@@ -92,6 +92,7 @@ pub fn renderer_base_url(c: &Ctx) -> String {
 pub fn render_detached_at<T>(app: &App, account: Option<&Account>, base_url: &str, render: impl FnOnce(&ViewContext) -> T) -> T {
     let asset_path = |path: &str| campfire_assets::asset_path(path);
     let stylesheets = crate::controllers::presenters::view_context::stylesheet_tags();
+    let signed_stream_name = |streamables: &[&str]| rails_compat::turbo::signed_stream_name(&app.secrets, streamables);
     let ctx = ViewContext {
         current_user: None,
         account: account_summary(account, false),
@@ -109,6 +110,9 @@ pub fn render_detached_at<T>(app: &App, account: Option<&Account>, base_url: &st
         referrer: None,
         last_room_visited_id: None,
         app_version: app.config.app_version.clone(),
+        signed_stream_name: &signed_stream_name,
+        time_zone: campfire_views::time::Zone::utc(),
+        chrome: Default::default(),
     };
     // Renders outside a request (broadcasts from jobs) share the fragment cache too.
     campfire_views::fragment_cache::with(&app.fragment_cache, || render(&ctx))

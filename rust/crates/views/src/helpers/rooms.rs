@@ -10,6 +10,42 @@ use super::turbo::dom_id;
 use super::url::{Param, with_query};
 use crate::ViewContext;
 
+pub const FIRST_PAINT_CONTROLLERS: &[&str] = &[
+    "messages",
+    "maintain_scroll",
+    "reply",
+    "composer",
+    "markdown_editor",
+    "typing_notifications",
+    "local_time",
+    "presence",
+    "message_list",
+    "header_overflow",
+    "attach_menu",
+];
+
+pub fn first_paint_controller_preloads(ctx: &ViewContext) -> Html {
+    super::Safe(
+        FIRST_PAINT_CONTROLLERS
+            .iter()
+            .map(|name| {
+                super::builder_tag(
+                    "link",
+                    super::attrs()
+                        .attr("rel", "modulepreload")
+                        .attr(
+                            "href",
+                            ctx.asset(&format!("controllers/{name}_controller.js")),
+                        )
+                        .attr_opt("nonce", super::request_forgery::csp_nonce().as_deref()),
+                )
+                .0
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )
+}
+
 /// `link_to_room(room, **attributes) { content }`. `options` is the attribute hash in Ruby
 /// order, `data-*` entries included where the `data:` key was.
 pub fn link_to_room(room_id: i64, options: Attrs, content: &str) -> Html {
@@ -18,7 +54,11 @@ pub fn link_to_room(room_id: i64, options: Attrs, content: &str) -> Html {
         .data("room_id", room_id)
         .data("badge_dot_target", "unread")
         .data("sorted_list_target", "item");
-    link_to(&campfire_routes::room(room_id), options.with_default_data(defaults), content)
+    link_to(
+        &campfire_routes::room(room_id),
+        options.with_default_data(defaults),
+        content,
+    )
 }
 
 /// `HUMANIZE_INVOLVEMENT`.
@@ -26,17 +66,42 @@ pub fn humanize_involvement(involvement: &str) -> &'static str {
     match involvement {
         "mentions" => "Notifying about @ mentions",
         "everything" => "Notifying about all messages",
+        "muted" => "Muted, notifying only about @ mentions",
         "nothing" => "Notifications are off",
         "invisible" => "Notifications are off and room invisible in sidebar",
         _ => "",
     }
 }
 
+/// `involvement_levels_for(room)`.
+pub fn involvement_levels(direct: bool) -> &'static [&'static str] {
+    if direct {
+        &["everything", "muted", "nothing"]
+    } else {
+        &["mentions", "everything", "muted", "nothing", "invisible"]
+    }
+}
+
+/// `short_involvement_label(level)` for the notification chooser.
+pub fn short_involvement_label(involvement: &str) -> &'static str {
+    match involvement {
+        "mentions" => "Mentions",
+        "everything" => "Everything",
+        "muted" => "Muted",
+        "nothing" => "Off",
+        "invisible" => "Invisible",
+        _ => panic!("unknown involvement {involvement}"),
+    }
+}
+
 /// `next_involvement_for(room, involvement:)`.
 pub fn next_involvement(direct: bool, involvement: &str) -> &'static str {
-    let order: &[&'static str] = if direct { &["everything", "nothing"] } else { &["mentions", "everything", "nothing", "invisible"] };
+    let order = involvement_levels(direct);
     let index = order.iter().position(|candidate| *candidate == involvement);
-    index.and_then(|index| order.get(index + 1)).copied().unwrap_or(order[0])
+    index
+        .and_then(|index| order.get(index + 1))
+        .copied()
+        .unwrap_or(order[0])
 }
 
 /// A room as the involvement helpers see it.
@@ -48,17 +113,34 @@ pub struct InvolvementRoom<'r> {
 }
 
 /// `button_to_change_involvement(room, involvement)`.
-pub fn button_to_change_involvement<'r>(ctx: &ViewContext, room: impl std::borrow::Borrow<InvolvementRoom<'r>>, involvement: &str) -> Html {
+pub fn button_to_change_involvement<'r>(
+    ctx: &ViewContext,
+    room: impl std::borrow::Borrow<InvolvementRoom<'r>>,
+    involvement: &str,
+) -> Html {
     let room = room.borrow();
     let label_id = dom_id(room.param_key, room.id, Some("involvement_label"));
     let url = with_query(
         &campfire_routes::room_involvement(room.id),
-        vec![("involvement", Param::One(next_involvement(room.direct, involvement).to_string()))],
+        vec![(
+            "involvement",
+            Param::One(next_involvement(room.direct, involvement).to_string()),
+        )],
     );
     let content = format!(
         "{}{}",
-        image_tag(ctx, format!("notification-bell-{involvement}.svg"), attrs().aria_hidden().size(20)).0,
-        content_tag_text("span", attrs().class("for-screen-reader").id(label_id.as_str()), humanize_involvement(involvement)).0
+        image_tag(
+            ctx,
+            format!("notification-bell-{involvement}.svg"),
+            attrs().aria_hidden().size(20)
+        )
+        .0,
+        content_tag_text(
+            "span",
+            attrs().class("for-screen-reader").id(label_id.as_str()),
+            humanize_involvement(involvement)
+        )
+        .0
     );
     let options = attrs()
         .method("put")

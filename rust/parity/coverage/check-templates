@@ -24,7 +24,8 @@ end
 
 templates = Dir[File.join(VIEWS, "**/*")].select { |f| File.file?(f) }.map { |f| template_name(f) }.sort
 exclusions = YAML.load_file(File.join(__dir__, "exclusions.yml"))
-states = YAML.load_file(File.join(ROOT, "parity/screens.yml"))
+inventory = YAML.load_file(File.join(ROOT, "parity/screens.yml"))
+states = inventory.is_a?(Array) ? inventory : inventory.fetch("states")
 
 covering = Hash.new { |h, k| h[k] = [] }
 unknown = []

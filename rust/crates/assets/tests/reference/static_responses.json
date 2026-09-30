@@ -5,7 +5,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "99",
       "content-type": "text/plain"
     },
@@ -17,7 +17,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "99",
       "content-type": "text/plain"
     },
@@ -39,7 +39,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "4237",
       "content-type": "text/html"
     },
@@ -51,7 +51,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "4237",
       "content-type": "text/html"
     },
@@ -63,7 +63,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "4887",
       "content-type": "text/html"
     },
@@ -105,11 +105,11 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "27059",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "42644",
       "content-type": "application/json"
     },
-    "body_sha256": "bf1a96fa7cc5d09050070b04fca9e582697d78f8c543ee6698b4f19916342ea8"
+    "body_sha256": "b6c2c7db352721426c89be6717027e2aeec085830f76bc678a1e99bdd1b900c4"
   },
   {
     "method": "GET",
@@ -117,7 +117,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "99",
       "content-type": "text/plain"
     },
@@ -129,7 +129,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "99",
       "content-type": "text/plain"
     },
@@ -141,7 +141,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "133677",
       "content-type": "audio/mpeg"
     },
@@ -153,7 +153,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "5197",
       "content-type": "text/javascript"
     },
@@ -165,7 +165,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1218",
       "content-type": "text/css"
     },
@@ -177,7 +177,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "16604",
       "content-type": "text/javascript"
     },
@@ -189,7 +189,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "16474",
       "content-type": "text/javascript"
     },
@@ -201,7 +201,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "14813",
       "content-type": "text/javascript"
     },
@@ -209,15 +209,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/actiontext-7b8d51ea.css",
+    "path": "/assets/actiontext-6a395a16.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "6212",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5935",
       "content-type": "text/css"
     },
-    "body_sha256": "50c73097191a00d22a7b3790c765bf8de60a4d987a3696dceb08cf3affddc2d9"
+    "body_sha256": "3b4e59644776dc3d46bbc0eece44d03ea59402f379d54be5b76ce90d9f51ffbb"
   },
   {
     "method": "GET",
@@ -225,7 +225,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "33970",
       "content-type": "text/javascript"
     },
@@ -237,7 +237,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "31650",
       "content-type": "text/javascript"
     },
@@ -249,7 +249,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "30573",
       "content-type": "text/javascript"
     },
@@ -261,7 +261,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "28343",
       "content-type": "text/javascript"
     },
@@ -269,11 +269,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/activity_inbox-83199ac6.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3886",
+      "content-type": "text/css"
+    },
+    "body_sha256": "fe580e387180f3c91179b575095bb3d1ea9d24376967c8a099716118875bd156"
+  },
+  {
+    "method": "GET",
     "path": "/assets/add-f232d8a6.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "312",
       "content-type": "image/svg+xml"
     },
@@ -281,11 +293,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/agents-2e5a1a28.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1975",
+      "content-type": "text/css"
+    },
+    "body_sha256": "2efefe3e0873a672b4b41da26119f5dfc10976ed0bb0b3229ddc671110265232"
+  },
+  {
+    "method": "GET",
     "path": "/assets/alert-b937985b.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "373",
       "content-type": "image/svg+xml"
     },
@@ -293,15 +317,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/animation-bcdb4bab.css",
+    "path": "/assets/animation-456db163.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1859",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2526",
       "content-type": "text/css"
     },
-    "body_sha256": "cf0129dc6ad0a300db39ee2c0cb53ae1433df4ebe75504ac0cbc3835fd0c48f6"
+    "body_sha256": "80b3403247facca9c1db90fe76a15fa3b9a4328c050ff8cc71d682082b1760c9"
   },
   {
     "method": "GET",
@@ -309,7 +333,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "179",
       "content-type": "text/javascript"
     },
@@ -321,7 +345,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "412",
       "content-type": "image/svg+xml"
     },
@@ -333,7 +357,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "362",
       "content-type": "image/svg+xml"
     },
@@ -345,7 +369,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "357",
       "content-type": "image/svg+xml"
     },
@@ -357,7 +381,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "382",
       "content-type": "image/svg+xml"
     },
@@ -369,7 +393,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "760",
       "content-type": "image/svg+xml"
     },
@@ -381,7 +405,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "442",
       "content-type": "image/svg+xml"
     },
@@ -389,27 +413,39 @@
   },
   {
     "method": "GET",
-    "path": "/assets/autocomplete-9de8c93f.css",
+    "path": "/assets/audit_log-6e4895db.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "3184",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "919",
       "content-type": "text/css"
     },
-    "body_sha256": "b3f3b43b6a0f84d84f8b6f80a6907d664cdf8c956a416463cc430d7177f029c8"
+    "body_sha256": "6965d231c3cea2a18507362822f593b3d255e4a72585244c103a0b280cb584e6"
   },
   {
     "method": "GET",
-    "path": "/assets/avatars-279376ab.css",
+    "path": "/assets/autocomplete-0ed08664.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "2050",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4202",
       "content-type": "text/css"
     },
-    "body_sha256": "4a49fa34f71bc26d4979bd5e51213c8e84ae56d0b62324d3016ce22266547d38"
+    "body_sha256": "224790bf95ef70ae52a7a9f3813ed0bc88dbfd9d49fce08c3a2ae29664f86909"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/avatars-406ac70e.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1987",
+      "content-type": "text/css"
+    },
+    "body_sha256": "2446e83c1bf512c38893fd22e2d328626e841d4c1b6a29b73665c6a902005936"
   },
   {
     "method": "GET",
@@ -417,7 +453,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "107561",
       "content-type": "audio/mpeg"
     },
@@ -425,15 +461,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/base-637a0ec8.css",
+    "path": "/assets/base-3fbb6e39.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "5997",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "6955",
       "content-type": "text/css"
     },
-    "body_sha256": "3549c3b35d5eb0caed728465dd5da3e4506a5b88c59160b2932845807be9b5a9"
+    "body_sha256": "1fe3da8cd21409f52f179d636e4936bbfe9b707a7b2a992680161829d615a163"
   },
   {
     "method": "GET",
@@ -441,7 +477,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "41318",
       "content-type": "audio/mpeg"
     },
@@ -453,7 +489,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "30817",
       "content-type": "audio/mpeg"
     },
@@ -465,7 +501,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "607",
       "content-type": "image/svg+xml"
     },
@@ -473,11 +509,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/boards-91aa0b79.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "9976",
+      "content-type": "text/css"
+    },
+    "body_sha256": "5b08f576b10abe541af270c8565ae23fe9998291b0c90f0f3526ca9f74af7ac7"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/bookmark-65a53889.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "131",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "447610001da46d8312bd6a0788aa62c37c75e975ea15aa43b55a2b829e9dca01"
+  },
+  {
+    "method": "GET",
     "path": "/assets/boost-4a7bab66.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "848",
       "content-type": "image/svg+xml"
     },
@@ -485,15 +545,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/boosts-da4032a8.css",
+    "path": "/assets/boosts-57a8020e.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1982",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4144",
       "content-type": "text/css"
     },
-    "body_sha256": "a8b88ce8ea02175740c5e1cbba10af95c16709a92eccb93fadbcfea3e918b271"
+    "body_sha256": "b2d79c47d8c4dea543f788de8a465342405a791583a9063c354bd88dc14573db"
   },
   {
     "method": "GET",
@@ -501,7 +561,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "580",
       "content-type": "image/svg+xml"
     },
@@ -513,7 +573,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1450",
       "content-type": "image/svg+xml"
     },
@@ -525,7 +585,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1429",
       "content-type": "image/svg+xml"
     },
@@ -537,7 +597,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1429",
       "content-type": "image/svg+xml"
     },
@@ -549,7 +609,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "31741",
       "content-type": "image/svg+xml"
     },
@@ -561,7 +621,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "10401",
       "content-type": "image/svg+xml"
     },
@@ -573,7 +633,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1661",
       "content-type": "image/svg+xml"
     },
@@ -585,7 +645,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "16096",
       "content-type": "image/svg+xml"
     },
@@ -597,7 +657,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "97482",
       "content-type": "audio/mpeg"
     },
@@ -605,15 +665,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/buttons-c7d39fd4.css",
+    "path": "/assets/buttons-a7353db7.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "3918",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3735",
       "content-type": "text/css"
     },
-    "body_sha256": "8011afc67bf4e481b86d5b965c84369d74b553b7f74dfb15ff0b4bf9370a05aa"
+    "body_sha256": "1985474936fe62884fdb5386d5d5096c828093a7a307639e3b3406fa25bcff09"
   },
   {
     "method": "GET",
@@ -621,7 +681,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "51734",
       "content-type": "audio/mpeg"
     },
@@ -629,11 +689,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/calendar-1df59226.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "593",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "55fc63decc37c5b43c5194ca0967d414e8fa3022f12f78610b208e46e9f109b2"
+  },
+  {
+    "method": "GET",
     "path": "/assets/camera-927323b8.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "662",
       "content-type": "image/svg+xml"
     },
@@ -645,7 +717,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "110270",
       "content-type": "image/png"
     },
@@ -657,7 +729,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "309",
       "content-type": "image/svg+xml"
     },
@@ -669,7 +741,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "268",
       "content-type": "image/svg+xml"
     },
@@ -681,7 +753,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "251492",
       "content-type": "audio/mpeg"
     },
@@ -689,39 +761,63 @@
   },
   {
     "method": "GET",
-    "path": "/assets/code-333ae548.css",
+    "path": "/assets/code-d23bb853.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "2774",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1516",
       "content-type": "text/css"
     },
-    "body_sha256": "60b1f8d2975406a37e36dd487f24bc953d1975128895311788a5da798a6e8025"
+    "body_sha256": "3a45f2c4fbd673dfebb91e045642437142c63a521287a86d3c774212ab72020e"
   },
   {
     "method": "GET",
-    "path": "/assets/colorize-eb391ca0.css",
+    "path": "/assets/code-highlighter-worker-1ac40959.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "229",
-      "content-type": "text/css"
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2404966",
+      "content-type": "text/javascript"
     },
-    "body_sha256": "abc8f4b4c5be0612ba774907bbace4a44893136b1d3de372a69b8943c1c9bf32"
+    "body_sha256": "2e2b30be72e1912423e597dfc37f3460af6b5a2d6f5b6032aa730a082cb18037"
   },
   {
     "method": "GET",
-    "path": "/assets/colors-aee62523.css",
+    "path": "/assets/code-highlighter.NOTICES-1632d8d0.txt",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1439",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "52726",
+      "content-type": "text/plain"
+    },
+    "body_sha256": "ac04379f9105c8e0526994a06c7f708c86bb8f260ad257e7244759c4d00390fe"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/colorize-1bb78062.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "131",
       "content-type": "text/css"
     },
-    "body_sha256": "b5372f9e2dc0a214477aa2f73aa4cd41bc4109c7ec85a2c869be47b6aba68988"
+    "body_sha256": "b8a1824484fce4ed83f82acf6a8fb58a2ca9deff638ec03b53ba37650e0b1ca7"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/colors-29158886.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2124",
+      "content-type": "text/css"
+    },
+    "body_sha256": "b581abe2c344ffc9e8cfe1dca6f43f105ea388f82b34aa961581c9f0c129958b"
   },
   {
     "method": "GET",
@@ -729,7 +825,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "344",
       "content-type": "image/svg+xml"
     },
@@ -737,15 +833,51 @@
   },
   {
     "method": "GET",
-    "path": "/assets/composer-e490638a.css",
+    "path": "/assets/composer-b177c9c6.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "4149",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "9158",
       "content-type": "text/css"
     },
-    "body_sha256": "7dff812d84411bae1c6e6372d4ecbefa0870a5914914c1fff95f9bee58ec258c"
+    "body_sha256": "da14d267f68cd6180913b8eef9710c416bc40a1f442574f614ccbc567be8f829"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/composer_power-0f117f18.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "8202",
+      "content-type": "text/css"
+    },
+    "body_sha256": "9217617ddbec18b58865a5a7cca6bd943fd4a94c31204740617e051cb83506fd"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/activity_inbox_controller-78d14e42.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4254",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "6e91d4d486b941eb5beddb99576296a5e5b2ede88da79e7b325150daa90e62be"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/activity_indicator_controller-4c0a2099.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2618",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "e3a86d03e4fc49baf8c764e7c4b190fb56977e3826247fbbb0d8ab47a2ec6885"
   },
   {
     "method": "GET",
@@ -753,7 +885,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "171",
       "content-type": "text/javascript"
     },
@@ -761,11 +893,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/controllers/attach_menu_controller-4a85d87b.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "8353",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "004addab0f49cb2a685076ebfde6064be3e5767f3fc0dacc1257734e491f9e0c"
+  },
+  {
+    "method": "GET",
     "path": "/assets/controllers/auto_submit_controller-ee52d396.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "144",
       "content-type": "text/javascript"
     },
@@ -777,7 +921,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1083",
       "content-type": "text/javascript"
     },
@@ -789,7 +933,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "710",
       "content-type": "text/javascript"
     },
@@ -797,11 +941,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/controllers/board_list_controller-8a5c5270.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2197",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "1fab2a5f2d42c51069b474a3556a1e5f5e6d7fbf0e9086e455cf534d1cb38277"
+  },
+  {
+    "method": "GET",
     "path": "/assets/controllers/boost_delete_controller-29fd1686.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "803",
       "content-type": "text/javascript"
     },
@@ -809,15 +965,27 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/composer_controller-73c33f9f.js",
+    "path": "/assets/controllers/check_all_controller-f185b790.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "5999",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "445",
       "content-type": "text/javascript"
     },
-    "body_sha256": "41098cd7821da84dabe37562e01da31d515adf56d68d9d4ad54623f1be8847d0"
+    "body_sha256": "fd7b5bd79245373735f31528911bccf7eaafa228578c89fdcacf3ac650547b12"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/composer_controller-813bd5df.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "30590",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "64753cf574935829f58ac23e62dd92c7dc7a9b1865202591bf38c853693e7aba"
   },
   {
     "method": "GET",
@@ -825,7 +993,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "521",
       "content-type": "text/javascript"
     },
@@ -833,15 +1001,75 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/drop_target_controller-3a205782.js",
+    "path": "/assets/controllers/dm_picker_controller-ec753b41.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "362",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2141",
       "content-type": "text/javascript"
     },
-    "body_sha256": "751d63181b360392c5b773d6e26e93fa961c0a386b16e39abe592ae031b133ab"
+    "body_sha256": "3e5f75764a8e9888b469c1caf171b6df50260bdf0959c6554192b6b6777b62b4"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/dm_presence_controller-a514f26c.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2539",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "e2892a3a3daeb226f0c0e44c4d60e0d35de5ded27503e57ac62720e99d809e1d"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/drive_link_controller-41efd87c.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "7413",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "3601b8a17c37d1422d3e5e4bcab2166f1cb72697e7f564e6304e96d16fc9fedb"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/drive_picker_controller-45bc0786.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "10869",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "2200e2e98f6f30c1afb7a24865b84cec5a2c02d2262ca528ae05a456f21a0e72"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/drive_share_controller-c247e0be.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "55798",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "a9f98c6513483a4ffe630f8d567fb247062ea2c9a77e7be86ef29aae0fbbb81e"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/drop_target_controller-64a81b6e.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "384",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "55342ac3edd41c80ff72a06265a30a9ba0b4f268ab5a01683b6cde8cb57fdbdd"
   },
   {
     "method": "GET",
@@ -849,7 +1077,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "136",
       "content-type": "text/javascript"
     },
@@ -857,11 +1085,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/controllers/emoji_picker_controller-25c75851.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "18501",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "1f0dd6fce6c1b4a65a0c96bff17dbb23bed3a8d0c1f3dc7d28c10be5ddfe3c10"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/event_time_zone_controller-1852fe57.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "797",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "ce5525da54c5af0b9cc26563e1197fce5d866ab3f8d60f773335cfc9195497b7"
+  },
+  {
+    "method": "GET",
     "path": "/assets/controllers/filter_controller-ca9769d5.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1015",
       "content-type": "text/javascript"
     },
@@ -873,7 +1125,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "286",
       "content-type": "text/javascript"
     },
@@ -881,15 +1133,183 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/index-594ba2fb.js",
+    "path": "/assets/controllers/forward_source_controller-e9e68d4c.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "178",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1004",
       "content-type": "text/javascript"
     },
-    "body_sha256": "e0fea5ddf6d71e3395bf18d01c1c4d9152c67bd5e094c9c0f969452798e20651"
+    "body_sha256": "4f327805865137ea9137d3e7976672e0858716aa08944b327b8b82b2188c6570"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/frame_poll_controller-80b1929c.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "906",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "db8c064c8aea145b1fc02697714f7dce1a76c85e6fdec6c1fa79dbb039cac273"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/global_search_controller-d0f2f075.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "7969",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "a5128ea43190c7c9a3f0a85ff06484bb201e4190f0213352f965e4a491d69307"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/header_overflow_controller-0a7a2fb6.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "13411",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "320221794137e9d9901778242dc882af5f815417dc93202db7d735c7eaa41115"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/help_menu_controller-d15d64f3.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "714",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "b1944e12c55dc437798c4766f84ed823b50d75f1e7f955d1d00cbd0a74b9b456"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/huddle_controller-c0b348ef.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "126902",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "2274ce0ce9f32fdec13e106dd161e4ff38b61036177c329987f8fb3dbec050a5"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/huddle_invitation_controller-05a857ed.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "11505",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "11b334c7f0e777a015eaa7edbec33a1af13dc4ec03f71b5660093f0fb292c53f"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/huddle_join_notice_controller-49b67728.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "22641",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "d2cea40da5b93ddf7569d4ded4e442d8067cb9f72cd460749ea745d1b90fb68b"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/huddle_launcher_controller-df0064be.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2792",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "3d72101a76cbfa4f0fd3b7e22ae5f747b314af6952c0a02fc273f9a1f951bccc"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/huddle_participants_controller-0c990206.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "6035",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "94758eb8952ae99aeba4b41a3eb83aa125eeae18859632cd46f7de2bf6ebaf5c"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/huddle_presence_controller-490a3ba4.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2416",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "e43622111fafe9391ca8f2ce831d5d84475d1f5c22474f26a1d15ed266f4ddcd"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/huddle_share_indicator_controller-5a2828b8.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1556",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "ebc91a77feff8fe935c5c61d216f5851bd22ec21ce8345d13490a7459900a0c4"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/icon_field_controller-6e7e62f3.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2287",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "f014dec003c6e5c008fbecf245dbfc41c8079459b75f90cd8f1ee45e3648eee5"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/index-a2897030.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "176",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "db3daa25e151beb9aea2b501b1da3729b22be7c8b7af03bcaf6bbccdd524647a"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/keyboard_shortcuts_controller-86b4124a.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5968",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "65305f24fedd7f5894223d1d5b583ebe0bd7c382435d09e51fccdc628e1839bd"
   },
   {
     "method": "GET",
@@ -897,7 +1317,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "649",
       "content-type": "text/javascript"
     },
@@ -905,15 +1325,27 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/local_time_controller-7daf3d0c.js",
+    "path": "/assets/controllers/linkedin_embed_controller-7b4cc097.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "902",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1387",
       "content-type": "text/javascript"
     },
-    "body_sha256": "1659b8fd756f75c4caf17742338e034dc9a14b5b71a8d9e5cd94053b9f3825c6"
+    "body_sha256": "bd697081a73e2972f75735a43bd2eba3f5f2d0180b1429b9d751c2cac845003b"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/local_time_controller-e6492786.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1219",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "79570a0327797b2f1accb2c9faeb6732d0b3b4f3fb0ec0d3b41b7149e4f7e5cb"
   },
   {
     "method": "GET",
@@ -921,7 +1353,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "915",
       "content-type": "text/javascript"
     },
@@ -929,15 +1361,111 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/messages_controller-3d90944a.js",
+    "path": "/assets/controllers/markdown_autocomplete_controller-b12fb838.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "5129",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1653",
       "content-type": "text/javascript"
     },
-    "body_sha256": "9a6f2fd5b70feb702fa81ee4b467a8be495c84a6439e31c8846356b341cedb30"
+    "body_sha256": "fe1a05da812cabbc0d1d4d034accebd7c3cd7e0256e72fe4919260b5eecf7530"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/markdown_editor_controller-609753e1.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1949",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "a335a9375a0ed92e738b6d2caf57d0070ad5c2f7e78c20cb0f37cd6e370b6c8e"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/member_panel_controller-4f19a4bf.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "22179",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "a0adab04f12c3b06f02bbf2dd55ebf54086e775737283435eb5bbb504f45117b"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/message_actions_controller-69cb8b4d.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "44716",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "46a37aa17f09b575227edaeae8b8e9b3f21d04b9f21e5e6718490475a65189b1"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/message_format_controller-27aed557.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1042",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "accc0a52012f90de885ad9f7bf45045fcfcfa4fa982942eda917a8eeceb61f6d"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/message_list_controller-92f62e5e.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "13410",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "116185a6991293df62f0ebc83bbb78772be19004336a11b61ef8173a10f2dbc9"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/message_toolbar_controller-7e4727a7.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1407",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "ea5e107803135f49afa5b7a766e3071f0c721911a5ff7e437b360dd82210dd7e"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/messages_controller-d90f8204.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "12126",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "afe56b096047e8e367df23aeb6ef607819a41929e16330416ca2083fe428187b"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/multi_select_controller-0841eeb2.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "14095",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "736f068568e16aa3af308eec09e0bd108eb20a0c58a83e9ae15040dae452e705"
   },
   {
     "method": "GET",
@@ -945,7 +1473,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "4963",
       "content-type": "text/javascript"
     },
@@ -953,11 +1481,47 @@
   },
   {
     "method": "GET",
+    "path": "/assets/controllers/pins_panel_controller-d2c420d0.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1028",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "32fa53e9c32be2b9ac0bf9b50a3cab5e17129731ee4571bc78ef016cb54ac2b9"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/poll_builder_controller-fba2ec80.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2628",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "fecd021f50cda70dbd6fefe2e49c5a2186f57f7cd12efc75ee4c66ae303b1f6e"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/poll_controller-05853562.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2257",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "52d153565e0dffb757a7b21bc1c7725ae807a586a02cae4a97c6a917d524b457"
+  },
+  {
+    "method": "GET",
     "path": "/assets/controllers/popup_controller-9f8ea824.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "837",
       "content-type": "text/javascript"
     },
@@ -969,7 +1533,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2026",
       "content-type": "text/javascript"
     },
@@ -977,11 +1541,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/controllers/profile_card_controller-25a0f42e.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4011",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "97022164531c003ded9fe08db208d8e765f1c0edf355728ed22ea9f170d87d15"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/profile_voice_controller-22cfdf28.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1086",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "a3ee0ae0bad9c04a6cf3060c45707dbffba7c0d2124e5695746e1bac1e75e5e8"
+  },
+  {
+    "method": "GET",
     "path": "/assets/controllers/pwa_install_controller-3fe3fc5e.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "854",
       "content-type": "text/javascript"
     },
@@ -989,11 +1577,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/controllers/quick_switcher_controller-2345744b.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "11309",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "4a5ff83e6e11c2b7f09c0744e4c8c0f7fcc5ba3b1b87062cbeb39e9660bb7fcf"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/reaction_chip_controller-38d5acd8.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "688",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "32b45f84812fa2499b1e8b248046c4f33a128cb9cd501c06730321c9acb62e71"
+  },
+  {
+    "method": "GET",
     "path": "/assets/controllers/read_rooms_controller-8245522a.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "573",
       "content-type": "text/javascript"
     },
@@ -1005,7 +1617,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2035",
       "content-type": "text/javascript"
     },
@@ -1013,27 +1625,51 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/reply_controller-278bb9cc.js",
+    "path": "/assets/controllers/reply_controller-d79596bd.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1562",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4774",
       "content-type": "text/javascript"
     },
-    "body_sha256": "2f2136e7d97cac0b3bb935825cfa10a0bb1829b0fa372a5e0a1fc91993a01400"
+    "body_sha256": "c8797d75c73783c24bacda21376d2d1c7c54060cb59a1bd7c49df5366f19f89e"
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/rooms_list_controller-64840fcd.js",
+    "path": "/assets/controllers/room_menu_controller-050064e6.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1565",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "16917",
       "content-type": "text/javascript"
     },
-    "body_sha256": "a9148a7a494d2d9f8429dfd1c11c5e6168fee1ff482a249b596ea363ea744efc"
+    "body_sha256": "823ac86141a9863858e072688de77f7932246a12e6e16f42ce4a5ffae169c120"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/rooms_list_controller-e35b9658.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2281",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "f9736838b295008536c638f0b114d23a1c90c0200c09f608905d60b6ddbaa129"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/schedule_send_controller-a9a5f458.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4514",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "a758a0fceef46f99d0c236a01ec6bbdaccd6fbf0ef58a70cff38e9573917470b"
   },
   {
     "method": "GET",
@@ -1041,7 +1677,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "263",
       "content-type": "text/javascript"
     },
@@ -1049,15 +1685,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/search_results_controller-aab46974.js",
+    "path": "/assets/controllers/search_results_controller-0a0d5200.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "680",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "764",
       "content-type": "text/javascript"
     },
-    "body_sha256": "c1db92ae9c15ac2faf5db647805aebd7749ee886a6eed9ccfe172ddcdb65319f"
+    "body_sha256": "3b0dbb506c0598672c2a08189b0b4c3747867625f7d5c6197facd4f4fe54e590"
   },
   {
     "method": "GET",
@@ -1065,7 +1701,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "701",
       "content-type": "text/javascript"
     },
@@ -1073,11 +1709,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/controllers/sidebar_organize_controller-88251d69.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4838",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "80d1ef6cd564deb12ed7cdaddd5600e0f0894cda85c57c9f96e4ca00791d1c51"
+  },
+  {
+    "method": "GET",
     "path": "/assets/controllers/soft_keyboard_controller-be1da837.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "915",
       "content-type": "text/javascript"
     },
@@ -1089,7 +1737,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1026",
       "content-type": "text/javascript"
     },
@@ -1097,27 +1745,87 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/sound_controller-d3e5656e.js",
+    "path": "/assets/controllers/sound_controller-b3ad53e1.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "205",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3075",
       "content-type": "text/javascript"
     },
-    "body_sha256": "58e6d35dbd938a7104a4f68d8ce85436ef5bf29e52882f327c9d030f8cfbb9f5"
+    "body_sha256": "07e4e75dcacaf0a91673e77ffcd41daa325f10712716ed4c79cf49facc8eca47"
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/toggle_class_controller-b67fa681.js",
+    "path": "/assets/controllers/stage_panel_controller-8e82d134.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "195",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "7614",
       "content-type": "text/javascript"
     },
-    "body_sha256": "ad3d5e003e885725a611bbd0d86b1ec7a848c59639e6a01e24a963566297cd71"
+    "body_sha256": "86b08ada2d09d8da6d89e27bf2320a65302eff694426baa512f07d29d931574f"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/stage_rejoin_controller-2c5719d4.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "542",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "98b24e4e4aaf396e206ac04b5dff99e20c22ed55313a23ea347d2758ef7c96bd"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/thread_messages_controller-28b594c1.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2071",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "7cce950554d830705ae9e5e9df139286cd2768064a43e8a2b5a9921fccde8cc8"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/thread_panel_controller-3422264e.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "59288",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "5840461bb515e7a968d26ea73004c3ba6ee3baf36e9ee124f2fa2014d0ca11bb"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/timezone_controller-84c08b99.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1498",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "af93909708716edf6bdcb2f545b400e7efb21c1356716face861c02b6fa8e25c"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/tour_controller-2553e608.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "7268",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "2c843f612cbb68117b475ab4028f0fafb977b93c098d18de0411a0d90c920c10"
   },
   {
     "method": "GET",
@@ -1125,7 +1833,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "355",
       "content-type": "text/javascript"
     },
@@ -1133,39 +1841,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/turbo_streaming_controller-04b85a80.js",
+    "path": "/assets/controllers/typing_notifications_controller-3268db6d.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "372",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1964",
       "content-type": "text/javascript"
     },
-    "body_sha256": "6f8e9c21d17fb3373ca1e8eedd337484ae749ecafa5ac3bb0544e50807dfe6c8"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/controllers/typing_notifications_controller-86906ab9.js",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1402",
-      "content-type": "text/javascript"
-    },
-    "body_sha256": "d68b9a05ac6a8d7fe4826f08e7221031aff03f6d73f7f306541f1bcaa7d4f87d"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/controllers/unfurl_controller-4a868f9a.js",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "2515",
-      "content-type": "text/javascript"
-    },
-    "body_sha256": "935079df4ec1b8adfe3ac5df322f92d9b54118e956ef6c516d9250a871e6dde5"
+    "body_sha256": "9fdfd97db18c3569cbc2e2b223dbba0fc1c6e059796816a972d37e81f60eb622"
   },
   {
     "method": "GET",
@@ -1173,7 +1857,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "384",
       "content-type": "text/javascript"
     },
@@ -1181,15 +1865,39 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/web_share_controller-f7236b6f.js",
+    "path": "/assets/controllers/web_share_controller-9b57fd01.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "902",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "903",
       "content-type": "text/javascript"
     },
-    "body_sha256": "4ec2b613b9f548b633273a29653aa3c3b04c19e9c5e4b5992dc4c47f37a170a1"
+    "body_sha256": "63aaf9663af87d5d477de8cb6ac94c3490393faeff83480fb987a3dcbccdff61"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/workspace_navigation_controller-0a4078bd.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "7824",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "a0d2d6349fbefc906efc4861fa82f6e5f38e90e410729de1538a21dd72ed2f7c"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/controllers/workspace_presence_controller-b1f6eeb0.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2908",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "ef13f17665abdae97e66e08263d943cb54cdf9d890a2a87a6baba679e4b8120f"
   },
   {
     "method": "GET",
@@ -1197,7 +1905,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1299",
       "content-type": "image/svg+xml"
     },
@@ -1209,7 +1917,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "454367",
       "content-type": "audio/mpeg"
     },
@@ -1221,7 +1929,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "43399",
       "content-type": "audio/mpeg"
     },
@@ -1233,7 +1941,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "446",
       "content-type": "image/svg+xml"
     },
@@ -1245,7 +1953,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "191096",
       "content-type": "audio/mpeg"
     },
@@ -1257,7 +1965,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "46849",
       "content-type": "audio/mpeg"
     },
@@ -1269,7 +1977,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "209038",
       "content-type": "audio/mpeg"
     },
@@ -1281,7 +1989,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "110957",
       "content-type": "audio/mpeg"
     },
@@ -1293,7 +2001,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "53900",
       "content-type": "audio/mpeg"
     },
@@ -1305,7 +2013,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "464",
       "content-type": "image/svg+xml"
     },
@@ -1317,7 +2025,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "884",
       "content-type": "image/svg+xml"
     },
@@ -1329,7 +2037,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "340",
       "content-type": "image/svg+xml"
     },
@@ -1341,7 +2049,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "97379",
       "content-type": "audio/mpeg"
     },
@@ -1353,7 +2061,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "562",
       "content-type": "image/svg+xml"
     },
@@ -1365,7 +2073,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "46176",
       "content-type": "audio/mpeg"
     },
@@ -1373,11 +2081,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/drive-bbcf5456.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "13246",
+      "content-type": "text/css"
+    },
+    "body_sha256": "4937aaf6ecb6ef238f817453fdef1d92e73fe1bde748d45a4d9c491e9e4cd463"
+  },
+  {
+    "method": "GET",
     "path": "/assets/email-6c595bc5.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "439",
       "content-type": "image/svg+xml"
     },
@@ -1385,15 +2105,27 @@
   },
   {
     "method": "GET",
-    "path": "/assets/embeds-c20d0a3a.css",
+    "path": "/assets/embeds-c2564969.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1627",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1393",
       "content-type": "text/css"
     },
-    "body_sha256": "adf3c6c3025c79c63200d0ebb6c16fb5003f56be597d7a7c06c54352fda3b1f0"
+    "body_sha256": "0e6a91145012111323d54922c59c1115b6c271cee21e18746258817b48bbe938"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/emoji-b65359a0.json",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "85635",
+      "content-type": "application/json"
+    },
+    "body_sha256": "e8db68d91b8137691df08ed3bd03ea95604fc0ec3aa7746d8960b899a12e3a1d"
   },
   {
     "method": "GET",
@@ -1401,7 +2133,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "720",
       "content-type": "image/svg+xml"
     },
@@ -1413,7 +2145,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "5467",
       "content-type": "image/svg+xml"
     },
@@ -1425,7 +2157,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "965",
       "content-type": "image/svg+xml"
     },
@@ -1437,7 +2169,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "785",
       "content-type": "image/svg+xml"
     },
@@ -1449,7 +2181,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "200",
       "content-type": "image/svg+xml"
     },
@@ -1461,7 +2193,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "403",
       "content-type": "image/svg+xml"
     },
@@ -1473,7 +2205,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "278",
       "content-type": "image/svg+xml"
     },
@@ -1485,7 +2217,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "859",
       "content-type": "image/svg+xml"
     },
@@ -1497,7 +2229,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "79",
       "content-type": "text/css"
     },
@@ -1505,15 +2237,27 @@
   },
   {
     "method": "GET",
-    "path": "/assets/flash-a561c1e5.css",
+    "path": "/assets/fizzy_cards-37bb0ec3.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "463",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3216",
       "content-type": "text/css"
     },
-    "body_sha256": "7f1c5a81ffd7cabad2bf71200a48a3317e6897bab8c755c641656ede62635d23"
+    "body_sha256": "2208581331e2dc4f102376880301776e3ea4e8eec5508420473a5d6390b1413d"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/flash-2bebcebf.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1573",
+      "content-type": "text/css"
+    },
+    "body_sha256": "12dcee8a6f74a769f9b25161380b3eb7e04807ffd6e009cb23bd9be88fa27ee4"
   },
   {
     "method": "GET",
@@ -1521,7 +2265,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "131364",
       "content-type": "audio/mpeg"
     },
@@ -1529,11 +2273,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/github_pr_cards-1c6f5015.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5137",
+      "content-type": "text/css"
+    },
+    "body_sha256": "0e93abe79f5d70b88dcb14e73321d02ab8fe71643b877b4225c0dd0852269f4e"
+  },
+  {
+    "method": "GET",
     "path": "/assets/glados-f033ed9e.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "13115",
       "content-type": "audio/mpeg"
     },
@@ -1541,11 +2297,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/global_search-35d125a0.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "9211",
+      "content-type": "text/css"
+    },
+    "body_sha256": "4b76d3880e831e1a4ee2925544fe95b11bc9148ce6fa0fe463b9aa71140b4a09"
+  },
+  {
+    "method": "GET",
     "path": "/assets/globe-8c54d23b.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "450",
       "content-type": "image/svg+xml"
     },
@@ -1557,7 +2325,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "21315",
       "content-type": "audio/mpeg"
     },
@@ -1569,7 +2337,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "26164",
       "content-type": "audio/mpeg"
     },
@@ -1581,7 +2349,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "54833",
       "content-type": "audio/mpeg"
     },
@@ -1593,7 +2361,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "49533",
       "content-type": "audio/mpeg"
     },
@@ -1601,11 +2369,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/header_overflow-3297aa42.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3708",
+      "content-type": "text/css"
+    },
+    "body_sha256": "ce0ed4218a21f05dd3f3639e0b01e88bdab9ba4a6f0a1f64000e4383ac90bb91"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/headphones-9b183469.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "236",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "f45c5c88b7ede758b9d1ff8d27669e102a3a47ec2c75cb7335d78092d395fc88"
+  },
+  {
+    "method": "GET",
     "path": "/assets/help-a18b47fc.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "384",
       "content-type": "image/svg+xml"
     },
@@ -1617,7 +2409,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "298",
       "content-type": "image/svg+xml"
     },
@@ -1629,7 +2421,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1321",
       "content-type": "text/javascript"
     },
@@ -1637,11 +2429,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/helpers/drive_attachments-f9ad3d5a.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3295",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "6281c531f9f1abddaa766375f4410b9e8408013751a1d8004ba8960a1e73b145"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/helpers/live_region_helpers-0c34bdf4.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1561",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "18df8088681db91c76740c164c7a07f084d2410d8ffe4b6e35d8dfc5831e10af"
+  },
+  {
+    "method": "GET",
     "path": "/assets/helpers/navigator_helpers-3c9f4c31.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "102",
       "content-type": "text/javascript"
     },
@@ -1653,7 +2469,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "422",
       "content-type": "text/javascript"
     },
@@ -1665,7 +2481,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "855",
       "content-type": "text/javascript"
     },
@@ -1677,7 +2493,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "110",
       "content-type": "text/javascript"
     },
@@ -1689,7 +2505,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "47005",
       "content-type": "audio/mpeg"
     },
@@ -1697,11 +2513,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/highlight.js/LICENSE",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1514",
+      "content-type": "text/plain"
+    },
+    "body_sha256": "6c081431591d9df696c82dc598fe1423765b8a299b200ed00b281afd0f64c490"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/highlight.js/README-ae6ad45b.md",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "756",
+      "content-type": "text/plain"
+    },
+    "body_sha256": "ef4aec65601c4138e7fcc2a28767cf9cfd3c47be90167fd7fec581f3389f0623"
+  },
+  {
+    "method": "GET",
     "path": "/assets/highlight.js/core-4e141f64.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "75944",
       "content-type": "text/javascript"
     },
@@ -1713,7 +2553,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "19374",
       "content-type": "audio/mpeg"
     },
@@ -1725,7 +2565,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "113327",
       "content-type": "audio/mpeg"
     },
@@ -1737,7 +2577,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "152033",
       "content-type": "audio/mpeg"
     },
@@ -1745,11 +2585,479 @@
   },
   {
     "method": "GET",
+    "path": "/assets/huddle-89870051.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "14921",
+      "content-type": "text/css"
+    },
+    "body_sha256": "858b6e060ab7ba5f1c3b705dc41495377d0760f05e4259230b3b90670e6e0b12"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/huddle_invitation-090bee08.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1127",
+      "content-type": "text/css"
+    },
+    "body_sha256": "5765a956fceff52b5c47013439bfed83c43c1b7857d74b953f1789015ca3536f"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/huddle_join_notice-3ee33ff0.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2365",
+      "content-type": "text/css"
+    },
+    "body_sha256": "d18343f7595e6fdfaaa29bea0b202167b8e6289ff12cbff3bc1659daf3090967"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons-209ff391.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2050",
+      "content-type": "text/css"
+    },
+    "body_sha256": "6de086f9079675a1c7da60d03153033cefc9dcd8fc22ddd48a4eae89fca75933"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/LICENSE-ca59dc08.md",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1377",
+      "content-type": "text/plain"
+    },
+    "body_sha256": "9282bc6b4e941529b563c6313f42ef3202ad52f8c06080aec69f2673989b15ae"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/LICENSE-lobehub-19671093.md",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1064",
+      "content-type": "text/plain"
+    },
+    "body_sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/anthropic-dd32ca1b.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "281",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "1cc599f6ebce2016dc388cf84e54a52c6b13487655c7e243554d654c7bce1882"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/apple-6a413389.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "650",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "2a1509dccd25e6d2bc7a11a8e52941077e1a48555e192ce638699b9f083c2a7c"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/aws-2e3320c4.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3234",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "f73f2506defea5df3b064bcea998339e183c4f979b2bb4af4fcbf42c29ae151c"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/azure-37d5b20e.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "703",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "a48fa106b32093acac4cb858df39c4ee6bf1049d2ecec92ad556190f7c4d9a0e"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/claude-ca9485f0.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1921",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "2d6fda79eb18ddccca35b799eeb3cece0dfabc22520ce3b10abd25668df9fa93"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/cloudflare-2c87aea0.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1178",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "408096d99907fd99e0863cb5d73f77a72537c6a85fd8d5e2704178a83a891f08"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/cursor-496f7d98.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "454",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "71572a9be192cc069ec22b48d785e61d754eeed7edb7d082d615f6d5620f70ec"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/deepseek-ea0202b0.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2189",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "8f9443e351b6dacce71871790201b799d92e8bf96a45ef79aeb5e9bf4db423e2"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/discord-46909fd1.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1374",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "1d364b72c9eaf1fe37d17ca88cd8fb541308dc0f3b09e2ab3b824f380b3493d5"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/docker-79f4e03a.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1765",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "65571291c261ef869c31540a38f3ca0f0ee3bb73f179c172211c8860f19a6359"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/figma-f5b64ed9.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1093",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "2f86fca501dfed321a62f28743f29d9dd738dac91668eac5260ab746d1ef8840"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/github-07b84d6c.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "822",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "3bf8cceead820aec50d4ee825a3fd02c5a1cd6665cc9cf4cbf3d9c8861a204bb"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/githubcopilot-715ebbc6.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1744",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "c72c1e0018e84b3128c5a1ac43ec2be135ac6ec4eb9c0ea18ed76416d23f2af3"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/google-81394e6c.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "457",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "d8cf9fb2d5e234e03254f1d6400d8cc8160c309b010d031a64f37084b5a21d01"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/googlegemini-14d3f9df.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "401",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "a6228d8846040401e941a39ed17459785e8324dbb7b870ce84233c9b3e9863a0"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/grok-cff0ffb1.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "756",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "9175fc90c22655160231976c849f25a03b888d7cc0e04c5f1b987b659bb07c95"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/huggingface-9bc24ee3.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3027",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "aa81744034eecf4ac6b3fb7108dd71223965c7af3c534932391314563b150109"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/kubernetes-e0fe0fd0.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3565",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "ceee2f4e87fa1533600672190c156194039f744fa9b5da10e83f002178e84b47"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/linear-2b1fe12e.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "453",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "90b91b61090f4f9c94f9cb24769642278f03e8eedcfe5680738cf3a186bfc00f"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/linux-576b02b4.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5463",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "7e55f2779ae11a83c9dad2d0414a65d8ca7867d0716ce58bfe41ed299ae1447f"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/meta-9354c332.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1324",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "e3e9db62f59dc477e5917687349b8aa9685b841d40300c1afad60ad85075cd2e"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/microsoft-6243c863.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "379",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "0617d6111e99845e7ab06dd4ff1e16c2c1ad381575b3204ef02dd71b716ffa4b"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/mistralai-c76378ba.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "290",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "88f00cf2e82e4d36bb4fdd0e913df200c6e7d6162ec627cc58cfdd6a4eb17d18"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/notion-6436b60a.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "978",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "b17d2a2b592a06252efef522d5205f0c7a958f748d40df1011ed081417e42f85"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/nvidia-658348d9.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "881",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "b0e4cfc12712c840d4d630c9a717200fbd09aeeadbd3faeac13bda2e2ed050b0"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/ollama-867183df.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4769",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "9c62bf0159ee96c8b58c86a732f33b002b4b3bb165ec86e8ecca51ad6a82dab6"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/openai-a0bb8578.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1570",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "2b4a04ddc2395b20d168694d3850ce2050a702c4a0cdeb4d8b31b9a970481a8c"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/perplexity-c385ef28.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "618",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "57220c29378ce5e615e7244d2fdfcf5a44fad40dad81a99f2e0e4260c726ca74"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/slack-cdbcb290.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1123",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "f23c317b279f53dcd2260a6cd2e279f7a696f87dcb3da259d6201f05bbc45b0d"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/stripe-beea30ab.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "588",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "130c6d957b8977f5eda2928267b9df531ca038a400a801765d263801bb1bd870"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/vercel-aafae8df.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "132",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "57f1e4135486c566e9878fddd259f7f6bf8ec43f31e7e6e38a36d9e814a1c0e0"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/x-9d69ccea.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "299",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "693e68863eceb8dc9f72e2acd386ab9c20a10858dab2c076212f7084cb7a32fe"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/icons/brands/xai-ba8034c0.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "372",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "89eb7de9f0d02a41cfecd9109e253d7fd3529e27467dee4254faa67f3ac21451"
+  },
+  {
+    "method": "GET",
     "path": "/assets/incoming-0621d199.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "13731",
       "content-type": "audio/mpeg"
     },
@@ -1761,7 +3069,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "22770",
       "content-type": "audio/mpeg"
     },
@@ -1773,7 +3081,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "315",
       "content-type": "text/javascript"
     },
@@ -1785,7 +3093,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "587",
       "content-type": "text/javascript"
     },
@@ -1793,51 +3101,63 @@
   },
   {
     "method": "GET",
-    "path": "/assets/initializers/highlight-5bd558f1.js",
+    "path": "/assets/initializers/index-c15ee6a0.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "906",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "179",
       "content-type": "text/javascript"
     },
-    "body_sha256": "4fd86024e5a333dcc197cfadec46507edbbffb46da2f4abce43d4fa6b7d1e47b"
+    "body_sha256": "8f64d4417761986b0043bc43daacca3ecdabaf1aa1f4e629483b49a2aca72a0e"
   },
   {
     "method": "GET",
-    "path": "/assets/initializers/index-d2bbfae4.js",
+    "path": "/assets/initializers/navigation_progress-9e1a0647.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "129",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1741",
       "content-type": "text/javascript"
     },
-    "body_sha256": "9b96c2ae37849092157f3c950ab225ab8b7a5a1ce341f9d47cdeda1bada7e665"
+    "body_sha256": "faf1c0f38c1d43457d00b1f7e189b53d0b76ebdb046b0269e5a88e50e3b9647e"
   },
   {
     "method": "GET",
-    "path": "/assets/initializers/rich_text-f451a05e.js",
+    "path": "/assets/initializers/service_worker-392869cf.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "630",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "748",
       "content-type": "text/javascript"
     },
-    "body_sha256": "5e0c975eb65ca3342c5317212b50dd3571ac80c2aac7a646b433123c5c698ae5"
+    "body_sha256": "56423b3448ef19a1774c17500c4fadbc9117e314a3ced8fd58607fae307bd572"
   },
   {
     "method": "GET",
-    "path": "/assets/inputs-9e58a07c.css",
+    "path": "/assets/initializers/stream_focus-b91b823e.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "4140",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1336",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "2192411fd9a1486551d3448186a8cbd85c3bbebe4c463feedbe5152cdcb3cc5b"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/inputs-6e06ff6a.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4668",
       "content-type": "text/css"
     },
-    "body_sha256": "6e4a0f2b60aa4801d95c515fc2fd40f41d0e70aa81f2d331ec896a26899e43a8"
+    "body_sha256": "868748b61475219ecee9c4ebfa2e1ee702466de182e2b2f9b5e8c3ca1b274aa3"
   },
   {
     "method": "GET",
@@ -1845,7 +3165,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "439",
       "content-type": "image/svg+xml"
     },
@@ -1857,7 +3177,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "6289",
       "content-type": "text/javascript"
     },
@@ -1865,11 +3185,47 @@
   },
   {
     "method": "GET",
+    "path": "/assets/languages/c-b0e43fb9.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3900",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "e42929d9ad39a4825b56ed66f7d60c935e950a5a8324359bb5d101b48446f3ea"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/languages/cpp-642c4478.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5704",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "1e596a1df87a000ace026c01eefb89bb53cd1a387847af68ceaf84b10c8859f2"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/languages/csharp-442415b2.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3999",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "ff59794cc774eb8592d470072872bed10c427966eac9b6d3640e984b20924ca8"
+  },
+  {
+    "method": "GET",
     "path": "/assets/languages/css-a7f2e40b.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "14834",
       "content-type": "text/javascript"
     },
@@ -1881,7 +3237,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1207",
       "content-type": "text/javascript"
     },
@@ -1889,11 +3245,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/languages/dockerfile-1b7d380f.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "509",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "e795b1d4574513b6574c51bcf621870bbcde5f29a77a588858b327af0f8724c8"
+  },
+  {
+    "method": "GET",
     "path": "/assets/languages/go-10465864.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2367",
       "content-type": "text/javascript"
     },
@@ -1905,7 +3273,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "6202",
       "content-type": "text/javascript"
     },
@@ -1917,7 +3285,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "17544",
       "content-type": "text/javascript"
     },
@@ -1929,7 +3297,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1312",
       "content-type": "text/javascript"
     },
@@ -1937,11 +3305,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/languages/plaintext-46889ab9.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "203",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "211be7ae7466b74f61822880d60b3d2de972ae1c856f4718078f7304fc7c0aa1"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/languages/powershell-63ad9b0a.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4437",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "dbce4c901f1d2a705b026dba0ae1c7eb4bc6284b503ae71e634be86c1c0da512"
+  },
+  {
+    "method": "GET",
     "path": "/assets/languages/python-8f48fd1a.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "9102",
       "content-type": "text/javascript"
     },
@@ -1953,7 +3345,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "9921",
       "content-type": "text/javascript"
     },
@@ -1965,7 +3357,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "5474",
       "content-type": "text/javascript"
     },
@@ -1977,7 +3369,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "11755",
       "content-type": "text/javascript"
     },
@@ -1985,11 +3377,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/languages/typescript-652943bb.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "7624",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "bece8768520311968f3a0c0f8b3b8c0ce2d4fe1ffff77e2b14f5d6d2e45855f7"
+  },
+  {
+    "method": "GET",
     "path": "/assets/languages/xml-fa7f1eda.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "7000",
       "content-type": "text/javascript"
     },
@@ -1997,11 +3401,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/languages/yaml-33f9ada8.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1805",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "e2c21b0b82cfedfb1e32e5963709547d5fadf8f0a22cb524e60622cf6de06953"
+  },
+  {
+    "method": "GET",
     "path": "/assets/lanyard-945079e9.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1896",
       "content-type": "image/svg+xml"
     },
@@ -2013,7 +3429,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "670",
       "content-type": "image/svg+xml"
     },
@@ -2025,7 +3441,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1896",
       "content-type": "text/css"
     },
@@ -2037,7 +3453,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "169043",
       "content-type": "audio/mpeg"
     },
@@ -2045,143 +3461,11 @@
   },
   {
     "method": "GET",
-    "path": "/assets/lexxy-2876c58e.css",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "101",
-      "content-type": "text/css"
-    },
-    "body_sha256": "48f44047a2a3bb24f8314f69598c23ddfe95b046f78cf3f6d1358c6c98906166"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy-a21f41d4.js",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "922910",
-      "content-type": "text/javascript"
-    },
-    "body_sha256": "d564df86da68cdb9d7ef1ccc037ea92dcf0f8b333f19c72b1faa9200c981df36"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy-cf040c43.js.map",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "2179664",
-      "content-type": "text/plain"
-    },
-    "body_sha256": "13f7e7317722f5217682688c6f55f4cfd196aacab075076901fe80f89bb122d0"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy-content-0ff2f961.css",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "10295",
-      "content-type": "text/css"
-    },
-    "body_sha256": "ae67439f7da9269ca1d4b919b10afcb164ee6d1923fe3db4c21c016542d62858"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy-editor-2d5c7ebe.css",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "28870",
-      "content-type": "text/css"
-    },
-    "body_sha256": "09c7b2338026c8ac96202f11f8a087bc7c78e5264d011ff9ad09289b5c8f121c"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy-variables-3fef4323.css",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "3449",
-      "content-type": "text/css"
-    },
-    "body_sha256": "c36ad5343cb0286bf3c6213804551300898c37fc3e5f284032fd97287387d91c"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy.js-380cb9c9.br",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "210977",
-      "content-type": "text/plain"
-    },
-    "body_sha256": "cab4870ec9e88e25020e4ea831638e3262d1424cb8304beb57f959a794187e7e"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy.js-9130cdde.gz",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "257314",
-      "content-type": "application/x-gzip"
-    },
-    "body_sha256": "5f26b0b88fabb261aba7f787613f8834f9b0150cd915ba31f683a41144fd8d2a"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy.min-68f38983.js",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "609282",
-      "content-type": "text/javascript"
-    },
-    "body_sha256": "bf4edd6ad01d08fa56ecf5d4f59bb5b68a7acd76ea02f9f12d055010125948ed"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy.min.js-02328003.br",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "155509",
-      "content-type": "text/plain"
-    },
-    "body_sha256": "f9a166168d9c3ad36209a62ee6ba0379d39b8fce907334913563afb433c7d8df"
-  },
-  {
-    "method": "GET",
-    "path": "/assets/lexxy.min.js-56322c4c.gz",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "186473",
-      "content-type": "application/x-gzip"
-    },
-    "body_sha256": "bb8201f6746ae40862ae2e70012dc0ea387db145ba961515493d43043727acfe"
-  },
-  {
-    "method": "GET",
     "path": "/assets/lib/autocomplete/autocomplete_handler-becd1e1a.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1174",
       "content-type": "text/javascript"
     },
@@ -2189,15 +3473,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/lib/autocomplete/base_autocomplete_handler-e29a896e.js",
+    "path": "/assets/lib/autocomplete/base_autocomplete_handler-d146f93d.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "3311",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3368",
       "content-type": "text/javascript"
     },
-    "body_sha256": "81e34d36e1449fc1c69bb59646e9fa8d24b2544e6775907a04584a2b8d278ebb"
+    "body_sha256": "594ecff6190382ed674b02595ef111f51857c0fec693fd78b0fb544cf28b02d7"
   },
   {
     "method": "GET",
@@ -2205,7 +3489,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "4204",
       "content-type": "text/javascript"
     },
@@ -2217,7 +3501,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1352",
       "content-type": "text/javascript"
     },
@@ -2229,7 +3513,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1177",
       "content-type": "text/javascript"
     },
@@ -2241,7 +3525,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1061",
       "content-type": "text/javascript"
     },
@@ -2253,7 +3537,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2747",
       "content-type": "text/javascript"
     },
@@ -2261,11 +3545,47 @@
   },
   {
     "method": "GET",
+    "path": "/assets/lib/autocomplete/markdown_icons_autocomplete_handler-68d06bcd.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3176",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "5c96a1b47326c892285579c1a4832611854ee8730918721d5af87e6c33ce6284"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/lib/autocomplete/markdown_mentions_autocomplete_handler-8f7f4748.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2179",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "58a9f214e290d236005ae14551c16a28915cb7959a2c87e46d3d8c9aff514952"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/lib/autocomplete/markdown_slash_commands_autocomplete_handler-70d74b00.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5607",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "f4d39297bca72323d2e7c3ca0c0b9d7dda1583508344fbffb442de78b2724573"
+  },
+  {
+    "method": "GET",
     "path": "/assets/lib/autocomplete/renderer-5caf6120.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1662",
       "content-type": "text/javascript"
     },
@@ -2277,7 +3597,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2198",
       "content-type": "text/javascript"
     },
@@ -2289,7 +3609,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1526",
       "content-type": "text/javascript"
     },
@@ -2297,27 +3617,27 @@
   },
   {
     "method": "GET",
-    "path": "/assets/lib/autocomplete/suggestion_controller-10624c40.js",
+    "path": "/assets/lib/autocomplete/suggestion_controller-ab82011a.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "9016",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "12061",
       "content-type": "text/javascript"
     },
-    "body_sha256": "bc1344d6ea78ad85be603080a6b0076a831605a433d293afc023b354b2103e53"
+    "body_sha256": "a5ee4a1f2790ecca775a86aff4afda8e838d315f53b8ee63e03a7b0f2bb3cdd4"
   },
   {
     "method": "GET",
-    "path": "/assets/lib/autocomplete/suggestion_results_controller-91405749.js",
+    "path": "/assets/lib/autocomplete/suggestion_results_controller-a980a4a6.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "6257",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "6254",
       "content-type": "text/javascript"
     },
-    "body_sha256": "9cda34fe1fa39e004a1a5de63af3539e441ff9b3c940fb2d88ba4903227571fd"
+    "body_sha256": "120c98d06445aab5d406b61a9245186c3b69f53abe8d2ea43ff115aa76172a31"
   },
   {
     "method": "GET",
@@ -2325,7 +3645,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "944",
       "content-type": "text/javascript"
     },
@@ -2337,7 +3657,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "663",
       "content-type": "text/javascript"
     },
@@ -2345,27 +3665,51 @@
   },
   {
     "method": "GET",
-    "path": "/assets/lib/rich_text/campfire_extension-f62f017b.js",
+    "path": "/assets/lib/huddle/devices-fcae04dc.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "612",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2348",
       "content-type": "text/javascript"
     },
-    "body_sha256": "54614caa3eeeb97bd369641c5a689f9e80698438ae98aa3a26f818eebb0d4faa"
+    "body_sha256": "de1b583b08a3564395579f6417df170fa52bdf61de167f7589b01443610f05b1"
   },
   {
     "method": "GET",
-    "path": "/assets/lib/rich_text/cite_node-b4d2b89a.js",
+    "path": "/assets/lib/huddle/meter-8045cff5.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "711",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3232",
       "content-type": "text/javascript"
     },
-    "body_sha256": "c3c29c9bce26a8a011cf827e3ef374eceb659b426777fc6e9082ae44fbe5e61a"
+    "body_sha256": "bc748de0e62656bfa03bde00e0854a8befad85a55798e1bdc98b78b1cde61e8d"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/lib/huddle/stats-79478c26.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "6931",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "9ea4f057d1e26e8d081085615f28aeb28ccd125873002f5d1def8ca093d3665a"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/lib/huddle_noise_suppressor-cc2e5388.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5942",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "b6b13102559e37b51db72c04ebf2b5f32a88c93fa1910758271499e09c688b3e"
   },
   {
     "method": "GET",
@@ -2373,7 +3717,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "515",
       "content-type": "image/svg+xml"
     },
@@ -2385,7 +3729,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "837",
       "content-type": "text/css"
     },
@@ -2397,7 +3741,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "674",
       "content-type": "image/svg+xml"
     },
@@ -2405,11 +3749,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/link_embeds-692ba221.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3949",
+      "content-type": "text/css"
+    },
+    "body_sha256": "b40b24cebcf5cef54adc268048c61893ba3f107853210abde305de2346d697d1"
+  },
+  {
+    "method": "GET",
     "path": "/assets/live-550f1f88.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "30026",
       "content-type": "audio/mpeg"
     },
@@ -2417,11 +3773,47 @@
   },
   {
     "method": "GET",
+    "path": "/assets/livekit-client-ae36432e.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "579873",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "f18a115f401581bb6dc25e4991157ad35433a3b97fb3f8aa0dd3693102002137"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/livekit-client.LICENSE-e81f03ca.txt",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "10142",
+      "content-type": "text/plain"
+    },
+    "body_sha256": "09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/livekit-client.NOTICES-81d41d97.txt",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "56857",
+      "content-type": "text/plain"
+    },
+    "body_sha256": "c87d28dbc5680efc9dffb4bc4ca08d5668603919ea54f63871c629556407d364"
+  },
+  {
+    "method": "GET",
     "path": "/assets/lock-7cdf4b3d.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "365",
       "content-type": "image/svg+xml"
     },
@@ -2433,7 +3825,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "220875",
       "content-type": "audio/mpeg"
     },
@@ -2445,7 +3837,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "841",
       "content-type": "image/svg+xml"
     },
@@ -2457,7 +3849,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "61306",
       "content-type": "image/png"
     },
@@ -2469,7 +3861,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "405666",
       "content-type": "image/png"
     },
@@ -2481,7 +3873,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "594",
       "content-type": "image/svg+xml"
     },
@@ -2493,7 +3885,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "14684",
       "content-type": "audio/mpeg"
     },
@@ -2505,7 +3897,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "12110",
       "content-type": "audio/mpeg"
     },
@@ -2513,11 +3905,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/mark-unread-0996471c.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "188",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "301554eed11d553cf7daeea6420c09b42a54024ecbd46254399c3f16233dd174"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/markdown-4a4d2e6e.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3910",
+      "content-type": "text/css"
+    },
+    "body_sha256": "6aef680432f389b896d1ae1c8b1ad1ff8c58f65038553d177f813e3f01d468db"
+  },
+  {
+    "method": "GET",
     "path": "/assets/maybe-4a638e83.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "123904",
       "content-type": "audio/mpeg"
     },
@@ -2529,7 +3945,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "221",
       "content-type": "image/svg+xml"
     },
@@ -2541,7 +3957,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "173",
       "content-type": "image/svg+xml"
     },
@@ -2553,7 +3969,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "173",
       "content-type": "image/svg+xml"
     },
@@ -2561,11 +3977,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/messages-70898b6c.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "27088",
+      "content-type": "text/css"
+    },
+    "body_sha256": "c9e8f3af266a2f26ee8876d0e7b5255e8b2ab8a5557126e13f77b361ca3a1c03"
+  },
+  {
+    "method": "GET",
     "path": "/assets/messages-9395d503.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "269",
       "content-type": "image/svg+xml"
     },
@@ -2577,7 +4005,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "688",
       "content-type": "image/svg+xml"
     },
@@ -2585,23 +4013,11 @@
   },
   {
     "method": "GET",
-    "path": "/assets/messages-c5485fef.css",
-    "env": {},
-    "status": 200,
-    "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "11905",
-      "content-type": "text/css"
-    },
-    "body_sha256": "6699be7c9c3f6e25902859d76f88492989811a5a135300a241407888f11067b5"
-  },
-  {
-    "method": "GET",
     "path": "/assets/messages-empty-84c8fd41.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1544",
       "content-type": "image/svg+xml"
     },
@@ -2613,7 +4029,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "491",
       "content-type": "image/svg+xml"
     },
@@ -2625,7 +4041,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "230",
       "content-type": "image/svg+xml"
     },
@@ -2637,7 +4053,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "287",
       "content-type": "image/svg+xml"
     },
@@ -2645,51 +4061,75 @@
   },
   {
     "method": "GET",
-    "path": "/assets/models/client_message-de3c07cf.js",
+    "path": "/assets/models/client_message-fa10c0f1.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "2794",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3942",
       "content-type": "text/javascript"
     },
-    "body_sha256": "ff4541ef5badb2827388acbe1545636b6cdb287c5d7f7cdfeb63f70a7e2341ee"
+    "body_sha256": "73452e0f3f6686249128f344842b7cf4838c0c19ae3fdca5b3ae2d356cfdc7fb"
   },
   {
     "method": "GET",
-    "path": "/assets/models/file_uploader-d3a5c44b.js",
+    "path": "/assets/models/code_highlighter-08a283de.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1219",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3030",
       "content-type": "text/javascript"
     },
-    "body_sha256": "55ec774e029f54b9611b48b4859c1f1f535c40f46399c9eb2b30c2643226239d"
+    "body_sha256": "2d126afd516220e676eda01c8f0abc7f340b62e4dfbb7bf628d4c6f5423036ce"
   },
   {
     "method": "GET",
-    "path": "/assets/models/message_formatter-f39a0c5d.js",
+    "path": "/assets/models/drive_share_client-31338302.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "3194",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5439",
       "content-type": "text/javascript"
     },
-    "body_sha256": "9b6f390fa38ed2b24f026047d4afd36bd2c33b94645f55657ea5eef1a5b2aa78"
+    "body_sha256": "8f4105346b9c739bddd5327183c8a187f5db39ad39256a2b4462ce70929f8c64"
   },
   {
     "method": "GET",
-    "path": "/assets/models/message_paginator-b79013e3.js",
+    "path": "/assets/models/file_uploader-98c34a10.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "5001",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1442",
       "content-type": "text/javascript"
     },
-    "body_sha256": "a7c2340623bb49986d820d42c24b79d9dbcecdd74c92cfdae58b6552cdd45fa7"
+    "body_sha256": "8a1cc01c91e238cc5c478a9ef6827a4b8cb2f5b7f59c4fe847147e1327185582"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/models/message_formatter-66351374.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4065",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "c2a99ed7344c0daa4aba8f7b9c8082d53c05265d9adf79527673bf19ee7ed32b"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/models/message_paginator-035a8ee7.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5251",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "190c5f0a35905f6e36cd5c766d209a223477085cabdbada043e228d11a2feae3"
   },
   {
     "method": "GET",
@@ -2697,7 +4137,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1378",
       "content-type": "text/javascript"
     },
@@ -2705,27 +4145,87 @@
   },
   {
     "method": "GET",
-    "path": "/assets/models/typing_tracker-42a444a5.js",
+    "path": "/assets/models/typing_tracker-9d841e30.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "911",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "957",
       "content-type": "text/javascript"
     },
-    "body_sha256": "463994a9f012a0619b7eadcf360a7e0ba747a58e157fc27b5601e60f0f51e17e"
+    "body_sha256": "f1fa34fd88d315aa305660ba77cf94fada8196f2fa6be83037c2f21b320a29eb"
   },
   {
     "method": "GET",
-    "path": "/assets/nav-05e7183a.css",
+    "path": "/assets/motion-535d4a9f.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "1315",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1203",
       "content-type": "text/css"
     },
-    "body_sha256": "5d873853a0b508590f78eee7570d18070a46a1f3fbc813e1266204261feb4767"
+    "body_sha256": "9a6ff0122e3e5d5d12873b44c3db60f3f032ed0fec00585642a1db6d4927ead4"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/nav-4f83591a.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2194",
+      "content-type": "text/css"
+    },
+    "body_sha256": "5d6e72b417088e96e8fe5e11730f61c59528b293d329857cfdd3f2c82dfdabf9"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/navigation-d9be90a7.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "13221",
+      "content-type": "text/css"
+    },
+    "body_sha256": "e297031efb9a35a9bd68f6aae3da819424670ca11b81bf215442d0baa30fce70"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/noise-suppressor-b7cb655b.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1372",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "5c2282b952734bc476f4134902cdfa5c2fae7842c67dfddd0c43830a91d651cd"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/noise-suppressor-worklet-adb3f748.js",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "64534",
+      "content-type": "text/javascript"
+    },
+    "body_sha256": "bcef2b737983bf5d565b996f1a2033b48b8ed659aa1c4ee32bbbfdfde1cb14e9"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/noise-suppressor.LICENSE-1154f40a.txt",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1068",
+      "content-type": "text/plain"
+    },
+    "body_sha256": "d91a727fcf7115e66c14fd7430b920baaa2c49f9908d0df473e7d971affcf21a"
   },
   {
     "method": "GET",
@@ -2733,7 +4233,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "91404",
       "content-type": "audio/mpeg"
     },
@@ -2745,7 +4245,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1125",
       "content-type": "image/svg+xml"
     },
@@ -2757,7 +4257,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "416",
       "content-type": "image/svg+xml"
     },
@@ -2769,7 +4269,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "593",
       "content-type": "image/svg+xml"
     },
@@ -2781,7 +4281,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "506",
       "content-type": "image/svg+xml"
     },
@@ -2793,7 +4293,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "873",
       "content-type": "image/svg+xml"
     },
@@ -2801,11 +4301,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/notification-bell-muted-7e9f1f4a.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "499",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "5a4e799f153d332521cf2382ffd2f364d3363d0ec8d8946d2956a21335d4de0d"
+  },
+  {
+    "method": "GET",
     "path": "/assets/notification-bell-nothing-d8096c76.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "557",
       "content-type": "image/svg+xml"
     },
@@ -2817,7 +4329,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "172115",
       "content-type": "audio/mpeg"
     },
@@ -2829,7 +4341,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "777",
       "content-type": "image/svg+xml"
     },
@@ -2841,7 +4353,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "60472",
       "content-type": "audio/mpeg"
     },
@@ -2853,7 +4365,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "59860",
       "content-type": "audio/mpeg"
     },
@@ -2861,15 +4373,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/panels-af44ec6d.css",
+    "path": "/assets/panels-3721947f.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "959",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1098",
       "content-type": "text/css"
     },
-    "body_sha256": "34e106cb2d657b01d34dff7d4778cd5c6843d66fb50630fd1d6edcc21aa7dff3"
+    "body_sha256": "7b8df2d97f177b0f9ff66b5d748b2109eec4173d24c9e10c19c9d472ec8509a9"
   },
   {
     "method": "GET",
@@ -2877,7 +4389,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2355",
       "content-type": "image/svg+xml"
     },
@@ -2889,7 +4401,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "662",
       "content-type": "image/svg+xml"
     },
@@ -2897,11 +4409,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/people-b8926caa.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "9516",
+      "content-type": "text/css"
+    },
+    "body_sha256": "ba03e3466b80821a04cc7bdb19828da828d61534de6e55860f89ac0d5d701af5"
+  },
+  {
+    "method": "GET",
     "path": "/assets/person-add-1432b76b.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "729",
       "content-type": "image/svg+xml"
     },
@@ -2913,7 +4437,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "377",
       "content-type": "image/svg+xml"
     },
@@ -2921,11 +4445,59 @@
   },
   {
     "method": "GET",
+    "path": "/assets/pin-2f109331.svg",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "104",
+      "content-type": "image/svg+xml"
+    },
+    "body_sha256": "aaca483afd4586718f4f07db418119fc8445b71413abdf741b3b190cbdf5cac1"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/pins_saved-d50815ec.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "9880",
+      "content-type": "text/css"
+    },
+    "body_sha256": "c1d48473afb641c619d27c642be9696f257463ca926a8f9e0c429afc3a7b328e"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/profile_settings-ee00efb3.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1502",
+      "content-type": "text/css"
+    },
+    "body_sha256": "9350fa4ca24e68e9adb01ce8f12ba5e5d27f4425fed5ee15669477c410fe9ef0"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/public-fd278953.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4518",
+      "content-type": "text/css"
+    },
+    "body_sha256": "59987569930530edaeea9908eceb8bae4f2027746850ecfd74f620a1460e456f"
+  },
+  {
+    "method": "GET",
     "path": "/assets/pushit-f43f90a7.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "156045",
       "content-type": "audio/mpeg"
     },
@@ -2937,7 +4509,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "413",
       "content-type": "image/svg+xml"
     },
@@ -2949,7 +4521,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "24018",
       "content-type": "text/javascript"
     },
@@ -2961,7 +4533,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "22369",
       "content-type": "text/javascript"
     },
@@ -2973,7 +4545,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "692",
       "content-type": "image/svg+xml"
     },
@@ -2985,7 +4557,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "497",
       "content-type": "image/svg+xml"
     },
@@ -2997,7 +4569,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "401",
       "content-type": "image/svg+xml"
     },
@@ -3009,7 +4581,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "385",
       "content-type": "image/svg+xml"
     },
@@ -3021,7 +4593,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "17859",
       "content-type": "audio/mpeg"
     },
@@ -3029,11 +4601,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/rnnoise-f5ba0fec.wasm",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "152656",
+      "content-type": "application/wasm"
+    },
+    "body_sha256": "8b60a2ab88fdae2d1a9f940249d0eb072f28ba8e796f7304347b4e07839c8853"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/rnnoise-simd-4aac0d96.wasm",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "157234",
+      "content-type": "application/wasm"
+    },
+    "body_sha256": "378fd17c294db15ee4e818ba5ef072242a21c8ad7445b483f7f46d7dc4f2c253"
+  },
+  {
+    "method": "GET",
     "path": "/assets/rollout-3a826ae4.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "97482",
       "content-type": "audio/mpeg"
     },
@@ -3041,11 +4637,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/room_events-4a98d5ac.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "5141",
+      "content-type": "text/css"
+    },
+    "body_sha256": "f80cb1a74409c48772e15de34714ec86f568fa34c140d72395a69f8155a834ff"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/room_files-1b36e9a9.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2384",
+      "content-type": "text/css"
+    },
+    "body_sha256": "08dbc1d03966228451cdec415d4f00fbab062b4e78ddc33ea1413d8fca887509"
+  },
+  {
+    "method": "GET",
     "path": "/assets/rumble-7b5d6e4f.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "308038",
       "content-type": "audio/mpeg"
     },
@@ -3057,7 +4677,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "182193",
       "content-type": "audio/mpeg"
     },
@@ -3069,7 +4689,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "245661",
       "content-type": "image/png"
     },
@@ -3081,7 +4701,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "183716",
       "content-type": "image/png"
     },
@@ -3093,7 +4713,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "283755",
       "content-type": "image/png"
     },
@@ -3105,7 +4725,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "265",
       "content-type": "image/svg+xml"
     },
@@ -3117,7 +4737,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "25669",
       "content-type": "audio/mpeg"
     },
@@ -3129,7 +4749,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "176",
       "content-type": "text/css"
     },
@@ -3141,7 +4761,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2402",
       "content-type": "image/svg+xml"
     },
@@ -3153,7 +4773,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "135427",
       "content-type": "audio/mpeg"
     },
@@ -3165,7 +4785,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "522",
       "content-type": "image/svg+xml"
     },
@@ -3173,15 +4793,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/sidebar-0be58db9.css",
+    "path": "/assets/sidebar-f9e42ccc.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "7016",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "11002",
       "content-type": "text/css"
     },
-    "body_sha256": "224d9873f52937fc481916fdf91f36354e0cfd952f550b4ba98cb0d596925cb3"
+    "body_sha256": "589d16e9656eb56eb2b0d00df7835f2cad61a00f82bf961ae42e09897a63026f"
   },
   {
     "method": "GET",
@@ -3189,7 +4809,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1394",
       "content-type": "text/css"
     },
@@ -3197,11 +4817,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/slack_import-c250e93f.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "316",
+      "content-type": "text/css"
+    },
+    "body_sha256": "208097f6361543c0f7e0f1221d260fada4f60b0d7411b673d50162b5b37f1e7e"
+  },
+  {
+    "method": "GET",
     "path": "/assets/sounds/56k-1567db5b.webp",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "5672",
       "content-type": "image/webp"
     },
@@ -3213,7 +4845,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "6378",
       "content-type": "image/gif"
     },
@@ -3225,7 +4857,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "5386",
       "content-type": "image/webp"
     },
@@ -3237,7 +4869,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "20500",
       "content-type": "image/gif"
     },
@@ -3249,7 +4881,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "358354",
       "content-type": "image/gif"
     },
@@ -3261,7 +4893,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "138564",
       "content-type": "image/webp"
     },
@@ -3273,7 +4905,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2886",
       "content-type": "image/webp"
     },
@@ -3285,7 +4917,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "3556",
       "content-type": "image/png"
     },
@@ -3297,7 +4929,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "176659",
       "content-type": "image/gif"
     },
@@ -3309,7 +4941,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "144828",
       "content-type": "image/webp"
     },
@@ -3321,7 +4953,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "588",
       "content-type": "image/webp"
     },
@@ -3333,7 +4965,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "748",
       "content-type": "image/webp"
     },
@@ -3345,7 +4977,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1023",
       "content-type": "image/png"
     },
@@ -3357,7 +4989,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2116",
       "content-type": "image/webp"
     },
@@ -3369,7 +5001,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2674",
       "content-type": "image/webp"
     },
@@ -3381,7 +5013,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2483",
       "content-type": "image/gif"
     },
@@ -3393,7 +5025,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "878",
       "content-type": "image/webp"
     },
@@ -3405,7 +5037,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "893",
       "content-type": "image/gif"
     },
@@ -3417,7 +5049,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "63846",
       "content-type": "image/gif"
     },
@@ -3429,7 +5061,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "42818",
       "content-type": "image/webp"
     },
@@ -3441,7 +5073,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "42063",
       "content-type": "image/gif"
     },
@@ -3453,7 +5085,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "3930",
       "content-type": "image/webp"
     },
@@ -3465,7 +5097,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "324188",
       "content-type": "image/webp"
     },
@@ -3477,7 +5109,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "444210",
       "content-type": "image/gif"
     },
@@ -3489,7 +5121,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2792",
       "content-type": "image/png"
     },
@@ -3501,7 +5133,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "2174",
       "content-type": "image/webp"
     },
@@ -3513,7 +5145,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "8515",
       "content-type": "image/gif"
     },
@@ -3525,7 +5157,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "7962",
       "content-type": "image/webp"
     },
@@ -3537,7 +5169,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "532",
       "content-type": "text/css"
     },
@@ -3545,11 +5177,35 @@
   },
   {
     "method": "GET",
+    "path": "/assets/stage-67166157.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "6898",
+      "content-type": "text/css"
+    },
+    "body_sha256": "009b28bfb90146a1272e0d753ae60452ee835326663bf7f989da6ce133c3e33f"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/status-e109ec92.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1614",
+      "content-type": "text/css"
+    },
+    "body_sha256": "fc045627e4d716e5d96afe8e52818ef9e5fff795b60a6236c25b323056f95fc7"
+  },
+  {
+    "method": "GET",
     "path": "/assets/stimulus-autoloader-9d447422.js",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "1747",
       "content-type": "text/javascript"
     },
@@ -3561,7 +5217,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "88790",
       "content-type": "text/javascript"
     },
@@ -3573,7 +5229,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "989",
       "content-type": "text/javascript"
     },
@@ -3585,7 +5241,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "3315",
       "content-type": "text/javascript"
     },
@@ -3597,7 +5253,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "164428",
       "content-type": "text/plain"
     },
@@ -3609,7 +5265,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "45657",
       "content-type": "text/javascript"
     },
@@ -3621,7 +5277,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "45050",
       "content-type": "audio/mpeg"
     },
@@ -3633,7 +5289,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "64096",
       "content-type": "audio/mpeg"
     },
@@ -3645,7 +5301,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "318",
       "content-type": "image/svg+xml"
     },
@@ -3653,11 +5309,47 @@
   },
   {
     "method": "GET",
+    "path": "/assets/text_size-2511e944.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "496",
+      "content-type": "text/css"
+    },
+    "body_sha256": "053d9c6618da52ff72078585cf9f2e8cc72dd129fa8b8925d9fb718af7a2dfb0"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/theme-55f137e9.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2566",
+      "content-type": "text/css"
+    },
+    "body_sha256": "c44ba27ed6da2f0ea079519745866709d11a0fbe47336b037edcda706674dc65"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/thread_panel-70546b04.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "20815",
+      "content-type": "text/css"
+    },
+    "body_sha256": "2eb4497f5fb931acdbe26d6063d7ea736a049b95e49cd976e448ccac0e9eb738"
+  },
+  {
+    "method": "GET",
     "path": "/assets/tmyk-035cbb8b.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "52171",
       "content-type": "audio/mpeg"
     },
@@ -3669,7 +5361,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "39117",
       "content-type": "audio/mpeg"
     },
@@ -3677,11 +5369,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/tour-5ac7cce2.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2435",
+      "content-type": "text/css"
+    },
+    "body_sha256": "2bda294f4631e908495466a8b88d74f43fba6c41fd42dce38c2850f1b7db3302"
+  },
+  {
+    "method": "GET",
     "path": "/assets/transfer-3ec4f61b.svg",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "499",
       "content-type": "image/svg+xml"
     },
@@ -3693,7 +5397,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "535",
       "content-type": "image/svg+xml"
     },
@@ -3705,7 +5409,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "526142",
       "content-type": "text/javascript"
     },
@@ -3717,7 +5421,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "19638",
       "content-type": "text/css"
     },
@@ -3729,7 +5433,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "343499",
       "content-type": "audio/mpeg"
     },
@@ -3741,7 +5445,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "64956",
       "content-type": "audio/mpeg"
     },
@@ -3753,7 +5457,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "188046",
       "content-type": "text/javascript"
     },
@@ -3765,7 +5469,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "105417",
       "content-type": "text/javascript"
     },
@@ -3777,7 +5481,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "365589",
       "content-type": "text/plain"
     },
@@ -3785,11 +5489,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/two_factor-540cf28b.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "624",
+      "content-type": "text/css"
+    },
+    "body_sha256": "50fa9b325672477447119fe6ec140680b7713287e179e9a0d78d23594d574b72"
+  },
+  {
+    "method": "GET",
     "path": "/assets/unix-bb19b65d.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "47304",
       "content-type": "audio/mpeg"
     },
@@ -3797,15 +5513,27 @@
   },
   {
     "method": "GET",
-    "path": "/assets/utilities-e2f32466.css",
+    "path": "/assets/utilities-4f89c148.css",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
-      "content-length": "6670",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "7489",
       "content-type": "text/css"
     },
-    "body_sha256": "c7c9bb4c6117b59ced40887bd88c84c3edc8a339a824716eb3786122ce305d81"
+    "body_sha256": "17083abdd5cf3c899d1a5d322009e01b5ed8f9e79cc6776023a841f305c8c784"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/voice_channels-4b667aef.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "2860",
+      "content-type": "text/css"
+    },
+    "body_sha256": "8582c5a3d63e8f9c5de375ba7e8080353aea692cbc284f2322662b156aef2e37"
   },
   {
     "method": "GET",
@@ -3813,7 +5541,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "56239",
       "content-type": "audio/mpeg"
     },
@@ -3825,7 +5553,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "764",
       "content-type": "image/svg+xml"
     },
@@ -3837,7 +5565,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "129351",
       "content-type": "audio/mpeg"
     },
@@ -3849,7 +5577,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "125832",
       "content-type": "audio/mpeg"
     },
@@ -3857,11 +5585,59 @@
   },
   {
     "method": "GET",
+    "path": "/assets/work_thread_links-5e070978.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1850",
+      "content-type": "text/css"
+    },
+    "body_sha256": "7b87fcd9f85d7d1deaea56068fd446ee9edcfaa5bcb57434f645a509b939a27f"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/work_threads-d777677b.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "3779",
+      "content-type": "text/css"
+    },
+    "body_sha256": "e8fd9106d82f9d5f40f77bdbe1dc259f666137bf965fcfabae71ae3f0c33d266"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/workspace-ee6bc006.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "33323",
+      "content-type": "text/css"
+    },
+    "body_sha256": "68a9be8880fada4a514f00203b4529abdab6f37ffec68ea4fb57822f54303c26"
+  },
+  {
+    "method": "GET",
+    "path": "/assets/workspace_destinations-7f1ece60.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "1099",
+      "content-type": "text/css"
+    },
+    "body_sha256": "680b8cb6d91e23f26090a056c013552d62ad3bc276619f4f2fd890eb2a922390"
+  },
+  {
+    "method": "GET",
     "path": "/assets/wups-fbad935c.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "18252",
       "content-type": "audio/mpeg"
     },
@@ -3869,11 +5645,23 @@
   },
   {
     "method": "GET",
+    "path": "/assets/x_cards-7b7f19b7.css",
+    "env": {},
+    "status": 200,
+    "headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "content-length": "4868",
+      "content-type": "text/css"
+    },
+    "body_sha256": "9d0d3790cd92e592e1583c0558a5307ffd02b2570d267f47f127c4e9dbb8bb32"
+  },
+  {
+    "method": "GET",
     "path": "/assets/yay-1fae7a37.mp3",
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "12728",
       "content-type": "audio/mpeg"
     },
@@ -3885,7 +5673,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "214682",
       "content-type": "audio/mpeg"
     },
@@ -3897,7 +5685,7 @@
     "env": {},
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "656123",
       "content-type": "audio/mpeg"
     },
@@ -3911,7 +5699,7 @@
     },
     "status": 206,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "10",
       "content-range": "bytes 0-9/133677",
       "content-type": "audio/mpeg"
@@ -3926,7 +5714,7 @@
     },
     "status": 206,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "5",
       "content-range": "bytes 133672-133676/133677",
       "content-type": "audio/mpeg"
@@ -3941,7 +5729,7 @@
     },
     "status": 206,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "133577",
       "content-range": "bytes 100-133676/133677",
       "content-type": "audio/mpeg"
@@ -3971,7 +5759,7 @@
     },
     "status": 200,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "133677",
       "content-type": "audio/mpeg"
     },
@@ -3985,7 +5773,7 @@
     },
     "status": 206,
     "headers": {
-      "Cache-Control": "public, max-age=2592000",
+      "cache-control": "public, max-age=60, stale-while-revalidate=300",
       "content-length": "10",
       "content-range": "bytes 0-9/133677",
       "content-type": "audio/mpeg"

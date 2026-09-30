@@ -1,0 +1,454 @@
+{
+  "messages": [
+    {
+      "name": "image",
+      "message": {
+        "id": 935961903,
+        "client_message_id": "16b00454-0dcb-5935-8974-a3a197287968",
+        "room_id": 654632876,
+        "room_name": "Designers",
+        "creator": {
+          "id": 712064548,
+          "name": "Kevin",
+          "title": "Kevin – Programmer",
+          "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+        },
+        "created_at": "2026-03-01T11:10:00.000000Z",
+        "updated_at": "2026-03-01T11:11:00.000000Z",
+        "all_emoji": false,
+        "content": {
+          "type": "attachment",
+          "filename": "moon.jpg",
+          "filename_base": "moon",
+          "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg",
+          "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg?disposition=attachment",
+          "preview": {
+            "type": "image",
+            "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg"
+          },
+          "width": 640,
+          "height": 640
+        },
+        "boosts": [
+          {
+            "id": 329428244,
+            "updated_at": "2026-03-01T11:11:00.000000Z",
+            "message_id": 935961903,
+            "content": "🌕",
+            "all_emoji": true,
+            "booster": {
+              "id": 149087659,
+              "name": "Jason",
+              "title": "Jason",
+              "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+            },
+            "reaction": {
+              "title": "full_moon",
+              "icon": null,
+              "icon_alt": null
+            }
+          }
+        ],
+        "details": {
+          "thread_id": null,
+          "system_note": false,
+          "action": false,
+          "edited_at": null,
+          "streaming": false,
+          "markdown": false,
+          "pinned": false,
+          "reply_count": 0,
+          "reply": null,
+          "forwarded": false,
+          "forward_note": null,
+          "drive_urls": [],
+          "room_icon": null,
+          "agent_steps": [],
+          "poll": null
+        }
+      },
+      "html_by_viewer": {
+        "david@37signals.com": "\n<div id=\"message_16b00454-0dcb-5935-8974-a3a197287968\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935961903\" data-room-id=\"654632876\" data-message-timestamp=\"1772363400000\" data-message-updated-at=\"1772363460000\" data-sort-value=\"1772363400000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"712064548\" data-actions-url=\"http://campfire.test/rooms/654632876/messages/935961903/actions\" data-message-url=\"http://campfire.test/rooms/654632876/messages/935961903\" data-boost-url=\"http://campfire.test/messages/935961903/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-01T11:10:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_16b00454-0dcb-5935-8974-a3a197287968\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_16b00454-0dcb-5935-8974-a3a197287968\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Kevin – Programmer\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n        <strong data-reply-target=\"author\">Kevin</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/654632876/@935961903\"><time class=\"message__timestamp\" datetime=\"2026-03-01T11:10:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/654632876/@935961903\">Designers</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_16b00454-0dcb-5935-8974-a3a197287968\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg\" /></a></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_16b00454-0dcb-5935-8974-a3a197287968\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_16b00454-0dcb-5935-8974-a3a197287968\" action=\"/messages/935961903/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"🌕\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"full_moon\" aria-label=\"full_moon: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_16b00454-0dcb-5935-8974-a3a197287968\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"149087659\" data-reaction=\"🌕\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">🌕</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">full_moon</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_16b00454-0dcb-5935-8974-a3a197287968\">\n          <span class=\"reaction-chip__reactor\">Jason</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_16b00454-0dcb-5935-8974-a3a197287968\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935961903/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>",
+        "jz@37signals.com": "\n<div id=\"message_16b00454-0dcb-5935-8974-a3a197287968\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935961903\" data-room-id=\"654632876\" data-message-timestamp=\"1772363400000\" data-message-updated-at=\"1772363460000\" data-sort-value=\"1772363400000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"712064548\" data-actions-url=\"http://campfire.test/rooms/654632876/messages/935961903/actions\" data-message-url=\"http://campfire.test/rooms/654632876/messages/935961903\" data-boost-url=\"http://campfire.test/messages/935961903/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-01T11:10:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Kevin – Programmer\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\" href=\"/users/712064548\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_16b00454-0dcb-5935-8974-a3a197287968\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_16b00454-0dcb-5935-8974-a3a197287968\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Kevin – Programmer\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n        <strong data-reply-target=\"author\">Kevin</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/654632876/@935961903\"><time class=\"message__timestamp\" datetime=\"2026-03-01T11:10:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/654632876/@935961903\">Designers</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_16b00454-0dcb-5935-8974-a3a197287968\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg\" /></a></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_16b00454-0dcb-5935-8974-a3a197287968\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"flex-inline flex-wrap gap\">\n    <div class=\"boosts__reactions flex-inline flex-wrap gap\" role=\"group\" aria-label=\"Message reactions\">\n        \n<form class=\"reaction-chip__form\" data-turbo-frame=\"boosting_message_16b00454-0dcb-5935-8974-a3a197287968\" action=\"/messages/935961903/boosts\" accept-charset=\"UTF-8\" method=\"post\">\n  <input type=\"hidden\" name=\"boost[content]\" id=\"boost_content\" value=\"🌕\" />\n  <span class=\"reaction-chip__wrap\">\n    <button name=\"button\" type=\"submit\" class=\"reaction-chip\" title=\"full_moon\" aria-label=\"full_moon: 1\" aria-pressed=\"false\" aria-describedby=\"reactors_0_message_16b00454-0dcb-5935-8974-a3a197287968\" data-controller=\"reaction-chip\" data-reaction-chip-booster-ids-value=\"149087659\" data-reaction=\"🌕\">\n      <span class=\"reaction-chip__emoji\" aria-hidden=\"true\">🌕</span>\n      <span class=\"reaction-chip__count\">1</span>\n      <span class=\"for-screen-reader\">full_moon</span>\n</button>      <span class=\"reaction-chip__tooltip\" role=\"tooltip\" id=\"reactors_0_message_16b00454-0dcb-5935-8974-a3a197287968\">\n          <span class=\"reaction-chip__reactor\">Jason</span>\n      </span>\n  </span>\n</form>\n    </div>\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_16b00454-0dcb-5935-8974-a3a197287968\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935961903/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_16b00454-0dcb-5935-8974-a3a197287968\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>"
+      }
+    },
+    {
+      "name": "image_large",
+      "message": {
+        "id": 935961904,
+        "client_message_id": "3491f7c3-1b5f-5456-bedb-59c47f71b594",
+        "room_id": 654632876,
+        "room_name": "Designers",
+        "creator": {
+          "id": 149087659,
+          "name": "Jason",
+          "title": "Jason",
+          "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+        },
+        "created_at": "2026-03-01T11:20:00.000000Z",
+        "updated_at": "2026-03-01T11:20:00.000000Z",
+        "all_emoji": false,
+        "content": {
+          "type": "attachment",
+          "filename": "black_hole.jpg",
+          "filename_base": "black_hole",
+          "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/black_hole.jpg",
+          "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/black_hole.jpg?disposition=attachment",
+          "preview": {
+            "type": "image",
+            "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/black_hole.jpg"
+          },
+          "width": 3840,
+          "height": 2160
+        },
+        "boosts": [],
+        "details": {
+          "thread_id": null,
+          "system_note": false,
+          "action": false,
+          "edited_at": null,
+          "streaming": false,
+          "markdown": false,
+          "pinned": false,
+          "reply_count": 0,
+          "reply": null,
+          "forwarded": false,
+          "forward_note": null,
+          "drive_urls": [],
+          "room_icon": null,
+          "agent_steps": [],
+          "poll": null
+        }
+      },
+      "html_by_viewer": {
+        "david@37signals.com": "\n<div id=\"message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935961904\" data-room-id=\"654632876\" data-message-timestamp=\"1772364000000\" data-message-updated-at=\"1772364000000\" data-sort-value=\"1772364000000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"149087659\" data-actions-url=\"http://campfire.test/rooms/654632876/messages/935961904/actions\" data-message-url=\"http://campfire.test/rooms/654632876/messages/935961904\" data-boost-url=\"http://campfire.test/messages/935961904/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-01T11:20:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Jason\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n        <strong data-reply-target=\"author\">Jason</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/654632876/@935961904\"><time class=\"message__timestamp\" datetime=\"2026-03-01T11:20:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/654632876/@935961904\">Designers</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"max-inline-size center flex overflow-clip\" style=\"width: 600.0px; aspect-ratio: 1.7777777777777777;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/black_hole.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/black_hole.jpg\"><img width=\"1200.0\" height=\"675.0\" class=\"message__attachment\" loading=\"lazy\" alt=\"black_hole\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/black_hole.jpg\" /></a></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935961904/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>",
+        "jz@37signals.com": "\n<div id=\"message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935961904\" data-room-id=\"654632876\" data-message-timestamp=\"1772364000000\" data-message-updated-at=\"1772364000000\" data-sort-value=\"1772364000000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"149087659\" data-actions-url=\"http://campfire.test/rooms/654632876/messages/935961904/actions\" data-message-url=\"http://campfire.test/rooms/654632876/messages/935961904\" data-boost-url=\"http://campfire.test/messages/935961904/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-01T11:20:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Jason\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n        <strong data-reply-target=\"author\">Jason</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/654632876/@935961904\"><time class=\"message__timestamp\" datetime=\"2026-03-01T11:20:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/654632876/@935961904\">Designers</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"max-inline-size center flex overflow-clip\" style=\"width: 600.0px; aspect-ratio: 1.7777777777777777;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/black_hole.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/black_hole.jpg\"><img width=\"1200.0\" height=\"675.0\" class=\"message__attachment\" loading=\"lazy\" alt=\"black_hole\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NywicHVyIjoiYmxvYl9pZCJ9fQ==--8855e63074674bb21e5fcb03a4de8df0d6b0f4f8/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/black_hole.jpg\" /></a></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935961904/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_3491f7c3-1b5f-5456-bedb-59c47f71b594\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>"
+      }
+    }
+  ],
+  "filename_previews": [
+    {
+      "raw_filename": "moon.jpg",
+      "content": {
+        "type": "attachment",
+        "filename": "moon.jpg",
+        "filename_base": "moon",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg\" /></a></div>"
+    },
+    {
+      "raw_filename": "black_hole.jpg",
+      "content": {
+        "type": "attachment",
+        "filename": "black_hole.jpg",
+        "filename_base": "black_hole",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/black_hole.jpg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/black_hole.jpg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/black_hole.jpg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/black_hole.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/black_hole.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"black_hole\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/black_hole.jpg\" /></a></div>"
+    },
+    {
+      "raw_filename": "moon.JPG",
+      "content": {
+        "type": "attachment",
+        "filename": "moon.JPG",
+        "filename_base": "moon",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.JPG",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.JPG?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJKUEciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--0c0e6166ce93c63938f160cc2de2f53974d76aa4/moon.JPG"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.JPG?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.JPG\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJKUEciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--0c0e6166ce93c63938f160cc2de2f53974d76aa4/moon.JPG\" /></a></div>"
+    },
+    {
+      "raw_filename": "archive.tar.gz",
+      "content": {
+        "type": "attachment",
+        "filename": "archive.tar.gz",
+        "filename_base": "archive.tar",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/archive.tar.gz",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/archive.tar.gz?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/archive.tar.gz"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/archive.tar.gz?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/archive.tar.gz\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"archive.tar\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/archive.tar.gz\" /></a></div>"
+    },
+    {
+      "raw_filename": "version.1.preview.jpeg",
+      "content": {
+        "type": "attachment",
+        "filename": "version.1.preview.jpeg",
+        "filename_base": "version.1.preview",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/version.1.preview.jpeg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/version.1.preview.jpeg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGVnIiwicmVzaXplX3RvX2xpbWl0IjpbMTIwMCw4MDBdfSwicHVyIjoidmFyaWF0aW9uIn19--55abfc81276ce0ec9e86889ade2fcb298588e2c4/version.1.preview.jpeg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/version.1.preview.jpeg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/version.1.preview.jpeg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"version.1.preview\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGVnIiwicmVzaXplX3RvX2xpbWl0IjpbMTIwMCw4MDBdfSwicHVyIjoidmFyaWF0aW9uIn19--55abfc81276ce0ec9e86889ade2fcb298588e2c4/version.1.preview.jpeg\" /></a></div>"
+    },
+    {
+      "raw_filename": "README",
+      "content": {
+        "type": "attachment",
+        "filename": "README",
+        "filename_base": "README",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/README",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/README?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/README"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/README?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/README\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"README\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/README\" /></a></div>"
+    },
+    {
+      "raw_filename": ".gitignore",
+      "content": {
+        "type": "attachment",
+        "filename": ".gitignore",
+        "filename_base": ".gitignore",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/.gitignore",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/.gitignore?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/.gitignore"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/.gitignore?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/.gitignore\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\".gitignore\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/.gitignore\" /></a></div>"
+    },
+    {
+      "raw_filename": ".hidden.jpg",
+      "content": {
+        "type": "attachment",
+        "filename": ".hidden.jpg",
+        "filename_base": ".hidden",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/.hidden.jpg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/.hidden.jpg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/.hidden.jpg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/.hidden.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/.hidden.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\".hidden\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/.hidden.jpg\" /></a></div>"
+    },
+    {
+      "raw_filename": "a..b",
+      "content": {
+        "type": "attachment",
+        "filename": "a..b",
+        "filename_base": "a.",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/a..b",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/a..b?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/a..b"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/a..b?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/a..b\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"a.\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/a..b\" /></a></div>"
+    },
+    {
+      "raw_filename": "foo.",
+      "content": {
+        "type": "attachment",
+        "filename": "foo.",
+        "filename_base": "foo",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/foo.",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/foo.?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/foo."
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/foo.?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/foo.\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"foo\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/foo.\" /></a></div>"
+    },
+    {
+      "raw_filename": "..",
+      "content": {
+        "type": "attachment",
+        "filename": "..",
+        "filename_base": "..",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/..",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/..?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/.."
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/..?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/..\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"..\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/..\" /></a></div>"
+    },
+    {
+      "raw_filename": "...",
+      "content": {
+        "type": "attachment",
+        "filename": "...",
+        "filename_base": "...",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/...",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/...?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/..."
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/...?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/...\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"...\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/...\" /></a></div>"
+    },
+    {
+      "raw_filename": "...jpg",
+      "content": {
+        "type": "attachment",
+        "filename": "...jpg",
+        "filename_base": "...jpg",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/...jpg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/...jpg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/...jpg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/...jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/...jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"...jpg\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/...jpg\" /></a></div>"
+    },
+    {
+      "raw_filename": "dir.with.dots/moon.jpg",
+      "content": {
+        "type": "attachment",
+        "filename": "dir.with.dots-moon.jpg",
+        "filename_base": "moon",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir.with.dots-moon.jpg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir.with.dots-moon.jpg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/dir.with.dots-moon.jpg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir.with.dots-moon.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir.with.dots-moon.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/dir.with.dots-moon.jpg\" /></a></div>"
+    },
+    {
+      "raw_filename": "dir/moon.jpg/",
+      "content": {
+        "type": "attachment",
+        "filename": "dir-moon.jpg-",
+        "filename_base": "moon",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir-moon.jpg-",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir-moon.jpg-?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/dir-moon.jpg-"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir-moon.jpg-?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir-moon.jpg-\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/dir-moon.jpg-\" /></a></div>"
+    },
+    {
+      "raw_filename": "/",
+      "content": {
+        "type": "attachment",
+        "filename": "-",
+        "filename_base": "/",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/-",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/-?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/-"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/-?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/-\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"/\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/-\" /></a></div>"
+    },
+    {
+      "raw_filename": "dir\\moon.jpg",
+      "content": {
+        "type": "attachment",
+        "filename": "dir-moon.jpg",
+        "filename_base": "dir\\moon",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir-moon.jpg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir-moon.jpg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/dir-moon.jpg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir-moon.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/dir-moon.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"dir\\moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/dir-moon.jpg\" /></a></div>"
+    },
+    {
+      "raw_filename": "  moon.jpg  ",
+      "content": {
+        "type": "attachment",
+        "filename": "moon.jpg",
+        "filename_base": "  moon",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/moon.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"  moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg\" /></a></div>"
+    },
+    {
+      "raw_filename": "lune <&> \"é\".jpg",
+      "content": {
+        "type": "attachment",
+        "filename": "lune -&- -é-.jpg",
+        "filename_base": "lune <&> \"é\"",
+        "blob_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/lune%20-&-%20-%C3%A9-.jpg",
+        "download_path": "/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/lune%20-&-%20-%C3%A9-.jpg?disposition=attachment",
+        "preview": {
+          "type": "image",
+          "thumb_url": "/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/lune%20-&-%20-%C3%A9-.jpg"
+        },
+        "width": 640,
+        "height": 640
+      },
+      "html": "<div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/lune%20-&amp;-%20-%C3%A9-.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/lune%20-&amp;-%20-%C3%A9-.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"lune &lt;&amp;&gt; &quot;é&quot;\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6NSwicHVyIjoiYmxvYl9pZCJ9fQ==--7664b3ffcbc55d9da8b8d9f8636a95fd7b7326a2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/lune%20-&amp;-%20-%C3%A9-.jpg\" /></a></div>"
+    }
+  ]
+}

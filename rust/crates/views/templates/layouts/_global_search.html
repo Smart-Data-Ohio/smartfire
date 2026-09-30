@@ -1,0 +1,34 @@
+{#- reference/app/views/layouts/_global_search.html.erb: the global search in the top bar, on every
+    signed-in page, over the viewer's recent searches (ctx.chrome). -#}
+<div id="global-search" class="global-search"
+     data-controller="global-search"
+     data-global-search-expanded-class="global-search--expanded"
+     data-action="keydown->global-search#keydown focusout->global-search#focusOut global-search:focus@window->global-search#focusField pointerdown@document->global-search#pointerDownOutside turbo:before-cache@document->global-search#reset turbo:submit-end@document->global-search#searchesChanged">
+  <button type="button" class="btn global-search__toggle"
+          aria-label="Search" title="Search (/)"
+          aria-controls="global-search-form" aria-expanded="false"
+          data-global-search-target="toggle"
+          data-action="global-search#expand">
+    {{ h::image_tag(ctx, "search.svg", h::attrs().size(20).aria("hidden", "true").class("colorize--black")) }}
+  </button>
+
+  {% let form = h::form_with(h::routes::searches()).id("global-search-form").class("global-search__form").html(h::attrs().role("search").aria("label", "Search")).data("global_search_target", "form") %}{% filter form_with(form) %}
+    {{ h::image_tag(ctx, "search.svg", h::attrs().size(16).aria("hidden", "true").class("global-search__icon colorize--black")) }}
+    {{ form.search_field("q", h::attrs().id("global-search-input").attr_opt("value", ctx.chrome.global_search_query.as_deref()).class("global-search__input").placeholder("Search").title("Search messages, threads and events").autocomplete("off").attr("spellcheck", false).required(true).attr("enterkeyhint", "search").role("combobox").aria("label", "Search messages, threads and events").aria("expanded", "false").aria("controls", "global-search-listbox").aria("autocomplete", "list").aria("haspopup", "listbox").data("global_search_target", "input").data("action", "focus->global-search#open click->global-search#open input->global-search#filter")) }}
+    <kbd class="global-search__shortcut" aria-hidden="true">/</kbd>
+    <button type="button" class="btn global-search__close" aria-label="Close search"
+            data-action="global-search#collapse">
+      {{ h::image_tag(ctx, "remove.svg", h::attrs().size(14).aria("hidden", "true").class("colorize--black")) }}
+    </button>
+{% endfilter %}
+  <div id="global-search-panel" class="global-search__panel shadow" hidden data-global-search-target="panel">
+    <div id="global-search-recents">
+      {% let searches = ctx.chrome.recent_searches.as_slice() %}{% include "searches/_dropdown_recents.html" %}
+    </div>
+    <p class="for-screen-reader" role="status" aria-live="polite" data-global-search-target="status"></p>
+    <p class="global-search__hint">
+      <kbd>Enter</kbd> to search. Narrow with <code>from:@name</code>, <code>in:#room</code>, <code>has:file</code>.
+    </p>
+  </div>
+</div>
+

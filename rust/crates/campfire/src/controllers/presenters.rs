@@ -28,6 +28,7 @@ use campfire_views::fragment_cache;
 use campfire_views::rooms::{RoomView, room_display_name};
 use rails_compat::Secrets;
 use regex::Regex;
+use rusqlite::OptionalExtension;
 
 use crate::app::AppState;
 
@@ -76,7 +77,17 @@ pub fn room_kind(room_type: RoomType) -> RoomKind {
 }
 
 pub fn user_view(secrets: &Secrets, user: &User) -> UserView {
-    UserView { id: user.id, name: user.name.clone(), title: user.title(), avatar_url: avatar_path(secrets, user) }
+    UserView { id: user.id, name: user.name.clone(), title: user.title(), avatar_url: avatar_path(secrets, user), icon: None }
+}
+
+impl campfire_views::helpers::IconSource for Presenter<'_> {
+    fn resolve_avatar_icon(&self, name: &str) -> Option<campfire_views::helpers::AvatarIcon> {
+        use campfire_views::{helpers::AvatarIcon, messages::reactions::static_icon};
+        let icon = static_icon(name);
+        if matches!(icon, Some(AvatarIcon::Image { brand: true, .. })) { return icon; }
+        let custom: Option<String> = self.conn.query_row("SELECT title FROM workspace_icons WHERE name = ?1", [name], |row| row.get(0)).optional().ok().flatten();
+        custom.map(|title| AvatarIcon::Image { title, url: format!("/icons/{name}"), brand: false }).or(icon)
+    }
 }
 
 /// `users/_user.json.jbuilder` (`json.cache! user`).
@@ -114,6 +125,7 @@ pub struct Presenter<'a> {
     pub now: jiff::Timestamp,
     /// `Current.request_host`, which opengraph embeds are checked against.
     pub request_host: Option<String>,
+    pub cache_base_url: Option<String>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
 }
@@ -127,6 +139,7 @@ impl<'a> Presenter<'a> {
             rich_text: &*app.db.env().rich_text,
             now: app.clock.now(),
             request_host,
+            cache_base_url: None,
             users: RefCell::default(),
             room_names: RefCell::default(),
         }
@@ -146,7 +159,14 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn user_view(&self, id: i64) -> Result<UserView> {
-        Ok(user_view(self.secrets, &self.user(id)?))
+        let user = self.user(id)?;
+        let mut view = user_view(self.secrets, &user);
+        let uploaded: bool = self.conn.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type = 'User' AND record_id = ?1 AND name = 'avatar')", [id], |row| row.get(0))?;
+        if user.is_bot() && !uploaded {
+            let icon_name: Option<String> = self.conn.query_row("SELECT icon_name FROM users WHERE id = ?1", [id], |row| row.get(0))?;
+            view.icon = icon_name.as_deref().and_then(|name| campfire_views::helpers::IconSource::resolve_avatar_icon(self, name));
+        }
+        Ok(view)
     }
 
     /// `room_display_name(room, for_user:)`.
@@ -196,7 +216,7 @@ impl<'a> Presenter<'a> {
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        Ok(match campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff()) {
+        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff(), base)) {
             Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
             None => MessageItem::View(Box::new(self.message(message)?)),
         })
@@ -213,12 +233,14 @@ impl<'a> Presenter<'a> {
                 client_message_id: message.client_message_id.clone(),
                 room_id: message.room_id,
                 room_name,
-                creator: UserView { id: message.creator_id, name: String::new(), title: String::new(), avatar_url: String::new() },
+                creator: UserView { id: message.creator_id, name: String::new(), title: String::new(), avatar_url: String::new(), icon: None },
                 created_at: message.created_at.jiff(),
                 updated_at: message.updated_at.jiff(),
                 all_emoji: false,
                 content: MessageContent::Unrenderable,
                 boosts: Vec::new(),
+                details: Default::default(),
+                components: Default::default(),
             }),
             rendered => rendered,
         }
@@ -237,6 +259,52 @@ impl<'a> Presenter<'a> {
             all_emoji: all_emoji(&plain_text),
             content: self.content(message, &plain_text)?,
             boosts: self.boosts(message)?,
+            details: self.message_details(message)?,
+            components: Default::default(),
+        })
+    }
+
+    fn message_details(&self, message: &Message) -> Result<campfire_views::messages::MessageDetails> {
+        use campfire_views::messages::{MessageDetails, ReplyPreview, ReplySource};
+        let pinned = self.conn.query_row("SELECT EXISTS(SELECT 1 FROM message_pins WHERE message_id = ?1)", [message.id], |row| row.get(0))?;
+        let reply_count: u64 = self.conn.query_row("SELECT messages_count FROM channel_threads WHERE parent_message_id = ?1", [message.id], |row| row.get(0)).optional()?.unwrap_or(0);
+        let drive_urls = self.conn.prepare("SELECT file_id FROM drive_attachments WHERE message_id = ?1 ORDER BY id")?
+            .query_map([message.id], |row| Ok(format!("https://drive.google.com/open?id={}", row.get::<_, String>(0)?)))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        let reply = if message.reply_to_message_id.is_some() || message.reply_target_deleted_at.is_some() {
+            let source = message.reply_to_message_id.map(|id| Message::find_by_id(self.conn, id)).transpose()?.flatten();
+            let source = source.map(|source| -> Result<ReplySource> {
+                let url = if let Some(thread) = source.thread_id {
+                    campfire_routes::ROOM.path_with(&[&source.room_id], None, &[("thread", Some(&thread.to_string())), ("message_id", Some(&source.id.to_string()))])
+                } else { campfire_routes::room_at_message(source.room_id, source.id) };
+                Ok(ReplySource { id: source.id, author: self.user(source.creator_id)?.name, plain_text: self.plain_text_body(&source)?, url })
+            }).transpose()?;
+            Some(ReplyPreview { source })
+        } else { None };
+        let agent_steps = self.conn.prepare("SELECT name, status, duration_ms, input_summary, output_summary FROM agent_steps WHERE message_id = ?1 ORDER BY position, id")?
+            .query_map([message.id], |row| Ok(campfire_views::messages::parts::AgentStep {
+                name: row.get(0)?, status: row.get(1)?, duration_ms: row.get(2)?, input_summary: row.get(3)?, output_summary: row.get(4)?,
+            }))?.collect::<std::result::Result<Vec<_>, _>>()?;
+        let poll_row = self.conn.query_row("SELECT id, anonymous, multiple, closed_at, closes_at FROM polls WHERE message_id = ?1", [message.id], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, bool>(1)?, row.get::<_, bool>(2)?, row.get::<_, Option<campfire_db::Timestamp>>(3)?, row.get::<_, Option<campfire_db::Timestamp>>(4)?))
+        }).optional()?;
+        let poll = if let Some((id, anonymous, multiple, closed_at, closes_at)) = poll_row {
+            use campfire_views::messages::parts::{Poll, PollOption, PollVote};
+            let options = self.conn.prepare("SELECT id, label FROM poll_options WHERE poll_id = ?1 ORDER BY position, id")?
+                .query_map([id], |row| Ok(PollOption { id: row.get(0)?, label: row.get(1)? }))?.collect::<std::result::Result<Vec<_>, _>>()?;
+            let votes = self.conn.prepare("SELECT poll_option_id, user_id, users.name FROM poll_votes LEFT JOIN users ON users.id = poll_votes.user_id WHERE poll_id = ?1 ORDER BY poll_votes.id")?
+                .query_map([id], |row| Ok(PollVote { option_id: row.get(0)?, user_id: row.get(1)?, user_name: row.get(2)? }))?.collect::<std::result::Result<Vec<_>, _>>()?;
+            Some(Poll { id, room_id: message.room_id, anonymous, multiple,
+                closed: closed_at.is_some() || closes_at.is_some_and(|time| time.jiff() <= self.now), closes_at: closes_at.map(|time| time.jiff()),
+                options, votes, vote_error: None,
+            })
+        } else { None };
+        Ok(MessageDetails {
+            thread_id: message.thread_id, system_note: message.system_note, action: message.action,
+            edited_at: message.edited_at.map(|time| time.jiff()), streaming: message.streaming,
+            markdown: message.markdown_source.is_some(), forwarded: message.forwarded_at.is_some(),
+            forward_note: message.forward_note.clone(), pinned, reply_count, drive_urls, reply, agent_steps, poll,
+            ..Default::default()
         })
     }
 
@@ -253,6 +321,7 @@ impl<'a> Presenter<'a> {
             content: boost.content.clone(),
             all_emoji: all_emoji(&boost.content),
             booster: self.user_view(boost.booster_id)?,
+            reaction: campfire_views::messages::reactions::resolve(&boost.content, self),
         })
     }
 
@@ -320,6 +389,7 @@ impl<'a> Presenter<'a> {
         };
         Ok(Some(AttachmentView {
             filename: blob.filename.to_string(),
+            filename_base: blob.filename.base().to_string(),
             blob_path: campfire_storage::paths::blob_redirect_path(verifier, &blob, None),
             download_path: campfire_storage::paths::blob_redirect_path(verifier, &blob, Some("attachment")),
             preview,

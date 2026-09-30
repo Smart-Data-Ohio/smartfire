@@ -13,9 +13,8 @@
 //   --time ISO             the instant both servers' clocks are frozen at (default: the seed's)
 //   --only GLOB[,GLOB]     state id globs      --engines chromium,firefox,webkit
 //   --viewports desktop,…  --schemes light,dark
-//   --matrix lean|full     lean (default): Chromium desktop+phone, light+dark for every state, a smoke
-//                          set on Firefox and WebKit, the breakpoint sweep on Chromium; full: the
-//                          whole support matrix (release checks). See inventory.ts LEAN_*.
+//   --matrix lean|full     lean (default): one cell per route plus explicit browser/mobile/dark
+//                          smoke states; full: the whole support matrix and breakpoint sweep.
 //   --breakpoints include|only|exclude (default include)
 //   --breakpoint-states GLOBS   states swept across breakpoints (default DEFAULT_BREAKPOINT_STATES)
 //   --workers N            --timeout MS        --inventory FILE
@@ -30,6 +29,7 @@
 // The self-parity gate (reference vs reference) is orchestrated by parity/bin/compare --self-parity,
 // because it starts and stops servers on the host.
 import fs from "node:fs"
+import { validateSeed } from "./seed_validation.ts"
 import path from "node:path"
 import { parseArgs } from "node:util"
 import { execFile } from "node:child_process"
@@ -77,6 +77,7 @@ const { values: opts, positionals } = parseArgs({
     origin: { type: "string", default: DEFAULT_ORIGIN },
     "no-allowlist": { type: "boolean", default: false },
     report: { type: "string", default: "report" },
+    receipt: { type: "string" },
   },
 })
 
@@ -154,11 +155,13 @@ function finish(result: RunResult) {
   if (result.reportFile) console.log(`report: ${result.reportFile}`)
   const c = summarize(result.comparisons)
   const errors = result.metas.filter((m) => m.error).length
-  process.exitCode = c.fail || c.error || errors ? 1 : 0
+  process.exitCode = c.fail || c.error || errors || result.comparisons.some(c => c.flaky) || result.metas.some(m => m.retriedAfter) ? 1 : 0
 }
 
 async function main() {
+  if (["recompare", "validate"].includes(command)) validateSeed(opts.seed!, path.resolve(opts["seed-dir"]!), time(), command === "validate" ? opts.receipt : undefined)
   switch (command) {
+    case "validate": return
     case "capture": {
       if (!opts.target) fail("capture needs --target URL")
       const dir = outDir("capture")
@@ -209,7 +212,7 @@ async function main() {
       try {
         const f = filter()
         const all = states()
-        const widths = f.breakpoints !== "exclude" ? await breakpointWidths(pool, f.engines ?? ENGINES) : ({} as Record<Engine, number[]>)
+        const widths = f.matrix === "full" && f.breakpoints !== "exclude" ? await breakpointWidths(pool, f.engines ?? ENGINES) : ({} as Record<Engine, number[]>)
         const jobs = expandJobs(all, f, widths)
         for (const job of jobs) console.log(jobId(job))
         console.log(`${jobs.length} cells in ${new Set(jobs.map((j) => j.state.id)).size} states`)
@@ -228,6 +231,7 @@ function recompare(runDir: string, expectedName: string, actualName: string, qui
   const started = Date.now()
   const allowlist = loadAllowlist()
   const jobs = expandJobs(states(), filter(), readWidths(path.join(runDir, expectedName)))
+  if (!jobs.length) fail("no selected inventory cells")
   const comparisons = jobs.map((job) => compareJob(job, runDir, expectedName, actualName, allowlist))
   const result: RunResult = { jobs, metas: [], comparisons, durationMs: Date.now() - started }
   result.reportFile = writeReport(runDir, opts.report!, comparisons, {

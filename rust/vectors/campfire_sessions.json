@@ -4,9 +4,56 @@
       "session_id": 481019661,
       "user_id": 127326141,
       "user_name": "David",
+      "two_factor_verified": true,
+      "last_active_at": "2026-03-02T16:00:00Z",
+      "expired": false,
       "token": "AxJs94fteQ5Autv2VrKsH68c",
-      "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrRjRTbk01TkdaMFpWRTFRWFYwZGpKV2NrdHpTRFk0WXlJPSIsImV4cCI6IjIwNDYtMDktMjlUMjI6Mzc6MzYuNzM3WiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--f92b299928d0fdb60fc6ca79ed27d1449c399f00",
-      "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrRjRTbk01TkdaMFpWRTFRWFYwZGpKV2NrdHpTRFk0WXlJPSIsImV4cCI6IjIwNDYtMDktMjlUMjI6Mzc6MzYuNzM3WiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--f92b299928d0fdb60fc6ca79ed27d1449c399f00"
+      "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrRjRTbk01TkdaMFpWRTFRWFYwZGpKV2NrdHpTRFk0WXlJPSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--cdc93a3106856cd0a287473bfcb052537c695311",
+      "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrRjRTbk01TkdaMFpWRTFRWFYwZGpKV2NrdHpTRFk0WXlJPSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--cdc93a3106856cd0a287473bfcb052537c695311"
+    },
+    {
+      "session_id": 481019662,
+      "user_id": 127326141,
+      "user_name": "David",
+      "two_factor_verified": true,
+      "last_active_at": "2026-03-02T16:00:00Z",
+      "expired": false,
+      "token": "76464e5afb4f798a66061e777dd16fc5",
+      "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqYzJORFkwWlRWaFptSTBaamM1T0dFMk5qQTJNV1UzTnpka1pERTJabU0xSWc9PSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--aaa58f545572cb33f3abead3294b1433095ba358",
+      "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqYzJORFkwWlRWaFptSTBaamM1T0dFMk5qQTJNV1UzTnpka1pERTJabU0xSWc9PSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--aaa58f545572cb33f3abead3294b1433095ba358"
+    },
+    {
+      "session_id": 481019663,
+      "user_id": 149087659,
+      "user_name": "Jason",
+      "two_factor_verified": true,
+      "last_active_at": "2026-03-02T16:00:00Z",
+      "expired": false,
+      "token": "bb505c090c414c56623b7763b9c065a5",
+      "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltSmlOVEExWXpBNU1HTTBNVFJqTlRZMk1qTmlOemMyTTJJNVl6QTJOV0UxSWc9PSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--59914eb8962616a2fc210059a08392fdff6f180d",
+      "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltSmlOVEExWXpBNU1HTTBNVFJqTlRZMk1qTmlOemMyTTJJNVl6QTJOV0UxSWc9PSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--59914eb8962616a2fc210059a08392fdff6f180d"
+    },
+    {
+      "session_id": 481019664,
+      "user_id": 773523953,
+      "user_name": "JZ",
+      "two_factor_verified": true,
+      "last_active_at": "2026-03-02T16:00:00Z",
+      "expired": false,
+      "token": "e4fe8145f310b673fabf379185866d33",
+      "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltVTBabVU0TVRRMVpqTXhNR0kyTnpObVlXSm1NemM1TVRnMU9EWTJaRE16SWc9PSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--9693a88da49c7b965979ee79bc35d1c77ec5988b",
+      "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltVTBabVU0TVRRMVpqTXhNR0kyTnpObVlXSm1NemM1TVRnMU9EWTJaRE16SWc9PSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--9693a88da49c7b965979ee79bc35d1c77ec5988b"
+    },
+    {
+      "session_id": 481019665,
+      "user_id": 712064548,
+      "user_name": "Kevin",
+      "two_factor_verified": true,
+      "last_active_at": "2026-03-02T16:00:00Z",
+      "expired": false,
+      "token": "9e0cdb81a3fe14fb1899283550a82151",
+      "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGxNR05rWWpneFlUTm1aVEUwWm1JeE9EazVNamd6TlRVd1lUZ3lNVFV4SWc9PSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--f82e43b8bcb196c5f6bcd96c21ca6e883e98ab81",
+      "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqbGxNR05rWWpneFlUTm1aVEUwWm1JeE9EazVNamd6TlRVd1lUZ3lNVFV4SWc9PSIsImV4cCI6IjIwNDYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--f82e43b8bcb196c5f6bcd96c21ca6e883e98ab81"
     }
   ],
   "blobs": [
@@ -17,7 +64,34 @@
     }
   ],
   "forged": {
-    "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltNXZkQzFoTFhObGMzTnBiMjR0ZEc5clpXNGkiLCJleHAiOiIyMDQ2LTA5LTI5VDIyOjM3OjM2Ljc0OVoiLCJwdXIiOiJjb29raWUuc2Vzc2lvbl90b2tlbiJ9fQ==--6dcad70a81e22e5059ea6f4e908b0e907ae268dc",
-    "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltNXZkQzFoTFhObGMzTnBiMjR0ZEc5clpXNGkiLCJleHAiOiIyMDQ2LTA5LTI5VDIyOjM3OjM2Ljc0OVoiLCJwdXIiOiJjb29raWUuc2Vzc2lvbl90b2tlbiJ9fQ%3D%3D--6dcad70a81e22e5059ea6f4e908b0e907ae268dc"
-  }
+    "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltNXZkQzFoTFhObGMzTnBiMjR0ZEc5clpXNGkiLCJleHAiOiIyMDQ2LTAzLTAyVDE2OjAwOjAwLjAwMFoiLCJwdXIiOiJjb29raWUuc2Vzc2lvbl90b2tlbiJ9fQ==--15af0ccbf98a151220523a0a42297c0e5deee0ee",
+    "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltNXZkQzFoTFhObGMzTnBiMjR0ZEc5clpXNGkiLCJleHAiOiIyMDQ2LTAzLTAyVDE2OjAwOjAwLjAwMFoiLCJwdXIiOiJjb29raWUuc2Vzc2lvbl90b2tlbiJ9fQ%3D%3D--15af0ccbf98a151220523a0a42297c0e5deee0ee"
+  },
+  "remembered_devices": [
+    {
+      "user_id": 127326141,
+      "token_digest": "8e461b237ee55420e9240e850d737b8b6127968b7642527de590953be6419ebb",
+      "expires_at": "2026-04-01T16:00:00Z"
+    },
+    {
+      "user_id": 149087659,
+      "token_digest": "1d9d7cf3bc07a360db4e724a34371f3d5ce6e8b61c84d1c790507ebc2244f618",
+      "expires_at": "2026-04-01T16:00:00Z"
+    },
+    {
+      "user_id": 773523953,
+      "token_digest": "363d4560d025983da0c3958ac316ad8cc87f4849237fd8c7ccf8777e59b53d58",
+      "expires_at": "2026-04-01T16:00:00Z"
+    },
+    {
+      "user_id": 712064548,
+      "token_digest": "8dae04f3383a9b183ef9285f0a919e6295c2d7eca7cfad6c70516201267cecae",
+      "expires_at": "2026-04-01T16:00:00Z"
+    },
+    {
+      "user_id": 773523958,
+      "token_digest": "536270a5cebd33b046d365a74c9822b994ab24d8add5212cf0ca287376d1acee",
+      "expires_at": "2026-04-01T16:00:00Z"
+    }
+  ]
 }

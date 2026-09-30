@@ -13,10 +13,13 @@ def issue(token)
 end
 
 sessions = Session.includes(:user).order(:id).limit(5).map do |session|
-  { session_id: session.id, user_id: session.user_id, user_name: session.user.name, token: session.token, **issue(session.token) }
+  { session_id: session.id, user_id: session.user_id, user_name: session.user.name, two_factor_verified: session.two_factor_verified?, last_active_at: session.last_active_at.iso8601, expired: session.expired?, token: session.token, **issue(session.token) }
 end
 
 blob = ActiveStorage::Blob.joins(:attachments).where(active_storage_attachments: { record_type: "Message" }).order(:id).first
 blobs = blob ? [ { blob_id: blob.id, signed_id: blob.signed_id, redirect_path: Rails.application.routes.url_helpers.rails_blob_path(blob, only_path: true) } ] : []
 
-puts JSON.pretty_generate(sessions: sessions, blobs: blobs, forged: issue("not-a-session-token"))
+remembered = TwoFactorRememberedDevice.includes(:user).order(:id).map do |device|
+  { user_id: device.user_id, token_digest: device.token_digest, expires_at: device.expires_at.iso8601 }
+end
+puts JSON.pretty_generate(sessions: sessions, blobs: blobs, forged: issue("not-a-session-token"), remembered_devices: remembered)

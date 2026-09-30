@@ -7,6 +7,24 @@
       "defaults": {}
     },
     {
+      "verb": "POST",
+      "path": "/internal/huddle/authorize(.:format)",
+      "endpoint": "internal/huddle#authorize",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/internal/huddle/grants/:id(.:format)",
+      "endpoint": "internal/huddle#show",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/internal/huddle/grants/:id/left(.:format)",
+      "endpoint": "internal/huddle#left",
+      "defaults": {}
+    },
+    {
       "verb": "GET",
       "path": "/first_run/new(.:format)",
       "endpoint": "first_runs#new",
@@ -109,6 +127,120 @@
       "defaults": {}
     },
     {
+      "verb": "POST",
+      "path": "/csp_reports(.:format)",
+      "endpoint": "content_security_policy_reports#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/session/google(.:format)",
+      "endpoint": "sessions/google#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/session/google/callback(.:format)",
+      "endpoint": "sessions/google#callback",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/sudo/new(.:format)",
+      "endpoint": "sudos#new",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/sudo(.:format)",
+      "endpoint": "sudos#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/sudo/google(.:format)",
+      "endpoint": "sudos#google",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/user/profile/google_sign_in_link(.:format)",
+      "endpoint": "users/google_sign_in_links#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/two_factor_setup(.:format)",
+      "endpoint": "two_factor/setups#show",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/two_factor_setup(.:format)",
+      "endpoint": "two_factor/setups#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/two_factor_setup(.:format)",
+      "endpoint": "two_factor/setups#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/two_factor_challenge(.:format)",
+      "endpoint": "two_factor/challenges#show",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/two_factor_challenge(.:format)",
+      "endpoint": "two_factor/challenges#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/two_factor_backup_codes(.:format)",
+      "endpoint": "two_factor/backup_codes#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/two_factor_remembered_devices/:id(.:format)",
+      "endpoint": "two_factor/remembered_devices#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/two_factor_remembered_devices(.:format)",
+      "endpoint": "two_factor/remembered_devices#destroy_all",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/two_factor_reauthentication(.:format)",
+      "endpoint": "two_factor/reauthentications#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/users/:user_id/google_link(.:format)",
+      "endpoint": "accounts/users/google_links#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/users/:user_id/google_link(.:format)",
+      "endpoint": "accounts/users/google_links#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/users/:user_id/two_factor_reset(.:format)",
+      "endpoint": "accounts/users/two_factor_resets#create",
+      "defaults": {}
+    },
+    {
       "verb": "GET",
       "path": "/account/users(.:format)",
       "endpoint": "accounts/users#index",
@@ -157,6 +289,12 @@
       "defaults": {}
     },
     {
+      "verb": "POST",
+      "path": "/account/bots/:id/kill_switch(.:format)",
+      "endpoint": "accounts/bots#kill_switch",
+      "defaults": {}
+    },
+    {
       "verb": "PATCH",
       "path": "/account/bots/:bot_id/key(.:format)",
       "endpoint": "accounts/bots/keys#update",
@@ -166,6 +304,60 @@
       "verb": "PUT",
       "path": "/account/bots/:bot_id/key(.:format)",
       "endpoint": "accounts/bots/keys#update",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/bots/:bot_id/credentials(.:format)",
+      "endpoint": "accounts/bots/credentials#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/:bot_id/credentials(.:format)",
+      "endpoint": "accounts/bots/credentials#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/bots/:bot_id/credentials/:id(.:format)",
+      "endpoint": "accounts/bots/credentials#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/bots/:bot_id/grants(.:format)",
+      "endpoint": "accounts/bots/grants#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/:bot_id/grants(.:format)",
+      "endpoint": "accounts/bots/grants#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/bots/:bot_id/grants/:id(.:format)",
+      "endpoint": "accounts/bots/grants#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/bots/:bot_id/github_connection(.:format)",
+      "endpoint": "accounts/bots/github_connections#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/:bot_id/github_connection(.:format)",
+      "endpoint": "accounts/bots/github_connections#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/:bot_id/webhook_secret(.:format)",
+      "endpoint": "accounts/bots/webhook_secrets#create",
       "defaults": {}
     },
     {
@@ -217,9 +409,105 @@
       "defaults": {}
     },
     {
+      "verb": "GET",
+      "path": "/account/icons(.:format)",
+      "endpoint": "accounts/icons#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/icons(.:format)",
+      "endpoint": "accounts/icons#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/icons/:id(.:format)",
+      "endpoint": "accounts/icons#destroy",
+      "defaults": {}
+    },
+    {
       "verb": "POST",
       "path": "/account/join_code(.:format)",
       "endpoint": "accounts/join_codes#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import/runs/:id/plan(.:format)",
+      "endpoint": "accounts/slack_import_runs#plan",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import/runs/:id/status(.:format)",
+      "endpoint": "accounts/slack_import_runs#status",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs/:id/import(.:format)",
+      "endpoint": "accounts/slack_import_runs#start_import",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs/:id/catch_up(.:format)",
+      "endpoint": "accounts/slack_import_runs#catch_up",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs/:id/cancel(.:format)",
+      "endpoint": "accounts/slack_import_runs#cancel",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs/:id/undo(.:format)",
+      "endpoint": "accounts/slack_import_runs#undo",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import/runs(.:format)",
+      "endpoint": "accounts/slack_import_runs#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs(.:format)",
+      "endpoint": "accounts/slack_import_runs#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import/runs/:id(.:format)",
+      "endpoint": "accounts/slack_import_runs#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import(.:format)",
+      "endpoint": "accounts/slack_imports#show",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/account/slack_import(.:format)",
+      "endpoint": "accounts/slack_imports#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/account/slack_import(.:format)",
+      "endpoint": "accounts/slack_imports#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/slack_import(.:format)",
+      "endpoint": "accounts/slack_imports#destroy",
       "defaults": {}
     },
     {
@@ -250,6 +538,18 @@
       "verb": "PUT",
       "path": "/account/custom_styles(.:format)",
       "endpoint": "accounts/custom_styles#update",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/audit_log(.:format)",
+      "endpoint": "accounts/audit_logs#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/integrations_health(.:format)",
+      "endpoint": "accounts/integrations_health#show",
       "defaults": {}
     },
     {
@@ -314,6 +614,24 @@
     },
     {
       "verb": "GET",
+      "path": "/users/:id/card(.:format)",
+      "endpoint": "users/cards#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/users/huddle_presence(.:format)",
+      "endpoint": "users/huddle_presence#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/users/presence(.:format)",
+      "endpoint": "users/presences#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
       "path": "/users/:user_id/avatar(.:format)",
       "endpoint": "users/avatars#show",
       "defaults": {}
@@ -334,6 +652,30 @@
       "verb": "POST",
       "path": "/users/:user_id/ban(.:format)",
       "endpoint": "users/bans#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/:user_id/dnd_allowance(.:format)",
+      "endpoint": "users/dnd_allowances#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/users/:user_id/dnd_allowance(.:format)",
+      "endpoint": "users/dnd_allowances#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/:user_id/star(.:format)",
+      "endpoint": "users/stars#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/users/:user_id/star(.:format)",
+      "endpoint": "users/stars#create",
       "defaults": {}
     },
     {
@@ -396,6 +738,94 @@
       "verb": "POST",
       "path": "/users/:user_id/profile(.:format)",
       "endpoint": "users/profiles#create",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/:user_id/sessions/revoke_others(.:format)",
+      "endpoint": "users/sessions#revoke_others",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/:user_id/sessions(.:format)",
+      "endpoint": "users/sessions#index",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/:user_id/sessions/:id(.:format)",
+      "endpoint": "users/sessions#destroy",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/:user_id/tour(.:format)",
+      "endpoint": "users/tours#update",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/:user_id/tour(.:format)",
+      "endpoint": "users/tours#update",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/:user_id/status(.:format)",
+      "endpoint": "users/statuses#update",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/:user_id/status(.:format)",
+      "endpoint": "users/statuses#update",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/:user_id/notification_settings(.:format)",
+      "endpoint": "users/notification_settings#update",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/:user_id/notification_settings(.:format)",
+      "endpoint": "users/notification_settings#update",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/:user_id/time_zone(.:format)",
+      "endpoint": "users/time_zones#update",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/:user_id/time_zone(.:format)",
+      "endpoint": "users/time_zones#update",
       "defaults": {
         "user_id": "me"
       }
@@ -474,6 +904,12 @@
     },
     {
       "verb": "GET",
+      "path": "/users(.:format)",
+      "endpoint": "users#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
       "path": "/users/:id(.:format)",
       "endpoint": "users#show",
       "defaults": {}
@@ -482,6 +918,412 @@
       "verb": "GET",
       "path": "/autocompletable/users(.:format)",
       "endpoint": "autocompletable/users#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/autocompletable/icons(.:format)",
+      "endpoint": "autocompletable/icons#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/autocompletable/slash_commands(.:format)",
+      "endpoint": "autocompletable/slash_commands#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/icons/:name(.:format)",
+      "endpoint": "workspace_icons#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/agents(.:format)",
+      "endpoint": "agents/directory#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/me(.:format)",
+      "endpoint": "agents#me",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agents/me(.:format)",
+      "endpoint": "agents#update",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/events(.:format)",
+      "endpoint": "agents/events#index",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/events/:id/ack(.:format)",
+      "endpoint": "agents/events#ack",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/:id/events(.:format)",
+      "endpoint": "agents/events#ledger",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/approvals(.:format)",
+      "endpoint": "agents/approvals#index",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/approvals(.:format)",
+      "endpoint": "agents/approvals#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/approvals/:id(.:format)",
+      "endpoint": "agents/approvals#show",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/agents/approvals/:id(.:format)",
+      "endpoint": "agents/approvals#destroy",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/:id/approvals(.:format)",
+      "endpoint": "agents/approvals#for_agent",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agent_approvals/:id(.:format)",
+      "endpoint": "agent_approvals#update",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/context(.:format)",
+      "endpoint": "agents/contexts#show",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/dms(.:format)",
+      "endpoint": "agents/dms#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/mcp(.:format)",
+      "endpoint": "agents/mcp#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/mcp(.:format)",
+      "endpoint": "agents/mcp#method_not_allowed",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/agents/mcp(.:format)",
+      "endpoint": "agents/mcp#method_not_allowed",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/work(.:format)",
+      "endpoint": "agents/work#index",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/work/:id(.:format)",
+      "endpoint": "agents/work#show",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agents/work/:id(.:format)",
+      "endpoint": "agents/work#update",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/agents/work/:id/result(.:format)",
+      "endpoint": "agents/work#result",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/work/:id/handoff(.:format)",
+      "endpoint": "agents/work#handoff",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/agents/messages(.:format)",
+      "endpoint": "agents/messages#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/agents/streaming_messages(.:format)",
+      "endpoint": "agents/streaming_messages#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agents/streaming_messages/:id(.:format)",
+      "endpoint": "agents/streaming_messages#update",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/streaming_messages/:id/finalize(.:format)",
+      "endpoint": "agents/streaming_messages#finalize",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/steps(.:format)",
+      "endpoint": "agents/steps#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agents/steps/:id(.:format)",
+      "endpoint": "agents/steps#update",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/messages/:id/pin(.:format)",
+      "endpoint": "agents/pins#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/agents/messages/:id/pin(.:format)",
+      "endpoint": "agents/pins#destroy",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/agents/slash_commands(.:format)",
+      "endpoint": "agents/slash_commands#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/agents/slash_commands/:name(.:format)",
+      "endpoint": "agents/slash_commands#destroy",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/agents/polls(.:format)",
+      "endpoint": "agents/polls#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/agents/polls/:id(.:format)",
+      "endpoint": "agents/polls#show",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/agents/posts(.:format)",
+      "endpoint": "agents/posts#index",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/agents/posts(.:format)",
+      "endpoint": "agents/posts#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/agents/github/pull_request_actions(.:format)",
+      "endpoint": "agents/github/pull_request_actions#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/fizzy/boards(.:format)",
+      "endpoint": "agents/fizzy/boards#index",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/fizzy/boards/:id(.:format)",
+      "endpoint": "agents/fizzy/boards#show",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/fizzy/cards/search(.:format)",
+      "endpoint": "agents/fizzy/cards#search",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/fizzy/cards/:account_id/:number(.:format)",
+      "endpoint": "agents/fizzy/cards#show",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/fizzy/card_actions(.:format)",
+      "endpoint": "agents/fizzy/card_actions#create",
+      "defaults": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:id/join(.:format)",
+      "endpoint": "rooms#join",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:id/leave(.:format)",
+      "endpoint": "rooms#leave",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/messages/preview(.:format)",
+      "endpoint": "messages#preview",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/messages/:id/actions(.:format)",
+      "endpoint": "messages#actions",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/messages/:id/forward_source(.:format)",
+      "endpoint": "message_forward_sources#forward_source",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/messages/:message_id/embed_suppression(.:format)",
+      "endpoint": "message_embed_suppressions#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/messages/:message_id/forwards(.:format)",
+      "endpoint": "message_forwards#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/messages/:message_id/forwards/destinations(.:format)",
+      "endpoint": "message_forwards#destinations",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/messages/:message_id/fizzy_cards(.:format)",
+      "endpoint": "rooms/fizzy/message_cards#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/messages/:message_id/fizzy_cards/new(.:format)",
+      "endpoint": "rooms/fizzy/message_cards#new",
       "defaults": {}
     },
     {
@@ -530,6 +1372,156 @@
       "verb": "DELETE",
       "path": "/rooms/:room_id/messages/:id(.:format)",
       "endpoint": "messages#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/:id/content(.:format)",
+      "endpoint": "channel_threads#content",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:id/actions(.:format)",
+      "endpoint": "channel_thread_messages#actions",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:id/forward_source(.:format)",
+      "endpoint": "message_forward_sources#forward_source",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:message_id/embed_suppression(.:format)",
+      "endpoint": "message_embed_suppressions#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:message_id/forwards(.:format)",
+      "endpoint": "message_forwards#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:message_id/forwards/destinations(.:format)",
+      "endpoint": "message_forwards#destinations",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:message_id/fizzy_cards(.:format)",
+      "endpoint": "rooms/fizzy/message_cards#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:message_id/fizzy_cards/new(.:format)",
+      "endpoint": "rooms/fizzy/message_cards#new",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/:thread_id/messages(.:format)",
+      "endpoint": "channel_thread_messages#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/threads/:thread_id/messages(.:format)",
+      "endpoint": "channel_thread_messages#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:id(.:format)",
+      "endpoint": "channel_thread_messages#show",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:id(.:format)",
+      "endpoint": "channel_thread_messages#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:id(.:format)",
+      "endpoint": "channel_thread_messages#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/threads/:thread_id/messages/:id(.:format)",
+      "endpoint": "channel_thread_messages#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/threads/:id/join(.:format)",
+      "endpoint": "channel_threads#join",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/threads/:id/leave(.:format)",
+      "endpoint": "channel_threads#leave",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/threads/:id/read(.:format)",
+      "endpoint": "channel_threads#read",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/threads/:id/read(.:format)",
+      "endpoint": "channel_threads#read",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads(.:format)",
+      "endpoint": "channel_threads#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/threads(.:format)",
+      "endpoint": "channel_threads#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/new(.:format)",
+      "endpoint": "channel_threads#new",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/threads/:id(.:format)",
+      "endpoint": "channel_threads#show",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/threads/:id(.:format)",
+      "endpoint": "channel_threads#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/:room_id/threads/:id(.:format)",
+      "endpoint": "channel_threads#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/threads/:id(.:format)",
+      "endpoint": "channel_threads#destroy",
       "defaults": {}
     },
     {
@@ -590,6 +1582,204 @@
     },
     {
       "verb": "GET",
+      "path": "/rooms/:room_id/members(.:format)",
+      "endpoint": "rooms/members#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/message_links/:id(.:format)",
+      "endpoint": "rooms/message_links#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/files(.:format)",
+      "endpoint": "rooms/files#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/pins(.:format)",
+      "endpoint": "rooms/pins#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/slash_commands(.:format)",
+      "endpoint": "rooms/slash_commands#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/polls/:id/vote(.:format)",
+      "endpoint": "rooms/polls#vote",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/polls(.:format)",
+      "endpoint": "rooms/polls#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/polls/:id(.:format)",
+      "endpoint": "rooms/polls#show",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/drive_recipients/validate(.:format)",
+      "endpoint": "rooms/drive_recipients#validate",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/drive_recipients(.:format)",
+      "endpoint": "rooms/drive_recipients#index",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/events/:id/cancel(.:format)",
+      "endpoint": "rooms/events#cancel",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/events/:event_id/attendance(.:format)",
+      "endpoint": "rooms/events/attendances#show",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/events/:event_id/attendance(.:format)",
+      "endpoint": "rooms/events/attendances#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/:room_id/events/:event_id/attendance(.:format)",
+      "endpoint": "rooms/events/attendances#update",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/events(.:format)",
+      "endpoint": "rooms/events#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/events(.:format)",
+      "endpoint": "rooms/events#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/events/new(.:format)",
+      "endpoint": "rooms/events#new",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/events/:id/edit(.:format)",
+      "endpoint": "rooms/events#edit",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/events/:id(.:format)",
+      "endpoint": "rooms/events#show",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/events/:id(.:format)",
+      "endpoint": "rooms/events#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/:room_id/events/:id(.:format)",
+      "endpoint": "rooms/events#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/stage/hand(.:format)",
+      "endpoint": "rooms/stage/hands#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/stage/hand(.:format)",
+      "endpoint": "rooms/stage/hands#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/stage/stream(.:format)",
+      "endpoint": "rooms/stage/streams#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/stage/stream(.:format)",
+      "endpoint": "rooms/stage/streams#create",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/stage/roles/:membership_id(.:format)",
+      "endpoint": "rooms/stage/roles#update",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/huddle/participants(.:format)",
+      "endpoint": "rooms/huddles#participants",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/huddle/leave(.:format)",
+      "endpoint": "rooms/huddles#leave",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/huddle(.:format)",
+      "endpoint": "rooms/huddles#show",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/huddle(.:format)",
+      "endpoint": "rooms/huddles#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/call_moderation/:membership_id/mute(.:format)",
+      "endpoint": "rooms/call_moderation#mute",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/call_moderation/:membership_id/mute(.:format)",
+      "endpoint": "rooms/call_moderation#unmute",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/call_moderation/:membership_id/disconnect(.:format)",
+      "endpoint": "rooms/call_moderation#disconnect",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
       "path": "/rooms/:room_id/refresh(.:format)",
       "endpoint": "rooms/refreshes#show",
       "defaults": {}
@@ -616,6 +1806,126 @@
       "verb": "PUT",
       "path": "/rooms/:room_id/involvement(.:format)",
       "endpoint": "rooms/involvements#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/read(.:format)",
+      "endpoint": "rooms/reads#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/read(.:format)",
+      "endpoint": "rooms/reads#create",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/favorite(.:format)",
+      "endpoint": "rooms/favorites#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/:room_id/favorite(.:format)",
+      "endpoint": "rooms/favorites#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/favorite(.:format)",
+      "endpoint": "rooms/favorites#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/favorite(.:format)",
+      "endpoint": "rooms/favorites#create",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/category_assignment(.:format)",
+      "endpoint": "rooms/categories#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/:room_id/category_assignment(.:format)",
+      "endpoint": "rooms/categories#update",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/github_subscriptions(.:format)",
+      "endpoint": "rooms/github_subscriptions#create",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/:room_id/github_subscriptions/:id(.:format)",
+      "endpoint": "rooms/github_subscriptions#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/:room_id/github_subscriptions/:id(.:format)",
+      "endpoint": "rooms/github_subscriptions#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/:room_id/github_subscriptions/:id(.:format)",
+      "endpoint": "rooms/github_subscriptions#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/inbound_email_address(.:format)",
+      "endpoint": "rooms/inbound_email_addresses#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/github/pull_request_threads(.:format)",
+      "endpoint": "github/pull_request_threads#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/github/pull_request_comments(.:format)",
+      "endpoint": "github/pull_request_comments#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/github/pull_request_reviews(.:format)",
+      "endpoint": "github/pull_request_reviews#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/github/pull_request_review_requests(.:format)",
+      "endpoint": "github/pull_request_review_requests#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/github/pull_request_write_actions/:id(.:format)",
+      "endpoint": "github/pull_request_write_actions#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/github/pull_requests/:id/card(.:format)",
+      "endpoint": "rooms/github/pull_request_cards#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/:room_id/fizzy/cards/:id/card(.:format)",
+      "endpoint": "rooms/fizzy/cards#show",
       "defaults": {}
     },
     {
@@ -769,6 +2079,18 @@
       "defaults": {}
     },
     {
+      "verb": "POST",
+      "path": "/rooms/directs/:id/add_members(.:format)",
+      "endpoint": "rooms/directs#add_members",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/directs/:id/leave(.:format)",
+      "endpoint": "rooms/directs#leave",
+      "defaults": {}
+    },
+    {
       "verb": "GET",
       "path": "/rooms/directs(.:format)",
       "endpoint": "rooms/directs#index",
@@ -814,6 +2136,210 @@
       "verb": "DELETE",
       "path": "/rooms/directs/:id(.:format)",
       "endpoint": "rooms/directs#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/voices(.:format)",
+      "endpoint": "rooms/voices#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/voices(.:format)",
+      "endpoint": "rooms/voices#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/voices/new(.:format)",
+      "endpoint": "rooms/voices#new",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/voices/:id/edit(.:format)",
+      "endpoint": "rooms/voices#edit",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/voices/:id(.:format)",
+      "endpoint": "rooms/voices#show",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/voices/:id(.:format)",
+      "endpoint": "rooms/voices#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/voices/:id(.:format)",
+      "endpoint": "rooms/voices#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/voices/:id(.:format)",
+      "endpoint": "rooms/voices#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/stages(.:format)",
+      "endpoint": "rooms/stages#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/stages(.:format)",
+      "endpoint": "rooms/stages#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/stages/new(.:format)",
+      "endpoint": "rooms/stages#new",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/stages/:id/edit(.:format)",
+      "endpoint": "rooms/stages#edit",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/stages/:id(.:format)",
+      "endpoint": "rooms/stages#show",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/stages/:id(.:format)",
+      "endpoint": "rooms/stages#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/stages/:id(.:format)",
+      "endpoint": "rooms/stages#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/stages/:id(.:format)",
+      "endpoint": "rooms/stages#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards(.:format)",
+      "endpoint": "rooms/boards#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/boards(.:format)",
+      "endpoint": "rooms/boards#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards/new(.:format)",
+      "endpoint": "rooms/boards#new",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards/:id/edit(.:format)",
+      "endpoint": "rooms/boards#edit",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards/:id(.:format)",
+      "endpoint": "rooms/boards#show",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/boards/:id(.:format)",
+      "endpoint": "rooms/boards#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/boards/:id(.:format)",
+      "endpoint": "rooms/boards#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/boards/:id(.:format)",
+      "endpoint": "rooms/boards#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards/:board_id/automations(.:format)",
+      "endpoint": "rooms/boards/automations#show",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/boards/:board_id/automations/tag_assignments(.:format)",
+      "endpoint": "rooms/boards/automations#create_tag_assignment",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/boards/:board_id/automations/tag_assignments/:id(.:format)",
+      "endpoint": "rooms/boards/automations#destroy_tag_assignment",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/boards/:board_id/automations/sla_rules(.:format)",
+      "endpoint": "rooms/boards/automations#update_sla_rules",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/messages/:message_id/forwards(.:format)",
+      "endpoint": "message_forwards#create",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/messages/:message_id/embed_suppression(.:format)",
+      "endpoint": "message_embed_suppressions#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/messages/:id/forward_source(.:format)",
+      "endpoint": "message_forward_sources#forward_source",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/messages/:message_id/forwards/destinations(.:format)",
+      "endpoint": "message_forwards#destinations",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/messages/:message_id/pin(.:format)",
+      "endpoint": "messages/pins#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/messages/:message_id/pin(.:format)",
+      "endpoint": "messages/pins#create",
       "defaults": {}
     },
     {
@@ -913,6 +2439,72 @@
       "defaults": {}
     },
     {
+      "verb": "GET",
+      "path": "/saved(.:format)",
+      "endpoint": "saved_items#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/saved(.:format)",
+      "endpoint": "saved_items#create",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/saved/:id(.:format)",
+      "endpoint": "saved_items#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/saved/:id(.:format)",
+      "endpoint": "saved_items#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/saved/:id(.:format)",
+      "endpoint": "saved_items#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/scheduled_messages/:id/send_now(.:format)",
+      "endpoint": "scheduled_messages#send_now",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/scheduled_messages(.:format)",
+      "endpoint": "scheduled_messages#index",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/scheduled_messages/:id(.:format)",
+      "endpoint": "scheduled_messages#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/scheduled_messages/:id(.:format)",
+      "endpoint": "scheduled_messages#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/scheduled_messages/:id(.:format)",
+      "endpoint": "scheduled_messages#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/:room_id/scheduled_messages(.:format)",
+      "endpoint": "scheduled_messages#create",
+      "defaults": {}
+    },
+    {
       "verb": "DELETE",
       "path": "/searches/clear(.:format)",
       "endpoint": "searches#clear",
@@ -931,9 +2523,267 @@
       "defaults": {}
     },
     {
+      "verb": "GET",
+      "path": "/switcher(.:format)",
+      "endpoint": "switchers#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/room_categories(.:format)",
+      "endpoint": "room_categories#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/room_categories(.:format)",
+      "endpoint": "room_categories#create",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/room_categories/:id(.:format)",
+      "endpoint": "room_categories#update",
+      "defaults": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/room_categories/:id(.:format)",
+      "endpoint": "room_categories#update",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/room_categories/:id(.:format)",
+      "endpoint": "room_categories#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/activity/unread_count(.:format)",
+      "endpoint": "activity_items#unread_count",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/activity/:id/open(.:format)",
+      "endpoint": "activity_items#open",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/activity/:id/read(.:format)",
+      "endpoint": "activity_items#read",
+      "defaults": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/activity/:id/handled(.:format)",
+      "endpoint": "activity_items#handled",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/activity(.:format)",
+      "endpoint": "activity_items#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/work(.:format)",
+      "endpoint": "work_threads#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/threads/:thread_id/work/links(.:format)",
+      "endpoint": "threads/work/links#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/threads/:thread_id/work/links(.:format)",
+      "endpoint": "threads/work/links#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/threads/:thread_id/work/links/:id(.:format)",
+      "endpoint": "threads/work/links#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/threads/:thread_id/work/handoff/new(.:format)",
+      "endpoint": "threads/work/handoffs#new",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/threads/:thread_id/work/handoff(.:format)",
+      "endpoint": "threads/work/handoffs#create",
+      "defaults": {}
+    },
+    {
       "verb": "POST",
       "path": "/unfurl_link(.:format)",
       "endpoint": "unfurl_links#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/embeds/image/:signed(.:format)",
+      "endpoint": "embeds/images#show",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/github/webhooks(.:format)",
+      "endpoint": "github/webhooks#create",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/github/connection(.:format)",
+      "endpoint": "github/connections#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/github/connection(.:format)",
+      "endpoint": "github/connections#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/github/app/connect(.:format)",
+      "endpoint": "github/app_connections#connect",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/github/app/callback(.:format)",
+      "endpoint": "github/app_connections#callback",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/fizzy/connection(.:format)",
+      "endpoint": "fizzy/connections#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/fizzy/connection(.:format)",
+      "endpoint": "fizzy/connections#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/oauth/start(.:format)",
+      "endpoint": "slack/oauth#start",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/oauth/callback(.:format)",
+      "endpoint": "slack/oauth#callback",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/slack/connection(.:format)",
+      "endpoint": "slack/connections#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/imports/:id/status(.:format)",
+      "endpoint": "slack/imports#status",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/slack/imports/:id/cancel(.:format)",
+      "endpoint": "slack/imports#cancel",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/slack/imports/:id/undo(.:format)",
+      "endpoint": "slack/imports#undo",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/imports(.:format)",
+      "endpoint": "slack/imports#index",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/slack/imports(.:format)",
+      "endpoint": "slack/imports#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/imports/:id(.:format)",
+      "endpoint": "slack/imports#show",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/google/connect(.:format)",
+      "endpoint": "google/connections#connect",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/google/callback(.:format)",
+      "endpoint": "google/connections#callback",
+      "defaults": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/google/connection(.:format)",
+      "endpoint": "google/connections#destroy",
+      "defaults": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/google/calendar/notifications(.:format)",
+      "endpoint": "google/calendar_notifications#create",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/google/drive/files(.:format)",
+      "endpoint": "google/drive_files#index",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/google/drive/files/:id(.:format)",
+      "endpoint": "google/drive_files#show",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/about(.:format)",
+      "endpoint": "public_pages#about",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/privacy(.:format)",
+      "endpoint": "public_pages#privacy",
+      "defaults": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/terms(.:format)",
+      "endpoint": "public_pages#terms",
       "defaults": {}
     },
     {
@@ -1961,6 +3811,3313 @@
       "path": "/cable",
       "endpoint": null,
       "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/internal/huddle/authorize",
+      "endpoint": "internal/huddle#authorize",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/internal/huddle/grants/1",
+      "endpoint": "internal/huddle#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/internal/huddle/grants/1/left",
+      "endpoint": "internal/huddle#left",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/first_run/new",
+      "endpoint": "first_runs#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/first_run/edit",
+      "endpoint": "first_runs#edit",
+      "params": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/first_run",
+      "endpoint": "first_runs#update",
+      "params": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/first_run",
+      "endpoint": "first_runs#update",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/first_run",
+      "endpoint": "first_runs#destroy",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/session/transfers/1",
+      "endpoint": "sessions/transfers#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/session/transfers/1",
+      "endpoint": "sessions/transfers#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/session/transfers/1",
+      "endpoint": "sessions/transfers#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/session/edit",
+      "endpoint": "sessions#edit",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/session",
+      "endpoint": "sessions#show",
+      "params": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/session",
+      "endpoint": "sessions#update",
+      "params": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/session",
+      "endpoint": "sessions#update",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/csp_reports",
+      "endpoint": "content_security_policy_reports#create",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/session/google",
+      "endpoint": "sessions/google#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/session/google/callback",
+      "endpoint": "sessions/google#callback",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/sudo/new",
+      "endpoint": "sudos#new",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/sudo",
+      "endpoint": "sudos#create",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/sudo/google",
+      "endpoint": "sudos#google",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/user/profile/google_sign_in_link",
+      "endpoint": "users/google_sign_in_links#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/two_factor_setup",
+      "endpoint": "two_factor/setups#show",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/two_factor_setup",
+      "endpoint": "two_factor/setups#destroy",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/two_factor_setup",
+      "endpoint": "two_factor/setups#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/two_factor_challenge",
+      "endpoint": "two_factor/challenges#show",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/two_factor_challenge",
+      "endpoint": "two_factor/challenges#create",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/two_factor_backup_codes",
+      "endpoint": "two_factor/backup_codes#create",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/two_factor_remembered_devices/1",
+      "endpoint": "two_factor/remembered_devices#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/two_factor_remembered_devices",
+      "endpoint": "two_factor/remembered_devices#destroy_all",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/two_factor_reauthentication",
+      "endpoint": "two_factor/reauthentications#create",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/users/1/google_link",
+      "endpoint": "accounts/users/google_links#destroy",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/users/1/google_link",
+      "endpoint": "accounts/users/google_links#create",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/users/1/two_factor_reset",
+      "endpoint": "accounts/users/two_factor_resets#create",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/users",
+      "endpoint": "accounts/users#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/users/new",
+      "endpoint": "accounts/users#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/users/1/edit",
+      "endpoint": "accounts/users#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/users/1",
+      "endpoint": "accounts/users#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/account/users/1",
+      "endpoint": "accounts/users#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/account/users/1",
+      "endpoint": "accounts/users#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/users/1",
+      "endpoint": "accounts/users#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/1/kill_switch",
+      "endpoint": "accounts/bots#kill_switch",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/account/bots/1/key",
+      "endpoint": "accounts/bots/keys#update",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/account/bots/1/key",
+      "endpoint": "accounts/bots/keys#update",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/bots/1/credentials",
+      "endpoint": "accounts/bots/credentials#index",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/1/credentials",
+      "endpoint": "accounts/bots/credentials#create",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/bots/1/credentials/1",
+      "endpoint": "accounts/bots/credentials#destroy",
+      "params": {
+        "bot_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/bots/1/grants",
+      "endpoint": "accounts/bots/grants#index",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/1/grants",
+      "endpoint": "accounts/bots/grants#create",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/bots/1/grants/1",
+      "endpoint": "accounts/bots/grants#destroy",
+      "params": {
+        "bot_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/bots/1/github_connection",
+      "endpoint": "accounts/bots/github_connections#destroy",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/1/github_connection",
+      "endpoint": "accounts/bots/github_connections#create",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots/1/webhook_secret",
+      "endpoint": "accounts/bots/webhook_secrets#create",
+      "params": {
+        "bot_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/bots",
+      "endpoint": "accounts/bots#index",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/bots",
+      "endpoint": "accounts/bots#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/bots/1/edit",
+      "endpoint": "accounts/bots#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/bots/1",
+      "endpoint": "accounts/bots#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/account/bots/1",
+      "endpoint": "accounts/bots#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/account/bots/1",
+      "endpoint": "accounts/bots#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/bots/1",
+      "endpoint": "accounts/bots#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/icons",
+      "endpoint": "accounts/icons#index",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/icons",
+      "endpoint": "accounts/icons#create",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/icons/1",
+      "endpoint": "accounts/icons#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import/runs/1/plan",
+      "endpoint": "accounts/slack_import_runs#plan",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import/runs/1/status",
+      "endpoint": "accounts/slack_import_runs#status",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs/1/import",
+      "endpoint": "accounts/slack_import_runs#start_import",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs/1/catch_up",
+      "endpoint": "accounts/slack_import_runs#catch_up",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs/1/cancel",
+      "endpoint": "accounts/slack_import_runs#cancel",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs/1/undo",
+      "endpoint": "accounts/slack_import_runs#undo",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import/runs",
+      "endpoint": "accounts/slack_import_runs#index",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account/slack_import/runs",
+      "endpoint": "accounts/slack_import_runs#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import/runs/1",
+      "endpoint": "accounts/slack_import_runs#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/account/slack_import",
+      "endpoint": "accounts/slack_imports#show",
+      "params": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/account/slack_import",
+      "endpoint": "accounts/slack_imports#update",
+      "params": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/account/slack_import",
+      "endpoint": "accounts/slack_imports#update",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account/slack_import",
+      "endpoint": "accounts/slack_imports#destroy",
+      "params": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/account/custom_styles",
+      "endpoint": "accounts/custom_styles#update",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/audit_log",
+      "endpoint": "accounts/audit_logs#show",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/integrations_health",
+      "endpoint": "accounts/integrations_health#show",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account/new",
+      "endpoint": "accounts#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/account",
+      "endpoint": "accounts#show",
+      "params": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/account",
+      "endpoint": "accounts#update",
+      "params": {}
+    },
+    {
+      "verb": "PUT",
+      "path": "/account",
+      "endpoint": "accounts#update",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/account",
+      "endpoint": "accounts#destroy",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/account",
+      "endpoint": "accounts#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/join/1",
+      "endpoint": "users#new",
+      "params": {
+        "join_code": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/join/1",
+      "endpoint": "users#create",
+      "params": {
+        "join_code": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/qr_code/1",
+      "endpoint": "qr_code#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/card",
+      "endpoint": "users/cards#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/huddle_presence",
+      "endpoint": "users/huddle_presence#show",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/users/presence",
+      "endpoint": "users/presences#show",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/avatar",
+      "endpoint": "users/avatars#show",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/1/avatar",
+      "endpoint": "users/avatars#destroy",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/1/ban",
+      "endpoint": "users/bans#destroy",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/users/1/ban",
+      "endpoint": "users/bans#create",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/1/dnd_allowance",
+      "endpoint": "users/dnd_allowances#destroy",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/users/1/dnd_allowance",
+      "endpoint": "users/dnd_allowances#create",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/1/star",
+      "endpoint": "users/stars#destroy",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/users/1/star",
+      "endpoint": "users/stars#create",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/sidebar",
+      "endpoint": "users/sidebars#show",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/profile/new",
+      "endpoint": "users/profiles#new",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/profile/edit",
+      "endpoint": "users/profiles#edit",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/profile",
+      "endpoint": "users/profiles#show",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/1/profile",
+      "endpoint": "users/profiles#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/1/profile",
+      "endpoint": "users/profiles#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/1/profile",
+      "endpoint": "users/profiles#destroy",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/users/1/profile",
+      "endpoint": "users/profiles#create",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/1/sessions/revoke_others",
+      "endpoint": "users/sessions#revoke_others",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/sessions",
+      "endpoint": "users/sessions#index",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/1/sessions/1",
+      "endpoint": "users/sessions#destroy",
+      "params": {
+        "user_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/1/tour",
+      "endpoint": "users/tours#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/1/tour",
+      "endpoint": "users/tours#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/1/status",
+      "endpoint": "users/statuses#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/1/status",
+      "endpoint": "users/statuses#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/1/notification_settings",
+      "endpoint": "users/notification_settings#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/1/notification_settings",
+      "endpoint": "users/notification_settings#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/1/time_zone",
+      "endpoint": "users/time_zones#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/1/time_zone",
+      "endpoint": "users/time_zones#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/users/1/push_subscriptions/1/test_notifications",
+      "endpoint": "users/push_subscriptions/test_notifications#create",
+      "params": {
+        "user_id": "1",
+        "push_subscription_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/push_subscriptions",
+      "endpoint": "users/push_subscriptions#index",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/users/1/push_subscriptions",
+      "endpoint": "users/push_subscriptions#create",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/push_subscriptions/new",
+      "endpoint": "users/push_subscriptions#new",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/push_subscriptions/1/edit",
+      "endpoint": "users/push_subscriptions#edit",
+      "params": {
+        "user_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/push_subscriptions/1",
+      "endpoint": "users/push_subscriptions#show",
+      "params": {
+        "user_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/users/1/push_subscriptions/1",
+      "endpoint": "users/push_subscriptions#update",
+      "params": {
+        "user_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/users/1/push_subscriptions/1",
+      "endpoint": "users/push_subscriptions#update",
+      "params": {
+        "user_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/users/1/push_subscriptions/1",
+      "endpoint": "users/push_subscriptions#destroy",
+      "params": {
+        "user_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users",
+      "endpoint": "users#index",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1",
+      "endpoint": "users#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/autocompletable/icons",
+      "endpoint": "autocompletable/icons#index",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/autocompletable/slash_commands",
+      "endpoint": "autocompletable/slash_commands#index",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/icons/1",
+      "endpoint": "workspace_icons#show",
+      "params": {
+        "name": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents",
+      "endpoint": "agents/directory#index",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/me",
+      "endpoint": "agents#me",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agents/me",
+      "endpoint": "agents#update",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/events",
+      "endpoint": "agents/events#index",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/events/1/ack",
+      "endpoint": "agents/events#ack",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/1/events",
+      "endpoint": "agents/events#ledger",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/approvals",
+      "endpoint": "agents/approvals#index",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/approvals",
+      "endpoint": "agents/approvals#create",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/approvals/1",
+      "endpoint": "agents/approvals#show",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/agents/approvals/1",
+      "endpoint": "agents/approvals#destroy",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/1/approvals",
+      "endpoint": "agents/approvals#for_agent",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agent_approvals/1",
+      "endpoint": "agent_approvals#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/context",
+      "endpoint": "agents/contexts#show",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/dms",
+      "endpoint": "agents/dms#create",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/mcp",
+      "endpoint": "agents/mcp#create",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/mcp",
+      "endpoint": "agents/mcp#method_not_allowed",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/agents/mcp",
+      "endpoint": "agents/mcp#method_not_allowed",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/work",
+      "endpoint": "agents/work#index",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/work/1",
+      "endpoint": "agents/work#show",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agents/work/1",
+      "endpoint": "agents/work#update",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/agents/work/1/result",
+      "endpoint": "agents/work#result",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/work/1/handoff",
+      "endpoint": "agents/work#handoff",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/agents/messages",
+      "endpoint": "agents/messages#create",
+      "params": {
+        "format": "json",
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/agents/streaming_messages",
+      "endpoint": "agents/streaming_messages#create",
+      "params": {
+        "format": "json",
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agents/streaming_messages/1",
+      "endpoint": "agents/streaming_messages#update",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/streaming_messages/1/finalize",
+      "endpoint": "agents/streaming_messages#finalize",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/steps",
+      "endpoint": "agents/steps#create",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/agents/steps/1",
+      "endpoint": "agents/steps#update",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/messages/1/pin",
+      "endpoint": "agents/pins#create",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/agents/messages/1/pin",
+      "endpoint": "agents/pins#destroy",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/agents/slash_commands",
+      "endpoint": "agents/slash_commands#create",
+      "params": {
+        "format": "json",
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/agents/slash_commands/1",
+      "endpoint": "agents/slash_commands#destroy",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "name": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/agents/polls",
+      "endpoint": "agents/polls#create",
+      "params": {
+        "format": "json",
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/agents/polls/1",
+      "endpoint": "agents/polls#show",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/agents/posts",
+      "endpoint": "agents/posts#index",
+      "params": {
+        "format": "json",
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/agents/posts",
+      "endpoint": "agents/posts#create",
+      "params": {
+        "format": "json",
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/agents/github/pull_request_actions",
+      "endpoint": "agents/github/pull_request_actions#create",
+      "params": {
+        "format": "json",
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/fizzy/boards",
+      "endpoint": "agents/fizzy/boards#index",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/fizzy/boards/1",
+      "endpoint": "agents/fizzy/boards#show",
+      "params": {
+        "format": "json",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/fizzy/cards/search",
+      "endpoint": "agents/fizzy/cards#search",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/agents/fizzy/cards/1/1",
+      "endpoint": "agents/fizzy/cards#show",
+      "params": {
+        "format": "json",
+        "account_id": "1",
+        "number": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/agents/fizzy/card_actions",
+      "endpoint": "agents/fizzy/card_actions#create",
+      "params": {
+        "format": "json"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/join",
+      "endpoint": "rooms#join",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/leave",
+      "endpoint": "rooms#leave",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/messages/preview",
+      "endpoint": "messages#preview",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/messages/1/actions",
+      "endpoint": "messages#actions",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/messages/1/forward_source",
+      "endpoint": "message_forward_sources#forward_source",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/messages/1/embed_suppression",
+      "endpoint": "message_embed_suppressions#create",
+      "params": {
+        "room_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/messages/1/forwards",
+      "endpoint": "message_forwards#create",
+      "params": {
+        "room_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/messages/1/forwards/destinations",
+      "endpoint": "message_forwards#destinations",
+      "params": {
+        "room_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/messages/1/fizzy_cards",
+      "endpoint": "rooms/fizzy/message_cards#create",
+      "params": {
+        "room_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/messages/1/fizzy_cards/new",
+      "endpoint": "rooms/fizzy/message_cards#new",
+      "params": {
+        "room_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/messages/1/edit",
+      "endpoint": "messages#edit",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/messages/1",
+      "endpoint": "messages#show",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/messages/1",
+      "endpoint": "messages#update",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/messages/1",
+      "endpoint": "messages#update",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/messages/1",
+      "endpoint": "messages#destroy",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/1/content",
+      "endpoint": "channel_threads#content",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/1/messages/1/actions",
+      "endpoint": "channel_thread_messages#actions",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/1/messages/1/forward_source",
+      "endpoint": "message_forward_sources#forward_source",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/threads/1/messages/1/embed_suppression",
+      "endpoint": "message_embed_suppressions#create",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/threads/1/messages/1/forwards",
+      "endpoint": "message_forwards#create",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/1/messages/1/forwards/destinations",
+      "endpoint": "message_forwards#destinations",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/threads/1/messages/1/fizzy_cards",
+      "endpoint": "rooms/fizzy/message_cards#create",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/1/messages/1/fizzy_cards/new",
+      "endpoint": "rooms/fizzy/message_cards#new",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/1/messages",
+      "endpoint": "channel_thread_messages#index",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/threads/1/messages",
+      "endpoint": "channel_thread_messages#create",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/1/messages/1",
+      "endpoint": "channel_thread_messages#show",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/threads/1/messages/1",
+      "endpoint": "channel_thread_messages#update",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/threads/1/messages/1",
+      "endpoint": "channel_thread_messages#update",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/threads/1/messages/1",
+      "endpoint": "channel_thread_messages#destroy",
+      "params": {
+        "room_id": "1",
+        "thread_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/threads/1/join",
+      "endpoint": "channel_threads#join",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/threads/1/leave",
+      "endpoint": "channel_threads#leave",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/threads/1/read",
+      "endpoint": "channel_threads#read",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/threads/1/read",
+      "endpoint": "channel_threads#read",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads",
+      "endpoint": "channel_threads#index",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/threads",
+      "endpoint": "channel_threads#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/new",
+      "endpoint": "channel_threads#new",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/threads/1",
+      "endpoint": "channel_threads#show",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/threads/1",
+      "endpoint": "channel_threads#update",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/threads/1",
+      "endpoint": "channel_threads#update",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/threads/1",
+      "endpoint": "channel_threads#destroy",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/1-parity/messages/1/boosts",
+      "endpoint": "messages/boosts/by_bots#create",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "bot_key": "1-parity",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/1-parity/messages/1/boosts/1",
+      "endpoint": "messages/boosts/by_bots#destroy",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "bot_key": "1-parity",
+        "message_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/1-parity/messages",
+      "endpoint": "messages/by_bots#index",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "bot_key": "1-parity"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/1-parity/messages",
+      "endpoint": "messages/by_bots#create",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "bot_key": "1-parity"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/1-parity/messages/1",
+      "endpoint": "messages/by_bots#update",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "bot_key": "1-parity",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/1-parity/messages/1",
+      "endpoint": "messages/by_bots#update",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "bot_key": "1-parity",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/1-parity/messages/1",
+      "endpoint": "messages/by_bots#destroy",
+      "params": {
+        "format": "json",
+        "room_id": "1",
+        "bot_key": "1-parity",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/members",
+      "endpoint": "rooms/members#index",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/message_links/1",
+      "endpoint": "rooms/message_links#show",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/files",
+      "endpoint": "rooms/files#index",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/pins",
+      "endpoint": "rooms/pins#index",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/slash_commands",
+      "endpoint": "rooms/slash_commands#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/polls/1/vote",
+      "endpoint": "rooms/polls#vote",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/polls",
+      "endpoint": "rooms/polls#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/polls/1",
+      "endpoint": "rooms/polls#show",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/drive_recipients/validate",
+      "endpoint": "rooms/drive_recipients#validate",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/drive_recipients",
+      "endpoint": "rooms/drive_recipients#index",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/events/1/cancel",
+      "endpoint": "rooms/events#cancel",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/events/1/attendance",
+      "endpoint": "rooms/events/attendances#show",
+      "params": {
+        "room_id": "1",
+        "event_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/events/1/attendance",
+      "endpoint": "rooms/events/attendances#update",
+      "params": {
+        "room_id": "1",
+        "event_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/events/1/attendance",
+      "endpoint": "rooms/events/attendances#update",
+      "params": {
+        "room_id": "1",
+        "event_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/events",
+      "endpoint": "rooms/events#index",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/events",
+      "endpoint": "rooms/events#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/events/new",
+      "endpoint": "rooms/events#new",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/events/1/edit",
+      "endpoint": "rooms/events#edit",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/events/1",
+      "endpoint": "rooms/events#show",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/events/1",
+      "endpoint": "rooms/events#update",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/events/1",
+      "endpoint": "rooms/events#update",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/stage/hand",
+      "endpoint": "rooms/stage/hands#destroy",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/stage/hand",
+      "endpoint": "rooms/stage/hands#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/stage/stream",
+      "endpoint": "rooms/stage/streams#destroy",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/stage/stream",
+      "endpoint": "rooms/stage/streams#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/stage/roles/1",
+      "endpoint": "rooms/stage/roles#update",
+      "params": {
+        "room_id": "1",
+        "membership_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/huddle/participants",
+      "endpoint": "rooms/huddles#participants",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/huddle/leave",
+      "endpoint": "rooms/huddles#leave",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/huddle",
+      "endpoint": "rooms/huddles#show",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/huddle",
+      "endpoint": "rooms/huddles#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/call_moderation/1/mute",
+      "endpoint": "rooms/call_moderation#mute",
+      "params": {
+        "room_id": "1",
+        "membership_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/call_moderation/1/mute",
+      "endpoint": "rooms/call_moderation#unmute",
+      "params": {
+        "room_id": "1",
+        "membership_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/call_moderation/1/disconnect",
+      "endpoint": "rooms/call_moderation#disconnect",
+      "params": {
+        "room_id": "1",
+        "membership_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/involvement",
+      "endpoint": "rooms/involvements#update",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/read",
+      "endpoint": "rooms/reads#destroy",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/read",
+      "endpoint": "rooms/reads#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/favorite",
+      "endpoint": "rooms/favorites#update",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/favorite",
+      "endpoint": "rooms/favorites#update",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/favorite",
+      "endpoint": "rooms/favorites#destroy",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/favorite",
+      "endpoint": "rooms/favorites#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/category_assignment",
+      "endpoint": "rooms/categories#update",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/category_assignment",
+      "endpoint": "rooms/categories#update",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/github_subscriptions",
+      "endpoint": "rooms/github_subscriptions#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1/github_subscriptions/1",
+      "endpoint": "rooms/github_subscriptions#update",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1/github_subscriptions/1",
+      "endpoint": "rooms/github_subscriptions#update",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1/github_subscriptions/1",
+      "endpoint": "rooms/github_subscriptions#destroy",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/inbound_email_address",
+      "endpoint": "rooms/inbound_email_addresses#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/github/pull_request_threads",
+      "endpoint": "github/pull_request_threads#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/github/pull_request_comments",
+      "endpoint": "github/pull_request_comments#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/github/pull_request_reviews",
+      "endpoint": "github/pull_request_reviews#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/github/pull_request_review_requests",
+      "endpoint": "github/pull_request_review_requests#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/github/pull_request_write_actions/1",
+      "endpoint": "github/pull_request_write_actions#show",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/github/pull_requests/1/card",
+      "endpoint": "rooms/github/pull_request_cards#show",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/fizzy/cards/1/card",
+      "endpoint": "rooms/fizzy/cards#show",
+      "params": {
+        "room_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/1/@1",
+      "endpoint": "rooms#show",
+      "params": {
+        "room_id": "1",
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms",
+      "endpoint": "rooms#create",
+      "params": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/1",
+      "endpoint": "rooms#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/1",
+      "endpoint": "rooms#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/1",
+      "endpoint": "rooms#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/opens/1/edit",
+      "endpoint": "rooms/opens#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/opens/1",
+      "endpoint": "rooms/opens#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/opens/1",
+      "endpoint": "rooms/opens#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/opens/1",
+      "endpoint": "rooms/opens#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/opens/1",
+      "endpoint": "rooms/opens#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/closeds",
+      "endpoint": "rooms/closeds#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/closeds/new",
+      "endpoint": "rooms/closeds#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/closeds/1/edit",
+      "endpoint": "rooms/closeds#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/closeds/1",
+      "endpoint": "rooms/closeds#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/closeds/1",
+      "endpoint": "rooms/closeds#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/closeds/1",
+      "endpoint": "rooms/closeds#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/closeds/1",
+      "endpoint": "rooms/closeds#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/directs/1/add_members",
+      "endpoint": "rooms/directs#add_members",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/directs/1/leave",
+      "endpoint": "rooms/directs#leave",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/directs",
+      "endpoint": "rooms/directs#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/directs/new",
+      "endpoint": "rooms/directs#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/directs/1/edit",
+      "endpoint": "rooms/directs#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/directs/1",
+      "endpoint": "rooms/directs#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/directs/1",
+      "endpoint": "rooms/directs#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/directs/1",
+      "endpoint": "rooms/directs#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/directs/1",
+      "endpoint": "rooms/directs#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/voices",
+      "endpoint": "rooms#show",
+      "params": {
+        "id": "voices"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/voices",
+      "endpoint": "rooms/voices#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/voices/new",
+      "endpoint": "rooms/voices#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/voices/1/edit",
+      "endpoint": "rooms/voices#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/voices/1",
+      "endpoint": "rooms/voices#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/voices/1",
+      "endpoint": "rooms/voices#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/voices/1",
+      "endpoint": "rooms/voices#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/voices/1",
+      "endpoint": "rooms/voices#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/stages",
+      "endpoint": "rooms#show",
+      "params": {
+        "id": "stages"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/stages",
+      "endpoint": "rooms/stages#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/stages/new",
+      "endpoint": "rooms/stages#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/stages/1/edit",
+      "endpoint": "rooms/stages#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/stages/1",
+      "endpoint": "rooms/stages#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/stages/1",
+      "endpoint": "rooms/stages#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/stages/1",
+      "endpoint": "rooms/stages#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/stages/1",
+      "endpoint": "rooms/stages#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards",
+      "endpoint": "rooms#show",
+      "params": {
+        "id": "boards"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/boards",
+      "endpoint": "rooms/boards#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards/new",
+      "endpoint": "rooms/boards#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards/1/edit",
+      "endpoint": "rooms/boards#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards/1",
+      "endpoint": "rooms/boards#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/boards/1",
+      "endpoint": "rooms/boards#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rooms/boards/1",
+      "endpoint": "rooms/boards#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/boards/1",
+      "endpoint": "rooms/boards#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rooms/boards/1/automations",
+      "endpoint": "rooms/boards/automations#show",
+      "params": {
+        "board_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/boards/1/automations/tag_assignments",
+      "endpoint": "rooms/boards/automations#create_tag_assignment",
+      "params": {
+        "board_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/rooms/boards/1/automations/tag_assignments/1",
+      "endpoint": "rooms/boards/automations#destroy_tag_assignment",
+      "params": {
+        "board_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/rooms/boards/1/automations/sla_rules",
+      "endpoint": "rooms/boards/automations#update_sla_rules",
+      "params": {
+        "board_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/messages/1/forwards",
+      "endpoint": "message_forwards#create",
+      "params": {
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/messages/1/embed_suppression",
+      "endpoint": "message_embed_suppressions#create",
+      "params": {
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/messages/1/forward_source",
+      "endpoint": "message_forward_sources#forward_source",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/messages/1/forwards/destinations",
+      "endpoint": "message_forwards#destinations",
+      "params": {
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/messages/1/pin",
+      "endpoint": "messages/pins#destroy",
+      "params": {
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/messages/1/pin",
+      "endpoint": "messages/pins#create",
+      "params": {
+        "message_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/messages/1/boosts/1/edit",
+      "endpoint": "messages/boosts#edit",
+      "params": {
+        "message_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/messages/1/boosts/1",
+      "endpoint": "messages/boosts#show",
+      "params": {
+        "message_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/messages/1/boosts/1",
+      "endpoint": "messages/boosts#update",
+      "params": {
+        "message_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/messages/1/boosts/1",
+      "endpoint": "messages/boosts#update",
+      "params": {
+        "message_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/messages/1/boosts/1",
+      "endpoint": "messages/boosts#destroy",
+      "params": {
+        "message_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/messages",
+      "endpoint": "messages#index",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/messages",
+      "endpoint": "messages#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/messages/1/edit",
+      "endpoint": "messages#edit",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/messages/1",
+      "endpoint": "messages#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/messages/1",
+      "endpoint": "messages#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/messages/1",
+      "endpoint": "messages#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/messages/1",
+      "endpoint": "messages#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/saved",
+      "endpoint": "saved_items#index",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/saved",
+      "endpoint": "saved_items#create",
+      "params": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/saved/1",
+      "endpoint": "saved_items#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/saved/1",
+      "endpoint": "saved_items#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/saved/1",
+      "endpoint": "saved_items#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/scheduled_messages/1/send_now",
+      "endpoint": "scheduled_messages#send_now",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/scheduled_messages",
+      "endpoint": "scheduled_messages#index",
+      "params": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/scheduled_messages/1",
+      "endpoint": "scheduled_messages#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/scheduled_messages/1",
+      "endpoint": "scheduled_messages#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/scheduled_messages/1",
+      "endpoint": "scheduled_messages#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rooms/1/scheduled_messages",
+      "endpoint": "scheduled_messages#create",
+      "params": {
+        "room_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/switcher",
+      "endpoint": "switchers#show",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/room_categories",
+      "endpoint": "room_categories#index",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/room_categories",
+      "endpoint": "room_categories#create",
+      "params": {}
+    },
+    {
+      "verb": "PATCH",
+      "path": "/room_categories/1",
+      "endpoint": "room_categories#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/room_categories/1",
+      "endpoint": "room_categories#update",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/room_categories/1",
+      "endpoint": "room_categories#destroy",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/activity/unread_count",
+      "endpoint": "activity_items#unread_count",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/activity/1/open",
+      "endpoint": "activity_items#open",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/activity/1/read",
+      "endpoint": "activity_items#read",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "PATCH",
+      "path": "/activity/1/handled",
+      "endpoint": "activity_items#handled",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/activity",
+      "endpoint": "activity_items#index",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/work",
+      "endpoint": "work_threads#index",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/threads/1/work/links",
+      "endpoint": "threads/work/links#index",
+      "params": {
+        "thread_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/threads/1/work/links",
+      "endpoint": "threads/work/links#create",
+      "params": {
+        "thread_id": "1"
+      }
+    },
+    {
+      "verb": "DELETE",
+      "path": "/threads/1/work/links/1",
+      "endpoint": "threads/work/links#destroy",
+      "params": {
+        "thread_id": "1",
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/threads/1/work/handoff/new",
+      "endpoint": "threads/work/handoffs#new",
+      "params": {
+        "thread_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/threads/1/work/handoff",
+      "endpoint": "threads/work/handoffs#create",
+      "params": {
+        "thread_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/embeds/image/1",
+      "endpoint": "embeds/images#show",
+      "params": {
+        "signed": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/github/webhooks",
+      "endpoint": "github/webhooks#create",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/github/connection",
+      "endpoint": "github/connections#destroy",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/github/connection",
+      "endpoint": "github/connections#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/github/app/connect",
+      "endpoint": "github/app_connections#connect",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/github/app/callback",
+      "endpoint": "github/app_connections#callback",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/fizzy/connection",
+      "endpoint": "fizzy/connections#destroy",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/fizzy/connection",
+      "endpoint": "fizzy/connections#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/oauth/start",
+      "endpoint": "slack/oauth#start",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/oauth/callback",
+      "endpoint": "slack/oauth#callback",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/slack/connection",
+      "endpoint": "slack/connections#destroy",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/imports/1/status",
+      "endpoint": "slack/imports#status",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/slack/imports/1/cancel",
+      "endpoint": "slack/imports#cancel",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/slack/imports/1/undo",
+      "endpoint": "slack/imports#undo",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/imports",
+      "endpoint": "slack/imports#index",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/slack/imports",
+      "endpoint": "slack/imports#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/slack/imports/1",
+      "endpoint": "slack/imports#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/google/connect",
+      "endpoint": "google/connections#connect",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/google/callback",
+      "endpoint": "google/connections#callback",
+      "params": {}
+    },
+    {
+      "verb": "DELETE",
+      "path": "/google/connection",
+      "endpoint": "google/connections#destroy",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/google/calendar/notifications",
+      "endpoint": "google/calendar_notifications#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/google/drive/files",
+      "endpoint": "google/drive_files#index",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/google/drive/files/1",
+      "endpoint": "google/drive_files#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/about",
+      "endpoint": "public_pages#about",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/privacy",
+      "endpoint": "public_pages#privacy",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/terms",
+      "endpoint": "public_pages#terms",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/resume_historical_location",
+      "endpoint": "turbo/native/navigation#resume",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/refresh_historical_location",
+      "endpoint": "turbo/native/navigation#refresh",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rails/action_mailbox/relay/inbound_emails",
+      "endpoint": "action_mailbox/ingresses/relay/inbound_emails#create",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rails/action_mailbox/sendgrid/inbound_emails",
+      "endpoint": "action_mailbox/ingresses/sendgrid/inbound_emails#create",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rails/action_mailbox/mandrill/inbound_emails",
+      "endpoint": "action_mailbox/ingresses/mandrill/inbound_emails#create",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rails/action_mailbox/mailgun/inbound_emails/mime",
+      "endpoint": "action_mailbox/ingresses/mailgun/inbound_emails#create",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rails/conductor/action_mailbox/inbound_emails",
+      "endpoint": "rails/conductor/action_mailbox/inbound_emails#create",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/conductor/action_mailbox/inbound_emails/new",
+      "endpoint": "rails/conductor/action_mailbox/inbound_emails#new",
+      "params": {}
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/conductor/action_mailbox/inbound_emails/1",
+      "endpoint": "rails/conductor/action_mailbox/inbound_emails#show",
+      "params": {
+        "id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/conductor/action_mailbox/inbound_emails/sources/new",
+      "endpoint": "rails/conductor/action_mailbox/inbound_emails/sources#new",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rails/conductor/action_mailbox/inbound_emails/sources",
+      "endpoint": "rails/conductor/action_mailbox/inbound_emails/sources#create",
+      "params": {}
+    },
+    {
+      "verb": "POST",
+      "path": "/rails/conductor/action_mailbox/1/reroute",
+      "endpoint": "rails/conductor/action_mailbox/reroutes#create",
+      "params": {
+        "inbound_email_id": "1"
+      }
+    },
+    {
+      "verb": "POST",
+      "path": "/rails/conductor/action_mailbox/1/incinerate",
+      "endpoint": "rails/conductor/action_mailbox/incinerates#create",
+      "params": {
+        "inbound_email_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/active_storage/blobs/redirect/1/parity",
+      "endpoint": "active_storage/blobs/redirect#show",
+      "params": {
+        "signed_id": "1",
+        "filename": "parity"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/active_storage/blobs/proxy/1/parity",
+      "endpoint": "active_storage/blobs/proxy#show",
+      "params": {
+        "signed_id": "1",
+        "filename": "parity"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/active_storage/blobs/1/parity",
+      "endpoint": "active_storage/blobs/redirect#show",
+      "params": {
+        "signed_id": "1",
+        "filename": "parity"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/active_storage/representations/redirect/1/1/parity",
+      "endpoint": "active_storage/representations/redirect#show",
+      "params": {
+        "signed_blob_id": "1",
+        "variation_key": "1",
+        "filename": "parity"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/active_storage/representations/proxy/1/1/parity",
+      "endpoint": "active_storage/representations/proxy#show",
+      "params": {
+        "signed_blob_id": "1",
+        "variation_key": "1",
+        "filename": "parity"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/active_storage/representations/1/1/parity",
+      "endpoint": "active_storage/representations/redirect#show",
+      "params": {
+        "signed_blob_id": "1",
+        "variation_key": "1",
+        "filename": "parity"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/rails/active_storage/disk/1/parity",
+      "endpoint": "active_storage/disk#show",
+      "params": {
+        "encoded_key": "1",
+        "filename": "parity"
+      }
+    },
+    {
+      "verb": "PUT",
+      "path": "/rails/active_storage/disk/1",
+      "endpoint": "active_storage/disk#update",
+      "params": {
+        "encoded_token": "1"
+      }
     }
   ]
 }

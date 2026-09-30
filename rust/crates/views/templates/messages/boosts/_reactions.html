@@ -1,0 +1,11 @@
+
+<div id="{{ message.dom_id("boosts") }}" class="flex-inline flex-wrap gap">
+{% if !message.reaction_groups().is_empty() %}    <div class="boosts__reactions flex-inline flex-wrap gap" role="group" aria-label="Message reactions">
+{% for group in message.reaction_groups() %}        {{ crate::messages::reaction(ctx, message, group, loop.index0) }}
+{% endfor %}    </div>
+{% endif %}
+{% if !message.legacy_boosts().is_empty() %}    <div class="boosts__legacy flex-inline flex-wrap gap">
+      {% for boost in message.legacy_boosts() %}{{ crate::messages::cached_boost(ctx, boost) }}{% endfor %}
+    </div>
+{% endif %}</div>
+{# Keep the final newline emitted by this Rails partial. #}

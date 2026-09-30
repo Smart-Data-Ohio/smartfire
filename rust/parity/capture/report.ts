@@ -48,7 +48,7 @@ export function writeReport(runDir: string, name: string, results: CellCompariso
   }
 
   const cellHtml = (r: CellComparison) => {
-    const badge = r.flaky ? `<span class="badge pass">pass</span> <span class="badge flaky">flaky</span>` : `<span class="badge ${r.status}">${r.status}</span>`
+    const badge = r.flaky ? `<span class="badge fail">fail</span> <span class="badge flaky">flaky</span>` : `<span class="badge ${r.status}">${r.status}</span>`
     const head = `<summary>${badge} <code>${esc(r.cell)}</code> ${r.layers.filter((l) => !l.equal).map((l) => `<span class="layer">${l.layer}${l.allowed ? " (allowed)" : ""}</span>`).join(" ")}${r.attempts ? ` <span class="muted">${r.attempts.length} attempts</span>` : ""}</summary>`
     if (r.status === "pass") return `<details class="cell">${head}${attemptsHtml(r)}<p class="muted">identical (${r.layers.map((l) => l.layer).join(", ")})</p></details>`
     const body: string[] = [attemptsHtml(r)]
@@ -96,7 +96,7 @@ export function writeReport(runDir: string, name: string, results: CellCompariso
 <h1>${esc(info.title)}</h1>
 <p class="muted">expected <code>${esc(info.expected)}</code> · actual <code>${esc(info.actual)}</code> · ${esc(info.startedAt)} · ${(info.durationMs / 1000).toFixed(1)}s</p>
 <p class="summary">${(Object.keys(counts) as Status[]).map((s) => `<span><span class="badge ${s}">${s}</span> ${counts[s]}</span>`).join("")} <span><span class="badge flaky">flaky</span> ${flaky.length}</span> <span class="muted">${results.length} cells in ${byState.size} states</span></p>
-${flaky.length ? `<p class="muted">Flaky (passed on a later capture, pixels only): ${flaky.map((r) => `<a href="#${esc(r.state)}"><code>${esc(r.state)} @ ${esc(r.cell)}</code></a> (${r.attempts!.length} attempts)`).join(", ")}</p>` : ""}
+${flaky.length ? `<p class="muted">Gate failed: these captures disagreed before a later match (pixels only): ${flaky.map((r) => `<a href="#${esc(r.state)}"><code>${esc(r.state)} @ ${esc(r.cell)}</code></a> (${r.attempts!.length} attempts)`).join(", ")}</p>` : ""}
 ${masked.length ? `<h3>Masks</h3><ul>${masked.map(([state, masks]) => `<li><code>${esc(state)}</code>: ${masks.map((m) => `<code>${esc(m)}</code>`).join(", ")}</li>`).join("")}</ul>` : ""}
 ${info.unusedAllowlist.length ? `<p class="muted">Unused allowlist entries: ${info.unusedAllowlist.map((e) => `<code>${esc(e.state)}</code> (${esc(e.owner)})`).join(", ")}</p>` : ""}
 ${states.map(([state, rs]) => {

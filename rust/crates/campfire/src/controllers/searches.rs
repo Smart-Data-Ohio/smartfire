@@ -26,7 +26,7 @@ pub async fn index(c: &mut Ctx) -> Result {
     let messages = present(c, move |presenter| presenter.messages(&messages)).await?;
     let index = IndexView { query, q, messages, recent_searches, return_to_room_id };
     let response = page::framed_page!(c, StatusCode::OK, |ctx| Index { ctx, index: &index }).await?;
-    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &index.messages);
+    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &index.messages, &c.url_for(""));
     Ok(response.with_cached_fragments(fragments))
 }
 

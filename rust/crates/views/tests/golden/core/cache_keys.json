@@ -1,0 +1,277 @@
+{
+  "records": [
+    [
+      136976342,
+      "messages/136976342-20260210120000000000"
+    ],
+    [
+      217777555,
+      "messages/217777555-20260210120000000000"
+    ],
+    [
+      303968118,
+      "messages/303968118-20260210120000000000"
+    ]
+  ],
+  "expand": [
+    [
+      "nil",
+      ""
+    ],
+    [
+      "true",
+      "true"
+    ],
+    [
+      "false",
+      "false"
+    ],
+    [
+      "integer",
+      "2"
+    ],
+    [
+      "string",
+      "a b/c"
+    ],
+    [
+      "time",
+      "0/0/12/10/2/2026/2/41/false/UTC"
+    ],
+    [
+      "zoned_time",
+      "0/0/2/10/2/2026/2/41/false/HST"
+    ],
+    [
+      "array",
+      "1//2/3//true/x"
+    ],
+    [
+      "empty_array",
+      ""
+    ],
+    [
+      "record_and_friends",
+      "messages/136976342-20260210120000000000//7/0/0/0/1/1/2026/4/1/false/UTC/3/false/2"
+    ]
+  ],
+  "presentation_cache_version": 3,
+  "message_with_pr_cards": [
+    {
+      "label": "plain",
+      "message": "messages/136976342-20260210120000000000",
+      "expanded": {
+        "UTC": {
+          "key": "messages/136976342-20260210120000000000/////false/false////3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/////false/false////3"
+        },
+        "Hawaii": {
+          "key": "messages/136976342-20260210120000000000/////false/false////3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/////false/false////3"
+        }
+      }
+    },
+    {
+      "label": "everything",
+      "cards": [
+        "2026-01-02T03:04:05.123456Z",
+        "2026-01-09T10:00:00.000001Z",
+        null
+      ],
+      "embeds": [
+        [
+          5,
+          "2026-01-03T00:00:00.5Z"
+        ],
+        [
+          6,
+          null
+        ]
+      ],
+      "has_pull_requests": true,
+      "pr_threads_stamp": "2026-01-04T05:06:07Z",
+      "pins": [
+        "2026-01-05T00:00:00Z",
+        "2026-01-06T00:00:00Z"
+      ],
+      "thread_messages_count": 7,
+      "poll": "2026-01-07T08:09:10Z",
+      "system_note": true,
+      "streaming": true,
+      "agent_steps": [
+        "2026-01-08T00:00:00Z"
+      ],
+      "quoted_sources": [
+        {
+          "updated_at": "2026-01-01T00:00:00Z",
+          "edited_at": "2026-01-10T00:00:00Z",
+          "creator": "Élodie \"E\" Martin",
+          "room": "Designers"
+        },
+        {
+          "updated_at": "2026-01-02T00:00:00Z",
+          "edited_at": null,
+          "creator": "jz",
+          "room": "Hash #{x} \\ tab\t"
+        }
+      ],
+      "message": "messages/136976342-20260210120000000000",
+      "expanded": {
+        "UTC": {
+          "key": "messages/136976342-20260210120000000000/0/0/10/9/1/2026/5/9/false/UTC/5/0/0/0/3/1/2026/6/3/false/UTC/6//7/6/5/4/1/2026/0/4/false/UTC/0/0/0/6/1/2026/2/6/false/UTC/7/10/9/8/7/1/2026/3/7/false/UTC/true/true/0/0/0/8/1/2026/4/8/false/UTC/0/0/0/10/1/2026/6/10/false/UTC/7b935985ddaf802ffe83b3cbe67582f9534cc2aea86365214e3d0009dd3af60d/3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/0/0/10/9/1/2026/5/9/false/UTC/5/0/0/0/3/1/2026/6/3/false/UTC/6//7/6/5/4/1/2026/0/4/false/UTC/0/0/0/6/1/2026/2/6/false/UTC/7/10/9/8/7/1/2026/3/7/false/UTC/true/true/0/0/0/8/1/2026/4/8/false/UTC/0/0/0/10/1/2026/6/10/false/UTC/7b935985ddaf802ffe83b3cbe67582f9534cc2aea86365214e3d0009dd3af60d/3"
+        },
+        "Hawaii": {
+          "key": "messages/136976342-20260210120000000000/0/0/0/9/1/2026/5/9/false/HST/5/0/0/14/2/1/2026/5/2/false/HST/6//7/6/19/3/1/2026/6/3/false/HST/0/0/14/5/1/2026/1/5/false/HST/7/10/9/22/6/1/2026/2/6/false/HST/true/true/0/0/14/7/1/2026/3/7/false/HST/0/0/14/9/1/2026/5/9/false/HST/7b935985ddaf802ffe83b3cbe67582f9534cc2aea86365214e3d0009dd3af60d/3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/0/0/0/9/1/2026/5/9/false/HST/5/0/0/14/2/1/2026/5/2/false/HST/6//7/6/19/3/1/2026/6/3/false/HST/0/0/14/5/1/2026/1/5/false/HST/7/10/9/22/6/1/2026/2/6/false/HST/true/true/0/0/14/7/1/2026/3/7/false/HST/0/0/14/9/1/2026/5/9/false/HST/7b935985ddaf802ffe83b3cbe67582f9534cc2aea86365214e3d0009dd3af60d/3"
+        }
+      }
+    },
+    {
+      "label": "pull_request_without_thread",
+      "has_pull_requests": true,
+      "pr_threads_stamp": null,
+      "cards": [
+        "2026-03-08T07:00:00Z"
+      ],
+      "message": "messages/136976342-20260210120000000000",
+      "expanded": {
+        "UTC": {
+          "key": "messages/136976342-20260210120000000000/0/0/7/8/3/2026/0/67/false/UTC/////false/false////3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/0/0/7/8/3/2026/0/67/false/UTC/////false/false////3"
+        },
+        "Hawaii": {
+          "key": "messages/136976342-20260210120000000000/0/0/21/7/3/2026/6/66/false/HST/////false/false////3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/0/0/21/7/3/2026/6/66/false/HST/////false/false////3"
+        }
+      }
+    },
+    {
+      "label": "empty_thread",
+      "thread_messages_count": 0,
+      "pins": [],
+      "agent_steps": [],
+      "message": "messages/136976342-20260210120000000000",
+      "expanded": {
+        "UTC": {
+          "key": "messages/136976342-20260210120000000000///0//false/false////3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000///0//false/false////3"
+        },
+        "Hawaii": {
+          "key": "messages/136976342-20260210120000000000///0//false/false////3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000///0//false/false////3"
+        }
+      }
+    },
+    {
+      "label": "quote_of_unedited_source",
+      "quoted_sources": [
+        {
+          "updated_at": "2026-02-01T00:00:00Z",
+          "edited_at": null,
+          "creator": "Bender Bot",
+          "room": "All Pets"
+        }
+      ],
+      "message": "messages/136976342-20260210120000000000",
+      "expanded": {
+        "UTC": {
+          "key": "messages/136976342-20260210120000000000/////false/false//0/0/0/1/2/2026/0/32/false/UTC/dc841e8efb0c82073fab2e4d42f5ab9df00861830b92b5fbf6e962ad7a9eacae/3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/////false/false//0/0/0/1/2/2026/0/32/false/UTC/dc841e8efb0c82073fab2e4d42f5ab9df00861830b92b5fbf6e962ad7a9eacae/3"
+        },
+        "Hawaii": {
+          "key": "messages/136976342-20260210120000000000/////false/false//0/0/14/31/1/2026/6/31/false/HST/dc841e8efb0c82073fab2e4d42f5ab9df00861830b92b5fbf6e962ad7a9eacae/3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/////false/false//0/0/14/31/1/2026/6/31/false/HST/dc841e8efb0c82073fab2e4d42f5ab9df00861830b92b5fbf6e962ad7a9eacae/3"
+        }
+      }
+    },
+    {
+      "label": "quote_updated_after_edit",
+      "quoted_sources": [
+        {
+          "updated_at": "2026-02-02T00:00:00Z",
+          "edited_at": "2026-02-01T00:00:00Z",
+          "creator": "David",
+          "room": "HQ"
+        }
+      ],
+      "message": "messages/136976342-20260210120000000000",
+      "expanded": {
+        "UTC": {
+          "key": "messages/136976342-20260210120000000000/////false/false//0/0/0/2/2/2026/1/33/false/UTC/600b817a0673af0fd440769a68cbc55761771cd5fd2645e6cd9e74a5899abcaf/3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/////false/false//0/0/0/2/2/2026/1/33/false/UTC/600b817a0673af0fd440769a68cbc55761771cd5fd2645e6cd9e74a5899abcaf/3"
+        },
+        "Hawaii": {
+          "key": "messages/136976342-20260210120000000000/////false/false//0/0/14/1/2/2026/0/32/false/HST/600b817a0673af0fd440769a68cbc55761771cd5fd2645e6cd9e74a5899abcaf/3",
+          "fragment": "views/messages/_message:0123abcd/messages/136976342-20260210120000000000/////false/false//0/0/14/1/2/2026/0/32/false/HST/600b817a0673af0fd440769a68cbc55761771cd5fd2645e6cd9e74a5899abcaf/3"
+        }
+      }
+    }
+  ],
+  "quote_names_digests": [
+    [
+      [
+        [
+          "b",
+          "x"
+        ],
+        [
+          "a",
+          "y"
+        ]
+      ],
+      "7dab8e5ecc394a1e0d6ad5152931aba2cd9f9cff491fb7ae3cb0458256ec4d65",
+      "[[\"a\", \"y\"], [\"b\", \"x\"]]"
+    ],
+    [
+      [
+        [
+          "Élodie \"E\" Martin",
+          "Designers"
+        ]
+      ],
+      "e69455a439b3736f91a0fd1257ca4b2146b802d27112d4fc0bc97d66641b791e",
+      "[[\"Élodie \\\"E\\\" Martin\", \"Designers\"]]"
+    ],
+    [
+      [
+        [
+          "a\\b",
+          "#{c}"
+        ],
+        [
+          "new\nline",
+          "\u001b\u0001"
+        ]
+      ],
+      "212c6ff48ccae7073e0e53cb74456e5ebb1f96767d533914a10bbf89ad9332cf",
+      "[[\"a\\\\b\", \"\\#{c}\"], [\"new\\nline\", \"\\e\\u0001\\u007F\"]]"
+    ]
+  ],
+  "sidebar_membership": [
+    {
+      "membership": "memberships/142918545-20260210120000000000",
+      "participant_ids": null,
+      "administrator": false,
+      "key": "memberships/142918545-20260210120000000000//false",
+      "fragment": "views/users/sidebars/rooms/_shared:0123abcd/memberships/142918545-20260210120000000000//false"
+    },
+    {
+      "membership": "memberships/142918545-20260210120000000000",
+      "participant_ids": [
+        3,
+        1
+      ],
+      "administrator": true,
+      "key": "memberships/142918545-20260210120000000000/3/1/true",
+      "fragment": "views/users/sidebars/rooms/_shared:0123abcd/memberships/142918545-20260210120000000000/3/1/true"
+    },
+    {
+      "membership": "memberships/142918545-20260210120000000000",
+      "participant_ids": [],
+      "administrator": false,
+      "key": "memberships/142918545-20260210120000000000//false",
+      "fragment": "views/users/sidebars/rooms/_shared:0123abcd/memberships/142918545-20260210120000000000//false"
+    }
+  ]
+}
