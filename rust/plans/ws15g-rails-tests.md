@@ -1,8 +1,8 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 43 mapped to Rust assertions; 383 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 61 mapped to Rust assertions; 365 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. HTTP routes, view/system parity, webhook ingestion, PR persistence/fetch jobs, notifications/subscriptions, agent actions and sweep wiring remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion and transactional enqueue are covered. Job handlers, card broadcasts and view/system parity, other HTTP controllers, PR persistence/fetch, notifications/subscriptions, agent actions and sweep wiring remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam. No coverage or parity allowlist has been added.
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
 
@@ -172,26 +172,26 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
 | valid pull_request signature updates the record and broadcasts once | Deferred; WS15g continuation | — |
-| response carries no card content | Deferred; WS15g continuation | — |
-| pull_request webhook stores repository privacy when the payload carries it | Deferred; WS15g continuation | — |
-| pull_request webhook stores a public repository when the payload says so | Deferred; WS15g continuation | — |
-| pull_request webhook leaves privacy alone when the payload omits it | Deferred; WS15g continuation | — |
-| bad signature is rejected without enqueueing | Deferred; WS15g continuation | — |
-| missing signature is rejected | Deferred; WS15g continuation | — |
-| missing secret answers unavailable | Deferred; WS15g continuation | — |
-| redelivered events are ignored | Deferred; WS15g continuation | — |
-| issue_comment on a referenced PR enqueues exactly one refresh | Deferred; WS15g continuation | — |
-| issue_comment enqueues only the refresh, never subscription delivery | Deferred; WS15g continuation | — |
-| redelivered issue_comment events enqueue nothing | Deferred; WS15g continuation | — |
-| issue_comment on plain issues and unreferenced PRs is ignored | Deferred; WS15g continuation | — |
-| events for unreferenced PRs are ignored | Deferred; WS15g continuation | — |
-| unhandled event types are acknowledged and ignored | Deferred; WS15g continuation | — |
-| pull_request_review, check_run, check_suite, and status events enqueue a refresh | Deferred; WS15g continuation | — |
-| mixed-case repository names in payloads still find the stored PR | Deferred; WS15g continuation | — |
+| response carries no card content | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| pull_request webhook stores repository privacy when the payload carries it | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| pull_request webhook stores a public repository when the payload says so | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| pull_request webhook leaves privacy alone when the payload omits it | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| bad signature is rejected without enqueueing | Mapped to grouped Rust assertions; WS15g | `webhook_security_rejects_bad_or_missing_signatures_before_parsing` |
+| missing signature is rejected | Mapped to grouped Rust assertions; WS15g | `webhook_security_rejects_bad_or_missing_signatures_before_parsing` |
+| missing secret answers unavailable | Mapped to grouped Rust assertions; WS15g | `webhook_security_missing_or_blank_secret_is_unavailable` |
+| redelivered events are ignored | Mapped to grouped Rust assertions; WS15g | `webhook_redelivered_supported_events_do_not_enqueue_again` |
+| issue_comment on a referenced PR enqueues exactly one refresh | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| issue_comment enqueues only the refresh, never subscription delivery | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| redelivered issue_comment events enqueue nothing | Mapped to grouped Rust assertions; WS15g | `webhook_redelivered_supported_events_do_not_enqueue_again` |
+| issue_comment on plain issues and unreferenced PRs is ignored | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| events for unreferenced PRs are ignored | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| unhandled event types are acknowledged and ignored | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| pull_request_review, check_run, check_suite, and status events enqueue a refresh | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| mixed-case repository names in payloads still find the stored PR | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
 | subscribed repositories enqueue subscription delivery and post once | Deferred; WS15g continuation | — |
 | redelivered subscription events post nothing | Deferred; WS15g continuation | — |
-| unsubscribed repositories enqueue no delivery and create no bot user | Deferred; WS15g continuation | — |
-| check events without PR links and status events for other branches are ignored | Deferred; WS15g continuation | — |
+| unsubscribed repositories enqueue no delivery and create no bot user | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
+| check events without PR links and status events for other branches are ignored | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
 
 ## `test/controllers/rooms/github/pull_request_cards_controller_test.rb` (15 tests)
 

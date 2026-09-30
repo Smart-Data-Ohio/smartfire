@@ -53,6 +53,7 @@ url.workspace = true
 subtle.workspace = true
 
 [dev-dependencies]
+hmac.workspace = true
 rcgen.workspace = true
 campfire_kit = { workspace = true, features = ["test-support"] }
 campfire_db = { workspace = true, features = ["test-support"] }

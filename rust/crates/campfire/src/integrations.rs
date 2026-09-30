@@ -14,7 +14,7 @@
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
 mod jobs;
-// The domain lands before its controller/job consumers (WS15g continuation).
+// Account, fetcher and notifier consumers remain staged (WS15g continuation).
 #[allow(dead_code)]
 pub mod github;
 pub mod net;
@@ -24,6 +24,6 @@ pub mod web_push;
 pub mod webhook;
 
 #[cfg(test)]
-mod test_support;
+pub(crate) mod test_support;
 
 pub use jobs::{register_jobs, web_push_pool};

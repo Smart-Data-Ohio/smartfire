@@ -18,6 +18,9 @@ mutations = [
     ("plaintext-refresh", "accounts.rs", "let refresh = input.refresh_token.map(|token| crypto.encrypt(token));", "let refresh = input.refresh_token.map(|token| token.to_string());", "accounts_encrypt_both_columns", 1),
     ("mention-injection", "client.rs", '.replace("@[", "@\\u{200b}[")', '.replace("@[", "@[")', "write_status_matrix", 1),
     ("owner-pat-side-effect", "accounts.rs", "&& self.usable(account.id).await?\n            && account.app_token()", "&& account.app_token()\n            && self.usable(account.id).await?", "agent_identity_checks_unreadable_owner_pat", 1),
+    ("webhook-signature", "webhooks.rs", "!rails_compat::webhook::verify_github_signature(secret, raw, signature)", "false && !rails_compat::webhook::verify_github_signature(secret, raw, signature)", "webhook_security_", 2),
+    ("webhook-secret", "../../controllers/github/webhooks.rs", "return Ok(c.head(StatusCode::SERVICE_UNAVAILABLE));", "return Ok(c.head(StatusCode::OK));", "webhook_security_missing_or_blank_secret", 1),
+    ("webhook-dedupe", "webhooks.rs", "if inserted == 0 {\n        return Ok(false);", "if inserted == 0 {\n        return Ok(true);", "webhook_concurrent_duplicates_claim_and_enqueue_once", 1),
 ]
 for name, filename, before, after, test_filter, expected_failures in mutations:
     path = base / filename
@@ -26,7 +29,7 @@ for name, filename, before, after, test_filter, expected_failures in mutations:
         raise SystemExit(f"Mutation target disappeared: {name}")
     try:
         path.write_text(original.replace(before, after))
-        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", "campfire", f"integrations::github::tests::{test_filter}", "--", "--nocapture"]
+        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", "campfire", test_filter, "--", "--nocapture"]
         run = subprocess.run(command, cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (scratch / f"mutation-{name}.log").write_text(run.stdout)
         summaries = [line for line in run.stdout.splitlines() if line.startswith("test result:")]
@@ -36,4 +39,4 @@ for name, filename, before, after, test_filter, expected_failures in mutations:
         print(f"{name}: {summaries[-1]}", flush=True)
     finally:
         path.write_text(original)
-print("GitHub security mutations: 5 rejected; 0 survived", flush=True)
+print(f"GitHub security mutations: {len(mutations)} rejected; 0 survived", flush=True)

@@ -7,6 +7,29 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 repo = root.parent
 names = {
+    'test/controllers/github/webhooks_controller_test.rb': [
+        None,  # Fetch persistence and the card broadcast are the next slices.
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_security_rejects_bad_or_missing_signatures_before_parsing',
+        'webhook_security_rejects_bad_or_missing_signatures_before_parsing',
+        'webhook_security_missing_or_blank_secret_is_unavailable',
+        'webhook_redelivered_supported_events_do_not_enqueue_again',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_redelivered_supported_events_do_not_enqueue_again',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        None,  # Notifier posting and message-reference synchronization remain deferred.
+        None,  # HTTP dedupe covered; actual subscription posting remains deferred.
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+        'webhook_http_status_body_selection_and_privacy_match_rails',
+    ],
     'test/models/github/app_test.rb': [
         'app_requires_both_credentials_and_authorizes_with_empty_scope',
         'app_requires_both_credentials_and_authorizes_with_empty_scope',
@@ -61,7 +84,7 @@ names = {
 paths = sorted(p for p in subprocess.check_output(['git', '-C', str(repo), 'ls-tree', '-r', '--name-only', 'd7c7de92', 'test'], text=True).splitlines() if 'github' in p and p.endswith('_test.rb'))
 rows = []
 covered = 0
-rust_tests = (root / 'crates/campfire/src/integrations/github/tests.rs').read_text()
+rust_tests = (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text()
 for path in paths:
     content = subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True)
     tests = re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', content, re.M)
@@ -81,6 +104,6 @@ for path in paths:
     rows.append('')
 count = sum(len(re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True), re.M)) for path in paths)
 summary = f'{count} Rails cases in {len(paths)} files: {covered} mapped to Rust assertions; {count-covered} explicitly deferred.'
-header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. HTTP routes, view/system parity, webhook ingestion, PR persistence/fetch jobs, notifications/subscriptions, agent actions and sweep wiring remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam. No coverage or parity allowlist has been added.\n\n'
+header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion and transactional enqueue are covered. Job handlers, card broadcasts and view/system parity, other HTTP controllers, PR persistence/fetch, notifications/subscriptions, agent actions and sweep wiring remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam. No coverage or parity allowlist has been added.\n\n'
 (root / 'plans/ws15g-rails-tests.md').write_text((header + '\n'.join(rows)).rstrip() + '\n')
 print('GitHub Rails inventory: ' + summary)
