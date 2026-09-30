@@ -466,7 +466,7 @@ fn ws11r_approval_inbox_failure_retains_primary_record_like_rails() {
 }
 
 #[test]
-fn ws11_approval_inbox_fanout_owns_a_transaction_after_primary_commit() {
+fn ws11_approval_inbox_recipients_commit_separately_after_primary_like_rails() {
     let t=setup();
     t.write(|tx| {
         tx.conn().execute_batch("CREATE TEMP TRIGGER ws11_reject_second_recipient BEFORE INSERT ON activity_items WHEN NEW.source_type='AgentApproval' AND EXISTS(SELECT 1 FROM activity_items WHERE source_type='AgentApproval' AND source_id=NEW.source_id) BEGIN SELECT RAISE(ABORT,'second recipient failure'); END")?;
@@ -475,7 +475,10 @@ fn ws11_approval_inbox_fanout_owns_a_transaction_after_primary_commit() {
     assert!(t.try_write(create).is_err());
     t.read(|c| {
         assert_eq!(c.query_row("SELECT COUNT(*) FROM agent_approvals",[],|r|r.get::<_,i64>(0))?,1);
-        assert_eq!(c.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval'",[],|r|r.get::<_,i64>(0))?,0);
+        let count=c.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval'",[],|r|r.get::<_,i64>(0))?;
+        let oracle:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/agents_approval_partial_fanout_contract.json")).unwrap();
+        println!("WS11 approval later-recipient failure: persisted inbox items = {count}");
+        assert_eq!(count,oracle["inbox_items"].as_i64().unwrap());
         Ok(())
     });
 }
