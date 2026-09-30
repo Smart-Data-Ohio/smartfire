@@ -24,6 +24,14 @@ pub async fn show(c: &mut Ctx) -> Result {
 pub(super) async fn render_settings(c: &mut Ctx, status: StatusCode, settings: campfire_db::UserStatusSettings, errors: campfire_db::Errors) -> Result {
     c.respond_to(&[&format::HTML])?;
     let user = settings.user.clone();
+    if !errors.is_empty() && user.role != campfire_db::Role::Bot {
+        // At the pin, both settings controllers render profiles/show without setting
+        // @two_factor_devices. The enabled-credential branch calls nil.any? and returns 500.
+        // Preserve this observed failure until the reference/WS9 template contract changes.
+        let id=user.id;
+        let enabled=c.app().db.read(move |conn|Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM two_factor_credentials WHERE user_id=? AND confirmed_at IS NOT NULL)",[id],|r|r.get::<_,bool>(0))?)).await.map_err(Error::internal)?;
+        if enabled {return Err(Error::internal(anyhow::anyhow!("profiles/two_factor: undefined method any? for nil remembered devices")));}
+    }
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
     let now = c.app().db.env().now();

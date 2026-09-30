@@ -5,6 +5,7 @@ pub mod avatars;
 pub mod bans;
 pub mod dnd_allowances;
 pub mod notification_settings;
+pub mod statuses;
 pub mod profiles;
 pub mod presences;
 pub mod push_subscriptions;

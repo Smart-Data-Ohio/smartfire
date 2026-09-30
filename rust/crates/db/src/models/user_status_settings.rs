@@ -10,6 +10,7 @@ use crate::sql::{placeholders, query_all};
 use crate::{Result, Role, Status, Timestamp, User};
 
 mod writes;
+pub mod updates;
 pub use writes::{clock_time_to_minutes, minutes_to_clock_time, replace_keyword_alerts};
 
 #[derive(Debug, Clone)]

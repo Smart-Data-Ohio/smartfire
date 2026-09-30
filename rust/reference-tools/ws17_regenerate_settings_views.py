@@ -16,4 +16,4 @@ value = json.loads((scratch / "settings-views-generated.json").read_text())
 assert value["reference"] == "d7c7de92"
 destination = root / "rust/crates/views/tests/golden/ws17-settings.json"
 destination.write_text(json.dumps(value, ensure_ascii=False) + "\n")
-print(f"Rails settings HTML: {len(value['rows'])} states; {len(value['rows']) * 2} complete partials")
+print(f"Rails settings HTML: {len(value['rows'])} states; {len(value['rows']) * 2} complete forms; {len(value['rows']) * 2} complete status partials")

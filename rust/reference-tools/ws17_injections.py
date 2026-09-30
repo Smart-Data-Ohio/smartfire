@@ -77,6 +77,18 @@ cases += [
     ("next-test-push-tag", "rust/crates/campfire/src/jobs/notifications.rs",
      'Some("test-notification".into())', 'Some("wrong-tag".into())',
      "ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_dnd", "campfire"),
+    ("status-ooo-claim-guard", "rust/crates/db/src/models/user_status_settings/updates.rs",
+     "AND (ooo_until IS NULL OR ooo_until<=?)", "AND (1 OR ooo_until<=?)",
+     "ws17_manual_ooo_claims_match_actual_rails_conditional_updates", "campfire_db"),
+    ("status-transaction", "rust/crates/db/src/models/user_status_settings/updates.rs",
+     "self.save(tx)?;", 'self.save(tx)?; tx.conn().execute_batch("COMMIT")?;',
+     "ws17_failed_status_refresh_enqueue_rolls_back_the_entire_http_write", "campfire"),
+    ("status-stream-target", "rust/crates/campfire/src/channels/sink.rs",
+     'Some("status_badge")', 'Some("wrong_badge")',
+     "ws17_opting_out_while_in_a_meeting_broadcasts_the_cleared_badge", "campfire"),
+    ("status-seeded-error", "rust/crates/campfire/src/controllers/users/profiles.rs",
+     "if enabled {", "if false && enabled {",
+     "ws17_seeded_enabled_2fa_settings_errors_match_the_actual_rails_failure", "campfire"),
 ]
 if len(sys.argv)>1:
     cases=[case for case in cases if case[0].startswith(sys.argv[1])]

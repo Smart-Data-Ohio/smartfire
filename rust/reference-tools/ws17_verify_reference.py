@@ -24,6 +24,10 @@ files = [
     "app/controllers/users/notification_settings_controller.rb", "app/models/dnd_allowed_user.rb",
     "app/models/keyword_alert.rb", "app/views/users/profiles/_status.html.erb",
     "app/views/users/profiles/_notifications.html.erb",
+    "app/views/users/statuses/_badge.html.erb", "app/views/rooms/show/_ooo_notice_line.html.erb",
+    "app/helpers/users/presence_helper.rb", "app/views/users/profiles/_two_factor.html.erb",
+    "app/models/calendar/meeting_dispatcher.rb", "app/models/calendar/ooo_dispatcher.rb",
+    "app/jobs/calendar/meeting_refresh_job.rb",
 ]
 checks = subprocess.check_output([
     "docker", "run", "--rm", "--name", "ws17-verify-reference", "--entrypoint", "sha256sum",

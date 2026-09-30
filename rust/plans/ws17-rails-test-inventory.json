@@ -1677,156 +1677,156 @@
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "updates presence and the custom status with an expiry",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_updates_presence_and_the_custom_status_with_an_expiry"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "clears the custom status",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_clears_the_custom_status"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "rejects an unknown presence with errors",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_rejects_an_unknown_presence_with_errors"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "requires sign-in",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_statuses_requires_sign_in"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting into meeting status enqueues a first refresh",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_into_meeting_status_enqueues_a_first_refresh"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out of meeting status drops the cached intervals",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_of_meeting_status_drops_the_cached_intervals"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out while in a meeting broadcasts the cleared badge",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_while_in_a_meeting_broadcasts_the_cleared_badge"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out without cached intervals broadcasts nothing",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_without_cached_intervals_broadcasts_nothing"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "saving other status settings leaves meeting refreshes alone",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_saving_other_status_settings_leaves_meeting_refreshes_alone"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "sets out of office with a preset and a note, and broadcasts it",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_sets_out_of_office_with_a_preset_and_a_note_and_broadcasts_it"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "sets out of office with a custom date and time in the member's zone",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_sets_out_of_office_with_a_custom_date_and_time_in_the_members_zone"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "rejects an unknown OOO preset without saving anything",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_rejects_an_unknown_ooo_preset_without_saving_anything"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "rejects a blank or past custom OOO end without saving anything",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_rejects_a_blank_or_past_custom_ooo_end_without_saving_anything"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "rejects an OOO note over 140 characters",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_rejects_an_ooo_note_over_140_characters"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "clears out of office early and broadcasts the cleared state",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_clears_out_of_office_early_and_broadcasts_the_cleared_state"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "clearing early ends only the manual OOO while calendar OOO covers",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_clearing_early_ends_only_the_manual_ooo_while_calendar_ooo_covers"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "edits the OOO note alone",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_edits_the_ooo_note_alone"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting into calendar OOO enqueues a first refresh",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_into_calendar_ooo_enqueues_a_first_refresh"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out of calendar OOO clears its intervals and broadcasts",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_of_calendar_ooo_clears_its_intervals_and_broadcasts"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out of calendar OOO keeps the row while meeting status is on",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_of_calendar_ooo_keeps_the_row_while_meeting_status_is_on"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out of meeting status keeps the row while calendar OOO is on",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_of_meeting_status_keeps_the_row_while_calendar_ooo_is_on"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "saving other status settings leaves calendar OOO refreshes alone",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_saving_other_status_settings_leaves_calendar_ooo_refreshes_alone"
     },
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",

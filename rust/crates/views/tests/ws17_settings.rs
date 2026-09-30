@@ -96,3 +96,38 @@ fn ws17_owned_settings_html_matches_complete_rails_partials() {
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
+
+#[test]
+fn ws17_badge_and_ooo_notice_html_match_complete_rails_partials() {
+    let golden: serde_json::Value =
+        serde_json::from_str(include_str!("golden/ws17-settings.json")).unwrap();
+    for row in golden["rows"].as_array().unwrap() {
+        let data = &row["status_data"];
+        let badge = users::statuses::StatusBadge {
+            presence: data["presence"].as_str().unwrap(),
+            status_text: data["status_text"].as_str(),
+        }
+        .render()
+        .unwrap();
+        let notice = users::statuses::OooNotice {
+            name: data["name"].as_str().unwrap(),
+            visible: data["visible"].as_bool().unwrap(),
+            until_date: data["until_date"].as_str(),
+            note: data["note"].as_str(),
+        }
+        .render()
+        .unwrap();
+        assert_eq!(
+            badge,
+            row["html"]["badge"].as_str().unwrap(),
+            "{}/badge",
+            row["name"]
+        );
+        assert_eq!(
+            notice,
+            row["html"]["ooo_notice"].as_str().unwrap(),
+            "{}/notice",
+            row["name"]
+        );
+    }
+}

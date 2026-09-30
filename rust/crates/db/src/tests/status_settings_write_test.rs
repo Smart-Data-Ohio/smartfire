@@ -15,6 +15,132 @@ fn stamp(s: &str) -> Timestamp {
 }
 
 #[test]
+fn ws17_status_broadcast_emission_order_matches_actual_rails_calls() {
+    use crate::Broadcast;
+    use crate::models::user_status_settings::updates::{OooNoticeBroadcast, StatusBadgeBroadcast};
+    let golden: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/ws17_status_requests.json"
+    ))
+    .unwrap();
+    for name in ["manual_on", "both_off", "calendar_off_and_note"] {
+        let row = golden["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["name"] == name)
+            .unwrap();
+        let t = TestDb::new();
+        let now = stamp(golden["now"].as_str().unwrap());
+        t.clock.travel_to(now);
+        if name != "manual_on" {
+            t.write(move |tx|{
+            tx.conn().execute("UPDATE users SET meeting_status_enabled=?,ooo_calendar_enabled=1,ooo_until=?,ooo_note=? WHERE id=?",rusqlite::params![name=="both_off",(name=="calendar_off_and_note").then(||now.since(SignedDuration::from_hours(24))),(name=="calendar_off_and_note").then_some("Back soon"),id("david")])?;
+            tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,created_at,updated_at) VALUES (?,'[]','[[\"2026-03-02T15:55:00Z\",\"2026-03-04T16:00:00Z\"]]',?,?)",rusqlite::params![id("david"),now,now])?;
+            Ok(())
+        });
+        }
+        let mut user = settings(&t);
+        if name == "manual_on" {
+            user.ooo_until = user.ooo_preset_until("tomorrow", None, now).unwrap();
+            user.ooo_note = Some("Back <soon> & safe".into());
+        } else {
+            user.meeting_status_enabled = false;
+            user.ooo_calendar_enabled = false;
+            if name == "calendar_off_and_note" {
+                user.ooo_note = Some("Changed".into());
+            }
+        }
+        let before = t.events().len();
+        t.write(move |tx| user.save_status(tx));
+        let streams = t
+            .events()
+            .into_iter()
+            .skip(before)
+            .map(|event| match event {
+                Event::Broadcast(b) if b.kind == StatusBadgeBroadcast::KIND => "status",
+                Event::Broadcast(b) if b.kind == OooNoticeBroadcast::KIND => "ooo_notice",
+                other => panic!("unexpected {other:?}"),
+            })
+            .collect::<Vec<_>>();
+        let expected = row["frames"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["stream"].as_str().unwrap().rsplit(':').next().unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(streams, expected, "{name}");
+    }
+}
+
+#[test]
+fn ws17_manual_ooo_claims_match_actual_rails_conditional_updates() {
+    let golden: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/ws17_status_requests.json"
+    ))
+    .unwrap();
+    let t = TestDb::new();
+    let now = stamp(golden["now"].as_str().unwrap());
+    t.clock.travel_to(now);
+    for row in golden["claims"].as_array().unwrap() {
+        let row = row.clone();
+        t.write(move |tx| {
+            let stored = row["stored"].as_bool();
+            let until = row["until_time"].as_str().map(stamp);
+            tx.conn().execute(
+                "UPDATE users SET ooo_broadcast=?,ooo_until=?,ooo_note='Keep or clear' WHERE id=?",
+                rusqlite::params![stored, until, id("david")],
+            )?;
+            let user = Settings::find(tx.conn(), id("david"))?;
+            let won = user.claim_ooo_broadcast(tx, row["active"].as_bool().unwrap(), now)?;
+            let after = Settings::find(tx.conn(), id("david"))?;
+            assert_eq!(won, row["won"].as_bool().unwrap(), "{row}");
+            assert_eq!(
+                after.ooo_broadcast,
+                row["after"]["broadcast"].as_bool(),
+                "{row}"
+            );
+            assert_eq!(
+                after.ooo_until,
+                row["after"]["until_time"].as_str().map(stamp),
+                "{row}"
+            );
+            assert_eq!(
+                after.ooo_note.as_deref(),
+                row["after"]["note"].as_str(),
+                "{row}"
+            );
+            // Re-running the same claim cannot win; failed false claims preserve future ends.
+            assert!(!user.claim_ooo_broadcast(tx, row["active"].as_bool().unwrap(), now)?);
+            Ok(())
+        });
+    }
+}
+
+#[test]
+fn ws17_stale_ooo_end_claim_does_not_clear_a_new_manual_end() {
+    let t = TestDb::new();
+    let now = t.now();
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE users SET ooo_broadcast=1,ooo_until=? WHERE id=?",
+            rusqlite::params![now.ago(SignedDuration::from_mins(1)), id("david")],
+        )?;
+        let stale = Settings::find(tx.conn(), id("david"))?;
+        let future = now.since(SignedDuration::from_hours(24));
+        tx.conn().execute(
+            "UPDATE users SET ooo_until=?,ooo_note='New end' WHERE id=?",
+            rusqlite::params![future, id("david")],
+        )?;
+        assert!(!stale.claim_ooo_broadcast(tx, false, now)?);
+        let fresh = Settings::find(tx.conn(), id("david"))?;
+        assert_eq!(fresh.ooo_until, Some(future));
+        assert_eq!(fresh.ooo_note.as_deref(), Some("New end"));
+        assert_eq!(fresh.ooo_broadcast, Some(true));
+        Ok(())
+    });
+}
+
+#[test]
 fn defaults_to_automatic_presence_no_dnd_and_system_theme() {
     let t = TestDb::new();
     let user = settings(&t);

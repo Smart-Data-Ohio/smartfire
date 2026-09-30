@@ -2,9 +2,9 @@
 
 Worktree `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws17`, branch `rust/ws17-push-presence`, Rails pin `d7c7de92`. Starting base `bb6c5d78`.
 
-Merged `origin/main` `21a7332f2d3c324f0862cdf448baf17a84395aa0` with merge commit `56aa9f62ffbf3641b3ddd944d3da95a30407c654` and pushed it. Locked metadata succeeds; 75 workspace dependency keys are unique. The full seeded app suite now has **zero failures**: 334 passed, 3 explicitly ignored. Main's existing ignores are the cable reference recorder, latency measurement and `manages_bots` pending WS11. No new ignored tests, silent seed fallbacks, masks or allowlist changes.
+Merged `origin/main` `21a7332f2d3c324f0862cdf448baf17a84395aa0` with merge commit `56aa9f62ffbf3641b3ddd944d3da95a30407c654` and pushed it. Locked metadata succeeds; 75 workspace dependency keys are unique. The full seeded app suite now has **zero failures**: 364 passed, 3 explicitly ignored. Main's existing ignores are the cable reference recorder, latency measurement and `manages_bots` pending WS11. No new ignored tests, silent seed fallbacks, masks or allowlist changes.
 
-This is a coherent partial delivery, not WS17 acceptance or cutover approval. Prior pushed implementation commits: `7b9267a3c948cca3fdf9a8c6946a2e643fb10d50`, `32b49aa4118c7ecb57f18fa14d2ccc0204acefe7`; prior report `aab111036aec6dc51a96d98d25126b3636032ad5`. The first continuation slice, settings writers and allowances, is pushed at `76c34826643f3850dcd3ba11b3a69aa9ad8f2819`. This report is committed with the next form/notification-controller/durable-test-push slice; its pushed SHA is in the delivery reply.
+This is a coherent partial delivery, not WS17 acceptance or cutover approval. Prior pushed implementation commits: `7b9267a3c948cca3fdf9a8c6946a2e643fb10d50`, `32b49aa4118c7ecb57f18fa14d2ccc0204acefe7`; prior report `aab111036aec6dc51a96d98d25126b3636032ad5`. The first continuation slice, settings writers and allowances, is pushed at `76c34826643f3850dcd3ba11b3a69aa9ad8f2819`. Forms, notification PATCH, durable test push and loaded-instance dirty tracking are pushed at `0adcae959c0e63e914a29fa7c0e888c5e28f7ec5`. This report is committed with the status-controller/cache-reconciliation/live-broadcast slice; its pushed SHA is in the delivery reply.
 
 ## What changed, by file and observable boundary
 
@@ -18,15 +18,16 @@ All paths are relative to this worktree. Rails source, schema, migrations, Cargo
 | `models/dnd_allowed_user.rs`, `models/user.rs` | Allowance ownership, active-human/self/duplicate validation, idempotent create, scoped remove; deactivation clears manual OOO columns in the existing transaction. Other WS11 deactivation callbacks are outside this slice. |
 | `models/workspace_presence_lease.rs` | Read-only online/idle batches; inclusive 90-second expiration, 10-minute idle, legacy null activity online, active session/identity joins, bounded pruning. Establish/heartbeat/delete lifecycle retained. |
 | `models/push_subscription.rs`, `channel_thread.rs`, `saved_item.rs` | Exact tagged untruncated room/thread payloads and Rails' saved-reminder body truncation; merged/deduped eligible room scopes and opted-in reply authors; batch policy. Added serializable durable test-notification DTO. Keyword settings replacement is atomic; keyword activity recording is still missing. |
-| `rust/crates/db/src/tests/status_settings_write_test.rs`, `tests.rs`, settings JSON fixtures | 17 new writer tests, presets and validations, independent allowances, timer and nested-savepoint rollback scenarios. Earlier policy/status/presence/push regressions rerun in the full DB suite. |
+| `rust/crates/db/src/tests/status_settings_write_test.rs`, `tests.rs`, settings JSON fixtures | 17 writer tests plus three new conditional/stale OOO claim and broadcast-order tests, presets and validations, independent allowances, timer and nested-savepoint rollback scenarios. Earlier policy/status/presence/push regressions rerun in the full DB suite. |
 | `rust/crates/campfire/src/controllers/users/dnd_allowances.rs`, `controllers/users.rs`, `controllers.rs` | Authenticated current-user-scoped POST/DELETE; self 422, bot/inactive/missing 404; concurrent real HTTP requests leave one allowance. The deterministic simulated unique-index-loser Rails scenario remains deferred. |
 | `controllers/users/notification_settings.rs` | Authenticated PATCH; permitted scalar assignments, Rails boolean/clock casts, timer rules, atomic list+settings save, exact validation response status and unsaved form values, old keyword list on failure. All ten named Rails controller scenarios plus five extra HTTP regressions pass. Twelve actual compound-parameter/list-writer vectors cover nil, booleans, numbers, arrays, hashes, nested arrays, escaping and control characters. SQL failure and nil boolean both roll back the list. |
-| `controllers/presenters/status_settings.rs`, `controllers/presenters.rs`, `controllers/users/profiles.rs` | Gather plain view facts before rendering: settings, calendar configuration/account/scope/error, allowance people ordered by case-folded name, keywords ordered by phrase, OOO date in the user's zone and validation messages. Failed notification writes render the profile with submitted settings and rolled-back keyword rows. |
-| `rust/crates/views/src/users/settings.rs`, `users.rs`, `templates/users/profiles/{_status,_notifications,show}.html`, `tests/ws17_settings.rs`, golden JSON | Mechanical ports of the two owned Rails forms: whitespace, attribute order, escaping, fields, error wrappers, calendar connection states, allowance buttons and OOO display. Twenty-four complete partial strings across twelve actual Rails states compare byte for byte. Integrated both forms into the profile. The full profile page still lacks unrelated upstream-to-Smartfire sections; whole-page byte parity is not claimed. Status form rendering is delivered, but its PATCH route is still unported (501). |
+| `controllers/presenters/status_settings.rs`, `controllers/presenters.rs`, `controllers/users/profiles.rs` | Gather plain view facts before rendering: settings, calendar configuration/account/scope/error, allowance people ordered by case-folded name, keywords ordered by phrase, OOO date in the user's zone and validation messages. Failed writes preserve submitted settings and rolled-back keyword rows. The pin's enabled-2FA profile-rendering failure is reproduced explicitly (see design notes). |
+| `rust/crates/views/src/users/settings.rs`, `users.rs`, `templates/users/profiles/{_status,_notifications,show}.html`, `tests/ws17_settings.rs`, golden JSON | Mechanical ports of the two owned Rails forms: whitespace, attribute order, escaping, fields, error wrappers, calendar connection states, allowance buttons and OOO display. Twenty-four complete partial strings across twelve actual Rails states compare byte for byte. Integrated both forms into the profile. The full profile page still lacks unrelated upstream-to-Smartfire sections; whole-page byte parity is not claimed. Status PATCH is now delivered. Badge and DM notice partials also match twenty-four complete strings across the same twelve Rails states, including all five presence labels, escaping and invisible OOO. |
+| `controllers/users/statuses.rs`, `statuses/tests.rs`, `models/user_status_settings/updates.rs`, `channels/sink.rs`, `views/src/users/statuses.rs`, two status partials, request vectors/generator | Authenticated status PATCH with presence, custom status expiry/clear, manual OOO presets/clear/note, calendar opt-ins/out, shared-cache cleanup, conditional manual OOO claim and immediate session-free badge/DM Turbo broadcasts after commit. 36 actual Rails HTTP requests, 36 complete Turbo frames, 18 conditional claim outcomes and two seeded rendering failures. All 22 named Rails status-controller scenarios plus eight extra HTTP regressions pass. Both opt-ins on enqueue two refreshes; both off emit three frames, matching the loaded destroyed association. SQL cache and enqueue errors roll back the entire triggering write and send no frames. |
 | `controllers/users/push_subscriptions/test_notifications.rs`, `jobs/notifications.rs` | Current-user-scoped test push persisted as `Push::Subscription::TestNotificationJob`; UUID body and absolute request URL captured at enqueue. Execution loads the owned subscription and fresh badge, then queues exact Smartfire Test/tag payload. Explicit test sends even in DND. The inline Rails endpoint has no job class: this Rust adapter is the brief's required durable execution, not a claimed Rails class. |
 | `integrations/web_push.rs`, `pool.rs`, `tests.rs`, `config.rs`, encrypted golden | Smartfire tag and `mailto:support@smartdata.net`, retained bounded encryption/VAPID/IP-pinned transport. Actual Rails invalidation: 410 and TLS/key failures invalidate; 404 retained. Inline test helper now test-only; unused VAPID getter removed. Actual HTTP enqueue-failure rollback/readback and encrypted queued test delivery pass, along with durable thread/saved delivery and policy tests. |
 | `controllers/users/presences.rs`, `jobs/periodic.rs`, `controllers/pwa.rs` | Authenticated presence batch endpoint: 35 Ruby Integer vectors and twelve complete Rails responses; read never prunes, periodic minute sweep does. Service-worker/offline-shell served bytes match the pin. Unchanged Node harness rerun against freshly saved Rust HTTP worker bytes. |
-| `rust/reference-tools/ws17_*`, `rust/vectors/ws17_keyword_input.json`, `rust/plans/ws17-rails-test-inventory.json`, this report | Pin verification for 29 owned Rails files, reproducible actual Rails generators, failure-injection runner and dependency-key check. Exact named scenario ownership/evidence list and external report mirror. |
+| `rust/reference-tools/ws17_*`, `rust/vectors/ws17_keyword_input.json`, `rust/plans/ws17-rails-test-inventory.json`, this report | Pin verification for 36 owned Rails files, reproducible actual Rails generators, failure-injection runner and dependency-key check. Exact named scenario ownership/evidence list and external report mirror. |
 
 ## Design notes and cross-workstream touches
 
@@ -34,7 +35,9 @@ Domain writers and policy know no HTML. View templates take plain structs, and c
 
 Per the brief, the test endpoint now redirects once enqueue commits; delivery errors follow asynchronous pool handling and invalidation. The pin performs that test delivery inline, so synchronous delivery failure timing is an explicit architectural change required by the durable-job instruction. Missing/deleted or newly non-owned subscriptions no-op when the job executes. No DND policy is applied to an explicit test push, matching the pin. UUID and path are frozen at enqueue; badge is fresh at execution.
 
-The form adapter reads Google account connection/scope facts without reading tokens, mutating caches or fetching Google. WS14 supplies the real cache/feed and refresh handler; status controller opt-in/opt-out reconciliation is not yet delivered. The profile's appearance/preferences, auth/security and integration sections still require their owning workstreams; this is not full-page acceptance. WS12 owns user stars and the full activity recorder; DND exceptions remain separate. No implementation swarm, PR or production operation was performed.
+The form adapter reads Google account connection/scope facts without reading tokens, mutating caches or fetching Google. WS14 supplies the real cache/feed and refresh handler; status controller opt-in/out reconciliation and refresh enqueue are delivered. `campfire_db::models::user_status_settings::updates::MeetingRefreshJob { user_id: i64 }` serializes as `{"user_id": ...}`, class `Calendar::MeetingRefreshJob`, version 1, default queue. WS14 must register its fetching handler: until that lands, the durable row fails visibly with "no handler" and existing failed rows need explicit replay after registration; this slice does not claim cache fetching works. The profile's appearance/preferences, auth/security and integration sections still require their owning workstreams; this is not full-page acceptance. WS12 owns user stars and the full activity recorder; DND exceptions remain separate. No implementation swarm, PR or production operation was performed.
+
+The actual seeded Rails oracle found that both settings controllers render `profiles/show` without setting `@two_factor_devices`; its confirmed-credential branch calls `nil.any?` and returns 500 on invalid input. The port now reproduces that seeded failure without changing Rails. Named Rails controller tests use `users.yml` without confirmed 2FA: both reference and Rust replays explicitly apply that fixture state and receive 422 with unsaved edits. A separate unmodified-seed test checks both observed 500 responses and unchanged settings. This corrects the prior slice's assumption that every seeded validation failure rendered 422. WS9 must preserve this pin behavior or coordinate a reference change; no credential secrets or tokens are read by this adapter.
 
 ## WS13 shared transport/policy seam — exact signatures
 
@@ -71,112 +74,146 @@ python3 rust/reference-tools/ws17_workspace_dependencies.py
 Metadata exit 0, no stdout. Raw: `workspace dependency keys: 75 unique; 0 duplicates`.
 
 ```bash
-python3 rust/reference-tools/ws17_regenerate_settings.py > .scratch/settings-regenerate-final.log 2>&1
+python3 rust/reference-tools/ws17_regenerate_settings.py > .scratch/settings-regenerate-status-final.log 2>&1
 ```
 
 ```text
-pinned Rails source verified: 29 files match d7c7de92
+pinned Rails source verified: 36 files match d7c7de92
 Rails settings vectors: 200 presets; 14 clock setters; 15 validations; 636 legal zone names; 1 dirty-write scenario
 ```
 
 ```bash
-python3 rust/reference-tools/ws17_regenerate_settings_views.py > .scratch/settings-views-regenerate.log 2>&1
+python3 rust/reference-tools/ws17_regenerate_settings_views.py > .scratch/settings-views-status-final.log 2>&1
 ```
 
 ```text
-pinned Rails source verified: 29 files match d7c7de92
-Rails settings HTML: 12 states; 24 complete partials
+pinned Rails source verified: 36 files match d7c7de92
+Rails settings HTML: 12 states; 24 complete forms; 24 complete status partials
 ```
 
 ```bash
-python3 rust/reference-tools/ws17_regenerate_keyword_inputs.py > .scratch/keyword-input-regenerate.log 2>&1
+python3 rust/reference-tools/ws17_regenerate_keyword_inputs.py > .scratch/keyword-input-status-final.log 2>&1
 ```
 
 ```text
-pinned Rails source verified: 29 files match d7c7de92
+pinned Rails source verified: 36 files match d7c7de92
 Rails keyword input: 12 parameter and writer scenarios
 ```
 
 ```bash
-python3 rust/reference-tools/ws17_injections.py settings- > .scratch/settings-injections-final.log 2>&1
+python3 rust/reference-tools/ws17_regenerate_status_requests.py > .scratch/status-regenerate.log 2>&1
+```
+
+```text
+pinned Rails source verified: 36 files match d7c7de92
+Rails status requests: 36 requests; 36 complete Turbo frames; 18 conditional OOO claims; 2 seeded failures
+```
+
+```bash
+python3 rust/reference-tools/ws17_injections.py settings- > .scratch/settings-injections-status-final.log 2>&1
 ```
 
 ```text
 settings-validation: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 435 filtered out; finished in 0.09s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 437 filtered out; finished in 0.09s
 settings-keyword-rollback: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 435 filtered out; finished in 0.09s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 437 filtered out; finished in 0.11s
 settings-active-allowance: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 435 filtered out; finished in 0.09s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 437 filtered out; finished in 0.14s
 settings-dnd-timer: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 435 filtered out; finished in 0.08s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 437 filtered out; finished in 0.19s
 settings-stale-write: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 435 filtered out; finished in 0.14s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 437 filtered out; finished in 0.17s
 ```
 
 ```bash
-python3 rust/reference-tools/ws17_injections.py next- > .scratch/settings-next-injections.log 2>&1
+python3 rust/reference-tools/ws17_injections.py next- > .scratch/next-injections-status-final.log 2>&1
 ```
 
 ```text
 next-form-bytes: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
 next-controller-errors: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 336 filtered out; finished in 0.39s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 366 filtered out; finished in 0.44s
 next-test-push-tag: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 336 filtered out; finished in 0.47s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 366 filtered out; finished in 0.42s
 ```
 
-Eight intentional defects detected: validation removal, broken savepoint rollback, invalid allowance target, clearing a live timer, overwriting concurrent settings changes, wrong form bytes, wrong error response status, wrong queued test tag. Mutation runners exit 0, expected failing test summaries above, restored source. Before controller registration, failed-save HTTP test returned 501 instead of 422 and failed (one test); the initial view comparison failed on actual byte order/newline differences before fixing them. No compile failures are counted as discriminating tests.
-
 ```bash
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -p campfire_views -- --test-threads=4 > .scratch/settings-next-domain-views-final.log 2>&1
+python3 rust/reference-tools/ws17_injections.py status- > .scratch/status-injections.log 2>&1
 ```
 
 ```text
-test result: ok. 433 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 43.80s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.19s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+status-ooo-claim-guard: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 438 filtered out; finished in 0.10s
+status-transaction: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 366 filtered out; finished in 0.43s
+status-stream-target: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 366 filtered out; finished in 0.41s
+status-seeded-error: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 366 filtered out; finished in 0.39s
+```
+
+Twelve intentional defects detected: validation removal, broken savepoint rollback, invalid allowance target, clearing a live timer, overwriting concurrent settings changes, wrong form bytes, wrong error response status, wrong queued test tag, a missing future-end claim guard, an early COMMIT breaking HTTP rollback, a wrong Turbo target, and a missing seeded 2FA failure. Mutation runners exit 0, expected failing test summaries above, restored source. Before controller registration, failed-save HTTP test returned 501 instead of 422 and failed (one test); the initial view comparison failed on actual byte order/newline differences before fixing them. The status validation replay also failed with 501 instead of 422 before registration: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.41s`. No compile failures are counted as discriminating tests.
+
+```bash
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -p campfire_views -- --test-threads=4 > .scratch/status-domain-views-final.log 2>&1
+```
+
+```text
+test result: ok. 436 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 41.60s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.40s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.03s
 test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-Summaries in order: DB, jobs unit, two crash/restart integrations, views unit, views core, owned settings HTML, then three doc-test groups. DB has three pre-existing special oracle/export ignores (`scenario_matches_ruby`, `fixtures_match_ruby_row_for_row`, `export_database_for_rails`). They need their dedicated environment and were not run. Twenty-four complete settings strings pass in the one owned-HTML harness test.
+Summaries in order: DB, jobs unit, two crash/restart integrations, views unit, views core, owned settings HTML, then three doc-test groups. DB has three pre-existing special oracle/export ignores (`scenario_matches_ruby`, `fixtures_match_ruby_row_for_row`, `export_database_for_rails`). They need their dedicated environment and were not run. Forty-eight complete owned partial strings pass across two harness tests (24 forms, 24 badge/notice strings).
 
 ```bash
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire -- --test-threads=4 > .scratch/settings-next-app-final.log 2>&1
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire -- --test-threads=4 > .scratch/status-app-final.log 2>&1
 ```
 
 ```text
-test result: ok. 334 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 29.94s
+test result: ok. 364 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 33.31s
 ```
 
 Zero seeded app failures, three main ignores as listed above. Full suite includes allowance, notification settings, actual enqueue-trigger rollback/readback and decrypted durable delivery. No full DB rollback/readback through Rails or cutover rehearsal is claimed.
 
 ```bash
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire controllers::users::notification_settings -- --test-threads=4 > .scratch/notification-named-final.log 2>&1
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire controllers::users::notification_settings -- --test-threads=4 > .scratch/notification-status-final.log 2>&1
 ```
 
 ```text
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 322 filtered out; finished in 0.89s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 352 filtered out; finished in 0.91s
 ```
 
 Named notification-controller file: all ten selected Rails scenarios pass, plus five extra HTTP regressions (SQL rollback, twelve parameter coercion cases, sorted/invalid keywords, nil boolean, required hash shape). Filtered-out count is intentional; full app run above ran separately.
 
 ```bash
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 WS17_SERVICE_WORKER_OUTPUT="$PWD/.scratch/service-worker-served.js" mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire ws17_service_worker_is_served_byte_identical_to_rails -- --test-threads=4 > .scratch/service-worker-http-current.log 2>&1
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire controllers::users::statuses::tests:: -- --test-threads=4 > .scratch/status-focused-final.log 2>&1
 ```
 
 ```text
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 336 filtered out; finished in 0.33s
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 337 filtered out; finished in 4.92s
+```
+
+All 22 named status-controller scenarios pass, plus eight extra tests; each exact Rails title points to its Rust replay below. Actual socket messages compare complete Turbo bytes, exact signed stream names/counts and each stream sequence. Pinned Rails ActionCable::Channel::Streams delegates stream callbacks to worker_pool.async_invoke: cross-channel callback emissions are not a global socket delivery order. A separate DB regression compares broadcast emission order to the actual Rails notification capture. No payload or HTML mask was added.
+
+```bash
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 WS17_SERVICE_WORKER_OUTPUT="$PWD/.scratch/service-worker-served.js" mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire ws17_service_worker_is_served_byte_identical_to_rails -- --test-threads=4 > .scratch/service-worker-http-status-final.log 2>&1
+```
+
+```text
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 366 filtered out; finished in 0.37s
 ```
 
 ```bash
-bash rust/reference-tools/ws17_service_worker_harness.sh > .scratch/service-worker-harness-current.log 2>&1
+bash rust/reference-tools/ws17_service_worker_harness.sh > .scratch/service-worker-harness-status-final.log 2>&1
 ```
 
 ```text
@@ -188,26 +225,26 @@ service worker harness: all checks passed
 Nineteen unchanged Node checks pass before and after an intentional scratch-only cache-poisoning mutation; its five failures are expected. Fresh worker response bytes were saved by the preceding HTTP test. Browser status/meeting/OOO interaction and screenshot scenarios remain deferred.
 
 ```bash
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings > .scratch/settings-next-clippy-final.log 2>&1
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings > .scratch/status-clippy-final.log 2>&1
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 20.63s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.43s
 ```
 
 Exit 0, no crate exclusions or warning suppressions. Broader workspace tests, storage media-byte differential, full DB differential/rollback and browser screenshots were not run in this slice.
 
 ## Precisely remaining, in the requested order
 
-1. **Step 1 remains partial.** Implement `Users::StatusesController#update` (currently 501), status/presence/custom expiry clear/error/unsaved-value requests, manual OOO set/clear/note and calendar opt-in/out reconciliation with transactional refresh job seam and immediate badges/notices. Finish time-zone/theme/text-size profile writes and whole owned profile HTML boundaries, status badges and presence sidebar/DM presentation. Push-subscription controller named scenarios and index HTML byte checks remain; durable explicit test notification is now delivered. Allowance controller still needs the exact repeated-star and deterministic unique-index-loser scenarios. Domain writers, both rendered forms, notification PATCH and allowance routes are done.
+1. **Step 1 remains partial.** Finish time-zone/theme/text-size profile writes and owned appearance/profile HTML boundaries, presence sidebar/DM presentation and browser/pixel verification. Push-subscription named controller scenarios and index HTML byte checks remain. Allowances still need exact repeated-star and deterministic unique-index-loser scenarios. Domain writers, both settings forms, status/notification PATCH, allowance routes, durable explicit test notification, controller cache reconciliation, manual OOO claims and complete badge/DM notice broadcast bytes are delivered. WS14 must register/connect its refresh handler; queued refreshes currently fail visibly until then.
 2. **Keyword-alert recording not started.** Wire matcher priority into transactional activity recording, with minimal writer if WS12 has not landed; active-human eligibility, room/thread membership/muting, mention/reply/keyword winner, inbox remains recorded through DND. This slice changes keyword settings, not the activity recorder.
-3. **Meeting/OOO dispatcher claims and broadcasts not started.** Atomic conditional claims, due sweeps, stale refresh deduplication, periodic tasks, manual expiry cleanup, badge/sidebar/DM/OOO notice rendering/broadcasts and opt-out/inactive/malformed-cache/concurrency tests. WS14 supplies Google/cache feed.
+3. **Meeting/OOO due dispatchers remain.** Manual OOO claim plus controller-triggered badges/notices are delivered. Still implement meeting-cache conditional claims, due sweeps, stale refresh deduplication, periodic tasks, manual-expiry sweep cleanup and opt-out/inactive/malformed-cache/concurrent-dispatcher scenarios. Sidebar/DM presence presentation remains. WS14 supplies Google/cache feed and the refresh handler.
 4. **Event, board and huddle pushers/jobs not started.** Policy/recipient adapters, exact payload vectors, source seams (WS14 events, WS12 board, WS13 huddle payloads), durable execution, transactional claim/enqueue, huddle join throttle, rollback/restart tests. Audit room durable handler parity; thread/saved/test durable handlers delivered. Shared huddle transport signatures are above; dedicated job DTO signature remains to be agreed/delivered with WS13.
 5. **Remaining named scenario replays** below, including system/browser cases. Each exact deferred title has an owner and current state in the inventory. No WS17 completion claim.
 
 ## Named Rails replay counts, grouped by file
 
-347 selected exact Rails titles: **85 equivalent scenarios rerun; 262 deferred**. Counts are Rails titles, not Rust harness test counts. `rust/plans/ws17-rails-test-inventory.json` records every selected title, owner, status and passing Rust evidence. Pure vector coverage does not automatically mark all exact scenario sequences ported.
+347 selected exact Rails titles: **107 equivalent scenarios rerun; 240 deferred**. Counts are Rails titles, not Rust harness test counts. `rust/plans/ws17-rails-test-inventory.json` records every selected title, owner, status and passing Rust evidence. Pure vector coverage does not automatically mark all exact scenario sequences ported.
 
 | Rails file | Passed equivalent | Deferred |
 | --- | ---: | ---: |
@@ -216,7 +253,7 @@ Exit 0, no crate exclusions or warning suppressions. Broader workspace tests, st
 | `test/controllers/users/notification_settings_controller_test.rb` | 10 | 0 |
 | `test/controllers/users/presences_controller_test.rb` | 7 | 0 |
 | `test/controllers/users/push_subscriptions_controller_test.rb` | 0 | 6 |
-| `test/controllers/users/statuses_controller_test.rb` | 0 | 22 |
+| `test/controllers/users/statuses_controller_test.rb` | 22 | 0 |
 | `test/integration/ooo_dm_notice_test.rb` | 0 | 10 |
 | `test/jobs/huddle/push_invitation_job_test.rb` | 0 | 4 |
 | `test/lib/web_push/persistent_request_test.rb` | 1 | 1 |
@@ -424,28 +461,6 @@ Exit 0, no crate exclusions or warning suppressions. Broader workspace tests, st
 | `test/jobs/huddle/push_invitation_job_test.rb` | an opted-out recipient gets no push subscriptions | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
 | `test/jobs/huddle/push_invitation_job_test.rb` | a connected recipient gets no push | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
 | `test/jobs/huddle/push_invitation_job_test.rb` | missing invitations are ignored | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/controllers/users/statuses_controller_test.rb` | updates presence and the custom status with an expiry | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | clears the custom status | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | rejects an unknown presence with errors | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | requires sign-in | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | opting into meeting status enqueues a first refresh | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | opting out of meeting status drops the cached intervals | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | opting out while in a meeting broadcasts the cleared badge | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | opting out without cached intervals broadcasts nothing | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | saving other status settings leaves meeting refreshes alone | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | sets out of office with a preset and a note, and broadcasts it | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | sets out of office with a custom date and time in the member's zone | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | rejects an unknown OOO preset without saving anything | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | rejects a blank or past custom OOO end without saving anything | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | rejects an OOO note over 140 characters | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | clears out of office early and broadcasts the cleared state | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | clearing early ends only the manual OOO while calendar OOO covers | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | edits the OOO note alone | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | opting into calendar OOO enqueues a first refresh | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | opting out of calendar OOO clears its intervals and broadcasts | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | opting out of calendar OOO keeps the row while meeting status is on | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | opting out of meeting status keeps the row while calendar OOO is on | WS17 continuation |
-| `test/controllers/users/statuses_controller_test.rb` | saving other status settings leaves calendar OOO refreshes alone | WS17 continuation |
 | `test/controllers/users/dnd_allowances_controller_test.rb` | starring twice stays a single exception | WS17 continuation |
 | `test/controllers/users/dnd_allowances_controller_test.rb` | a concurrent star reports success instead of an error | WS17 continuation |
 | `test/controllers/users/push_subscriptions_controller_test.rb` | create new push subscription | WS17 continuation |

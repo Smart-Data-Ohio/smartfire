@@ -32,7 +32,7 @@ states = [
 ]
 rows = []
 travel_to(Time.utc(2026, 9, 30, 12)) do
-  states.each do |state|
+  states.each_with_index do |state, index|
     GoogleAccount.where(user:).delete_all
     Calendar::MeetingCache.where(user:).delete_all
     user.keyword_alerts.delete_all
@@ -79,7 +79,13 @@ travel_to(Time.utc(2026, 9, 30, 12)) do
     html = %w[status notifications].to_h do |partial|
       [partial, Ws17SettingsGoldenController.renderer.new(env).render(partial: "users/profiles/#{partial}", assigns: {user:})]
     end
-    rows << {name: state[:name], data:, html:}
+    presence = %w[online idle dnd offline agent][index % 5]
+    html["badge"] = Ws17SettingsGoldenController.renderer.new(env).render(partial: "users/statuses/badge", locals: {user:, presence:})
+    html["ooo_notice"] = Ws17SettingsGoldenController.renderer.new(env).render(partial: "rooms/show/ooo_notice_line", locals: {user:})
+    status_data = {presence:, status_text: user.status_text_display, name: user.name,
+      visible: user.ooo_status_visible?, until_date: user.ooo_until_date,
+      note: user.manual_ooo_active? ? user.ooo_note.presence : nil}
+    rows << {name: state[:name], data:, status_data:, html:}
   end
 end
 puts JSON.generate({reference: "d7c7de92", check_asset: ApplicationController.helpers.asset_path("check.svg"), rows:})

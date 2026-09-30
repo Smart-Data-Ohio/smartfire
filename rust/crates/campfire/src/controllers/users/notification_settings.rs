@@ -96,7 +96,7 @@ fn keyword_lines(value: &Param) -> Result<Vec<String>> {
     }
 }
 
-fn ruby_to_s(value: &Param) -> String {
+pub(super) fn ruby_to_s(value: &Param) -> String {
     value.to_s().unwrap_or_else(|| ruby_inspect(value))
 }
 fn ruby_inspect(value: &Param) -> String {
@@ -166,6 +166,9 @@ mod tests {
             .await
             .expect("WS17 requires the parity seed");
         app.db().write(|tx| {
+            // Rails named controller tests use users.yml without confirmed 2FA. The actual
+            // seeded enabled-credential failure is replayed separately by the status tests.
+            tx.conn().execute("UPDATE two_factor_credentials SET confirmed_at=NULL WHERE user_id=?",[DAVID])?;
             tx.conn().execute("UPDATE users SET dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,meeting_dnd_enabled=0,ooo_notify_enabled=0 WHERE id=?", [DAVID])?;
             tx.conn().execute("DELETE FROM keyword_alerts WHERE user_id=?", [DAVID])?;
             Ok(())

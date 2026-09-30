@@ -11,6 +11,7 @@ mod summary;
 pub use summary::*;
 mod settings;
 pub use settings::*;
+pub mod statuses;
 
 /// `users/new.html.erb` (the join page).
 #[derive(Template)]
