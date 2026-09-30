@@ -719,7 +719,10 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .tasks()
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let mut expected = golden["tasks"].as_array().unwrap().clone();
+    // Periodic::Runner registers this domain task alongside the WS8 tasks.
+    expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
+    assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
 }
 
 #[tokio::test]

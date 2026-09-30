@@ -187,6 +187,7 @@ async fn ws15e_room_message_embeds_render_signed_proxy_urls() {
             room_id: ALL_TALK, creator_id: DAVID, client_message_id: Some("ws15e-embed-proxy".into()),
             body: Some(r#"<div class="trix-content"><p>https://example.com/page</p><action-text-attachment content-type="application/vnd.actiontext.opengraph-embed" href="https://example.com/page" url="https://images.example.com/room-photo.png" filename="Example" caption="A page"></action-text-attachment></div>"#.into()),
             attachment_blob_id: None, thread_id: None, system_note: false, streaming: false,
+            ..Default::default()
         })?;
         Ok(())
     }).await.unwrap();

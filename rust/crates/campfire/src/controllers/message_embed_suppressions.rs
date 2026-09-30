@@ -33,11 +33,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         } else { Message::find_reachable(tx.conn(),user_id,id)? };
         let locked=message.thread_id.map(|thread| tx.conn().query_row("SELECT locked_at IS NOT NULL FROM channel_threads WHERE id=?",[thread],|row| row.get::<_,bool>(0))).transpose()?.unwrap_or(false);
         if message.creator_id!=user_id || message.system_note || locked { return Ok(None); }
-        if !message.embeds_suppressed {
-            tx.conn().execute("UPDATE messages SET embeds_suppressed=TRUE, streaming_updated_at=CASE WHEN streaming THEN ?2 ELSE streaming_updated_at END WHERE id=?1",rusqlite::params![id,tx.now()])?;
-            message.touch(tx)?;
-            message.embeds_suppressed=true;
-        }
+        message.suppress_embeds(tx)?;
         Ok(Some(message))
     }).await.map_err(db_error)?;
     let Some(message) = message else {

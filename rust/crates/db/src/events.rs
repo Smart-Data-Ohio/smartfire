@@ -150,6 +150,12 @@ impl Event {
 }
 
 pub trait EventSink: Send + Sync {
+    /// Domain reference callbacks run on the message writer's transaction. No network or
+    /// HTML belongs here; durable fetch requests must commit with their triggering message.
+    fn sync_message_references(&self, _tx: &mut Tx<'_>, _message: &crate::Message, _enqueue: bool) -> Result<()> {
+        Ok(())
+    }
+
     /// Hands the event off, once its write has committed (or right away, for [`Tx::emit_now`]).
     fn emit(&self, event: Event);
 
@@ -198,6 +204,10 @@ impl EventSink for RecordingSink {
 }
 
 impl<T: EventSink + ?Sized> EventSink for Arc<T> {
+    fn sync_message_references(&self, tx: &mut Tx<'_>, message: &crate::Message, enqueue: bool) -> Result<()> {
+        (**self).sync_message_references(tx, message, enqueue)
+    }
+
     fn emit(&self, event: Event) {
         (**self).emit(event)
     }

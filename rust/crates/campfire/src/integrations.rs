@@ -32,3 +32,9 @@ pub mod webhook;
 pub(crate) mod test_support;
 
 pub use jobs::{register_jobs, web_push_pool};
+
+
+/// SQL-only reference callbacks invoked from WS8's message transaction.
+pub fn sync_message_references(tx: &mut campfire_db::Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
+    link_embed::sync_message(tx, message, enqueue)
+}

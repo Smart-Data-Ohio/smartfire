@@ -229,11 +229,8 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
         Some(Assignment::Invalid) => return Err(invalid_attachment()),
         _ => None,
     };
-    let body = match (&attributes.markdown_source, attributes.body) {
-        (Some(source), _) => Some(canonicalize_markdown(c.app(), room_id, source.clone()).await?),
-        (None, Some(body)) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
-        (None, None) => None,
-    };
+    let body = attributes.body.map(|body| canonicalize_body(c.app(), body, Some(c.request.host())));
+    let body = match body { Some(body) => Some(body.await?), None => None };
     let (message, blob) = c
         .app()
         .db
@@ -246,15 +243,11 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                     creator_id,
                     client_message_id: attributes.client_message_id,
                     body,
+                    markdown_source: attributes.markdown_source,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                     ..Default::default()
                 },
             )?;
-            assign_markdown_source(tx, &message, attributes.markdown_source.as_deref())?;
-            let message = Message::find(tx.conn(), message.id)?;
-            if !message.streaming {
-                crate::integrations::link_embed::sync_message(tx, &message, true)?;
-            }
             deliver_webhooks_to_bots(tx, &room, &message)?;
             Ok((message, blob))
         })
@@ -286,46 +279,6 @@ pub(crate) fn canonical_body(conn: &campfire_db::Connection, app: &App, body: &s
     let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
     let ctx = resolver.render_context(request_host);
     Content::load(body, &ctx).map(|content| content.to_html()).unwrap_or_else(|_| body.to_string())
-}
-
-async fn canonicalize_markdown(app: &App, room_id: i64, source: String) -> Result<String> {
-    if source.chars().count() > campfire_richtext::markdown::SOURCE_LIMIT {
-        let mut errors = campfire_db::Errors::default();
-        errors.add("markdown_source", "is too long (maximum is 50000 characters)");
-        errors.into_result().map_err(db_error)?;
-    }
-    let app2 = app.clone();
-    app.db
-        .read(move |conn| {
-            crate::controllers::presenters::rich_text::render_markdown(conn, &app2.secrets, app2.clock.now(), room_id, &source)
-        })
-        .await
-        .map_err(db_error)
-}
-
-/// Minimal source assignment seam until WS8a owns all Message write callbacks.
-fn assign_markdown_source(tx: &mut campfire_db::Tx<'_>, message: &Message, source: Option<&str>) -> campfire_db::Result<bool> {
-    let mut errors = campfire_db::Errors::default();
-    if let Some(source) = source {
-        if source.chars().count() > campfire_richtext::markdown::SOURCE_LIMIT {
-            errors.add("markdown_source", "is too long (maximum is 50000 characters)");
-        }
-        if !message.streaming && source.chars().all(char::is_whitespace) {
-            let attached:bool=tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='Message' AND record_id=?1 AND name='attachment') OR EXISTS(SELECT 1 FROM drive_attachments WHERE message_id=?1)",[message.id],|row| row.get(0))?;
-            if !attached {
-                errors.add("markdown_source", "can't be blank");
-            }
-        }
-    }
-    errors.into_result()?;
-    let changed = message.markdown_source.as_deref() != source;
-    if changed {
-        tx.conn().execute(
-            "UPDATE messages SET markdown_source=?1 WHERE id=?2",
-            rusqlite::params![source, message.id],
-        )?;
-    }
-    Ok(changed)
 }
 
 /// Assigning something that isn't an upload, a signed blob id, nil or "".
@@ -383,35 +336,25 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
         Some(_) => Some(None),
         None => None,
     };
-    let body = match (&attributes.markdown_source, attributes.body) {
-        (Some(source), _) => Some(canonicalize_markdown(c.app(), message.room_id, source.clone()).await?),
-        (None, Some(body)) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
-        (None, None) => None,
+    let body = match attributes.body {
+        Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
+        None => None,
     };
     let (id, blob) = c
         .app()
         .db
         .write(move |tx| {
             let mut message = message;
-            let source_changed = assign_markdown_source(tx, &message, attributes.markdown_source.as_deref())?;
-            let body_changed = body
-                .as_ref()
-                .is_some_and(|body| message.body_html(tx.conn()).ok().flatten().as_ref() != Some(body));
-            if let Some(body) = body {
-                message.update_body(tx, &body)?;
-            }
             let attachment_given = attachment.is_some();
             let blob = attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?;
             if attachment_given {
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
             }
-            if source_changed {
-                message.touch(tx)?;
-            }
-            if !message.streaming && (source_changed || body_changed) {
-                let reloaded = Message::find(tx.conn(), message.id)?;
-                crate::integrations::link_embed::sync_message(tx, &reloaded, true)?;
-            }
+            message.edit(tx, campfire_db::MessageChanges {
+                markdown_source: attributes.markdown_source,
+                body,
+                ..Default::default()
+            })?;
             Ok((message.id, blob))
         })
         .await

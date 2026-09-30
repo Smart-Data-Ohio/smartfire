@@ -76,28 +76,6 @@ impl campfire_richtext::markdown::IconResolver for DbResolver<'_> {
     }
 }
 
-/// WS8a adapter: the existing WS5 renderer with real room members and icon catalog.
-pub fn render_markdown(
-    conn: &Connection,
-    secrets: &Secrets,
-    now: jiff::Timestamp,
-    room_id: i64,
-    source: &str,
-) -> campfire_db::Result<String> {
-    use campfire_richtext::markdown::{MentionResolver, RoomMember};
-    let resolver = DbResolver { conn, secrets, now };
-    let members = campfire_db::Room::find(conn, room_id)?
-        .users(conn)?
-        .iter()
-        .map(|user| RoomMember {
-            user: resolver.mention_user(user),
-            active: user.status == campfire_db::Status::Active,
-        })
-        .collect::<Vec<_>>();
-    let mentions = |name: &str| members.as_slice().unique_active_member(name);
-    campfire_richtext::markdown::render(source, &mentions, &resolver).map_err(|error| campfire_db::Error::Other(error.to_string()))
-}
-
 impl AttachableResolver for DbResolver<'_> {
     fn embed_image_path(&self, url: &str) -> Result<String, campfire_richtext::Error> {
         Ok(crate::integrations::image_proxy::signed_path(self.secrets, url))

@@ -213,6 +213,10 @@ impl Jobs {
 }
 
 impl EventSink for Jobs {
+    fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
+        crate::integrations::sync_message_references(tx, message, enqueue)
+    }
+
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
         if let Some(request) = request_for(event) {
             if !tx.in_transaction() {

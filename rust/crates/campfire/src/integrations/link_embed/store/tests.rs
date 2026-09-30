@@ -110,3 +110,38 @@ async fn ws15e_link_references_preserve_room_urls_reconcile_edits_and_refresh_ex
     let jobs=app.db().read(campfire_jobs::inspect::all).await.unwrap();
     assert_eq!(jobs.iter().filter(|job| job.class=="LinkEmbed::FetchJob").count(),2,"twelve writers share the initial claim; only the expired row refetches");
 }
+
+
+#[tokio::test]
+async fn ws15e_ws8_model_create_edit_and_scheduled_send_sync_refs_transactionally() {
+    use campfire_db::{MessageChanges, NewScheduledMessage, ScheduledMessage};
+    let mut app = TestApp::boot().await.expect("build the pinned parity seed");
+    app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    app.db().write(|tx| {
+        let mut message = Message::create(tx, NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID,
+            markdown_source: Some("https://example.com/ws8-create".into()),
+            ..Default::default()
+        })?;
+        assert_eq!(Reference::for_message(tx.conn(), &message)?.len(), 1, "WS8 model create must sync");
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'", [], |r| r.get::<_, i64>(0))?, 1);
+        message.edit(tx, MessageChanges { markdown_source: Some("https://example.com/ws8-edit".into()), ..Default::default() })?;
+        assert_eq!(Reference::for_message(tx.conn(), &message)?[0].display_url(), "https://example.com/ws8-edit");
+        message.suppress_embeds(tx)?;
+        assert_eq!(Reference::for_message(tx.conn(), &message)?.len(), 1);
+        let item = ScheduledMessage::create(tx, NewScheduledMessage {
+            user_id: DAVID, room_id: ALL_TALK, markdown_source: "https://example.com/ws8-scheduled".into(),
+            send_at: tx.now().since(jiff::SignedDuration::from_mins(1)), thread_id: None, reply_to_message_id: None,
+        })?;
+        assert!(ScheduledMessage::dispatch(tx, item.id, tx.now(), true)?);
+        let scheduled = ScheduledMessage::find(tx.conn(), item.id)?;
+        let sent = Message::find(tx.conn(), scheduled.sent_message_id.unwrap())?;
+        assert_eq!(Reference::for_message(tx.conn(), &sent)?.len(), 1);
+        let stream = Message::create(tx, NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, streaming: true,
+            markdown_source: Some("https://example.com/ws8-stream".into()), ..Default::default()
+        })?;
+        assert!(Reference::for_message(tx.conn(), &stream)?.is_empty());
+        Ok(())
+    }).await.unwrap();
+}
