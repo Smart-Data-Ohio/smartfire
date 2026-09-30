@@ -200,3 +200,63 @@ fn overdue_invitations_match_twenty_nine_rails_scenarios_and_are_idempotent() {
         assert!(db.events().is_empty(), "{} resolved twice", case["name"]);
     }
 }
+
+#[test]
+fn stale_stream_state_matches_sixteen_rails_scenarios() {
+    let vectors: Value =
+        serde_json::from_str(include_str!("../models/huddle_stale_stream_vectors.json")).unwrap();
+    assert_eq!(vectors["cases"].as_array().unwrap().len(), 16);
+    for case in vectors["cases"].as_array().unwrap() {
+        let db = TestDb::new();
+        db.clock
+            .travel_to(Timestamp::from_second(vectors["now"].as_i64().unwrap()));
+        let input = case["input"].clone();
+        db.write(move |tx| {
+            huddle_notices_test::load(tx, &input)?;
+            for stream in input["streams"].as_array().unwrap() {
+                huddle_notices_test::insert(tx, "streams", stream)?;
+            }
+            Ok(())
+        });
+        let ids = db.read(crate::models::huddle_stream_liveness::live_ids);
+        let mut errors = Value::Null;
+        for id in ids {
+            match db.try_write(move |tx| crate::models::huddle_stream_liveness::end_stale(tx, id)) {
+                Ok(()) => (),
+                Err(crate::Error::RecordInvalid(error)) => {
+                    let mut fields = serde_json::Map::new();
+                    for (attribute, message) in error.0 {
+                        fields
+                            .entry(attribute)
+                            .or_insert_with(|| json!([]))
+                            .as_array_mut()
+                            .unwrap()
+                            .push(json!(message));
+                    }
+                    errors = Value::Object(fields);
+                    break;
+                }
+                Err(error) => panic!("{}: {error}", case["name"]),
+            }
+        }
+        assert_eq!(errors, case["errors"], "{}", case["name"]);
+        let mut actual = db.read(|conn| snapshot(conn, "streams"));
+        let mut expected = case["streams"].clone();
+        normalize(&mut actual);
+        normalize(&mut expected);
+        assert_eq!(actual, expected, "{}", case["name"]);
+        let ids = db.read(crate::models::huddle_stream_liveness::live_ids);
+        if errors.is_null() {
+            for id in ids {
+                db.write(move |tx| crate::models::huddle_stream_liveness::end_stale(tx, id));
+            }
+            let mut repeated = db.read(|conn| snapshot(conn, "streams"));
+            normalize(&mut repeated);
+            assert_eq!(
+                repeated, actual,
+                "{} repeated sweep changed timestamps",
+                case["name"]
+            );
+        }
+    }
+}

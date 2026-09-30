@@ -14,6 +14,7 @@ pub mod huddle_grant;
 pub mod huddle_effects;
 pub mod huddle_notices;
 pub mod huddle_invitations;
+pub mod huddle_stream_liveness;
 pub mod forwarder;
 pub mod membership;
 pub mod keyword_alert;

@@ -1,6 +1,7 @@
 //! Durable presence, join-notice, invitation-push and cleanup jobs.
 //! Invitation/join payloads enqueue through WS17's seam. The invitation resolver and
-//! cleanup sweep run in this process; stream render callbacks remain a lifecycle slice.
+//! stale-stream and cleanup sweeps run in this process; stream render callbacks remain a
+//! lifecycle slice.
 use campfire_db::Database;
 use campfire_db::models::huddle_cleanup::{CleanupJob, HuddleCleanup, Operation};
 use campfire_jobs::{Execution, JobKind, JobResult, Outcome, RetryPolicy};
@@ -145,6 +146,9 @@ pub(crate) async fn reconcile(db: &Database, service: RoomService) -> anyhow::Re
     if let Err(error) = resolve_invitations(db).await {
         tracing::error!(%error,"Huddle invitation resolution failed");
     }
+    if let Err(error) = end_stale_streams(db).await {
+        tracing::error!(%error,"Huddle stream reconciliation failed");
+    }
     if !service.admin_configured() {
         return Ok(0);
     }
@@ -170,6 +174,17 @@ async fn resolve_invitations(db: &Database) -> campfire_db::Result<()> {
         .await?;
     for id in ids {
         db.write(move |tx| campfire_db::models::huddle_invitations::resolve_item(tx, id))
+            .await?;
+    }
+    Ok(())
+}
+
+async fn end_stale_streams(db: &Database) -> campfire_db::Result<()> {
+    let ids = db
+        .read(campfire_db::models::huddle_stream_liveness::live_ids)
+        .await?;
+    for id in ids {
+        db.write(move |tx| campfire_db::models::huddle_stream_liveness::end_stale(tx, id))
             .await?;
     }
     Ok(())

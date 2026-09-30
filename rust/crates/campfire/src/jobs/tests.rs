@@ -118,13 +118,16 @@ async fn huddle_in_process_loop_resolves_invitations_without_livekit_admin_confi
     let Some(test)=TestApp::boot().await else{return;};
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let app=test.booted.app.clone();
-    let item=app.db.write(|tx| {
+    let (item,stream)=app.db.write(|tx| {
         let session=campfire_db::Session::start(tx,DAVID,None,None)?;
         let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
         let grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})?;
         let item=tx.conn().query_row("SELECT id FROM activity_items WHERE source_type='HuddleGrant' AND source_id=?",[grant.id],|r|r.get::<_,i64>(0))?;
         tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(46)),item])?;
-        Ok(item)
+        let stage=campfire_db::Room::create_for(tx,campfire_db::RoomType::Stage,Some("WS13 loop stage"),DAVID,&[DAVID])?;
+        let presenter=campfire_db::Membership::find_by_room_and_user(tx.conn(),stage.id,DAVID)?.unwrap();
+        let stream=tx.conn().query_row("INSERT INTO streams(room_id,membership_id,user_id,quality,started_at,created_at,updated_at) VALUES(?,?,?,'1080p15',?,?,?) RETURNING id",rusqlite::params![stage.id,presenter.id,DAVID,tx.now(),tx.now(),tx.now()],|r|r.get::<_,i64>(0))?;
+        Ok((item,stream))
     }).await.unwrap();
     let config=runner_config(&app.config);
     let (_,ad_hoc)=Jobs::new(&registry(),&config).unwrap();
@@ -132,8 +135,8 @@ async fn huddle_in_process_loop_resolves_invitations_without_livekit_admin_confi
     let runner=start(app.clone(),registry(),ad_hoc,config,loops);
     let deadline=tokio::time::Instant::now()+Duration::from_secs(5);
     loop {
-        let missed=app.db.read(move |conn|Ok(campfire_db::ActivityItem::find(conn,item)?.event_type=="huddle_missed")).await.unwrap();
-        if missed {break;}
+        let done=app.db.read(move |conn|Ok(campfire_db::ActivityItem::find(conn,item)?.event_type=="huddle_missed" && conn.query_row("SELECT ended_at IS NOT NULL FROM streams WHERE id=?",[stream],|r|r.get::<_,bool>(0))?)).await.unwrap();
+        if done {break;}
         assert!(tokio::time::Instant::now()<deadline,"the actual in-process huddle task did not resolve the invitation");
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
