@@ -8,6 +8,7 @@ pub mod helpers;
 pub mod layouts;
 pub mod link_embeds;
 pub mod fizzy_cards;
+pub mod fizzy_message_cards;
 pub mod public_pages;
 pub mod shared;
 pub mod time;

@@ -42,6 +42,8 @@ pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
 pub mod fizzy_cards;
+pub mod fizzy_connections;
+pub mod fizzy_message_cards;
 pub mod github;
 pub mod message_embed_suppressions;
 pub mod messages;
@@ -148,6 +150,10 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
         "rooms/fizzy/cards#show" => arc(fizzy_cards::show),
+        "fizzy/connections#create" => arc(fizzy_connections::create),
+        "fizzy/connections#destroy" => arc(fizzy_connections::destroy),
+        "rooms/fizzy/message_cards#new" => arc(fizzy_message_cards::new),
+        "rooms/fizzy/message_cards#create" => arc(fizzy_message_cards::create),
         "github/webhooks#create" => arc(github::webhooks::create),
         "content_security_policy_reports#create" => arc(csp_reports::create),
         "accounts/users#index" => arc(accounts::users::index),

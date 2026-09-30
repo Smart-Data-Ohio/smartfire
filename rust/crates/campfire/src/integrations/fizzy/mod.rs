@@ -7,7 +7,7 @@ mod error_body;
 pub mod urls;
 use serde_json::Value;
 #[allow(dead_code, reason = "Used by staged Fizzy create-card API")]
-fn blank(value: &Value) -> bool {
+pub(crate) fn blank(value: &Value) -> bool {
     match value {
         Value::Null | Value::Bool(false) => true,
         Value::String(s) => s.chars().all(char::is_whitespace),

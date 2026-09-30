@@ -268,6 +268,19 @@ pub fn encode(value: &str) -> String {
 }
 
 impl Browser<'_> {
+    /// Rails-compatible sudo session for controller tests; no confirmation endpoint shortcut.
+    pub(crate) async fn grant_sudo(&mut self) {
+        use campfire_kit::Crypto;
+        self.authenticity_token().await;
+        let key = campfire_kit::session::SESSION_KEY;
+        let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
+        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap()).decode_utf8().unwrap();
+        let mut session = crypto.decrypt_cookie(key, &raw, jiff::Timestamp::now()).unwrap();
+        session["sudo_verified_at"] = serde_json::json!(self.app.booted.app.clock.now().as_second());
+        let encrypted = crypto.encrypt_cookie(key, &session, None);
+        self.cookies.insert(key.into(), campfire_kit::cookies::escape(&encrypted));
+    }
+
     fn absorb_cookie_header(&mut self, header: &str) {
         for pair in header.split(';') {
             if let Some((name, value)) = pair.trim().split_once('=') {
