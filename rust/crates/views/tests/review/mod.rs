@@ -230,6 +230,116 @@ fn review_whole_message_matches_rails_for_both_viewers() {
     );
 }
 
+fn image_vectors() -> Value {
+    serde_json::from_str(&fixture("images.json")).unwrap()
+}
+
+fn check_image_message(name: &str) {
+    use campfire_views::{fragment_cache, messages};
+    let vectors = image_vectors();
+    let row = vectors["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["name"] == name)
+        .unwrap();
+    let message: messages::MessageView = serde_json::from_value(row["message"].clone()).unwrap();
+    assert!(matches!(
+        message.content,
+        messages::MessageContent::Attachment(_)
+    ));
+    let cache = fragment_cache::FragmentCache::new(1 << 20);
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let signer = |_: &[&str]| String::new();
+    let mut differences = Vec::new();
+    for (viewer, email, token) in [
+        ("David", "david@37signals.com", "DAVID-SESSION"),
+        ("JZ", "jz@37signals.com", "JZ-SESSION"),
+    ] {
+        let ctx = context(Some(viewer), &asset, &signer, "");
+        let html = h::request_forgery::rendering_with(
+            h::request_forgery::RequestSecrets {
+                tokens: Box::new(UserTokens(token)),
+                csp_nonce: Some(token.into()),
+            },
+            || fragment_cache::with(&cache, || messages::message(&ctx, &message)),
+        );
+        assert!(!html.contains("authenticity_token") && !html.contains("SESSION"));
+        fragment_cache::with(&cache, || {
+            let stored =
+                messages::cached_message_fragment(message.id, message.updated_at, &ctx.base_url)
+                    .unwrap();
+            assert_eq!(stored.as_str(), html.as_str());
+            assert!(!h::request_forgery::has_token_slots(&stored));
+        });
+        if !compare(
+            &format!("{name}-{viewer}"),
+            &html,
+            row["html_by_viewer"][email].as_str().unwrap(),
+        ) {
+            differences.push(viewer);
+        }
+    }
+    assert!(
+        differences.is_empty(),
+        "{name} message differences: {differences:?}"
+    );
+}
+
+#[test]
+fn image_message_matches_rails_for_both_viewers() {
+    check_image_message("image");
+}
+
+#[test]
+fn image_large_message_matches_rails_for_both_viewers() {
+    check_image_message("image_large");
+}
+
+#[test]
+fn image_filename_previews_match_rails() {
+    use campfire_views::messages::{MessageContent, presentation};
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let signer = |_: &[&str]| String::new();
+    let ctx = context(None, &asset, &signer, "");
+    let mut differences = Vec::new();
+    for row in image_vectors()["filename_previews"].as_array().unwrap() {
+        let MessageContent::Attachment(mut attachment) =
+            serde_json::from_value(row["content"].clone()).unwrap()
+        else {
+            panic!("filename probe must use the attachment renderer");
+        };
+        let name = row["raw_filename"].as_str().unwrap();
+        // Use the same existing Filename implementation as the production presenter, starting
+        // with the raw value: sanitizing before removing the extension loses Rails semantics.
+        let filename = campfire_storage::Filename::new(name);
+        assert_eq!(
+            filename.base(),
+            attachment.filename_base,
+            "filename base: {name}"
+        );
+        assert_eq!(
+            filename.to_string(),
+            attachment.filename,
+            "sanitized filename: {name}"
+        );
+        attachment.filename_base = filename.base().to_string();
+        attachment.filename = filename.to_string();
+        let actual = presentation::attachment_presentation(&ctx, &attachment);
+        if !compare(
+            &format!("filename-preview-{}", differences.len()),
+            &actual,
+            row["html"].as_str().unwrap(),
+        ) {
+            differences.push(name.to_string());
+        }
+    }
+    assert!(
+        differences.is_empty(),
+        "image filename differences: {differences:?}"
+    );
+}
+
 #[test]
 fn review_helper_attribute_sweep() {
     let v = vectors();
@@ -608,7 +718,7 @@ fn reaction_registry_and_graphemes_match_rails() {
 }
 
 #[test]
-fn edge_install_matches_rails_with_pr151_asset_correction() {
+fn edge_install_matches_pinned_rails() {
     let asset = |path: &str| campfire_assets::asset_path(path);
     let signer = |_: &[&str]| String::new();
     let mut ctx = context(Some("David"), &asset, &signer, "");
@@ -621,8 +731,8 @@ fn edge_install_matches_rails_with_pr151_asset_correction() {
         .render()
         .unwrap();
     assert!(compare(
-        "edge-install-corrected",
+        "edge-install",
         &html,
-        vectors()["edge_install_corrected"].as_str().unwrap()
+        vectors()["edge_install"].as_str().unwrap()
     ));
 }

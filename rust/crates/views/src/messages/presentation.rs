@@ -63,7 +63,8 @@ fn lightboxed_image_preview(attachment: &AttachmentView, thumb_url: &str) -> Str
         None => String::new(),
     };
     let image = format!(
-        r#"<img{size} class="message__attachment" loading="lazy" src="{}" />"#,
+        r#"<img{size} class="message__attachment" loading="lazy" alt="{}" src="{}" />"#,
+        escape(&attachment.filename_base),
         escape(thumb_url)
     );
     let link = format!(

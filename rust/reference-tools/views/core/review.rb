@@ -24,12 +24,10 @@ def generate_review_goldens(goldens)
   goldens["layouts"]["frame_authenticated"] = render_with(inline: "Body", layout: "turbo_rails/frame")
   goldens["layouts"]["frame_head"] = render_with(inline: '<% content_for :head do %><meta name="extra" content="yes"><% end %>Body', layout: "turbo_rails/frame")
 
-  # PR #151's one authorized correction, applied only to this throwaway oracle render.
-  # The pinned file raises MissingAssetError; do not silently pretend the pin already moved.
+  # PR #151 is included in the pin: render the actual partial without source substitutions.
   controller.request.env["HTTP_USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edge/124.0.0.0"
   controller.remove_instance_variable(:@platform) if controller.instance_variable_defined?(:@platform)
-  corrected_edge_source = File.read(Rails.root.join("app/views/pwa/_install_instructions.html.erb")).sub('"install-edge.svg"', '"external/install-edge.svg"')
-  out["edge_install_corrected"] = view.render(inline: corrected_edge_source)
+  out["edge_install"] = view.render(partial: "pwa/install_instructions")
   controller.request.env["HTTP_USER_AGENT"] = USER_AGENT
   controller.remove_instance_variable(:@platform)
 

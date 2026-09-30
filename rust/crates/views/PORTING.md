@@ -7,8 +7,9 @@ keep an upstream Campfire template because it compiles.
 ## Reference and ownership
 
 Read the matching `app/views/**/*.erb` and `app/helpers/**/*.rb` first. The pin is recorded in
-`.claude/delegation/rust-port/decisions.md`. The current pin is `fec615be`, including Rails PR #148
-and `PRESENTATION_CACHE_VERSION = 3`. WS6's image is `ws6-reference-fec615be`: the existing reference
+`.claude/delegation/rust-port/decisions.md`. The current pin is `d7c7de92`, including Rails PR #148,
+`PRESENTATION_CACHE_VERSION = 3` and the Edge icon correction in #151. WS6's image is
+`ws6-reference-d7c7de92`: the existing reference
 runtime with the pin's actual `app`, `config`, `lib`, `db`, `test`, `vendor` and `public` trees.
 The generator refuses an older presentation version.
 
@@ -101,7 +102,8 @@ Run from `rust/`, with the worker's own target and named image:
 
 ```sh
 bash reference-tools/views/core/build_reference.sh
-PARITY_IMAGE=ws6-reference-fec615be PARITY_OWNER=ws6 STORE=/home/riels/.cache/rust-port/ws6/core-reference reference-tools/views/core/run.sh
+PARITY_IMAGE=ws6-reference-d7c7de92 PARITY_OWNER=ws6 STORE=/home/riels/.cache/rust-port/ws6/core-reference bash reference-tools/views/core/run.sh
+PARITY_IMAGE=ws6-reference-d7c7de92 STORE=/home/riels/.cache/rust-port/ws6/image-reference bash reference-tools/views/core/images.sh
 TMPDIR=/home/riels/.cache/rust-port/ws6/tmp WS6_VIEW_DIFF_DIR=/home/riels/.cache/rust-port/ws6/view-diffs mise exec rust@1.98.1 -- cargo test -j 4 -p campfire_views --test core
 ```
 
@@ -109,6 +111,15 @@ TMPDIR=/home/riels/.cache/rust-port/ws6/tmp WS6_VIEW_DIFF_DIR=/home/riels/.cache
 diff directory receives actual/expected files for `diff -u`. Its injection test proves that a
 title change, extra space and asset URL change are rejected. Show a new test failing before
 fixing the port, or run it against an intentionally broken implementation.
+
+`images.sh` uses a private copy of the built default parity seed. It generates complete
+`messages.image` and `messages.image_large` goldens for David then JZ through one Rails cache,
+plus filename preview probes. Run it after `run.sh`, which replaces the core golden directory.
+`AttachmentView::filename_base` comes from the storage crate's `Filename::base` on the raw blob
+filename, before sanitization: Rails uses `File.basename(filename, File.extname(filename))` for
+image alt text, but its sanitized filename for links and file labels. The image tests compare
+both filename operations and the complete preview bytes against Rails, including multiple dots,
+no extension, dotfiles, paths, trailing dots, whitespace and HTML escaping.
 
 Generated helper tables come from the Rails vectors via `generate_tables.py`; format the two
 generated Rust files with the pinned rustfmt after regenerating. `config/locales/en.yml` adds
@@ -150,25 +161,25 @@ facts and grapheme/title probes come from pinned Rails, including gemoji Unicode
 LinkedIn and generic embed children. Each entry is the owning partial's already rendered loop
 body, including its whitespace. Never put request tokens, viewer-private data or unsanitized
 text in these entries. Empty replacement containers render even without children, as in Rails.
-Those domain providers are still incomplete; empty-container goldens do not prove populated cards.
+WS8b supplies quotes/composition, WS14 events and Drive, and WS15 GitHub/Fizzy/X/LinkedIn/embeds.
+These providers are still incomplete; empty-container goldens do not prove populated cards.
 
 HTML fragments now include `ViewContext::base_url` in their key because Rails message attributes
 contain absolute URLs. A presenter using `cached_message_fragment(id, updated_at, base_url)` must
 pass the same origin used to render. `MessageItem::cached_fragments` also takes that origin.
 This preserves the forged-host security property and makes fragments independent of the viewer.
 
-PR #151 corrects the Edge image to `external/install-edge.svg`. Until the pin moves, the Edge
-oracle substitutes exactly that path in the pinned ERB in memory; its expected HTML is otherwise
-unchanged Rails output. The old pin itself raises MissingAssetError on Edge. Re-pin and remove
-the oracle substitution when the Rails correction lands.
+PR #151 corrects the Edge image to `external/install-edge.svg`. The current pin includes it;
+the Edge golden renders the actual partial with no source substitution.
 
 `fragment_cache::keys::MessageKey` ports `message_with_pr_cards_cache_key`: record version,
 newest cards, optional embed references/PR thread stamp, pins, thread count, poll, note/stream
 flags, agent steps, quote timestamps/names and version 3. `sidebar_membership` includes the
 ordered huddle participant IDs and administrator flag. Keys are different in UTC and Hawaii
 where Rails expands a `Time` through `to_a`. Quote-name digests use Ruby `Array#inspect`, not
-JSON. The owning message/sidebar presenter must gather these inputs and wire these keys into
-its cache reads and writes. The inherited message cache entry point still needs that wiring.
+JSON. WS8b must gather these inputs and wire these keys into its cache reads and writes, with
+agent facts from WS11, huddle/sidebar inputs from WS13, event/Google/calendar/Drive inputs from
+WS14 and card facts from WS15. The inherited message cache entry point still needs that wiring.
 The process-local template digest is not ActionView::Digestor's shared Redis digest.
 
 ## Pixel parity with WS19

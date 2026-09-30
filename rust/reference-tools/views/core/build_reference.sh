@@ -4,9 +4,9 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 REPO=$(git -C "$ROOT" rev-parse --show-toplevel)
-SOURCE=${REFERENCE_REF:-fec615be}
+SOURCE=${REFERENCE_REF:-d7c7de92}
 BASE=${REFERENCE_BASE_IMAGE:-ws6-reference}
-IMAGE=${PARITY_IMAGE:-ws6-reference-fec615be}
+IMAGE=${PARITY_IMAGE:-ws6-reference-d7c7de92}
 SCRATCH=${WS6_SCRATCH:-/home/riels/.cache/rust-port/ws6}
 mkdir -p "$SCRATCH"
 WORK=$(mktemp -d -p "$SCRATCH" ws6-reference.XXXXXX)

@@ -389,6 +389,7 @@ impl<'a> Presenter<'a> {
         };
         Ok(Some(AttachmentView {
             filename: blob.filename.to_string(),
+            filename_base: blob.filename.base().to_string(),
             blob_path: campfire_storage::paths::blob_redirect_path(verifier, &blob, None),
             download_path: campfire_storage::paths::blob_redirect_path(verifier, &blob, Some("attachment")),
             preview,

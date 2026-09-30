@@ -555,6 +555,7 @@ dependencies = [
  "askama",
  "campfire_assets",
  "campfire_routes",
+ "campfire_storage",
  "jiff",
  "rails_compat",
  "regex",

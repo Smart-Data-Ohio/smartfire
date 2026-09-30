@@ -13,7 +13,7 @@ def message_view_facts(view, message, show_room_icon: false)
     id: message.id, client_message_id: message.client_message_id, room_id: message.room_id,
     room_name: view.room_display_name(message.room, for_user: nil), creator: author.call(message.creator),
     created_at: message.created_at.iso8601(6), updated_at: message.updated_at.iso8601(6),
-    all_emoji: message.plain_text_body.all_emoji?, content: { type: "text", html: view.message_presentation(message) },
+    all_emoji: message.plain_text_body.all_emoji?, content: message_content_facts(view, message),
     boosts: message.ordered_boosts.map do |boost|
       reaction = if Boost.reaction?(boost.content)
         { title: view.reaction_title(boost.content), icon: icon_facts.call(view.send(:shortcode_icon, boost.content)), icon_alt: (view.send(:shortcode_icon, boost.content)&.then { |icon| ":#{icon.name}:" }) }
@@ -38,6 +38,22 @@ def message_view_facts(view, message, show_room_icon: false)
       }
     }
   }
+end
+
+def message_content_facts(view, message)
+  return { type: "text", html: view.message_presentation(message) } unless message.attachment.attached?
+
+  attachment = message.attachment
+  preview = if attachment.video?
+    { type: "video", poster_url: view.url_for(attachment.preview(format: :webp, resize_to_limit: [Message::THUMBNAIL_MAX_WIDTH, Message::THUMBNAIL_MAX_HEIGHT])) }
+  elsif attachment.previewable? || attachment.variable?
+    { type: "image", thumb_url: view.polymorphic_url(attachment.representation(:thumb), only_path: true) }
+  else
+    { type: "file" }
+  end
+  { type: "attachment", filename: attachment.filename.to_s, filename_base: attachment.filename.base.to_s,
+    blob_path: view.rails_blob_path(attachment), download_path: view.rails_blob_path(attachment, disposition: "attachment", only_path: true),
+    preview: preview, width: attachment.metadata[:width], height: attachment.metadata[:height] }
 end
 
 def generate_message_states(goldens, view)

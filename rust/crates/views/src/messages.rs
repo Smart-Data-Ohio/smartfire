@@ -224,6 +224,8 @@ pub struct SoundImage {
 pub struct AttachmentView {
     /// `attachment.filename.to_s`.
     pub filename: String,
+    /// `attachment.filename.base.to_s`, derived from the stored unsanitized filename.
+    pub filename_base: String,
     /// `rails_blob_path(attachment)`.
     pub blob_path: String,
     /// `rails_blob_path(attachment, disposition: "attachment")`.

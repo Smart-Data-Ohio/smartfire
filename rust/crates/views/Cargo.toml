@@ -17,5 +17,6 @@ unicode-segmentation.workspace = true
 
 [dev-dependencies]
 campfire_assets.workspace = true
+campfire_storage.workspace = true
 # Signs the goldens' stream names with the parity SECRET_KEY_BASE.
 rails_compat.workspace = true
