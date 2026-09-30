@@ -77,9 +77,38 @@ async fn render_show(
         })
         .await
         .map_err(Error::internal)?;
+    let calendar_configured = c.app().google.api().config.configured();
+    let signin_configured = c.app().google.sign_in().config.configured();
+    let (google_calendar, google_sign_in) = c
+        .app()
+        .db
+        .read(move |conn| {
+            let account = campfire_db::models::google_account::GoogleAccount::for_user(conn, id)?;
+            let identity =
+                campfire_db::models::google_identity::GoogleIdentity::for_user(conn, id)?;
+            Ok((
+                users::google::CalendarData {
+                    configured: calendar_configured,
+                    account: account.map(|a| users::google::Account {
+                        connected: a.connected(),
+                        calendar: a.calendar(),
+                        drive: a.drive(),
+                        email: a.email,
+                    }),
+                },
+                users::google::SignInData {
+                    configured: signin_configured,
+                    email: identity.map(|i| i.email),
+                },
+            ))
+        })
+        .await
+        .map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
+        google_calendar: google_calendar.clone(),
+        google_sign_in: google_sign_in.clone(),
         has_password,
         current_password_error,
         security: security.clone(),

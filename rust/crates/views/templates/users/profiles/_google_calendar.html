@@ -1,0 +1,15 @@
+<section class="margin-block pad-inline pad-block fill-shade border-radius" aria-labelledby="google-calendar-title">
+  <h2 id="google-calendar-title" class="txt-large">Google Calendar</h2>
+
+{% if !data.configured %}    <p>Google Calendar is not configured for this workspace</p>
+{% else if let Some(account) = data.account.as_ref() %}{% if account.connected && account.calendar %}    <p>Connected as {{ account.email }}</p>
+{% if account.drive %}      <p>Drive previews enabled</p>
+{% else %}      {{ self.connect("Enable Drive previews", true) }}
+{% endif %}    {{ self.disconnect() }}
+{% else %}{% if account.connected %}      <p>Calendar permission needed, reconnect to publish events</p>
+{% else %}      <p>Google rejected the connection, reconnect</p>
+{% endif %}    {{ self.connect("Connect Google Calendar", account.drive.clone()) }}
+{% if account.connected %}      {{ self.disconnect() }}
+{% endif %}{% endif %}{% else %}    <p>Publish events you are going or maybe to to your Google Calendar.</p>
+    {{ self.connect("Connect Google Calendar", false) }}
+{% endif %}</section>{{ "\n" }}

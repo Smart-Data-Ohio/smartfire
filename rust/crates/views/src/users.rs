@@ -7,6 +7,7 @@ use crate::accounts::HelpContact;
 use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
+pub mod google;
 mod summary;
 pub use summary::*;
 
@@ -148,6 +149,8 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
+    pub google_calendar: google::CalendarData,
+    pub google_sign_in: google::SignInData,
     pub has_password: bool,
     pub current_password_error: Option<&'a str>,
     pub security: crate::two_factor::ProfileData,
@@ -161,6 +164,8 @@ pub struct ProfileShow<'a> {
 }
 
 impl<'a> ProfileShow<'a> {
+    fn google_calendar_panel(&self) -> h::Html { h::raw(google::Calendar{data:self.google_calendar.clone()}.render().unwrap()) }
+    fn google_sign_in_panel(&self) -> h::Html { h::raw(google::SignIn{data:self.google_sign_in.clone()}.render().unwrap()) }
     fn security_panel(&self) -> h::Html {
         h::raw(
             crate::two_factor::Profile {

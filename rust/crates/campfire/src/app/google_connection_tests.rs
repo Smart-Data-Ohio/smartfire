@@ -255,3 +255,52 @@ async fn google_connection_disconnect_cleanup_snapshot_and_audit_roll_back_on_qu
             .all(|call| call["path"] == "/revoke")
     );
 }
+
+#[tokio::test]
+async fn google_profile_reads_calendar_and_login_identity_separately() {
+    use crate::integrations::google::sign_in::{Config, SignIn};
+    use campfire_db::models::google_identity::GoogleIdentity;
+    let (a, r) = app().await;
+    // Both protocols use the injected transport; rendering makes no outbound calls.
+    a.booted.app.google.install(SignIn::with_client(
+        Config {
+            client_id: "test-client-id".into(),
+            client_secret: "FAKE-google-client-secret".into(),
+            domains: vec!["smartdata.net".into()],
+        },
+        r.clone(),
+    ));
+    support::grant(
+        &a,
+        DAVID,
+        campfire_db::Timestamp::from_jiff(a.booted.app.clock.now())
+            .since(jiff::SignedDuration::from_hours(1)),
+        true,
+    )
+    .await;
+    a.db()
+        .write(|tx| {
+            GoogleIdentity::link_to_user(
+                tx,
+                json!({"sub":"profile","email":"login@smartdata.net","hd":"smartdata.net"})
+                    .as_object()
+                    .unwrap(),
+                DAVID,
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut b = a.sign_in(DAVID).await;
+    let reply = b.get("/users/me/profile").await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert!(
+        reply
+            .text()
+            .contains("Linked to login@smartdata.net. You can sign in with Google.")
+    );
+    assert!(reply.text().contains("Connected as david@gmail.test"));
+    assert!(reply.text().contains("Drive previews enabled"));
+    assert!(reply.text().contains("action=\"/google/connection\""));
+    assert!(r.calls.lock().unwrap().is_empty());
+}
