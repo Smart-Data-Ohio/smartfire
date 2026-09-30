@@ -704,16 +704,16 @@ fn reaction_registry_and_graphemes_match_rails() {
         let alt = resolved
             .as_ref()
             .and_then(|value| value.icon_alt.as_deref());
-        assert_eq!(
-            reaction_body(&ctx, content, icon, alt, false).0,
-            row["body"].as_str().unwrap(),
-            "reaction body: {content}"
-        );
-        assert_eq!(
-            reaction_body(&ctx, content, icon, alt, true).0,
-            row["legacy_body"].as_str().unwrap(),
-            "legacy body: {content}"
-        );
+        assert!(compare(
+            &format!("reaction body: {content}"),
+            &reaction_body(&ctx, content, icon, alt, false).0,
+            row["body"].as_str().unwrap()
+        ));
+        assert!(compare(
+            &format!("legacy body: {content}"),
+            &reaction_body(&ctx, content, icon, alt, true).0,
+            row["legacy_body"].as_str().unwrap()
+        ));
     }
 }
 

@@ -4,6 +4,8 @@ use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext, helpers
 use serde_json::Value;
 
 mod review;
+#[path = "../../../test-support/asset_goldens.rs"]
+mod asset_goldens;
 
 fn fixture(path: &str) -> String {
     std::fs::read_to_string(format!(
@@ -102,7 +104,7 @@ fn context<'a>(
 }
 
 fn compare(name: &str, actual: &str, expected: &str) -> bool {
-    if actual == expected {
+    if asset_goldens::compare(name, actual, expected) {
         return true;
     }
     if let Ok(dir) = std::env::var("WS6_VIEW_DIFF_DIR") {
@@ -667,10 +669,11 @@ fn shared_avatar_links_and_first_paint_preloads_match_rails() {
             title: row["title"].as_str().unwrap().into(),
             avatar_path: user["avatar_path"].as_str().unwrap().into(),
         };
-        assert_eq!(
-            h::avatar_tag(&ctx, &user, h::attrs().size(32).loading("lazy")).0,
+        assert!(compare(
+            "avatar",
+            &h::avatar_tag(&ctx, &user, h::attrs().size(32).loading("lazy")).0,
             row["html"].as_str().unwrap()
-        );
+        ));
     }
     let actual = h::request_forgery::rendering_with(
         h::request_forgery::RequestSecrets {
@@ -679,10 +682,11 @@ fn shared_avatar_links_and_first_paint_preloads_match_rails() {
         },
         || h::first_paint_controller_preloads(&ctx).0,
     );
-    assert_eq!(
-        actual,
-        fixture("partials/first_paint_controller_preloads.html")
-    );
+    assert!(compare(
+        "first_paint_controller_preloads",
+        &actual,
+        &fixture("partials/first_paint_controller_preloads.html")
+    ));
 }
 
 #[test]
@@ -701,5 +705,36 @@ fn byte_comparison_rejects_markup_whitespace_and_asset_changes() {
     ] {
         assert_ne!(changed, expected, "injection must modify the fixture");
         assert!(!compare(name, &changed, &expected));
+    }
+}
+
+#[test]
+fn live_application_layout_rejects_dropped_reordered_stylesheets_and_wrong_digests() {
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let signer = |_: &[&str]| String::new();
+    let styles = campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")]).html;
+    let ctx = context(None, &asset, &signer, &styles);
+    let page = layouts::Application::new(&ctx, h::raw("<p>Body</p>\n"));
+    let actual = render(&page);
+    assert!(compare("live layout", &actual, &actual));
+    let tags: Vec<_> = styles.split_inclusive('>').take(2).collect();
+    let people = campfire_assets::stylesheet_path("people");
+    for (mutation, changed) in [
+        ("drop stylesheet", actual.replacen(tags[0], "", 1)),
+        (
+            "reorder stylesheets",
+            actual.replacen(
+                &format!("{}{}", tags[0], tags[1]),
+                &format!("{}{}", tags[1], tags[0]),
+                1,
+            ),
+        ),
+        (
+            "wrong digest",
+            actual.replacen(&people, "/assets/people-00000000.css", 1),
+        ),
+    ] {
+        assert_ne!(changed, actual, "{mutation} must change the rendered page");
+        assert!(!compare(mutation, &changed, &actual));
     }
 }
