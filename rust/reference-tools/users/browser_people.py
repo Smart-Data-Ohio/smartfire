@@ -20,7 +20,8 @@ run_dir = Path(tempfile.mkdtemp(prefix="browser-people-", dir=scratch))
 seed = root / "parity/.seed/default"
 picker_mode = sys.argv[1:] == ["--picker"]
 status_mode = sys.argv[1:] == ["--status"]
-assert not sys.argv[1:] or picker_mode or status_mode, "expected --picker, --status or no arguments"
+pwa_mode = sys.argv[1:] == ["--pwa"]
+assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode, "expected --picker, --status, --pwa or no arguments"
 browser_seed = None
 if picker_mode:
     browser_seed = root / f"parity/.seed/ws8br2-browser-{os.getpid()}"
@@ -82,7 +83,7 @@ try:
             subprocess.run(["docker", "run", "--rm", "--network", "host", "--label", "parity.owner=ws8br2",
                             "-v", f"{root.parent}:/work:ro", "-e", f"WS8BR2_BROWSER_URL=http://127.0.0.1:{port}",
                             "-e", f"WS8BR2_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json", image,
-                            "node", "/work/rust/reference-tools/users/" + ("browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
+                            "node", "/work/rust/reference-tools/users/" + ("browser_pwa.mjs" if pwa_mode else "browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
 finally:
     if server is not None:
         server.terminate()

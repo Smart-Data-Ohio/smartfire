@@ -42,6 +42,8 @@ covered_before = {
 }
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
+    "controllers/pwa_controller_test.rb": covered_before["controllers/pwa_controller_test.rb"] | {"service worker fetch and notification logic"},
+    "system/service_worker_test.rb": {"the worker caches static assets and never authenticated responses", "the offline shell renders with working retry behavior"},
     "controllers/users/profiles_two_factor_test.rb": {
         "profile shows the 2FA section with devices and revoke buttons", "profile asks for re-authentication on every sensitive 2FA action",
         "profile offers Google confirmation to linked members", "profile hides Google confirmation without a linked account",
