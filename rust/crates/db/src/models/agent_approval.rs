@@ -232,7 +232,12 @@ impl AgentApproval {
         Self::validate(tx.conn(), &a, tx.now(), None)?.into_result()?;
         let id=tx.conn().query_row("INSERT INTO agent_approvals(agent_id,agent_credential_id,room_id,action,summary,payload,external_id,status,expires_at,decided_by_id,decided_at,decision_note,github_account_id,github_login,fizzy_connected_account_id,fizzy_user_id,fizzy_user_name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.agent_credential_id,a.room_id,a.action,a.summary,a.payload,a.external_id,a.status,a.expires_at,a.decided_by_id,a.decided_at,a.decision_note,a.github_account_id,a.github_login,a.fizzy_connected_account_id,a.fizzy_user_id,a.fizzy_user_name,tx.now(),tx.now()],|r|r.get(0))?;
         let record = Self::find(tx.conn(), id)?.expect("inserted approval");
-        record.fan_out_inbox_items(tx)?;
+        let approval = record.clone();
+        tx.after_commit(move |tx| {
+            crate::database::run_write(tx.conn(), tx.env(), |tx| {
+                approval.fan_out_inbox_items(tx)
+            })
+        });
         Ok(record)
     }
     fn attributes(&self) -> NewApproval {

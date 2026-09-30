@@ -345,7 +345,18 @@ fn ws11_approval_case_decision_note_length() {
 #[test]
 fn ws11_approval_case_inbox_per_decider() {
     let t = setup();
-    t.write(|tx|{tx.conn().execute("UPDATE agents SET owner_id=? WHERE id=?",params![id("kevin"),id("bender_agent")])?;let a=create(tx)?;let mut actual=crate::sql::query_all(tx.conn(),"SELECT user_id FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND event_type='agent_approval_request'",[a.id],|r|r.get::<_,i64>(0))?;actual.sort_unstable();let mut expected=vec![id("david"),id("jason"),id("kevin")];expected.sort_unstable();assert_eq!(actual,expected);Ok(())});
+    let a = t.write(|tx| {
+        tx.conn().execute("UPDATE agents SET owner_id=? WHERE id=?", params![id("kevin"),id("bender_agent")])?;
+        let a = create(tx)?;
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=?", [a.id], |r| r.get::<_,i64>(0))?, 0);
+        Ok(a)
+    });
+    t.read(|c| {
+        let mut actual = crate::sql::query_all(c,"SELECT user_id FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND event_type='agent_approval_request'",[a.id],|r|r.get::<_,i64>(0))?;
+        actual.sort_unstable();
+        let mut expected=vec![id("david"),id("jason"),id("kevin")];expected.sort_unstable();
+        assert_eq!(actual,expected);Ok(())
+    });
 }
 #[test]
 fn ws11_approval_case_ownerless_admin_deciders() {
@@ -421,9 +432,10 @@ fn ws11_approval_case_second_stale_decision_no_event() {
 #[test]
 fn ws11_approval_case_cancel_and_expire_handle_inbox() {
     let t = setup();
-    let (aid, bid) = t.write(|tx| {
-        let mut a = create(tx)?;
-        assert!(a.cancel_by_agent(tx)?.is_empty());
+    let mut a = t.write(create);
+    let aid = a.id;
+    t.write(move |tx| { assert!(a.cancel_by_agent(tx)?.is_empty()); Ok(()) });
+    let (aid, bid) = t.write(move |tx| {
         let b = AgentApproval::create(
             tx,
             NewApproval {
@@ -431,8 +443,24 @@ fn ws11_approval_case_cancel_and_expire_handle_inbox() {
                 ..base()
             },
         )?;
-        Ok((a.id, b.id))
+        Ok((aid, b.id))
     });
     t.travel(7200);
     t.write(move|tx|{assert!(AgentApproval::find(tx.conn(),bid)?.unwrap().expire_if_due(tx)?);for mid in [aid,bid] {let total:i64=tx.conn().query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=?",[mid],|r|r.get(0))?;let handled:i64=tx.conn().query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NOT NULL",[mid],|r|r.get(0))?;assert!(total>0);assert_eq!(handled,total);}Ok(())});
+}
+
+#[test]
+fn ws11r_approval_inbox_failure_retains_primary_record_like_rails() {
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute_batch("CREATE TEMP TRIGGER ws11r_reject_inbox BEFORE INSERT ON activity_items WHEN NEW.source_type='AgentApproval' BEGIN SELECT RAISE(ABORT, 'ws11r inbox failure'); END")?;
+        Ok(())
+    });
+    let result = t.try_write(|tx| crate::AgentApproval::create(tx, crate::NewApproval {
+        agent_id: id("bender_agent"), action: "deploy".into(), summary: "ws11r inbox failure".into(), external_id: Some("ws11r-inbox-failure".into()), ..Default::default()
+    }));
+    assert!(result.is_err(), "inbox insert was rejected");
+    let count: i64 = t.read(|c| Ok(c.query_row("SELECT COUNT(*) FROM agent_approvals WHERE external_id='ws11r-inbox-failure'", [], |r| r.get(0))?));
+    println!("WS11R approval inbox failure: persisted approvals = {count}");
+    assert_eq!(count, 1, "Rails retains the approval after its after_create_commit fails");
 }
