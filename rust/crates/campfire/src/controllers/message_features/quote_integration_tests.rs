@@ -117,7 +117,7 @@ async fn preloaded_quote_cards_render_without_queries_for_distinct_direct_rooms(
     }).await.unwrap();
 }
 
-async fn stream(app:&TestApp) -> (crate::channels::tests::support::Client,tokio::task::JoinHandle<()>) {
+pub(super) async fn stream(app:&TestApp) -> (crate::channels::tests::support::Client,tokio::task::JoinHandle<()>) {
     use crate::channels::tests::support::{Client,bind_listener,identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     let listener=bind_listener().await; let address=listener.local_addr().unwrap();

@@ -706,6 +706,14 @@ pub struct PresentationPartial<'a> {
     pub message: &'a MessageView,
 }
 
+/// `messages/_meta`, replaced after the presentation on a human message edit.
+#[derive(Template)]
+#[template(path = "messages/_meta.html")]
+pub struct MetaPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
 /// `messages/_unrenderable`.
 #[derive(Template)]
 #[template(path = "messages/_unrenderable.html")]

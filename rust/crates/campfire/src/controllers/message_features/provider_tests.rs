@@ -241,3 +241,52 @@ async fn preloaded_x_cards_match_actual_rails_numeric_order_and_warm_refresh() {
             .contains("Fresh X cached card")
     );
 }
+
+#[tokio::test]
+async fn human_edits_replace_all_eight_rails_targets_on_a_real_socket() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/provider_edits.json"
+    ))
+    .unwrap();
+    let app = app_rows(oracle["rows"].clone()).await;
+    let (mut client, server) = super::quote_integration_tests::stream(&app).await;
+    let mut browser = app.david();
+    for step in oracle["steps"].as_array().unwrap() {
+        let response = browser
+            .write(
+                Req::new(
+                    axum::http::Method::PATCH,
+                    &format!(
+                        "/rooms/{QUIET_CORNER}/messages/{}",
+                        step["message_id"].as_i64().unwrap()
+                    ),
+                )
+                .header("accept", "application/json")
+                .header("content-type", "application/json")
+                .body(serde_json::to_vec(&step["input"]).unwrap()),
+            )
+            .await;
+        assert_eq!(
+            response.status.as_u16(),
+            step["status"].as_u64().unwrap() as u16,
+            "{}",
+            response.text()
+        );
+        assert_eq!(step["frames"].as_array().unwrap().len(), 8);
+        for expected in step["frames"].as_array().unwrap() {
+            let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
+            let html = frame["message"].as_str().unwrap();
+            assert_eq!(
+                html,
+                expected["html"].as_str().unwrap(),
+                "{}",
+                step["label"]
+            );
+            assert!(!html.contains("authenticity_token") && !html.contains("nonce=\""));
+        }
+    }
+    server.abort();
+    println!(
+        "WS8bm2 provider edits: 5 HTTP edits, 40/40 real socket replacement frames byte-identical to Rails"
+    );
+}

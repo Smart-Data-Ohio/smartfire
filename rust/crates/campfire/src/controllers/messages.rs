@@ -641,16 +641,23 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
             app.broadcasts.message_replace(&room, &message, &partials);
-            // WS8bm2 owning quote-container seam: Rails update replaces this target
-            // after presentation/meta even when the edited message has no quotes.
-            let html = page::render_detached_at(&app, account.as_ref(), &base_url,
-                |ctx| campfire_views::message_links::cards(ctx, &view).0);
-            let html = campfire_cable::turbo::action_tag(campfire_cable::turbo::Action::Replace,
-                campfire_cable::turbo::Target::Target(&campfire_db::broadcasts::message_dom_id(&message, Some("message_link_cards"))),
-                Some(&html), &[("maintain_scroll", Some("true"))]);
-            let stream = campfire_db::broadcasts::conversation_messages(conn, &message)?.iter()
-                .map(campfire_db::broadcasts::Streamable::to_param).collect::<Vec<_>>().join(":");
-            app.cable.broadcast_stream_to(&[&stream], &html);
+            // MessagesController#update replaces every container, even when empty.
+            // Provider fetch/reference synchronization remains with the feature owners;
+            // these replacements compose the same persisted facts as root rendering.
+            let parts = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| {
+                Ok::<_, askama::Error>([
+                    ("meta", views::MetaPartial { ctx, message: &view }.render()?),
+                    ("github_pr_cards", campfire_views::message_providers::github_cards(ctx, &view).0),
+                    ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
+                    ("message_link_cards", campfire_views::message_links::cards(ctx, &view).0),
+                    ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
+                    ("linkedin_cards", campfire_views::message_providers::embed_cards(ctx, &view, true).0),
+                    ("link_embed_cards", campfire_views::message_providers::embed_cards(ctx, &view, false).0),
+                ])
+            }).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            for (part, html) in parts {
+                app.broadcasts.message_part_replace(&room, &message, part, &html);
+            }
             Ok(())
         })
         .await
