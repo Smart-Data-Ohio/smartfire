@@ -1,6 +1,8 @@
 //! `reference/app/models/user.rb` and `user/*.rb` (Role, Bot, Bannable, Mentionable; Avatar
 //! and Transferable are signed ids, which live in `rails_compat`).
 
+pub mod removal;
+
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
 use sha2::{Digest, Sha256};
@@ -428,6 +430,9 @@ impl User {
             sets.push(("role", Box::new(role)));
         }
         if let Some(status) = changes.status.filter(|s| *s != self.status) {
+            if status != Status::Active {
+                crate::models::AgentGrant::revoke_for_user(tx, self.id)?;
+            }
             self.status = status;
             sets.push(("status", Box::new(status)));
         }
@@ -512,6 +517,9 @@ impl User {
     /// non-direct memberships, push subscriptions, searches and sessions, and scrambles the
     /// email address.
     pub fn deactivate(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.deactivate_with_audit(tx, &super::audit_log::Context::default())
+    }
+    pub fn deactivate_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
         self.close_remote_connections(tx, false);
         let conn = tx.conn();
         conn.execute_cached(
@@ -531,6 +539,7 @@ impl User {
             [self.id],
         )?;
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
+        super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
         let email = self.deactivated_email_address();
         // app/models/user.rb: manual OOO cannot survive account deactivation.
         conn.execute_cached("UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?", [self.id])?;
@@ -553,6 +562,9 @@ impl User {
 
     /// `User::Bannable#ban`
     pub fn ban(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.ban_with_audit(tx, &super::audit_log::Context::default())
+    }
+    pub fn ban_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
         // create_bans_from_sessions: `sessions.pluck(:ip_address).compact_blank.uniq`
         let ips: Vec<Option<String>> = query_all(
             tx.conn(),
@@ -574,6 +586,7 @@ impl User {
             [self.id],
         )?;
         tx.emit_after_commit(Event::RemoveBannedContent { user_id: self.id });
+        super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
         self.update(
             tx,
             UserChanges {

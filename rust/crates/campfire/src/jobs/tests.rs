@@ -583,7 +583,6 @@ async fn the_periodic_loops_run_with_the_jobs() {
 
     let (ticked, mut ticks) = mpsc::unbounded_channel();
     let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None));
-    loops.periodic.as_mut().unwrap().task(periodic::clear_plaintext_bot_tokens_task());
     loops.huddle.as_mut().unwrap().task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
         let ticked = ticked.clone();
         async move {
@@ -735,6 +734,7 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     });
     let tasks: Vec<_> = periodic
         .tasks()
+        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks", "streaming messages"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
@@ -743,6 +743,13 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
     expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
     assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
+    let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
+    assert_eq!(recovery.interval(), Duration::from_secs(30));
+    // WS11 tasks have their own fresh, pinned Rails roster, rather than the WS8 subset.
+    let ws11:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/agents_streaming_contract.json")).unwrap();
+    let mut tasks:Vec<_>=periodic.tasks().filter(|t|["clear plaintext bot tokens","stranded agent webhooks","streaming messages"].contains(&t.name())).map(|t|serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()})).collect();
+    tasks.sort_by_key(|t|t["name"].as_str().unwrap().to_owned());
+    assert_eq!(serde_json::json!(tasks),ws11["results"]["tasks"]);
 }
 
 #[tokio::test]
@@ -751,8 +758,9 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     let app = booted.app.clone();
     app.db.write(|tx|{tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob{source_message_id:999}));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
     let rows = wait_for(&app, "quote refresh execution", |rows| {
-        rows.iter()
-            .all(|row| row.class != "Message::QuoteCardsRefreshJob")
+        // The periodic runner may enqueue retention alongside this job. Wait for
+        // that work too before asserting an empty queue, rather than racing it.
+        rows.is_empty()
             || rows
                 .iter()
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")

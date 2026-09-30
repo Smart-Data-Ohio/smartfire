@@ -1,0 +1,189 @@
+{
+  "reference_pin": "d7c7de92",
+  "validation": {
+    "blank": {
+      "name": [
+        "can't be blank",
+        "is invalid"
+      ]
+    },
+    "invalid": {
+      "name": [
+        "is invalid"
+      ]
+    },
+    "slash": {
+      "name": [
+        "is invalid"
+      ]
+    },
+    "spaces": {
+      "name": [
+        "is invalid"
+      ]
+    },
+    "long": {
+      "name": [
+        "is invalid"
+      ]
+    },
+    "builtin": {
+      "name": [
+        "is already a built-in command"
+      ]
+    },
+    "description": {
+      "description": [
+        "is too long (maximum is 140 characters)"
+      ]
+    },
+    "boundary": {},
+    "missing_agent": {
+      "agent": [
+        "must exist"
+      ]
+    },
+    "missing_room": {
+      "room": [
+        "must exist"
+      ]
+    },
+    "duplicate": {
+      "name": [
+        "has already been taken"
+      ]
+    }
+  },
+  "registrations": {
+    "missing": {
+      "status": 404,
+      "payload": null,
+      "error": "Room not found"
+    },
+    "created": {
+      "status": 201,
+      "payload": {
+        "name": "inspect",
+        "description": "Inspect <>&",
+        "room_id": 486777696,
+        "agent_id": 773018776,
+        "takes_arguments": false
+      },
+      "error": null
+    },
+    "updated": {
+      "status": 201,
+      "payload": {
+        "name": "inspect",
+        "description": "Again",
+        "room_id": 486777696,
+        "agent_id": 773018776,
+        "takes_arguments": false
+      },
+      "error": null
+    },
+    "default": {
+      "status": 201,
+      "payload": {
+        "name": "ping",
+        "description": null,
+        "room_id": 486777696,
+        "agent_id": 773018776,
+        "takes_arguments": true
+      },
+      "error": null
+    },
+    "foreign": {
+      "status": 422,
+      "payload": null,
+      "error": "“/inspect” is already registered in this room"
+    },
+    "builtin": {
+      "status": 422,
+      "payload": null,
+      "error": "Name is already a built-in command"
+    },
+    "unregister_foreign": {
+      "status": 404,
+      "payload": null,
+      "error": "Command not found"
+    },
+    "unregister": {
+      "status": 200,
+      "payload": {
+        "unregistered": true,
+        "name": "ping",
+        "room_id": 486777696
+      },
+      "error": null
+    },
+    "unregister_missing": {
+      "status": 404,
+      "payload": null,
+      "error": "Command not found"
+    },
+    "revoked_registration": {
+      "status": 403,
+      "payload": null,
+      "error": "Forbidden: agent lacks post_messages capability"
+    }
+  },
+  "invocations": {
+    "root": {
+      "kind": "ephemeral",
+      "message": "Sent to Bender Bot",
+      "url": null,
+      "notice": null,
+      "payload": {}
+    },
+    "thread": {
+      "kind": "ephemeral",
+      "message": "Sent to Bender Bot",
+      "url": null,
+      "notice": null,
+      "payload": {}
+    },
+    "rate": {
+      "kind": "error",
+      "message": "“/inspect” is receiving too many invocations right now. Try again in a minute.",
+      "url": null,
+      "notice": null,
+      "payload": {}
+    },
+    "rate_count": 20,
+    "revoked": {
+      "kind": "error",
+      "message": "“/inspect” is no longer available.",
+      "url": null,
+      "notice": null,
+      "payload": {}
+    }
+  },
+  "events": [
+    {
+      "event_type": "slash_command",
+      "room_id": 486777696,
+      "actor_id": 127326141,
+      "outcome": "delivered",
+      "webhook_status": "pending",
+      "chain_uuid": true,
+      "metadata": {
+        "command": "inspect",
+        "arguments": "hello <>&"
+      }
+    },
+    {
+      "event_type": "slash_command",
+      "room_id": 486777696,
+      "actor_id": 127326141,
+      "outcome": "delivered",
+      "webhook_status": "pending",
+      "chain_uuid": true,
+      "metadata": {
+        "command": "inspect",
+        "arguments": "x\n y",
+        "thread_id": 900040001
+      }
+    }
+  ]
+}

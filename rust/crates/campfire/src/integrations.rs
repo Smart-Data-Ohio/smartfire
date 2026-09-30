@@ -5,7 +5,7 @@
 //!   push services only, the endpoint resolved through the private network guard and pinned.
 //! - [`opengraph`]: `UnfurlLinksController#create` over `Opengraph::*`: every address guarded
 //!   and pinned, every redirect re-checked, 10 responses and 5MB at most.
-//! - [`webhook`]: `Webhook#deliver` for bots: intentionally unguarded, 7-second timeouts.
+//! - [`webhook`]: `Webhook#deliver` for bots: public addresses pinned, signed payloads and 7-second timeouts.
 //! - [`search`]: the query sanitizing in `SearchesController#query`.
 //! - [`register_jobs`]: `Room::PushMessageJob` and `Bot::WebhookJob` for the job runner.
 //!
@@ -14,6 +14,9 @@
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
 mod jobs;
+mod agent_jobs;
+pub mod agent_repositories;
+mod agent_streaming;
 pub mod net;
 pub mod opengraph;
 pub mod search;

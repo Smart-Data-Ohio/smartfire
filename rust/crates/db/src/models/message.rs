@@ -88,6 +88,8 @@ pub struct NewMessage {
 /// Attributes assigned to a saved message (`message.update!(...)`); `None` leaves one alone.
 #[derive(Debug, Clone, Default)]
 pub struct MessageChanges {
+    /// Explicit nil assignment used by the raw bot edit endpoint.
+    pub clear_markdown_source: bool,
     /// Rendered into the body before validation, like a new message's.
     pub markdown_source: Option<String>,
     /// A legacy (Action Text) body.
@@ -235,6 +237,11 @@ impl Message {
     pub fn find_in_room(conn: &Connection, room_id: i64, id: i64) -> Result<Self> {
         let sql = format!(r#"{SELECT_IN_ROOM} AND "messages"."id" = ? LIMIT 1"#);
         query_one(conn, &sql, [room_id, id], Self::from_row)?.or_not_found("Message")
+    }
+
+    /// `room.root_messages.count` (bot API pagination excludes replies).
+    pub fn count_roots_in_room(conn: &Connection, room_id: i64) -> Result<i64> {
+        sql::count(conn, r#"SELECT COUNT(*) FROM "messages" WHERE "room_id" = ? AND "thread_id" IS NULL"#, [room_id])
     }
 
     /// `room.messages.count`
@@ -463,6 +470,7 @@ impl Message {
             // room's archive state.
             ChannelThread::close_stale_in(tx, Some(message.room_id))?;
         }
+        crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)
@@ -690,7 +698,7 @@ impl Message {
     }
 
     fn markdown_source_will_change(&self, changes: &MessageChanges) -> bool {
-        changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
+        (changes.clear_markdown_source && self.markdown_source.is_some()) || changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
     }
 
     /// `save!` of assigned changes. A changed Markdown source re-renders the body
@@ -702,7 +710,7 @@ impl Message {
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
         let markdown_source =
-            if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() } else { self.markdown_source.clone() };
+            if changes.clear_markdown_source { None } else if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() } else { self.markdown_source.clone() };
         let body = match &changes.markdown_source {
             Some(source) if self.markdown_source_will_change(&changes) => {
                 if source.chars().count() <= SOURCE_LIMIT {
@@ -1102,6 +1110,20 @@ impl Message {
     /// thread stream joins its thread's reply count, and the indicator is broadcast after commit.
     /// The rest of `finalize_stream!` (the deferred side effects) is WS11's.
     pub fn claim_stream_finalized(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        let claimed = self.claim_stream_finalized_without_indicator(tx)?;
+        if claimed
+            && self.thread_reply()
+            && let Some(thread_id) = self.thread_id
+        {
+            tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
+        }
+        Ok(claimed)
+    }
+
+    pub(crate) fn claim_stream_finalized_without_indicator(
+        &mut self,
+        tx: &mut Tx<'_>,
+    ) -> Result<bool> {
         let now = tx.now();
         let claimed = tx.conn().execute_cached(
             r#"UPDATE "messages" SET "streaming" = 0, "updated_at" = ? WHERE "messages"."id" = ? AND "messages"."streaming" = 1"#,
@@ -1111,10 +1133,63 @@ impl Message {
             self.reload(tx.conn())?;
             if let Some(thread_id) = self.thread_id.filter(|_| self.thread_reply()) {
                 ChannelThread::refresh_messages_count(tx, thread_id)?;
-                tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
             }
         }
         Ok(claimed)
+    }
+
+    /// Normal finalization runs the deferred WS8/WS11 callbacks exactly once.
+    /// WS12's activity recorder and WS14/15's external reference syncs attach here
+    /// when their domains merge, as they do in the ordinary message create chain.
+    pub fn finalize_stream(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        let agent_id:Option<i64>=query_one(tx.conn(),"SELECT id FROM agents WHERE user_id=?",[self.creator_id],|r|r.get(0))?;
+        let active=agent_id.map(|id|crate::Agent::find(tx.conn(),id)).transpose()?.flatten().map(|a|a.active(tx.conn())).transpose()?.unwrap_or(false);
+        if !active {return self.finalize_stream_quietly(tx);}
+        if !self.claim_stream_finalized_without_indicator(tx)? {return Ok(false);}
+        self.create_in_index(tx)?;
+        self.receive_in_conversation(tx)?;
+        self.push_later_in_conversation(tx);
+        crate::models::agent_delivery::enqueue_for_message(tx,self)?;
+        crate::models::message_reference::sync(tx,self)?;
+        crate::models::bot_webhook_fanout::deliver(tx,self)?;
+        if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
+        if let Some(mut agent)=crate::Agent::find(tx.conn(),agent_id.expect("active agent"))? {agent.clear_working_presence(tx)?;}
+        if self.thread_reply() && let Some(thread_id)=self.thread_id {tx.after_commit(move |tx|ChannelThread::broadcast_thread_indicators(tx,&[thread_id]));}
+        crate::models::agent_streaming::broadcast_final(tx,self)?;
+        Ok(true)
+    }
+
+    /// Quiet finalize is used by suspension even in locked threads. It claims once,
+    /// clears presence, updates the reply count and replaces the draft without fanout.
+    pub fn finalize_stream_quietly(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        if !self.claim_stream_finalized_without_indicator(tx)? {
+            return Ok(false);
+        }
+        let agent_id: Option<i64> = query_one(
+            tx.conn(),
+            "SELECT id FROM agents WHERE user_id=?",
+            [self.creator_id],
+            |r| r.get(0),
+        )?;
+        if let Some(id) = agent_id
+            && let Some(mut agent) = crate::Agent::find(tx.conn(), id)?
+        {
+            agent.clear_working_presence(tx)?;
+        }
+        if self.thread_reply()
+            && let Some(thread_id) = self.thread_id
+        {
+            tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
+        }
+        let stream = crate::broadcasts::conversation_messages(tx.conn(), self)?;
+        tx.emit_after_commit(Event::broadcast(&crate::broadcasts::Broadcast::replace(
+            stream,
+            crate::broadcasts::message_dom_id(self, None),
+            crate::broadcasts::Partial::MessageReplace {
+                message_id: self.id,
+            },
+        )));
+        Ok(true)
     }
 
     pub fn reload(&mut self, conn: &Connection) -> Result<()> {

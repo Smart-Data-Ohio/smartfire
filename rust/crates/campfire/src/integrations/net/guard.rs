@@ -45,6 +45,51 @@ pub async fn resolve_public_ips(resolver: &dyn Resolver, host: &str) -> Result<V
     Ok(v4.into_iter().chain(v6).collect())
 }
 
+/// Webhook policy at the Rails reference pin: Gemfile.lock selects Surfguard 910be917.
+/// The inherited unfurl client above targets 59e278c; keep its behavior isolated until
+/// its owner re-records that client's vectors against the Smartfire pin.
+pub async fn resolve_webhook(resolver: &dyn Resolver, host: &str) -> Result<IpAddr, GuardError> {
+    let bare = host.strip_prefix('[').unwrap_or(host);
+    let bare = bare.strip_suffix(']').unwrap_or(bare);
+    if let Some(address) = getaddrinfo_numeric(bare) {
+        return if blocked_at_reference_pin(address) { Err(GuardError::Violation(host.into())) } else { Ok(address) };
+    }
+    let addresses = if let Some(address) = ip_literal(host) { vec![address] } else {
+        resolver.lookup(host).await.map_err(|_| GuardError::Unresolvable)?
+    };
+    if addresses.is_empty() { return Err(GuardError::Unresolvable); }
+    let (v4, v6): (Vec<_>, Vec<_>) = addresses.into_iter().filter(|ip| !blocked_at_reference_pin(*ip)).partition(IpAddr::is_ipv4);
+    v4.into_iter().chain(v6).next().ok_or_else(|| GuardError::Violation(host.into()))
+}
+
+/// The exact ranges in 910be917's `blocked_address?`, read from the reference image.
+fn blocked_at_reference_pin(ip: IpAddr) -> bool {
+    let v4 = |ip: u32| DISALLOWED_IPV4.iter().filter(|range| **range != self::v4(168, 63, 129, 16, 32)).any(|range| in_v4(ip, *range));
+    match ip {
+        IpAddr::V4(ip) => v4(u32::from(ip)),
+        IpAddr::V6(ip) => {
+            let ip = u128::from(ip);
+            if in_v6(ip, IPV4_MAPPED) || in_v6(ip, IPV4_COMPATIBLE) || in_v6(ip, NAT64_LOCAL_USE) { true }
+            else if in_v6(ip, NAT64_WELL_KNOWN) || in_v6(ip, IPV4_TRANSLATABLE) { v4(ip as u32) }
+            else {
+                in_v6(ip, UNIQUE_LOCAL) || ip == 1 || in_v6(ip, LINK_LOCAL_V6)
+                    || REFERENCE_DISALLOWED_IPV6.iter().any(|range| in_v6(ip, *range))
+            }
+        }
+    }
+}
+
+const REFERENCE_DISALLOWED_IPV6: &[V6Range] = &[
+    v6([0, 0, 0, 0, 0, 0, 0, 0], 128),
+    v6([0x100, 0, 0, 0, 0, 0, 0, 0], 64),
+    v6([0x2001, 0, 0, 0, 0, 0, 0, 0], 32),
+    v6([0x2001, 2, 0, 0, 0, 0, 0, 0], 48),
+    v6([0x2001, 0xdb8, 0, 0, 0, 0, 0, 0], 32),
+    v6([0x2002, 0, 0, 0, 0, 0, 0, 0], 16),
+    v6([0xfec0, 0, 0, 0, 0, 0, 0, 0], 10),
+    v6([0xff00, 0, 0, 0, 0, 0, 0, 0], 8),
+];
+
 const MAX_HOST_BYTES: usize = 255;
 const MAX_ADDRESSES: usize = 256;
 

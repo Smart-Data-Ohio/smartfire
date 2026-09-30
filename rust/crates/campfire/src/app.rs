@@ -31,6 +31,7 @@ pub use crate::channels::Cable;
 pub struct AppState {
     pub config: Config,
     pub secrets: Arc<Secrets>,
+    pub ar_encryption: Arc<rails_compat::ar_encryption::ArEncryption>,
     pub clock: SharedClock,
     pub db: Database,
     pub storage: Arc<Storage>,
@@ -38,6 +39,7 @@ pub struct AppState {
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
     pub mail: crate::mail::State,
+    pub agent_repositories: crate::integrations::agent_repositories::State,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
@@ -99,6 +101,7 @@ pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscr
 pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
+    let ar_encryption = Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets));
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
 
     // The job classes first: the database's sink enqueues them on their queues.
@@ -156,6 +159,7 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
     let app = Arc::new(AppState {
         config,
         secrets,
+        ar_encryption,
         clock: clock.clone(),
         db,
         storage,
@@ -163,6 +167,7 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
         cable,
         jobs,
         mail,
+        agent_repositories: crate::integrations::agent_repositories::State::default(),
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         web_push,
