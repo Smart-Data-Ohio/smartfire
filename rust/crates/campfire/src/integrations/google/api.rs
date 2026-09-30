@@ -15,12 +15,16 @@ use std::sync::Arc;
 pub struct Config {
     pub client_id: String,
     pub client_secret: String,
+    pub webhook_url: Option<String>,
 }
 impl Config {
     pub fn from_env() -> Self {
         Self {
             client_id: std::env::var("GOOGLE_CLIENT_ID").unwrap_or_default(),
             client_secret: std::env::var("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
+            webhook_url: std::env::var("GOOGLE_CALENDAR_WEBHOOK_URL")
+                .ok()
+                .filter(|s| !blank(s)),
         }
     }
     pub fn configured(&self) -> bool {

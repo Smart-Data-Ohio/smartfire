@@ -67,7 +67,10 @@ fn find_seed(root: &Path, name: &str, ci: bool) -> Option<PathBuf> {
     if dir.join("db/production.sqlite3").is_file() {
         return Some(dir);
     }
-    assert!(!ci, "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests");
+    assert!(
+        !ci,
+        "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests"
+    );
     eprintln!("skipping locally: parity/.seed/{name} isn't built (parity/bin/seed build {name})");
     None
 }
@@ -137,6 +140,28 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
+        Self::boot_with_loops(clock, extra, None).await
+    }
+
+    /// Consumer fixture tests must not race an unrelated initial periodic sweep.
+    /// This still starts the real durable runner with its normal worker counts.
+    pub async fn boot_without_periodic() -> Option<TestApp> {
+        Self::boot_with_loops(
+            seed_clock(),
+            &[],
+            Some(crate::jobs::periodic::Loops {
+                periodic: None,
+                huddle: None,
+            }),
+        )
+        .await
+    }
+
+    async fn boot_with_loops(
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+        loops: Option<crate::jobs::periodic::Loops>,
+    ) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -160,7 +185,12 @@ impl TestApp {
         })
         .unwrap();
         Some(TestApp {
-            booted: boot_with_clock(config, clock).await.unwrap(),
+            booted: match loops {
+                Some(loops) => crate::app::boot_with_clock_and_loops(config, clock, loops)
+                    .await
+                    .unwrap(),
+                None => boot_with_clock(config, clock).await.unwrap(),
+            },
             _dir: dir,
         })
     }
@@ -327,7 +357,11 @@ pub fn encode(value: &str) -> String {
 
 impl Browser<'_> {
     pub fn cookie_header(&self) -> String {
-        self.cookies.iter().map(|(k,v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ")
+        self.cookies
+            .iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("; ")
     }
 
     pub fn absorb_cookie_header(&mut self, header: &str) {

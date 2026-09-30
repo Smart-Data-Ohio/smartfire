@@ -18,6 +18,7 @@ async fn app() -> (TestApp, Arc<Recorded>) {
         })
         .await
         .unwrap();
+    super::google_test_support::observe_jobs(&a).await;
     (a, r)
 }
 pub async fn sudo(a: &TestApp, b: &mut Browser<'_>) {
@@ -134,7 +135,7 @@ async fn google_connection_saves_encrypted_grant_audit_and_durable_watch_atomica
             .as_deref(),
         Some("new-refresh-token")
     );
-    let(rows,audits)=a.db().read(|c|Ok((c.query_row("SELECT count(*) FROM background_jobs WHERE job_class='Calendar::WatchChannelJob'",[],|r|r.get::<_,i64>(0))?,c.query_row("SELECT count(*) FROM audit_logs WHERE action='google.account.connect'",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
+    let(rows,audits)=a.db().read(|c|Ok((c.query_row("SELECT count(*) FROM ws14g_emitted_jobs WHERE job_class='Calendar::WatchChannelJob'",[],|r|r.get::<_,i64>(0))?,c.query_row("SELECT count(*) FROM audit_logs WHERE action='google.account.connect'",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
     assert_eq!((rows, audits), (1, 1));
     a.db().write(|tx|{tx.conn().execute("DELETE FROM google_accounts",[])?;tx.conn().execute("DELETE FROM audit_logs",[])?;tx.conn().execute_batch("CREATE TRIGGER reject_connection_job BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT,'fixture queue failure'); END;")?;Ok(())}).await.unwrap();
     let state = start(&a, &mut b).await;
@@ -207,6 +208,7 @@ async fn google_connection_disconnect_cleanup_snapshot_and_audit_roll_back_on_qu
     b.get("/users/me/profile").await;
     sudo(&a, &mut b).await;
     a.db().write(|tx|{tx.conn().execute_batch("CREATE TRIGGER reject_disconnect_job BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT,'fixture queue failure'); END;")?;Ok(())}).await.unwrap();
+    r.answer(200, json!({}));
     assert_eq!(
         b.write(Req::new(Method::DELETE, "/google/connection"))
             .await
@@ -241,9 +243,15 @@ async fn google_connection_disconnect_cleanup_snapshot_and_audit_roll_back_on_qu
             .unwrap()
             .is_none()
     );
-    let args:String=a.db().read(|c|Ok(c.query_row("SELECT arguments FROM background_jobs WHERE job_class='Calendar::DisconnectCleanupJob'",[],|r|r.get(0))?)).await.unwrap();
+    let args:String=a.db().read(|c|Ok(c.query_row("SELECT arguments FROM ws14g_emitted_jobs WHERE job_class='Calendar::DisconnectCleanupJob'",[],|r|r.get(0))?)).await.unwrap();
     let args: Value = serde_json::from_str(&args).unwrap();
     assert!(args[1].as_str().is_some());
     assert!(!args.to_string().contains("refresh-token"));
-    assert!(r.calls.lock().unwrap().is_empty());
+    assert!(
+        r.calls
+            .lock()
+            .unwrap()
+            .iter()
+            .all(|call| call["path"] == "/revoke")
+    );
 }

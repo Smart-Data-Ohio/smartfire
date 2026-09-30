@@ -1,0 +1,176 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "ids": [
+    {
+      "event_id": 7,
+      "user_id": 9,
+      "id": "campfire000000000000e0000000000014"
+    },
+    {
+      "event_id": 127326141,
+      "user_id": 149087659,
+      "id": "campfire00000007irbrq0000000hon5lc"
+    },
+    {
+      "event_id": -1,
+      "user_id": 1,
+      "id": "campfirevvvvvvvvvvvvu0000000000004"
+    },
+    {
+      "event_id": 9223372036854775807,
+      "user_id": 1,
+      "id": "campfirefvvvvvvvvvvvu0000000000004"
+    }
+  ],
+  "cases": [
+    {
+      "name": "utc",
+      "event": {
+        "id": 439674038,
+        "room_id": 486777696,
+        "title": "Party",
+        "description": null,
+        "starts_at": "2026-09-23 10:00:00 UTC",
+        "ends_at": "2026-09-23 12:00:00 UTC",
+        "time_zone": "UTC"
+      },
+      "venue": null,
+      "origin": null,
+      "payload": {
+        "summary": "Party",
+        "description": "From Smartfire: /rooms/486777696/events/439674038",
+        "start": {
+          "dateTime": "2026-09-23T10:00:00Z",
+          "timeZone": "UTC"
+        },
+        "end": {
+          "dateTime": "2026-09-23T12:00:00Z",
+          "timeZone": "UTC"
+        },
+        "reminders": {
+          "useDefault": true
+        }
+      }
+    },
+    {
+      "name": "ny",
+      "event": {
+        "id": 439674039,
+        "room_id": 486777696,
+        "title": "Party",
+        "description": null,
+        "starts_at": "2026-09-23 10:00:00 UTC",
+        "ends_at": "2026-09-23 12:00:00 UTC",
+        "time_zone": "America/New_York"
+      },
+      "venue": null,
+      "origin": null,
+      "payload": {
+        "summary": "Party",
+        "description": "From Smartfire: /rooms/486777696/events/439674039",
+        "start": {
+          "dateTime": "2026-09-23T06:00:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "end": {
+          "dateTime": "2026-09-23T08:00:00-04:00",
+          "timeZone": "America/New_York"
+        },
+        "reminders": {
+          "useDefault": true
+        }
+      }
+    },
+    {
+      "name": "fallback-end",
+      "event": {
+        "id": 439674040,
+        "room_id": 486777696,
+        "title": "Party",
+        "description": null,
+        "starts_at": "2026-09-23 10:00:00 UTC",
+        "ends_at": null,
+        "time_zone": "UTC"
+      },
+      "venue": null,
+      "origin": null,
+      "payload": {
+        "summary": "Party",
+        "description": "From Smartfire: /rooms/486777696/events/439674040",
+        "start": {
+          "dateTime": "2026-09-23T10:00:00Z",
+          "timeZone": "UTC"
+        },
+        "end": {
+          "dateTime": "2026-09-23T11:00:00Z",
+          "timeZone": "UTC"
+        },
+        "reminders": {
+          "useDefault": true
+        }
+      }
+    },
+    {
+      "name": "description-venue",
+      "event": {
+        "id": 439674041,
+        "room_id": 486777696,
+        "title": "Party",
+        "description": "Bring snacks",
+        "starts_at": "2026-09-23 10:00:00 UTC",
+        "ends_at": "2026-09-23 12:00:00 UTC",
+        "time_zone": "UTC"
+      },
+      "venue": {
+        "id": 699448333,
+        "name": "Workshop"
+      },
+      "origin": null,
+      "payload": {
+        "summary": "Party",
+        "description": "Bring snacks\n\nFrom Smartfire: /rooms/486777696/events/439674041\n\nJoin: /rooms/699448333",
+        "start": {
+          "dateTime": "2026-09-23T10:00:00Z",
+          "timeZone": "UTC"
+        },
+        "end": {
+          "dateTime": "2026-09-23T12:00:00Z",
+          "timeZone": "UTC"
+        },
+        "reminders": {
+          "useDefault": true
+        },
+        "location": "Workshop"
+      }
+    },
+    {
+      "name": "blank-description",
+      "event": {
+        "id": 439674042,
+        "room_id": 486777696,
+        "title": "Party",
+        "description": "  ",
+        "starts_at": "2026-09-23 10:00:00 UTC",
+        "ends_at": "2026-09-23 12:00:00 UTC",
+        "time_zone": "UTC"
+      },
+      "venue": null,
+      "origin": null,
+      "payload": {
+        "summary": "Party",
+        "description": "From Smartfire: /rooms/486777696/events/439674042",
+        "start": {
+          "dateTime": "2026-09-23T10:00:00Z",
+          "timeZone": "UTC"
+        },
+        "end": {
+          "dateTime": "2026-09-23T12:00:00Z",
+          "timeZone": "UTC"
+        },
+        "reminders": {
+          "useDefault": true
+        }
+      }
+    }
+  ]
+}

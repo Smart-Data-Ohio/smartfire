@@ -75,6 +75,7 @@ pub fn config() -> Config {
     Config {
         client_id: "test-client-id".into(),
         client_secret: "FAKE-google-client-secret".into(),
+        webhook_url: None,
     }
 }
 pub async fn install(app: &TestApp, recorded: Arc<Recorded>) {

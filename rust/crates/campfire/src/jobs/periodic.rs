@@ -145,6 +145,10 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
         Ok(())
     }));
+    periodic.task(Task::new("calendar push channels", Duration::from_secs(HOUR), |app: App| async move {
+        crate::integrations::google::calendar::renew(&app).await?;
+        Ok(())
+    }));
     periodic
 }
 pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {

@@ -1,7 +1,10 @@
 //! Google identity and opt-in Calendar/Drive integrations.
 pub mod api;
+pub mod calendar;
 pub mod client;
 pub mod drive;
+pub mod entry_sync;
+pub mod meeting_refresh;
 pub mod sign_in;
 use crate::app::AppCtx;
 use campfire_kit::{Ctx, Response, Result};

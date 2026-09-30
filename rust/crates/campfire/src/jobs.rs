@@ -152,6 +152,9 @@ pub fn registry() -> Registry {
     // Room::PushMessageJob and Bot::WebhookJob
     crate::integrations::register_jobs(&mut registry);
     crate::mail::register(&mut registry);
+    crate::integrations::google::calendar::register(&mut registry);
+    crate::integrations::google::meeting_refresh::register(&mut registry);
+    crate::integrations::google::entry_sync::register(&mut registry);
     registry
 }
 

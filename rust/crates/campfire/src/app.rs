@@ -87,6 +87,20 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
 /// [`boot`] with its clock given rather than read from `CAMPFIRE_FROZEN_TIME`: the seeded tests
 /// run at the parity seed's instant, as the reference does (`parity/seeds/README.md`).
 pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Result<Booted> {
+    boot_with_clock_and_loops(
+        config,
+        clock,
+        jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env()),
+    )
+    .await
+}
+
+/// Injectable periodic loops for consumer tests; the durable worker concurrency is unchanged.
+pub(crate) async fn boot_with_clock_and_loops(
+    config: Config,
+    clock: SharedClock,
+    loops: jobs::periodic::Loops,
+) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
@@ -96,7 +110,6 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
     let registry = jobs::registry();
     let runner_config = jobs::runner_config(&config);
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
-    let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env());
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
     // Mail's preflight and Message::create use the same room-aware, fallible renderer.
     mail.install_renderer(Arc::new({
@@ -214,8 +227,18 @@ fn router(app: &App, kit: Kit) -> Router {
                 controllers::csp_reports::create,
             )),
         )
-        .route("/google/calendar/notifications", axum::routing::post(campfire_kit::unparsed_action(controllers::google_calendar::notifications)))
-        .route("/google/calendar/notifications.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::google_calendar::notifications)))
+        .route(
+            "/google/calendar/notifications",
+            axum::routing::post(campfire_kit::unparsed_action(
+                controllers::google_calendar::notifications,
+            )),
+        )
+        .route(
+            "/google/calendar/notifications.{format}",
+            axum::routing::post(campfire_kit::unparsed_action(
+                controllers::google_calendar::notifications,
+            )),
+        )
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
@@ -507,3 +530,9 @@ mod google_connection_tests;
 
 #[cfg(test)]
 mod google_drive_tests;
+
+#[cfg(test)]
+mod google_calendar_job_tests;
+
+#[cfg(test)]
+mod google_test_support;
