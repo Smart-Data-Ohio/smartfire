@@ -147,22 +147,6 @@
       ]
     },
     {
-      "rails_file": "test/models/agent_event_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "requires a known event type",
-        "accepts every documented event type",
-        "requires a known outcome",
-        "room, message, credential, and actor are optional",
-        "deliverable scope covers message types, approval decisions, work assignments, and github completions",
-        "message_deliverable scope excludes approval decisions, work assignments, and github completions",
-        "hop defaults to zero and reads metadata",
-        "acknowledged! is idempotent",
-        "destroying the agent removes its events",
-        "agent exposes its events"
-      ]
-    },
-    {
       "rails_file": "test/models/agent_step_test.rb",
       "owner": "WS11 domain",
       "remaining_named_case_ports": [

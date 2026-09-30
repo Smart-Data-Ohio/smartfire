@@ -28,6 +28,7 @@ mod agent_streaming_cases_test;
 mod agent_delivery_test;
 mod agent_delivery_cases_test;
 mod agent_event_access_test;
+mod agent_event_cases_test;
 mod agent_event_polling_test;
 mod bot_webhook_fanout_test;
 mod audit_log_test;

@@ -1012,6 +1012,52 @@
           "rust": "ws11_budget_case_caps_require_positive_integer"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent_event_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_event_cases_test.rs",
+      "cases": [
+        {
+          "rails": "requires a known event type",
+          "rust": "ws11_event_case_requires_known_type"
+        },
+        {
+          "rails": "accepts every documented event type",
+          "rust": "ws11_event_case_accepts_documented_types"
+        },
+        {
+          "rails": "requires a known outcome",
+          "rust": "ws11_event_case_requires_known_outcome"
+        },
+        {
+          "rails": "room, message, credential, and actor are optional",
+          "rust": "ws11_event_case_optional_associations"
+        },
+        {
+          "rails": "deliverable scope covers message types, approval decisions, work assignments, and github completions",
+          "rust": "ws11_event_case_deliverable_scope"
+        },
+        {
+          "rails": "message_deliverable scope excludes approval decisions, work assignments, and github completions",
+          "rust": "ws11_event_case_message_deliverable_scope"
+        },
+        {
+          "rails": "hop defaults to zero and reads metadata",
+          "rust": "ws11_event_case_hop_defaults_and_metadata"
+        },
+        {
+          "rails": "acknowledged! is idempotent",
+          "rust": "ws11_event_case_acknowledgment_idempotent"
+        },
+        {
+          "rails": "destroying the agent removes its events",
+          "rust": "ws11_event_case_destroying_agent_removes_events"
+        },
+        {
+          "rails": "agent exposes its events",
+          "rust": "ws11_event_case_agent_exposes_own_ledger"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
