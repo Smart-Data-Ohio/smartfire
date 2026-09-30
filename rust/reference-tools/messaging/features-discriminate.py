@@ -40,6 +40,12 @@ def check(name, relative, old, new, test):
         source.write_text(original)
 
 
+check("calendar-short-year", "rust/crates/db/src/slash_commands/calendar.rs",
+      'p.year.unwrap_or(today.year()),', 'p.year.map(|y| if y < 100 {y + 2000} else {y}).unwrap_or(today.year()),',
+      "controllers::message_features::date_tests::broader_calendar_inputs_match_actual_rails")
+check("coercion-array-reminder", "rust/crates/campfire/src/controllers/saved_items.rs",
+      '&features::param_string(raw)', '&raw.to_s().unwrap_or_default()',
+      "controllers::message_features::date_tests::reminder_parameter_shapes_match_eight_actual_rails_responses")
 check("composer-thread-field-ids", "rust/crates/views/src/helpers/forms.rs",
       'self.namespace.as_ref().map_or(id.clone(),|namespace|format!("{namespace}_{id}"))', 'id',
       "controllers::message_features::composer_tests::complete_markdown_composers_match_four_actual_rails_partials")

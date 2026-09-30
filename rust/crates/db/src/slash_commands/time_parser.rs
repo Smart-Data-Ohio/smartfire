@@ -292,33 +292,7 @@ pub fn parse_calendar(
     zone: &TimeZone,
     now: Timestamp,
 ) -> crate::Result<Option<Timestamp>> {
-    let text = strip(text);
-    let invalid_date = re(r"(?P<year>[0-9]{4})[-/](?P<month>[0-9]{1,2})[-/](?P<day>[0-9]{1,2})")
-        .captures(text)
-        .is_some_and(|c| {
-            let month = c["month"].parse::<i8>().unwrap();
-            let day = c["day"].parse::<i8>().unwrap();
-            !(1..=12).contains(&month) || !(1..=31).contains(&day)
-        });
-    let invalid_clock =
-        re(r"(?i)(?:\b|T)(?P<hour>[0-9]{1,2}):(?P<minute>[0-9]{2})(?::(?P<second>[0-9]{2}))?")
-            .captures(text)
-            .is_some_and(|c| {
-                let hour = c["hour"].parse::<i8>().unwrap();
-                let minute = c["minute"].parse::<i8>().unwrap();
-                let second = c
-                    .name("second")
-                    .map(|s| s.as_str().parse::<i8>().unwrap())
-                    .unwrap_or(0);
-                hour > 24
-                    || minute > 59
-                    || second > 60
-                    || hour == 24 && (minute != 0 || second != 0)
-            });
-    if invalid_date || invalid_clock {
-        return Err(crate::Error::Other("invalid date".into()));
-    }
-    Ok(fallback(text, zone, now))
+    super::calendar::parse(text, zone, now)
 }
 pub fn split_leading_time(
     text: &str,
@@ -523,18 +497,17 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
     }
 }
 
-fn offset_pattern() -> &'static Regex {
+pub(super) fn offset_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
-    PATTERN.get_or_init(|| re(r"(?i)\A(?P<offset>(?:GMT|UTC?)?[+-][0-9]{2}:?[0-9]{2}|[[:alpha:].\x09-\x0d ]+(?:standard|daylight)\s+time\b|[[:alpha:]]+(?:\s+dst)?\b)"))
+    PATTERN.get_or_init(|| re(r"(?i)\A(?P<offset>(?:GMT|UTC?)?[+-](?:[0-9]{1,2}:[0-9]{2}|[0-9]{3,4}|[0-9]{1,2})|[[:alpha:].\x09-\x0d ]+(?:standard|daylight)\s+time\b|[[:alpha:]]+(?:\s+dst)?\b)"))
 }
-fn parsed_offset(text: &str) -> Option<i32> {
+pub(super) fn parsed_offset(text: &str) -> Option<i32> {
     let c = offset_pattern().captures(text)?;
     let token = c["offset"].to_ascii_lowercase();
-    if let Some(number) = re(r"[+-][0-9]{2}:?[0-9]{2}").find(&token) {
+    if let Some(number) = re(r"[+-](?:[0-9]{1,2}:[0-9]{2}|[0-9]{3,4}|[0-9]{1,2})").find(&token) {
         let number = number.as_str();
         let digits = number[1..].replace(':', "");
-        let hour = digits[..2].parse::<i32>().ok()?;
-        let minute = digits[2..].parse::<i32>().ok()?;
+        let (hour, minute) = if digits.len() <= 2 {(digits.parse::<i32>().ok()?,0)} else {(digits[..digits.len()-2].parse::<i32>().ok()?,digits[digits.len()-2..].parse::<i32>().ok()?)};
         return Some((hour * 3600 + minute * 60) * if number.starts_with('-') { -1 } else { 1 });
     }
     static OFFSETS: OnceLock<std::collections::HashMap<String, i32>> = OnceLock::new();

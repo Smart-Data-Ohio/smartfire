@@ -2,7 +2,7 @@
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions};
 use crate::controllers::{message_features as features, presenters::page::db_error};
-use campfire_kit::{Ctx, Param, Result, StatusCode};
+use campfire_kit::{Ctx, Result, StatusCode};
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = features::room(c).await?;
@@ -10,7 +10,7 @@ pub async fn index(c: &mut Ctx) -> Result {
     let query = c
         .param("query")
         .filter(|p| p.is_present())
-        .and_then(Param::to_s);
+        .map(crate::controllers::message_features::param_string);
     let commands = c
         .app()
         .db

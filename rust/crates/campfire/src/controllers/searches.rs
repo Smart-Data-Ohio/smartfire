@@ -10,12 +10,12 @@ use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format};
 use campfire_views::searches::{Index, IndexView, search_path};
 
 pub fn display_query(c: &Ctx) -> Option<String> {
-    let raw = c.param("q").and_then(Param::to_s).unwrap_or_default();
+    let raw = c.param("q").map(super::message_features::param_string).unwrap_or_default();
     let q = raw.split_whitespace().collect::<Vec<_>>().join(" ");
     (!q.is_empty()).then_some(q)
 }
 fn parsed(c: &Ctx) -> SearchQuery {
-    SearchQuery::parse(&c.param("q").and_then(Param::to_s).unwrap_or_default())
+    SearchQuery::parse(&c.param("q").map(super::message_features::param_string).unwrap_or_default())
 }
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;

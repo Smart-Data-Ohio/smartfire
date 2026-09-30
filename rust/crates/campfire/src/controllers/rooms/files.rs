@@ -6,10 +6,10 @@ use crate::controllers::{
     presenters::{accounts, page, storage_error},
 };
 use campfire_db::{User, room_files};
-use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format, halt};
+use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
 use campfire_storage::{Blob, paths};
 fn string(c: &Ctx, key: &str) -> String {
-    c.param(key).and_then(Param::to_s).unwrap_or_default()
+    c.param(key).map(features::param_string).unwrap_or_default()
 }
 fn message_path(room_id: i64, id: i64, thread: Option<i64>) -> String {
     thread.map_or_else(
@@ -35,11 +35,11 @@ async fn render(c: &mut Ctx) -> Result {
     let raw_page = c
         .param("page")
         .filter(|v| !v.is_null())
-        .and_then(Param::to_s);
+        .map(features::param_string);
     let raw_drive_page = c
         .param("drive_page")
         .filter(|v| !v.is_null())
-        .and_then(Param::to_s);
+        .map(features::param_string);
     let storage = c.app().storage.clone();
     let list = c
         .app()

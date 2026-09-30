@@ -86,6 +86,24 @@ pub(crate) fn sentence(errors: &campfire_db::Errors) -> String {
     campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")
 }
 
+/// Explicit request `to_s` sites, including Ruby Array/Parameters coercion. This does
+/// not change the kit-wide parameter API or ActiveRecord lookup casting.
+pub(crate) fn param_string(value:&Param)->String {
+    use campfire_richtext::ruby::{json_value_to_s,json_value_inspect};
+    fn inspect(value:&Param)->String {
+        match value {
+            Param::Hash(_)=>format!("#<ActionController::Parameters {} permitted: false>",param_string(value)),
+            Param::Array(_)=>param_string(value),
+            value=>json_value_inspect(&value.to_json()),
+        }
+    }
+    match value {
+        Param::Array(values)=>format!("[{}]",values.iter().map(inspect).collect::<Vec<_>>().join(", ")),
+        Param::Hash(map)=>format!("{{{}}}",map.iter().map(|(k,v)|format!("{} => {}",json_value_inspect(&serde_json::Value::String(k.clone())),inspect(v))).collect::<Vec<_>>().join(", ")),
+        value=>json_value_to_s(&value.to_json()),
+    }
+}
+
 pub(crate) fn boolean(value: Option<&Param>) -> bool {
     !matches!(value, None | Some(Param::Null | Param::Bool(false)))
         && !matches!(
