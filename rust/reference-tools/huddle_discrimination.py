@@ -56,6 +56,8 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("room-composition-room-binding-corrupted", ROOT / "rust/crates/views/templates/rooms/composition/_composer_none.html", lambda s: replace_once(s, 'data-typing-notifications-room-id-value="{{ room.id }}"', 'data-typing-notifications-room-id-value="0"'), "campfire", "room_composition_matches_thirty_complete_rails_partials"),
+    ("room-composition-request-panels-bypassed", ROOT / "rust/crates/views/templates/rooms/show.html", lambda s: replace_once(s, '{{ self.composition("member_panel")|safe }}', ''), "campfire", "room_composition_replaces_the_upstream_composer_with_rails_markdown"),
     ("runtime-chrome-request-adapter-bypassed", ROOT / "rust/crates/campfire/src/controllers/presenters/view_context.rs", lambda s: replace_once(s, "Some(user_id) => user_preferences_at(conn, user_id, now)?,", "Some(user_id) => { let mut p=user_preferences_at(conn, user_id, now)?; p.notification_sounds=Default::default(); p },"), "campfire", "runtime_chrome_reads_twenty_three_recorded_rails_sound_and_drive_states"),
     ("remaining-stage-type-isolation-bypassed", R, lambda s: replace_once(s, "if room.stage() =>", "if !room.direct() =>"), "campfire", "remaining_call_security_keeps_stage_actions_private_and_type_scoped"),
     ("remaining-internal-steady-check-writes", I, lambda s: replace_once(s, "if !authorized || seen_due {", "if true || !authorized || seen_due {"), "campfire", "remaining_gateway_steady_state_has_no_transaction_and_denial_revokes_once"),

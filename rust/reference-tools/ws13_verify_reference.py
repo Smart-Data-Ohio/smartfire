@@ -10,6 +10,7 @@ paths += ['app/views/users/sidebars/show.html.erb', 'app/controllers/users/sideb
 paths += ['test/controllers/rooms/stage/streams_controller_test.rb', 'test/controllers/rooms/stage_view_test.rb', 'test/controllers/rooms/huddles_controller_test.rb', 'test/controllers/internal/huddle_controller_test.rb']
 paths += ['test/controllers/rooms/stages_controller_test.rb', 'test/controllers/rooms/voices_controller_test.rb']
 paths += ['app/helpers/application_helper.rb', 'app/models/calendar/meeting_cache.rb', 'app/models/google_account.rb', 'app/models/google/picker.rb', 'app/models/search.rb', 'app/models/user/status_settings.rb']
+paths += ['app/views/rooms/show/_composer.html.erb', 'app/views/rooms/show/_member_panel.html.erb', 'app/views/rooms/show/_thread_panel.html.erb', 'app/views/polls/_builder.html.erb', 'app/views/scheduled_messages/_composer_button.html.erb', 'app/views/shared/_multi_select_bar.html.erb', 'app/views/work_threads/_guide.html.erb']
 raw=subprocess.check_output(['docker','run','--rm','--name','ws13-source-check-current','--network','none','--entrypoint','sha256sum','ws13-reference:d7c7de92',*[f'/rails/{path}' for path in paths]],text=True,cwd=root)
 for line in raw.splitlines():
  digest,path=line.split();local=path.removeprefix('/rails/')

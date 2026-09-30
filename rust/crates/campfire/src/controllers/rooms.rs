@@ -236,6 +236,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
                 messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
                 navigation: Some(call_navigation::model(&app, conn, &room, &user)?),
+                thread_panel_name: Some(if room.direct() {room.direct_display_name(conn,None,None)?.unwrap_or_default()} else {room.name.clone().unwrap_or_default()}),
             })
         })
         .await
@@ -267,3 +268,6 @@ mod remaining_query_tests;
 
 #[cfg(test)]
 mod remaining_presence_tests;
+
+#[cfg(test)]
+mod room_composition_tests;

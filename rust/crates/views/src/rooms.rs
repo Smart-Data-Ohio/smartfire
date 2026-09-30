@@ -2,6 +2,7 @@
 //! the `MessagesHelper` tags the room screen uses.
 
 pub mod calls;
+pub mod composition;
 pub mod navigation;
 pub mod edit_sections;
 
@@ -86,6 +87,8 @@ pub struct ShowView {
     pub messages_stream_name: String,
     #[serde(default)]
     pub navigation: Option<navigation::Navigation>,
+    #[serde(default)]
+    pub thread_panel_name: Option<String>,
 }
 
 /// `rooms/show`.
@@ -108,6 +111,7 @@ impl Page for Show<'_> {
 }
 
 impl Show<'_> {
+    fn composition(&self,partial:&str)->String {composition::request(self.ctx,&self.show.room,self.show.thread_panel_name.as_deref(),partial)}
     fn loaded_at(&self) -> i64 {
         epoch_ms(self.show.updated_at)
     }
