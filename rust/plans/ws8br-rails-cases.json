@@ -200,69 +200,102 @@
       "declared_cases": [
         {
           "name": "show redirects to get general show",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::opens_rails_cases::show_redirects_to_get_general_show",
+          "rust_result": "passed"
         },
         {
           "name": "new",
-          "line": 12
+          "line": 12,
+          "rust_test": "controllers::rooms::opens_rails_cases::new_case",
+          "rust_result": "passed"
         },
         {
           "name": "create",
-          "line": 17
+          "line": 17,
+          "rust_test": "controllers::rooms::opens_rails_cases::create_case",
+          "rust_result": "passed"
         },
         {
           "name": "create forbidden by non-admin when account restricts creation to admins",
-          "line": 26
+          "line": 26,
+          "rust_test": "controllers::rooms::opens_rails_cases::create_forbidden_by_non_admin_when_account_restricts_creation_to_admins",
+          "rust_result": "passed"
         },
         {
           "name": "only admins or creators can update",
-          "line": 35
+          "line": 35,
+          "rust_test": "controllers::rooms::opens_rails_cases::only_admins_or_creators_can_update",
+          "rust_result": "passed"
         },
         {
           "name": "update",
-          "line": 46
+          "line": 46,
+          "rust_test": "controllers::rooms::opens_rails_cases::update_case",
+          "rust_result": "passed"
         },
         {
           "name": "update with an icon normalizes the shortcode",
-          "line": 56
+          "line": 56,
+          "rust_test": "controllers::rooms::opens_rails_cases::update_with_an_icon_normalizes_the_shortcode",
+          "rust_result": "passed"
         },
         {
           "name": "update clears the icon with a blank shortcode",
-          "line": 63
+          "line": 63,
+          "rust_test": "controllers::rooms::opens_rails_cases::update_clears_the_icon_with_a_blank_shortcode",
+          "rust_result": "passed"
         },
         {
           "name": "create with an unknown icon re-renders the new form",
-          "line": 72
+          "line": 72,
+          "rust_test": "controllers::rooms::opens_rails_cases::create_with_an_unknown_icon_re_renders_the_new_form",
+          "rust_result": "passed"
         },
         {
           "name": "update with an unknown icon re-renders the edit form",
-          "line": 81
+          "line": 81,
+          "rust_test": "controllers::rooms::opens_rails_cases::update_with_an_unknown_icon_re_renders_the_edit_form",
+          "rust_result": "passed"
         },
         {
           "name": "a plain member cannot set an icon",
-          "line": 91
+          "line": 91,
+          "rust_test": "controllers::rooms::opens_rails_cases::a_plain_member_cannot_set_an_icon",
+          "rust_result": "passed"
         },
         {
           "name": "update ignores unpermitted keys",
-          "line": 100
+          "line": 100,
+          "rust_test": "controllers::rooms::opens_rails_cases::update_ignores_unpermitted_keys",
+          "rust_result": "passed"
         },
         {
           "name": "update a closed room to be open",
-          "line": 111
+          "line": 111,
+          "rust_test": "controllers::rooms::opens_rails_cases::update_a_closed_room_to_be_open",
+          "rust_result": "passed"
         },
         {
           "name": "a direct room can't be promoted to open by its creator",
-          "line": 116
+          "line": 116,
+          "rust_test": "controllers::rooms::opens_rails_cases::a_direct_room_cant_be_promoted_to_open_by_its_creator",
+          "rust_result": "passed"
         },
         {
           "name": "a direct room can't be promoted to open by an administrator either",
-          "line": 126
+          "line": 126,
+          "rust_test": "controllers::rooms::opens_rails_cases::a_direct_room_cant_be_promoted_to_open_by_an_administrator_either",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 15,
       "rails_tests_run": 15,
       "rails_pass_count": 15,
-      "status": "full-file acceptance deferred",
+      "status": "15 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 15,
+      "rust_pass_count": 15,
+      "rust_cases_deferred": 0,
       "rails_assertions": 55
     },
     {
@@ -2015,7 +2048,7 @@
     },
     {
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "owner": "WS8br",
+      "owner": "WS15e; WS8br upstream controller re-diff only",
       "reference_file_present": true,
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
       "declared_cases": [

@@ -81,6 +81,7 @@ def owner(file):
     base=Path(file).stem.removesuffix('_controller_test').removesuffix('_test')
     if file.startswith('test/controllers/') and base in handoff_controllers: return 'WS8br2'
     if file.startswith('test/system/') and base in handoff_systems: return 'WS8br2'
+    if base=='unfurl_links': return 'WS15e; WS8br upstream controller re-diff only'
     if base=='starred_people': return 'WS12 with WS8br2/WS8br presentation'
     return 'WS8br'
 result=[]
@@ -115,6 +116,10 @@ if args.test_log:
           'show renders the unread divider above the first unread message on the page':'WS8bm list seam; WS8br divider facts are covered separately',
           'show keeps the last page when the first unread fell off it and links the pill to it':'WS8bm full list integration; WS8br page/divider facts covered separately',
           'destroy succeeds when the queue is down and the sweep recovers the room':'Lead decision 2 requires atomic queue rollback; native fault-injection coverage is separate'}),
+        ('test/controllers/rooms/opens_controller_test.rb','opens_rails_cases',
+         {'new':'new_case','create':'create_case','update':'update_case',
+          "a direct room can't be promoted to open by its creator":'a_direct_room_cant_be_promoted_to_open_by_its_creator',
+          "a direct room can't be promoted to open by an administrator either":'a_direct_room_cant_be_promoted_to_open_by_an_administrator_either'},{}),
     ]
     for path,module,renamed,deferred in groups:
         file=next(row for row in result if row['file']==path)
