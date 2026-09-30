@@ -5,6 +5,10 @@ import json
 import os
 from pathlib import Path
 import re
+import argparse
+parser=argparse.ArgumentParser()
+parser.add_argument('--test-log',type=Path,help='raw cargo test output for the named one-to-one Rust Rails cases')
+args=parser.parse_args()
 root=Path(__file__).resolve().parents[3]
 reference=Path(os.environ.get('CAMPFIRE_REFERENCE',root))
 files = [
@@ -90,5 +94,17 @@ for file in files:
         cases.append(dict(name=match[2] or match[3],line=source.count('\n',0,match.start())+1))
     result.append(dict(file=file,owner=owner(file),reference_file_present=True,source_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),declared_cases=cases,declared_count=len(cases),rails_tests_run=0,rails_pass_count=0,status='full-file acceptance deferred'))
 output=dict(reference='d7c7de92',note='These are source declarations, not dynamically expanded Rails tests. Equivalent Rust subsets are reported separately; no full-file Rails acceptance is claimed.',files=result)
+if args.test_log:
+    receipts=args.test_log.read_text()
+    file=next(row for row in result if row['file']=='test/controllers/rooms/inbound_email_addresses_controller_test.rb')
+    assert file['source_sha256']=='7f0a2071a6a696f04b5fa27a677e9d929de25abce4aec7653db43c1250ba423e', 'inbound Rails case drift'
+    passed=set(re.findall(r'^test controllers::rooms::inbound_rails_cases::(\w+) \.\.\. ok$',receipts,re.M))
+    for case in file['declared_cases']:
+        selector=re.sub(r'[^a-z0-9]+','_',case['name'].lower()).strip('_')
+        assert selector in passed, f'missing Rust pass receipt: {selector}'
+        case.update(rust_test=f'controllers::rooms::inbound_rails_cases::{selector}',rust_result='passed')
+    file.update(rust_cases_run=len(file['declared_cases']),rust_pass_count=len(file['declared_cases']),status='all eight source-declared cases ported to individually executed Rust tests')
+    print(f"Rails case port receipts: {file['file']}: {file['rust_pass_count']} Rust cases passed, 0 deferred; 0 Rails Minitest executions")
+    output['note']='Source declarations are not dynamically expanded Rails tests. The inbound-email file has one individually executed Rust test per declaration, with receipts from the supplied raw cargo log; remaining full-file case mappings are deferred. No Rails Minitest execution claimed.'
 (root/'rust/plans/ws8br-rails-cases.json').write_text(json.dumps(output,indent=2)+'\n')
 print(f'Rails deferred inventory: {len(result)} files, {sum(r["declared_count"] for r in result)} source-declared cases; 0 Rails tests run, 0 Rails passes claimed')

@@ -448,3 +448,6 @@ mod icons_tests;
 
 #[cfg(test)]
 mod inbound_tests;
+
+#[cfg(test)]
+mod inbound_rails_cases;

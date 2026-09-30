@@ -1,6 +1,6 @@
 {
   "reference": "d7c7de92",
-  "note": "These are source declarations, not dynamically expanded Rails tests. Equivalent Rust subsets are reported separately; no full-file Rails acceptance is claimed.",
+  "note": "Source declarations are not dynamically expanded Rails tests. The inbound-email file has one individually executed Rust test per declaration, with receipts from the supplied raw cargo log; remaining full-file case mappings are deferred. No Rails Minitest execution claimed.",
   "files": [
     {
       "file": "test/controllers/rooms_controller_test.rb",
@@ -642,41 +642,59 @@
       "declared_cases": [
         {
           "name": "an administrator can create the room address",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::inbound_rails_cases::an_administrator_can_create_the_room_address",
+          "rust_result": "passed"
         },
         {
           "name": "the creator can rotate the address",
-          "line": 16
+          "line": 16,
+          "rust_test": "controllers::rooms::inbound_rails_cases::the_creator_can_rotate_the_address",
+          "rust_result": "passed"
         },
         {
           "name": "a plain member is forbidden",
-          "line": 26
+          "line": 26,
+          "rust_test": "controllers::rooms::inbound_rails_cases::a_plain_member_is_forbidden",
+          "rust_result": "passed"
         },
         {
           "name": "a non-member gets a 404",
-          "line": 35
+          "line": 35,
+          "rust_test": "controllers::rooms::inbound_rails_cases::a_non_member_gets_a_404",
+          "rust_result": "passed"
         },
         {
           "name": "direct rooms never have an address",
-          "line": 44
+          "line": 44,
+          "rust_test": "controllers::rooms::inbound_rails_cases::direct_rooms_never_have_an_address",
+          "rust_result": "passed"
         },
         {
           "name": "board rooms never have an address",
-          "line": 52
+          "line": 52,
+          "rust_test": "controllers::rooms::inbound_rails_cases::board_rooms_never_have_an_address",
+          "rust_result": "passed"
         },
         {
           "name": "the edit page shows the address once created",
-          "line": 62
+          "line": 62,
+          "rust_test": "controllers::rooms::inbound_rails_cases::the_edit_page_shows_the_address_once_created",
+          "rust_result": "passed"
         },
         {
           "name": "the edit page explains the missing domain",
-          "line": 75
+          "line": 75,
+          "rust_test": "controllers::rooms::inbound_rails_cases::the_edit_page_explains_the_missing_domain",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 8,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "status": "all eight source-declared cases ported to individually executed Rust tests",
+      "rust_cases_run": 8,
+      "rust_pass_count": 8
     },
     {
       "file": "test/controllers/room_categories_controller_test.rb",
