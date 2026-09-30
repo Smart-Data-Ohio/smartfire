@@ -149,6 +149,7 @@ async fn run_case(case: &Value) {
     if case["name"] == "lazy_bot"
         && let Ok(path) = std::env::var("GITHUB_NOTIFIER_RUST_OUTPUT")
     {
+        if let Some(parent)=std::path::Path::new(&path).parent().filter(|p|!p.as_os_str().is_empty()){std::fs::create_dir_all(parent).unwrap();}
         let _ = std::fs::remove_file(&path);
         let database = fixture
             .db

@@ -1,12 +1,11 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 317 mapped to Rust assertions; 109 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 338 mapped to Rust assertions; 88 explicitly deferred.
 
-These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; profile/bot view cases remain deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Remaining room-page/controller/system parity, helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; profile/bot view cases remain deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Remaining room-page/controller/system parity, helper cache cases, remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 | Rails file | Cases passing grouped assertions | Deferred |
 |---|---:|---:|
-| `test/controllers/agents/github/pull_request_actions_controller_test.rb` | 0/21 | 21 |
 | `test/helpers/github_pull_requests_helper_test.rb` | 1/20 | 19 |
 | `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
@@ -26,6 +25,7 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | `test/controllers/github/pull_request_write_actions_controller_test.rb` | 4/5 | 1 |
 | `test/models/github/pull_request_test.rb` | 16/17 | 1 |
 | `test/models/github/write_client_test.rb` | 12/13 | 1 |
+| `test/controllers/agents/github/pull_request_actions_controller_test.rb` | 21/21 | 0 |
 | `test/controllers/github/app_connections_controller_test.rb` | 13/13 | 0 |
 | `test/controllers/github/pull_request_reviews_controller_test.rb` | 9/9 | 0 |
 | `test/controllers/rooms/github_subscriptions_controller_test.rb` | 17/17 | 0 |
@@ -57,27 +57,27 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| a bad credential is 401 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a suspended agent is 401 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a room the agent is not a member of is 404 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| an unknown room is 404 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a pull request the room does not discuss is 404 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a mapping in another room is 404 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a missing pull_request_id is 404 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a missing external_action grant is 403 with the approvals error shape | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| an external_action grant in another room is 403 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| an agent without a linked GitHub account is 422 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| an agent with a disconnected account is 422 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a comment without a body is 422 with field errors | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| request_changes without a body is 422 with field errors | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| request_review without valid logins is 422 with field errors | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| an unknown kind is 422 with field errors | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a legacy bot key is rejected | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a human session is rejected | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a comment request creates one approval and returns 202 without calling GitHub | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| approve, request_changes, and request_review build their own payloads | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| reviewers also accept an array | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a repeated external_id returns the existing row with 200 | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
+| a bad credential is 401 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a suspended agent is 401 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a room the agent is not a member of is 404 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| an unknown room is 404 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a pull request the room does not discuss is 404 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a mapping in another room is 404 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a missing pull_request_id is 404 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a missing external_action grant is 403 with the approvals error shape | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| an external_action grant in another room is 403 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| an agent without a linked GitHub account is 422 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| an agent with a disconnected account is 422 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a comment without a body is 422 with field errors | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| request_changes without a body is 422 with field errors | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| request_review without valid logins is 422 with field errors | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| an unknown kind is 422 with field errors | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a legacy bot key is rejected | Mapped to grouped Rust assertions; WS15g | `github_agent_http_races_fanout_rollback_expiry_and_real_approved_job` |
+| a human session is rejected | Mapped to grouped Rust assertions; WS15g | `github_agent_http_races_fanout_rollback_expiry_and_real_approved_job` |
+| a comment request creates one approval and returns 202 without calling GitHub | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| approve, request_changes, and request_review build their own payloads | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| reviewers also accept an array | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
+| a repeated external_id returns the existing row with 200 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
 
 ## `test/controllers/agents/github_action_delivery_test.rb` (9 tests)
 

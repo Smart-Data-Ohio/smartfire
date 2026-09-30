@@ -3,6 +3,7 @@
 mod card_tests;
 #[cfg(test)]
 mod subscription_tests;
+pub mod agent_actions;
 pub mod cards;
 pub mod connections;
 pub mod discussions;
@@ -26,3 +27,6 @@ mod write_tests;
 
 #[cfg(test)]
 mod lifecycle_tests;
+
+#[cfg(test)]
+mod agent_tests;

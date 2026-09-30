@@ -1,6 +1,7 @@
 //! GitHub domain and fixed-host clients, matching our Rails `app/models/github/`.
 //! Controllers and HTML belong outside this module.
 
+pub mod approval_requests;
 pub mod accounts;
 pub mod actions;
 pub mod agent_actions;

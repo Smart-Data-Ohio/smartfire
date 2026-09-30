@@ -706,6 +706,8 @@ async fn rust_account_rows_are_exported_for_rails_rollback_verification() {
     assert_eq!(stored_token(&test, id, "refresh_token"), "fixture-refresh");
     if let Ok(path) = std::env::var("GITHUB_RUST_OUTPUT") {
         let row: Value = test.db.read_blocking(|conn| Ok(conn.query_row("SELECT access_token, refresh_token, github_login, token_source, token_expires_at, created_at, updated_at FROM github_connected_accounts WHERE id = ?", [id], |r| Ok(json!({"access_token":r.get::<_,String>(0)?,"refresh_token":r.get::<_,String>(1)?,"github_login":r.get::<_,String>(2)?,"token_source":r.get::<_,String>(3)?,"token_expires_at":r.get::<_,String>(4)?,"created_at":r.get::<_,String>(5)?,"updated_at":r.get::<_,String>(6)?})))?)).unwrap();
+        let path=std::path::Path::new(&path);
+        if let Some(parent)=path.parent().filter(|p|!p.as_os_str().is_empty()){std::fs::create_dir_all(parent).unwrap();}
         std::fs::write(path, json!({"row":row,"plaintext":{"access_token":"fixture-access","refresh_token":"fixture-refresh"},"signed_state":oauth::sign_state(&Secrets::new(vectors()["secret_key_base"].as_str().unwrap()),"fixture-session-state")}).to_string()).unwrap();
     }
 }
