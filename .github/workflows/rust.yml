@@ -1,6 +1,6 @@
 name: Rust
 
-# The Rust port in rust/: clippy, build and tests, in the toolchain stage of rust/Dockerfile (the
+# The Rust port in rust/: clippy, binary build and tests, in the toolchain stage of rust/Dockerfile (the
 # same libvips and ffmpeg builds as its image, so the storage vectors' byte checks run rather than
 # skip). The whole repository is mounted, so rust/.. is the Rails app the port reads as its
 # reference (assets, fixtures, schema).
@@ -11,7 +11,7 @@ name: Rust
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ci/rust-speedups ]
     paths:
       - "rust/**"
       - ".github/workflows/rust.yml"
@@ -41,9 +41,10 @@ jobs:
       contents: read
     timeout-minutes: 90
     env:
-      # Only pushes to main write caches. The repository's Actions cache is shared with Rails CI and
-      # the image builds, and a pull request's multi-gigabyte target directory would evict theirs.
-      SAVE_CACHES: ${{ github.event_name == 'push' }}
+      # Only pushes to main write caches. PRs and branch pushes may read but never write: this
+      # prevents cache poisoning and keeps their multi-gigabyte targets from evicting Rails/image
+      # caches. Adding a branch trigger must not accidentally make that branch a cache writer.
+      SAVE_CACHES: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -75,69 +76,62 @@ jobs:
           path: |
             rust/.cargo-home/registry
             rust/target
-          key: rust-cargo-${{ hashFiles('rust/Cargo.lock') }}
-          restore-keys: rust-cargo-
+          key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-
+            rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-
 
       - name: Clippy
-        run: |
-          docker run --rm --user "$(id -u):$(id -g)" --volume "$PWD:/src" --workdir /src/rust \
-            --env HOME=/tmp --env CARGO_HOME=/src/rust/.cargo-home --env CARGO_TERM_COLOR=always \
-            --env CARGO_INCREMENTAL=0 --env CARGO_PROFILE_DEV_DEBUG=line-tables-only \
-            campfire-toolchain cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+        run: bash rust/ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
 
-      - name: Build
-        run: |
-          docker run --rm --user "$(id -u):$(id -g)" --volume "$PWD:/src" --workdir /src/rust \
-            --env HOME=/tmp --env CARGO_HOME=/src/rust/.cargo-home --env CARGO_TERM_COLOR=always \
-            --env CARGO_INCREMENTAL=0 --env CARGO_PROFILE_DEV_DEBUG=line-tables-only \
-            campfire-toolchain cargo build --locked --workspace
+      # The app has no integration-test target, so nextest builds its test harness but not its
+      # normal executable. Retain that cfg(not(test))/link coverage, without building extra targets.
+      - name: Build application binaries
+        run: bash rust/ci/cargo.sh build --locked --workspace --bins
 
-      # A gate: campfire_db runs against our schema.sql and test/fixtures, so any failure is a
-      # regression.
+      # Build with the same workspace/features as clippy and the following nextest run, then run
+      # only the blocking database tests. The workspace filter below avoids executing them twice.
       - name: Tests (campfire_db)
+        shell: bash
         run: |
-          docker run --rm --user "$(id -u):$(id -g)" --volume "$PWD:/src" --workdir /src/rust \
-            --env HOME=/tmp --env CARGO_HOME=/src/rust/.cargo-home --env CARGO_TERM_COLOR=always \
-            --env CARGO_INCREMENTAL=0 --env CARGO_PROFILE_DEV_DEBUG=line-tables-only \
-            campfire-toolchain cargo test --locked -p campfire_db
+          bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
+            --profile ci --no-fail-fast -E 'package(campfire_db)'
+          cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/db-junit.xml"
+          # nextest does not run doctests; database doctests remain part of the blocking gate.
+          bash rust/ci/cargo.sh test --locked -p campfire_db --doc --no-fail-fast 2>&1 |
+            tee "$RUNNER_TEMP/db-doc.log"
 
-      # NON-BLOCKING until the rest of the port catches up with our Rails app. campfire_db is gated
-      # above; what still fails here is campfire_assets' reference tests (its asset vectors are
-      # stock Campfire's while the reference's assets are Smartfire's). The step still shows as
-      # failed in the run, and the summary below counts the failures.
+      # NON-BLOCKING until the rest of the port catches up with our Rails app. Database tests are
+      # gated above; reference failures still fail this step and are counted in the summary.
       - name: Tests (non-blocking)
         id: tests
         continue-on-error: true
         shell: bash
         run: |
-          docker run --rm --user "$(id -u):$(id -g)" --volume "$PWD:/src" --workdir /src/rust \
-            --env HOME=/tmp --env CARGO_HOME=/src/rust/.cargo-home --env CARGO_TERM_COLOR=always \
-            --env CARGO_INCREMENTAL=0 --env CARGO_PROFILE_DEV_DEBUG=line-tables-only \
-            campfire-toolchain cargo test --locked --workspace --exclude html5ever --no-fail-fast 2>&1 |
-            tee "$RUNNER_TEMP/cargo-test.log"
+          bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
+            --profile ci --no-fail-fast -E 'not package(campfire_db)' 2>&1 |
+            tee "$RUNNER_TEMP/nextest.log"
+
+      - name: Doctests (non-blocking)
+        id: doctests
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          bash rust/ci/cargo.sh test --locked --workspace --exclude html5ever --exclude campfire_db \
+            --doc --no-fail-fast 2>&1 | tee "$RUNNER_TEMP/workspace-doc.log"
 
       - name: Summarize tests
         if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
-        shell: bash
         env:
-          OUTCOME: ${{ steps.tests.outcome }}
+          TMPDIR: ${{ runner.temp }}
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          DOC_OUTCOME: ${{ steps.doctests.outcome }}
         run: |
-          log="$RUNNER_TEMP/cargo-test.log"
-          read -r passed failed ignored < <(sed 's/\x1b\[[0-9;]*m//g' "$log" |
-            awk '/^test result:/ { for (i = 1; i < NF; i++) { if ($(i+1) ~ /^passed/) p += $i; if ($(i+1) ~ /^failed/) f += $i; if ($(i+1) ~ /^ignored/) g += $i } }
-                 END { print p + 0, f + 0, g + 0 }')
-          {
-            echo "### Rust tests (non-blocking)"
-            echo
-            echo "Outcome: **${OUTCOME}**. ${passed} passed, ${failed} failed, ${ignored} ignored."
-            echo
-            echo '```'
-            sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -A 20 -E '^error: [0-9]+ targets? failed' || echo "no failing targets"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$OUTCOME" != success ]; then
-            echo "::warning title=Rust tests (non-blocking)::${failed} failed, ${passed} passed; see the Tests step's log"
-          fi
+          python3 -m unittest discover -s rust/ci -p 'test_*.py'
+          python3 rust/ci/summarize-tests.py \
+            --junit "$RUNNER_TEMP/db-junit.xml" --junit rust/target/nextest/ci/junit.xml \
+            --doc-log "$RUNNER_TEMP/db-doc.log" --doc-log "$RUNNER_TEMP/workspace-doc.log"
 
       - name: Save cargo registry and target
         if: ${{ env.SAVE_CACHES == 'true' && steps.cargo-cache.outputs.cache-hit != 'true' }}
@@ -146,4 +140,4 @@ jobs:
           path: |
             rust/.cargo-home/registry
             rust/target
-          key: rust-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}

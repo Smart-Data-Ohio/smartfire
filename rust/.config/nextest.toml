@@ -1,0 +1,16 @@
+[profile.ci]
+fail-fast = false
+retries = 0
+
+[profile.ci.junit]
+path = "junit.xml"
+# Count #[ignore] tests, without counting tests excluded by the database/workspace filters.
+report-skipped = "ignored"
+
+[test-groups]
+acme = { max-threads = 1 }
+
+[[profile.default.overrides]]
+# These tests use Pebble's fixed validation ports 5001/5002 when PEBBLE_MINICA is set.
+filter = 'package(campfire_kit) & binary(front) & test(acme_)'
+test-group = "acme"
