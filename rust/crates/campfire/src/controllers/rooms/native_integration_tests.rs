@@ -66,6 +66,12 @@ async fn native_component_capture_matches_rails_root_selection() {
    Ok((records.iter().map(|m|m.id).collect::<Vec<_>>(),list,composer,template))
   }).await.unwrap();
   assert_eq!(serde_json::json!(ids),row["root_ids"]);
+  for (name,actual) in [("composer",&composer),("pending_template",&template)] {
+   assert!(crate::app::asset_goldens::compare(name,actual,row[name].as_str().unwrap()),"room {room_id} {name}");
+  }
+  if room_id!=654632876 {
+   assert!(crate::app::asset_goldens::compare("message list",&list,row["message_list"].as_str().unwrap()),"room {room_id} list");
+  }
   captures.push(serde_json::json!({"room_id":room_id,"user_id":user_id,"message_list":list,"composer":composer,"pending_template":template}));
  }
  println!("WS8BR_NATIVE_COMPONENTS:{}",serde_json::json!(captures));

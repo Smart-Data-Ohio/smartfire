@@ -11,7 +11,7 @@ impl Presenter<'_> {
         let account = campfire_db::Account::first(self.conn)?;
         page::render_detached_at(self.app, account.as_ref(), base, |ctx| {
             campfire_views::messages::RoomIndex { ctx, messages: &items,
-                unread_index: divider_id.and_then(|id| records.iter().position(|record| record.id == id)), unread_count }.render()
+                unread_index: divider_id.and_then(|id| records.iter().position(|record| record.id == id)), unread_count }.render().map(|list| format!("\n    \n{list}"))
                 .map_err(|error| campfire_db::Error::Other(error.to_string()))
         })
     }
