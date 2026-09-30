@@ -1,4 +1,4 @@
-//! Read-side User::StatusSettings. Expired settings read as off without modifying rows.
+//! User::StatusSettings readers and writers. Expired settings read as off without modifying rows.
 //! Calendar caches are preloaded: these methods never contact Google or acquire a write lock.
 
 use std::collections::HashMap;
@@ -8,6 +8,9 @@ use serde_json::Value;
 
 use crate::sql::{placeholders, query_all};
 use crate::{Result, Role, Status, Timestamp, User};
+
+mod writes;
+pub use writes::{clock_time_to_minutes, minutes_to_clock_time, replace_keyword_alerts};
 
 #[derive(Debug, Clone)]
 pub struct UserStatusSettings {
@@ -22,6 +25,9 @@ pub struct UserStatusSettings {
     pub quiet_hours_start_minute: Option<i64>,
     pub quiet_hours_end_minute: Option<i64>,
     pub time_zone: Option<String>,
+    pub time_zone_explicit: bool,
+    pub theme: String,
+    pub text_size: String,
     pub meeting_status_enabled: bool,
     pub meeting_dnd_enabled: bool,
     pub ooo_until: Option<Timestamp>,
@@ -108,6 +114,9 @@ impl UserStatusSettings {
             quiet_hours_start_minute: row.get("quiet_hours_start_minute")?,
             quiet_hours_end_minute: row.get("quiet_hours_end_minute")?,
             time_zone: row.get("time_zone")?,
+            time_zone_explicit: row.get("time_zone_explicit")?,
+            theme: row.get("theme")?,
+            text_size: row.get("text_size")?,
             meeting_status_enabled: row.get("meeting_status_enabled")?,
             meeting_dnd_enabled: row.get("meeting_dnd_enabled")?,
             ooo_until: row.get("ooo_until")?,

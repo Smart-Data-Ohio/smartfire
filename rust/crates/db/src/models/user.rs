@@ -490,6 +490,8 @@ impl User {
             [self.id],
         )?;
         let email = self.deactivated_email_address();
+        // app/models/user.rb: manual OOO cannot survive account deactivation.
+        conn.execute_cached("UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?", [self.id])?;
         self.update(
             tx,
             UserChanges {

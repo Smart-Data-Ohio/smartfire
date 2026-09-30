@@ -30,6 +30,8 @@ pub mod thread_membership;
 pub mod thread_tag;
 pub mod user;
 pub mod user_status_settings;
+pub mod dnd_allowed_user;
+pub use dnd_allowed_user::DndAllowedUser;
 pub mod notification_policy;
 pub mod webhook;
 pub mod workspace_presence_lease;

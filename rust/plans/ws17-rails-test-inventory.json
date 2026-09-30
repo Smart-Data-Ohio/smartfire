@@ -830,16 +830,16 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "defaults to automatic presence, no DND, and the system theme",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::defaults_to_automatic_presence_no_dnd_and_system_theme"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "rejects unknown presence, theme, and time zone values",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_status_settings_validations_match_rails_and_leave_rows_unchanged"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
@@ -851,9 +851,9 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "the DND presence silences like the DND switch",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::the_dnd_presence_silences_like_the_dnd_switch_and_only_allows_the_allowed_sender"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
@@ -865,23 +865,23 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "quiet hours need a start and an end while enabled",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_status_settings_validations_match_rails_and_leave_rows_unchanged"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "malformed quiet-hours input reads as blank",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_quiet_hours_virtual_setters_match_rails"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "quiet-hours input tolerates seconds",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_quiet_hours_virtual_setters_match_rails"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
@@ -893,30 +893,30 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "custom status expiry presets resolve in the user's time zone",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_custom_status_and_ooo_presets_match_rails_zones_and_dst"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "an unknown custom status expiry raises",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::unknown_expiry_raises_and_blank_preserves_the_old_expiry"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "replacing keywords strips, dedupes, and caps the list",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::replacing_keywords_strips_dedupes_and_caps_the_list"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "replacing keywords past the cap fails with errors",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::replacing_keywords_strips_dedupes_and_caps_the_list"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
@@ -1831,9 +1831,9 @@
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
       "test": "starring and unstarring someone for DND",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/dnd_allowances.rs::ws17_starring_and_unstarring_someone_for_dnd"
     },
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
@@ -1852,16 +1852,16 @@
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
       "test": "cannot star yourself",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/dnd_allowances.rs::ws17_allowances_reject_self_bots_inactive_missing_and_anonymous"
     },
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
       "test": "cannot star a bot",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/dnd_allowances.rs::ws17_allowances_reject_self_bots_inactive_missing_and_anonymous"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
@@ -1936,16 +1936,16 @@
     {
       "file": "test/models/dnd_allowed_user_test.rb",
       "test": "allows starring another active person",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::allows_another_active_person_but_rejects_duplicates_self_bots_and_missing_people"
     },
     {
       "file": "test/models/dnd_allowed_user_test.rb",
       "test": "rejects duplicates, self-stars, and bots",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::allows_another_active_person_but_rejects_duplicates_self_bots_and_missing_people"
     },
     {
       "file": "test/controllers/users/push_subscriptions_controller_test.rb",

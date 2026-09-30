@@ -3,6 +3,7 @@
 
 pub mod avatars;
 pub mod bans;
+pub mod dnd_allowances;
 pub mod profiles;
 pub mod presences;
 pub mod push_subscriptions;

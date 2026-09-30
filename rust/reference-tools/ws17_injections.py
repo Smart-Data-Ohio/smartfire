@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 
 root = Path(__file__).resolve().parents[2]
 scratch = root / ".scratch"
@@ -42,6 +43,19 @@ cases = [
 cases = [(name, f"rust/crates/db/src/models/{filename}", original, broken, test, "campfire_db")
          for name, filename, original, broken, test in cases]
 cases += [
+    ("settings-validation", "rust/crates/db/src/models/user_status_settings/writes.rs",
+     "if !allowed.contains(&value)", "if false && !allowed.contains(&value)",
+     "ws17_status_settings_validations_match_rails_and_leave_rows_unchanged", "campfire_db"),
+    ("settings-keyword-rollback", "rust/crates/db/src/models/user_status_settings/writes.rs",
+     "            self.save(tx)",
+     '            tx.conn().execute_batch("RELEASE SAVEPOINT model_operation")?;\n            self.save(tx)',
+     "an_invalid_settings_save_keeps_the_previous_keyword_list_atomically", "campfire_db"),
+    ("settings-active-allowance", "rust/crates/db/src/models/dnd_allowed_user.rs",
+     "if person.is_some_and", "if false && person.is_some_and",
+     "allows_another_active_person_but_rejects_duplicates_self_bots_and_missing_people", "campfire_db"),
+    ("settings-dnd-timer", "rust/crates/db/src/models/user_status_settings/writes.rs",
+     "if !self.dnd_enabled || !self.manual_dnd_active(now)", "if true",
+     "enabling_dnd_clears_an_expired_timer_and_preserves_a_live_one", "campfire_db"),
     ("presence-http-body", "rust/crates/campfire/src/controllers/users/presences.rs",
      'json!({"presences":presences})', 'json!({"presences":[]})',
      "ws17_presence_http_bodies_match_rails_vectors", "campfire"),
@@ -52,6 +66,9 @@ cases += [
      "pwa::SERVICE_WORKER_JS", '"/* wrong bytes */"',
      "ws17_service_worker_is_served_byte_identical_to_rails", "campfire"),
 ]
+if len(sys.argv)>1:
+    cases=[case for case in cases if case[0].startswith(sys.argv[1])]
+    assert cases, "no injection matches the supplied name prefix"
 for name, filename, original, broken, test, package in cases:
     source = root / filename
     text = source.read_text()
