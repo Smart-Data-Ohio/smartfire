@@ -6,6 +6,8 @@
 pub mod boosts;
 #[cfg(test)]
 pub(crate) mod boosts_tests;
+#[cfg(test)]
+mod upload_tests;
 pub mod by_bots;
 pub(crate) mod payload;
 mod freshness;
@@ -262,6 +264,9 @@ pub(crate) struct MessageParams {
     pub body: Option<String>,
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
+    /// A verified Active Storage signed ID (the direct-upload capability). This additive
+    /// human attachment seam leaves the shared avatar/assignment and bot APIs unchanged.
+    pub existing_attachment: Option<Blob>,
     pub client_message_id: Option<String>,
     pub markdown_source: Option<String>,
     pub reply_to_message_id: Option<i64>,
@@ -294,6 +299,14 @@ pub(crate) async fn human_message_params(c: &Ctx, root_room: Option<&Room>) -> R
         return Err(Error::internal(anyhow::anyhow!("message parameters do not support permit")));
     }
     let mut attributes = message_params(c)?;
+    if matches!(attributes.attachment, Some(Assignment::Invalid))
+        && let Some(signed) = message.get("attachment").and_then(Param::as_str) {
+        let id = campfire_storage::paths::verify_signed_blob_id(&*c.app().storage.verifier, signed, c.now())
+            .ok_or_else(invalid_attachment)?;
+        attributes.existing_attachment = Some(c.app().db.read(move |conn| Blob::find(conn, id).map_err(storage_error)?
+            .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))).await.map_err(db_error)?);
+        attributes.attachment = Some(Assignment::Unchanged);
+    }
     let permitted = message.permit(&permit_keys(&["markdown_source", "client_message_id", "reply_to_message_id", "reply_notify_author"]));
     let text = |key: &str| permitted.get(key).and_then(string_column);
     attributes.markdown_source = text("markdown_source");
@@ -376,7 +389,7 @@ pub(crate) async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thre
                 .map_err(|error| campfire_db::Error::Other(error.to_string()))?);
         }
         let attachment_given = attachment.is_some();
-        let blob = attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?;
+        let blob = attributes.existing_attachment.or(attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?);
         if attachment_given { message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?; }
         message.edit(tx, changes)?;
         Ok((id, blob))
@@ -501,7 +514,7 @@ pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<cam
         .app()
         .db
         .write(move |tx| {
-            let blob = attachment.map(|staged| save_staged(tx, staged)).transpose()?;
+            let blob = attributes.existing_attachment.or(attachment.map(|staged| save_staged(tx, staged)).transpose()?);
             let attributes = NewMessage {
                     room_id,
                     creator_id,
