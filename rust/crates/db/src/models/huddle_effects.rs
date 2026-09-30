@@ -46,3 +46,7 @@ pub struct RoleEvent {
 impl Broadcast for RoleEvent {
     const KIND: &'static str = "Stage#broadcast_role_event_to_member";
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StagePanel { pub room_id:i64,pub membership_id:i64 }
+impl Broadcast for StagePanel { const KIND:&'static str="Stage#broadcast_panel_to_member"; }

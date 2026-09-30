@@ -18,6 +18,7 @@ pub mod huddle_stream_liveness;
 pub mod stream;
 pub mod stage;
 pub mod stage_streams;
+pub mod stage_participation;
 pub mod call_moderation;
 pub mod forwarder;
 pub mod membership;

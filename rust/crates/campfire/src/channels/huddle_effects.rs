@@ -180,3 +180,11 @@ pub(crate) fn presence(app: &App, room_id: i64) -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+pub(crate) fn stage_panel(app:&App,room_id:i64,membership_id:i64)->anyhow::Result<()> {
+    let stage=app.db.read_blocking(|conn|stage_model(app,conn,room_id,membership_id))?;
+    if let Some(member)=stage.members.iter().find(|m|m.id==membership_id) {
+        app.broadcasts.replace(&Stream::user_rooms(member.user_id),&stage.dom_id("stage_panel"),&stage.panel(false));
+    }
+    Ok(())
+}

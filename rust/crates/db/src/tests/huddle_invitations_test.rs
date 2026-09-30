@@ -646,3 +646,176 @@ fn moderation_enqueue_failure_rolls_back_mute_revocation_stream_and_frames() {
         "rolled-back moderation escaped to Cable/jobs"
     );
 }
+
+#[test]
+fn stage_roles_and_hands_match_thirty_four_rails_controller_scenarios() {
+    use crate::models::huddle_effects::{RoleEvent, StagePanel, StageRoster, StreamChanged};
+    use crate::models::stage_participation::{self, Denial, HandTarget};
+    let vectors: Value =
+        serde_json::from_str(include_str!("../models/huddle_participation_vectors.json")).unwrap();
+    assert_eq!(vectors["cases"].as_array().unwrap().len(), 34);
+    for case in vectors["cases"].as_array().unwrap() {
+        let db = TestDb::new();
+        db.clock
+            .travel_to(Timestamp::from_second(vectors["now"].as_i64().unwrap()));
+        let input = case["input"].clone();
+        db.write(move |tx| {
+            huddle_notices_test::load(tx, &input)?;
+            for m in input["memberships"].as_array().unwrap() {
+                tx.conn().execute(
+                    "UPDATE memberships SET created_at=?,updated_at=? WHERE id=?",
+                    rusqlite::params![
+                        Timestamp::parse_db(m["created_at"].as_str().unwrap()),
+                        Timestamp::parse_db(m["updated_at"].as_str().unwrap()),
+                        m["id"].as_i64()
+                    ],
+                )?;
+            }
+            for stream in input["streams"].as_array().unwrap() {
+                huddle_notices_test::insert(tx, "streams", stream)?;
+            }
+            Ok(())
+        });
+        db.sink.take();
+        let actor = case["actor_id"].as_i64().unwrap();
+        let target = case["target_id"].as_i64();
+        let action = case["action"].as_str().unwrap().to_string();
+        let params = case["params"].clone();
+        let actual = db.try_write(move |tx| match action.as_str() {
+            "role" => stage_participation::change_role(
+                tx,
+                9001,
+                actor,
+                target,
+                params["stage_role"].as_str().unwrap(),
+                &HuddleConfig {
+                    api_secret: Some("ws13-fixture-api-secret".into()),
+                    admin_configured: true,
+                },
+            ),
+            "raise" => stage_participation::raise_hand(tx, 9001, actor),
+            _ => stage_participation::lower_hand(
+                tx,
+                9001,
+                actor,
+                if params.get("membership_id").is_some() {
+                    HandTarget::Other(target)
+                } else {
+                    HandTarget::Own
+                },
+            ),
+        });
+        let status = match actual {
+            Err(crate::Error::RecordInvalid(_)) => 422,
+            Err(error) => panic!("{}: {error}", case["name"]),
+            Ok(Err(Denial::NotFound | Denial::TargetNotFound)) => 404,
+            Ok(Err(Denial::Forbidden | Denial::PlainForbidden(_))) => 403,
+            Ok(Err(Denial::UnknownRole | Denial::ListenerOnly)) => 422,
+            Ok(Ok(())) => case["status"].as_i64().unwrap(),
+        };
+        assert_eq!(json!(status), case["status"], "{} status", case["name"]);
+        for (table, field, columns) in [
+            (
+                "memberships",
+                "members",
+                vec!["id", "stage_role", "hand_raised_at", "updated_at"],
+            ),
+            (
+                "huddle_grants",
+                "grants",
+                vec!["id", "stage_role", "revoked_at"],
+            ),
+            ("streams", "streams", vec!["id", "ended_at"]),
+            (
+                "huddle_cleanups",
+                "cleanups",
+                vec!["operation", "huddle_grant_id", "room_name", "identity"],
+            ),
+        ] {
+            let actual = db.read(|conn| {
+                let sql = format!(
+                    "SELECT {} FROM {table} {} ORDER BY id",
+                    columns.join(","),
+                    if table == "memberships" {
+                        "WHERE room_id=9001"
+                    } else {
+                        ""
+                    }
+                );
+                let mut statement = conn.prepare(&sql)?;
+                let rows = statement
+                    .query_map([], |row| {
+                        let mut object = serde_json::Map::new();
+                        for (i, column) in columns.iter().enumerate() {
+                            let value = match row.get_ref(i)? {
+                                rusqlite::types::ValueRef::Null => Value::Null,
+                                rusqlite::types::ValueRef::Integer(n) if *column == "operation" => {
+                                    json!(if n == 0 {
+                                        "remove_participant"
+                                    } else {
+                                        "delete_room"
+                                    })
+                                }
+                                rusqlite::types::ValueRef::Integer(n) => json!(n),
+                                rusqlite::types::ValueRef::Text(s) => {
+                                    json!(std::str::from_utf8(s).unwrap())
+                                }
+                                _ => panic!("unexpected moderation field"),
+                            };
+                            object.insert(column.to_string(), value);
+                        }
+                        Ok(Value::Object(object))
+                    })?
+                    .collect::<std::result::Result<Vec<_>, _>>()?;
+                Ok(rows)
+            });
+            let mut actual = json!(actual);
+            let mut expected = case[field].clone();
+            normalize(&mut actual);
+            normalize(&mut expected);
+            assert_eq!(actual, expected, "{} {field}", case["name"]);
+        }
+        let events = db.sink.take();
+        let rosters = events
+            .iter()
+            .filter(
+                |e| matches!(e,crate::Event::Broadcast(b) if b.decode::<StageRoster>().is_some()),
+            )
+            .count();
+        let role_events = events
+            .iter()
+            .filter(|e| matches!(e,crate::Event::Broadcast(b) if b.decode::<RoleEvent>().is_some()))
+            .count();
+        assert_eq!(
+            role_events,
+            case["role_events"].as_array().unwrap().len(),
+            "{} role events",
+            case["name"]
+        );
+        let panels = events
+            .iter()
+            .filter(
+                |e| matches!(e,crate::Event::Broadcast(b) if b.decode::<StagePanel>().is_some()),
+            )
+            .count();
+        let changes = events
+            .iter()
+            .filter(
+                |e| matches!(e,crate::Event::Broadcast(b) if b.decode::<StreamChanged>().is_some()),
+            )
+            .count();
+        assert_eq!(
+            panels + changes * case["members"].as_array().unwrap().len(),
+            case["panels"].as_u64().unwrap() as usize,
+            "{} panel fanout",
+            case["name"]
+        );
+        let members = case["members"].as_array().unwrap().len();
+        assert_eq!(
+            rosters * members,
+            case["rosters"].as_u64().unwrap() as usize,
+            "{} roster fanout",
+            case["name"]
+        );
+    }
+}

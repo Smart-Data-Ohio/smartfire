@@ -355,3 +355,160 @@ async fn stage_stream_callbacks_reach_real_sockets_and_rollback_stays_silent() {
         .unwrap()
         .unwrap();
 }
+
+#[tokio::test]
+async fn stage_role_roster_panel_and_single_rejoin_reach_real_sockets_after_commit() {
+    use campfire_db::models::stage_participation;
+    use campfire_db::{CachedStatements, Room};
+    let Some(test) = TestApp::boot().await else {
+        return;
+    };
+    let app = test.booted.app.clone();
+    let membership=app.db.write(|tx| {
+        tx.conn().execute_cached("UPDATE rooms SET type='Rooms::Stage' WHERE id=?",[ALL_TALK])?;
+        tx.conn().execute_cached("UPDATE memberships SET stage_role=CASE WHEN user_id=? THEN 'host' ELSE 'listener' END WHERE room_id=?",rusqlite::params![campfire_db::fixtures::identify("jason"),ALL_TALK])?;
+        Ok(Membership::find_by_room_and_user(tx.conn(),ALL_TALK,DAVID)?.unwrap().id)
+    }).await.unwrap();
+    let listener = super::tests::support::bind_listener().await;
+    let addr = listener.local_addr().unwrap();
+    let (stop, stopping) = tokio::sync::oneshot::channel::<()>();
+    let router = test.booted.router.clone();
+    let serving = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async {
+                let _ = stopping.await;
+            })
+            .await
+            .unwrap()
+    });
+    let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
+    request
+        .headers_mut()
+        .insert("origin", format!("http://{addr}").parse().unwrap());
+    request
+        .headers_mut()
+        .insert("cookie", david_cookie().parse().unwrap());
+    request.headers_mut().insert(
+        "sec-websocket-protocol",
+        "actioncable-v1-json".parse().unwrap(),
+    );
+    let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+    assert_eq!(next(&mut socket).await["type"], "welcome");
+    let room = app
+        .db
+        .read(|conn| Room::find(conn, ALL_TALK))
+        .await
+        .unwrap();
+    for (channel, stream) in [
+        (
+            "Turbo::StreamsChannel",
+            super::broadcasts::Stream::user_rooms(DAVID),
+        ),
+        (
+            "RoomMessagesChannel",
+            super::broadcasts::Stream::room_messages(&room),
+        ),
+    ] {
+        subscribe(
+            &mut socket,
+            channel,
+            rails_compat::turbo::signed_stream_name(&app.secrets, &stream.streamables()),
+        )
+        .await;
+    }
+    for role in ["speaker", "host"] {
+        let change = app
+            .db
+            .write(move |tx| {
+                stage_participation::change_role(
+                    tx,
+                    ALL_TALK,
+                    DAVID,
+                    Some(membership),
+                    role,
+                    &HuddleConfig::default(),
+                )
+            })
+            .await
+            .unwrap();
+        assert!(change.is_ok());
+        let presenter = app.clone();
+        let stage = app
+            .db
+            .read(move |conn| {
+                super::huddle_effects::stage_model(&presenter, conn, ALL_TALK, membership)
+            })
+            .await
+            .unwrap();
+        for (partial, prefix) in [("roster", "stage_roster"), ("panel_body", "stage_panel")] {
+            let frame = next(&mut socket).await;
+            let html = frame["message"].as_str().unwrap();
+            assert_eq!(
+                html,
+                campfire_cable::turbo::action_tag(
+                    campfire_cable::turbo::Action::Replace,
+                    campfire_cable::turbo::Target::Target(&stage.dom_id(prefix)),
+                    Some(&stage.render(partial)),
+                    &[]
+                )
+            );
+            assert!(!html.contains("data-huddle-rejoin-room-id"));
+            assert!(campfire_cable::turbo::session_bound(html).is_none());
+        }
+        if role == "speaker" {
+            let frame = next(&mut socket).await;
+            assert_eq!(
+                frame["message"].as_str().unwrap(),
+                campfire_cable::turbo::action_tag(
+                    campfire_cable::turbo::Action::Append,
+                    campfire_cable::turbo::Target::Target("huddle_role_events"),
+                    Some(&stage.render("role_event")),
+                    &[]
+                )
+            );
+        }
+        assert!(
+            tokio::time::timeout(Duration::from_millis(150), socket.next())
+                .await
+                .is_err(),
+            "duplicate rejoin or wrong target delivery"
+        );
+    }
+    let failed = app
+        .db
+        .write(move |tx| -> campfire_db::Result<()> {
+            assert!(
+                stage_participation::change_role(
+                    tx,
+                    ALL_TALK,
+                    DAVID,
+                    Some(membership),
+                    "listener",
+                    &HuddleConfig::default()
+                )?
+                .is_ok()
+            );
+            Err(campfire_db::Error::Other("WS13 rollback".into()))
+        })
+        .await;
+    assert!(failed.is_err());
+    assert!(
+        tokio::time::timeout(Duration::from_millis(150), socket.next())
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        app.db
+            .read(move |conn| Ok(Membership::find(conn, membership)?.stage_role))
+            .await
+            .unwrap(),
+        Some(campfire_db::StageRole::Host)
+    );
+    socket.close(None).await.unwrap();
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    let _ = stop.send(());
+    tokio::time::timeout(Duration::from_secs(3), serving)
+        .await
+        .unwrap()
+        .unwrap();
+}

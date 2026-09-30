@@ -11,6 +11,7 @@
 mod call_lifecycle_tests;
 pub mod call_moderation;
 pub mod stage_streams;
+pub mod stage_participation;
 pub mod closeds;
 pub mod directs;
 pub mod involvements;

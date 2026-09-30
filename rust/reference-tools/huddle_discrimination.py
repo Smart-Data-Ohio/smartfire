@@ -31,6 +31,8 @@ U = ROOT / "rust/crates/db/src/models/user.rs"
 W = ROOT / "rust/crates/views/src/huddle_stage.rs"
 C = ROOT / "rust/crates/db/src/models/call_moderation.rs"
 P = ROOT / "rust/crates/db/src/models/stage_streams.rs"
+Q = ROOT / "rust/crates/db/src/models/stage_participation.rs"
+R = ROOT / "rust/crates/campfire/src/controllers/rooms/stage_participation.rs"
 
 
 def replace_once(source, before, after):
@@ -50,6 +52,13 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("role-rank-bypassed", Q, lambda s: replace_once(s,"&& !administrator\n    {","&& false && !administrator\n    {"),"campfire","stage_role_and_hand_security_keep_grants_and_imported_hands_on_denial"),
+    ("role-demotion-without-grant-left-live", Q, lambda s: replace_once(s,"Stream::end_for_membership(tx, room_id, target.id)?;",""),"campfire_db","stage_roles_and_hands_match_thirty_four_rails_controller_scenarios"),
+    ("role-personal-panel-bypassed", Q, lambda s: replace_once(s,"tx.emit_after_commit(Event::broadcast(&StagePanel {","let _ = Event::broadcast(&StagePanel {").replace("membership_id: target.id,\n    }));","membership_id: target.id,\n    });",1),"campfire","stage_role_roster_panel_and_single_rejoin_reach_real_sockets_after_commit"),
+    ("role-unnecessary-rejoin", Q, lambda s: replace_once(s,"if (before == Some(StageRole::Listener)) != (role == StageRole::Listener) {","if before.is_some() {"),"campfire","stage_role_roster_panel_and_single_rejoin_reach_real_sockets_after_commit"),
+    ("hand-repeat-roster-noisy", Q, lambda s: replace_once(s,"if member.raise_hand(tx)? {","if member.raise_hand(tx)? || true {"),"campfire_db","stage_roles_and_hands_match_thirty_four_rails_controller_scenarios"),
+    ("hand-rate-limit-bypassed", R, lambda s: replace_once(s,"if count > 10 {","if false && count > 10 {"),"campfire","stage_hand_rate_limit_matches_rails_and_is_per_membership_per_minute"),
+
     ("moderation-enqueue-failure-swallowed", C, lambda s: replace_once(s,"target.set_server_muted(tx, true, config)?","target.set_server_muted(tx, true, config).unwrap_or(false)"),"campfire_db","moderation_enqueue_failure_rolls_back_mute_revocation_stream_and_frames"),
 
     ("stream-start-seen-bypassed", P, lambda s: replace_once(s,"if !seen {","if false && !seen {"),"campfire","stage_stream_start_requires_role_host_unmuted_and_seen_grant"),

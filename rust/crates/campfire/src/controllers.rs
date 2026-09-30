@@ -138,6 +138,9 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "rooms/stage/roles#update" => arc(rooms::stage_participation::role),
+        "rooms/stage/hands#create" => arc(rooms::stage_participation::raise),
+        "rooms/stage/hands#destroy" => arc(rooms::stage_participation::lower),
         "rooms/stage/streams#create" => arc(rooms::stage_streams::create),
         "rooms/stage/streams#destroy" => arc(rooms::stage_streams::destroy),
         "rooms/call_moderation#mute" => arc(rooms::call_moderation::mute),

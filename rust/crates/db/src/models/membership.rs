@@ -449,11 +449,14 @@ impl Membership {
     }
 
     pub fn change_stage_role(&mut self, tx: &mut Tx<'_>, role: StageRole) -> Result<()> {
+        self.change_stage_role_with_config(tx,role,&super::room_delete::HuddleConfig::from_env())
+    }
+    pub fn change_stage_role_with_config(&mut self, tx: &mut Tx<'_>, role: StageRole, config:&super::room_delete::HuddleConfig) -> Result<()> {
         self.validate_call_attributes(tx.conn(), Some(role), None, self.server_muted_at)?;
         if self.stage_role == Some(role) && self.hand_raised_at.is_none() { return Ok(()); }
         if self.stage_role != Some(role) {
             if (self.stage_role == Some(StageRole::Listener)) != (role == StageRole::Listener) {
-                crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
+                crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, config)?;
             } else {
                 tx.conn().execute_cached("UPDATE huddle_grants SET stage_role=? WHERE membership_id=? AND revoked_at IS NULL", params![role, self.id])?;
             }
