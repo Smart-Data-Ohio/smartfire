@@ -65,6 +65,12 @@ try {
   }
  });
  await run(file,'the status form works at phone width',async p=>{await p.setViewportSize({width:390,height:844});await visit(p,'/users/me/profile');for(const id of ['user_presence_setting','user_custom_status_text','user_theme_system'])assert.equal(await p.locator('#'+id).isVisible(),true);});
+ await run('test/system/meeting_status_test.rb','the profile links to connect without a Google account',async p=>{
+  assert.equal(sql('SELECT COUNT(*) FROM google_identities WHERE user_id=?',[DAVID])[0][0],0);
+  await visit(p,'/users/me/profile');
+  assert.ok(await p.locator('a[href="#google-calendar-title"]').filter({hasText:/^Connect Google Calendar$/}).count()>0);
+  assert.equal(await p.locator('#user_meeting_status_enabled').count(),0);
+ });
  await run('test/system/out_of_office_test.rb','set OOO until tomorrow, badge and DM notice show for another user, then clear it',async(p,ctx)=>{
   await visit(p,'/users/me/profile');await p.selectOption('#user_ooo_preset','tomorrow');await p.fill('#user_ooo_note','Back soon');await submit(p,'/users/me/status');await until(()=>stored('ooo_until')!==null);await visit(p,`/users/${DAVID}`);assert.match(await p.locator('.user-status-badge').innerText(),/Out of office/);
   await cookie(ctx,'Jason');await visit(p,`/rooms/${DM}`);assert.match(await p.locator('.ooo-notice').innerText(),/David is out of office/);assert.match(await p.locator('.ooo-notice').innerText(),/Back soon/);

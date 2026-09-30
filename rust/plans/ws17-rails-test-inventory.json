@@ -2070,10 +2070,9 @@
     {
       "file": "test/system/meeting_status_test.rb",
       "test": "the profile links to connect without a Google account",
-      "status": "deferred-exact-scenario",
-      "owner": "WS14g",
-      "evidence": null,
-      "seam": "Google account/profile integration must mount the real #google-calendar-title connect section. WS17 already renders its status-form anchor and hides the opt-in when no identity exists, but the destination/account connection is unmerged."
+      "status": "ported-equivalent",
+      "owner": "WS17",
+      "evidence": "python3 rust/reference-tools/ws17_browser.py: exact native Chromium connect-link and absent opt-in assertions under the original configured/disconnected Google fixture inputs; no Google fetch or account-flow success is simulated"
     },
     {
       "file": "test/system/out_of_office_test.rb",
