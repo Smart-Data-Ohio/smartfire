@@ -1,3 +1,242 @@
+# Review follow-up: sanitized attachment filenames (2026-09-30)
+
+Verified source commit: `3ef4fd645ac2a6e155a5534ee55b7c242e5aa1a4`.
+Identification fix: `8c303dc014bd0e1224a6727ef3289f2922143f26`.
+Failing-first base: `76e922725258948c9da59bae78305ac26fb46b15`.
+Rails oracle: `d7c7de9264c63015be398001d7a1094e7695a6db`.
+
+## Change and Rails audit
+
+`crates/storage/src/storage.rs::identify_blob` now passes `Filename#sanitized` to Marcel,
+matching pinned `ActiveStorage::Blob::Identifiable#identify_content_type`'s `filename.to_s`.
+The source audit also covered `Blob#extract_content_type`, `Blob#filename`,
+`ActiveStorage::Filename#sanitized`, disk disposition and storage URL handling.
+`NewBlob::content_type` already sanitizes filenames for byte and file uploads; URL/disposition
+paths already sanitize too. Rails persists the original filename string in the database, and
+Rust continues to match that. Base/extension methods intentionally operate on the original name,
+as Rails' `File.basename`/`File.extname` do.
+
+The audit additionally found that `app/services/messages/forwarder.rb::copy_attachment_to`
+explicitly supplies `filename.to_s` to `create_and_upload!`, so a forwarded copy stores the sanitized
+name. `Storage::stage_copy` now matches that assignment. It continues to retain the source MIME,
+metadata and bytes, and the original upload's row retains its raw filename. These are the only two
+production changes.
+No schema, queue timing, view, asset golden, threshold, mask or unrelated source change was needed.
+
+## Failing first
+
+Added tests and pinned vectors before changing production code. On `76e92272`, ran with
+`CARGO_BUILD_JOBS=2`, dev/test debug 0, incremental 0, `CI=true`, disk-backed worktree `TMPDIR`
+and eight test threads:
+
+```sh
+mise exec rust@1.98.1 -- cargo test --locked -p campfire_storage blob_filenames_match_pinned_rails -- --test-threads=8
+mise exec rust@1.98.1 -- cargo test --locked -p campfire signed_filename -- --test-threads=8
+```
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.03s
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 684 filtered out; finished in 0.74s
+```
+
+- Storage corpus: `file.png/` with `hello` identified as `image/png`, versus Rails'
+  `application/octet-stream` (sanitized `file.png-`).
+- Signed slash HTTP regression: a SQLite trigger rejects durable AnalyzeJob inserts; old Rust
+  returns 500 rather than Rails' 302. Correct behavior commits the attachment, sets identified
+  and analyzed metadata, and queues no job.
+- Signed trailing-space HTTP regression: old Rust identifies `application/octet-stream`, whereas
+  Rails identifies `image/png` (sanitized `file.png`), leaves analyzed unset, and enqueues one job.
+
+After the identification change, the same commands passed:
+
+```text
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.64s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 684 filtered out; finished in 0.63s
+```
+
+The forward-copy regression was added before its production change, against `8c303dc0` (whose
+copy path was unchanged from `76e92272`). It fails because `file.png/` is stored unchanged instead
+of Rails' `file.png-`:
+
+```sh
+mise exec rust@1.98.1 -- cargo test --locked -p campfire_storage forwarded_filenames_match_pinned_rails -- --test-threads=8
+```
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.03s
+```
+
+Both storage corpus regressions pass after the copy fix:
+
+```sh
+mise exec rust@1.98.1 -- cargo test --locked -p campfire_storage filenames_match_pinned_rails -- --test-threads=8
+```
+
+```text
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.42s
+```
+
+The final HTTP regressions also create and persist a copy, which is included in Rails readback:
+
+```text
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 684 filtered out; finished in 0.76s
+```
+
+The shared direct-upload test helper now restores the declared content type as well as empty
+metadata after staging, so test setup accurately models a blob created before identification.
+HTTP tests use real admin authentication, CSRF and SQLite. Real durable jobs are held by the
+existing AFTER INSERT trigger for inspection; no analyzer or queue mock is used in Rust.
+
+## Pinned differential corpus and readback
+
+`reference-tools/attachments/generate_filenames.rb` generated
+`vectors/attachment_filenames.json` from the pinned Rails app: **141 filenames × four byte
+inputs = 564 cases**. Inputs are `hello`, empty bytes, a PNG and a valid PDF. Names cover trailing
+slashes, backslashes, repeated/path separators, spaces, every ASCII control 1–31 at the start,
+middle and end, leading/trailing NUL stripping, DEL, non-ASCII whitespace, bidi override,
+replacement punctuation, accented/composed/decomposed Unicode, Japanese, emoji and Unicode
+slash/backslash lookalikes. Interior NUL is excluded because Ruby's File.extname rejects it.
+The corpus compares sanitized and raw persisted names, identified MIME, identification metadata,
+ordinary upload metadata, and deferred analyzer selection. Each case tests signed-blob
+identification, ordinary byte upload, and file staging. It also checks **560 forward copies**: stored sanitized names, retained MIME/metadata and identical
+bytes. The four raw-NUL names are excluded from copying because Rails' Blob#open rejects them
+before a copy can be made. Both original rows and stored copies are checked through row lookup.
+The full corpus regenerated byte-for-byte in the independent final fresh clone.
+
+Two further Rails vectors are actual signed logo assignments with authenticated admin sessions
+and forgery protection enabled. `file.png/` returns 302 with NullAnalyzer, zero analysis jobs,
+and identified/analyzed metadata; `file.png ` returns 302 with Vips ImageAnalyzer, one job,
+and identified metadata only.
+
+The HTTP tests exported their actual committed SQLite rows and uploaded files. Pinned Rails'
+`reference-tools/attachments/verify_filenames.rb` read both back, validating the account, blob and
+attachment, bytes, both filename forms, MIME, analyzer, metadata, signed lookup, foreign keys,
+and durable analysis job counts:
+
+```text
+Rails filename_slash readback: valid account/blob/attachment and copied blob; raw and sanitized names, bytes, MIME, analyzer, metadata and 0 analysis jobs match
+Rails filename_space readback: valid account/blob/attachment and copied blob; raw and sanitized names, bytes, MIME, analyzer, metadata and 1 analysis jobs match
+```
+
+Generation and readback commands (from `rust/`, with `PARITY_NAMESPACE=attach`,
+`PARITY_OWNER=attach`, `PARITY_IMAGE=attach-reference:d7c7de92`):
+
+```sh
+parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze reference-tools/attachments/generate_filenames.rb
+parity/bin/reference runner --storage ../.scratch/filename-final-readback/filename_slash --time 2026-03-02T16:00:00Z --freeze reference-tools/attachments/verify_filenames.rb filename_slash
+parity/bin/reference runner --storage ../.scratch/filename-final-readback/filename_space --time 2026-03-02T16:00:00Z --freeze reference-tools/attachments/verify_filenames.rb filename_space
+```
+
+## Final fresh-clone verification
+
+Independent `git clone --no-local` under `.scratch/fresh-filenames-final`, checked out at
+`3ef4fd645ac2a6e155a5534ee55b7c242e5aa1a4`, with an empty target directory. Both pinned seeds
+were built in this clone using `parity/bin/seed build default first_run`. Rails validated all
+29 default and four first-run checks, with zero failures. Corpus regeneration is byte-identical.
+
+Locked metadata passed in the worktree and final clone/CI image. Strict TOML parsing checked
+all 13 workspace manifests and the workspace dependency table:
+
+```text
+duplicate-key check: 13 workspace manifests parsed; 75 unique workspace dependency keys; 0 duplicates
+```
+
+The full workspace, including app, db, views, assets, storage and doctests, passed:
+**1775 passed, 0 failed, 12 existing ignores**. There are no inherited failures and no added
+ignores. All attachment regressions ran with the real parity seed. No asset golden helper change
+was required. Clippy with `-D warnings` and the normal binary build passed.
+
+All checks used `CARGO_BUILD_JOBS=2`; all tests used `--test-threads=8`. The host compiler throttle
+and its shared slot locks remained in use, through the same container wrapper documented in the
+previous follow-up below. The Docker command is identical except the source bind is now
+`.scratch/fresh-filenames-final:/src`. No global cargo configuration was changed. The canonical
+CI toolchain image (`attach-toolchain-ci:1.98.1`,
+`sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2`)
+runs the pinned media tools, so the storage byte parity gate executes in full.
+
+Final clone check arguments:
+
+```sh
+cargo metadata --locked --format-version 1
+cargo test --locked --workspace --exclude html5ever --no-fail-fast -- --test-threads=8
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+cargo build --locked --workspace --bins
+```
+
+Raw full-suite result lines in execution order:
+
+```text
+test result: ok. 683 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 98.13s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.79s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
+test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 45.22s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.72s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.54s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.25s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.64s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 34.07s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.53s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.36s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.72s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.49s
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.66s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Raw clippy and binary-build completion lines, respectively:
+
+```text
+    Finished `dev` profile [unoptimized] target(s) in 1m 28s
+    Finished `dev` profile [unoptimized] target(s) in 44.89s
+```
+
+Both fresh-clone targets from this follow-up were deleted after their checks (2.8 GB each),
+and no `.scratch/*/rust/target*` directory remains. The primary worktree `rust/target` is retained.
+No test process or `attach-filename` container remains running. Scratch logs and readback rows
+are outputs only; no test depends on them.
+
+Changed files: `crates/storage/src/storage.rs` (identification and copy assignment),
+`crates/storage/tests/vectors.rs` (two corpus regressions),
+`crates/campfire/src/controllers/presenters/attachments/tests.rs` (two HTTP regressions and
+accurate direct-upload setup/readback), `reference-tools/attachments/generate_filenames.rb`,
+`reference-tools/attachments/verify_filenames.rb`, `vectors/attachment_filenames.json`, and
+this report. No other production path or workstream changed.
+
+Earlier follow-ups below retain their historical commands and results.
+
+---
+
 # Review follow-up: Rails NullAnalyzer (2026-09-30)
 
 Verified source/merge commit: `1760c69c90223c2fd646caafec532b0d19e1eb3e`.
