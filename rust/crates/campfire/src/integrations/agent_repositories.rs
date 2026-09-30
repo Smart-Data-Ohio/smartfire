@@ -176,10 +176,11 @@ mod tests {
             access,
             RepositoryAccess::from([(DAVID, "mixed".into(), "repo".into())])
         );
-        let calls = reader.calls.lock().unwrap();
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0].user_id, DAVID);
-        drop(calls);
+        {
+            let calls = reader.calls.lock().unwrap();
+            assert_eq!(calls.len(), 1);
+            assert_eq!(calls[0].user_id, DAVID);
+        }
         db.write(move |tx| {
             tx.conn()
                 .execute("UPDATE agents SET owner_id=NULL WHERE id=?", [agent])?;
