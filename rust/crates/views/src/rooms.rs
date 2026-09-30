@@ -1,6 +1,8 @@
 //! Views for `reference/app/views/rooms`, plus `RoomsHelper`, `Rooms::InvolvementsHelper` and
 //! the `MessagesHelper` tags the room screen uses.
 
+pub mod panels;
+
 mod header;
 pub use header::{HeaderIdentity, header_identity};
 
@@ -514,6 +516,10 @@ fn default_involvement()->String { "mentions".into() }
 /// These fragments are page inputs, never a shared fragment cache or broadcast payload.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct ShellComponents {
+    #[serde(default)]
+    pub pins_count:i64,
+    #[serde(default)]
+    pub thread_panel_name:Option<String>,
     pub pins_panel:String,
     pub thread_panel:String,
     pub huddle_header:String,

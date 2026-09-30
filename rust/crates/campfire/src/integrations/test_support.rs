@@ -349,12 +349,6 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
     stream.shutdown().await
 }
 
-/// A server that answers every request with `head` and then a byte of body every 50 ms, until
-/// the client hangs up.
-pub async fn trickling_server(head: &'static str) -> SocketAddr {
-    trickling_server_with_ready(head).await.0
-}
-
 /// Also acknowledges the first response byte, so a paused-time test can wait for real I/O
 /// before advancing its clock.
 pub async fn trickling_server_with_ready(

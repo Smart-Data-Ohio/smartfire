@@ -455,3 +455,20 @@ async fn show_renders_an_unfurled_link_preview() {
     assert!(!html.contains("https://example.com/image.png"));
     assert!(html.contains("href=\"https://example.com/page\""));
 }
+
+#[tokio::test]
+async fn show_renders_collapsed_work_thread_guidance_in_the_new_thread_panel() {
+    let app = setup().await;
+    let reply = app.david().get(&format!("/rooms/{ALL_TALK}")).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let content = campfire_richtext::Content::wrap(&reply.text()).unwrap();
+    let dom = &content.dom;
+    let create = dom.descendants(content.root).into_iter().find(|&id| dom.attr(id, "data-thread-panel-target") == Some("create")).expect("new-thread panel");
+    let guide = dom.descendants(create).into_iter().find(|&id| dom.name(id) == "details" && dom.attr(id, "class").is_some_and(|s| s.split_whitespace().any(|s| s == "thread-panel__guide"))).expect("collapsed work-thread guidance");
+    assert!(dom.attr(guide, "open").is_none());
+    let summary = dom.descendants(guide).into_iter().find(|&id| dom.name(id) == "summary").unwrap();
+    assert_eq!(dom.text_content(summary), "How to start a work thread");
+    let items = dom.descendants(guide).into_iter().filter(|&id| dom.name(id) == "li").map(|id| dom.text_content(id)).collect::<Vec<_>>();
+    assert!(items.iter().any(|s| s.contains("Track as work")));
+    assert!(items.iter().all(|s| !s.contains("Open a channel")));
+}

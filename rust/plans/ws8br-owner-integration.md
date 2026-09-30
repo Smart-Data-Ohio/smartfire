@@ -1,6 +1,6 @@
 # Room owner integration contract — native adapters mounted, byte acceptance partial
 
-Main is merged through `ea630861` (#170), including WS15e (#166), the shared
+Main is merged through `2a7c8b9b` (#169/#170), including WS15e (#166), the shared
 asset-golden helper (#168), board drift (#164/#165), and the updated WS17 code.
 Earlier merge commits brought in WS11 `18c9219c`, WS8bm `b14759da` and WS8bm2
 `d24317e8`. WS9 authentication and request concerns remain the main implementations.
@@ -76,12 +76,21 @@ components; it does not inject Rails message/composer fragments. Request tests c
 selected roots, around-anchor roots, schedule controls, real viewer token ownership,
 and different unread boundaries on warm shared fragments.
 
-`ShellComponents` also retains `thread_panel`, `pins_panel`, `poll_builder`,
-`huddle_header`, and `ooo_notices` slots. A full owner panel entry point is not present
-for all of these. In particular, WS8bm2 currently supplies pin count/list factories,
-not a complete pins-panel factory; WS8bm supplies no root thread-panel factory.
-WS13 huddle and WS14 configured Picker facts also remain integration work. Do not
-reimplement those partials or provider policies in this shell.
+The shell now mounts the unchanged WS13 `66e4c66d` thread/poll templates through
+`rooms::panels::{ThreadPanel,PollBuilder}` and WS8bm2 `1fdf42a6`'s actual
+`pins::PanelPartial`. The thread factory receives the original room view plus
+`Presenter::room_display_name(&room,None)` (neutral, including the viewer in an
+unnamed DM). The shell contributes Rails' two-space content_for prefix. PollBuilder
+receives the same room ID and current request ViewContext; token generation stays
+inside that rendering scope. Pins receives room ID, the full header STI param key
+and `MessagePin::count_for_room` from the reader. The count/list/policy remain M2's.
+The templates are copied without edits from the owning branches. Fourteen complete
+thread/poll/pin captures match the pinned Rails corpus, separately from the real
+HTTP viewer-token ownership test and original collapsed work-guide declaration.
+
+Configured WS13 huddle header/sidebar adapters and WS14 Picker availability remain
+integration work. No huddle policy, grant issuance or message/composer internals
+are reproduced locally.
 
 ## Pin refresh
 

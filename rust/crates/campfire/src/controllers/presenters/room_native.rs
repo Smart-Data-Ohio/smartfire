@@ -17,6 +17,15 @@ pub fn render(ctx:&ViewContext<'_>,show:&ShowView,composer:&Facts,frame:bool)->a
     let (composer,template)=components(ctx,&show.user,composer)?;
     show.shell.composer=Some(composer);
     show.shell.message_template=Some(template);
+    show.shell.thread_panel=format!("  {}",campfire_views::rooms::panels::ThreadPanel {
+        ctx,room:&show.room,neutral_name:show.shell.thread_panel_name.as_deref(),
+    }.render()?);
+    show.shell.poll_builder=campfire_views::rooms::panels::PollBuilder{ctx,room:&show.room}.render()?;
+    show.shell.pins_panel=campfire_views::pins::PanelPartial {
+        ctx,room_id:show.room.id,
+        room_param_key:show.room.header.as_ref().map(|h|h.param_key.as_str()).unwrap_or(show.room.kind.param_key()),
+        count:show.shell.pins_count,
+    }.render()?;
     let page=Show{ctx,show:&show};
     if frame {campfire_views::layouts::frame(ctx,page.as_head(),page.as_content())} else {page.render()}
 }
