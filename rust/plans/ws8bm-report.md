@@ -1,73 +1,70 @@
-# WS8bm messaging HTTP — partial six-slice continuation
+# WS8bm messaging HTTP — partial four-slice continuation
 
 Date: 2026-09-30. Worker: GPT-6.1 Sol. Branch: `rust/ws8bm-messages-http`.
 Worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm`.
-Rails pin: `d7c7de92`. Main remains `21a7332f2d3c324f0862cdf448baf17a84395aa0`, previously merged with merge commit `1caa4c63`.
-This continuation started at report commit `d6f8c524`; its preceding implementation was `8a66d07b`.
-Latest pushed implementation: `217886fb9bbdf6847cc626e16af3a8196aa57e70`. The report commit follows it.
+Rails reference pin: `d7c7de92`. Started from accepted report commit `5795df58`.
+Main advanced during verification to `4278cb1e7a4529d5e2ecee51fccf69be6ed45257` (WS9 #161).
+Merged with merge commit `4fd87662a7c4adb3681b4bdfdd1597c241b85c6d`; no rebase.
+Subsequent test-scope fix: `62b83cc9`; final bounded fresh-verification commit: `62c7d045`. The report-only commit follows that verified input SHA.
 
-**PARTIAL.** Six coherent slices were committed and pushed this continuation:
+**PARTIAL.** Four implementation slices and a validation slice were pushed separately:
 
 | Commit | Slice |
 | --- | --- |
-| `2e851955` | Verification from committed inputs; failure artifacts create their own directories; fresh-clone check |
-| `2db55561` | Exact unread list-slot bytes and Rails around-page selection through an additive room-list adapter |
-| `7e909c18` | Whole-message state and actual append/replace/remove publisher goldens |
-| `4c46c88d` | Nested thread-message index/show/actions, scope and formats |
-| `1884bd99` | Nested thread-message create/update/destroy, Drive sets, retry/lock policies and delivered broadcasts; bodyless Drive presentation |
-| `217886fb` | Thread state listings and standalone index/show reads, work history/owner-picker JSON, ordinary thread HTML |
+| `68f6615b` | Ordinary thread creation, metadata/lifecycle updates and deletion; permissions and atomic row differentials |
+| `fbf88b56` | Scoped thread content, conversation pane and additive Markdown composer/optimistic template |
+| `5237eb59` | Forward endpoints through `ForwarderCopier`, private source resolver, copied-file rollback and initial thread upload processing |
+| `3dc3d6e3` | Media, sounds and legacy forward states: 19 whole-message cold/warm goldens and 57 delivered publisher frames |
+| `f5fe4741` | Eight compiled regression discriminators, stronger forward CSRF test and explicit deferred system inventory |
+| `4fd87662` | Merge WS9 main; preserve both clock helpers and self-contained message failure artifacts |
+| `62b83cc9` | Fix the main quote-job test's global-queue assertion; preserve job completion/failure checks |
+| `62c7d045` | Bound fresh suite runtime concurrency to four threads; no assertion/threshold/ignore changes |
 
-The final fresh-clone app run has **355 passed, zero failures, three explicit ignores**. Views core has **28 passed, zero failures**. Full-workspace/all-targets clippy passes with warnings denied. Fourteen new named Rust integration tests ran, in addition to the accepted earlier suite. The 18 compiled mutation checks each fail the intended runtime test, then restore the source. Ten owned Rails controller reference files pass: **156 runs, 949 assertions, zero failures/errors/skips**. Those Rails counts are a reference baseline, not a claim that every case was ported.
-
-WS8b-m2 owns polls, pins, saved/reminder items, scheduled messages, search, slash/autocomplete, message links and room files. This continuation implements none of their controllers. Existing feature facts remain available to shared message composition.
+Final fresh clone: **460 app passes, zero failures, three explicit ignores; 445 DB passes, zero failures, four reference hooks ignored; 28 views core passes, zero failures; full-workspace/all-targets clippy passes with warnings denied.** Thirteen new named Rust integration tests cover many vector requests. These are not one-to-one counts of fully ported Rails cases. All ten owned Rails controller reference files passed (156 runs, 949 assertions, zero failures/errors/skips); those are reference baseline counts. No browser/system execution or pixel parity is claimed. WS8b-m2 retains polls, pins, saved/reminder items, scheduled messages, search, slash/autocomplete, message links and room files.
 
 ## Changes by file
 
-Paths below are relative to `rust/`.
+Paths in this section are relative to `rust/`. Accepted earlier slices remain intact.
 
-- `crates/campfire/src/controllers/presenters/test_support.rs`: `rails_mismatch` creates a unique artifact directory under this worktree's target before writing a mismatch. It preserves the assertion failure even if writing artifacts fails. It no longer unwraps an assumed TMPDIR/artifact parent. Root/paging/collection and socket comparisons use it.
-- `reference-tools/messaging/fresh-check.py`: clones the committed branch using `--no-local` into an owned, newly created directory; asserts the clone has neither `.scratch` nor `rust/target`; creates its own scratch/target and freshly generates default/first_run seeds before locked metadata, all seeded app tests, views core and full clippy. Tests read committed vectors. Neither this script nor the tests require a pre-existing untracked fixture/artifact directory.
-- `controllers/presenters/room_list.rs`, `presenters.rs`, `crates/views/src/messages.rs`, `templates/messages/room_index.html`, `templates/messages/_unread_divider.html`: additive `Presenter::room_message_list`, `RoomIndex` and `UnreadDivider`. Exact Rails show-slot indentation and marker bytes, placement by record ID, and per-viewer markers outside shared message fragments. The adapter requires a verified render origin. It does not calculate room membership cursors/counts or modify WS8b-r's shell.
-- `controllers/messages/room_list_tests.rs`, `reference-tools/messaging/room-list.rb`, `vectors/messaging/room-list.json`: nine real RoomsController GETs, selected root IDs/unread facts and the real pinned show list slot. Tests check WS8a around windows, invalid-anchor fallback/root scope, marker placement and exact list bytes. Full merged room-shell HTTP integration remains below.
-- `controllers/messages/state_tests.rs`, `channels/tests/hub_test/message_parity.rs`, `reference-tools/messaging/message-states.rb`, `vectors/messaging/message-states.json`: eleven real message states, cache-miss/cache-hit bytes and 33 actual Rails append/replace/remove frames delivered by the Rust publisher to real sockets. States: legacy body, action, all-emoji, streaming, bot icon, system note, forwarded body/note, reply, deleted reply target, agent steps, and bodyless Drive-only message. Four real AgentStep states exercise position ordering, null/zero/subsecond/second durations and escaped multiline input/output. This verifies step presentation and message publisher output, not WS11's agent streaming protocol.
-- `controllers/presenters.rs`: Drive-only messages with no ActionText body render the actual empty presentation after the attachment/sound paths, matching the Rails bodyless path. This corrects the previous empty trix-wrapper output. General unsupported cards/inline blobs remain partial.
-- `controllers/channel_thread_messages.rs`, `controllers.rs`: all six nested message actions routed. Alive parent-room membership, nested room/thread/message/cursor scope, normal bot/agent/CSRF guards, latest/before/after reads, Rails's ignored around parameter on this endpoint, empty formats, canonical show redirect, JSON no-store behavior, actions JSON, create/update/destroy formats. Edits enforce author/system-note/lock rules; deletes allow the author or administrator, including locked threads. Duplicate client IDs are resolved before new attributes/lock checks, matching Rails and suppressing retry broadcasts.
-- `controllers/messages.rs`: additive shared human-parameter/update/create helpers. Root entry points retain their behavior. Thread creation calls WS8a `post_message` inside the existing writer transaction, so membership join, reopening, the post and durable jobs are atomic. Update rechecks the lock inside the writer. Root webhook behavior stays on its root path. Broader odd shapes and uploaded attachments need further differentials.
-- `controllers/messages/payload.rs`: existing method signatures retained, with additive visibility for shared message/actions/thread payloads. `thread_message` omits the root's thread-summary field. `thread_details` supplies the show-only work history and eligible, sorted human/agent owner options, with Rails compact/null rules. It reads existing WS12/WS11 rows and performs no work/agent mutation.
-- `controllers/messages/rendered.rs`: additive `broadcast_thread_edit`, keeping the existing root edit entry point. Nested edits target the thread's messages stream; existing tombstones and thread-indicator refreshes render through WS7. The delivered-frame test now checks the actual channel identifier/stream as well as payload bytes, preventing a correct payload on the wrong conversation stream from passing.
-- `crates/views/src/messages.rs`, `templates/channel_thread_messages/create.turbo_stream.html`: additive thread create stream, exact append target/newline and safe already-rendered message HTML.
-- `controllers/channel_thread_messages/tests.rs`, `write_tests.rs`, `channels/tests/hub_test/message_parity.rs`, corresponding read/write reference tools and vectors: 18 real nested reads and 15 real writes; raw responses/headers, rows, Drive sets, retry behavior, lock/immutable-note restrictions and enqueue-rejection rollback. The write oracle captures 50 real publisher frames; the socket comparison checks all 44 frames on the subscribed user's four streams, plus silence after each request. It does not claim one user receives the other recipients' six frames.
-- `controllers/channel_threads.rs`, `channel_threads/tests.rs`, `page_tests.rs`: index/show added to the existing join/read/leave slice. State aliases/default, ordering, stale/closed/locked/work/done lists, last-page replies, explicit deleted starter null, scoped browsing without join. Stale listing reads do not write closed_at. Actual work-history/eligible-owner JSON is verified, including a populated assignment event/note. Ordinary index/show HTML is exact inside the chosen application/frame layout; titles are checked against actual Rails response tags.
-- `crates/views/src/channel_threads.rs`, `templates/channel_threads/index.html`, `show.html`, `crates/views/src/lib.rs`: additive thread list and ordinary standalone thread view models/templates. Populated work/board/PR HTML and the thread conversation/composer remain deferred; the current show template is only the ordinary-thread composition.
-- `controllers/presenters/page.rs`: additive `titled_content` supplies Rails's page title to the application layout; the existing content helper delegates with no title. Existing callers and ViewContext fields remain unchanged.
-- `reference-tools/messaging/thread-pages.rb`, `vectors/messaging/thread-pages.json`: 23 actual Rails GETs for state lists, standalone JSON/HTML/frame formats, work details, locked/empty threads and deleted starter. HTML goldens contain the real owned template output; they do not normalize session tokens out of the authenticated layout.
-- `reference-tools/messaging/reference-check.py`, `check-goldens.py`, `continuation-discriminate.py`, `check-controller-files.py`: 41 pinned source files, fresh replay of 12 oracles/13 golden files, 18 compiled regressions, and per-file Rails controller counts. No masks or allowlists added or widened.
-- `plans/ws8bm-integration.md`: stable list entry point and exact lead merge hook documented. This report is mirrored in `plans/ws8bm-report.md`.
+- `crates/campfire/src/controllers/channel_threads/writes.rs`, `controllers.rs`: route ordinary `new/create/update/destroy`. Alive parent-room membership, scoped root starter, normal bot/CSRF guards, direct-room refusal. Ordinary `new` returns Rails's 404; board new/create and work/board mutations remain explicit 501 pending WS12. Creation accepts initial message parameters, resolves retry client IDs before new attributes, joins/posts through WS8a inside one writer transaction, and preserves durable enqueue rollback. Metadata/lifecycle updates enforce creator versus moderator versus joined-member rules, validate before writes, and recheck room membership in the writer. Deletion uses `manageable_by` and emits the parent indicator. JSON/HTML statuses, cache/type headers, redirects, attempted HTML on validation errors, and rows match the ordinary lifecycle oracle. JSON compares whole response bytes; HTML checks the owned template as a contiguous response substring. Whole authenticated layout bytes remain deferred.
+- `crates/db/src/models/channel_thread.rs`: small additive `update_metadata` method with Rails validation/no-op timestamp behavior. Additive `for_rooms` and `status_in_room` support batch destination reads without stale-thread write effects. Work/board owner/status side effects are not implemented here.
+- `controllers/channel_threads.rs`: scoped `content` selects `last_page` or `page_around` using a verified same-thread anchor, preserves no implicit join, no-store and `X-Thread-Content-At-Latest`. Rails content JSON missing-template 500 is covered. Other content formats remain deferred. Existing standalone rendering was extracted to accept attempted metadata for 422 HTML without changing index/show callers.
+- `controllers/channel_threads/write_tests.rs`: five named tests covering authorization first, the 27 actual lifecycle requests and row snapshots, creator/moderator separation, queue rejection rollback, and initial uploaded PNG analysis/downloadability. `content_tests.rs`: three named tests covering scope/bot denial/no join, actual selected windows/header/form-token behavior, and complete fixed-token conversation/room-composer bytes.
+- `crates/views/src/channel_threads.rs`, `templates/channel_threads/_conversation.html`: additive `Conversation` and `PendingTemplate`, the single log live region, thread steps, message area/list controls, thread-only signed stream, jump controls and composer. `templates/messages/_pending.html` supplies the pinned Markdown optimistic message template. The old foundation Lexxy entry points remain available.
+- `crates/views/src/messages/composer.rs`, `messages.rs`, `templates/messages/_composer.html`, `lib.rs`: additive stable Markdown `Composer { ctx, facts, scheduled_control }`, namespaced field IDs and thread/root form routes. `helpers/forms.rs` adds optional namespace handling for field IDs without changing parameter names. Full component bytes use the same fixed CSRF provider as the Rails render oracle; separate HTTP tests verify real tokens rather than masking them.
+- `controllers/presenters.rs`: additive read-only `composer_facts`, `composer_drive_flow`, and ordered `thread_steps`. Built-in command names come from the existing domain registry, room command names/steps from current rows; no M2 command execution or WS11 agent mutation is added. Enhanced Drive Picker availability is an explicit Google-owner input.
+- **Pane integration limitation:** the runtime content controller passes an empty schedule child. The byte comparison supplies the real Rails child as an explicit feature input. After merging M2, the lead must wire its `scheduled_messages::ComposerButton` into the same slot. Complete HTTP pane bytes are consequently still partial; this report does not confuse the component comparison with that integration.
+- `controllers/message_forwards.rs`, `controllers.rs`, `message_forwards_tests.rs`: create/destinations/private-source endpoints. Source nested scope/reachability/bot/CSRF checks, writer recheck, domain forwarder with `ForwarderCopier`, batch room/thread/direct-member picker reads, board/locked refusal, no-store JSON and canonical source privacy. Copies are processed/reloaded before message broadcasts. Four named tests compare 18 actual refusal/picker/private-source responses, and check positive snapshots/Drive IDs/reopened membership plus separate private blob IDs/keys/bytes/checksums and rejection rollback of rows/copied files. Successful UUID-bearing forward bodies and delivered forward frame bytes still need differentials. Processing failures after the transaction remain a known atomicity gap below.
+- `controllers/messages.rs`: additive visibility for the shared Rails string-column caster; root behavior unchanged. Initial thread uploads now call shared attachment processing before returning. No storage schema/service changes.
+- `controllers/messages/state_tests.rs`, `channels/tests/hub_test/message_parity.rs`, `reference-tools/messaging/message-states.rb`, `vectors/messaging/message-states.json`: extend the accepted matrix to 19 actual states, complete cold/warm message bytes and all 57 append/replace/remove frames through real WS7 publisher sockets/guard. Added square/wide images, video, file, unrepresentable image, text/image sounds and legacy-forward flag false. Existing legacy/action/emoji/streaming/bot/system/forward/reply/deleted-reply/agent-step/bodyless Drive states remain covered. The lifecycle socket test checks frames and silence after all 27 actions; Rails produces no append for the initial thread post and a parent indicator on deletion.
+- `reference-tools/messaging/thread-lifecycle.rb`, `thread-content.rb`, `forwards.rb`, associated `vectors/messaging/*.json`: pinned real Rails requests and model rows, full owned template bytes, actual publisher capture. Positive-forward properties do not use invented UUID goldens.
+- `reference-tools/messaging/check-goldens.py`: copy storage generated by the seed for media replay instead of assuming prior scratch files. `fresh-check.py` now also runs DB tests and sets `RUST_TEST_THREADS=4` to bound runtime concurrency as well as build jobs. `reference-check.py` tracks the 54 source files actually read. New `lifecycle-discriminate.py` compiles eight regressions and restores source in `finally`; compiler/setup failures do not count as detection. `deferred-system-inventory.py` reports literal pinned declarations and zero execution, not pass counts.
+- `controllers/presenters/test_support.rs`: merge resolution preserves main's `boot_with_clock`/`boot_with_clock_and_env`, additive `boot_with_test_clock` delegates to them, conditional default Host handling and self-created `rails_mismatch` directories remain. No test depends on a pre-existing `.scratch` or `rust/target` directory.
+- `crates/campfire/src/jobs/tests.rs`: the fresh merged suite and a separately cloned main both exposed quote-refresh's assertion that the entire queue was empty while a periodic retention job was running. The test now intentionally leaves an unrelated future retention job queued, still waits for the quote job, fails if that job fails, and asserts its completion specifically. No runner/queue/production behavior changed.
+- `plans/ws8bm-integration.md`: exact shell/list/composer seam. This report has an identical external copy at `wave4/ws8bm-report.md`.
 
-## Stable message-list and presenter entry points
+## Stable shell inputs
 
-`Presenter::new`, `messages`, `message`, `message_item`, all `MessageItem` variants, and
-`campfire_views::messages::Index { ctx, messages: &[MessageItem] }` remain unchanged. `Index` still calls `cached_message_item`. Set `cache_base_url` to the verified request origin and render under the app fragment-cache context. Individual/broadcast renders keep using additive `uncached_message`/`uncached_message_html`; they do not put viewer state into collection fragments.
+No existing `Presenter::messages`, `MessageItem` variant, or `campfire_views::messages::Index { ctx, messages }` signature changed. Individual/broadcast renders retain `uncached_message`/`uncached_message_html`. WS8b-r owns room shell selection, membership cursors/read effects and the unread facts; this branch does not edit the shell.
 
-For WS8b-r's message-owned slot inside `rooms/show`, the additive adapter is:
+The merged shell must supply the following:
 
-```rust
-presenter.room_message_list(&messages, divider.message_id, divider.count)?
-```
+1. For its message-list slot: a presenter using the verified request origin as `cache_base_url`, the app fragment-cache context, scoped root records from its room/anchor selector, unread divider `message_id: Option<i64>` and `count: i64`. Call `presenter.room_message_list(&records, divider.message_id, divider.count)?` and place the string in `ShellComponents::message_list`. The divider stays outside shared message fragments; no/off-page divider renders the ordinary list. Full merged HTTP unread/around/read-effect coverage remains WS8bm/WS8b-r integration.
+2. For its composer slot: normal request `ViewContext` with verified origin, viewer, asset resolver, signer and CSRF secrets lent by layout rendering; `Facts { room_id, room_kind, room_name, thread, slash_commands, drive }`. `room_name` is viewer-specific for direct rooms. Use `thread: None` for root or `Some(Thread { id, name })` for a pane. `Presenter::composer_facts` supplies built-in names followed by ordered room agent-command names.
+3. Drive mode: `Share` only when the Google owner resolves enhanced Picker availability, otherwise `Metadata` for the stored drive.file grant or `None`; `composer_drive_flow(viewer, share_picker_available)` reads the grant. Supply M2's rendered `scheduled_messages::ComposerButton { ctx, room_id, thread_id }` as trusted `helpers::Html` to `scheduled_control`. M2 owns the feature; no copied schedule implementation exists here.
+4. Optimistic template: `channel_threads::PendingTemplate { ctx, user: presenter.user_view(viewer.id)? }`. For `Conversation`, also supply thread ID, parent room `updated_at`, scoped optional anchor ID, selected message items, viewer `UserView`, ordered thread step facts and the same composer/child inputs. It signs only the thread's messages stream and does not join the viewer.
 
-Pass that string as WS8b-r's `ShellComponents.message_list`. WS8b-r owns `find_messages` and `unread_divider`: room/anchor selection, membership cursors, unread counts, scroll/jump facts and read effects. The exact marker/list bytes and WS8a's selection window are tested here. The lead must connect this hook when merging both branches; **full HTTP shell unread/around behavior is not claimed by the adapter test**. The adapter has a narrow dead-code annotation stating that the separately owned shell will call it after merge. It adds no global warning suppression.
+These inputs and entry points are documented in `plans/ws8bm-integration.md` for the lead's merge. No full room-shell or pane integration claim is made before that merge.
 
-Root `messages#index` and nested thread-message index recognize before/after and ignore around, as pinned Rails does. Around belongs to the room shell and thread content endpoint. Existing APIs remain stable for m2. Page-wide message preloading and constant-query thread listings remain outstanding; the current presenters still make per-record aggregate/payload queries.
+## Verification and raw summaries
 
-## Verification and raw evidence
+Every command cited below ran in this continuation. Rust 1.98.1 via mise, locked dependencies, four jobs, own test/dev targets. Original cable/mail ports 52000–52049; fresh clone 52050–52099. Docker ws8bm prefixes, two CPUs, pinned reference image. No schema, migration, dependencies, Cargo.lock, Rails source, parity masks or allowlists changed. The final fresh run follows the WS9 merge; the earlier Rails oracle/controller replays read the same unchanged reference pin.
 
-Every command below was rerun in this continuation. Rust 1.98.1, locked dependencies, four jobs, worker-owned target directories, test/dev profiles. Docker names are ws8bm-prefixed, cpus capped at two, and the reference uses test secrets. Main is unchanged, so no additional merge was needed; the existing merge commit is retained. No schema, migration, dependency or Cargo.lock change.
-
-### Locked metadata and duplicate workspace dependency keys
+### Merge metadata and duplicate keys
 
 ```sh
-mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 >/dev/null
-python3 - <<'WS8BM_WORKSPACE_KEYS_END' > .scratch/workspace-keys-thread-pages-final.log
+CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 >/dev/null
+python3 - <<'WS8BM_WORKSPACE_KEYS_END' >.scratch/workspace-keys-final.log
 from pathlib import Path
 import subprocess
 import tomllib
@@ -78,49 +75,108 @@ print(f"WS8bm workspace dependency check: {len(root['workspace']['dependencies']
 WS8BM_WORKSPACE_KEYS_END
 ```
 
-Metadata returned 0, with no stdout. Raw key summary:
+Metadata exited 0 without stdout. TOML parsing rejects duplicate keys, including workspace dependencies.
 
 ```text
 WS8bm workspace dependency check: 75 unique keys; 15 Rust manifests parsed; 0 duplicate TOML keys
 ```
 
-TOML parsing rejects duplicate keys, including duplicate workspace dependencies. All 15 Rust manifests were parsed.
+### Fresh main comparison and quote-job test correction
 
-### Committed branch, new clone, new target, generated seeds
+The first post-merge fresh app run failed with 459 passes, one failure and three ignores. The sole failure was `jobs::tests::ws8_quote_refresh_jobs_execute_in_the_real_app_runner`, which had completed quote refresh but asserted that a concurrently running retention job was absent. A fresh detached `origin/main` checkout at `4278cb1e` with new scratch, target and generated default/first_run seeds reproduced that same failure. This was not called inherited before that comparison.
+
+The comparison executed:
 
 ```sh
-python3 rust/reference-tools/messaging/fresh-check.py > .scratch/fresh-thread-pages-final.log 2>&1
+python3 - <<'WS8BM_MAIN_COMPARE_END' >.scratch/main-compare-final.log 2>&1
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+root=Path.cwd()
+clone=Path(tempfile.mkdtemp(prefix='ws8bm-main-check-',dir=root/'.scratch'))
+subprocess.run(['git','clone','--quiet','--no-local','--single-branch','--branch','rust/ws8bm-messages-http',str(root),str(clone)],check=True)
+subprocess.run(['git','checkout','--quiet','--detach','4278cb1e7a4529d5e2ecee51fccf69be6ed45257'],cwd=clone,check=True)
+assert not (clone/'.scratch').exists() and not (clone/'rust/target').exists()
+(clone/'.scratch').mkdir()
+env=dict(os.environ,CI='1',TMPDIR=str(clone/'.scratch'),CARGO_TARGET_DIR=str(clone/'rust/target'),CABLE_TEST_PORT_RANGE='52050-52099',MAIL_TEST_PORT_RANGE='52050-52099',CAMPFIRE_REFERENCE=str(clone),PARITY_NAMESPACE='ws8bm-main-check',PARITY_OWNER='ws8bm',PARITY_CPUS='2',PARITY_IMAGE='triage-reference-d7c7de92')
+print(f'WS8bm fresh main comparison: 4278cb1e7a4529d5e2ecee51fccf69be6ed45257; new scratch and Cargo target; {clone}',flush=True)
+for name,args in [('seeds',['bash','rust/parity/bin/seed','build','default','first_run']),('app',['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire'])]:
+    with (clone/'.scratch'/f'{name}.log').open('w') as log:
+        result=subprocess.run(args,cwd=clone,env=env,stdout=log,stderr=subprocess.STDOUT)
+    output=(clone/'.scratch'/f'{name}.log').read_text()
+    for line in output.splitlines():
+        if line.startswith(('seed:','test result:','    Finished')):print(line,flush=True)
+    print(f'{name}: exit {result.returncode}',flush=True)
+    if name=='seeds': assert result.returncode==0
+print('WS8bm main comparison finished; inspect per-test failures in the fresh checkout',flush=True)
+WS8BM_MAIN_COMPARE_END
 ```
 
-Raw output:
+Raw comparison summaries:
 
 ```text
-WS8bm fresh checkout: 217886fb9bbdf6847cc626e16af3a8196aa57e70; no pre-existing scratch or Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-xdb_neuu
+WS8bm fresh main comparison: 4278cb1e7a4529d5e2ecee51fccf69be6ed45257; new scratch and Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-main-check-l50cg8cd
 seed: building default
 seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 39s
-test result: ok. 355 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 22.37s
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.52s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 03s
-WS8bm fresh-check: committed inputs only; generated default/first_run seeds; app/views/clippy passed
+seeds: exit 0
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 27s
+test result: FAILED. 397 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 46.64s
+app: exit 101
+WS8bm main comparison finished; inspect per-test failures in the fresh checkout
 ```
 
-The script runs, in that clone: locked metadata; parity seed build default/first_run; `cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire`; the same flags for `-p campfire_views --test core`; and `cargo clippy --locked -j4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`, all via mise rust@1.98.1. CI=1 makes a missing/failed seeded app setup a failure. It sets CAMPFIRE_REFERENCE to the clone, owned TMPDIR/CARGO_TARGET_DIR, and cable/mail range 52050–52099. The regular worktree uses 52000–52049. The script's inputs are committed source/vectors and generated seeds, not pre-existing worker scratch files.
-
-App explicit ignores remain: `channels::tests::golden::record_reference`, `jobs::tests::push_latency`, and main's WS11 `controllers::presenters::accounts::tests::manages_bots`. No seed-dependent test silently skipped. Views core has no ignores. No full-workspace test-suite claim; the clippy gate covers the full workspace and all targets.
-
-### Pinned source identity and fresh golden replay
+The corrected quote test deliberately schedules an unrelated retention job to reproduce the old assertion deterministically. It keeps its quote-job timeout and failed-job discrimination. Before and after that test assertion correction, the same focused command ran:
 
 ```sh
-python3 rust/reference-tools/messaging/reference-check.py > .scratch/reference-thread-pages.log 2>&1
-python3 rust/reference-tools/messaging/check-goldens.py > .scratch/goldens-thread-pages.log 2>&1
+CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE=52000-52049 MAIL_TEST_PORT_RANGE=52000-52049 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire jobs::tests::ws8_quote_refresh_jobs_execute_in_the_real_app_runner -- --exact
 ```
 
 ```text
-WS8bm reference source check: 41 controller, model, helper, template and icon files match d7c7de92
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 462 filtered out; finished in 0.68s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 462 filtered out; finished in 0.33s
+```
+
+The next unbounded fresh run passed the quote test but hit the unchanged OpenGraph parser's one-second performance limit (3.127915722s) under default test concurrency. Its raw summary was `test result: FAILED. 459 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 104.55s`. The final fresh run below bounds runtime concurrency to four test threads (`RUST_TEST_THREADS=4`), keeps the timing threshold and all app assertions unchanged, and has no new ignores or production runner changes.
+
+### Fresh committed clone, new target, new seeds
+
+```sh
+python3 rust/reference-tools/messaging/fresh-check.py >.scratch/fresh-final.log 2>&1
+```
+
+```text
+WS8bm fresh checkout: 62c7d045d434d8d81e43937888782ba655467e3c; no pre-existing scratch or Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-7lcjxtz5
+seed: building default
+seed: default -> parity/.seed/default (6.1M)
+seed: building first_run
+seed: first_run -> parity/.seed/first_run (1.5M)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 48s
+test result: ok. 460 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 97.48s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 26.04s
+test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 62.24s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.02s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 50.93s
+WS8bm fresh-check: committed inputs only; generated default/first_run seeds; app/db/views/clippy passed
+```
+
+The script clones the committed branch with `--no-local`, verifies neither `.scratch` nor `rust/target` exists, creates its own directories, generates default/first_run seeds, and sets `CI=1`, `RUST_TEST_THREADS=4`, `CAMPFIRE_REFERENCE` to the clone, owned TMPDIR/target and port ranges. It runs locked metadata; seeded `campfire --bin campfire`; all `campfire_db` tests/doctests; `campfire_views --test core`; and full workspace/all-targets clippy with `-D warnings` (all via mise rust@1.98.1, `-j4`). No full-workspace runtime-test claim beyond those suites.
+
+Explicit app ignores: WS11 `controllers::presenters::accounts::tests::manages_bots`, the running-reference recorder and push latency measurement. DB has four explicit main ignores: `tests::differential_test::scenario_matches_ruby`, `tests::fixtures_test::export_database_for_rails`, `tests::fixtures_test::fixtures_match_ruby_row_for_row`, and WS9's `tests::two_factor_rollback_test::read_rails_rollback_changes`; these need separate Rails mutation/export tooling. This continuation added no ignores. No missing seed silently skipped. Views core has no ignores.
+
+### Reference identity and golden replay
+
+```sh
+python3 rust/reference-tools/messaging/reference-check.py >.scratch/source-final.log 2>&1
+python3 rust/reference-tools/messaging/check-goldens.py >.scratch/goldens-final.log 2>&1
+```
+
+```text
+WS8bm reference source check: 54 controller, model, helper, template and icon files match d7c7de92
 WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
 WS8bm preview oracle: 8 real Rails HTTP responses; 0 messages written
 WS8bm invalid-create oracle: 6 real Rails HTTP responses; 0 messages written
@@ -132,61 +188,90 @@ WS8bm broadcast oracle: 6 real Rails writes; 25 rendered/channel publisher frame
 WS8bm thread-membership oracle: 11 real Rails requests; membership rows and JSON bytes captured
 WS8bm collection oracle: 10 real Rails states; keys and cache-hit bytes; 0 session-bound values
 WS8bm room-list oracle: 9 real Rails room requests; selected roots/unread facts and show list-slot bytes; 0 session-bound values
-WS8bm message-states oracle: 11 real Rails states rendered cold/warm; 33 actual append/replace/remove frames; 0 session-bound values
+WS8bm message-states oracle: 19 real Rails states rendered cold/warm; 57 actual append/replace/remove frames; 0 session-bound values
 WS8bm thread-message read oracle: 18 actual Rails requests; scoped pages, empty formats, raw JSON/actions/HTML and locked reads
 WS8bm thread-message write oracle: 15 actual Rails writes; 50 publisher frames; retries, rows, Drive sets, locks and tombstones
 WS8bm thread-pages oracle: 23 actual Rails requests; state lists, standalone HTML/JSON, latest replies and deleted starter
-WS8bm golden check: 12 Rails oracles re-run; 13 golden files byte-identical
+WS8bm thread-lifecycle oracle: 27 actual Rails actions; creation retries, metadata/tags, lifecycle permissions, rollback rows and delete frames
+WS8bm thread-content oracle: 9 actual requests; anchor scope and fixed-secret conversation/composer bytes
+WS8bm forwards oracle: 18 real picker/refusal/source-privacy requests; exact JSON bytes
+WS8bm golden check: 15 Rails oracles re-run; 16 golden files byte-identical
 ```
 
-These oracles exercise our pinned Rails controller/model/template code. The publisher capture invokes the actual ActionCable broadcaster and its normal renderer. New state records come from real Rails model writes; goldens are committed. The Rails file-set checker rejects injected byte drift and missing files.
+These invoke our actual pinned Rails controllers/models/templates and broadcaster. Goldens are committed; no expected body was generated from Rust. Full conversation byte goldens use an explicit deterministic token provider on both renderers, with the real Rails schedule child passed as the separate owner input. HTTP tests verify real form CSRF/window/header behavior. Successful forward UUIDs are tested as properties rather than claimed byte-identical.
 
-### Compiled authorization/rendering regressions
+### Failing first and compiled regressions
+
+Development authorization tests ran before their routes were implemented. The stubs returned 501 instead of expected scoped 404/403. Initial upload processing first failed the analyzed-metadata assertion. Captured raw summaries (development logs, not current failures):
+
+```text
+thread-lifecycle-before: test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 358 filtered out; finished in 0.49s
+thread-content-before: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.37s
+forwards-before: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 366 filtered out; finished in 0.46s
+thread-upload-before: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.43s
+thread-upload-after: test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.44s
+```
 
 ```sh
-python3 rust/reference-tools/messaging/continuation-discriminate.py > .scratch/discrimination-thread-pages-final.log 2>&1
+python3 rust/reference-tools/messaging/lifecycle-discriminate.py >.scratch/discrimination-final.log 2>&1
 ```
 
 ```text
-root-page-scope: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.92s
-validator-pin-set: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.87s
-publisher-rendered-message: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.27s
-thread-cross-room: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.59s
-thread-join-csrf: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.57s
-collection-streaming: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.16s
-collection-null-room: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.00s
-room-unread-marker: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.56s
-forward-note-bytes: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.20s
-agent-step-order: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 3.10s
-nested-thread-room: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.56s
-nested-message-scope: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.61s
-nested-edit-author: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.76s
-nested-edit-stream: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 1.10s
-bodyless-presentation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.26s
-thread-pages-bot: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.41s
-thread-list-stale: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.77s
-work-event-note: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 1.10s
-WS8bm continuation discrimination: 18 compiled regressions detected; sources restored
+creator-lock-permission: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.52s
+creator-delete-permission: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.56s
+initial-upload-processing: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.58s
+tag-validation-atomicity: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.58s
+content-anchor-scope: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.42s
+forward-source-scope: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.37s
+forward-source-privacy: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.51s
+forward-create-csrf: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.39s
+WS8bm lifecycle discrimination: 8 compiled regressions detected; sources restored
 ```
 
-Each mutation must compile, fail exactly the named runtime test and produce a failed test summary; compiler/setup errors do not count. All mutated sources are restored in `finally`. The final fresh-clone suite independently uses the unmutated committed implementation. These checks discriminate scope, CSRF, author gates, unread marker placement, cache keys, complete state/step bytes, the actual edit stream, bodyless presentation, bot denial, stale listing and populated event-note JSON.
+These checks ran before merging WS9; the fresh post-merge suite independently verifies restored committed code. Each mutation must compile and fail exactly the named runtime test with a FAILED summary. The first CSRF mutation attempt exposed a weak request: malformed input returned 422 even without the guard. The committed test now submits a valid forward; removing the guard produces a write/201 and the test fails. Creator lock/delete permission, upload processing, tag validation atomicity, anchor/source scope and source privacy are also discriminated. Setup/compiler/fixture mistakes are excluded from failing-first evidence.
 
-Security tests were also run before route implementation. The recorded development baselines were 501 where 404/403 was expected:
+### Owned Rust file groups in the final fresh run
 
-- Nested reads: three named tests failed before the read routes.
-- Nested writes: two named tests failed before the write routes.
-- New thread pages (`.scratch/thread-pages-before.log`): raw summary below.
-
-```text
-test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 354 filtered out; finished in 0.36s
-```
-
-The unread-slot differential first detected missing six-space show-slot indentation. The write-frame differential detected escaped Drive markup, an extra bodyless trix wrapper and the wrong edit conversation stream. Those are runtime parity findings. Incorrect fixture IDs/names, missing fixture timestamps, model/foreign-key setup mistakes, compiler errors, the title expectation corrected to real Rails tags, and stale fixture closure caused by its own setup posts are excluded from failing-first evidence.
-
-### Owned controller files, grouped Rails reference pass counts
+The completed fresh app log was parsed by test module prefix, requiring every named result in each group to be `ok`. The actual command was:
 
 ```sh
-python3 rust/reference-tools/messaging/check-controller-files.py > .scratch/rails-files-thread-pages-final.log 2>&1
+python3 - <<'WS8BM_OWNED_COUNTS_END' >.scratch/owned-counts-final.log
+from pathlib import Path
+import re
+log=Path('.scratch/ws8bm-fresh-7lcjxtz5/.scratch/app.log').read_text()
+groups=[('controllers/messages/http_tests.rs','controllers::messages::http_tests::'),('controllers/messages/paging_tests.rs','controllers::messages::paging_tests::'),('controllers/messages/collection_tests.rs','controllers::messages::collection_tests::'),('controllers/messages/room_list_tests.rs','controllers::messages::room_list_tests::'),('controllers/messages/state_tests.rs','controllers::messages::state_tests::'),('controllers/channel_thread_messages/tests.rs','controllers::channel_thread_messages::tests::'),('controllers/channel_thread_messages/write_tests.rs','controllers::channel_thread_messages::write_tests::'),('controllers/channel_threads/tests.rs','controllers::channel_threads::tests::'),('controllers/channel_threads/page_tests.rs','controllers::channel_threads::page_tests::'),('controllers/channel_threads/content_tests.rs','controllers::channel_threads::content_tests::'),('controllers/channel_threads/write_tests.rs','controllers::channel_threads::write_tests::'),('controllers/message_forwards_tests.rs','controllers::message_forwards_tests::'),('channels/tests/hub_test/message_parity.rs','channels::tests::hub_test::message_parity::')]
+rows=re.findall(r'^test ([^ ]+) \.\.\. (ok|FAILED|ignored[^\n]*)$',log,re.M)
+for file,prefix in groups:
+    statuses=[status for name,status in rows if name.startswith(prefix)]
+    assert statuses and all(status=='ok' for status in statuses),(file,statuses)
+    print(f'{file}: {len(statuses)} passed; 0 failed; 0 ignored')
+print('WS8bm owned Rust modules: 13 file groups passed; named tests are not one-to-one Rails case port counts')
+WS8BM_OWNED_COUNTS_END
+```
+
+```text
+controllers/messages/http_tests.rs: 15 passed; 0 failed; 0 ignored
+controllers/messages/paging_tests.rs: 4 passed; 0 failed; 0 ignored
+controllers/messages/collection_tests.rs: 2 passed; 0 failed; 0 ignored
+controllers/messages/room_list_tests.rs: 1 passed; 0 failed; 0 ignored
+controllers/messages/state_tests.rs: 1 passed; 0 failed; 0 ignored
+controllers/channel_thread_messages/tests.rs: 3 passed; 0 failed; 0 ignored
+controllers/channel_thread_messages/write_tests.rs: 3 passed; 0 failed; 0 ignored
+controllers/channel_threads/tests.rs: 5 passed; 0 failed; 0 ignored
+controllers/channel_threads/page_tests.rs: 2 passed; 0 failed; 0 ignored
+controllers/channel_threads/content_tests.rs: 3 passed; 0 failed; 0 ignored
+controllers/channel_threads/write_tests.rs: 5 passed; 0 failed; 0 ignored
+controllers/message_forwards_tests.rs: 4 passed; 0 failed; 0 ignored
+channels/tests/hub_test/message_parity.rs: 5 passed; 0 failed; 0 ignored
+WS8bm owned Rust modules: 13 file groups passed; named tests are not one-to-one Rails case port counts
+```
+
+These 53 named tests include accepted earlier slices and this continuation; a named test can drive multiple real reference requests. They are separate from the Rails reference counts below.
+
+### Owned controller files: reference passes and Rust deferrals
+
+```sh
+python3 rust/reference-tools/messaging/check-controller-files.py >.scratch/controllers-final.log 2>&1
 ```
 
 ```text
@@ -213,40 +298,63 @@ test/controllers/message_forward_sources_controller_test.rb
 WS8bm Rails controller reference: 10 files passed; reference counts only
 ```
 
-The tool mounts the pinned test archive read-only, prepares the reference test DB and runs each file with one worker. These 156 Rails passes/949 assertions do not replace Rust parity tests. No entire file below is claimed fully ported.
+The script mounts tests from `git archive d7c7de92 test` read-only, prepares the pinned Rails test DB and runs each file with one worker. The **156 Rails runs/949 assertions are reference passes**, not proof that every case is ported. No full file is claimed completely ported.
 
-| File under `test/controllers/` | Rails reference passes | Rust coverage and precise deferred cases |
+| File under `test/controllers/` | Rails passes | Rust coverage / precise deferred cases and owner |
 | --- | ---: | --- |
-| `messages_controller_test.rb` | 56 | Partial root create/retry/preview/update/actions/destroy, 16 paging/12 format requests, exact ETags, four standalone bodies, legacy/action/emoji/streaming/system/forward/reply/deleted-reply/step/bodyless Drive states and actual frames. Still deferred: merged room unread/around HTTP, authenticated full layout/frame bytes, exhaustive odd params, uploaded/inline blobs and attachment states, populated cards/quotes/work/PR states, composer/quick edit and preload/query budgets. |
-| `messages_drive_attachments_test.rb` | 19 | Partial root create/update Drive sets, scalar/nested/id rejection, file-only JSON, edit/cache/link bytes and bodyless state. Still deferred: consent/credential variants, broader shapes, upload/processing variants; service credentials WS14. |
-| `messages/cached_fragment_csrf_test.rb` | 4 | Partial two-viewer cache proof from the earlier slice, 10 dependency states plus 11 new cold/warm complete states, and session-free actual publisher output. Still deferred: complete authenticated warming/edit/broadcast/retraction permutations and every recipient lifecycle. |
-| `messages/legacy_presentation_cache_test.rb` | 2 | Partial source conversion, formatting-only edits, unfurl preservation, complete legacy/forward snapshot bodies and cache hits. Still deferred: inline blob resolver/conversion (WS5) and wider legacy/quote/card cache combinations. |
-| `messages/boosts_controller_test.rb` | 17 | Inherited happy paths remain. Modern toggle/duplicate/limits/icon/clear/JSON/broadcast cases deferred to WS8bm; bot subclass WS11. |
-| `channel_threads_controller_test.rb` | 24 | Partial join/read/leave plus 23 actual index/show reads: state aliases/staleness, locked/empty/deleted starter, last page, scope/no implicit join, ordinary HTML and work history/owner-picker JSON. Still deferred: content/new/create/update/destroy, lifecycle permissions/writes, pane/composer, populated work/board/PR HTML and broadcasts, constant-query/preload checks, fuller owner revocation/agent variants. Work domain WS12, agent auth/ledger WS11, PR presentation WS15g. |
-| `channel_thread_messages_controller_test.rb` | 12 | Partial all six actions, 18 actual reads/15 writes, nested cursors, empty/XML/HTML/frame/JSON/Turbo formats, author/admin/immutable/lock gates, retries, rows, correct publisher streams, and enqueue rollback. Still deferred: exhaustive input/form/redirect/cache and lock/membership race permutations, populated card/quote/attachment states and multi-recipient changes. |
-| `channel_thread_messages_drive_attachments_test.rb` | 13 | Partial thread Drive sets/file-only create/update/delete/retry/lock validation and output. Still deferred: broader Drive credentials/shapes, attachment deletion/processing/uploads; credentials WS14. |
-| `message_forwards_controller_test.rb` | 7 | Deferred WS8bm HTTP entirely: destinations/ForwarderCopier, direct display names, nested scope, board/stale/locked refusal, copied attachments and bounded queries. |
-| `message_forward_sources_controller_test.rb` | 2 | Deferred WS8bm HTTP entirely: no-store canonical source URL and inaccessible identity protection. |
+| `messages_controller_test.rb` | 56 | Accepted root writes/paging/formats/ETags/actions and this matrix/publisher expansion. Deferred WS8bm: complete authenticated layout/frame and unusual input shapes, all upload/inline/card/quote combinations, modern boosts, recipient/cache permutations and measured preload/query budgets. Merged room unread/around/read effects need WS8b-r seam integration. |
+| `messages_drive_attachments_test.rb` | 19 | Partial root Drive sets/file-only/edit/cache/link bytes remain. Deferred WS8bm/WS14: consent/credential and wider shape variants, signed/direct uploads and processing/variant failures; Google owner supplies credential/Picker inputs. |
+| `messages/cached_fragment_csrf_test.rb` | 4 | Two viewers, dependency-key states, 19 complete cold/warm states and session-free publisher output covered. Deferred WS8bm: complete authenticated warming/edit/retraction and recipient-change permutations. |
+| `messages/legacy_presentation_cache_test.rb` | 2 | Conversion/format-only edits/unfurl preservation/legacy-forward snapshots covered. Deferred WS8bm/WS5: inline ActiveStorage resolver/conversion and wider quote/card/cache combinations. |
+| `messages/boosts_controller_test.rb` | 17 | Inherited happy paths. Deferred WS8bm: modern toggle/duplicate/limits/icon/clear/JSON/broadcast cases; bot subclass/agent auth WS11. |
+| `channel_threads_controller_test.rb` | 24 | All ordinary read/membership/lifecycle endpoints covered in partial matrices; 27 lifecycle plus 9 content requests, pane/composer component bytes, initial PNG, rollback and deletion frames. Deferred WS8bm: other content formats, malformed params, remaining race/recipient/indicator and full HTTP pane/layout cases, measured query/preload counts. Board new/create/work/owner/status/delete hooks WS12 (explicit 501). Populated work/board HTML WS12 + our composition; PR HTML/data WS15g. M2 child wiring after merge. |
+| `channel_thread_messages_controller_test.rb` | 12 | Accepted six message actions, 18 reads/15 writes/50 reference frames, nested/author/immutable/lock/retry/rollback gates remain. Deferred WS8bm: broader parameter/form/cache/race/recipient and upload/card/quote combinations. |
+| `channel_thread_messages_drive_attachments_test.rb` | 13 | Accepted thread Drive/file-only/retry/delete/lock sets remain. Deferred WS8bm/WS14: credentials/wider shapes, deletion/processing/direct-upload combinations and storage failure atomicity. |
+| `message_forwards_controller_test.rb` | 7 | This slice adds endpoints/copier; 18 refusal/picker/source responses, snapshot persistence, Drive/membership properties, private copies/bytes/checksums and enqueue rollback. Deferred WS8bm: successful JSON/HTML wire byte and delivered forward-frame differentials, malformed shapes/nil bodies, processing failure atomicity, full destination recipient races and measured bounded-query assertion. |
+| `message_forward_sources_controller_test.rb` | 2 | Exact no-store canonical URL/null privacy and nested scope covered. Deferred WS8bm: full source deletion/membership races and unusual coercions/formats. |
 
-Fourteen newly added Rust tests this continuation are grouped in `messages/room_list_tests.rs` (1), `messages/state_tests.rs` (1), `channel_thread_messages/tests.rs` (3), `channel_thread_messages/write_tests.rs` (3), `channel_threads/tests.rs` (2), `channel_threads/page_tests.rs` (2), and `channels/tests/hub_test/message_parity.rs` (2). A vector-driven Rust test often covers many real Rails requests; the grouped counts are named Rust tests, not one-to-one Rails case completion.
+New named Rust tests by file: `channel_threads/write_tests.rs` 5; `channel_threads/content_tests.rs` 3; `message_forwards_tests.rs` 4; `channels/tests/hub_test/message_parity.rs` 1 (lifecycle). Existing state/socket tests were broadened, not recounted as new tests.
 
-No browser/system test or screenshot/pixel capture ran. Owned system files remain deferred: `boosting_messages_test.rb`, `code_highlighting_test.rb`, `sending_messages_test.rb`, `threads_test.rb`, `workspace_markdown_test.rb`, `composer_test.rb`, `composer_attach_menu_test.rb`, `message_interactions_test.rb`, `message_actions_mobile_test.rb`, `message_toolbar_test.rb`, `message_list_a11y_test.rb`, `drive_attachments_test.rb`, `unread_divider_test.rb`, and forward/edit portions of `search_forward_edit_test.rb`. Message parts of `keyboard_shortcuts_test.rb`, `content_security_policy_test.rb`, `motion_test.rb`, `mobile_layout_test.rb`, `timezone_detection_test.rb` remain WS8bm/WS8b-r/WS4 integration. Board/work system cases stay WS12 with our pane/message seam; bot/agent controllers stay WS11.
+M2-only controllers remain with M2: room/message polls/pins, saved items, scheduled messages, searches, room slash commands, autocomplete, room message links and files. No pass/port counts for them are claimed here.
 
-Now WS8b-m2, with no count or port claim here: `rooms/polls_controller_test.rb`, `messages/pins_controller_test.rb`, `rooms/pins_controller_test.rb`, `saved_items_controller_test.rb`, `scheduled_messages_controller_test.rb`, `searches_controller_test.rb`, `rooms/slash_commands_controller_test.rb`, `autocompletable/{icons,slash_commands,users}_controller_test.rb`, `rooms/message_links_controller_test.rb`, `rooms/files_controller_test.rb` and their feature system coverage.
+### System files: zero executed, all explicitly deferred
 
-## Design and cross-workstream seams
+```sh
+python3 rust/reference-tools/messaging/deferred-system-inventory.py >.scratch/systems-final.log 2>&1
+```
 
-Controllers authorize, call the existing WS8a writer/domain APIs, then present data or render views. No HTML moved into the domain. The nested post rollback test proves the durable job insert shares the post/join/reopen transaction. The publisher and conservative WS7 guard are unchanged; all delivered owned frames pass the guard, and the test compares the stream identifier.
+```text
+test/system/boosting_messages_test.rb: 4 literal test declarations; 0 executed; deferred
+test/system/code_highlighting_test.rb: 6 literal test declarations; 0 executed; deferred
+test/system/sending_messages_test.rb: 3 literal test declarations; 0 executed; deferred
+test/system/threads_test.rb: 15 literal test declarations; 0 executed; deferred
+test/system/workspace_markdown_test.rb: 8 literal test declarations; 0 executed; deferred
+test/system/composer_test.rb: 11 literal test declarations; 0 executed; deferred
+test/system/composer_attach_menu_test.rb: 9 literal test declarations; 0 executed; deferred
+test/system/message_interactions_test.rb: 10 literal test declarations; 0 executed; deferred
+test/system/message_actions_mobile_test.rb: 2 literal test declarations; 0 executed; deferred
+test/system/message_toolbar_test.rb: 13 literal test declarations; 0 executed; deferred
+test/system/message_list_a11y_test.rb: 29 literal test declarations; 0 executed; deferred
+test/system/drive_attachments_test.rb: 3 literal test declarations; 0 executed; deferred
+test/system/unread_divider_test.rb: 5 literal test declarations; 0 executed; deferred
+test/system/search_forward_edit_test.rb: 3 literal test declarations; 0 executed; deferred
+test/system/keyboard_shortcuts_test.rb: 14 literal test declarations; 0 executed; deferred
+test/system/content_security_policy_test.rb: 5 literal test declarations; 0 executed; deferred
+test/system/motion_test.rb: 9 literal test declarations; 0 executed; deferred
+test/system/mobile_layout_test.rb: 5 literal test declarations; 0 executed; deferred
+test/system/timezone_detection_test.rb: 2 literal test declarations; 0 executed; deferred
+WS8bm system inventory: 19 pinned files; declarations only; no browser or pixel pass claim
+```
 
-WS8b-r owns the room shell/unread facts and must call the additive adapter after merge. WS8b-m2 can build on unchanged presenter/list signatures. WS6 owns shared layouts; our additive titled content helper and templates are small view seams. WS12 work event/owner rows are read for JSON, not mutated here. WS11's agent invocation/auth/streaming remains untouched; valid agent-token behavior is unproven while the shared authenticator returns 401, and a Bender-key-as-Bearer check must not be described as valid agent authentication. WS14 supplies real Drive credentials/composer flows. WS5 supplies inline blob resolution. WS15g/e supply populated card/work/PR seams.
+These are literal `test` declarations from the pinned files, not discovered/executed case counts. Every file has **zero system passes claimed**. Message/controller interaction coverage belongs to WS8bm; merged room/composer/unread/layout/keyboard/mobile integration also needs WS8b-r. Search portions of `search_forward_edit` belong to M2. Google attachment flows need WS14, agent/auth flows WS11, board/work flows WS12, CSP integration WS4 and populated PR/cards WS15. Controller/vector tests do not replace browser or screenshot/pixel evidence.
 
-No Rails source, room-shell/sidebar implementation, m2 controller, schema/migration/dependency, Cargo.lock, mask or allowlist changed. No stash, rebase, PR or production action. All six implementation commits were pushed and have the required GPT-6.1 Sol co-author. Only owned scratch is untracked after the report commit; external report and tracked mirror are identical.
+## Design and remaining work in requested order
 
-## Remaining work, in requested order
+Authorization stays in controllers; transactions/domain/copier remain in WS8a/WS3, HTML in views/presenters, broadcasts through the existing WS7 publisher and conservative guard. Atomic thread/post/enqueue and copied-file enqueue rollback are tested. Neither existing presenter APIs nor the shell's list entry point changed. The WS9 merge retains main authentication semantics; no bypass was added.
 
-1. **Root/unread/around and message states:** lead wire the documented adapter into the merged WS8b-r shell, then prove full HTTP unread/around/read effects and headers. Finish complete authenticated layouts/Turbo frames, odd parameter coverage, uploaded/inline attachments and media, quote placeholders/rename/delete, populated/suppressed cards, agent/work/PR/locked-thread combinations and modern boosts. Integrate m2 poll/pin presentation facts after merge. Finish message preload/query budgets and composer/quick edit. Bare append/replace/remove and the covered thread write frames are verified; recipient membership changes, warm/cold user permutations, populated card/quote/attachment/reaction variants and source refresh/removal descriptors remain.
-2. **Thread controllers/pane:** `index`, `show`, `join`, `read`, `leave` and all six nested message actions are implemented as described. `content`, `new`, `create`, `update`, `destroy` are still unimplemented (501); thread conversation/composer, content anchoring/header bytes, lifecycle/metadata permissions and writes, populated work/board/PR sections, locks/deletion/recipient matrices, full indicators/broadcast combinations and constant-query counts remain. WS12 owns work/board domain changes; WS11 agent invocation/auth; WS15g PR data/views.
-3. **Forwards/uploads:** both forward controllers remain unimplemented (501). Wire existing `ForwarderCopier`, authorize source/destination/privacy/direct/stale/locked/board policies, copy attachments and test bounded queries/source URL hiding. Finish multipart/signed/direct-upload parity, processing/variants/previews/sizing/retention and inline ActiveStorage SGID resolution/conversion. Inherited PNG upload coverage is not completion; no new upload differential was added this continuation.
-4. **Deferred owned cases:** finish Rust mappings for the remaining grouped controller cases above and run the owned browser/system parity. Reference pass counts are recorded, but the remaining cases stay explicitly deferred to WS8bm or the named integration owner.
+1. **Threads:** ordinary new/create/update/destroy/content and pane components are implemented as above. Complete merged HTTP pane bytes by supplying M2's schedule child; prove other content formats/unusual params, membership/lock/owner races and recipient/indicator permutations. Finish populated work/board/PR sections with their owners, work/board mutations after WS12, and measured constant-query/preload cases. Ordinary initial creation correctly emits no append in the captured Rails actions.
+2. **Forwards/uploads:** positive snapshot/copier/PNG processing is implemented. Finish positive JSON/HTML response and actual forward-broadcast differentials, malformed/nil inputs and recipient/destination races. **Known parity gap:** forward attachment analysis/variant processing currently runs after the domain transaction, while Rails processes inside the forward transaction; a processing exception can leave committed forward rows. Initial thread/root upload error atomicity likewise needs its failure matrix. Add multipart/signed/direct-upload cases for media/variants/previews/metadata/retention/failed processing and inline SGID resolution with WS5. Batch picker queries are implemented but have no measured query-budget assertion yet.
+3. **Full message state matrix:** 19 complete states/57 delivered frames pass, but this is not the full matrix. Finish inline ActionText blobs, missing/corrupt metadata, quote placeholders and rename/delete, attachment plus reply/forward/reaction combinations, populated/suppressed cards, work/PR/agent lifecycle and locked-thread combinations; integrate M2 poll/pin facts. Finish modern boosts, all warm/cold viewer/recipient/membership permutations and measured preload/query budgets. WS5/WS11/WS12/WS15 own the named foundation data/processing seams, M2 its features.
+4. **Deferred cases:** port remaining grouped Rust controller cases and execute the 19 owned/shared system files with the merged shell/feature/auth branches; browser/pixel parity is still unverified. Full shell HTTP unread/around/read effects remain to verify after the lead wires the stable inputs above. Reference controller passes are recorded separately.
 
-Open integration questions: which merged component providers supply populated work/board/PR/embed/quote/attachment content; WS5 inline-blob resolver availability; WS11 valid agent-token authentication. This report does not claim the full WS8bm brief is complete.
+No Rails source, room shell/sidebar, M2 feature implementation, schema/migrations/dependencies/lockfile, mask or allowlist changed. No stash, rebase, PR or production action. Co-author trailers are present. Only owned `.scratch/` remains untracked; external report and tracked mirror are identical after the final report commit. The WS8bm brief remains partial.
