@@ -67,48 +67,78 @@ pub enum Segment {
 impl NamedRoute {
     /// The path for these arguments, in the order the Rails helper takes them positionally.
     pub fn path(&self, args: &[&dyn Display]) -> String {
-        self.build_path(args, &[])
+        self.path_with(args, None, &[])
     }
 
-    fn build_path(&self, args: &[&dyn Display], options: &[(&str, Option<&str>)]) -> String {
-        let mut args = args.iter();
-        let mut path = String::new();
-        for segment in self.segments {
-            match segment {
-                Segment::Literal(literal) => path.push_str(literal),
-                Segment::Param { name, default } | Segment::Glob { name, default } => {
-                    // Only required parameters consume positional arguments. Named options
-                    // override both positional values and defaults (Journey::Formatter).
-                    let positional = default.is_none().then(|| args.next()).flatten();
-                    let value = options
-                        .iter()
-                        .find(|(key, _)| key == name)
-                        .and_then(|(_, value)| *value)
-                        .map(str::to_string)
-                        .or_else(|| positional.map(ToString::to_string))
-                        .or_else(|| default.map(str::to_string))
-                        .unwrap_or_else(|| panic!("{}_path: missing {name}", self.name));
-                    path.push_str(&escape(&value, matches!(segment, Segment::Glob { .. })));
-                }
-            }
-        }
-        assert!(
-            args.next().is_none(),
-            "{}_path: too many arguments",
-            self.name
-        );
-        path
-    }
-
-    /// `name_path(*args, format: format, **query)`. `None` query values are dropped, as Rails
-    /// drops nil options.
+    /// `name_path(*args, format: format, **query)`. Nil extra query values are dropped;
+    /// an explicit nil path parameter overrides its default and fails route generation.
     pub fn path_with(
         &self,
         args: &[&dyn Display],
         format: Option<&str>,
         query: &[(&str, Option<&str>)],
     ) -> String {
-        let mut path = self.build_path(args, query);
+        // ActionDispatch::Routing::RouteSet::UrlHelper#handle_positional_args:
+        // with fewer arguments than path parts, remove defaulted parts. Explicit options
+        // always remove their parts before assigning positions; format is the last part.
+        let parts: Vec<_> = self
+            .segments
+            .iter()
+            .filter_map(|segment| match segment {
+                Segment::Param { name, default } | Segment::Glob { name, default } => {
+                    Some((*name, *default))
+                }
+                _ => None,
+            })
+            .collect();
+        let optimized = args.len() == parts.len() && format.is_none() && query.is_empty();
+        let mut positional_parts: Vec<_> = parts
+            .iter()
+            .filter(|(name, default)| {
+                (args.len() >= parts.len() || default.is_none())
+                    && !query.iter().any(|(key, _)| key == name)
+            })
+            .map(|(name, _)| *name)
+            .collect();
+        if self.spec.ends_with("(.:format)") && format.is_none() {
+            positional_parts.push("format");
+        }
+        let positional: Vec<_> = positional_parts
+            .iter()
+            .zip(args)
+            .map(|(name, arg)| (*name, arg.to_string()))
+            .collect();
+        let mut path = String::new();
+        for segment in self.segments {
+            match segment {
+                Segment::Literal(literal) => path.push_str(literal),
+                Segment::Param { name, default } | Segment::Glob { name, default } => {
+                    let value = if let Some((_, value)) = query.iter().find(|(key, _)| key == name)
+                    {
+                        value.map(str::to_string)
+                    } else {
+                        positional
+                            .iter()
+                            .find(|(key, _)| key == name)
+                            .map(|(_, value)| value.clone())
+                            .or_else(|| default.map(str::to_string))
+                    }
+                    .unwrap_or_else(|| panic!("{}_path: missing {name}", self.name));
+                    assert!(
+                        !optimized || !value.is_empty(),
+                        "{}_path: missing {name}",
+                        self.name
+                    );
+                    path.push_str(&escape(&value, matches!(segment, Segment::Glob { .. })));
+                }
+            }
+        }
+        let format = format.or_else(|| {
+            positional
+                .iter()
+                .find(|(key, _)| *key == "format")
+                .map(|(_, value)| value.as_str())
+        });
         if let Some(format) = format
             && self.spec.ends_with("(.:format)")
             && Some(format) != self.default_format
@@ -116,9 +146,11 @@ impl NamedRoute {
             path.push('.');
             path.push_str(&escape(format, false));
         }
-        let unused: Vec<_> = query.iter().copied().filter(|(key, _)| !self.segments.iter().any(|segment| {
-            matches!(segment, Segment::Param { name, .. } | Segment::Glob { name, .. } if name == key)
-        })).collect();
+        let unused: Vec<_> = query
+            .iter()
+            .copied()
+            .filter(|(key, _)| !parts.iter().any(|(name, _)| name == key))
+            .collect();
         with_query(path, &unused)
     }
 }

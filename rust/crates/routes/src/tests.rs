@@ -138,3 +138,51 @@ fn the_table_has_every_route() {
         |r| r.endpoint == "rooms/settings#show" && r.action == ActionStatus::MissingController
     ));
 }
+
+#[test]
+fn default_parameters_match_rails_positional_and_nil_semantics() {
+    let rows: serde_json::Value =
+        serde_json::from_str(include_str!("../default-probes.json")).unwrap();
+    let mut failed = Vec::new();
+    let mut passed = 0;
+    for row in rows.as_array().unwrap() {
+        let name = row["name"].as_str().unwrap();
+        let strings: Vec<_> = row["args"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect();
+        let args: Vec<&dyn Display> = strings.iter().map(|v| v as &dyn Display).collect();
+        let options = row["options"].as_object().unwrap();
+        let format = options.get("format").and_then(|v| v.as_str());
+        let query: Vec<_> = options
+            .iter()
+            .filter(|(k, _)| *k != "format")
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        let actual = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            named(name).path_with(&args, format, &query)
+        }));
+        let matches = match actual {
+            Ok(path) => row["path"].as_str() == Some(path.as_str()),
+            Err(_) => row["error"] == "ActionController::UrlGenerationError",
+        };
+        if matches {
+            passed += 1;
+        } else {
+            failed.push(format!("{name}: {:?} {:?}", row["args"], options));
+        }
+    }
+    eprintln!(
+        "Rails default parameter probes: {passed} passed; {} differed",
+        failed.len()
+    );
+    assert!(failed.is_empty(), "{failed:#?}");
+    // Exercise both entry points: the reviewer also calls path(), without keyword options.
+    assert_eq!(USER_PROFILE.path(&[&7]), "/users/7/profile");
+    assert_eq!(
+        USER_PUSH_SUBSCRIPTION.path(&[&42, &9]),
+        "/users/42/push_subscriptions/9"
+    );
+}
