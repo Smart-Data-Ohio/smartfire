@@ -34,6 +34,10 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
         "no_connection",
         "direct_bots",
     ] {
+        // Each subprocess needs its own origin: workers run this matrix concurrently.
+        let reservation = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", reservation.local_addr().unwrap());
+        drop(reservation);
         let output = tokio::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
@@ -41,7 +45,7 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
                 "--nocapture",
             ])
             .env("WS15E_FIZZY_MESSAGE_CASE", case)
-            .env("FIZZY_API_BASE_URL", "http://127.0.0.1:51598")
+            .env("FIZZY_API_BASE_URL", base_url)
             .output()
             .await
             .unwrap();
@@ -152,7 +156,8 @@ async fn run(case: &str) {
     if case == "enqueue_rollback" {
         app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws15e_reject_fizzy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Fizzy::FetchCardJob' BEGIN SELECT RAISE(ABORT,'queue rejected'); END;")?;Ok(())}).await.unwrap();
     }
-    let base = "http://127.0.0.1:51598/897362094/cards/580".to_owned();
+    let origin = std::env::var("FIZZY_API_BASE_URL").expect("matrix launcher supplies its private origin");
+    let base = format!("{origin}/897362094/cards/580");
     let url = if case == "long_reply" {
         format!("https://example.com/{}", "x".repeat(60000))
     } else {
@@ -173,7 +178,7 @@ async fn run(case: &str) {
         "new_rejected" => 401,
         _ => 200,
     };
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:51598")
+    let listener = tokio::net::TcpListener::bind(origin.strip_prefix("http://").unwrap())
         .await
         .unwrap();
     let server = FakeServer::on_listener(
