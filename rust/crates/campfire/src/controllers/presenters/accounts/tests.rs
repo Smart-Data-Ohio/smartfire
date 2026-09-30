@@ -11,7 +11,7 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_clock};
+use crate::app::Booted;
 use crate::config::Config;
 use crate::controllers::presenters::test_support::{masked_session_token, seed_clock, seed_dir};
 
@@ -52,6 +52,10 @@ async fn boot_seed(name: &str) -> Option<Test> {
 }
 
 async fn boot_seed_with_clock(name: &str, clock: campfire_kit::SharedClock) -> Option<Test> {
+    boot_seed_with_network(name, clock, crate::integrations::net::Network::system()).await
+}
+
+async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, network: crate::integrations::net::Network) -> Option<Test> {
     let seed = seed_dir(name)?;
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -78,7 +82,7 @@ async fn boot_seed_with_clock(name: &str, clock: campfire_kit::SharedClock) -> O
     })
     .unwrap();
     Some(Test {
-        booted: boot_with_clock(config, clock).await.unwrap(),
+        booted: crate::app::boot_with_network(config, clock, network).await.unwrap(),
         labels,
         _dir: dir,
     })

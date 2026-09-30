@@ -1,5 +1,5 @@
 //! Live owner-specific PR access, resolved without holding a database connection.
-//! WS15g installs its Accounts::can_read_repository adapter (refresh/cache/401 policy).
+//! Boot installs WS15g Accounts::can_read_repository (refresh/cache/401 policy).
 use super::net::BoxFuture;
 use campfire_db::models::agent_payloads::RepositoryAccess;
 use campfire_db::{Agent, Connection, Database, Result};
@@ -18,12 +18,16 @@ pub struct RepositoryRequest {
 pub trait RepositoryReader: Send + Sync {
     fn readable(&self, request: RepositoryRequest) -> BoxFuture<'_, Result<bool>>;
 }
+impl RepositoryReader for super::github::accounts::Accounts {
+    fn readable(&self, request: RepositoryRequest) -> BoxFuture<'_, Result<bool>> {
+        Box::pin(async move { self.can_read_repository(request.account_id, &request.owner, &request.repo).await })
+    }
+}
 #[derive(Default)]
 pub struct State {
     reader: RwLock<Option<Arc<dyn RepositoryReader>>>,
 }
 impl State {
-    #[allow(dead_code)] // WS15g's boot adapter installs the linked-account implementation.
     pub fn install(&self, reader: Arc<dyn RepositoryReader>) {
         *self.reader.write().unwrap_or_else(|p| p.into_inner()) = Some(reader);
     }
@@ -41,8 +45,8 @@ impl State {
             .unwrap_or_else(|p| p.into_inner())
             .clone();
         let Some(reader) = reader else {
-            // FLAGGED STUB: WS15g installs the live GitHub reader. Until then
-            // private/unknown PRs stay inaccessible; no GitHub I/O is implemented here.
+            // Explicitly detached test states remain fail-closed. Production boot
+            // installs the owner service before handling requests or jobs.
             return Ok(RepositoryAccess::default());
         };
         let requests = db
@@ -157,8 +161,10 @@ mod tests {
         let db = &test.booted.app.db;
         let (agent, thread) = setup(db, test.booted.app.ar_encryption.clone()).await;
         let state = &test.booted.app.agent_repositories;
+        // Explicitly detached registries still deny without external calls.
+        let detached = State::default();
         assert!(
-            state
+            detached
                 .resolve_threads(db, agent, vec![thread])
                 .await
                 .unwrap()

@@ -41,6 +41,7 @@ pub struct AppState {
     pub mail: crate::mail::State,
     pub agent_message_payload: crate::controllers::presenters::agent_payload::State,
     pub agent_repositories: crate::integrations::agent_repositories::State,
+    pub github_accounts: crate::integrations::github::accounts::Accounts,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
@@ -157,6 +158,13 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
 
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
+    let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
+        db.clone(), ar_encryption.clone(),
+        crate::integrations::github::client::AppClient::with_network(
+            std::env::var("GITHUB_APP_CLIENT_ID").ok(),
+            std::env::var("GITHUB_APP_CLIENT_SECRET").ok(), subscription_network.clone(),
+        ), subscription_network.clone(),
+    );
     let app = Arc::new(AppState {
         config,
         secrets,
@@ -170,6 +178,7 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
         mail,
         agent_message_payload: crate::controllers::presenters::agent_payload::State::default(),
         agent_repositories: crate::integrations::agent_repositories::State::default(),
+        github_accounts,
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         web_push,
@@ -177,6 +186,7 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
         fragment_cache,
     });
 
+    app.agent_repositories.install(Arc::new(app.github_accounts.clone()));
     let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);
 
     let kit = Kit::new(kit_config, crypto, clock, app.clone());

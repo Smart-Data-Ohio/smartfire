@@ -259,9 +259,8 @@ pub fn bot(conn: &Connection, secrets: &Secrets, bot: &User) -> campfire_db::Res
 }
 
 /// Read-only facts for the bot edit form. Reading a legacy bot never creates an Agent.
-pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, bot: &User, zone: &campfire_views::time::Zone) -> campfire_db::Result<BotForm> {
+pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, bot: &User, zone: &campfire_views::time::Zone, github_usable: bool) -> campfire_db::Result<BotForm> {
     use campfire_db::models::{agent_posting::{self, Cap}, webhook::Webhook};
-    use rusqlite::OptionalExtension;
     let avatar = attachments::attached_blob(conn, "User", bot.id, "avatar")?;
     let icon_name: Option<String> = conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| row.get(0))?;
     let profile = campfire_db::Agent::for_user(conn, bot.id)?;
@@ -282,15 +281,9 @@ pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, b
             }).collect::<campfire_db::Result<Vec<_>>>()?;
         Ok(cells.join(" · "))
     }).transpose()?.unwrap_or_default();
-    // Read seam for WS15g's account model. Do not expose the decrypted PAT in a view model.
-    let github = conn.query_row("SELECT github_login, disconnected_reason, access_token FROM github_connected_accounts WHERE user_id=? LIMIT 1", [bot.id], |row| {
-        let login: String = row.get(0)?;
-        let disconnected_reason: Option<String> = row.get(1)?;
-        let encrypted: String = row.get(2)?;
-        let connected = disconnected_reason.as_deref().is_none_or(campfire_richtext::ruby::is_blank);
-        let usable = connected && app.ar_encryption.decrypt(&encrypted).ok().is_some_and(|token| !campfire_richtext::ruby::is_blank(&token));
-        Ok(BotGithubAccount { usable, login, disconnected_reason })
-    }).optional()?;
+    let github = crate::integrations::github::accounts::Account::for_user(conn, bot.id)?.map(|account| BotGithubAccount {
+        usable: github_usable, login: account.github_login, disconnected_reason: account.disconnected_reason,
+    });
     Ok(BotForm {
         name: Some(bot.name.clone()), webhook_url: bot.webhook_url(conn)?,
         avatar_attachment_url: avatar.map(|blob| format!("{base_url}{}", campfire_storage::paths::blob_redirect_path(&*app.storage.verifier, &blob, None))),

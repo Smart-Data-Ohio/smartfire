@@ -1342,3 +1342,33 @@ async fn agent_identity_checks_unreadable_owner_pat_before_falling_back() {
         Some(UNREADABLE_TOKEN_REASON)
     );
 }
+
+#[tokio::test]
+async fn boot_installs_owner_repository_reader_and_reuses_its_permission_cache() {
+    use campfire_db::{Agent, ChannelThread, NewChannelThread};
+    use crate::controllers::presenters::test_support::{TestApp, BENDER, DAVID, ALL_TALK};
+    let (server, network) = fake(vec![Route::new("GET", "api.github.com", "/repos/mixed/repo", 200).body("{}").header("content-type", "application/json")]).await;
+    let test = TestApp::boot_with_network(network).await.expect("default seed");
+    let crypto = test.booted.app.ar_encryption.clone();
+    let (agent,thread) = test.booted.app.db.write(move |tx| {
+        let agent=Agent::for_user(tx.conn(),BENDER)?.unwrap();
+        super::accounts::Account::create(tx,&crypto,&super::accounts::AccountInput {
+            user_id: DAVID, github_login: "owner-fixture", access_token: "owner-repository-fixture-token",
+            refresh_token: None, token_expires_at: None, token_source: "pat",
+        })?;
+        let thread=ChannelThread::create(tx,NewChannelThread {room_id:ALL_TALK,creator_id:DAVID,name:Some("Private owner read".into()),..Default::default()})?;
+        tx.conn().execute("INSERT INTO github_pull_requests(id,owner,repo,number,title,private,created_at,updated_at) VALUES (900130009,'Mixed','Repo',12,'Private fixture',1,?,?)",rusqlite::params![tx.now(),tx.now()])?;
+        tx.conn().execute("INSERT INTO work_thread_links(channel_thread_id,kind,github_pull_request_id,created_by_id,created_at,updated_at) VALUES (?,'pull_request',900130009,?,?,?)",rusqlite::params![thread.id,DAVID,tx.now(),tx.now()])?;
+        Ok((agent.id,thread.id))
+    }).await.unwrap();
+    for _ in 0..2 {
+        let access=test.booted.app.agent_repositories.resolve_threads(&test.booted.app.db,agent,vec![thread]).await.unwrap();
+        assert!(access.contains(&(DAVID,"mixed".into(),"repo".into())));
+    }
+    assert_eq!(server.received.lock().unwrap().len(),1,"the owner's ten-minute cache must survive callers");
+    let requests=server.received.lock().unwrap().clone();
+    assert_eq!(requests[0].header("authorization"),Some("Bearer owner-repository-fixture-token"));
+    test.booted.app.db.write(move |tx| {tx.conn().execute("UPDATE agents SET owner_id=NULL WHERE id=?",[agent])?;Ok(())}).await.unwrap();
+    assert!(test.booted.app.agent_repositories.resolve_threads(&test.booted.app.db,agent,vec![thread]).await.unwrap().is_empty());
+    assert_eq!(server.received.lock().unwrap().len(),1);
+}

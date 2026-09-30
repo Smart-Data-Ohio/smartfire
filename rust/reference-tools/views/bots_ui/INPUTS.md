@@ -8,7 +8,7 @@ facts, not passing Rust mutation counts. WS11 owns User icon normalization,
 validation and writes, Agent raw-cap validation, and agent secret rotation.
 The UI must pass those raw inputs through the corresponding domain seams.
 
-Examples that the typed AgentChanges seam cannot currently represent:
+Raw inputs passed to the owner before-type-cast API include:
 
 - `" 12 "` and `"12.5"` cast to 12 but fail with `must be an integer`.
 - `"12x"` casts to 12 but fails with `is not a number`.
@@ -34,12 +34,17 @@ WS11 APIs merged from `8b76fd0afc527ce27f0c3ebf0ea6bbf586b8024b`:
   fallback generates or rotates a signing secret.
 - Human status and lease reads use the merged WS17 owner modules.
 - FLAGGED directory ordering: `Agent::for_directory` still uses Rust contextual
-  lowercase. Preserve the pinned Ruby table for Greek sigma until WS11 fixes
-  the owner sorter. The existing HTTP order assertion stays enabled.
+  lowercase. The page now calls its real query and orders its records with the
+  shared Rails-compatible Unicode downcase API until WS11 fixes the owner
+  sorter. The duplicate UI table is removed; the Greek-sigma assertion stays
+  enabled.
 - FLAGGED budget counter visibility: the bot page uses the viewer's Time.zone;
   WS11's `usage` uses the bot's zone. The page calls the owner's `cap_usage`
   with its viewer window until `usage` accepts that zone. No counting logic is
   duplicated in the UI adapter.
+- GitHub edit reads now call Accounts::usable; boot installs the real owner
+  repository reader with its refresh and permission-cache policy. Tests cover
+  unreadable-token marking, owner identity and cached repository access.
 - GitHub/Fizzy edit-fragment boundaries remain named with their Rails partial
   names. The merged peers expose domain services, but no replacement bot-edit
   fragment is supplied; the pinned edit page has no Fizzy section.

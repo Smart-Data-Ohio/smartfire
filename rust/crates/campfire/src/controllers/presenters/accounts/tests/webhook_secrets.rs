@@ -380,3 +380,33 @@ async fn agent_secret_rotation_rolls_back_ciphertext_timestamp_and_audit_on_fail
         .await
         .unwrap();
 }
+
+#[tokio::test]
+async fn bot_edit_calls_github_owner_usability_and_marks_unreadable_tokens_disconnected() {
+    use crate::integrations::github::accounts::{Account, AccountInput, UNREADABLE_TOKEN_REASON};
+    let test = boot_seed("default").await.expect("default seed");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    let crypto = test.booted.app.ar_encryption.clone();
+    let id = test.booted.app.db.write(move |tx| {
+        let account = Account::create(tx, &crypto, &AccountInput {
+            user_id: bot, github_login: "machine-read-fixture", access_token: "never-render-pat-fixture",
+            refresh_token: None, token_expires_at: None, token_source: "pat",
+        })?;
+        tx.conn().execute("UPDATE github_connected_accounts SET access_token='unreadable-cipher-fixture',updated_at='2026-03-01 00:00:00.000000' WHERE id=?", [account.id])?;
+        Ok(account.id)
+    }).await.unwrap();
+    let mut admin = test.browser("198.51.100.245");
+    admin.sign_in(&test.label("emails.david")).await;
+    let response = admin.get(&format!("/account/bots/{bot}/edit")).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(response.text().contains(UNREADABLE_TOKEN_REASON));
+    for secret in ["never-render-pat-fixture", "unreadable-cipher-fixture"] { assert!(!response.text().contains(secret)); }
+    let stamp = test.booted.app.db.read(move |conn| {
+        let account = Account::find(conn,id)?.unwrap();
+        assert_eq!(account.disconnected_reason.as_deref(),Some(UNREADABLE_TOKEN_REASON));
+        assert!(account.updated_at.to_db() > "2026-03-01 00:00:00.000000".to_string());
+        Ok(account.updated_at)
+    }).await.unwrap();
+    assert_eq!(admin.get(&format!("/account/bots/{bot}/edit")).await.status,StatusCode::OK);
+    test.booted.app.db.read(move |conn| { assert_eq!(Account::find(conn,id)?.unwrap().updated_at,stamp);Ok(()) }).await.unwrap();
+}
