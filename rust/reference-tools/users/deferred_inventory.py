@@ -60,6 +60,7 @@ covered.update({
         "returns not found for unknown names", "returns not found for signed-out users", "unenrolled sessions are sent to setup instead of served the icon", "stale enrolled sessions are signed out instead of served the icon",
     },
     "controllers/users_controller_test.rb": {
+        "show", "new", "new does not allow a signed in user", "new requires a join code", "create", "creating a new user with an existing email address will redirect to login screen",
         "profile message buttons carry the accessible name", "index lists active members with presence and selection",
         "index lists starred people first with a star marker", "index requires sign-in",
     },
@@ -84,7 +85,7 @@ covered.update({
         "create bans user and creates ban records from sessions", "create destroys user sessions", "non-admins cannot ban users",
         "destroy removes ban records and sets user to active", "non-admins cannot unban users",
     },
-    "controllers/accounts_controller_test.rb": {"edit","update", "non-admins cannot update"},
+    "controllers/accounts_controller_test.rb": {"edit","edit groups administrators separately from members with a divider","update", "non-admins cannot update"},
     # The original destroy case removes David, an agent owner: it still needs WS11.
     "controllers/accounts/users_controller_test.rb": {"update", "non-admins cannot perform actions"},
     "controllers/accounts/custom_styles_controller_test.rb": {"edit","update", "non-admins cannot update"},

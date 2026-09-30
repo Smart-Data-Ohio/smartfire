@@ -11,6 +11,7 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("join-code", "crates/campfire/src/controllers/users.rs", 'c.param_str("join_code") != Some(account.join_code.as_str())', 'c.param_str("join_code") == Some(account.join_code.as_str())', "join_page_matches_complete_rails_body_and_access_checks"),
     ("first-run-repeat", "crates/campfire/src/controllers/first_runs.rs", "    if any {", "    if !any {", "signup_body_matches_rails_and_is_available_until_account_exists"),
     ("profile-inbox", "crates/views/templates/users/profiles/_inbox_calls.html", 'legend class="txt-large">Notifications', 'legend class="txt-large">Notificationz', "whole_profile_matches_rails_seed_without_masks"),
     ("icons-svg", "crates/storage/src/workspace_icon.rs", '"script" => return Some("must not contain script elements")', '"script_never" => return Some("must not contain script elements")', "all_committed_media_and_field_validation_cases_match_rails"),

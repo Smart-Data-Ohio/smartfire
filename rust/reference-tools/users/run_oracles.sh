@@ -27,8 +27,9 @@ run logos default vectors/users_logos.json logos
 run onboarding first_run vectors/users_first_run.json first-run
 run onboarding default vectors/users_welcome.json welcome welcome
 run profile_page default vectors/users_profile_page.json profile-page
+run joining default vectors/users_joining.json joining
 run pwa default vectors/users_pwa_default.json pwa-default
 run pwa first_run vectors/users_pwa_first_run.json pwa-first-run
 run zones first_run crates/db/src/slash_commands/rails_zone_identifiers.json zones
 run zones first_run crates/db/src/slash_commands/rails_named_zones.json named-zones named
-echo 'WS8br2 oracle verification: all 18 fresh files match byte for byte; no masks or normalization'
+echo 'WS8br2 oracle verification: all 19 fresh files match byte for byte; no masks or normalization'

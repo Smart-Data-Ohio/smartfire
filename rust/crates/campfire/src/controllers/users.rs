@@ -144,3 +144,6 @@ fn user_params(c: &Ctx) -> Result<ParamMap> {
 
 #[cfg(test)]
 mod profile_page_tests;
+
+#[cfg(test)]
+mod joining_tests;
