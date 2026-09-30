@@ -1,6 +1,6 @@
 # WS7: cable, channels and broadcasts
 
-Status: **review fixes complete; full brief acceptance remains partial for domain and HTML/pixel parity**. Branch `rust/ws7-cable`. Earlier review implementation commits `5f56e8aa` and `e1d041e6`; the foreign-content fix was `da75e109`. This follow-up implements the lead's conservative-backstop decision after Astra's round-four probes against that commit. Merged `origin/main` (`d2b21210`, including WS3, final WS4 #150, WS5 and Rails #148) in `a8ec54aef7dea0596b524df2fb6272c31a474bc9`. Reference pin `fec615be`; the private image is `ws7-reference:fec615be`. Push authorized by the user; no PR.
+Status: **review fixes complete; full brief acceptance remains partial for domain and HTML/pixel parity**. Branch `rust/ws7-cable`. Earlier review implementation commits `5f56e8aa` and `e1d041e6`; the foreign-content fix was `da75e109`. The conservative-backstop implementation was `782466b9`; this follow-up fixes Astra's round-five quadratic source-scan finding without changing the detection policy. Merged `origin/main` (`d2b21210`, including WS3, final WS4 #150, WS5 and Rails #148) in `a8ec54aef7dea0596b524df2fb6272c31a474bc9`. Reference pin `fec615be`; the private image is `ws7-reference:fec615be`. Push authorized by the user; no PR.
 
 ## Review corrections
 
@@ -10,6 +10,8 @@ Status: **review fixes complete; full brief acceptance remains partial for domai
 4. Repeated public `subscribed` actions are bounded to two receivers per subscription/stream. The Rails golden explicitly records a second delivery after one repeated action, so idempotence would break that evidence. A real-socket test sends 32 repeated actions, consumes exactly two frames and requires silence afterwards. The first two receivers preserve recorded Rails behavior; further duplicates are ignored.
 
 5. Per the lead decision, this guard is our own conservative addition, with no Rails equivalent. Both scripting modes and a raw-source backstop now reject the `noscript`, select/style nonce and both select/CSRF-meta probes. The select/title input is deliberately refused, pinned by `session_bound_select_title_is_an_intentional_conservative_refusal`. No claim of exact browser-parser conformance.
+
+6. The raw backstop now consumes tags, comments and text in one forward traversal. Nested raw tags share a bounded set of equivalent attribute states; no overlapping suffix is reparsed. Comment termination is checked while advancing, including EOF, with no repeated search for a missing terminator. Both operation-count gates fail on the old scanner and pass on the replacement.
 
 The contract contains all **115** source primitives. The lead and independent reviewer confirmed the brief's 140 figure was incorrect. Current states: 15 ported envelopes/call paths, 18 API ready, 80 waiting on their domain, 2 dead. No parity masks or allowlists changed.
 
@@ -27,7 +29,7 @@ Workspace presence establishes a server-owned UUID lease, refreshes expiry (acti
 
 Paths below are relative to `rust/`; this lists the full WS7 slice, including inherited commits.
 
-- `crates/cable/src/turbo.rs`: preserve the iterative DOM walk in two scripting modes and add an independent source-tag/attribute scan. Four prior SVG/MathML regressions remain; six new tests cover noscript, both CSRF meta names within select, select/style nonce, an intentional select/title refusal, and raw attributes on arbitrary tags (including duplicates, case, quotes, slash separators and character references). Regressions check bare fragments and Turbo templates. Existing text controls remain green.
+- `crates/cable/src/turbo.rs`: preserve both DOM walks and the conservative detection policy; replace suffix reparsing with a forward-only source scanner and merged attribute states. Add two failing-first operation-count gates for nested tags and unterminated comments, plus a preservation test for outer attributes around nested raw tags, canonical/ambiguous comments and EOF. All prior six conservative-backstop probes and SVG/MathML/text controls remain green.
 - `Cargo.toml`, `crates/cable/Cargo.toml`, `Cargo.lock`: add `markup5ever_rcdom` 0.35 (resolved to `0.35.0+unofficial`), matching the existing html5ever 0.35. The DOM exists only during the guard check; broadcasts still send the original bytes.
 - `crates/cable/src/channel.rs`: cap duplicate stream receivers at two.
 - `crates/cable/tests/protocol.rs`: real-socket refusal of SVG/MathML, noscript and select token/nonce payloads, including the intentional select/title refusal. Existing exact-delivery assertions for ordinary text and textarea/title controls remain.
@@ -110,66 +112,103 @@ To satisfy the lead's requirement to keep the existing text controls green, clea
 
 `<select><title><input name=authenticity_token></title></select>` is an intentional over-refusal: current browsers treat it as title text, but our templates never emit it. The named test checks both the public guard and source backstop so this refusal does not depend on html5ever's obsolete select rules. The old guard already refused this probe; it was not a missing detection and is not claimed as failing-first evidence.
 
-Broadcasts still send the original HTML bytes. Both Rails golden JSON files are byte-for-byte unchanged from `da75e109` and both replays pass. No new row writes, Rails validations/callbacks, schema migration, parity masks or allowlists. The existing domain deferrals above remain partial.
+Broadcasts still send the original HTML bytes. Both Rails golden JSON files are byte-for-byte unchanged from `782466b9` and both replays pass. No new row writes, Rails validations/callbacks, schema migration, parity masks or allowlists. The existing domain deferrals above remain partial.
+
+## Linear source-scan design notes
+
+The old scanner passed every nested `<tag` suffix through the attribute scanner and restarted a terminator search at every unterminated comment opener. The replacement advances one byte cursor through data, tags, HTML text and comments; it never rewinds after a completed span or at EOF.
+
+Each literal nested tag starts an attribute state. Equivalent states merge after each byte instead of repeating a suffix scan. Only the fixed `name`/`nonce` prefixes need distinct attribute-name states. A literal `<` makes a pending name value unequal to every sensitive name, so its source offset can be discarded while retaining its quote state. This bounds the state set independently of nesting depth and still detects outer attributes that resume after a nested raw tag. Character-reference decoding is unchanged and only applies to candidate name values.
+
+Comments collect prospective completed-tag detections while scanning once. A canonical `-->` discards those detections and restores the prior select/foreign counters. An ambiguous terminator or EOF exposes completed prospective detections. Unfinished tags are discarded at EOF, matching the existing policy. A comment inside an open comment does not start another terminator search. Existing text exemptions and the intentional select/title refusal remain unchanged.
+
+The test-only work counter records consumed source bytes, lexical-state steps and inspected candidate name values; it has no storage or updates in production. Each gate doubles n from 256 through 4096, requires work to grow by at most twice the previous count plus 64 fixed operations, and checks a final bound of 16 operations per input byte. These are source-scan operation gates, not wall-clock benchmarks. No new dependencies, model writes, Rails validations/callbacks, cross-workstream production edits or broader browser-conformance work.
 
 ## Checks and raw summaries
 
-All commands below ran in this worktree's `rust/` directory with its own target/cache and the assigned socket ports. Seeds were present, all ten seeded hub tests ran and no seed-dependent tests silently skipped. The previous broader takeover/merge verification is preserved in report history at `ef1f21d7`; the prior foreign-content verification is preserved at `da75e109`. Rails recording/assertions, DB/jobs, contract injection and nineteen mutations were not rerun for this guard-only follow-up; the committed Rails goldens were replayed without regenerating them. Raw logs are in `/home/riels/.cache/rust-port/ws7/evidence/`.
+All commands below ran from this worktree's `rust/` directory with its own target/cache and assigned socket range. Seeds were present; all ten seeded hub tests ran and none silently skipped. Earlier takeover, merge and guard verification remains in report history (`ef1f21d7`, `da75e109`, `782466b9`). Rails recorders, DB/jobs differential checks, contract injection and nineteen mutations were not rerun for this source-scan performance fix. Both committed goldens were replayed without regeneration. Logs are under `/home/riels/.cache/rust-port/ws7/evidence/`.
 
-### Failing-first evidence
+### Failing-first linearity evidence
 
-Before production changes, the noscript input, select/style nonce and both select/CSRF-meta probes returned `None`. The arbitrary-tag attribute backstop test also returned `None`: five failing detection tests. The deliberate select/title refusal and all existing controls passed. The real socket test accepted the noscript token fragment with one recipient instead of refusing it. All reviewer probes are covered by the committed tests; the known intentional over-refusal is explicitly documented rather than represented as a new failure.
+The gates were added to the old scanner before replacing its algorithm. Existing search/attribute entry points were instrumented to count scanned byte ranges. Both gates failed at the first doubling: nested tags 100483 to 397571 operations; unterminated comments 132608 to 527360 operations. These failures are operation-growth assertions, not elapsed-time thresholds. The new preservation test records already-held behavior, not a newly fixed detection failure.
 
-### Before the fix: unit regressions
+### Before the fix: operation-count gates
 
 ```sh
-TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws7/rust/target CABLE_TEST_PORT_RANGE=47000-47039 cargo test -j 4 -p campfire_cable --lib session_bound_ -- --nocapture
+TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws7/rust/target CABLE_TEST_PORT_RANGE=47000-47039 cargo test -j 4 -p campfire_cable --lib have_linear_work -- --nocapture
 ```
 
 ```text
-test result: FAILED. 8 passed; 5 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+source work unclosed comments: n=256 bytes=1024 operations=132608
+source work unclosed comments: n=512 bytes=2048 operations=527360
+source work nested tags: n=256 bytes=769 operations=100483
+source work nested tags: n=512 bytes=1537 operations=397571
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 30 filtered out; finished in 0.04s
 ```
 
-Exit 101: five failed, eight passed, seventeen unrelated units filtered. The intentional select/title refusal already passed; both prior text-control tests passed. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-failing-first-unit.log`.
+Exit 101: both gates failed, thirty unrelated units filtered. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/linear-scan-failing-first.log`.
 
-### Before the fix: real socket
+### After the fix: operation-count gates
 
 ```sh
-TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws7/rust/target CABLE_TEST_PORT_RANGE=47000-47039 cargo test -j 4 -p campfire_cable --test protocol broadcasts_carrying_session_bound_markup_are_refused -- --nocapture
+TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws7/rust/target CABLE_TEST_PORT_RANGE=47000-47039 cargo test -j 4 -p campfire_cable --lib have_linear_work -- --nocapture
 ```
 
 ```text
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 19 filtered out; finished in 0.00s
+source work unclosed comments: n=256 bytes=1024 operations=1021
+source work unclosed comments: n=512 bytes=2048 operations=2045
+source work nested tags: n=256 bytes=769 operations=2302
+source work unclosed comments: n=1024 bytes=4096 operations=4093
+source work nested tags: n=512 bytes=1537 operations=4606
+source work unclosed comments: n=2048 bytes=8192 operations=8189
+source work nested tags: n=1024 bytes=3073 operations=9214
+source work unclosed comments: n=4096 bytes=16384 operations=16381
+source work nested tags: n=2048 bytes=6145 operations=18430
+source work nested tags: n=4096 bytes=12289 operations=36862
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 31 filtered out; finished in 0.00s
 ```
 
-Exit 101. A real subscriber was registered; the noscript fragment returned one recipient, expected zero. Nineteen unrelated protocol tests filtered. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-failing-first-socket.log`.
+Exit 0. Both operation-growth and per-byte bounds passed for every size; thirty-one unrelated units filtered. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/linear-scan-counts.log`.
 
-### After the fix: complete cable suite
+### Complete cable suite
 
 ```sh
 TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws7/rust/target CABLE_TEST_PORT_RANGE=47000-47039 cargo test -j 4 -p campfire_cable
 ```
 
 ```text
-test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
-test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.03s
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-Exit 0, no warnings. In order: 30 units, one protocol golden replay (recorder ignored), 20 real-socket protocol tests, zero doc tests. All six new units and existing text controls passed. The socket test proves refusal of every reviewer payload, with the previous exact delivery assertions still passing. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-cable.log`.
+Exit 0, no warnings. In order: 33 units, one protocol golden replay (recorder ignored), twenty real-socket protocol tests and zero doc tests. All existing detection/control tests and the new preservation cases pass. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/linear-scan-cable.log`.
 
-### After the fix: full application binary
+### Full application binary
 
 ```sh
 TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws7/rust/target CABLE_TEST_PORT_RANGE=47000-47039 cargo test -j 4 -p campfire --bin campfire -- --nocapture
 ```
 
 ```text
-test result: FAILED. 272 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 22.18s
+test result: FAILED. 272 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 22.06s
 ```
 
-Exit 101, no warnings. Only `controllers::presenters::accounts::tests::manages_bots` fails on the inherited bot-key assertion (WS11). `channels::tests::golden::replays_reference_frames` passes, including revoke A; all 96 channel tests pass. Two ignored tests are the Rails recorder and optional job latency measurement. No filtered tests or seed skips. Full application acceptance remains partial because of the known bot test. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-campfire-bin.log`.
+Exit 101, no warnings. Only `controllers::presenters::accounts::tests::manages_bots` fails on the inherited bot-key assertion (WS11). The channel golden `replays_reference_frames` passes, including revoke A. Both golden JSON files are byte-identical to `782466b9`. Two ignored cases are the Rails recorder and optional job latency measurement; no filtered tests or seed skips. Full application acceptance remains partial because of the known bot test. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/linear-scan-campfire-bin.log`.
+
+### Reviewer detection and Rails-rendered payload fixtures
+
+```sh
+TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws7/rust/target cargo run -j 4 --manifest-path /home/riels/.cache/rust-port/ws7/linear-probe/Cargo.toml -- /home/riels/.cache/rust-port/ws7r/round5/rails-rendered.json
+```
+
+```text
+round4: 34/34 suspicious cases detected; 2/2 escaped controls passed; 36 extra envelopes passed
+rails rendered broadcasts: 4 passed; 0 refused
+```
+
+Exit 0. Replayed all 36 reviewer inputs, each bare and in an additional Turbo envelope, using the actual public guard. Also replayed four previously captured Rails-rendered broadcast payloads; no new Rails rendering or fixture regeneration is claimed here. The private harness is a copy of the reviewer detection harness with its timing mode removed. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/linear-scan-review-probes.log`.
 
 ### Strict workspace clippy
 
@@ -178,10 +217,10 @@ TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Project
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.45s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.97s
 ```
 
-Exit 0, no warnings. Excluded workspace html5ever is the vendored dependency, per rust/AGENTS.md. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-clippy.log`.
+Exit 0, no warnings. The excluded workspace html5ever is vendored, per rust/AGENTS.md. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/linear-scan-clippy.log`.
 
 ### Explicit application binary clippy
 
@@ -190,7 +229,7 @@ TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Project
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.20s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.49s
 ```
 
-Exit 0, no warnings. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-clippy-bin.log`.
+Exit 0, no warnings. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/linear-scan-clippy-bin.log`.

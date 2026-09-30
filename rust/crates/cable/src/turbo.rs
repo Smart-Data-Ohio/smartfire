@@ -233,124 +233,323 @@ fn session_bound_tree(html: &str, scripting_enabled: bool) -> Option<&'static st
 }
 
 fn session_bound_source(html: &str) -> Option<&'static str> {
-    let lower = html.to_ascii_lowercase();
-    let mut cursor = 0;
+    session_bound_source_with_work(html, &mut SourceWork::default())
+}
+
+#[derive(Default)]
+struct SourceWork {
+    // Count consumed bytes, lexical-state steps and inspected name values in tests.
+    // The counter has no storage or updates in production builds.
+    #[cfg(test)]
+    bytes: usize,
+}
+
+impl SourceWork {
+    fn scan(&mut self, bytes: usize) {
+        #[cfg(test)]
+        {
+            self.bytes += bytes;
+        }
+        #[cfg(not(test))]
+        let _ = bytes;
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum SourceValue {
+    Other,
+    Nonce,
+    Name(usize),
+}
+
+impl SourceValue {
+    fn finish(self, html: &str, end: usize, work: &mut SourceWork) -> Option<&'static str> {
+        let Self::Name(start) = self else { return None };
+        let value = &html[start..end];
+        work.scan(value.len());
+        let decoded;
+        let value = if value.contains('&') {
+            decoded = source_attribute_value(value);
+            decoded.as_str()
+        } else {
+            value
+        };
+        match value {
+            "authenticity_token" => Some("a CSRF token"),
+            "csrf-token" | "csrf-param" => Some("a CSRF meta tag"),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum SourceAttr {
+    TagName,
+    BeforeName,
+    Name { candidates: u8, matched: u8 },
+    AfterName(u8),
+    BeforeValue(u8),
+    Quoted(u8, SourceValue),
+    Unquoted(SourceValue),
+}
+
+impl SourceAttr {
+    fn step(&mut self, html: &str, at: usize, work: &mut SourceWork) -> Option<&'static str> {
+        let byte = html.as_bytes()[at];
+        match *self {
+            Self::TagName if byte.is_ascii_whitespace() || byte == b'/' => *self = Self::BeforeName,
+            Self::BeforeName if !byte.is_ascii_whitespace() && !matches!(byte, b'/' | b'<' | b'=') => {
+                *self = Self::Name { candidates: 3, matched: 0 };
+                return self.step(html, at, work);
+            }
+            Self::Name { candidates, matched } => {
+                if byte.is_ascii_whitespace() || matches!(byte, b'=' | b'/' | b'<') {
+                    let kind = match (candidates, matched) {
+                        (1, 4) => 1, // name
+                        (2, 5) => 2, // nonce
+                        _ => 0,
+                    };
+                    *self = match byte {
+                        b'=' => Self::BeforeValue(kind),
+                        b'/' | b'<' => Self::BeforeName,
+                        _ => Self::AfterName(kind),
+                    };
+                } else {
+                    let mut next = 0;
+                    for (bit, name) in [(1, b"name".as_slice()), (2, b"nonce".as_slice())] {
+                        if candidates & bit != 0 && name.get(matched as usize) == Some(&byte.to_ascii_lowercase()) {
+                            next |= bit;
+                        }
+                    }
+                    *self = Self::Name { candidates: next, matched: if next == 0 { 0 } else { matched + 1 } };
+                }
+            }
+            Self::AfterName(kind) if !byte.is_ascii_whitespace() => {
+                *self = if byte == b'=' { Self::BeforeValue(kind) } else { Self::BeforeName };
+                if byte != b'=' {
+                    return self.step(html, at, work);
+                }
+            }
+            Self::BeforeValue(kind) if !byte.is_ascii_whitespace() => {
+                let quoted = matches!(byte, b'\'' | b'"');
+                let value = match kind {
+                    1 => SourceValue::Name(at + usize::from(quoted)),
+                    2 => SourceValue::Nonce,
+                    _ => SourceValue::Other,
+                };
+                *self = if quoted { Self::Quoted(byte, value) } else { Self::Unquoted(value) };
+                if !quoted && kind == 2 {
+                    return Some("a CSP nonce");
+                }
+            }
+            Self::Quoted(quote, value) => {
+                if byte == quote {
+                    *self = Self::BeforeName;
+                    return value.finish(html, at, work);
+                }
+                if value == SourceValue::Nonce {
+                    return Some("a CSP nonce");
+                }
+                if byte == b'<' {
+                    // A literal '<' makes this value unequal to every sensitive name. Keep
+                    // its quote state so outer attributes after a nested raw tag still count.
+                    *self = Self::Quoted(quote, SourceValue::Other);
+                }
+            }
+            Self::Unquoted(value) => {
+                if byte.is_ascii_whitespace() {
+                    *self = Self::BeforeName;
+                    return value.finish(html, at, work);
+                }
+                if byte == b'<' {
+                    *self = Self::Unquoted(SourceValue::Other);
+                }
+            }
+            _ => {}
+        }
+        None
+    }
+}
+
+struct SourceTag {
+    start: usize,
+    name_start: usize,
+    name_end: Option<usize>,
+    closing: bool,
+    attrs: Vec<SourceAttr>,
+    reason: Option<&'static str>,
+}
+
+impl SourceTag {
+    fn new(start: usize, closing: bool) -> Self {
+        Self {
+            start,
+            name_start: start + if closing { 2 } else { 1 },
+            name_end: None,
+            closing,
+            attrs: vec![SourceAttr::TagName],
+            reason: None,
+        }
+    }
+
+    fn step(&mut self, html: &str, at: usize, work: &mut SourceWork) {
+        let byte = html.as_bytes()[at];
+        if self.name_end.is_none() && at >= self.name_start && (byte.is_ascii_whitespace() || byte == b'/') {
+            self.name_end = Some(at);
+        }
+        if self.closing || self.reason.is_some() {
+            return;
+        }
+        for attr in &mut self.attrs {
+            work.scan(1);
+            if let Some(reason) = attr.step(html, at, work) {
+                self.reason = Some(reason);
+                return;
+            }
+        }
+        if byte == b'<' && html.as_bytes().get(at + 1).is_some_and(u8::is_ascii_alphabetic) {
+            self.attrs.push(SourceAttr::TagName);
+        }
+        // Equivalent lexical states share all future work. Pending name values lose their
+        // offsets at each literal '<', so nested tags cannot grow the state set with input.
+        self.attrs.sort_unstable();
+        self.attrs.dedup();
+    }
+
+    fn finish(&mut self, html: &str, at: usize, work: &mut SourceWork) -> Option<&'static str> {
+        if self.closing {
+            return None;
+        }
+        if self.reason.is_none() {
+            for attr in &self.attrs {
+                work.scan(1);
+                if let SourceAttr::Quoted(_, value) | SourceAttr::Unquoted(value) = *attr
+                    && let Some(reason) = value.finish(html, at, work)
+                {
+                    self.reason = Some(reason);
+                    break;
+                }
+            }
+        }
+        self.reason
+    }
+
+    fn name<'a>(&self, html: &'a str, end: usize) -> &'a str {
+        &html[self.name_start..self.name_end.unwrap_or(end)]
+    }
+}
+
+enum SourceBody {
+    Data,
+    Tag(SourceTag),
+    Text(&'static str),
+}
+
+struct SourceComment {
+    selects: usize,
+    foreign: usize,
+    reason: Option<&'static str>,
+}
+
+fn session_bound_source_with_work(html: &str, work: &mut SourceWork) -> Option<&'static str> {
+    let bytes = html.as_bytes();
+    let mut body = SourceBody::Data;
+    let mut comment: Option<SourceComment> = None;
     let mut selects = 0_usize;
     let mut foreign = 0_usize;
-    while let Some(offset) = lower[cursor..].find('<') {
-        let start = cursor + offset;
-        cursor = start + 1;
-
-        // Preserve clear comment/text controls. Ambiguous markup is scanned, not exempted.
-        if let Some(comment) = lower[start..].strip_prefix("<!--")
-            && !comment.starts_with('>')
-            && !comment.starts_with("->")
-            && let Some(end) = comment.find("-->")
-            && !comment[..end].contains("--!>")
-        {
-            cursor = start + 4 + end + 3;
+    let mut at = 0;
+    while at < bytes.len() {
+        work.scan(1);
+        if comment.is_some() && bytes[at..].starts_with(b"-->") {
+            let old = comment.take().unwrap();
+            selects = old.selects;
+            foreign = old.foreign;
+            body = SourceBody::Data;
+            at += 3;
             continue;
         }
-        let closing = lower[start..].starts_with("</");
-        let name_start = start + if closing { 2 } else { 1 };
-        if !lower.as_bytes().get(name_start).is_some_and(u8::is_ascii_alphabetic) {
-            continue;
-        }
-        let Some(end) = lower[start..].find('>').map(|offset| start + offset) else {
-            break;
-        };
-        let name = lower[name_start..=end]
-            .split(|c: char| c.is_ascii_whitespace() || matches!(c, '/' | '>'))
-            .next()
-            .unwrap();
-        let tag = &html[start..=end];
-        cursor = end + 1;
-        if closing {
-            match name {
-                "select" => selects = selects.saturating_sub(1),
-                "svg" | "math" => foreign = foreign.saturating_sub(1),
-                _ => {}
-            }
-            continue;
-        }
-
-        // Inspect every literal '<' followed by a letter, including one inside another tag.
-        // Attribute tokenization decodes entities but never applies tree-builder filtering.
-        for (offset, _) in tag.match_indices('<') {
-            if tag.as_bytes().get(offset + 1).is_some_and(u8::is_ascii_alphabetic)
-                && let Some(reason) = session_bound_source_tag(&tag[offset..])
-            {
+        if comment.is_some() && bytes[at..].starts_with(b"--!>") {
+            // Ambiguous comments remain eligible for refusal. All prospective tags have
+            // already been checked while waiting; there is no rewind after the terminator.
+            if let Some(reason) = comment.take().unwrap().reason {
                 return Some(reason);
             }
         }
-        let self_closing = tag[..tag.len() - 1].trim_end().ends_with('/');
-        match name {
-            "select" => selects += 1,
-            "svg" | "math" if !self_closing => foreign += 1,
-            _ => {}
-        }
-        // Select's obsolete insertion rules must never hide a source tag. In particular,
-        // <select><title><input ...> is intentionally refused, even if a browser treats it as text.
-        if selects == 0 && foreign == 0 && !self_closing && matches!(name, "textarea" | "title" | "script") {
-            let close = format!("</{name}");
-            cursor = lower[cursor..]
-                .match_indices(&close)
-                .find(|(offset, _)| {
-                    lower.as_bytes().get(cursor + offset + close.len())
-                        .is_some_and(|c| c.is_ascii_whitespace() || matches!(c, b'/' | b'>'))
-                })
-                .map_or(html.len(), |(offset, _)| cursor + offset);
-        }
-    }
-    None
-}
-
-fn session_bound_source_tag(tag: &str) -> Option<&'static str> {
-    // Read source attributes independently: no tree insertion rules, duplicate-attribute
-    // filtering or EOF recovery can discard a suspicious value before we inspect it.
-    let mut attrs = tag[1..tag.len() - 1].trim_start_matches(|c: char| !c.is_ascii_whitespace() && c != '/');
-    while !attrs.is_empty() {
-        attrs = attrs.trim_start_matches(|c: char| c.is_ascii_whitespace() || c == '/');
-        if attrs.is_empty() {
-            break;
-        }
-        let end = attrs.find(|c: char| c.is_ascii_whitespace() || matches!(c, '=' | '/' | '>' | '<')).unwrap_or(attrs.len());
-        let name = &attrs[..end];
-        if end == 0 {
-            attrs = &attrs[1..];
-            continue;
-        }
-        attrs = attrs[end..].trim_start_matches(|c: char| c.is_ascii_whitespace());
-        let Some(value) = attrs.strip_prefix('=') else {
-            continue;
-        };
-        attrs = value.trim_start_matches(|c: char| c.is_ascii_whitespace());
-        let value = if attrs.starts_with(['\'', '"']) {
-            let quote = attrs.as_bytes()[0] as char;
-            attrs = &attrs[1..];
-            let end = attrs.find(quote).unwrap_or(attrs.len());
-            let value = &attrs[..end];
-            attrs = attrs.get(end + 1..).unwrap_or("");
-            value
-        } else {
-            let end = attrs.find(|c: char| c.is_ascii_whitespace() || c == '>').unwrap_or(attrs.len());
-            let value = &attrs[..end];
-            attrs = &attrs[end..];
-            value
-        };
-        if name.eq_ignore_ascii_case("nonce") && !value.is_empty() {
-            return Some("a CSP nonce");
-        }
-        if name.eq_ignore_ascii_case("name") {
-            let value = if value.contains('&') { source_attribute_value(value) } else { value.to_string() };
-            match value.as_str() {
-                "authenticity_token" => return Some("a CSRF token"),
-                "csrf-token" | "csrf-param" => return Some("a CSRF meta tag"),
-                _ => {}
+        match &mut body {
+            SourceBody::Data => {
+                if comment.is_none() && bytes[at..].starts_with(b"<!--")
+                    && !bytes[at + 4..].starts_with(b">") && !bytes[at + 4..].starts_with(b"->")
+                {
+                    comment = Some(SourceComment { selects, foreign, reason: None });
+                    at += 4;
+                    continue;
+                }
+                if bytes[at] == b'<' {
+                    let closing = bytes.get(at + 1) == Some(&b'/');
+                    let name_start = at + if closing { 2 } else { 1 };
+                    if bytes.get(name_start).is_some_and(u8::is_ascii_alphabetic) {
+                        body = SourceBody::Tag(SourceTag::new(at, closing));
+                        at = name_start;
+                        continue;
+                    }
+                }
+            }
+            SourceBody::Text(close) => {
+                if bytes[at..].get(..close.len()).is_some_and(|s| s.eq_ignore_ascii_case(close.as_bytes()))
+                    && bytes.get(at + close.len()).is_some_and(|b| b.is_ascii_whitespace() || matches!(b, b'/' | b'>'))
+                {
+                    body = SourceBody::Tag(SourceTag::new(at, true));
+                    at += 2;
+                    continue;
+                }
+            }
+            SourceBody::Tag(tag) => {
+                if bytes[at] == b'>' {
+                    let reason = tag.finish(html, at, work);
+                    if let Some(pending) = &mut comment {
+                        pending.reason = pending.reason.or(reason);
+                    } else if reason.is_some() {
+                        return reason;
+                    }
+                    let name = tag.name(html, at);
+                    let self_closing = html[tag.start..at].trim_end().ends_with('/');
+                    body = if tag.closing {
+                        if name.eq_ignore_ascii_case("select") {
+                            selects = selects.saturating_sub(1);
+                        } else if name.eq_ignore_ascii_case("svg") || name.eq_ignore_ascii_case("math") {
+                            foreign = foreign.saturating_sub(1);
+                        }
+                        SourceBody::Data
+                    } else {
+                        if name.eq_ignore_ascii_case("select") {
+                            selects += 1;
+                        } else if !self_closing && (name.eq_ignore_ascii_case("svg") || name.eq_ignore_ascii_case("math")) {
+                            foreign += 1;
+                        }
+                        if selects == 0 && foreign == 0 && !self_closing {
+                            if name.eq_ignore_ascii_case("textarea") {
+                                SourceBody::Text("</textarea")
+                            } else if name.eq_ignore_ascii_case("title") {
+                                SourceBody::Text("</title")
+                            } else if name.eq_ignore_ascii_case("script") {
+                                SourceBody::Text("</script")
+                            } else {
+                                SourceBody::Data
+                            }
+                        } else {
+                            SourceBody::Data
+                        }
+                    };
+                } else {
+                    tag.step(html, at, work);
+                }
             }
         }
+        at += 1;
     }
-    None
+    // An unfinished tag is never reparsed at EOF. An unfinished comment only exposes
+    // completed prospective tags; a clearly terminated comment discards them above.
+    comment.and_then(|pending| pending.reason)
 }
 
 fn source_attribute_value(value: &str) -> String {
@@ -584,6 +783,48 @@ mod tests {
             ("<select><x/name=authenticity_token></select>", "a CSRF token"),
         ] {
             assert_session_bound_fragment(html, reason);
+        }
+    }
+
+    fn assert_source_scan_linear(label: &str, input: impl Fn(usize) -> String) {
+        let mut previous = 0;
+        for n in [256, 512, 1024, 2048, 4096] {
+            let html = input(n);
+            let mut work = SourceWork::default();
+            assert_eq!(session_bound_source_with_work(&html, &mut work), None);
+            println!("source work {label}: n={n} bytes={} operations={}", html.len(), work.bytes);
+            if previous != 0 {
+                assert!(work.bytes <= previous * 2 + 64, "{label}: doubling input grew work from {previous} to {}", work.bytes);
+            }
+            previous = work.bytes;
+        }
+        let bytes = input(4096).len();
+        assert!(previous <= bytes * 16, "{label}: {previous} operations for {bytes} bytes");
+    }
+
+    #[test]
+    fn session_bound_source_nested_tags_have_linear_work() {
+        assert_source_scan_linear("nested tags", |n| "<x ".repeat(n) + ">");
+    }
+
+    #[test]
+    fn session_bound_source_unclosed_comments_have_linear_work() {
+        assert_source_scan_linear("unclosed comments", |n| "<!--".repeat(n));
+    }
+
+    #[test]
+    fn session_bound_source_preserves_nested_attributes_and_comment_controls() {
+        for (html, reason) in [
+            ("<select><x title=\"<y a='\" name=authenticity_token>", Some("a CSRF token")),
+            ("<select><x title='<y a=\"' nonce=secret>", Some("a CSP nonce")),
+            ("<!-- <input name=authenticity_token>", Some("a CSRF token")),
+            ("<!-- <input name=authenticity_token> --!>", Some("a CSRF token")),
+            ("<!-- <input name=authenticity_token> -->", None),
+            ("<!-- <select> --> <title><input name=authenticity_token></title>", None),
+            ("<!-- <input name=authenticity_token", None),
+            ("<x nonce=secret", None),
+        ] {
+            assert_eq!(session_bound_source(html), reason, "{html}");
         }
     }
 
