@@ -60,9 +60,11 @@ for anything that walks directories.
 
 CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on changes under
 `rust/**` (and by hand, for a Rails change the port reads), in the `toolchain` stage of
-`Dockerfile`. Clippy, the build and `cargo test -p campfire_db` are gates. The rest of the tests
-aren't yet: `campfire_assets`' reference tests still fail against our assets, so that step is
-`continue-on-error` and the run's summary counts the failures. Upstream's image publishing
+`Dockerfile`. Clippy, the normal binary build and the `campfire_db` tests/doctests are gates.
+Nextest runs unit/integration tests once each; `cargo test --doc` retains doctest coverage. The
+rest of the tests aren't gates yet: reference tests still fail against our assets, so those steps
+are `continue-on-error` and the run's summary combines JUnit and doctest failure counts. CI uses
+mold through `ci/cargo.sh`; ordinary local builds keep their normal linker. Upstream's image publishing
 workflow isn't carried over: we deploy through our own GCP pipeline.
 
 `crates/db/src/schema.sql` (with `schema_migrations.txt`, `schema_sha1.txt` and
