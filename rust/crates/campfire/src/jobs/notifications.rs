@@ -21,9 +21,45 @@ impl campfire_db::Job for SavedReminder {
 }
 impl JobKind for SavedReminder {}
 
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct TestNotification(campfire_db::models::push_subscription::TestNotificationJob);
+impl campfire_db::Job for TestNotification {
+    const CLASS: &'static str = "Push::Subscription::TestNotificationJob";
+}
+impl JobKind for TestNotification {
+    const QUEUE: &'static str = super::PUSH_QUEUE;
+}
+
 pub(super) fn register(registry: &mut Registry) {
     registry.register(thread_message);
     registry.register(saved_reminder);
+    registry.register(test_notification);
+}
+
+async fn test_notification(app: App, job: TestNotification, _: Execution) -> JobResult {
+    let Some(pool) = app.web_push.clone() else {
+        return Ok(Outcome::Done);
+    };
+    app.db
+        .read(move |conn| {
+            let subscription =
+                match campfire_db::PushSubscription::find(conn, job.0.subscription_id) {
+                    Ok(subscription) if subscription.user_id == job.0.user_id => subscription,
+                    Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => return Ok(()),
+                    Err(error) => return Err(error),
+                };
+            // The explicit test sends even in DND/quiet/OOO, as the Rails controller does.
+            let payload = campfire_db::PushPayload::new(
+                "Smartfire Test".into(),
+                job.0.body,
+                job.0.path,
+                Some("test-notification".into()),
+            );
+            pool.queue(conn, &payload, vec![subscription])
+        })
+        .await?;
+    Ok(Outcome::Done)
 }
 
 async fn thread_message(app: App, job: ThreadMessage, _: Execution) -> JobResult {

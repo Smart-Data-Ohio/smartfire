@@ -16,4 +16,4 @@ value=json.loads((scratch/"settings-generated.json").read_text())
 assert value["reference"]=="d7c7de92"
 (root/"rust/crates/db/src/tests/ws17_settings_vectors.json").write_text(json.dumps({k:v for k,v in value.items() if k!="zones"},ensure_ascii=False)+"\n")
 (root/"rust/crates/db/src/tests/ws17_settings_zones.json").write_text(json.dumps(value["zones"])+"\n")
-print(f"Rails settings vectors: {len(value['rows'])} presets; {len(value['clocks'])} clock setters; {len(value['validations'])} validations; {len(value['zones']['names'])} legal zone names")
+print(f"Rails settings vectors: {len(value['rows'])} presets; {len(value['clocks'])} clock setters; {len(value['validations'])} validations; {len(value['zones']['names'])} legal zone names; 1 dirty-write scenario")

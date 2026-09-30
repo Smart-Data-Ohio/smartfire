@@ -40,5 +40,11 @@ travel_to(clock) do
     validations << { attrs:, errors: u.errors.map { |e|[e.attribute.to_s,e.message] } }
   end
 end
-puts JSON.generate({reference:"d7c7de92",now:clock.iso8601,rows:,clocks:,validations:,
+user.save!
+first = User.find(user.id)
+second = User.find(user.id)
+first.update!(dnd_enabled: true, presence_setting: "invisible")
+second.update!(custom_status_text: "Concurrent edit")
+dirty_write = second.reload.attributes.slice("dnd_enabled", "presence_setting", "custom_status_text")
+puts JSON.generate({reference:"d7c7de92",now:clock.iso8601,rows:,clocks:,validations:,dirty_write:,
   zones:{ names:(ActiveSupport::TimeZone::MAPPING.keys+TZInfo::Timezone.all_identifiers).uniq.sort }})

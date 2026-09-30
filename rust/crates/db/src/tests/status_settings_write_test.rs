@@ -164,6 +164,23 @@ fn changed_settings_touch_updated_at_and_an_unchanged_save_does_not() {
 }
 
 #[test]
+fn concurrent_settings_instances_only_write_the_fields_each_changed() {
+    let t = TestDb::new();
+    let mut first = settings(&t);
+    let mut second = settings(&t);
+    first.dnd_enabled = true;
+    first.presence_setting = "invisible".into();
+    t.write(move |tx| first.save(tx));
+    second.custom_status_text = Some("Concurrent edit".into());
+    t.write(move |tx| second.save(tx));
+    let actual = settings(&t);
+    assert_eq!(
+        serde_json::json!({"dnd_enabled":actual.dnd_enabled,"presence_setting":actual.presence_setting,"custom_status_text":actual.custom_status_text}),
+        vectors()["dirty_write"]
+    );
+}
+
+#[test]
 fn an_unchanged_expired_ooo_end_still_saves_but_replacing_it_with_a_past_end_is_invalid() {
     let t = TestDb::new();
     let old = t.now().ago(SignedDuration::from_hours(1));

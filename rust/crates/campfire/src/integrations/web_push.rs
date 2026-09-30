@@ -204,6 +204,7 @@ fn verify_response(status: u16, reason: &str, host: &str) -> Result<u16, Deliver
 /// `Users::PushSubscriptions::TestNotificationsController#create`: a "Campfire Test"
 /// notification with a random body, delivered inline. `path` is `user_push_subscriptions_url`
 /// (a full URL); `badge` is the subscriber's unread count. Errors propagate, as in Rails.
+#[cfg(test)]
 pub async fn deliver_test_notification(
     net: &Network,
     vapid: &VapidConfig,

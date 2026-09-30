@@ -31,6 +31,19 @@ pub struct PushSubscription {
     pub updated_at: Timestamp,
 }
 
+/// Durable Rust adapter for the pinned Rails controller's inline test delivery. Capture the
+/// random UUID and absolute request path at enqueue, then read the subscription/badge at run.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TestNotificationJob {
+    pub subscription_id: i64,
+    pub user_id: i64,
+    pub body: String,
+    pub path: String,
+}
+impl crate::Job for TestNotificationJob {
+    const CLASS: &'static str = "Push::Subscription::TestNotificationJob";
+}
+
 /// How long a payload's title and body may be, counted as the bytes they take in the JSON
 /// message. An encrypted Web Push record holds at most 4096 bytes: 4078 of JSON once the padding
 /// and tag are in, and the icon, path and badge take under 150 of that.

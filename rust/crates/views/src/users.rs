@@ -9,6 +9,8 @@ use crate::layouts::Page;
 
 mod summary;
 pub use summary::*;
+mod settings;
+pub use settings::*;
 
 /// `users/new.html.erb` (the join page).
 #[derive(Template)]
@@ -111,9 +113,16 @@ pub struct ProfileShow<'a> {
     pub transfer_id: String,
     pub shared_memberships: Vec<ProfileMembership>,
     pub direct_memberships: Vec<ProfileMembership>,
+    pub settings: SettingsFormData,
 }
 
 impl<'a> ProfileShow<'a> {
+    fn status_form(&self) -> h::Html {
+        h::raw(StatusForm { ctx: self.ctx, data: &self.settings }.render().expect("status form renders"))
+    }
+    fn notification_form(&self) -> h::Html {
+        h::raw(NotificationForm { ctx: self.ctx, data: &self.settings }.render().expect("notification form renders"))
+    }
     /// `profile_form_with(@user, **params)`.
     fn profile_form(&self) -> h::FormWith {
         h::form_with(h::routes::user_profile()).model("user").method("patch").data("controller", "form")

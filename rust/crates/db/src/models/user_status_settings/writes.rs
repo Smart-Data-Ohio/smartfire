@@ -173,18 +173,16 @@ impl UserStatusSettings {
     /// touch updated_at only for a changed save. Callback orchestration belongs to controllers.
     pub fn save(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         let now = tx.now();
-        let previous = Self::find(tx.conn(), self.user.id)?;
         self.time_zone = self
             .time_zone
             .take()
             .filter(|s| !s.chars().all(char::is_whitespace));
-        self.validate_settings(&previous, now).into_result()?;
-        let before = previous.attributes();
+        self.validate_settings(now).into_result()?;
         let changes: Vec<_> = self
             .attributes()
             .into_iter()
-            .zip(before)
-            .filter_map(|((key, value), (_, old))| (value != old).then_some((key, value)))
+            .zip(self.original_attributes.iter())
+            .filter_map(|((key, value), (_, old))| (&value != old).then_some((key, value)))
             .collect();
         if changes.is_empty() {
             return Ok(());
@@ -205,6 +203,7 @@ impl UserStatusSettings {
             rusqlite::params_from_iter(values),
         )?;
         self.user.updated_at = now;
+        self.original_attributes = self.attributes();
         Ok(())
     }
 
@@ -217,7 +216,7 @@ impl UserStatusSettings {
         })
     }
 
-    fn validate_settings(&self, previous: &Self, now: Timestamp) -> Errors {
+    fn validate_settings(&self, now: Timestamp) -> Errors {
         let mut errors = Errors::default();
         for (key, value, allowed) in [
             (
@@ -257,7 +256,15 @@ impl UserStatusSettings {
                 errors.add(key, format!("is too long (maximum is {limit} characters)"));
             }
         }
-        if self.ooo_until != previous.ooo_until && self.ooo_until.is_some_and(|end| end <= now) {
+        let ooo_value = self
+            .ooo_until
+            .map(|end| Value::Text(end.to_db()))
+            .unwrap_or(Value::Null);
+        let ooo_changed = self
+            .original_attributes
+            .iter()
+            .any(|(key, old)| *key == "ooo_until" && *old != ooo_value);
+        if ooo_changed && self.ooo_until.is_some_and(|end| end <= now) {
             errors.add("ooo_until", "must be in the future");
         }
         for (key, value) in [
@@ -291,7 +298,7 @@ impl UserStatusSettings {
         errors
     }
 
-    fn attributes(&self) -> Vec<(&'static str, Value)> {
+    pub(super) fn attributes(&self) -> Vec<(&'static str, Value)> {
         let text = |s: &Option<String>| s.clone().map(Value::Text).unwrap_or(Value::Null);
         let stamp = |s: Option<Timestamp>| s.map(|s| Value::Text(s.to_db())).unwrap_or(Value::Null);
         let number = |n: Option<i64>| n.map(Value::Integer).unwrap_or(Value::Null);

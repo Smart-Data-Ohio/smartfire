@@ -1866,72 +1866,72 @@
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "enables DND with quiet hours and keywords",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_enables_dnd_with_quiet_hours_and_keywords"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "disables DND and clears keywords",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_disables_dnd_and_clears_keywords"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "enables quiet-during-meetings",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_enables_quiet_during_meetings"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "toggles keep-notifying while out of office, defaulting to off",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_toggles_keep_notifying_while_out_of_office_defaulting_off"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "quiet hours without a window render errors",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_quiet_hours_without_a_window_render_errors_and_submitted_values"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "a failed save keeps the previous keywords",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_a_failed_save_keeps_the_previous_keywords"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "requires sign-in",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_notification_settings_requires_sign_in"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "enabling DND after a timed expiry starts it indefinitely",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_enabling_dnd_after_a_timed_expiry_starts_it_indefinitely"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "disabling DND clears a running timer",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_disabling_dnd_clears_a_running_timer"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "saving settings preserves a running DND timer",
-      "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17",
+      "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_saving_settings_preserves_a_running_dnd_timer"
     },
     {
       "file": "test/models/dnd_allowed_user_test.rb",

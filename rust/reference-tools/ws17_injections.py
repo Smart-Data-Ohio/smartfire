@@ -13,7 +13,7 @@ root = Path(__file__).resolve().parents[2]
 scratch = root / ".scratch"
 scratch.mkdir(exist_ok=True)
 env = dict(os.environ, TMPDIR=str(scratch), CARGO_TARGET_DIR=str(root / "rust/target"),
-           CABLE_TEST_PORT_RANGE="52400-52449", MAIL_TEST_PORT_RANGE="52400-52449")
+           CAMPFIRE_TEST_REQUIRE_SEED="1", CABLE_TEST_PORT_RANGE="52400-52449", MAIL_TEST_PORT_RANGE="52400-52449")
 cases = [
     ("policy-quiet-gate", "notification_policy.rs",
      "(!recipient.quiet_for_push(self.now) || self.dnd_exception)",
@@ -56,6 +56,9 @@ cases += [
     ("settings-dnd-timer", "rust/crates/db/src/models/user_status_settings/writes.rs",
      "if !self.dnd_enabled || !self.manual_dnd_active(now)", "if true",
      "enabling_dnd_clears_an_expired_timer_and_preserves_a_live_one", "campfire_db"),
+    ("settings-stale-write", "rust/crates/db/src/models/user_status_settings/writes.rs",
+     ".zip(self.original_attributes.iter())", ".zip(Self::find(tx.conn(), self.user.id)?.original_attributes.iter())",
+     "concurrent_settings_instances_only_write_the_fields_each_changed", "campfire_db"),
     ("presence-http-body", "rust/crates/campfire/src/controllers/users/presences.rs",
      'json!({"presences":presences})', 'json!({"presences":[]})',
      "ws17_presence_http_bodies_match_rails_vectors", "campfire"),
@@ -65,6 +68,15 @@ cases += [
     ("service-worker-bytes", "rust/crates/campfire/src/controllers/pwa.rs",
      "pwa::SERVICE_WORKER_JS", '"/* wrong bytes */"',
      "ws17_service_worker_is_served_byte_identical_to_rails", "campfire"),
+    ("next-form-bytes", "rust/crates/views/templates/users/profiles/_status.html",
+     "Automatic shows you online", "Automatic always shows you offline",
+     "ws17_owned_settings_html_matches_complete_rails_partials", "campfire_views"),
+    ("next-controller-errors", "rust/crates/campfire/src/controllers/users/notification_settings.rs",
+     "StatusCode::UNPROCESSABLE_ENTITY, submitted", "StatusCode::OK, submitted",
+     "ws17_a_failed_save_keeps_the_previous_keywords", "campfire"),
+    ("next-test-push-tag", "rust/crates/campfire/src/jobs/notifications.rs",
+     'Some("test-notification".into())', 'Some("wrong-tag".into())',
+     "ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_dnd", "campfire"),
 ]
 if len(sys.argv)>1:
     cases=[case for case in cases if case[0].startswith(sys.argv[1])]

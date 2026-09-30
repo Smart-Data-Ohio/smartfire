@@ -446,6 +446,49 @@ async fn the_pool_invalidates_tls_failures_like_rails() {
     assert_eq!(*destroyed.lock().unwrap(), vec![1]);
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_dnd() {
+    use crate::app::AppState;
+    use crate::controllers::presenters::test_support::{TestApp, Req, DAVID};
+    use axum::http::Method;
+    let test=TestApp::boot().await.expect("WS17 requires the parity seed");
+    let original=test.booted.app.clone();let db=original.db.clone();
+    let service=push_service(201,"Created").await;let receiver=Receiver::new();
+    let subscription=receiver.subscription(1,"https://fcm.googleapis.com/fcm/send/ws17-test");
+    let id=db.write(move |tx| {
+        tx.conn().execute_batch("CREATE TRIGGER ws17_hold_test_push AFTER INSERT ON background_jobs WHEN NEW.job_class='Push::Subscription::TestNotificationJob' BEGIN UPDATE background_jobs SET run_at='2099-01-01 00:00:00' WHERE id=NEW.id; END;")?;
+        let id=PushSubscription::for_user(tx.conn(),DAVID)?[0].id;
+        tx.conn().execute("UPDATE push_subscriptions SET endpoint=?,p256dh_key=?,auth_key=? WHERE id=?",rusqlite::params![subscription.endpoint,subscription.p256dh_key,subscription.auth_key,id])?;
+        tx.conn().execute("UPDATE users SET dnd_enabled=1 WHERE id=?",[DAVID])?;Ok(id)
+    }).await.unwrap();
+    let mut browser=test.david();
+    let reply=browser.write(Req::new(Method::POST,&format!("/users/me/push_subscriptions/{id}/test_notifications"))).await;
+    assert_eq!(reply.location(),Some("http://campfire.test/users/me/push_subscriptions"));
+    let body: String=db.read(|c|Ok(c.query_row("SELECT json_extract(arguments,'$.body') FROM background_jobs WHERE job_class='Push::Subscription::TestNotificationJob'",[],|r|r.get(0))?)).await.unwrap();
+    test.booted.jobs.shutdown(Duration::from_secs(5)).await;
+    db.write(|tx|{tx.conn().execute_batch("DROP TRIGGER ws17_hold_test_push")?;tx.conn().execute("UPDATE background_jobs SET run_at=? WHERE job_class='Push::Subscription::TestNotificationJob'",[tx.now()])?;Ok(())}).await.unwrap();
+    let pool=Pool::new(service.net.clone(),vapid(),|_|Ok::<_,String>(()));
+    let app=Arc::new(AppState {
+        config:original.config.clone(),secrets:original.secrets.clone(),clock:original.clock.clone(),
+        db:db.clone(),storage:original.storage.clone(),cable:original.cable.clone(),broadcasts:original.broadcasts.clone(),
+        jobs:original.jobs.clone(),mail:crate::mail::State::new(original.mail.config.clone()),web_push:Some(pool.clone()),fragment_cache:original.fragment_cache.clone(),
+    });
+    let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::jobs::runner_config(&app.config));
+    tokio::time::timeout(Duration::from_secs(5),async {
+        loop {
+            let count=db.read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Push::Subscription::TestNotificationJob'",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
+            if count==0 {break;}tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }).await.unwrap();
+    runner.shutdown(Duration::from_secs(5)).await;pool.shutdown().await;
+    let requests=service.server.received();assert_eq!(requests.len(),1);
+    let payload: serde_json::Value=serde_json::from_str(&receiver.open(&requests[0].body)).unwrap();
+    assert_eq!(payload["title"],"Smartfire Test");assert_eq!(payload["options"]["body"],body);
+    assert_eq!(payload["options"]["tag"],"test-notification");
+    assert_eq!(payload["options"]["data"]["path"],"http://campfire.test/users/me/push_subscriptions");
+    assert_eq!(payload["options"]["data"]["badge"],db.read(|c|campfire_db::Membership::unread_count(c,DAVID)).await.unwrap());
+}
+
 #[tokio::test]
 async fn the_pool_drops_deliveries_past_its_queue() {
     let service = push_service(201, "Created").await;

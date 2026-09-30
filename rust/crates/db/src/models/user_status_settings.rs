@@ -36,6 +36,8 @@ pub struct UserStatusSettings {
     pub ooo_notify_enabled: bool,
     pub ooo_broadcast: Option<bool>,
     pub meeting_cache: Option<MeetingCache>,
+    /// Active Record dirty tracking uses the loaded record, not a new row read during save.
+    original_attributes: Vec<(&'static str, rusqlite::types::Value)>,
 }
 
 #[derive(Debug, Clone)]
@@ -102,7 +104,7 @@ impl MeetingCache {
 
 impl UserStatusSettings {
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
-        Ok(Self {
+        let mut user = Self {
             user: User::from_row(row)?,
             presence_setting: row.get("presence_setting")?,
             custom_status_emoji: row.get("custom_status_emoji")?,
@@ -125,7 +127,10 @@ impl UserStatusSettings {
             ooo_notify_enabled: row.get("ooo_notify_enabled")?,
             ooo_broadcast: row.get("ooo_broadcast")?,
             meeting_cache: None,
-        })
+            original_attributes: Vec::new(),
+        };
+        user.original_attributes = user.attributes();
+        Ok(user)
     }
 
     /// Two queries for the batch, regardless of how many subscriptions each person has.

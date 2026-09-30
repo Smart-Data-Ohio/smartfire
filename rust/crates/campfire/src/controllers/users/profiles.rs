@@ -15,28 +15,39 @@ use crate::controllers::presenters::{self, accounts::string_attribute};
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     c.respond_to(&[&format::HTML])?;
-    let user = concerns::require_current_user(c)?.clone();
+    let id = concerns::require_current_user(c)?.id;
+    let user = c.app().db.read(move |conn| campfire_db::UserStatusSettings::find(conn, id)).await.map_err(Error::internal)?;
+    render_settings(c, StatusCode::OK, user, campfire_db::Errors::default()).await
+}
+
+/// Failed settings writes keep submitted values in the forms and fetch the rolled-back keyword list.
+pub(super) async fn render_settings(c: &mut Ctx, status: StatusCode, settings: campfire_db::UserStatusSettings, errors: campfire_db::Errors) -> Result {
+    c.respond_to(&[&format::HTML])?;
+    let user = settings.user.clone();
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
-    let (avatar_attached, (direct_memberships, shared_memberships)) = {
+    let now = c.app().db.env().now();
+    let google_configured = presenters::status_settings::google_configured();
+    let (avatar_attached, (direct_memberships, shared_memberships), settings) = {
         let user = user.clone();
         c.app()
             .db
             .read(move |conn| {
                 let attached = attachments::attached_blob(conn, "User", user.id, "avatar")?.is_some();
-                Ok((attached, presenters::accounts::profile_memberships(conn, &user)?))
+                Ok((attached, presenters::accounts::profile_memberships(conn, &user)?, presenters::status_settings::forms(conn, &settings, errors, now, google_configured)?))
             })
             .await
             .map_err(Error::internal)?
     };
     let user = presenters::user_summary(&secrets, &user);
-    framed_page!(c, StatusCode::OK, |ctx| users::ProfileShow {
+    framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
         user: user.clone(),
         avatar_attached,
         transfer_id: transfer_id.clone(),
         shared_memberships: shared_memberships.clone(),
         direct_memberships: direct_memberships.clone(),
+        settings: settings.clone(),
     })
     .await
 }
