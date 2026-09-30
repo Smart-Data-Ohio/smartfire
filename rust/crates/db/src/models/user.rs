@@ -412,6 +412,9 @@ impl User {
             sets.push(("role", Box::new(role)));
         }
         if let Some(status) = changes.status.filter(|s| *s != self.status) {
+            if status != Status::Active {
+                crate::models::AgentGrant::revoke_for_user(tx, self.id)?;
+            }
             self.status = status;
             sets.push(("status", Box::new(status)));
         }

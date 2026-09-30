@@ -1,0 +1,318 @@
+{
+  "reference_pin": "d7c7de92",
+  "edit": {
+    "status": 200,
+    "markdown_source": null,
+    "body": "Fresh raw body",
+    "edited": true
+  },
+  "boosts": [
+    {
+      "input": " :thumbsup: ",
+      "status": 201,
+      "stored": "👍"
+    },
+    {
+      "input": ":heart:",
+      "status": 201,
+      "stored": "❤️"
+    },
+    {
+      "input": ":github:",
+      "status": 201,
+      "stored": ":github:"
+    },
+    {
+      "input": ":unknown_ws11:",
+      "status": 201,
+      "stored": ":unknown_ws11:"
+    },
+    {
+      "input": " words ",
+      "status": 201,
+      "stored": "words"
+    },
+    {
+      "input": " ",
+      "status": 422,
+      "stored": null
+    },
+    {
+      "input": "🇺🇸",
+      "status": 201,
+      "stored": "🇺🇸"
+    },
+    {
+      "input": "",
+      "status": 422,
+      "stored": null
+    }
+  ],
+  "client_ids": [
+    {
+      "input": false,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": "f"
+    },
+    {
+      "input": true,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "t"
+    },
+    {
+      "input": 7,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "7"
+    },
+    {
+      "input": 1.5,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "1.5"
+    },
+    {
+      "input": [],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": "[]"
+    },
+    {
+      "input": [
+        "x",
+        null
+      ],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": "[\"x\"]"
+    },
+    {
+      "input": {},
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": "{}"
+    },
+    {
+      "input": {
+        "k": "v"
+      },
+      "statuses": [
+        500,
+        500
+      ],
+      "replayed": null,
+      "stored": null
+    },
+    {
+      "input": "x",
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "x"
+    },
+    {
+      "input": [
+        [
+          "x"
+        ]
+      ],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "x"
+    },
+    {
+      "input": [
+        []
+      ],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": "[[]]"
+    },
+    {
+      "input": [
+        {}
+      ],
+      "statuses": [
+        500,
+        500
+      ],
+      "replayed": null,
+      "stored": null
+    },
+    {
+      "input": [
+        {
+          "k": "v"
+        }
+      ],
+      "statuses": [
+        500,
+        500
+      ],
+      "replayed": null,
+      "stored": null
+    },
+    {
+      "input": [
+        true,
+        false
+      ],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "f"
+    },
+    {
+      "input": [
+        "x",
+        "y"
+      ],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "x"
+    },
+    {
+      "input": "",
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": ""
+    },
+    {
+      "input": [
+        "x#{}",
+        "\n",
+        "\u001b"
+      ],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": "[\"x\\#{}\", \"\\n\", \"\\e\"]"
+    },
+    {
+      "input": 1e+20,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "1.0e+20"
+    },
+    {
+      "input": 0.0000001,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "1.0e-07"
+    },
+    {
+      "input": 0.0001,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "0.0001"
+    },
+    {
+      "input": 0.00001,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "1.0e-05"
+    },
+    {
+      "input": 100000000000000.0,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "100000000000000.0"
+    },
+    {
+      "input": 1e+15,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "1.0e+15"
+    },
+    {
+      "input": -0.0,
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": true,
+      "stored": "-0.0"
+    },
+    {
+      "input": [
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+      ],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": "[\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\a\\b\\t\\n\\v\\f\\r\\u000E\\u000F\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001A\\e\\u001C\\u001D\\u001E\\u001F !\\\"\\#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\\u007F\"]"
+    },
+    {
+      "input": [
+        "é😀 ​"
+      ],
+      "statuses": [
+        201,
+        201
+      ],
+      "replayed": false,
+      "stored": "[\"é😀\\u2028\\u0085​\"]"
+    }
+  ]
+}

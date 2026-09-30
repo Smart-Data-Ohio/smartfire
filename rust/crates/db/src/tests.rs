@@ -1,6 +1,17 @@
 //! Ports of `reference/test/models/**`, run against the reference fixtures.
 
 mod account_test;
+mod agent_posting_test;
+mod agent_access_model_test;
+mod agent_approval_test;
+mod agent_record_test;
+mod agent_slash_command_test;
+mod agent_step_test;
+mod agent_working_presence_test;
+mod agent_delivery_test;
+mod agent_event_access_test;
+mod agent_event_polling_test;
+mod bot_webhook_fanout_test;
 mod audit_log_test;
 mod callbacks_test;
 mod channel_thread_test;

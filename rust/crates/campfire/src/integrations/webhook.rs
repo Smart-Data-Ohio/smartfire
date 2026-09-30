@@ -1,10 +1,8 @@
 //! `Webhook#deliver` (reference/app/models/webhook.rb): a bot's webhook gets the message as
 //! JSON, and its answer becomes the bot's reply.
 //!
-//! Intentionally unguarded, unlike Opengraph::Fetch: only an administrator sets this URL and it
-//! may point at internal services. Connect and each read time out after 7 seconds, and a
-//! timeout is itself answered with a text reply. Unlike Rails, the whole delivery must finish
-//! within a minute and the reply is read up to 100 MB (see `DELIVERY_DEADLINE`, `MAX_REPLY_SIZE`).
+//! Requests resolve through the private-network guard and connect to that pinned address.
+//! Legacy timeouts create a root text reply; agent timeouts propagate to the ledger job.
 
 use std::sync::LazyLock;
 use std::time::Duration;
@@ -19,15 +17,6 @@ use crate::integrations::net::http::{self, Body, Endpoint, HttpError, Timeouts};
 
 /// `Webhook::ENDPOINT_TIMEOUT`
 pub const ENDPOINT_TIMEOUT: Duration = Duration::from_secs(campfire_db::models::webhook::ENDPOINT_TIMEOUT_SECONDS);
-
-/// The most a delivery may take, connecting and reading the reply included. `ENDPOINT_TIMEOUT`
-/// applies to each read, so an endpoint that keeps trickling bytes would otherwise hold a job
-/// slot forever.
-pub const DELIVERY_DEADLINE: Duration = Duration::from_secs(60);
-
-/// The largest reply read (after decompression); a larger one fails the delivery. Rails reads
-/// any size into memory.
-pub const MAX_REPLY_SIZE: usize = 100 * 1024 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WebhookDelivery {
@@ -73,34 +62,43 @@ pub enum WebhookError {
     #[error("{0}")]
     InvalidUrl(String),
     #[error("{0}")]
-    Http(HttpError),
+    Http(#[source] HttpError),
     /// `Mime::Type::InvalidMimeType`
     #[error("{0:?} is not a valid MIME type")]
     InvalidMimeType(String),
-    #[error("the reply is larger than {} MB", MAX_REPLY_SIZE / 1024 / 1024)]
-    ReplyTooLarge,
+    #[error(transparent)]
+    Guard(#[from] crate::integrations::net::guard::GuardError),
 }
 
-/// `Webhook#deliver(message)`: `payload` is `campfire_db::Webhook::payload`.
+/// An unsigned legacy delivery, with the system clock. App jobs use `deliver_signed`.
+#[cfg(test)]
 pub async fn deliver(net: &Network, url: &str, payload: String) -> Result<WebhookDelivery, WebhookError> {
-    deliver_within(net, url, payload, DELIVERY_DEADLINE).await
+    deliver_signed(net, url, payload, None, jiff::Timestamp::now, false).await
 }
 
-async fn deliver_within(net: &Network, url: &str, payload: String, deadline: Duration) -> Result<WebhookDelivery, WebhookError> {
-    match tokio::time::timeout(deadline, post(net, url, payload)).await {
-        Ok(Ok((status, content_type, body))) => Ok(WebhookDelivery { status: Some(status), reply: reply(status, content_type, body)? }),
-        Ok(Err(WebhookError::Http(HttpError::OpenTimeout | HttpError::ReadTimeout))) => Ok(timed_out(ENDPOINT_TIMEOUT)),
-        Ok(Err(error)) => Err(error),
-        Err(_) => Ok(timed_out(deadline)),
+/// `Webhook#deliver`: the agent flag controls timeout propagation, not signing policy.
+pub async fn deliver_signed<F: Fn() -> jiff::Timestamp + Send + Sync>(
+    net: &Network, url: &str, payload: String, secret: Option<&str>, now: F, agent: bool,
+) -> Result<WebhookDelivery, WebhookError> {
+    match post_payload(net, url, payload, secret, now).await {
+        Ok(response) => Ok(WebhookDelivery { status: Some(response.status), reply: reply(response.status, response.content_type, response.body)? }),
+        Err(WebhookError::Http(HttpError::OpenTimeout | HttpError::ReadTimeout)) if !agent => {
+            Ok(WebhookDelivery { status: None, reply: WebhookReply::Text(format!("Failed to respond within {} seconds", ENDPOINT_TIMEOUT.as_secs())) })
+        }
+        Err(error) => Err(error),
     }
 }
 
-fn timed_out(after: Duration) -> WebhookDelivery {
-    WebhookDelivery { status: None, reply: WebhookReply::Text(format!("Failed to respond within {} seconds", after.as_secs())) }
+#[derive(Debug)]
+pub struct Posted {
+    pub status: u16,
+    pub content_type: Option<String>,
+    pub body: Vec<u8>,
+    pub headers: hyper::HeaderMap,
 }
 
 /// `post(payload)` over `Net::HTTP.new(uri.host, uri.port)`: the status, content type and body.
-async fn post(net: &Network, url: &str, payload: String) -> Result<(u16, Option<String>, Vec<u8>), WebhookError> {
+pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(net: &Network, url: &str, payload: String, secret: Option<&str>, now: F) -> Result<Posted, WebhookError> {
     let uri = uri::parse(url).map_err(|_| WebhookError::InvalidUrl(format!("bad URI (is not URI?): {url:?}")))?;
     if !uri.is_http() {
         return Err(WebhookError::InvalidUrl("not an HTTP URI".into()));
@@ -108,26 +106,31 @@ async fn post(net: &Network, url: &str, payload: String) -> Result<(u16, Option<
     let host = uri.host.clone().filter(|h| !h.is_empty()).ok_or_else(|| WebhookError::InvalidUrl("no host component for URI".into()))?;
     let https = uri.scheme.as_deref().is_some_and(|s| s.eq_ignore_ascii_case("https"));
     let port = uri.port.and_then(|p| u16::try_from(p).ok()).ok_or_else(|| WebhookError::InvalidUrl("invalid port".into()))?;
-    let endpoint = Endpoint { https, host: host.clone(), port, pinned_ip: None };
+    let address = crate::integrations::net::guard::resolve_webhook(&*net.resolver, &host).await?;
+    let endpoint = Endpoint { https, host: host.clone(), port, pinned_ip: Some(address) };
 
     let hostname = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')).unwrap_or(&host);
     let uri_host = if port == if https { 443 } else { 80 } { hostname.to_string() } else { format!("{hostname}:{port}") };
-    let headers = vec![("Content-Type".to_string(), "application/json".to_string())];
-    let mut request = http::Request::net_http(hyper::Method::POST, http::request_uri(&uri), Some(uri_host), headers).transport(true, &endpoint);
+    let now = now();
+    let headers = rails_compat::webhook::smartfire_headers(secret, payload.as_bytes(), now)
+        .into_iter().map(|(name, value)| (name.to_string(), value)).collect();
+    let mut request = http::Request::net_http(hyper::Method::POST, http::request_uri(&uri), Some(uri_host), headers).transport(false, &endpoint);
     request.body = payload.into_bytes();
 
     let timeouts = Timeouts { open: ENDPOINT_TIMEOUT, read: ENDPOINT_TIMEOUT };
     let response = http::exchange(net, &endpoint, request, &timeouts).await.map_err(WebhookError::Http)?;
     let (status, content_type) = (response.status, response.content_type());
-    let body = match response.read_body(MAX_REPLY_SIZE).await.map_err(WebhookError::Http)? {
+    let headers = response.headers.clone();
+    let body = match response.read_body(usize::MAX).await.map_err(WebhookError::Http)? {
         Body::Complete(body) => body,
-        Body::TooLarge => return Err(WebhookError::ReplyTooLarge),
+        Body::TooLarge => unreachable!("a Vec cannot exceed usize::MAX"),
     };
-    Ok((status, content_type, body))
+    Ok(Posted { status, content_type, body, headers })
 }
 
 /// `extract_text_from`, else `extract_attachment_from`.
-fn reply(status: u16, content_type: Option<String>, body: Vec<u8>) -> Result<WebhookReply, WebhookError> {
+pub(super) fn reply(status: u16, content_type: Option<String>, body: Vec<u8>) -> Result<WebhookReply, WebhookError> {
+    if !(200..300).contains(&status) { return Ok(WebhookReply::None); }
     let Some(content_type) = content_type else { return Ok(WebhookReply::None) };
     if status == 200 && (content_type == "text/html" || content_type == "text/plain") {
         return Ok(WebhookReply::Text(String::from_utf8_lossy(&body).into_owned()));
@@ -229,7 +232,7 @@ mod tests {
     use serde_json::Value;
 
     use super::*;
-    use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, gzip_bomb, network, trickling_server};
+    use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 
     fn b64(s: &str) -> Vec<u8> {
         base64::engine::general_purpose::STANDARD.decode(s).unwrap()
@@ -256,12 +259,14 @@ mod tests {
             })
             .collect();
         let server = FakeServer::start(routes).await;
-        let net = crate::integrations::net::Network::system();
+        let resolver = Arc::new(FakeResolver::new([("webhook.example", vec!["93.184.216.34"])]));
+        let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
+        let net = network(resolver, dialer);
 
         let runs = cases.iter().map(|c| {
             let net = net.clone();
-            let url = c["url"].as_str().map(str::to_string).unwrap_or_else(|| format!("http://{}/{}", server.addr, c["name"].as_str().unwrap()));
-            async move { deliver(&net, &url, r#"{"message":"hi"}"#.to_string()).await }
+            let url = c["url"].as_str().map(str::to_string).unwrap_or_else(|| format!("http://webhook.example:{}/{}", server.addr.port(), c["name"].as_str().unwrap()));
+            async move { deliver_signed(&net, &url, r#"{"message":"hi"}"#.to_string(), None, || "2026-03-02T16:00:00Z".parse().unwrap(), false).await }
         });
         let outcomes = futures_join_all(runs).await;
 
@@ -276,6 +281,7 @@ mod tests {
                     };
                     serde_json::json!({ "status": delivery.status, "reply": reply })
                 }
+                Err(WebhookError::Guard(crate::integrations::net::guard::GuardError::Violation(_))) => serde_json::json!({ "error": "RestrictedHTTP::Violation", "reply": null }),
                 Err(WebhookError::InvalidMimeType(_)) => serde_json::json!({ "error": "Mime::Type::InvalidMimeType", "reply": null }),
                 Err(WebhookError::Http(HttpError::Io(e))) if e.kind() == std::io::ErrorKind::ConnectionRefused => {
                     serde_json::json!({ "error": "Errno::ECONNREFUSED", "reply": null })
@@ -305,7 +311,7 @@ mod tests {
         let request = server.received().into_iter().find(|r| r.target == "/text").unwrap();
         let wanted: Vec<(String, String)> = serde_json::from_value(expected[0]["requests"][0]["headers"].clone()).unwrap();
         let wanted: Vec<(String, String)> =
-            wanted.into_iter().map(|(n, v)| if n == "Host" { (n, server.addr.to_string()) } else { (n, v) }).collect();
+            wanted.into_iter().map(|(n, v)| if n == "Host" { (n, format!("webhook.example:{}", server.addr.port())) } else { (n, v) }).collect();
         assert_eq!(request.headers, wanted);
         assert_eq!(request.body, expected[0]["requests"][0]["body"].as_str().unwrap().as_bytes());
     }
@@ -322,42 +328,139 @@ mod tests {
         out
     }
 
-    /// Unguarded: private and loopback addresses are fine, names resolve normally, and nothing
-    /// is pinned.
     #[tokio::test]
-    async fn reaches_internal_services() {
-        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 200).header("Content-Type", "text/plain").body("ok")]).await;
+    async fn ws11_blocks_private_webhooks_before_connecting() {
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 200)]).await;
         let resolver = Arc::new(FakeResolver::new([("bots.internal", vec!["10.0.0.7"])]));
         let dialer = Arc::new(MappingDialer { public: HashSet::from(["10.0.0.7".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
         let net = network(resolver.clone(), dialer.clone());
-        let delivery = deliver(&net, "http://bots.internal:8080/hook", "{}".into()).await.unwrap();
-        assert_eq!(delivery, WebhookDelivery { status: Some(200), reply: WebhookReply::Text("ok".into()) });
-        assert_eq!(resolver.lookups(), ["bots.internal"]);
-        assert_eq!(*dialer.dialed.lock().unwrap(), ["10.0.0.7:8080".parse().unwrap()]);
-        assert_eq!(server.received()[0].header("Host"), Some("bots.internal:8080"));
+        for host in ["bots.internal", "127.0.0.1", "10.0.0.1", "192.168.1.1", "169.254.169.254", "[::1]", "[::ffff:127.0.0.1]", "2130706433", "0177.1", "0x7f.1"] {
+            let result = deliver(&net, &format!("http://{host}:8080/hook"), "{}".into()).await;
+            assert!(result.is_err(), "private webhook succeeded: {host}: {result:?}");
+        }
+        assert!(dialer.dialed.lock().unwrap().is_empty(), "private connections were attempted");
+        assert!(server.received().is_empty());
     }
 
-    /// An endpoint that keeps sending never trips the 7-second read timeout, but the delivery as a
-    /// whole gives up and says so.
     #[tokio::test]
-    async fn gives_up_on_a_trickling_reply() {
-        let server = trickling_server("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nConnection: close\r\n\r\n").await;
-        let net = crate::integrations::net::Network::system();
-        let deadline = Duration::from_secs(1);
-        let delivery = deliver_within(&net, &format!("http://{server}/hook"), "{}".into(), deadline).await.unwrap();
-        assert_eq!(delivery, WebhookDelivery { status: None, reply: WebhookReply::Text("Failed to respond within 1 seconds".into()) });
+    async fn ws11_pins_public_dns_answer_and_sends_timestamp() {
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 200).header("Content-Type", "text/plain").body("ok")]).await;
+        let resolver = Arc::new(FakeResolver::default());
+        resolver.set("bots.example", vec![vec!["93.184.216.34".parse().unwrap()], vec!["127.0.0.1".parse().unwrap()]]);
+        let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
+        let net = network(resolver.clone(), dialer.clone());
+        let delivery = deliver(&net, "http://bots.example:8080/hook", "{}".into()).await.unwrap();
+        assert_eq!(delivery.reply, WebhookReply::Text("ok".into()));
+        assert_eq!(resolver.lookups(), ["bots.example"]);
+        assert_eq!(*dialer.dialed.lock().unwrap(), ["93.184.216.34:8080".parse().unwrap()]);
+        let request = &server.received()[0];
+        assert_eq!(request.header("Host"), Some("bots.example:8080"));
+        assert!(request.header("X-Smartfire-Timestamp").unwrap().parse::<i64>().is_ok());
+        assert_eq!(request.header("X-Smartfire-Signature"), None);
     }
 
-    /// A reply that inflates past the limit fails the delivery, having read little more than
-    /// the limit.
+    #[test]
+    fn ws11_error_responses_never_become_replies() {
+        for status in [301, 400, 408, 429, 500, 503] {
+            assert_eq!(reply(status, Some("text/html".into()), b"Error".to_vec()).unwrap(), WebhookReply::None);
+        }
+    }
+
     #[tokio::test]
-    async fn rejects_replies_over_the_limit() {
-        let bomb = gzip_bomb(MAX_REPLY_SIZE / 1024 / 1024 + 1);
-        let route = Route::new("POST", "*", "/hook", 200).header("Content-Type", "image/png").header("Content-Encoding", "gzip").body(bomb);
+    async fn ws11_signed_requests_match_rails_vectors() {
+        let vectors: Value = serde_json::from_str(include_str!("../../../../vectors/agents_webhook_contract.json")).unwrap();
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 204)]).await;
+        let resolver = Arc::new(FakeResolver::new([("bots.example", vec!["93.184.216.34"])]));
+        let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
+        let net = network(resolver, dialer);
+        for case in vectors["signatures"].as_array().unwrap() {
+            post_payload(&net, "http://bots.example:8080/hook", case["body"].as_str().unwrap().into(), Some(case["secret"].as_str().unwrap()), || vectors["now"].as_str().unwrap().parse().unwrap()).await.unwrap();
+            let request = server.received().pop().unwrap();
+            assert_eq!(request.header("X-Smartfire-Timestamp"), case["timestamp"].as_str());
+            assert_eq!(request.header("X-Smartfire-Signature"), case["signature"].as_str());
+            assert_eq!(request.body, case["body"].as_str().unwrap().as_bytes());
+        }
+    }
+
+    #[tokio::test]
+    async fn ws11_guard_matches_rails_vectors() {
+        use crate::integrations::net::guard::{resolve_webhook, GuardError};
+        let vectors: Value = serde_json::from_str(include_str!("../../../../vectors/agents_webhook_contract.json")).unwrap();
+        let resolver = FakeResolver::default();
+        for case in vectors["guards"].as_array().unwrap().iter().chain(vectors["dns"].as_array().unwrap()) {
+            let host = case["host"].as_str().unwrap();
+            if let Some(answers) = case.get("answers") {
+                resolver.set(host, vec![answers.as_array().unwrap().iter().map(|ip| ip.as_str().unwrap().parse().unwrap()).collect()]);
+            }
+            let actual = match resolve_webhook(&resolver, host).await {
+                Ok(address) => serde_json::json!({"address":address.to_string()}),
+                Err(GuardError::Violation(_)) => serde_json::json!({"error":"RestrictedHTTP::Violation"}),
+                Err(GuardError::Unresolvable) => serde_json::json!({"error":"Surfguard::Unresolvable"}),
+            };
+            let wanted = if let Some(address) = case.get("address") { serde_json::json!({"address":address}) } else { serde_json::json!({"error":case["error"]}) };
+            assert_eq!(actual, wanted, "{host}");
+        }
+    }
+
+    #[tokio::test]
+    async fn ws11_timestamp_is_sampled_after_resolution() {
+        use crate::integrations::net::{BoxFuture, Resolver};
+        use std::sync::atomic::{AtomicI64, Ordering};
+        struct SlowResolver(Arc<AtomicI64>);
+        impl Resolver for SlowResolver {
+            fn lookup<'a>(&'a self, _: &'a str) -> BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {
+                Box::pin(async move {
+                    tokio::time::sleep(Duration::from_millis(1100)).await;
+                    self.0.store(jiff::Timestamp::now().as_second(), Ordering::SeqCst);
+                    Ok(vec!["93.184.216.34".parse().unwrap()])
+                })
+            }
+        }
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 204)]).await;
+        let resolved_at = Arc::new(AtomicI64::new(0));
+        let net = Network { resolver: Arc::new(SlowResolver(resolved_at.clone())), dialer: Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) }), tls: crate::integrations::net::tls_config(crate::integrations::test_support::test_tls_roots()) };
+        deliver(&net, "http://bots.example:8080/hook", "{}".into()).await.unwrap();
+        let timestamp: i64 = server.received()[0].header("X-Smartfire-Timestamp").unwrap().parse().unwrap();
+        assert!(timestamp >= resolved_at.load(Ordering::SeqCst), "timestamp was sampled before DNS resolution");
+    }
+
+    #[tokio::test]
+    async fn ws11_http_guard_matches_rails_vectors() {
+        let vectors: Value = serde_json::from_str(include_str!("../../../../vectors/agents_webhook_contract.json")).unwrap();
+        let cases: Vec<_> = vectors["guards"].as_array().unwrap().iter().chain(vectors["dns"].as_array().unwrap()).collect();
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 204)]).await;
+        let resolver = Arc::new(FakeResolver::default());
+        let public = cases.iter().filter_map(|case| case["address"].as_str()).map(|ip| ip.parse().unwrap()).collect();
+        let dialer = Arc::new(MappingDialer { public, to: server.addr, dialed: Mutex::new(Vec::new()) });
+        let net = network(resolver.clone(), dialer);
+        for case in cases {
+            let host = case["host"].as_str().unwrap();
+            if let Some(answers) = case.get("answers") {
+                resolver.set(host, vec![answers.as_array().unwrap().iter().map(|ip| ip.as_str().unwrap().parse().unwrap()).collect()]);
+            }
+            let uri_host = if host.contains(':') && !host.starts_with('[') { format!("[{host}]") } else { host.to_string() };
+            let response = deliver(&net, &format!("http://{uri_host}:8080/hook"), "{}".into()).await;
+            match case["error"].as_str() {
+                Some("RestrictedHTTP::Violation") => assert!(matches!(response, Err(WebhookError::Guard(crate::integrations::net::guard::GuardError::Violation(_)))), "{host}: {response:?}"),
+                Some("Surfguard::Unresolvable") => assert!(matches!(response, Err(WebhookError::Guard(crate::integrations::net::guard::GuardError::Unresolvable))), "{host}: {response:?}"),
+                None => assert_eq!(response.unwrap().status, Some(204), "{host}"),
+                other => panic!("unknown Rails error: {other:?}"),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn ws11_agent_timeouts_propagate_while_legacy_gets_a_root_reply() {
+        let mut route = Route::new("POST", "*", "/hook", 200);
+        route.delay = Duration::from_secs(8);
         let server = FakeServer::start(vec![route]).await;
-        let net = crate::integrations::net::Network::system();
-        let outcome = deliver(&net, &format!("http://{}/hook", server.addr), "{}".into()).await;
-        assert!(matches!(outcome, Err(WebhookError::ReplyTooLarge)), "{outcome:?}");
+        let resolver = Arc::new(FakeResolver::new([("bots.example", vec!["93.184.216.34"])]));
+        let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
+        let net = network(resolver, dialer);
+        let now = "2026-03-02T16:00:00Z".parse().unwrap();
+        let (legacy, agent) = tokio::join!(deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), None, || now, false), deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), Some("test-secret"), || now, true));
+        assert_eq!(legacy.unwrap(), WebhookDelivery { status: None, reply: WebhookReply::Text("Failed to respond within 7 seconds".into()) });
+        assert!(matches!(agent, Err(WebhookError::Http(HttpError::ReadTimeout))));
     }
 
     #[test]

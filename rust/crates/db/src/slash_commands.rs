@@ -1,4 +1,4 @@
-//! Non-agent chat commands from app/services/slash_commands at fec615be.
+//! Chat commands from app/services/slash_commands, including registered agent invocations.
 //! Call in the request's write transaction; the HTTP membership boundary belongs to WS8b.
 use crate::broadcasts::{self, Broadcast, Partial, Streamable, TurboAction, TurboStream};
 use crate::{
@@ -108,12 +108,12 @@ impl CommandResult {
             room_id: None,
         }
     }
-    fn error(message: impl Into<String>) -> Self {
+    pub(crate) fn error(message: impl Into<String>) -> Self {
         let mut r = Self::new("error");
         r.message = Some(message.into());
         r
     }
-    fn ephemeral(message: impl Into<String>) -> Self {
+    pub(crate) fn ephemeral(message: impl Into<String>) -> Self {
         let mut r = Self::new("ephemeral");
         r.message = Some(message.into());
         r
@@ -148,11 +148,12 @@ pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<Comman
     let name = c["name"].to_ascii_lowercase();
     let args = strip(c.name("args").map(|m| m.as_str()).unwrap_or(""));
     let Some(command) = lookup(&name) else {
+        if let Some(result)=crate::models::agent_slash_command::invoke(tx,context,&name,args)? {return Ok(result)};
         let mut names = available(context.thread_id.is_some())
             .iter()
             .map(|c| format!("/{}", c.name))
             .collect::<Vec<_>>();
-        // Agent dispatch is WS11. Include its ordered registrations in Rails' error list.
+        // Registered names remain listed even when their agent is unavailable.
         let mut stmt = tx
             .conn()
             .prepare("SELECT name FROM agent_slash_commands WHERE room_id=? ORDER BY name")?;
@@ -485,24 +486,7 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
                 }));
             }
         }
-        let recipients = if room.direct() {
-            room.users(tx.conn())?
-        } else {
-            message.mentionees(tx.conn(), tx.rich_text())?
-        };
-        for bot in recipients {
-            if bot.id != message.creator_id
-                && bot.is_active()
-                && bot.is_bot()
-                && !tx.conn().query_row(
-                    "SELECT EXISTS(SELECT 1 FROM agents WHERE user_id=?)",
-                    [bot.id],
-                    |r| r.get::<_, bool>(0),
-                )?
-            {
-                bot.deliver_webhook_later(tx, message.id)?;
-            }
-        }
+        crate::models::bot_webhook_fanout::deliver(tx, &message)?;
     }
     Ok(message)
 }

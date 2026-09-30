@@ -565,7 +565,6 @@ async fn the_periodic_loops_run_with_the_jobs() {
 
     let (ticked, mut ticks) = mpsc::unbounded_channel();
     let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None));
-    loops.periodic.as_mut().unwrap().task(periodic::clear_plaintext_bot_tokens_task());
     loops.huddle.as_mut().unwrap().task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
         let ticked = ticked.clone();
         async move {
@@ -717,11 +716,15 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     });
     let tasks: Vec<_> = periodic
         .tasks()
+        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     let ws8_count = golden["tasks"].as_array().unwrap().len();
     assert_eq!(serde_json::json!(&tasks[..ws8_count]), golden["tasks"]);
     assert_eq!(&tasks[ws8_count..], &[serde_json::json!({"name":"stuck GitHub claims","seconds":30})]);
+    let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
+    assert_eq!(recovery.interval(), Duration::from_secs(30));
+
 }
 
 #[tokio::test]

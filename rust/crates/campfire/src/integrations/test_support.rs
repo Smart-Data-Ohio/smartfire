@@ -51,7 +51,7 @@ impl Resolver for FakeResolver {
     }
 }
 
-/// Connects the given addresses (any port) to `to`; anything else is dialed for real.
+/// Connects the given fake addresses to `to`; every unmapped address is refused.
 pub struct MappingDialer {
     pub public: HashSet<IpAddr>,
     pub to: SocketAddr,
@@ -61,8 +61,11 @@ pub struct MappingDialer {
 impl Dialer for MappingDialer {
     fn connect(&self, addr: SocketAddr) -> BoxFuture<'_, io::Result<TcpStream>> {
         self.dialed.lock().unwrap().push(addr);
-        let target = if self.public.contains(&addr.ip()) { self.to } else { addr };
-        Box::pin(TcpStream::connect(target))
+        if self.public.contains(&addr.ip()) {
+            Box::pin(TcpStream::connect(self.to))
+        } else {
+            Box::pin(async move { Err(io::Error::new(io::ErrorKind::ConnectionRefused, format!("unmapped test address: {addr}"))) })
+        }
     }
 }
 
@@ -137,6 +140,24 @@ impl Received {
     }
 }
 
+/// Constrain host listeners when several parity workers run on the same machine.
+async fn bind_test_listener() -> TcpListener {
+    if let Ok(range) = std::env::var("INTEGRATION_TEST_PORT_RANGE") {
+        let (first, last) = range.split_once('-').expect("INTEGRATION_TEST_PORT_RANGE=start-end");
+        let (first, last): (u16, u16) = (first.parse().unwrap(), last.parse().unwrap());
+        assert!(first <= last, "invalid integration test port range");
+        for port in first..=last {
+            match TcpListener::bind(("127.0.0.1", port)).await {
+                Ok(listener) => return listener,
+                Err(error) if error.kind() == io::ErrorKind::AddrInUse => {},
+                Err(error) => panic!("integration test listener: {error}"),
+            }
+        }
+        panic!("no free integration test port in {range}");
+    }
+    TcpListener::bind("127.0.0.1:0").await.unwrap()
+}
+
 pub struct FakeServer {
     pub addr: SocketAddr,
     pub received: Arc<Mutex<Vec<Received>>>,
@@ -168,11 +189,12 @@ impl FakeServer {
     }
 
     async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>) -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let listener = bind_test_listener().await;
         Self::on_listener(routes, tls, listener).await
     }
 
     pub async fn on_listener(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, listener: TcpListener) -> Self {
+
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
@@ -274,7 +296,7 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
 /// A server that answers every request with `head` and then a byte of body every 50 ms, until
 /// the client hangs up.
 pub async fn trickling_server(head: &'static str) -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = bind_test_listener().await;
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
         while let Ok((mut stream, _)) = listener.accept().await {

@@ -187,6 +187,20 @@ impl Browser<'_> {
         self.request(Method::POST, path, &[], Some(("application/x-www-form-urlencoded", body))).await
     }
 
+    // Rails test helper's grant_sudo_access: authenticate the real encrypted cookie,
+    // preserve its CSRF state, and add the same verified-at epoch value.
+    fn grant_sudo_access(&mut self) {
+        use campfire_kit::Crypto;
+        let key = campfire_kit::session::SESSION_KEY;
+        let crypto = campfire_kit::RailsCrypto::new(self.test.booted.app.secrets.clone());
+        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap()).decode_utf8().unwrap();
+        let now = self.test.booted.app.clock.now();
+        let mut data = crypto.decrypt_cookie(key, &raw, now).unwrap();
+        data["sudo_verified_at"] = now.as_second().into();
+        let cookie = crypto.encrypt_cookie(key, &data, None);
+        self.cookies.insert(key.into(), campfire_kit::cookies::escape(&cookie));
+    }
+
     async fn sign_in(&mut self, email: &str) {
         let page = self.get("/session/new").await;
         assert_eq!(page.status, StatusCode::OK, "{}", page.text());
@@ -413,14 +427,47 @@ async fn administers_the_account() {
 }
 
 #[tokio::test]
-#[ignore = "WS11: resetting Bender's bot key leaves the original seeded key visible in the account bot list"]
+async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
+    let test = boot_seed("default").await.expect("build default parity seed");
+    let mut admin = test.browser("198.51.100.113");
+    admin.sign_in(&test.label("emails.david")).await;
+    let bot_id: i64 = test.label("users.bender").parse().unwrap();
+    let path = format!("/account/bots/{bot_id}/key");
+    let old_key = test.label("bot_keys.bender");
+    let response = admin.form("put", &path, &[]).await;
+    assert_redirect(&response, "http://campfire.test/sudo/new");
+    assert!(test.booted.app.db.read({let old_key=old_key.clone(); move |conn| campfire_db::User::authenticate_bot(conn,&old_key)}).await.unwrap().is_some());
+    admin.grant_sudo_access();
+    let response = admin.form("put", &path, &[]).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.headers.get("cache-control").unwrap(), "no-store");
+    assert_eq!(response.headers.get("pragma").unwrap(), "no-cache");
+    let html = response.text();
+    let value = html.split("aria-label=\"Bot key\"").next().unwrap();
+    let new_key = value.rsplit("value=\"").next().unwrap().split('"').next().unwrap().to_string();
+    assert_ne!(new_key, old_key);
+    let (new_valid, old_valid, plaintext, audit) = test.booted.app.db.read({let new_key=new_key.clone(); move |conn| Ok((
+        campfire_db::User::authenticate_bot(conn,&new_key)?.is_some(),
+        campfire_db::User::authenticate_bot(conn,&old_key)?.is_some(),
+        conn.query_row("SELECT bot_token FROM users WHERE id=?",[bot_id],|r|r.get::<_,Option<String>>(0))?,
+        conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.reset'",[],|r|r.get::<_,i64>(0))?,
+    ))}).await.unwrap();
+    assert!(new_valid);
+    assert!(!old_valid);
+    assert_eq!(plaintext,None);
+    assert_eq!(audit,1);
+    assert!(!admin.get("/account/bots").await.text().contains(&new_key));
+}
+
+#[tokio::test]
 async fn manages_bots() {
     let Some(test) = boot_seed("default").await else { return };
     let mut admin = test.browser("198.51.100.13");
     admin.sign_in(&test.label("emails.david")).await;
     let index = admin.get("/account/bots").await;
     assert_eq!(index.status, StatusCode::OK);
-    assert!(index.text().contains(&test.label("bot_keys.bender")));
+    assert!(!index.text().contains(&test.label("bot_keys.bender")));
+    assert!(index.text().contains("BOT_KEY"));
 
     let new = admin.get("/account/bots/new").await;
     new.assert_form("/account/bots");
@@ -438,13 +485,14 @@ async fn manages_bots() {
     let edit = admin.get(&format!("/account/bots/{bender}/edit")).await;
     let key_action = format!("/account/bots/{bender}/key");
     edit.assert_button(&key_action, "put");
+    admin.grant_sudo_access();
     let bender_id: i64 = bender.parse().unwrap();
     let old_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
-    assert_redirect(&admin.form("put", &key_action, &[]).await, "http://campfire.test/account/bots");
+    assert_eq!(admin.form("put", &key_action, &[]).await.status, StatusCode::OK);
     let new_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
     assert_ne!(old_digest, new_digest);
-    // Rails shows the same placeholder for persisted digest-only keys before and after reset.
     assert!(admin.get("/account/bots").await.text().contains(campfire_db::user::BOT_KEY_PLACEHOLDER));
+
 
     admin.get(&format!("/account/bots/{bender}/edit")).await.assert_button(&action, "delete");
     assert_redirect(&admin.form("delete", &action, &[]).await, "http://campfire.test/account/bots");

@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 caseless.workspace = true
+httpdate.workspace = true
 rails_compat.workspace = true
 campfire_kit.workspace = true
 campfire_routes.workspace = true

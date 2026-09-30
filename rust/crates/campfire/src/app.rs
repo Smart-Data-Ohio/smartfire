@@ -31,6 +31,7 @@ pub use crate::channels::Cable;
 pub struct AppState {
     pub config: Config,
     pub secrets: Arc<Secrets>,
+    pub ar_encryption: Arc<rails_compat::ar_encryption::ArEncryption>,
     pub clock: SharedClock,
     pub db: Database,
     pub storage: Arc<Storage>,
@@ -106,6 +107,7 @@ pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock,
 pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
+    let ar_encryption = Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets));
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
 
     // The job classes first: the database's sink enqueues them on their queues.
@@ -157,6 +159,7 @@ pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock,
     let app = Arc::new(AppState {
         config,
         secrets,
+        ar_encryption,
         clock: clock.clone(),
         db,
         storage,

@@ -1,11 +1,27 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod agent;
+pub mod agent_access;
+pub mod agent_approval;
+pub mod agent_approvals;
+pub mod agent_service;
+pub mod agent_slash_command;
+pub mod agent_step;
+pub mod agent_working_presence;
+pub mod agent_credential;
+pub mod agent_grant;
+pub mod agent_delivery;
+pub mod agent_event_access;
+pub mod agent_event_polling;
+pub mod agent_payloads;
+pub mod agent_posting;
 pub mod audit_log;
 pub mod activity_item;
 pub mod active_storage;
 pub mod ban;
 pub mod boost;
+pub mod bot_webhook_fanout;
 pub mod channel_thread;
 pub mod direct_room;
 pub mod first_run;
@@ -62,3 +78,10 @@ pub mod room_delete;
 
 pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
+
+pub use agent_credential::{AgentCredential, NewCredential};
+pub use agent_grant::{AgentGrant, NewGrant};
+pub use agent_approval::{AgentApproval, NewApproval};
+pub use agent::{Agent,AgentChanges,AgentKind,NewAgent};
+pub use agent_slash_command::{AgentSlashCommand,NewAgentSlashCommand};
+pub use agent_step::{AgentStep,NewAgentStep,AgentStepChanges};
