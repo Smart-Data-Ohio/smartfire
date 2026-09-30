@@ -6,8 +6,8 @@
 //! the old attachment is destroyed first (`has_one ... dependent: :destroy` replacing its target;
 //! its blob is purged after commit, `dependent: :purge_later`), then the new blob and attachment
 //! rows are inserted, and each attachment change touches the record
-//! (`belongs_to :record, touch: true`). Since a fresh blob isn't analyzed, `ActiveStorage::AnalyzeJob`
-//! runs after commit (analysis touches the record again).
+//! (`belongs_to :record, touch: true`). A fresh blob's analyzer runs after commit (analysis touches
+//! the record again): media analyzers use a durable job, while `NullAnalyzer` runs inline.
 //!
 //! Unlike Rails, which uploads after commit, the file is uploaded before the transaction
 //! ([`Assignment::stage`]), so the writer never waits on copying and checksumming it; a
@@ -103,7 +103,7 @@ pub fn attached_blob(conn: &Connection, record_type: &str, record_id: i64, name:
     Blob::attached(conn, record_type, record_id, name).map_err(storage_error)
 }
 
-/// Applies an assignment inside the record's save. Enqueues analysis atomically with the attachment.
+/// Applies an assignment inside the record's save. Durable analysis jobs are atomic with it.
 pub fn assign(tx: &mut Tx<'_>, record: Record, name: &str, assignment: Assignment<Staged>) -> campfire_db::Result<()> {
     match assignment {
         Assignment::Unchanged => Ok(()),
@@ -190,10 +190,29 @@ pub fn save_existing(tx: &mut Tx<'_>, identified: Blob) -> campfire_db::Result<B
     Ok(blob)
 }
 
-/// Persist the job now; the durable runner can claim it only after commit.
+/// `Attachment#analyze_blob_later`: media jobs commit with the attachment; Rails' synchronous
+/// `NullAnalyzer` updates metadata in its own write after the attachment commits.
 pub fn enqueue_analysis(tx: &mut Tx<'_>, blob: &Blob) {
-    if !blob.is_analyzed() {
+    if blob.is_analyzed() {
+        return;
+    }
+    if campfire_storage::analyze::Analyzer::for_content_type(blob.content_type()).analyze_later() {
         tx.emit_after_commit(Event::job(&AnalyzeJob { blob_id: blob.id }));
+    } else {
+        let blob_id = blob.id;
+        tx.after_commit(move |after| {
+            campfire_db::run_write(after.conn(), after.env(), |tx| {
+                let Some(mut blob) = Blob::find(tx.conn(), blob_id).map_err(storage_error)? else {
+                    return Ok(());
+                };
+                if !blob.is_analyzed() {
+                    blob.metadata.set("analyzed", campfire_storage::Json::Bool(true));
+                    blob.update_metadata(tx.conn(), blob.metadata.clone()).map_err(storage_error)?;
+                    crate::active_storage::touch_attachment_records(tx, blob.id)?;
+                }
+                Ok(())
+            })
+        });
     }
 }
 

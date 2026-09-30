@@ -1,6 +1,7 @@
 use axum::http::{Method, StatusCode};
 use base64::Engine as _;
 use campfire_storage::{Blob, Filename};
+use sha2::Digest as _;
 
 use super::*;
 use crate::controllers::presenters::test_support::*;
@@ -17,6 +18,329 @@ fn png() -> Vec<u8> {
     base64::engine::general_purpose::STANDARD
         .decode(vectors()["png_base64"].as_str().unwrap())
         .unwrap()
+}
+
+fn analyzer_vectors() -> serde_json::Value {
+    serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../vectors/attachment_analyzers.json"
+    )))
+    .unwrap()
+}
+
+async fn analyzer_blob(app: &TestApp, case: &serde_json::Value) -> Blob {
+    let bytes = if let Some(fixture) = case["reference_fixture"].as_str() {
+        std::fs::read(campfire_db::fixtures::reference_root().join(fixture)).unwrap()
+    } else if let Some(fixture) = case["rust_fixture"].as_str() {
+        std::fs::read(
+            std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../..")).join(fixture),
+        )
+        .unwrap()
+    } else {
+        base64::engine::general_purpose::STANDARD
+            .decode(case["data_base64"].as_str().unwrap())
+            .unwrap()
+    };
+    assert_eq!(
+        format!("{:x}", sha2::Sha256::digest(&bytes)),
+        case["sha256"].as_str().unwrap()
+    );
+    let staged = app
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            &bytes,
+            Filename::new(case["filename"].as_str().unwrap()),
+            case["content_type"].as_str(),
+        )
+        .unwrap();
+    // A direct upload stores its row before identification; assignment identifies it.
+    app.db()
+        .write(move |tx| {
+            let mut blob = crate::controllers::messages::save_staged(tx, staged)?;
+            blob.update_metadata(tx.conn(), campfire_storage::Json::object())
+                .map_err(storage_error)?;
+            Ok(blob)
+        })
+        .await
+        .unwrap()
+}
+
+fn signed(app: &TestApp, blob: &Blob) -> String {
+    campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, blob.id, None)
+}
+
+fn analysis_jobs(conn: &Connection) -> campfire_db::Result<i64> {
+    Ok(conn.query_row(
+        "SELECT count(*) FROM background_jobs WHERE job_class = 'ActiveStorage::AnalyzeJob'",
+        [],
+        |row| row.get(0),
+    )?)
+}
+
+async fn hold_analysis(app: &TestApp) {
+    // Retain real durable jobs for inspection without racing the running worker.
+    app.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER hold_analysis AFTER INSERT ON background_jobs WHEN NEW.job_class = 'ActiveStorage::AnalyzeJob' BEGIN UPDATE background_jobs SET status = 'held' WHERE id = NEW.id; END;")?;
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn null_analyzer_signed_text_ignores_rejected_jobs() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    hold_analysis(&app).await;
+    let blob = analyzer_blob(&app, &analyzer_vectors()["cases"][0]).await;
+    reject_analysis(&app).await;
+    let reply = app
+        .david()
+        .write(Req::new(Method::PATCH, "/account").form(&[
+            ("account[name]", "Null analyzer committed"),
+            ("account[logo]", &signed(&app, &blob)),
+        ]))
+        .await;
+    assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+    app.db()
+        .read(move |conn| {
+            let account = campfire_db::Account::first(conn)?.unwrap();
+            assert_eq!(account.name, "Null analyzer committed");
+            let attached = attached_blob(conn, "Account", account.id, "logo")?.unwrap();
+            assert_eq!(attached.id, blob.id);
+            assert!(attached.is_identified());
+            assert!(attached.is_analyzed());
+            assert_eq!(analysis_jobs(conn)?, 0);
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn null_analyzer_runs_after_attachment_commit() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    hold_analysis(&app).await;
+    let blob = analyzer_blob(&app, &analyzer_vectors()["cases"][0]).await;
+    let id = blob.id;
+    let assignment = Assignment::Signed(signed(&app, &blob))
+        .stage(&app.booted.app)
+        .await
+        .unwrap();
+    app.db()
+        .write(move |tx| {
+            let record = Record::account(campfire_db::Account::first(tx.conn())?.unwrap().id);
+            // Runs before the analysis hook, and can already see the committed attachment.
+            tx.after_commit(move |tx| {
+                assert!(!tx.in_transaction());
+                assert_eq!(
+                    attached_blob(tx.conn(), "Account", record.id, "logo")?
+                        .unwrap()
+                        .id,
+                    id
+                );
+                assert!(
+                    !Blob::find(tx.conn(), id)
+                        .map_err(storage_error)?
+                        .unwrap()
+                        .is_analyzed()
+                );
+                Ok(())
+            });
+            assign(tx, record, "logo", assignment)?;
+            assert!(
+                !Blob::find(tx.conn(), id)
+                    .map_err(storage_error)?
+                    .unwrap()
+                    .is_analyzed()
+            );
+            assert_eq!(analysis_jobs(tx.conn())?, 0);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    app.db()
+        .read(move |conn| {
+            assert!(
+                Blob::find(conn, id)
+                    .map_err(storage_error)?
+                    .unwrap()
+                    .is_analyzed()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn null_analyzer_failure_preserves_attachment() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    hold_analysis(&app).await;
+    let blob = analyzer_blob(&app, &analyzer_vectors()["cases"][0]).await;
+    app.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_null_analysis BEFORE UPDATE OF metadata ON active_storage_blobs WHEN json_extract(NEW.metadata, '$.analyzed') = 1 BEGIN SELECT RAISE(ABORT, 'reject inline analysis'); END;")?;
+        Ok(())
+    }).await.unwrap();
+    let reply = app
+        .david()
+        .write(Req::new(Method::PATCH, "/account").form(&[
+            ("account[name]", "Null analyzer committed"),
+            ("account[logo]", &signed(&app, &blob)),
+        ]))
+        .await;
+    let expected = analyzer_vectors()["inline_failure"].clone();
+    assert_eq!(
+        reply.status.as_u16(),
+        expected["status"].as_u64().unwrap() as u16,
+        "{}",
+        reply.text()
+    );
+    app.db()
+        .read(move |conn| {
+            let account = campfire_db::Account::first(conn)?.unwrap();
+            assert_eq!(account.name, expected["account_name"].as_str().unwrap());
+            let attached = attached_blob(conn, "Account", account.id, "logo")?.unwrap();
+            assert_eq!(attached.id, blob.id);
+            assert!(attached.is_identified());
+            assert!(!attached.is_analyzed());
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&attached.metadata.encode()).unwrap(),
+                expected["metadata"]
+            );
+            assert_eq!(
+                analysis_jobs(conn)?,
+                expected["analysis_jobs"].as_i64().unwrap()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn attachment_analyzers_match_pinned_rails() {
+    for case in analyzer_vectors()["cases"].as_array().unwrap() {
+        let Some(app) = TestApp::boot().await else {
+            return;
+        };
+        hold_analysis(&app).await;
+        let blob = analyzer_blob(&app, case).await;
+        let reply = app
+            .david()
+            .write(
+                Req::new(Method::PATCH, "/account")
+                    .form(&[("account[logo]", &signed(&app, &blob))]),
+            )
+            .await;
+        assert_eq!(
+            reply.status.as_u16(),
+            case["status"].as_u64().unwrap() as u16,
+            "{}: {}",
+            case["kind"],
+            reply.text()
+        );
+        let expected = case.clone();
+        app.db()
+            .read(move |conn| {
+                let account = campfire_db::Account::first(conn)?.unwrap();
+                let attached = attached_blob(conn, "Account", account.id, "logo")?.unwrap();
+                assert_eq!(attached.id, blob.id);
+                assert_eq!(
+                    attached.content_type(),
+                    expected["identified_content_type"].as_str().unwrap()
+                );
+                assert_eq!(
+                    serde_json::from_str::<serde_json::Value>(&attached.metadata.encode()).unwrap(),
+                    expected["metadata"],
+                    "{}",
+                    expected["kind"]
+                );
+                assert_eq!(
+                    analysis_jobs(conn)?,
+                    expected["analysis_jobs"].as_i64().unwrap(),
+                    "{}",
+                    expected["kind"]
+                );
+                assert_eq!(
+                    campfire_storage::analyze::Analyzer::for_content_type(attached.content_type())
+                        .analyze_later(),
+                    expected["analyze_later"].as_bool().unwrap()
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+        export_analyzer_readback(&app, case["kind"].as_str().unwrap()).await;
+        if case["analyze_later"].as_bool().unwrap() {
+            let replacement = analyzer_blob(&app, case).await;
+            reject_analysis(&app).await;
+            let reply = app
+                .david()
+                .write(Req::new(Method::PATCH, "/account").form(&[
+                    ("account[name]", "must roll back"),
+                    ("account[logo]", &signed(&app, &replacement)),
+                ]))
+                .await;
+            assert_eq!(
+                reply.status,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "{}",
+                case["kind"]
+            );
+            app.db()
+                .read(move |conn| {
+                    let account = campfire_db::Account::first(conn)?.unwrap();
+                    assert_ne!(account.name, "must roll back");
+                    assert_eq!(
+                        attached_blob(conn, "Account", account.id, "logo")?
+                            .unwrap()
+                            .id,
+                        blob.id
+                    );
+                    assert!(
+                        !Blob::find(conn, replacement.id)
+                            .map_err(storage_error)?
+                            .unwrap()
+                            .is_identified()
+                    );
+                    assert_eq!(analysis_jobs(conn)?, 1);
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        }
+    }
+}
+
+async fn export_analyzer_readback(app: &TestApp, kind: &str) {
+    // Optional output created by this run, never an input required for the test to pass.
+    let Some(output) = std::env::var_os("ATTACHMENT_ANALYZER_READBACK_DIR") else {
+        return;
+    };
+    let output = std::path::PathBuf::from(output).join(kind);
+    std::fs::create_dir_all(output.join("db")).unwrap();
+    let database = output.join("db/production.sqlite3");
+    app.db()
+        .write(move |tx| {
+            tx.after_commit(move |tx| {
+                tx.conn()
+                    .execute("VACUUM INTO ?1", [database.to_string_lossy().as_ref()])?;
+                Ok(())
+            });
+            Ok(())
+        })
+        .await
+        .unwrap();
+    copy_files(
+        &app.booted.app.config.storage.files,
+        &output.join("storage"),
+    );
 }
 
 async fn blob(app: &TestApp) -> Blob {
