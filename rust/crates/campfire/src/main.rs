@@ -9,6 +9,7 @@ mod config;
 mod controllers;
 mod integrations;
 mod jobs;
+mod mail;
 mod rich_text;
 mod security;
 
