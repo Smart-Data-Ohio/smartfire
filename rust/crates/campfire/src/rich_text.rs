@@ -45,10 +45,9 @@ struct Brand {
     #[serde(default)]
     aliases: Vec<String>,
 }
-static BRANDS: LazyLock<Vec<Brand>> = LazyLock::new(|| {
-    serde_yaml::from_str(include_str!(env!("CAMPFIRE_ICON_CONFIG")))
-        .expect("reference config/icons.yml")
-});
+const ICON_CONFIG: &str = include_str!("../vendor/icons.yml");
+static BRANDS: LazyLock<Vec<Brand>> =
+    LazyLock::new(|| serde_yaml::from_str(ICON_CONFIG).expect("vendored config/icons.yml"));
 fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     let mut icons = IconCatalog::default();
     for brand in BRANDS.iter() {
@@ -211,6 +210,52 @@ mod tests {
     use super::*;
     use campfire_db::{Config, Database, Env, Timestamp, fixtures};
     use serde_json::Value;
+    fn check_icon_reference(root: &std::path::Path, ci: bool) -> Result<bool, String> {
+        let path = root.join("config/icons.yml");
+        match std::fs::read(&path) {
+            Ok(reference) if reference == ICON_CONFIG.as_bytes() => Ok(true),
+            Ok(_) => Err(format!(
+                "vendored icon catalog differs from {}; refresh crates/campfire/vendor/icons.yml",
+                path.display()
+            )),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && !ci => Ok(false),
+            Err(error) => Err(format!("cannot read reference {}: {error}", path.display())),
+        }
+    }
+
+    #[test]
+    fn vendored_icon_catalog_matches_reference() {
+        let root = std::env::var_os("CAMPFIRE_REFERENCE")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(fixtures::reference_root);
+        if !check_icon_reference(&root, std::env::var_os("CI").is_some()).unwrap() {
+            eprintln!("SKIPPED icon reference comparison: no config/icons.yml at {}", root.display());
+        }
+    }
+
+    #[test]
+    fn changed_icon_catalog_is_rejected() {
+        let reference = tempfile::tempdir().unwrap();
+        std::fs::create_dir(reference.path().join("config")).unwrap();
+        // Equal YAML with an extra newline still violates byte-identical vendoring.
+        let mut changed = ICON_CONFIG.as_bytes().to_vec();
+        changed.push(b'\n');
+        std::fs::write(reference.path().join("config/icons.yml"), changed).unwrap();
+        assert!(check_icon_reference(reference.path(), false).unwrap_err().contains("differs"));
+    }
+
+    #[test]
+    fn missing_icon_reference_fails_in_ci() {
+        let reference = tempfile::tempdir().unwrap();
+        assert!(check_icon_reference(reference.path(), true).unwrap_err().contains("config/icons.yml"));
+    }
+
+    #[test]
+    fn missing_icon_reference_can_skip_locally() {
+        let reference = tempfile::tempdir().unwrap();
+        assert!(!check_icon_reference(reference.path(), false).unwrap());
+    }
+
     fn golden() -> Value {
         serde_json::from_str(include_str!("ws8_runtime_vectors.json")).unwrap()
     }

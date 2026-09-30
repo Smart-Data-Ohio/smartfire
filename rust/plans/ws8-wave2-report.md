@@ -1,8 +1,107 @@
-# WS8a messaging models — WS10 merge, verification and partial handoff
+# WS8a messaging models — standalone icon build fix and verification
 
-Branch: `rust/ws8-messaging-models`. Current merged code: `4ddbbaf2` (parents `31080756`, `7d61c1f5`); main merge: `dda958c942ea757c570db82f1995eb1d2da0d06f` (parents `6cd91358`, `a2fbe296`). The lead merged the reviewed slash branch in `6cd91358`. Earlier continue2 and Astra fixes are retained. **WS8a remains partial at the named integration boundaries below.** This report is mirrored only under `rust/plans/`; `.claude/delegation/**` is not tracked. The user authorized committing and pushing; no PR was opened.
+Branch: `rust/ws8-messaging-models`. Earlier WS10 merged code: `4ddbbaf2` (parents `31080756`, `7d61c1f5`); main merge: `dda958c942ea757c570db82f1995eb1d2da0d06f` (parents `6cd91358`, `a2fbe296`). The lead merged the reviewed slash branch in `6cd91358`. Earlier continue2 and Astra fixes are retained. **WS8a remains partial at the named integration boundaries below.** This report is mirrored only under `rust/plans/`; `.claude/delegation/**` is not tracked. The user authorized committing and pushing; no PR was opened.
 
-## WS10 / main merge (#156)
+## Standalone icon build fix / PR #158
+
+The lead's WS18 merge is `277f2dcf`; this follow-up starts there. The final WS8 review approved merge, but the image check failed because campfire/build.rs required a reference config/icons.yml outside its Rust context. This section is the current verification; the WS10/round-2 sections below preserve their earlier evidence and named partial work.
+
+- `crates/campfire/vendor/icons.yml` is copied byte-for-byte from our config/icons.yml (2,122 bytes); `vendor/README.md` records its source and refresh command. `src/rich_text.rs` uses include_str!("../vendor/icons.yml") directly. Brand parsing/rendering is unchanged.
+- `crates/campfire/build.rs` is removed; it had no other purpose. The binary no longer reads an external icon catalog during compilation. WS18's existing declared named reference context still supplies its asset/public/importmap files; its build stage never copies config/icons.yml. The successful image build therefore proves the catalog is self-contained in the Rust context. No Dockerfile redesign or live deployment is claimed.
+- The four tests compare actual reference bytes, reject an extra newline even when YAML semantics are identical, require a readable reference under CI, and explicitly permit a missing local reference. Runtime CAMPFIRE_REFERENCE overrides the default repository root. All four first failed as compiled assertions against the unimplemented comparison; four committed mutations subsequently prove each check discriminates and restore source afterward.
+- `ci/cargo.sh` now forwards CI into its Docker process. The Rust workflow uses a full actions/checkout with no sparse paths, and the wrapper mounts the whole repository at /src, so config/icons.yml is reachable there. The workflow's non-DB unit tests remain non-blocking, as inherited; this change adds no new approval or CI gating policy. The named runtime CI-missing probe fails, while its local counterpart reports an intentional skip.
+- `reference-tools/db/ws8-icons-discrimination.py` records vendor drift, disabled byte equality, missing-CI acceptance and disabled local skip regressions. No new rows, callbacks, job ordering or broadcasts are changed. WS19 owns the broader CI/seed gate; WS18 owns the unchanged image/asset context.
+
+Commands and current raw evidence, from this worktree (scratch on disk, Cargo four jobs, own target; socket tests restricted to 48000–48049):
+
+```sh
+cp config/icons.yml rust/crates/campfire/vendor/icons.yml
+cmp config/icons.yml rust/crates/campfire/vendor/icons.yml
+```
+
+The cmp exits 0 with no output. The deleted build script was reproduced before the fix with CAMPFIRE_REFERENCE pointing to .scratch/icons-before, which has no Rails catalog; it panicked at the same reference-icon read (exit 101).
+
+```sh
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire icon_ -- --nocapture > .scratch/icons-tests-before.log 2>&1
+```
+
+```text
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 301 filtered out; finished in 0.00s
+```
+
+```sh
+python3 rust/reference-tools/db/ws8-icons-discrimination.py > .scratch/icons-discrimination-final.log 2>&1
+```
+
+```text
+icons-vendor-drift: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 304 filtered out; finished in 0.00s
+icons-comparison: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 304 filtered out; finished in 0.00s
+icons-ci-required: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 304 filtered out; finished in 0.00s
+icons-local-optional: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 304 filtered out; finished in 0.00s
+WS8 icons discrimination: 4 compiled regressions detected; implementation restored
+```
+
+```sh
+docker build -f rust/Dockerfile --build-context reference=. --build-arg CARGO_PROFILE=dev --build-arg CARGO_BUILD_JOBS=4 --build-arg CARGO_CACHE_SCOPE=ws8-icons -t ws8-icons:dev rust > .scratch/icons-image-build-final.log 2>&1
+```
+
+```text
+#31 70.64     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 10s
+#47 naming to docker.io/library/ws8-icons:dev 0.0s done
+#47 DONE 6.4s
+```
+
+Docker build exits 0 and creates the local ws8-icons:dev image. The primary context is rust/, with precisely WS18/CI's declared reference context. Release/LTO, registry publishing and production runtime/media acceptance are not claimed.
+
+Run from rust/:
+
+```sh
+TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" CABLE_TEST_PORT_RANGE=48000-48049 MAIL_TEST_PORT_RANGE=48000-48049 mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire --bin campfire icon_ -- --nocapture > ../.scratch/icons-tests-final.log 2>&1
+```
+
+```text
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 301 filtered out; finished in 0.00s
+```
+
+Run from rust/:
+
+```sh
+TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" CABLE_TEST_PORT_RANGE=48000-48049 MAIL_TEST_PORT_RANGE=48000-48049 mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire --bin campfire -- --test-threads=4 --nocapture > ../.scratch/icons-binary-final.log 2>&1
+```
+
+```text
+test channels::tests::golden::replays_reference_frames ... ok
+test result: FAILED. 302 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 29.03s
+```
+
+Run from rust/:
+
+```sh
+TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" CABLE_TEST_PORT_RANGE=48000-48049 MAIL_TEST_PORT_RANGE=48000-48049 mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --workspace --all-targets -- -D warnings > ../.scratch/icons-clippy-final.log 2>&1
+```
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.19s
+```
+
+The binary's only failure remains controllers::presenters::accounts::tests::manages_bots (WS11); 2 inherited ignored tests remain the recorder and optional latency probe. No normal reference/seed comparison skip appears in this full run. Binary acceptance is still partial for the known failure.
+
+The same already-built harness is also invoked directly, selecting only rich_text::tests::vendored_icon_catalog_matches_reference, with CAMPFIRE_REFERENCE=.scratch/icons-missing-reference. CI=true produces exit 101; without CI it produces exit 0 and an explicit skip. This deliberate local probe is not counted as reference parity acceptance:
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 304 filtered out; finished in 0.01s
+SKIPPED icon reference comparison: no config/icons.yml at /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8/.scratch/icons-missing-reference
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 304 filtered out; finished in 0.00s
+```
+
+```sh
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CARGO_BUILD_JOBS=4 mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 >/dev/null
+bash -n rust/ci/cargo.sh
+```
+
+Both exit 0 with no output; no lockfile changes were needed. No .claude/delegation file is tracked; the external report and its Rust-only mirror are identical. Remaining work is unchanged in the precise handoff below.
+
+## Earlier WS10 / main merge (#156)
 
 The lead left one conflict in `crates/db/src/models/message.rs`. Merge commit `4ddbbaf2` retains WS8's `Message::create`: rendered/canonicalized bodies, every existing column, transaction-local index/unread/reference bookkeeping, durable job enqueue and ordered post-commit broadcasts. WS10's `create_content` is removed. `create_markdown(tx, attributes, source)` only sets `attributes.markdown_source` and calls `create`; existing RoomMailbox and mail-crate callers keep their API. The shared validator supplies the same 50,000-character and blank-source errors, including Rails' streaming and attachment/kept-Drive exceptions; the narrower duplicated mail validator is removed.
 
