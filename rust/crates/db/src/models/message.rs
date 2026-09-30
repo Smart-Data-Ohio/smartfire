@@ -1150,59 +1150,49 @@ impl Message {
         tx.model_callback(Phase::MessageLinkReferences, self.id)
     }
 
-    /// Normal finalization runs the deferred WS8/WS11 callbacks exactly once.
-    /// WS12's activity recorder and WS14/15's external reference syncs attach here
-    /// when their domains merge, as they do in the ordinary message create chain.
+    /// Claim first, like Rails' `update_all`, then run the deferred callbacks.
+    /// A callback exception preserves the claim and earlier effects. The writer
+    /// returns it after commit; a durable enqueue error still rolls the entire
+    /// write back through Tx::persist_error (the fixed queue-atomicity decision).
     pub fn finalize_stream(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
-        let agent_id:Option<i64>=query_one(tx.conn(),"SELECT id FROM agents WHERE user_id=?",[self.creator_id],|r|r.get(0))?;
-        let active=agent_id.map(|id|crate::Agent::find(tx.conn(),id)).transpose()?.flatten().map(|a|a.active(tx.conn())).transpose()?.unwrap_or(false);
-        if !active {return self.finalize_stream_quietly(tx);}
-        if !self.claim_stream_finalized_without_indicator(tx)? {return Ok(false);}
-        self.create_in_index(tx)?;
-        self.receive_in_conversation(tx)?;
-        self.push_later_in_conversation(tx);
-        if !self.system_note { tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
-        crate::models::agent_delivery::enqueue_for_message(tx,self)?;
-        self.sync_all_references(tx)?;
-        crate::models::bot_webhook_fanout::deliver(tx,self)?;
-        if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
-        if let Some(mut agent)=crate::Agent::find(tx.conn(),agent_id.expect("active agent"))? {agent.clear_working_presence(tx)?;}
-        if self.thread_reply() && let Some(thread_id)=self.thread_id {tx.after_commit(move |tx|ChannelThread::broadcast_thread_indicators(tx,&[thread_id]));}
-        crate::models::agent_streaming::broadcast_final(tx,self)?;
+        if !self.claim_stream_finalized_without_indicator(tx)? { return Ok(false); }
+        let effects = (|| {
+            let agent = crate::Agent::for_user(tx.conn(), self.creator_id)?;
+            if !agent.as_ref().map(|a| a.active(tx.conn())).transpose()?.unwrap_or(false) {
+                return self.finalize_claimed_stream_quietly(tx);
+            }
+            self.create_in_index(tx)?;
+            self.receive_in_conversation(tx)?;
+            self.push_later_in_conversation(tx);
+            if !self.system_note { tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
+            crate::models::agent_delivery::enqueue_for_message(tx,self)?;
+            self.sync_all_references(tx)?;
+            crate::models::bot_webhook_fanout::deliver(tx,self)?;
+            if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
+            if let Some(mut agent) = crate::Agent::for_user(tx.conn(),self.creator_id)? {agent.clear_working_presence(tx)?;}
+            self.broadcast_finalized_thread_indicator(tx);
+            crate::models::agent_streaming::broadcast_final(tx,self)
+        })();
+        if let Err(error) = effects { tx.after_commit(move |_| Err(error)); }
         Ok(true)
     }
 
-    /// Quiet finalize is used by suspension even in locked threads. It claims once,
-    /// clears presence, updates the reply count and replaces the draft without fanout.
+    /// Quiet finalize is used by suspension even in locked threads. It claims
+    /// once and broadcasts the final draft without indexing, receive or fanout.
     pub fn finalize_stream_quietly(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
-        if !self.claim_stream_finalized_without_indicator(tx)? {
-            return Ok(false);
-        }
-        let agent_id: Option<i64> = query_one(
-            tx.conn(),
-            "SELECT id FROM agents WHERE user_id=?",
-            [self.creator_id],
-            |r| r.get(0),
-        )?;
-        if let Some(id) = agent_id
-            && let Some(mut agent) = crate::Agent::find(tx.conn(), id)?
-        {
-            agent.clear_working_presence(tx)?;
-        }
-        if self.thread_reply()
-            && let Some(thread_id) = self.thread_id
-        {
+        if !self.claim_stream_finalized_without_indicator(tx)? { return Ok(false); }
+        if let Err(error) = self.finalize_claimed_stream_quietly(tx) { tx.after_commit(move |_| Err(error)); }
+        Ok(true)
+    }
+    fn finalize_claimed_stream_quietly(&self, tx: &mut Tx<'_>) -> Result<()> {
+        if let Some(mut agent) = crate::Agent::for_user(tx.conn(),self.creator_id)? {agent.clear_working_presence(tx)?;}
+        self.broadcast_finalized_thread_indicator(tx);
+        crate::models::agent_streaming::broadcast_final(tx,self)
+    }
+    fn broadcast_finalized_thread_indicator(&self, tx: &mut Tx<'_>) {
+        if self.thread_reply() && let Some(thread_id)=self.thread_id {
             tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
         }
-        let stream = crate::broadcasts::conversation_messages(tx.conn(), self)?;
-        tx.emit_after_commit(Event::broadcast(&crate::broadcasts::Broadcast::replace(
-            stream,
-            crate::broadcasts::message_dom_id(self, None),
-            crate::broadcasts::Partial::MessageReplace {
-                message_id: self.id,
-            },
-        )));
-        Ok(true)
     }
 
     pub fn reload(&mut self, conn: &Connection) -> Result<()> {

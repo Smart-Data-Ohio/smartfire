@@ -227,3 +227,62 @@ fn ws11_peer_missing_dependency_and_failed_dependency_preserve_the_user() {
     );
     assert!(t.read(move |c| User::find_by_id(c, uid)).is_some());
 }
+
+#[test]
+fn ws11_finalization_callback_failure_preserves_the_rails_claim_and_earlier_effects() {
+    let t = super::channel_thread_test::frozen();
+    let registry = Arc::new(Registry::default());
+    let db = adapter(&t, registry.clone());
+    let mid = db
+        .write_blocking(|tx| {
+            Agent::find(tx.conn(), id("bender_agent"))?
+                .unwrap()
+                .set_working_presence(tx, Some("Finishing"))?;
+            Ok(Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("watercooler"),
+                    creator_id: id("bender"),
+                    markdown_source: Some("Before activity failure".into()),
+                    streaming: true,
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .unwrap();
+    registry.install(Phase::MessageActivity, |_, _| {
+        Err(crate::Error::Other("WS12 adapter rejected activity".into()))
+    });
+    let error = db
+        .write_blocking(move |tx| Message::find(tx.conn(), mid)?.finalize_stream(tx))
+        .unwrap_err()
+        .to_string();
+    let repeated = db
+        .write_blocking(move |tx| Message::find(tx.conn(), mid)?.finalize_stream(tx))
+        .unwrap();
+    t.read(move|c|{
+        let results=serde_json::json!({"error":error,"streaming":Message::find(c,mid)?.streaming,"indexed":c.query_row("SELECT COUNT(*) FROM message_search_index WHERE rowid=?",[mid],|r|r.get::<_,i64>(0))?,"posted":c.query_row("SELECT COUNT(*) FROM agent_events WHERE message_id=? AND event_type='posted'",[mid],|r|r.get::<_,i64>(0))?,"presence":Agent::find(c,id("bender_agent"))?.unwrap().working_presence,"repeated":repeated});
+        let gold:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/agents_finalization_failure_contract.json")).unwrap();assert_eq!(results,gold["results"]);Ok(())
+    });
+}
+#[test]
+fn ws11_removal_uninstalled_peer_fk_and_rescued_error_preserve_rows_and_callbacks() {
+    let t = super::channel_thread_test::frozen();
+    let uid=t.write(|tx|{let u=User::create_email_bot(tx)?;tx.conn().execute("INSERT INTO github_connected_accounts(user_id,github_login,access_token,created_at,updated_at) VALUES(?,'ws11-removal','public fake material',?,?)",rusqlite::params![u.id,tx.now(),tx.now()])?;Ok(u.id)});
+    t.sink.take();
+    t.write(move |tx| {
+        assert!(User::find(tx.conn(), uid)?.destroy(tx).is_err());
+        assert!(User::find_by_id(tx.conn(), uid)?.is_some());
+        assert_eq!(
+            tx.conn().query_row(
+                "SELECT COUNT(*) FROM github_connected_accounts WHERE user_id=?",
+                [uid],
+                |r| r.get::<_, i64>(0)
+            )?,
+            1
+        );
+        Ok(())
+    });
+    assert!(t.sink.events().is_empty());
+}
