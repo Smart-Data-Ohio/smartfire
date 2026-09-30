@@ -119,6 +119,10 @@ pub struct TestApp {
 impl TestApp {
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
+        Self::boot_using_clock(seed_clock()).await
+    }
+
+    pub async fn boot_using_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -134,7 +138,7 @@ impl TestApp {
             _ => None,
         })
         .unwrap();
-        Some(TestApp { booted: boot_with_clock(config, seed_clock()).await.unwrap(), _dir: dir })
+        Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap(), _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {

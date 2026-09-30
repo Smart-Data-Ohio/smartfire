@@ -7,6 +7,11 @@ pub mod agent_job;
     reason = "WS11’s authenticated agent REST/MCP adapters have not merged"
 )]
 pub mod agent_reads;
+#[allow(
+    dead_code,
+    reason = "WS11's authenticated approval-request adapters have not merged"
+)]
+pub mod agent_requests;
 pub mod cards;
 pub mod client;
 mod error_body;

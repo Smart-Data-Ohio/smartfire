@@ -22,14 +22,14 @@ pub struct ReadResult {
     pub error: Option<String>,
 }
 impl ReadResult {
-    fn ok(payload: Value) -> Self {
+    pub(super) fn ok(payload: Value) -> Self {
         Self {
             status: 200,
             payload: Some(payload),
             error: None,
         }
     }
-    fn fail(status: u16, message: &str) -> Self {
+    pub(super) fn fail(status: u16, message: &str) -> Self {
         Self {
             status,
             payload: None,

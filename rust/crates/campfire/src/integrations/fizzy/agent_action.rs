@@ -138,10 +138,6 @@ impl Action {
         })
     }
     /// All eight keys (including nulls), in the reference hash's insertion order.
-    #[allow(
-        dead_code,
-        reason = "WS11's approval request adapters consume this serialization seam"
-    )]
     pub fn payload_json(&self) -> String {
         let kind = self.text("kind");
         let fields = [
