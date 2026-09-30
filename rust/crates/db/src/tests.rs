@@ -2,6 +2,7 @@
 
 mod account_test;
 mod agent_posting_test;
+mod agent_budget_cases_test;
 mod agent_peer_callbacks_test;
 mod agent_access_model_test;
 mod agent_approval_test;

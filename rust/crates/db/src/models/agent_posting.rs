@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use crate::slash_commands::time_parser;
 use crate::sql::{CachedStatements, query_all, query_one};
-use crate::{ActivityItem, Error, Message, NewMessage, Result, Timestamp, Tx, User};
+use crate::{ActivityItem, Connection, Error, Message, NewMessage, Result, Timestamp, Tx, User};
 
 #[derive(Debug)]
 pub enum PostingOutcome {
@@ -77,12 +77,11 @@ pub fn daily_window(now: Timestamp, zone: &TimeZone) -> Result<DailyWindow> {
 }
 
 /// Like Time.zone in an authenticated agent request: the user's recognized zone, else UTC.
-fn zone(tx: &Tx<'_>, user_id: i64) -> Result<TimeZone> {
+fn zone(conn: &Connection, user_id: i64) -> Result<TimeZone> {
     let name: Option<String> =
-        tx.conn()
-            .query_row_cached("SELECT time_zone FROM users WHERE id=?", [user_id], |r| {
-                r.get(0)
-            })?;
+        conn.query_row_cached("SELECT time_zone FROM users WHERE id=?", [user_id], |r| {
+            r.get(0)
+        })?;
     Ok(time_parser::zone(name.as_deref().unwrap_or("UTC")))
 }
 
@@ -203,19 +202,28 @@ pub fn post(tx: &mut Tx<'_>, agent_id: i64, mut attributes: NewMessage) -> Resul
     }
 }
 
-/// Agents::Budgets.check. Counting persisted rows and writing the notice are atomic with
-/// the attempted post. Returning the denial (not a DB error) commits the notice on overflow.
-pub fn check_budget(tx: &mut Tx<'_>, agent_id: i64, cap: Cap) -> Result<Option<Value>> {
-    let (user_id, owner_id, limit): (i64, Option<i64>, Option<i64>) = tx.conn().query_row_cached(
-        &format!(
-            "SELECT user_id, owner_id, {} FROM agents WHERE id=?",
-            cap.column()
-        ),
-        [agent_id],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )?;
-    let Some(limit) = limit else { return Ok(None) };
-    let window = daily_window(tx.now(), &zone(tx, user_id)?)?;
+/// Read-only Agents::Budgets.usage. Counts the same persisted rows as the
+/// writer's cap check, without creating notices or activity items.
+pub fn usage(conn: &Connection, agent_id: i64, now: Timestamp) -> Result<Value> {
+    let user_id =
+        conn.query_row_cached("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| {
+            r.get(0)
+        })?;
+    let window = daily_window(now, &zone(conn, user_id)?)?;
+    Ok(json!({
+        "messages": cap_usage(conn, agent_id, user_id, Cap::Messages, &window)?,
+        "board_posts": cap_usage(conn, agent_id, user_id, Cap::BoardPosts, &window)?,
+        "external_actions": cap_usage(conn, agent_id, user_id, Cap::ExternalActions, &window)?
+    }))
+}
+
+fn cap_usage(
+    conn: &Connection,
+    agent_id: i64,
+    user_id: i64,
+    cap: Cap,
+    window: &DailyWindow,
+) -> Result<i64> {
     let (sql, owner) = match cap {
         Cap::Messages => (
             "SELECT COUNT(*) FROM messages WHERE creator_id=? AND created_at BETWEEN ? AND ? AND board_post_opener=0",
@@ -230,9 +238,23 @@ pub fn check_budget(tx: &mut Tx<'_>, agent_id: i64, cap: Cap) -> Result<Option<V
             agent_id,
         ),
     };
-    let usage: i64 =
-        tx.conn()
-            .query_row_cached(sql, params![owner, window.start, window.end], |r| r.get(0))?;
+    Ok(conn.query_row_cached(sql, params![owner, window.start, window.end], |r| r.get(0))?)
+}
+
+/// Agents::Budgets.check. Counting persisted rows and writing the notice are atomic with
+/// the attempted post. Returning the denial (not a DB error) commits the notice on overflow.
+pub fn check_budget(tx: &mut Tx<'_>, agent_id: i64, cap: Cap) -> Result<Option<Value>> {
+    let (user_id, owner_id, limit): (i64, Option<i64>, Option<i64>) = tx.conn().query_row_cached(
+        &format!(
+            "SELECT user_id, owner_id, {} FROM agents WHERE id=?",
+            cap.column()
+        ),
+        [agent_id],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )?;
+    let Some(limit) = limit else { return Ok(None) };
+    let window = daily_window(tx.now(), &zone(tx.conn(), user_id)?)?;
+    let usage = cap_usage(tx.conn(), agent_id, user_id, cap, &window)?;
     if usage < limit {
         return Ok(None);
     }
@@ -382,8 +404,8 @@ pub fn broadcast_stream_start(tx: &mut Tx<'_>, message: &Message) -> Result<()> 
     Ok(())
 }
 
-pub fn broadcast_create(tx:&mut Tx<'_>,message:&Message)->Result<()> {
-    broadcast_stream_start(tx,message)?;
+pub fn broadcast_create(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
+    broadcast_stream_start(tx, message)?;
     if message.thread_id.is_none() && !message.system_note {
         broadcast_unread_room(tx, message)?;
     }

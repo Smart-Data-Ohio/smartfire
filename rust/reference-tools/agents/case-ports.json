@@ -970,6 +970,48 @@
           "rust": "ws11_recovery_case_fresh_pending_delivery_left_alone"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent_budgets_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_budget_cases_test.rs",
+      "cases": [
+        {
+          "rails": "usage counts today's messages, board posts, and approvals",
+          "rust": "ws11_budget_case_usage_counts_persisted_rows"
+        },
+        {
+          "rails": "a board post's first message counts only toward the board-post cap",
+          "rust": "ws11_budget_case_board_opener_counts_only_as_post"
+        },
+        {
+          "rails": "an opener does not burn the message budget but replies do",
+          "rust": "ws11_budget_case_opener_passes_reply_exhausts"
+        },
+        {
+          "rails": "usage ignores yesterday's rows",
+          "rust": "ws11_budget_case_yesterday_is_excluded"
+        },
+        {
+          "rails": "unlimited caps always pass",
+          "rust": "ws11_budget_case_unlimited_caps_pass"
+        },
+        {
+          "rails": "a hit cap answers 429 and notifies the owner once per day",
+          "rust": "ws11_budget_case_denial_notifies_owner_once_per_day"
+        },
+        {
+          "rails": "each cap notifies separately",
+          "rust": "ws11_budget_case_each_cap_notifies_separately"
+        },
+        {
+          "rails": "an ownerless agent notifies administrators",
+          "rust": "ws11_budget_case_ownerless_notifies_active_human_admins"
+        },
+        {
+          "rails": "caps must be positive integers",
+          "rust": "ws11_budget_case_caps_require_positive_integer"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
@@ -978,6 +1020,7 @@
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
     "test/models/message_streaming_test.rb": "19 named comparisons include installed production link-reference callbacks. Four rendered start/trailing and full activity/finalization cases still await peer adapters.",
     "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation.",
-    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence."
+    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence.",
+    "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred."
   }
 }

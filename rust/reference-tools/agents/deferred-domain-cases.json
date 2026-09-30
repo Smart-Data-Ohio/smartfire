@@ -8,7 +8,8 @@
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
     "test/models/message_streaming_test.rb": "19 named comparisons include installed production link-reference callbacks. Four rendered start/trailing and full activity/finalization cases still await peer adapters.",
     "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation.",
-    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence."
+    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence.",
+    "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred."
   },
   "files": [
     {
@@ -141,16 +142,7 @@
       "rails_file": "test/models/agent_budgets_test.rb",
       "owner": "WS11 domain",
       "remaining_named_case_ports": [
-        "usage counts today's messages, board posts, and approvals",
-        "a board post's first message counts only toward the board-post cap",
-        "an opener does not burn the message budget but replies do",
-        "usage ignores yesterday's rows",
-        "unlimited caps always pass",
-        "a hit cap answers 429 and notifies the owner once per day",
-        "each cap notifies separately",
-        "an ownerless agent notifies administrators",
         "a stranger cannot read another agent's budget item",
-        "caps must be positive integers",
         "an agent-created handoff counts toward no budget, even with caps exhausted"
       ]
     },
