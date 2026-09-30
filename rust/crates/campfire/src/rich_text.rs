@@ -77,6 +77,11 @@ fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     Ok(icons)
 }
 
+/// The shared WS8 MessagePayloadHelper Markdown reader.
+pub(crate) fn markdown_presentation(conn: &Connection, body: &str, ctx: &RenderContext<'_>) -> Result<String, String> {
+    markdown::presentation(body, ctx, &icons(conn)?, None).map_err(|error| error.to_string())
+}
+
 impl RichText for AppRichText {
     fn resolve_boost_content(&self, conn:&Connection, content:&str)->Result<String,String> {
         let content=campfire_richtext::ruby::strip(content);
