@@ -354,6 +354,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "hkdf",
+ "hmac",
  "http",
  "http-body-util",
  "hyper",
@@ -364,6 +365,7 @@ dependencies = [
  "percent-encoding",
  "rails_compat",
  "rand 0.9.5",
+ "rcgen",
  "regex",
  "rusqlite",
  "rustls",
@@ -371,6 +373,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "subtle",
  "tempfile",
  "thiserror",
  "tikv-jemalloc-sys",
@@ -381,6 +384,7 @@ dependencies = [
  "tower",
  "tracing",
  "tracing-subscriber",
+ "url",
  "uuid",
 ]
 

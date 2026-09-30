@@ -15,6 +15,10 @@
 
 pub mod image_proxy;
 mod jobs;
+pub mod action_claims;
+// Account, fetcher and notifier consumers remain staged (WS15g continuation).
+#[allow(dead_code)]
+pub mod github;
 pub mod link_embed;
 #[allow(dead_code)]
 pub mod linkedin;

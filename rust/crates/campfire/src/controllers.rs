@@ -41,6 +41,7 @@ pub mod accounts;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
+pub mod github;
 pub mod message_embed_suppressions;
 pub mod messages;
 pub mod presenters;
@@ -145,6 +146,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
+        "github/webhooks#create" => arc(github::webhooks::create),
         "content_security_policy_reports#create" => arc(csp_reports::create),
         "accounts/users#index" => arc(accounts::users::index),
         "accounts/users#update" => arc(accounts::users::update),

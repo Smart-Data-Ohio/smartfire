@@ -35,6 +35,8 @@ use anyhow::{Context, bail};
 #[derive(Debug, Clone)]
 pub struct Config {
     pub secret_key_base: String,
+    /// `GITHUB_WEBHOOK_SECRET`; blank disables inbound GitHub deliveries.
+    pub github_webhook_secret: Option<String>,
     pub vapid_public_key: Option<String>,
     pub vapid_private_key: Option<String>,
     /// `VAPID_SUBJECT`, or a default (see the module docs).
@@ -129,6 +131,7 @@ impl Config {
 
         Ok(Self {
             secret_key_base,
+            github_webhook_secret: present("GITHUB_WEBHOOK_SECRET"),
             vapid_public_key: present("VAPID_PUBLIC_KEY"),
             vapid_private_key: present("VAPID_PRIVATE_KEY"),
             vapid_subject: present("VAPID_SUBJECT").unwrap_or_else(|| default_vapid_subject(present("TLS_DOMAIN"))),

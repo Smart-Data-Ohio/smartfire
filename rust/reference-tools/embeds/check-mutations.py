@@ -29,6 +29,8 @@ mutations = [
     ("../controllers/message_embed_suppressions.rs", 'message.creator_id!=user_id || message.system_note || locked', 'message.system_note || locked', "ws15e_suppression_requires_membership_author_and_eligible_conversation"),
     ("link_embed/store.rs", 'tx.emit_after_commit(Event::broadcast(&CardUpdate { embed_id: self.id }));', 'tx.emit_now(Event::broadcast(&CardUpdate { embed_id: self.id }));', "ws15e_link_card_broadcasts_only_after_commit_with_message_key_and_scroll"),
     ("link_embed/fetcher.rs", '["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"]', '["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml"]', "ws15e_link_fetch_records_positive_negative_and_guarded_image_results"),
+    ("action_claims.rs", "\"json_extract(agent_events.metadata, '$.status') = 'running'\"", '"1"', "github_claim_sweep_and_late_finish_keep_the_first_outcome_and_enqueue_once"),
+    ("action_claims.rs", 'created_at < ?', 'created_at <= ?', "github_claim_sweep_fails_only_overdue_running_claims_and_preserves_metadata"),
 ]
 for name, old, new, test in mutations:
     path = root / "crates/campfire/src/integrations" / name
