@@ -154,8 +154,7 @@ pub fn rewrite_running(
     Ok(won)
 }
 
-// Workers audit cached approval/actor snapshots; tests simulate their completed outcome here.
-#[cfg(test)]
+// Completed Fizzy outcomes and the shared sweep audit the persisted approval/actor snapshot.
 pub fn record_execution_audit(
     tx: &Tx<'_>,
     event_id: i64,
