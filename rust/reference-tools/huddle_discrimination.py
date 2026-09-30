@@ -21,6 +21,7 @@ G = ROOT / "rust/crates/db/src/models/huddle_grant.rs"
 I = ROOT / "rust/crates/campfire/src/controllers/internal_huddle.rs"
 E = ROOT / "rust/crates/db/src/models/huddle_effects.rs"
 B = ROOT / "rust/crates/campfire/src/channels/huddle_effects.rs"
+N = ROOT / "rust/crates/db/src/models/huddle_notices.rs"
 
 
 def replace_once(source, before, after):
@@ -40,6 +41,20 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("push-connection-scope-bypassed", N, lambda s: replace_once(s, "AND (m.connected_at IS NULL OR m.connected_at<?)", "AND (? IS NOT NULL)"), "campfire_db", "huddle_push_scopes_and_throttle_match_thirty_six_rails_scenarios"),
+    ("push-throttle-shortened", N, lambda s: replace_once(s, "pub const JOIN_PUSH_THROTTLE_WINDOW: i64 = 600;", "pub const JOIN_PUSH_THROTTLE_WINDOW: i64 = 1;"), "campfire_db", "huddle_push_scopes_and_throttle_match_thirty_six_rails_scenarios"),
+    ("push-policy-bypassed", N, lambda s: replace_once(s, "if !policy_allowed {", "if false && !policy_allowed {"), "campfire_db", "huddle_push_scopes_and_throttle_match_thirty_six_rails_scenarios"),
+    ("push-denied-burns-throttle", N, lambda s: replace_once(s, "if !policy_allowed {\n        return Ok(None);", 'if !policy_allowed {\n        tx.conn().execute_cached("UPDATE memberships SET last_huddle_join_push_at=? WHERE id=?", params![tx.now(), request.room_membership_id])?;\n        return Ok(None);'), "campfire_db", "huddle_push_scopes_and_throttle_match_thirty_six_rails_scenarios"),
+    ("notice-revoked-and-stale-joiner", N, lambda s: replace_once(s, "if grant.revoked() || !grant.in_call(tx.now())", "if false && (grant.revoked() || !grant.in_call(tx.now()))"), "campfire_db", "huddle_join_leave_and_call_ended_match_sixty_seven_rails_scenarios"),
+    ("notice-inactive-humans", N, lambda s: replace_body(s, "fn human(", "User::find_by_id(conn, id)"), "campfire_db", "huddle_join_leave_and_call_ended_match_sixty_seven_rails_scenarios"),
+    ("notice-second-device-leave", N, lambda s: replace_once(s, "if another {", "if false && another {"), "campfire_db", "huddle_join_leave_and_call_ended_match_sixty_seven_rails_scenarios"),
+    ("notice-rejoin-window", N, lambda s: replace_once(s, "SignedDuration::from_secs(5)", "SignedDuration::from_secs(1)"), "campfire_db", "huddle_join_leave_and_call_ended_match_sixty_seven_rails_scenarios"),
+    ("notice-call-ended-while-others-remain", N, lambda s: replace_once(s, "if others {", "if false && others {"), "campfire_db", "huddle_join_leave_and_call_ended_match_sixty_seven_rails_scenarios"),
+    ("notice-join-worker-bypassed", J, lambda s: replace_body(s, "async fn join(", "Ok(Outcome::Done)"), "campfire", "huddle_join_and_invitation_workers_persist_the_payload_for_ws17"),
+    ("notice-invitation-worker-bypassed", J, lambda s: replace_body(s, "async fn invitation(", "Ok(Outcome::Done)"), "campfire", "huddle_join_and_invitation_workers_persist_the_payload_for_ws17"),
+    ("notice-push-request-dropped", N, lambda s: replace_body(s, "pub fn enqueue_huddle_push(", ""), "campfire", "huddle_push_enqueue_failure_rolls_back_the_notice_transaction"),
+    ("notice-revocation-callback-bypassed", G, lambda s: replace_once(s, ".filter(|grant| grant.in_call(tx.now()))", ".filter(|grant| false && grant.in_call(tx.now()))"), "campfire_db", "huddle_join_leave_and_call_ended_match_sixty_seven_rails_scenarios"),
+    ("notice-leave-callback-bypassed", G, lambda s: replace_once(s, "if was_in_call {", "if false && was_in_call {"), "campfire_db", "huddle_join_leave_and_call_ended_match_sixty_seven_rails_scenarios"),
     ("presence-before-commit", E, lambda s: replace_once(s, "tx.emit_after_commit", "tx.emit_now"), "campfire", "huddle_presence_reaches_real_sockets_and_rolled_back_revocation_stays_silent"),
     ("presence-worker-bypassed", J, lambda s: replace_body(s, "async fn presence(", "Ok(Outcome::Done)"), "campfire", "huddle_presence_reaches_real_sockets_and_rolled_back_revocation_stays_silent"),
     ("presence-sink-bypassed", B, lambda s: replace_body(s, "pub(crate) fn presence(", "Ok(())"), "campfire", "huddle_presence_reaches_real_sockets_and_rolled_back_revocation_stays_silent"),

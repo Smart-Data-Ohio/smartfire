@@ -1,5 +1,6 @@
 //! Authorization and liveness from `app/models/huddle_grant.rb`.
-//! Invitation fan-out and rendered callback effects are separate WS13 slices.
+//! Presence and leave/call-ended effects are described after commit; post-issuance
+//! invitation fan-out and stream render effects remain subsequent WS13 slices.
 use jiff::SignedDuration;
 use rusqlite::{OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
@@ -113,8 +114,8 @@ impl HuddleGrant {
         }
         errors.into_result()
     }
-    /// Re-read all coordinates under SQLite's immediate write transaction. Callers must run
-    /// post-issuance invitation/presence work separately; it is not part of this slice.
+    /// Re-read all coordinates under SQLite's immediate write transaction. Presence is
+    /// published after commit; invitation clearing and ringing remain a separate lifecycle seam.
     pub fn issue(
         tx: &mut Tx<'_>,
         session_id: i64,
@@ -257,6 +258,14 @@ impl HuddleGrant {
             Self::end_streams_for_membership(tx, self.room_id, self.membership_id)?;
         }
         crate::models::huddle_effects::broadcast_presence(tx, self.room_id);
+        let id = self.id;
+        tx.after_commit(move |tx| {
+            if let Some(grant) = Self::find_by_id(tx.conn(), id)?.filter(|grant| grant.in_call(tx.now())) {
+                crate::models::huddle_notices::call_ended(tx, &grant)?;
+                crate::models::huddle_notices::notify_leave(tx, &grant)?;
+            }
+            Ok(())
+        });
         Ok(())
     }
     pub(crate) fn end_streams_for_membership(
@@ -366,12 +375,23 @@ impl HuddleGrant {
         if seen_after.is_some_and(|floor| seen > floor) {
             return Ok(false);
         }
+        let was_in_call = self.in_call(tx.now());
         tx.conn().execute_cached(
             "UPDATE huddle_grants SET last_seen_at=NULL WHERE id=?",
             [self.id],
         )?;
         self.last_seen_at = None;
         crate::models::huddle_effects::broadcast_presence(tx, self.room_id);
+        let id = self.id;
+        if was_in_call {
+            tx.after_commit(move |tx| {
+                if let Some(grant) = Self::find_by_id(tx.conn(), id)? {
+                    crate::models::huddle_notices::call_ended(tx, &grant)?;
+                    if !grant.revoked() { crate::models::huddle_notices::notify_leave(tx, &grant)?; }
+                }
+                Ok(())
+            });
+        }
         Ok(true)
     }
     pub fn participants_for(

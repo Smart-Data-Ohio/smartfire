@@ -1,5 +1,6 @@
-//! The cleanup step of `Huddle::Reconciler` and `Huddle::CleanupJob`.
-//! Invitation resolution and stale-stream reconciliation remain WS13's next slice.
+//! Durable presence, join-notice, invitation-push and cleanup jobs.
+//! The reconciler currently registers cleanups; overdue invitations and stale streams
+//! remain the next WS13 lifecycle slice. Invitation/join payloads enqueue through WS17's seam.
 use campfire_db::Database;
 use campfire_db::models::huddle_cleanup::{CleanupJob, HuddleCleanup, Operation};
 use campfire_jobs::{Execution, JobKind, JobResult, Outcome, RetryPolicy};
@@ -26,13 +27,57 @@ impl JobKind for Cleanup {
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
 struct Presence(campfire_db::models::huddle_grant::PresenceJob);
-impl campfire_db::Job for Presence { const CLASS: &'static str = "Huddle::BroadcastPresenceJob"; }
+impl campfire_db::Job for Presence {
+    const CLASS: &'static str = "Huddle::BroadcastPresenceJob";
+}
 impl JobKind for Presence {}
 
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct Join(campfire_db::models::huddle_grant::JoinNoticeJob);
+impl campfire_db::Job for Join {
+    const CLASS: &'static str = "Huddle::JoinNoticeJob";
+}
+impl JobKind for Join {}
+
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct Invitation(campfire_db::models::huddle_notices::PushInvitationJob);
+impl campfire_db::Job for Invitation {
+    const CLASS: &'static str = "Huddle::PushInvitationJob";
+}
+impl JobKind for Invitation {}
+
+async fn join(app: App, job: Join, _: Execution) -> JobResult {
+    app.db
+        .write(move |tx| campfire_db::models::huddle_notices::notify_join(tx, job.0.grant_id))
+        .await?;
+    Ok(Outcome::Done)
+}
+async fn invitation(app: App, job: Invitation, _: Execution) -> JobResult {
+    app.db
+        .write(move |tx| {
+            campfire_db::models::huddle_notices::push_invitation(tx, job.0.activity_item_id)
+        })
+        .await?;
+    Ok(Outcome::Done)
+}
+
 async fn presence(app: App, job: Presence, _: Execution) -> JobResult {
-    let room = app.db.read(move |conn| Ok(campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, job.0.grant_id)?.map(|grant| grant.room_id))).await?;
+    let room = app
+        .db
+        .read(move |conn| {
+            Ok(
+                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, job.0.grant_id)?
+                    .map(|grant| grant.room_id),
+            )
+        })
+        .await?;
     if let Some(room_id) = room {
-        tokio::task::spawn_blocking(move || crate::channels::huddle_effects::presence(&app, room_id)).await??;
+        tokio::task::spawn_blocking(move || {
+            crate::channels::huddle_effects::presence(&app, room_id)
+        })
+        .await??;
     }
     Ok(Outcome::Done)
 }
@@ -41,7 +86,7 @@ async fn presence(app: App, job: Presence, _: Execution) -> JobResult {
 /// those exact unknown-class failures, preserving genuine rendering/validation failures.
 pub(crate) async fn recover_unregistered(db: &Database) -> campfire_db::Result<usize> {
     db.write(|tx| Ok(tx.conn().execute_cached(
-        "UPDATE background_jobs SET status='ready',attempts=0,run_at=?1,failed_at=NULL,updated_at=?1 WHERE status='failed' AND job_class IN ('Huddle::BroadcastPresenceJob') AND last_error='no handler is registered for ' || job_class",
+        "UPDATE background_jobs SET status='ready',attempts=0,run_at=?1,failed_at=NULL,updated_at=?1 WHERE status='failed' AND job_class IN ('Huddle::BroadcastPresenceJob','Huddle::JoinNoticeJob','Huddle::PushInvitationJob') AND last_error='no handler is registered for ' || job_class",
         [tx.now()],
     )?)).await
 }
@@ -49,6 +94,8 @@ pub(crate) async fn recover_unregistered(db: &Database) -> campfire_db::Result<u
 pub(super) fn register(registry: &mut Registry) {
     registry.register(cleanup);
     registry.register(presence);
+    registry.register(join);
+    registry.register(invitation);
 }
 
 async fn cleanup(app: App, job: Cleanup, _: Execution) -> JobResult {

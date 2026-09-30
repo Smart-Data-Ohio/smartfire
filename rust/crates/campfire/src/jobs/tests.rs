@@ -36,26 +36,110 @@ async fn huddle_presence_worker_discards_missing_grants_successfully() {
 }
 
 #[tokio::test]
+async fn huddle_join_and_invitation_workers_discard_missing_sources_successfully() {
+    let (booted, _dir) = app().await;
+    booted.app.db.write(|tx| {
+        for (class, arguments) in [("Huddle::JoinNoticeJob", serde_json::json!({"grant_id":-1})), ("Huddle::PushInvitationJob", serde_json::json!({"activity_item_id":-1}))] {
+            tx.emit_after_commit(Event::Job(JobRequest { class, arguments, wait: None }));
+        }
+        Ok(())
+    }).await.unwrap();
+    wait_for(&booted.app, "the join and invitation workers", |rows| rows.iter().all(|job| !["Huddle::JoinNoticeJob", "Huddle::PushInvitationJob"].contains(&job.class.as_str()))).await;
+    booted.jobs.shutdown(Duration::from_secs(2)).await;
+}
+
+#[tokio::test]
+async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
+    use crate::controllers::presenters::test_support::{TestApp, DAVID, JASON, DIRECT_DAVID_JASON};
+    use campfire_db::models::huddle_grant::HuddleGrant;
+    use campfire_db::models::huddle_notices::{PushInvitationJob, PushRequest};
+    let Some(test) = TestApp::boot().await else { return; };
+    let app = test.booted.app.clone();
+    let grant = app.db.write(|tx| {
+        let session = campfire_db::Session::start(tx, DAVID, None, None)?;
+        let membership = campfire_db::Membership::find_by_room_and_user(tx.conn(), DIRECT_DAVID_JASON, DAVID)?.unwrap();
+        let mut grant = HuddleGrant::issue(tx, session.id, membership.id, membership.room_id, &campfire_db::models::room_delete::HuddleConfig { api_secret: Some("ws13-fixture-value".into()), admin_configured: false })?;
+        grant.record_seen(tx)?;
+        Ok(grant)
+    }).await.unwrap();
+    let rows = wait_for(&app, "the durable join push request", |rows| rows.iter().any(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle_join")).await;
+    let request = rows.iter().find(|job| job.class == PushRequest::CLASS).unwrap();
+    assert_eq!(request.arguments["recipient_id"],JASON);
+    assert_eq!(request.arguments["sender_id"],DAVID);
+    assert_eq!(request.arguments["payload"],serde_json::json!({"title":"David joined your huddle", "body":"Join from the conversation", "path":format!("/rooms/{DIRECT_DAVID_JASON}"), "tag":format!("huddle-{DIRECT_DAVID_JASON}")}));
+    app.db.write(move |tx| {
+        let item = campfire_db::ActivityItem::refresh_unread(tx,JASON,"HuddleGrant",grant.id,"huddle_started")?;
+        tx.emit_after_commit(Event::job(&PushInvitationJob {activity_item_id:item.id}));
+        Ok(())
+    }).await.unwrap();
+    let rows = wait_for(&app, "the durable invitation push request", |rows| rows.iter().any(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle")).await;
+    let request = rows.iter().find(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle").unwrap();
+    assert_eq!(request.arguments["recipient_id"],JASON);
+    assert_eq!(request.arguments["payload"]["title"],"David started a huddle");
+    assert!(request.arguments["room_membership_id"].as_i64().is_some());
+    // WS17 supplies Notifications::HuddlePushJob's handler; these retained intents authorize
+    // no delivery until that handler applies the policy, membership and subscription gates.
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+}
+
+#[tokio::test]
+async fn huddle_push_enqueue_failure_rolls_back_the_notice_transaction() {
+    use crate::controllers::presenters::test_support::{TestApp, DAVID, JASON, DIRECT_DAVID_JASON};
+    use campfire_db::models::huddle_grant::HuddleGrant;
+    use campfire_db::models::huddle_notices::{PushKind, PushPayload, PushRequest, enqueue_huddle_push, prepare_push};
+    let Some(test) = TestApp::boot().await else { return; };
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    let app = test.booted.app;
+    let (id, membership_id) = app.db.write(|tx| {
+        let session = campfire_db::Session::start(tx,DAVID,None,None)?;
+        let member = campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
+        let grant = HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})?;
+        let item = campfire_db::ActivityItem::refresh_unread(tx,JASON,"HuddleGrant",grant.id,"huddle_started")?;
+        tx.conn().execute_batch("CREATE TRIGGER ws13_reject_push BEFORE INSERT ON background_jobs WHEN NEW.job_class='Notifications::HuddlePushJob' BEGIN SELECT RAISE(ABORT,'ws13 reject push intent'); END")?;
+        let recipient = campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,JASON)?.unwrap();
+        tx.conn().execute("UPDATE memberships SET connected_at=NULL,last_huddle_join_push_at=NULL WHERE id=?",[recipient.id])?;
+        Ok((item.id, recipient.id))
+    }).await.unwrap();
+    let failed = app.db.write(move |tx| {
+        // WS17 must enqueue the actual delivery in the transaction that owns this claim.
+        tx.conn().execute("UPDATE activity_items SET read_at='2026-03-02 16:00:01' WHERE id=?",[id])?;
+        let request = PushRequest {
+            kind: PushKind::HuddleJoin, recipient_id:JASON, sender_id:DAVID,
+            room_id:DIRECT_DAVID_JASON, room_membership_id:Some(membership_id),
+            payload:PushPayload { title:"David joined a huddle".into(),body:"Join the call".into(),path:format!("/rooms/{DIRECT_DAVID_JASON}"),tag:format!("huddle-room-{DIRECT_DAVID_JASON}") },
+        };
+        assert!(prepare_push(tx,&request,true)?.is_some(),"the subscription and throttle claim did not run");
+        enqueue_huddle_push(tx,&request);
+        Ok(())
+    }).await;
+    assert!(failed.is_err(),"the failed durable enqueue did not fail the triggering write");
+    assert!(app.db.read(move |conn|Ok(campfire_db::ActivityItem::find(conn,id)?.read_at.is_none())).await.unwrap());
+    assert!(app.db.read(move |conn|Ok(campfire_db::Membership::find(conn,membership_id)?.last_huddle_join_push_at.is_none())).await.unwrap());
+    assert!(!jobs(&app).iter().any(|job|job.class=="Notifications::HuddlePushJob"));
+}
+
+#[tokio::test]
 async fn huddle_presence_recovers_only_the_previous_unknown_class_failures() {
     let (booted, _dir) = app().await;
     booted.jobs.shutdown(Duration::from_secs(2)).await;
     booted.app.db.write(|tx| {
-        for (class, error) in [("Huddle::BroadcastPresenceJob", "no handler is registered for Huddle::BroadcastPresenceJob"), ("Huddle::BroadcastPresenceJob", "real rendering failure"), ("WS13OtherJob", "no handler is registered for WS13OtherJob")] {
+        for (class, error) in [("Huddle::BroadcastPresenceJob", "no handler is registered for Huddle::BroadcastPresenceJob"), ("Huddle::JoinNoticeJob", "no handler is registered for Huddle::JoinNoticeJob"), ("Huddle::PushInvitationJob", "no handler is registered for Huddle::PushInvitationJob"), ("Huddle::BroadcastPresenceJob", "real rendering failure"), ("WS13OtherJob", "no handler is registered for WS13OtherJob")] {
             let id = boot_insert_failed_job(tx, class, error)?;
             assert!(id > 0);
         }
         Ok(())
     }).await.unwrap();
-    assert_eq!(super::huddle::recover_unregistered(&booted.app.db).await.unwrap(), 1);
+    assert_eq!(super::huddle::recover_unregistered(&booted.app.db).await.unwrap(), 3);
     let rows = jobs(&booted.app);
-    assert_eq!(rows.iter().filter(|row| row.status == "ready").count(), 1);
+    assert_eq!(rows.iter().filter(|row| row.status == "ready").count(), 3);
     assert_eq!(rows.iter().filter(|row| row.status == "failed").count(), 2);
     assert_eq!(super::huddle::recover_unregistered(&booted.app.db).await.unwrap(), 0);
 }
 
 fn boot_insert_failed_job(tx: &Tx<'_>, class: &str, error: &str) -> campfire_db::Result<i64> {
     use campfire_db::CachedStatements;
-    Ok(tx.conn().query_row_cached("INSERT INTO background_jobs(job_class,queue_name,arguments,payload_version,status,attempts,run_at,last_error,failed_at,created_at,updated_at) VALUES(?1,'default','{\"grant_id\":-1}',1,'failed',1,?3,?2,?3,?3,?3) RETURNING id", rusqlite::params![class, error, tx.now()], |row| row.get(0))?)
+    let arguments = if class=="Huddle::PushInvitationJob" {"{\"activity_item_id\":-1}"} else {"{\"grant_id\":-1}"};
+    Ok(tx.conn().query_row_cached("INSERT INTO background_jobs(job_class,queue_name,arguments,payload_version,status,attempts,run_at,last_error,failed_at,created_at,updated_at) VALUES(?1,'default',?4,1,'failed',1,?3,?2,?3,?3,?3) RETURNING id", rusqlite::params![class, error, tx.now(), arguments], |row| row.get(0))?)
 }
 
 fn jobs(app: &App) -> Vec<JobRow> {
