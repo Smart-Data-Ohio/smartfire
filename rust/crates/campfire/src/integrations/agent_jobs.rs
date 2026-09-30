@@ -489,6 +489,30 @@ mod tests {
             assert_eq!(jobs,1);Ok(())
         }).await.unwrap();
     }
+
+    #[tokio::test]
+    async fn ws11_slash_queue_failure_rolls_back_the_invocation() {
+        use campfire_db::{AgentSlashCommand,NewAgentSlashCommand};
+        let test=TestApp::boot().await.expect("default seed");let db=test.db();
+        db.write(|tx| {
+            let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
+            tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?",[agent_id])?;
+            Room::find(tx.conn(),ALL_TALK)?.grant_to(tx,&[BENDER])?;
+            AgentSlashCommand::create(tx,NewAgentSlashCommand {agent_id,room_id:ALL_TALK,name:"inspect".into(),..Default::default()})?;
+            tx.conn().execute_batch("CREATE TRIGGER ws11_reject_slash_webhook BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' BEGIN SELECT RAISE(ABORT,'WS11 rejected slash webhook'); END;")?;
+            Ok(())
+        }).await.unwrap();
+        let failed=db.write(|tx| {
+            let context=campfire_db::slash_commands::Context {user_id:DAVID,room_id:ALL_TALK,thread_id:None,huddles_configured:false};
+            let result=campfire_db::slash_commands::dispatch(tx,&context,"/inspect queue")?;
+            assert_eq!(result.kind,"ephemeral");Ok(())
+        }).await;
+        assert!(failed.is_err(),"invocation and webhook queue insertion must commit together");
+        db.read(|c| {
+            let count:i64=c.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='slash_command'",[],|r|r.get(0))?;
+            assert_eq!(count,0);Ok(())
+        }).await.unwrap();
+    }
 }
 
 #[cfg(test)]
