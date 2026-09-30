@@ -19,6 +19,9 @@ const UNAUTHORIZED: &str = r#"{"type":"disconnect","reason":"unauthorized","reco
 #[path = "directory_test.rs"]
 mod directory;
 
+#[path = "reads_test.rs"]
+mod reads;
+
 struct Hub {
     app: TestApp,
     url: String,

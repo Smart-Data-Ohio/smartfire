@@ -197,6 +197,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts#destroy" => arc(messages::boosts::destroy),
         "switchers#show" => arc(switchers::show),
         "rooms/refreshes#show" => arc(rooms::refreshes::show),
+        "rooms/reads#create" => arc(rooms::reads::create),
+        "rooms/reads#destroy" => arc(rooms::reads::destroy),
         "room_categories#index" => arc(room_categories::index),
         "room_categories#create" => arc(room_categories::create),
         "room_categories#update" => arc(room_categories::update),

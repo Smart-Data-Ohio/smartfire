@@ -15,6 +15,7 @@ pub mod directs;
 pub mod involvements;
 pub mod opens;
 pub mod refreshes;
+pub mod reads;
 
 use askama::Template;
 use campfire_db::{Account, Message, Room, RoomType, Timeline, User};
@@ -313,3 +314,6 @@ mod tests;
 
 #[cfg(test)]
 mod parity_tests;
+
+#[cfg(test)]
+mod reads_tests;

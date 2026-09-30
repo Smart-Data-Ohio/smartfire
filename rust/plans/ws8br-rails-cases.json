@@ -4,6 +4,7 @@
   "files": [
     {
       "file": "test/controllers/rooms_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "95395b50bc1e8324f48035603b9ec7b54bbcfb072d63ba76638b8ede4e9540f3",
       "declared_cases": [
@@ -131,6 +132,7 @@
     },
     {
       "file": "test/controllers/rooms/opens_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "619938ea224c067b8c761dae00d8e87323d4b5314f3c90121e363c0d0ee0755a",
       "declared_cases": [
@@ -202,6 +204,7 @@
     },
     {
       "file": "test/controllers/rooms/closeds_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "833e3e691a86d9bb6b1f1db2f494b4e24e9cc0947c26d0ee35521a8780461865",
       "declared_cases": [
@@ -261,6 +264,7 @@
     },
     {
       "file": "test/controllers/rooms/directs_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "2d9881791b7c3c6ae3583ff4b95382587c65b8dbb47e4aafe64d9ac5f4f189de",
       "declared_cases": [
@@ -388,6 +392,7 @@
     },
     {
       "file": "test/controllers/rooms/involvements_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "c0bc50135bffaa94b832be332ed727f80f7594fc89ea51a6e0599d9dad03fdf5",
       "declared_cases": [
@@ -431,6 +436,7 @@
     },
     {
       "file": "test/controllers/rooms/refreshes_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "058081a6b40e99433bbd59599d811d93059337a5bfe3045972e524de960b2725",
       "declared_cases": [
@@ -458,6 +464,7 @@
     },
     {
       "file": "test/controllers/rooms/reads_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "3c4855636c126c008387061a75cda0928e37dd479e48dafde2034e211b15a2c4",
       "declared_cases": [
@@ -497,6 +504,7 @@
     },
     {
       "file": "test/controllers/rooms/members_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "53c4805396787b926a1578a459de000f45dd30ac33b53d138869c4ae9c8e2a85",
       "declared_cases": [
@@ -560,6 +568,7 @@
     },
     {
       "file": "test/controllers/rooms/categories_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "901b216b5e3b6db3fd953b4185db08bfd3294469f4ecddf24cf818a68f97ec63",
       "declared_cases": [
@@ -591,6 +600,7 @@
     },
     {
       "file": "test/controllers/rooms/favorites_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "5527bd4ad36f42792f54db2ad719dbdb0be4724a6ef98673dc6cdec13a95660f",
       "declared_cases": [
@@ -626,6 +636,7 @@
     },
     {
       "file": "test/controllers/rooms/inbound_email_addresses_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "7f0a2071a6a696f04b5fa27a677e9d929de25abce4aec7653db43c1250ba423e",
       "declared_cases": [
@@ -669,6 +680,7 @@
     },
     {
       "file": "test/controllers/room_categories_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "61d83bbfc13034fdc7605752e7ab9511bf509cd2efbeb48fb8595b22370df8f2",
       "declared_cases": [
@@ -704,6 +716,7 @@
     },
     {
       "file": "test/controllers/public_pages_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "4bfd944e29a9e4352dffbf675ef4d96672f0e88f27e5758e30daa19b7216ae91",
       "declared_cases": [
@@ -787,6 +800,7 @@
     },
     {
       "file": "test/controllers/first_runs_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "7b3cbfa187ecc228a8eca972bd6d45830dfe2ece4560b2ee6a6b5cbdc76ad768",
       "declared_cases": [
@@ -814,6 +828,7 @@
     },
     {
       "file": "test/controllers/welcome_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "bf72e4d54a907bc46f27d805733c8cbb8f11aa72217f23215575236c9223086b",
       "declared_cases": [
@@ -833,6 +848,7 @@
     },
     {
       "file": "test/controllers/switchers_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "2162820c377e594c84c0ed478ebbd337e9732062ff3655602cf271328eca7738",
       "declared_cases": [
@@ -864,6 +880,7 @@
     },
     {
       "file": "test/controllers/users_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "14819cebf6dd56bb331cc17a7122af6d6eacb8b8211c02ae75622d672ecf35a5",
       "declared_cases": [
@@ -955,6 +972,7 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
       "declared_cases": [
@@ -1022,6 +1040,7 @@
     },
     {
       "file": "test/controllers/users/tours_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "f68f94a2b13820bcd9377d6cc8476a521ebe13dee1e6c81272590112e9332c9e",
       "declared_cases": [
@@ -1053,6 +1072,7 @@
     },
     {
       "file": "test/controllers/users/profiles_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
       "declared_cases": [
@@ -1292,6 +1312,7 @@
     },
     {
       "file": "test/controllers/users/avatars_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "7bc9c2dca4f563a427a2efb6a20712eb31770bcb65310cf55f8b3eb104e65b03",
       "declared_cases": [
@@ -1319,6 +1340,7 @@
     },
     {
       "file": "test/controllers/users/cards_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "3d814cf70fe76721f69cf9437ab87ed081eef99361b4d26496ec93f7c4ee845c",
       "declared_cases": [
@@ -1358,6 +1380,7 @@
     },
     {
       "file": "test/controllers/users/bans_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
       "declared_cases": [
@@ -1401,6 +1424,7 @@
     },
     {
       "file": "test/controllers/users/time_zones_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "0cbecc9478c587a0a33d3831f057a37511ff6bbaf1b3f19575e18ba478f0820e",
       "declared_cases": [
@@ -1428,6 +1452,7 @@
     },
     {
       "file": "test/controllers/accounts_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "e5c7d46d75fa0ec421cc4a1f08ee139969c30ed3f96b8e94c79657b04f0ea879",
       "declared_cases": [
@@ -1455,6 +1480,7 @@
     },
     {
       "file": "test/controllers/accounts/users_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "a92ecd773684bc76c8f3c03870183d86fa8f892e15c40bae38c9784025c69827",
       "declared_cases": [
@@ -1478,6 +1504,7 @@
     },
     {
       "file": "test/controllers/accounts/icons_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "0dfee703ecbbd37b2788d469b129c0e0d27885d87bfc947e7f7c41cca9c15b1a",
       "declared_cases": [
@@ -1513,6 +1540,7 @@
     },
     {
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
       "declared_cases": [
@@ -1584,6 +1612,7 @@
     },
     {
       "file": "test/controllers/accounts/custom_styles_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "6ab446fb2b15995a072c28df17acf01221d8926a8b75e82f2a88be37ca5dde23",
       "declared_cases": [
@@ -1607,6 +1636,7 @@
     },
     {
       "file": "test/controllers/accounts/logos_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "17f5b8b6b1968b84466bd1cc32aa2757fc7a8547bd75a750402061049f3bd56e",
       "declared_cases": [
@@ -1642,6 +1672,7 @@
     },
     {
       "file": "test/controllers/accounts/join_codes_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "aceeeeea663ef058632b77bd510eab2d9a93f2841ceb15fd41690f77b2b009f9",
       "declared_cases": [
@@ -1661,6 +1692,7 @@
     },
     {
       "file": "test/controllers/workspace_icons_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
       "declared_cases": [
@@ -1700,6 +1732,7 @@
     },
     {
       "file": "test/controllers/pwa_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "22444ee1d7991b115990c5bd0a4d4328ad94efe182ee53634f1e8840bf363bed",
       "declared_cases": [
@@ -1731,6 +1764,7 @@
     },
     {
       "file": "test/controllers/qr_code_controller_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "cc3f67ebb9d1b89e56a1f3cb8a959f4211637e42eec3ec1c766ab1eb4184c81a",
       "declared_cases": [
@@ -1746,6 +1780,7 @@
     },
     {
       "file": "test/controllers/unfurl_links_controller_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
       "declared_cases": [
@@ -1793,6 +1828,7 @@
     },
     {
       "file": "test/system/audit_log_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "4c4f18a8de747fd26f6ce881f095ba8e85b4d1fe08642ccbe4835002c411eb7c",
       "declared_cases": [
@@ -1812,6 +1848,7 @@
     },
     {
       "file": "test/system/channel_members_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "4ec15c976acd9a9d9fcf667926fdc6fb2f2b19e9e12f80436fec7e87bf68ca9a",
       "declared_cases": [
@@ -1839,6 +1876,7 @@
     },
     {
       "file": "test/system/channel_navigation_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "a680b134fca80bf1d6756cab551416d0729928df3bfb44d00a4407135dfc275b",
       "declared_cases": [
@@ -1878,6 +1916,7 @@
     },
     {
       "file": "test/system/first_run_tour_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "4a553c1fccf9c3d8d93c50ed330096b7aaa875bea4c7027b28172457d94e46bf",
       "declared_cases": [
@@ -1905,6 +1944,7 @@
     },
     {
       "file": "test/system/icons_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "962b46ae49199e55932e7a71519704c4c20ef03d33125c4941bdf24242eaacad",
       "declared_cases": [
@@ -1932,6 +1972,7 @@
     },
     {
       "file": "test/system/keyboard_shortcuts_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "ce7e3f8c7498b747d0710668df99b2f550d8e3ca93af87b2b32a8673985c2c47",
       "declared_cases": [
@@ -1999,6 +2040,7 @@
     },
     {
       "file": "test/system/member_select_mode_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "5053aa72827e1950b60704b3d74286c1062fd5666636bc5594d68cbeb5826b46",
       "declared_cases": [
@@ -2082,6 +2124,7 @@
     },
     {
       "file": "test/system/mobile_layout_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "1397e2d10e2f98eef646ebe49b8c57471e5a65328318ce205ac44fbc8c2757ca",
       "declared_cases": [
@@ -2113,6 +2156,7 @@
     },
     {
       "file": "test/system/motion_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "5c88aad84b6fe9f518e3512cf33c0c40854bad5a59f9f722c400b5bb5b2235d7",
       "declared_cases": [
@@ -2160,6 +2204,7 @@
     },
     {
       "file": "test/system/people_group_dms_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "4e4e8311e972e3eb75eb8014d21add10f17fef1e8c6e00c51fd2baf778b8b35f",
       "declared_cases": [
@@ -2247,6 +2292,7 @@
     },
     {
       "file": "test/system/quick_switcher_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "37760d50e96277757bbc68562dfadc689c51ae9a28bff33c1219ec85404c79d3",
       "declared_cases": [
@@ -2278,6 +2324,7 @@
     },
     {
       "file": "test/system/room_header_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "9f96490cfd89f400c3ca736c7f1a56b8a4b85509a721661f8b3361e83e44a050",
       "declared_cases": [
@@ -2325,6 +2372,7 @@
     },
     {
       "file": "test/system/service_worker_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "8f16fcce87f015abd7df2040b219dfd22bd2cf159c36197061b10bba74d52482",
       "declared_cases": [
@@ -2344,6 +2392,7 @@
     },
     {
       "file": "test/system/sidebar_organize_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "db6a1bba4f7576a3ace15dd368e3b44e195bc2b45c82d32bc9aa7a4b7fc76286",
       "declared_cases": [
@@ -2379,6 +2428,7 @@
     },
     {
       "file": "test/system/sidebar_room_menu_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "9c0d3bec0dcace257050f5a0064bdb9605954727d25da632c6056ba2cb7fbd7a",
       "declared_cases": [
@@ -2454,6 +2504,7 @@
     },
     {
       "file": "test/system/starred_people_test.rb",
+      "owner": "WS12 with WS8br2/WS8br presentation",
       "reference_file_present": true,
       "source_sha256": "e0bf85e61e95d1fb2aaed591c00db9bbc840d369af9d342afe60e45b0a5520a8",
       "declared_cases": [
@@ -2481,6 +2532,7 @@
     },
     {
       "file": "test/system/timezone_detection_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "87adca55105eef19aa613cbf02d77bbd273058fc89cb38071fabff8472424737",
       "declared_cases": [
@@ -2500,6 +2552,7 @@
     },
     {
       "file": "test/system/unread_divider_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "006147f6e9ffb9066a4e82e8b50e841f150ce7c079047833efcf560f93546a1e",
       "declared_cases": [
@@ -2531,6 +2584,7 @@
     },
     {
       "file": "test/system/unread_rooms_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "f900f9573626e923c07d0d97be3b094862702cc77b90d0543e3f4a04689c81c5",
       "declared_cases": [
@@ -2550,6 +2604,7 @@
     },
     {
       "file": "test/system/workspace_icons_test.rb",
+      "owner": "WS8br2",
       "reference_file_present": true,
       "source_sha256": "267dd93d33c92276ffc2d07627a891eba9fc7c05cb96db185686c7593596882a",
       "declared_cases": [
@@ -2565,6 +2620,7 @@
     },
     {
       "file": "test/system/browser_launch_profile_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "d51ffa34fd957572a6e86d50dda7a3464a2a10d3299ce43ff4c8a8774dd26adf",
       "declared_cases": [
@@ -2580,6 +2636,7 @@
     },
     {
       "file": "test/system/content_security_policy_test.rb",
+      "owner": "WS8br",
       "reference_file_present": true,
       "source_sha256": "7294e7e68948b0ba5a2757997cc36fb73f919aed17aaaadfd0e6e771e3e3e06a",
       "declared_cases": [

@@ -350,6 +350,7 @@ impl Membership {
     /// `read`: `update!(unread_at: nil, last_read_message_id: latest_root_message_id)`, which
     /// writes nothing when neither changes.
     pub fn read(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.validate_organization(tx.conn(), self.room_category_id)?;
         let last_read_message_id = self.latest_root_message_id(tx.conn())?;
         if self.unread_at.is_none() && self.last_read_message_id == last_read_message_id {
             return Ok(());
@@ -363,6 +364,26 @@ impl Membership {
         self.last_read_message_id = last_read_message_id;
         self.updated_at = now;
         Ok(())
+    }
+
+    /// WS8b HTTP seam for `Membership#mark_unread_before`: order roots by timestamp and id,
+    /// and retain a null pointer when the target is the first root. No callbacks broadcast
+    /// this update; the read controller publishes only after the transaction succeeds.
+    pub fn mark_unread_before(&mut self, tx: &mut Tx<'_>, message: &crate::Message) -> Result<()> {
+        if message.room_id != self.room_id || message.thread_id.is_some() {
+            return Err(crate::Error::RecordNotFound("Message"));
+        }
+        self.validate_organization(tx.conn(), self.room_category_id)?;
+        let previous_id = query_one(tx.conn(),
+            "SELECT id FROM messages WHERE room_id=? AND thread_id IS NULL AND (created_at,id)<(?,?) ORDER BY created_at DESC,id DESC LIMIT 1",
+            params![self.room_id, message.created_at, message.id], |row| row.get::<_, i64>(0))?;
+        if self.unread_at == Some(message.created_at) && self.last_read_message_id == previous_id {
+            return Ok(());
+        }
+        tx.conn().execute_cached(
+            "UPDATE memberships SET unread_at=?,last_read_message_id=?,updated_at=? WHERE id=?",
+            params![message.created_at, previous_id, tx.now(), self.id])?;
+        self.reload(tx.conn())
     }
 
     /// `latest_root_message_id`: the room's newest root (non-thread) message.
