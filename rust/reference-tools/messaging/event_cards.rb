@@ -14,6 +14,7 @@ messages=[];events=[];cases=[]
  m=room.messages.create!(creator:Current.user,markdown_source:'event card reference',client_message_id:"event-card-#{label}")
  event=Event.create!({room:,organizer:Current.user,title:'Planning <&> "quoted"',starts_at:Time.current+25.hours}.merge(attributes))
  event.update_columns(series_id:event.id) if series
+ event.update_columns(cancelled_at:cancelled) if cancelled
  EventReference.find_or_create_by!(message:m,event:)
  messages<<m;events<<event
  cases<<{label:,message_id:m.id,html:renderer.render(partial:'rooms/events/cards',locals:{message:Message.with_rendering_details.find(m.id)})}

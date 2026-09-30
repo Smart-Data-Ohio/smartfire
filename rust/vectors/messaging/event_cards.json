@@ -60,7 +60,7 @@
       },
       {
         "id": 439674040,
-        "cancelled_at": null,
+        "cancelled_at": "2026-03-02 16:00:00",
         "created_at": "2026-03-02 16:00:00",
         "description": null,
         "ends_at": null,
@@ -223,7 +223,7 @@
     {
       "label": "cancelled_series",
       "message_id": 935962062,
-      "html": "  <div id=\"event_cards_message_event-card-cancelled_series\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"439674040\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/699448326/events/439674040\">Planning &lt;&amp;&gt; &quot;quoted&quot;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-03T17:00:00Z\" data-local-time-target=\"datetime\">March 3, 2026 at 7:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962062_event_439674040\" src=\"/rooms/699448326/events/439674040/attendance?message_id=935962062\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n"
+      "html": "  <div id=\"event_cards_message_event-card-cancelled_series\" class=\"event-cards\">\n      <article class=\"event-card event-card--cancelled\" data-event-card=\"439674040\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n      <span class=\"event-card__state\">Cancelled</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/699448326/events/439674040\">Planning &lt;&amp;&gt; &quot;quoted&quot;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-03T17:00:00Z\" data-local-time-target=\"datetime\">March 3, 2026 at 7:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_935962062_event_439674040\" src=\"/rooms/699448326/events/439674040/attendance?message_id=935962062\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n"
     }
   ]
 }

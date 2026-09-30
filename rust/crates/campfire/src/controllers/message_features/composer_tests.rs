@@ -12,6 +12,7 @@ async fn room_http_mounts_markdown_slash_and_schedule_controls() {
     assert!(html.contains("data-composer-slash-commands-value="));
     assert!(html.contains("name=\"authenticity_token\""));
     assert!(!html.contains("<lexxy-editor"));
+    assert!(html.contains("data-controller=\"drive-picker\""));
 }
 
 #[tokio::test]
