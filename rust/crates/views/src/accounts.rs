@@ -261,6 +261,30 @@ pub struct BotsEdit<'a> {
     pub bot: BotForm,
 }
 
+impl BotsEdit<'_> {
+    /// WS15g plug-in boundary: Rails `accounts/bots/_github_connection.html.erb`.
+    /// At d7c7de92 this section is inline in `accounts/bots/edit.html.erb`.
+    /// Keep the already-ported rendering here until WS15g supplies its fragment;
+    /// connection validation, writes and read-side effects remain with WS15g.
+    fn ws15g_github_connection_fragment(&self) -> askama::Result<h::Html> {
+        #[derive(Template)]
+        #[template(path = "accounts/bots/_github_connection.html")]
+        struct GithubConnection<'a> {
+            ctx: &'a ViewContext<'a>,
+            bot_id: i64,
+            bot: &'a BotForm,
+        }
+        GithubConnection { ctx: self.ctx, bot_id: self.bot_id, bot: &self.bot }
+            .render().map(h::raw)
+    }
+
+    /// WS15e plug-in boundary: Rails `accounts/bots/_fizzy_connection.html.erb`.
+    /// This partial is not in the pinned edit page; WS15e supplies its HTML/data.
+    fn ws15e_fizzy_connection_fragment(&self) -> h::Html {
+        h::empty()
+    }
+}
+
 impl Page for BotsEdit<'_> {
     fn page_title(&self) -> Option<String> {
         Some("Edit bot".into())
