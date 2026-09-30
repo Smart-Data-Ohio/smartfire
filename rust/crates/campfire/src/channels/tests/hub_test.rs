@@ -268,7 +268,7 @@ async fn quote_text_post_delivers_to_socket() {
         reply.text().contains("nonce=\"example\""),
         "the quoted text survives rendering"
     );
-    let frame = tokio::time::timeout(std::time::Duration::from_secs(1), client.next_text())
+    let frame = tokio::time::timeout(crate::test_support::WAIT, client.next_text())
         .await
         .expect("POST succeeded but room subscribers received no message");
     let frame: serde_json::Value = serde_json::from_str(&frame).unwrap();

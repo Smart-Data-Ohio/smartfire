@@ -181,6 +181,10 @@ impl Blob {
         self.is_variable() || self.is_previewable()
     }
 
+    pub fn is_identified(&self) -> bool {
+        self.metadata.get("identified").is_some_and(|v| !matches!(v, Json::Null | Json::Bool(false)))
+    }
+
     pub fn is_analyzed(&self) -> bool {
         self.metadata.get("analyzed").is_some_and(|v| !matches!(v, Json::Null | Json::Bool(false)))
     }

@@ -19,12 +19,12 @@
 //! (`config/resque-pool.yml`). Each has `JOB_CONCURRENCY` workers but `slack_import`.
 //!
 //! `DisconnectUser` and `Broadcast` are not jobs in Rails (it's a synchronous Action Cable broadcast), so it goes
-//! straight to the cable server. [`Jobs::perform_later`] still runs ad hoc futures in memory
-//! (`ActiveStorage::AnalyzeJob`, whose callers hand over a future rather than arguments): lost if
-//! the process stops before they run, as before.
+//! straight to the cable server. `Jobs::perform_later` remains test-only for best-effort ad hoc work;
+//! application jobs use the durable event sink.
 //!
 //! [`periodic`] is `bin/periodic` and the huddle reconciler's host.
 
+#[cfg(test)]
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, OnceLock, Weak};
@@ -122,6 +122,31 @@ impl JobKind for PurgeJob {
     }
 }
 
+/// `ActiveStorage::AnalyzeJob`: durable arguments for attachment analysis.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AnalyzeJob {
+    pub blob_id: i64,
+}
+
+impl Job for AnalyzeJob {
+    const CLASS: &'static str = "ActiveStorage::AnalyzeJob";
+}
+
+impl JobKind for AnalyzeJob {
+    fn retry_policy() -> RetryPolicy {
+        RetryPolicy::application_job()
+            .attempts(10)
+            .retry_on(|error| {
+                error.chain().any(|cause| {
+                    matches!(
+                        cause.downcast_ref::<campfire_storage::Error>(),
+                        Some(campfire_storage::Error::Integrity)
+                    )
+                })
+            })
+    }
+}
+
 /// The job a legacy job event asks for, or an [`Event::Job`]'s own. `None` for an event that
 /// isn't a job.
 pub fn request_for(event: &Event) -> Option<JobRequest> {
@@ -149,6 +174,7 @@ pub fn registry() -> Registry {
     let mut registry = Registry::new();
     registry.register(remove_banned_content);
     registry.register(purge_blob);
+    registry.register(analyze_blob);
     registry.register(quote_cards_refresh);
     messaging::register(&mut registry);
     notifications::register(&mut registry);
@@ -171,7 +197,7 @@ pub fn runner_config(config: &Config) -> RunnerConfig {
 
 type AdHocWork = (&'static str, BoxFuture<'static, anyhow::Result<()>>);
 
-/// The enqueueing side: the database's event sink, and [`Jobs::perform_later`] for ad hoc work.
+/// The enqueueing side: the database's durable event sink.
 /// Cheap to clone.
 #[derive(Clone)]
 pub struct Jobs {
@@ -179,6 +205,8 @@ pub struct Jobs {
     /// `queue.perform_later(&db, request)` enqueues it in a write of its own.
     pub queue: JobQueue,
     pub model_callbacks: Arc<campfire_db::callbacks::Registry>,
+    #[cfg(test)]
+
     ad_hoc: mpsc::Sender<AdHocWork>,
     cable: Arc<OnceLock<Cable>>,
     /// Weak because the app holds the database, which holds this sink.
@@ -196,11 +224,22 @@ impl Jobs {
         let (ad_hoc, receiver) = mpsc::channel(AD_HOC_CAPACITY);
         let model_callbacks = Arc::new(campfire_db::callbacks::Registry::default());
         peer_callbacks::install(&model_callbacks);
-        Ok((Self { queue, model_callbacks, ad_hoc, cable: Arc::new(OnceLock::new()), app: Arc::new(OnceLock::new()) }, AdHocQueue(receiver)))
+        #[cfg(not(test))]
+        drop(ad_hoc);
+        Ok((Self {
+            queue,
+            model_callbacks,
+            #[cfg(test)]
+            ad_hoc,
+            cable: Arc::new(OnceLock::new()),
+            app: Arc::new(OnceLock::new()),
+        }, AdHocQueue(receiver)))
+
     }
 
     /// Runs best-effort work in memory. Dropped with an error log when the ad hoc queue is full,
     /// or lost if the process stops first.
+    #[cfg(test)]
     pub fn perform_later(&self, name: &'static str, work: impl Future<Output = anyhow::Result<()>> + Send + 'static) {
         match self.ad_hoc.try_send((name, Box::pin(work))) {
             Ok(()) => tracing::debug!(job = name, "enqueued"),
@@ -389,6 +428,11 @@ async fn remove_banned_content(app: App, job: RemoveBannedContentJob, _: Executi
         let room = app.db.read(move |conn| campfire_db::Room::find(conn, room_id)).await?;
         app.broadcasts.message_remove(&room, &removed);
     }
+    Ok(Outcome::Done)
+}
+
+async fn analyze_blob(app: App, job: AnalyzeJob, _: Execution) -> JobResult {
+    crate::active_storage::analyze(&app, job.blob_id).await?;
     Ok(Outcome::Done)
 }
 

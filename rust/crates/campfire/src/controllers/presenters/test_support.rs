@@ -130,7 +130,7 @@ impl TestApp {
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
-        Self::boot_with_services(seed_clock(), network, &[]).await
+        Self::boot_seed_with_services("default", seed_clock(), network, &[]).await
     }
 
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
@@ -141,15 +141,32 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_with_services(clock, crate::integrations::net::Network::system(), extra).await
+        Self::boot_seed_with_services(
+            "default",
+            clock,
+            crate::integrations::net::Network::system(),
+            extra,
+        )
+        .await
     }
 
-    async fn boot_with_services(
+    pub async fn boot_seed(name: &str) -> Option<TestApp> {
+        Self::boot_seed_with_services(
+            name,
+            seed_clock(),
+            crate::integrations::net::Network::system(),
+            &[],
+        )
+        .await
+    }
+
+    async fn boot_seed_with_services(
+        name: &str,
         clock: campfire_kit::SharedClock,
         network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        let seed = seed_dir("default")?;
+        let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
         std::fs::copy(
@@ -171,7 +188,20 @@ impl TestApp {
                 .map(|(_, value)| (*value).into()),
         })
         .unwrap();
-        Some(TestApp { booted: boot_with_services(config, clock, network, crate::jobs::periodic::Intervals { periodic: None, huddle: None }).await.unwrap(), _dir: dir })
+        Some(TestApp {
+            booted: boot_with_services(
+                config,
+                clock,
+                network,
+                crate::jobs::periodic::Intervals {
+                    periodic: None,
+                    huddle: None,
+                },
+            )
+            .await
+            .unwrap(),
+            _dir: dir,
+        })
     }
 
     pub async fn stop_jobs(self) -> (crate::app::App, tempfile::TempDir) {
