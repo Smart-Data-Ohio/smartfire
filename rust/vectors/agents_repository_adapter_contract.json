@@ -1,0 +1,336 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": {
+    "200": {
+      "decisions": [
+        true,
+        true
+      ],
+      "paths": [
+        "/repos/mixed/repo"
+      ],
+      "disconnected_reason": null,
+      "links": [
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130001",
+          "title": "Private title",
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130001",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130001,
+            "title": "Private title",
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130002",
+          "title": "Private title",
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130002",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130002,
+            "title": "Private title",
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130003",
+          "title": "Private title",
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130003",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130003,
+            "title": "Private title",
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        }
+      ]
+    },
+    "403": {
+      "decisions": [
+        false,
+        false
+      ],
+      "paths": [
+        "/repos/mixed/repo"
+      ],
+      "disconnected_reason": null,
+      "links": [
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130001",
+          "title": null,
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130001",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130001,
+            "title": null,
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130002",
+          "title": null,
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130002",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130002,
+            "title": null,
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130003",
+          "title": "Private title",
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130003",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130003,
+            "title": "Private title",
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        }
+      ]
+    },
+    "404": {
+      "decisions": [
+        false,
+        false
+      ],
+      "paths": [
+        "/repos/mixed/repo"
+      ],
+      "disconnected_reason": null,
+      "links": [
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130001",
+          "title": null,
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130001",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130001,
+            "title": null,
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130002",
+          "title": null,
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130002",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130002,
+            "title": null,
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130003",
+          "title": "Private title",
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130003",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130003,
+            "title": "Private title",
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        }
+      ]
+    },
+    "401": {
+      "decisions": [
+        false,
+        false
+      ],
+      "paths": [
+        "/repos/mixed/repo"
+      ],
+      "disconnected_reason": "GitHub rejected the linked token (401)",
+      "links": [
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130001",
+          "title": null,
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130001",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130001,
+            "title": null,
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130002",
+          "title": null,
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130002",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130002,
+            "title": null,
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130003",
+          "title": "Private title",
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130003",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130003,
+            "title": "Private title",
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        }
+      ]
+    },
+    "500": {
+      "decisions": [
+        false,
+        false
+      ],
+      "paths": [
+        "/repos/mixed/repo",
+        "/repos/mixed/repo"
+      ],
+      "disconnected_reason": null,
+      "links": [
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130001",
+          "title": null,
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130001",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130001,
+            "title": null,
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130002",
+          "title": null,
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130002",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130002,
+            "title": null,
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        },
+        {
+          "kind": "pull_request",
+          "url": "https://github.com/mixed/repo/pull/900130003",
+          "title": "Private title",
+          "pull_request": {
+            "url": "https://github.com/mixed/repo/pull/900130003",
+            "owner": "mixed",
+            "repo": "repo",
+            "number": 900130003,
+            "title": "Private title",
+            "state": null,
+            "head_branch": null,
+            "base_branch": null,
+            "review_decision": null,
+            "checks_state": null
+          },
+          "event": null
+        }
+      ]
+    }
+  }
+}

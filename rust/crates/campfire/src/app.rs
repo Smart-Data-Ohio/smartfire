@@ -157,6 +157,9 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
 
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
+    let agent_repositories = crate::integrations::agent_repositories::State::live(
+        db.clone(), ar_encryption.clone(),
+    );
     let app = Arc::new(AppState {
         config,
         secrets,
@@ -168,8 +171,8 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
         cable,
         jobs,
         mail,
-        agent_message_payload: crate::controllers::presenters::agent_payload::State::default(),
-        agent_repositories: crate::integrations::agent_repositories::State::default(),
+        agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
+        agent_repositories,
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         web_push,
