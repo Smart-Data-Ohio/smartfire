@@ -379,8 +379,12 @@ async fn unresolved_token_slots_never_reach_a_socket() {
 /// to the real message, presentation, boost, shared-room and direct-room templates.
 #[tokio::test]
 async fn http_broadcasts_supply_real_nonempty_partials() {
-    use crate::controllers::presenters::test_support::{ALL_TALK, DIRECT_DAVID_JASON};
+    use crate::controllers::presenters::test_support::ALL_TALK;
     let hub = boot().await.expect("seed required");
+    // Rails broadcasts creation only for a new DM, so use a genuinely new member set.
+    let peer = hub.app.db().write(|tx| Ok(User::create(tx, campfire_db::NewUser {
+        name: "Broadcast Peer".into(), email_address: Some("broadcast-peer@example.test".into()), ..Default::default()
+    })?.id)).await.unwrap();
     let mut client = hub.david().await;
     let rooms = hub.turbo(&["rooms"]);
     client.confirm(&rooms).await;
@@ -404,7 +408,7 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
         ),
         (
             "/rooms/directs",
-            vec![("user_ids[]", "149087659".to_string())],
+            vec![("user_ids[]", peer.to_string())],
             "direct_rooms",
         ),
     ] {
@@ -419,12 +423,14 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
         let html = broadcast_html(&mut client).await;
         assert!(html.contains(&format!(r#"target="{target}""#)), "{html}");
         if target == "direct_rooms" {
-            assert!(
-                html.contains(&format!(r#"id="list_rooms_direct_{DIRECT_DAVID_JASON}""#)),
-                "{html}"
-            );
+            let id = response.location().unwrap().rsplit('/').next().unwrap();
+            assert!(html.contains(&format!(r#"id="list_rooms_direct_{id}""#)), "{html}");
         }
     }
+
+    let reused = browser.write(Req::new(Method::POST, "/rooms/directs").form(&[("user_ids[]", &peer.to_string())])).await;
+    assert_eq!(reused.status, 302);
+    client.assert_silent().await;
 
     // The shared visibility row is supplied as well, despite its inherited HTML still
     // lacking the fork's membership/unread locals (explicitly partial in the contract).

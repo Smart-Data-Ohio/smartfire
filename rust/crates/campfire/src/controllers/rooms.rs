@@ -30,7 +30,7 @@ use crate::controllers::presenters::{Presenter, user_view};
 pub enum Scope {
     /// `Current.user.rooms` (RoomsController)
     All,
-    /// `Current.user.rooms.without_directs` (opens, closeds)
+    /// Alive open and closed rooms only (the conversion controllers).
     WithoutDirects,
     /// `Current.user.rooms.directs` (directs)
     Directs,
@@ -85,12 +85,9 @@ pub async fn destroy_without_room(c: &mut Ctx) -> Result {
 }
 
 pub(crate) async fn destroy_room(c: &mut Ctx, room: Room) -> Result {
-    let context = audit_context(c)?;
     let destroyed = room.clone();
-    c.app().db.write(move |tx| {
-        destroyed.begin_destroy(tx)?;
-        record_room_audit(tx, &destroyed, "room.destroy", serde_json::json!({"name": destroyed.name}), &context)
-    }).await.map_err(db_error)?;
+    c.app().db.write(move |tx| destroyed.begin_destroy(tx)).await.map_err(db_error)?;
+    audit_room(c, &room, "room.destroy", serde_json::json!({"name": room.name})).await?;
     c.app().broadcasts.room_remove(&room);
     match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
         f if *f == campfire_kit::format::JSON => c.json(StatusCode::OK, &serde_json::json!({"deleted": true, "room_id": room.id})),
@@ -99,6 +96,37 @@ pub(crate) async fn destroy_room(c: &mut Ctx, room: Room) -> Result {
             let notice = room.name.as_deref().filter(|name| !campfire_richtext::ruby::is_blank(name)).map(|name| format!("Deleted #{name}"));
             c.redirect_to_with(&root, Redirect { notice, ..Redirect::default() })
         }
+    }
+}
+
+pub async fn leave(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let room = set_room(c, Scope::All).await?;
+    leave_room(c, room).await
+}
+
+pub(crate) async fn leave_room(c: &mut Ctx, room: Room) -> Result {
+    let user = require_current_user(c)?.clone();
+    let left = room.clone();
+    let destroyed = c.app().db.write(move |tx| {
+        let destroyed = if left.direct() {
+            left.leave_direct(tx, user.id)? == campfire_db::models::direct_room::LeaveOutcome::Destroyed
+        } else {
+            campfire_db::Membership::find_by_room_and_user(tx.conn(), left.id, user.id)?
+                .ok_or(campfire_db::Error::RecordNotFound("Membership"))?.destroy(tx)?;
+            false
+        };
+        Ok(destroyed)
+    }).await.map_err(db_error)?;
+    if destroyed {
+        audit_room(c, &room, "room.destroy", serde_json::json!({"name":room.name})).await?;
+        c.app().broadcasts.room_remove(&room);
+    } else {
+        audit_room(c, &room, "room.membership.change", serde_json::json!({"revoked":[require_current_user(c)?.name]})).await?;
+    }
+    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
+        f if *f == campfire_kit::format::JSON => c.json(StatusCode::OK, &serde_json::json!({"left":true,"room_id":room.id})),
+        _ => c.redirect_to(&c.url_for(&campfire_routes::root())),
     }
 }
 
@@ -142,6 +170,15 @@ pub(crate) async fn ensure_can_delete(c: &mut Ctx, room: &Room) -> Result<()> {
     } else {
         ensure_can_administer(c, room)
     }
+}
+
+/// Rails audits these actions after their domain transaction commits. Audit failure must not
+/// undo a completed write; durable job insertion still belongs to the domain transaction.
+pub(crate) async fn audit_room(c: &Ctx, room: &Room, action: &str, changes: serde_json::Value) -> Result<()> {
+    let context = audit_context(c)?;
+    let room = room.clone();
+    let action = action.to_string();
+    c.app().db.write(move |tx| record_room_audit(tx, &room, &action, changes, &context)).await.map_err(db_error)
 }
 
 pub(crate) fn audit_context(c: &Ctx) -> Result<campfire_db::models::audit_log::Context> {

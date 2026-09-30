@@ -77,9 +77,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     }
 }
 
-/// `params[:involvement]` as the enum casts it: a blank value (missing, "", "  ", `[]`) is stored
-/// as nil, anything that isn't one of the values raises ArgumentError ('... is not a valid
-/// involvement'). Verified against the reference with `update!(involvement: "")`.
+/// Our fork uses `params.require(:involvement)` before the enum cast.
 fn involvement_param(c: &Ctx) -> Result<Option<Involvement>> {
     let param = c.params.require("involvement")?;
     param

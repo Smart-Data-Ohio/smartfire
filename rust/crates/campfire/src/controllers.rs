@@ -208,6 +208,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms/involvements#update" => arc(rooms::involvements::update),
         "rooms#index" => arc(rooms::index),
         "rooms#show" => arc(rooms::show),
+        "rooms#leave" => arc(rooms::leave),
         "rooms#destroy" => arc(rooms::destroy),
         "rooms/opens#index" | "rooms/closeds#index" | "rooms/directs#index" => arc(rooms::index),
         "rooms/opens#create" => arc(rooms::opens::create),
@@ -221,6 +222,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms/closeds#edit" => arc(rooms::closeds::edit),
         "rooms/closeds#show" => arc(rooms::closeds::show),
         "rooms/closeds#update" => arc(rooms::closeds::update),
+        "rooms/directs#update" => arc(rooms::directs::update),
+        "rooms/directs#add_members" => arc(rooms::directs::add_members),
+        "rooms/directs#leave" => arc(rooms::directs::leave),
         "rooms/directs#create" => arc(rooms::directs::create),
         "rooms/directs#new" => arc(rooms::directs::new),
         "rooms/directs#edit" => arc(rooms::directs::edit),
@@ -528,6 +532,7 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "rooms#leave", "rooms/directs#update", "rooms/directs#add_members", "rooms/directs#leave",
         "room_categories#index", "room_categories#create", "room_categories#update", "room_categories#destroy",
         "rooms/categories#update", "rooms/favorites#create", "rooms/favorites#update", "rooms/favorites#destroy", "rooms/inbound_email_addresses#create",
         "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",

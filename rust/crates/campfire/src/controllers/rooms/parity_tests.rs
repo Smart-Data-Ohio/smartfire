@@ -533,3 +533,328 @@ async fn parity_inbound_address_rotation_requires_emailable_room_and_admin_or_cr
         StatusCode::FORBIDDEN
     );
 }
+
+#[tokio::test]
+async fn parity_direct_create_filters_inactive_caps_before_query_and_supports_huddle() {
+    let app = app().await;
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute_cached("UPDATE users SET status=1 WHERE id=?", [KEVIN])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = app.david();
+    let reply = david
+        .write(Req::new(Method::POST, "/rooms/directs").form(&[
+            ("user_ids[]", &JASON.to_string()),
+            ("user_ids[]", &KEVIN.to_string()),
+            ("start_huddle", "1"),
+        ]))
+        .await;
+    assert_eq!(
+        reply.location(),
+        Some(format!("http://campfire.test/rooms/{DIRECT_DAVID_JASON}?huddle=start").as_str())
+    );
+    let mut pairs = vec![("user_ids[]", "missing"); 10];
+    let kevin = KEVIN.to_string();
+    pairs.push(("user_ids[]", &kevin));
+    let reply = david
+        .write(Req::new(Method::POST, "/rooms/directs").form(&pairs))
+        .await;
+    let id: i64 = reply
+        .location()
+        .unwrap()
+        .rsplit('/')
+        .next()
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert_eq!(
+        app.db()
+            .read(move |conn| Room::find(conn, id)?.user_ids(conn))
+            .await
+            .unwrap(),
+        vec![DAVID]
+    );
+    let count: i64 = app
+        .db()
+        .read(|conn| {
+            conn.query_row_cached(
+                "SELECT count(*) FROM audit_logs WHERE action='room.create'",
+                [],
+                |r| r.get(0),
+            )
+            .map_err(Into::into)
+        })
+        .await
+        .unwrap();
+    david
+        .write(Req::new(Method::POST, "/rooms/directs").form(&pairs))
+        .await;
+    let after: i64 = app
+        .db()
+        .read(|conn| {
+            conn.query_row_cached(
+                "SELECT count(*) FROM audit_logs WHERE action='room.create'",
+                [],
+                |r| r.get(0),
+            )
+            .map_err(Into::into)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        after, count,
+        "reusing a DM must not emit another creation audit"
+    );
+}
+
+#[tokio::test]
+async fn parity_direct_create_rejects_eleven_active_people() {
+    let app = app().await;
+    let ids = app
+        .db()
+        .write(|tx| {
+            (0..10)
+                .map(|i| {
+                    Ok(campfire_db::User::create(
+                        tx,
+                        campfire_db::NewUser {
+                            name: format!("Cap {i}"),
+                            email_address: Some(format!("cap{i}@example.test")),
+                            ..Default::default()
+                        },
+                    )?
+                    .id
+                    .to_string())
+                })
+                .collect::<campfire_db::Result<Vec<_>>>()
+        })
+        .await
+        .unwrap();
+    let pairs = ids
+        .iter()
+        .map(|id| ("user_ids[]", id.as_str()))
+        .collect::<Vec<_>>();
+    let reply = app
+        .david()
+        .write(Req::new(Method::POST, "/rooms/directs").form(&pairs))
+        .await;
+    assert_eq!(reply.status, StatusCode::FOUND);
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/rooms/directs/new")
+    );
+}
+
+#[tokio::test]
+async fn parity_group_rename_add_and_leave_preserve_notes_and_history() {
+    let app = app().await;
+    let id = group(&app).await;
+    let extra = app
+        .db()
+        .write(|tx| {
+            Ok(campfire_db::User::create(
+                tx,
+                campfire_db::NewUser {
+                    name: "Extra".into(),
+                    email_address: Some("extra@example.test".into()),
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    let mut kevin = app.sign_in(KEVIN).await;
+    let renamed = kevin
+        .write(
+            Req::new(Method::PATCH, &format!("/rooms/directs/{id}"))
+                .form(&[("room[name]", "  Weekend  ")]),
+        )
+        .await;
+    assert_eq!(
+        renamed.location(),
+        Some(format!("http://campfire.test/rooms/directs/{id}/edit").as_str())
+    );
+    assert_eq!(
+        app.db()
+            .read(move |conn| Ok(Room::find(conn, id)?.name))
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("Weekend")
+    );
+    let added = kevin
+        .write(
+            Req::new(Method::POST, &format!("/rooms/directs/{id}/add_members"))
+                .form(&[("user_ids[]", &extra.to_string())]),
+        )
+        .await;
+    assert_eq!(added.status, StatusCode::FOUND);
+    assert!(
+        app.db()
+            .read(move |conn| Ok(Room::find(conn, id)?.user_ids(conn)?.contains(&extra)))
+            .await
+            .unwrap()
+    );
+    let left = kevin
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/rooms/directs/{id}/leave.json"),
+        ))
+        .await;
+    assert_eq!(left.json(), serde_json::json!({"left":true,"room_id":id}));
+    let renderer = app.db().env().rich_text.clone();
+    let notes = app
+        .db()
+        .read(move |conn| {
+            campfire_db::Message::for_room(conn, id)?
+                .into_iter()
+                .filter(|m| m.system_note)
+                .map(|m| m.plain_text_body(conn, &*renderer))
+                .collect::<campfire_db::Result<Vec<_>>>()
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        serde_json::to_value(notes).unwrap(),
+        oracle()["cases"]["group_note_texts"]
+    );
+    assert!(
+        app.db()
+            .read(move |conn| Ok(Room::find(conn, id)?.deleted_at.is_none()))
+            .await
+            .unwrap()
+    );
+}
+
+#[tokio::test]
+async fn parity_pair_cannot_be_widened_and_group_writes_require_membership() {
+    let app = app().await;
+    let mut david = app.david();
+    let reply = david
+        .write(
+            Req::new(
+                Method::POST,
+                &format!("/rooms/directs/{DIRECT_DAVID_JASON}/add_members"),
+            )
+            .form(&[("user_ids[]", &KEVIN.to_string())]),
+        )
+        .await;
+    assert_eq!(
+        reply.location(),
+        Some(format!("http://campfire.test/rooms/directs/{DIRECT_DAVID_JASON}/edit").as_str())
+    );
+    assert!(
+        !app.db()
+            .read(|conn| Ok(Room::find(conn, DIRECT_DAVID_JASON)?
+                .user_ids(conn)?
+                .contains(&KEVIN)))
+            .await
+            .unwrap()
+    );
+    let reply = app
+        .sign_in(KEVIN)
+        .await
+        .write(
+            Req::new(
+                Method::PATCH,
+                &format!("/rooms/directs/{DIRECT_DAVID_JASON}"),
+            )
+            .form(&[("room[name]", "stolen")]),
+        )
+        .await;
+    assert_eq!(reply.location(), Some("http://campfire.test/"));
+}
+
+#[tokio::test]
+async fn parity_plain_leave_keeps_room_and_last_direct_leave_enqueues_destroy() {
+    let app = app().await;
+    let mut david = app.david();
+    let left = david
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/rooms/{ALL_TALK}/leave.json"),
+        ))
+        .await;
+    assert_eq!(
+        left.json(),
+        serde_json::json!({"left":true,"room_id":ALL_TALK})
+    );
+    assert!(
+        app.db()
+            .read(|conn| Ok(Room::find(conn, ALL_TALK)?.deleted_at.is_none()))
+            .await
+            .unwrap()
+    );
+    let solo = app
+        .db()
+        .write(|tx| Ok(Room::find_or_create_direct_for(tx, &[DAVID], DAVID)?.id))
+        .await
+        .unwrap();
+    let left = david
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/rooms/directs/{solo}/leave.json"),
+        ))
+        .await;
+    assert_eq!(left.json(), serde_json::json!({"left":true,"room_id":solo}));
+    let room = app
+        .db()
+        .read(move |conn| Room::find(conn, solo))
+        .await
+        .unwrap();
+    assert!(room.deleted_at.is_some());
+    assert!(room.destroy_enqueued_at.is_some());
+    assert_eq!(
+        david
+            .write(Req::new(
+                Method::DELETE,
+                &format!("/rooms/directs/{QUIET_CORNER}/leave.json")
+            ))
+            .await
+            .location(),
+        Some("http://campfire.test/")
+    );
+}
+
+#[tokio::test]
+async fn parity_audit_failure_does_not_undo_completed_room_deletion() {
+    let app = app().await;
+    app.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_room_audit BEFORE INSERT ON audit_logs WHEN NEW.action='room.destroy' BEGIN SELECT RAISE(ABORT,'injected audit failure'); END;")?;
+        Ok(())
+    }).await.unwrap();
+    let reply = app
+        .david()
+        .write(Req::new(Method::DELETE, &format!("/rooms/{ALL_TALK}.json")))
+        .await;
+    assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
+    let room = app
+        .db()
+        .read(|conn| Room::find(conn, ALL_TALK))
+        .await
+        .unwrap();
+    assert!(
+        room.deleted_at.is_some(),
+        "Rails records the audit after the marking transaction commits"
+    );
+    assert!(
+        room.destroy_enqueued_at.is_some(),
+        "the durable destroy job stays atomic with marking"
+    );
+}
+
+#[tokio::test]
+async fn parity_category_name_uses_active_model_string_cast() {
+    let app = app().await;
+    let reply = app.david().write(Req::new(Method::POST, "/room_categories")
+        .header("content-type", "application/json")
+        .body(serde_json::to_vec(&serde_json::json!({"room_category":{"name":false}})).unwrap())).await;
+    assert_eq!(reply.status, StatusCode::FOUND);
+    let name = app.db().read(|conn| Ok(campfire_db::RoomCategory::ordered_for_user(conn, DAVID)?.last().unwrap().name.clone())).await.unwrap();
+    assert_eq!(serde_json::json!(name), oracle()["cases"]["category_false_name_state"]);
+}

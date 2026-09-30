@@ -4,5 +4,13 @@
   "app/controllers/rooms/opens_controller.rb": "932e1cc5ab97663253f5355cd2944f69779804a549d2ec14c62806c7f2717d0c",
   "app/controllers/rooms/closeds_controller.rb": "de11cf1268a4f84cb9d7d6b4dc972b4d6e27708404034ed4b6f133ec263973da",
   "app/controllers/concerns/room_scoped.rb": "ee631c4688da167272e7866816533d239aedba124daeb063b088b31c60cc3e9d",
-  "app/models/user/role.rb": "dd05545b867867cea94da618fde2424b3fadac87e0749af45017ef3de3957f41"
+  "app/models/user/role.rb": "dd05545b867867cea94da618fde2424b3fadac87e0749af45017ef3de3957f41",
+  "app/controllers/rooms/involvements_controller.rb": "23a1d4390c398b4f3c428e182401796ea337d701b182ed708d9a18aba3f13e45",
+  "app/controllers/rooms/categories_controller.rb": "13aec5838d6efaaf295b552dd84856f5bb2402c76455311ccf3b6a18ef917034",
+  "app/controllers/rooms/favorites_controller.rb": "86168018f39941d0569bb09ed27758c2359616b8b4184b10ba7d82e1b60ce9f4",
+  "app/controllers/rooms/inbound_email_addresses_controller.rb": "c474cd47710ea3ec4bf9f5fb28ea540a4334e174b35f9c7d2e6e534816d1e107",
+  "app/controllers/room_categories_controller.rb": "e7e6ae1b122207f7aae2b25ca8b3564023983176dc001a359e180ecd0fa0eafd",
+  "app/models/rooms/direct.rb": "4947f936c7607738dd39b6b52f3b5f5adc071bde0d21cf801a05ac801bb6e6f1",
+  "app/models/room_category.rb": "34cdc379f829e0207fe919deb5937b554792405ace915c93a4c560c977366142",
+  "app/models/membership.rb": "7942db424021486f7046742095b26141031dab9da05e599e22f382d120e4ed9b"
 }

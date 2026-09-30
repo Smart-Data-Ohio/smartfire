@@ -58,6 +58,11 @@
       "location": "http://campfire.test/users/me/sidebar"
     },
     "category_invalid_state": "Squad",
+    "category_false_name": {
+      "status": 302,
+      "location": "http://campfire.test/users/me/sidebar"
+    },
+    "category_false_name_state": "false",
     "category_cross_user": {
       "status": 404,
       "json": {
@@ -105,6 +110,67 @@
         "error": "Bad Request"
       }
     },
+    "group_rename": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448333/edit"
+    },
+    "group_add": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448333/edit"
+    },
+    "group_leave": {
+      "status": 200,
+      "json": {
+        "left": true,
+        "room_id": 699448333
+      }
+    },
+    "group_note_texts": [
+      "renamed the group to Weekend",
+      "added Extra to the group",
+      "left the group"
+    ],
+    "pair_add_rejected": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/186869642/edit"
+    },
+    "inactive_huddle_create": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/186869642?huddle=start"
+    },
+    "capped_before_query": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448337"
+    },
+    "solo_member_ids": [
+      127326141
+    ],
+    "last_direct_leave": {
+      "status": 200,
+      "json": {
+        "left": true,
+        "room_id": 699448337
+      }
+    },
+    "last_direct_state": {
+      "deleted": true,
+      "memberships": 0
+    },
+    "over_capacity_create": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/new"
+    },
+    "plain_leave": {
+      "status": 200,
+      "json": {
+        "left": true,
+        "room_id": 699448338
+      }
+    },
+    "plain_leave_state": {
+      "deleted": false,
+      "memberships": 0
+    },
     "deleted_involvement": {
       "status": 404,
       "json": {
@@ -123,6 +189,17 @@
       "deleted": true,
       "memberships": 0,
       "audit_action": "room.destroy"
+    },
+    "audit_failure": {
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      }
+    },
+    "audit_failure_state": {
+      "deleted": true,
+      "enqueued": true
     }
   }
 }
