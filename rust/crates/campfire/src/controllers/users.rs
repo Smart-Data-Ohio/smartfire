@@ -163,3 +163,6 @@ mod ban_lifecycle_tests;
 
 #[cfg(test)]
 mod layout_preferences_tests;
+
+#[cfg(test)]
+mod profile_effective_ooo_tests;

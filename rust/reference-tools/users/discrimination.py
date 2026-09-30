@@ -11,7 +11,10 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
-    ("layout-future-window", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "Some((start.as_second(), end.as_second()))", '((start.as_second()) <= 1772467200).then_some((start.as_second(), end.as_second()))', "layout_future_meeting_windows_before_start"),
+    ("ooo-start-boundary", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "start <= now && now < end", "start < now && now < end", "calendar_start_boundary"),
+    ("ooo-end-boundary", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "start <= now && now < end", "start <= now && now <= end", "calendar_end_boundary"),
+    ("ooo-overlap-end", "crates/campfire/src/controllers/presenters/profile_sections.rs", "manual_end.into_iter().chain(calendar_end).max()", "manual_end.into_iter().chain(calendar_end).min()", "calendar_later_end"),
+    ("layout-future-window", "crates/campfire/src/controllers/presenters/layout_preferences.rs", '.map(|(start, end)| (start.as_second(), end.as_second()))', '.filter(|(start, _)| start.as_second() <= 1772467200).map(|(start, end)| (start.as_second(), end.as_second()))', "layout_future_meeting_windows_before_start"),
     ("layout-meeting-gate", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "row.get::<_, bool>(6)? && row.get::<_, bool>(7)?", "true", "layout_meeting_status_off_sends_no_windows"),
     ("layout-ooo-keep", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "let keep_notifications: bool = row.get(10)?;", "let keep_notifications = false;", "layout_ooo_notifications_kept_sends_no_windows"),
     ("layout-drive-scope", "crates/campfire/src/controllers/presenters/layout_preferences.rs", 'scope == "https://www.googleapis.com/auth/drive.file"', 'scope == "https://www.googleapis.com/auth/drive.metadata.readonly"', "layout_drive_previews_uses_exact_scope"),

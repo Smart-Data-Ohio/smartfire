@@ -55,14 +55,17 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
             .split([' ', '\t', '\n', '\r', '\u{000b}', '\u{000c}'])
             .any(|s| s == "https://www.googleapis.com/auth/drive.file");
     }
-    // WS17 replaces manual-only return dates with the shared effective Calendar/OOO reader.
+    // Read-only cached OOO projection. WS17/WS14g replace it with their shared typed reader;
+    // this profile path never refreshes Google, claims a boundary, or mutates status.
     let (meeting,calendar,until,zone)=c.query_row("SELECT meeting_status_enabled,ooo_calendar_enabled,ooo_until,time_zone FROM users WHERE id=?",[id],|r|Ok((r.get::<_,bool>(0)?,r.get::<_,bool>(1)?,r.get::<_,Option<campfire_db::Timestamp>>(2)?,r.get::<_,Option<String>>(3)?)))?;
     fields.status.meeting_enabled = meeting;
     fields.status.ooo_calendar_enabled = calendar;
-    if let Some(until) = until.filter(|t| t.jiff() > now) {
-        fields.status.manual_ooo = true;
+    let manual_end = until.filter(|t| t.jiff() > now).map(|t| t.jiff());
+    fields.status.manual_ooo = manual_end.is_some();
+    let calendar_end = if calendar { super::layout_preferences::calendar_ooo_end(c, id, now)? } else { None };
+    if let Some(until) = manual_end.into_iter().chain(calendar_end).max() {
         fields.status.ooo_return = Some(
-            campfire_views::time::Zone::for_user(zone.as_deref()).format(until.jiff(), "%B %d, %Y"),
+            campfire_views::time::Zone::for_user(zone.as_deref()).format(until, "%B %d, %Y"),
         );
     }
     fields.status.fetch_error = c
