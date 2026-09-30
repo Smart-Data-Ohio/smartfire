@@ -1,0 +1,772 @@
+{
+  "actions": [
+    "session.sign_in.success",
+    "session.sign_in.failure",
+    "sign_in.two_factor.failure",
+    "sign_in.two_factor.lockout",
+    "two_factor.enable",
+    "two_factor.disable",
+    "two_factor.reset",
+    "two_factor.backup_codes.regenerate",
+    "two_factor.reauthenticate",
+    "two_factor.devices.revoke_all",
+    "session.revoke",
+    "session.revoke_others",
+    "sudo.confirm.success",
+    "sudo.confirm.failure",
+    "user.create",
+    "user.email.change",
+    "user.password.change",
+    "user.role.change",
+    "user.ban",
+    "user.unban",
+    "user.deactivate",
+    "google.sign_in.link",
+    "google.sign_in.link_allow",
+    "google.sign_in.unlink",
+    "google.account.connect",
+    "google.account.disconnect",
+    "github.account.connect",
+    "github.account.disconnect",
+    "fizzy.account.connect",
+    "fizzy.account.disconnect",
+    "slack.account.connect",
+    "slack.account.disconnect",
+    "slack.workspace.configure",
+    "slack.workspace.remove_credentials",
+    "slack.import.start",
+    "slack.import.cancel",
+    "slack.import.undo",
+    "account.join_code.reset",
+    "account.settings.change",
+    "account.custom_styles.change",
+    "agent.create",
+    "agent.update",
+    "agent.suspend",
+    "agent.credential.create",
+    "agent.credential.revoke",
+    "agent.credential.reset",
+    "agent.grant.create",
+    "agent.grant.revoke",
+    "agent.webhook_url.change",
+    "agent.webhook_secret.reset",
+    "agent.github.connect",
+    "agent.github.disconnect",
+    "agent.approval.decide",
+    "agent.github_action.execute",
+    "agent.fizzy_action.execute",
+    "agent.kill_switch",
+    "room.create",
+    "room.destroy",
+    "room.membership.change",
+    "board.automation.change",
+    "work.handoff",
+    "workspace_icon.create",
+    "workspace_icon.destroy"
+  ],
+  "filters": [
+    {
+      "input": null,
+      "output": {}
+    },
+    {
+      "input": "plain",
+      "output": {
+        "value": "plain"
+      }
+    },
+    {
+      "input": [
+        "a",
+        "b"
+      ],
+      "output": {
+        "value": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "input": {
+        "name": [
+          "Old",
+          "New"
+        ],
+        "password": "secret",
+        "current_password": "secret",
+        "pwd": "secret",
+        "access_token": "secret",
+        "api_key": "secret",
+        "bot_key": "secret",
+        "session": {
+          "id": 1
+        },
+        "nested": {
+          "credentials": {
+            "token": "secret"
+          },
+          "keep": "yes"
+        },
+        "list": [
+          {
+            "secret": "secret"
+          },
+          "plain"
+        ],
+        "join_code": "secret",
+        "transfer_id": "secret",
+        "email_address": [
+          "a@example.test",
+          "b@example.test"
+        ],
+        "key": "keep",
+        "KEYBOARD": "keep",
+        "apiKey": "secret",
+        "before": {
+          "authorization": "secret"
+        }
+      },
+      "output": {
+        "name": [
+          "Old",
+          "New"
+        ],
+        "password": "[FILTERED]",
+        "current_password": "[FILTERED]",
+        "pwd": "[FILTERED]",
+        "access_token": "[FILTERED]",
+        "api_key": "[FILTERED]",
+        "bot_key": "[FILTERED]",
+        "session": "[FILTERED]",
+        "nested": {
+          "credentials": "[FILTERED]",
+          "keep": "yes"
+        },
+        "list": [
+          {
+            "secret": "[FILTERED]"
+          },
+          "plain"
+        ],
+        "join_code": "[FILTERED]",
+        "transfer_id": "[FILTERED]",
+        "email_address": [
+          "a@example.test",
+          "b@example.test"
+        ],
+        "key": "keep",
+        "KEYBOARD": "keep",
+        "apiKey": "[FILTERED]",
+        "before": {
+          "authorization": "[FILTERED]"
+        }
+      }
+    }
+  ],
+  "labels": [
+    {
+      "input": null,
+      "label": "[unrecognized]"
+    },
+    {
+      "input": "",
+      "label": "[unrecognized]"
+    },
+    {
+      "input": "  ",
+      "label": "[unrecognized]"
+    },
+    {
+      "input": "hunter2",
+      "label": "[unrecognized]"
+    },
+    {
+      "input": "victim@example.com",
+      "label": "victim@example.com"
+    },
+    {
+      "input": " DAVID@37signals.com ",
+      "label": "DAVID@37signals.com"
+    },
+    {
+      "input": "dotless@intranet",
+      "label": "dotless@intranet"
+    },
+    {
+      "input": "a@.example",
+      "label": "[unrecognized]"
+    },
+    {
+      "input": "a@example.",
+      "label": "[unrecognized]"
+    },
+    {
+      "input": "a@@example.com",
+      "label": "[unrecognized]"
+    },
+    {
+      "input": "a@a.b",
+      "label": "a@a.b"
+    },
+    {
+      "input": "a b@example.com",
+      "label": "[unrecognized]"
+    },
+    {
+      "input": "a b@example.com",
+      "label": "a b@example.com"
+    },
+    {
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+      "label": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..."
+    },
+    {
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+      "label": "[unrecognized]"
+    }
+  ],
+  "origins": [
+    {
+      "input": null,
+      "summary": null
+    },
+    {
+      "input": "",
+      "summary": null
+    },
+    {
+      "input": " ",
+      "summary": null
+    },
+    {
+      "input": "https://example.com/hook?token=secret",
+      "summary": {
+        "origin": "https://example.com",
+        "digest": "ea22e8d624c5"
+      }
+    },
+    {
+      "input": "http://example.com:3000/hook",
+      "summary": {
+        "origin": "http://example.com:3000",
+        "digest": "8f088e64ef63"
+      }
+    },
+    {
+      "input": "https://example.com:443/hook",
+      "summary": {
+        "origin": "https://example.com",
+        "digest": "f16bb5c79c9a"
+      }
+    },
+    {
+      "input": "HTTPS://EXAMPLE.COM:443/x",
+      "summary": {
+        "origin": "https://EXAMPLE.COM",
+        "digest": "43300892a370"
+      }
+    },
+    {
+      "input": "https://user:password@[::1]:8443/path?q=secret",
+      "summary": {
+        "origin": "https://[::1]:8443",
+        "digest": "3a35f7777723"
+      }
+    },
+    {
+      "input": "ftp://example.com:21/x",
+      "summary": {
+        "origin": "ftp://example.com",
+        "digest": "b6afb0fadb68"
+      }
+    },
+    {
+      "input": "custom://host:42/x",
+      "summary": {
+        "origin": "custom://host:42",
+        "digest": "575db8f8b261"
+      }
+    },
+    {
+      "input": "http://é.test",
+      "summary": {
+        "origin": "[invalid]",
+        "digest": "827c05c72705"
+      }
+    },
+    {
+      "input": "::::",
+      "summary": {
+        "origin": "[invalid]",
+        "digest": "d00d9be38948"
+      }
+    },
+    {
+      "input": "/relative",
+      "summary": {
+        "origin": "[invalid]",
+        "digest": "4d3f8cc3d446"
+      }
+    },
+    {
+      "input": "https://example.com/a",
+      "summary": {
+        "origin": "https://example.com",
+        "digest": "2dce0a4c5044"
+      }
+    },
+    {
+      "input": "https://example.com/b",
+      "summary": {
+        "origin": "https://example.com",
+        "digest": "d7fe568b31ae"
+      }
+    }
+  ],
+  "records": [
+    {
+      "action": "user.role.change",
+      "actor_id": 127326141,
+      "actor_label": "David <david@37signals.com>",
+      "details": {
+        "role": {
+          "before": "member",
+          "after": "administrator"
+        },
+        "token": "[FILTERED]"
+      },
+      "ip_address": "203.0.113.7",
+      "target_id": 712064548,
+      "target_label": "Kevin <kevin@37signals.com>",
+      "target_type": "User",
+      "user_agent": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..."
+    },
+    {
+      "action": "room.destroy",
+      "actor_id": 127326141,
+      "actor_label": "David <david@37signals.com>",
+      "details": {},
+      "ip_address": null,
+      "target_id": 486777696,
+      "target_label": "All Talk",
+      "target_type": "Room",
+      "user_agent": null
+    },
+    {
+      "action": "future.action",
+      "actor_id": 127326141,
+      "actor_label": "Override",
+      "details": {
+        "value": "context"
+      },
+      "ip_address": null,
+      "target_id": null,
+      "target_label": "Target",
+      "target_type": null,
+      "user_agent": null
+    }
+  ],
+  "refusals": [
+    "readonly",
+    "readonly",
+    "readonly",
+    "readonly"
+  ],
+  "validation": [
+    {
+      "action": "",
+      "valid": false
+    },
+    {
+      "action": " ",
+      "valid": false
+    },
+    {
+      "action": "future.action",
+      "valid": true
+    }
+  ],
+  "failures": [
+    {
+      "email": "victim@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "victim@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 1
+    },
+    {
+      "email": "Victim@Example.com",
+      "offset": 0,
+      "result": null,
+      "count": 1
+    },
+    {
+      "email": "target0@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target0@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 2
+    },
+    {
+      "email": "target1@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target1@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 3
+    },
+    {
+      "email": "target2@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target2@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 4
+    },
+    {
+      "email": "target3@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target3@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 5
+    },
+    {
+      "email": "target4@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target4@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 6
+    },
+    {
+      "email": "target5@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target5@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 7
+    },
+    {
+      "email": "target6@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target6@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 8
+    },
+    {
+      "email": "target7@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target7@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 9
+    },
+    {
+      "email": "target8@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target8@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 10
+    },
+    {
+      "email": "target9@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target9@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 11
+    },
+    {
+      "email": "target10@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target10@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 12
+    },
+    {
+      "email": "target11@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target11@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 13
+    },
+    {
+      "email": "target12@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target12@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 14
+    },
+    {
+      "email": "target13@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target13@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 15
+    },
+    {
+      "email": "target14@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target14@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 16
+    },
+    {
+      "email": "target15@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target15@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 17
+    },
+    {
+      "email": "target16@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target16@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 18
+    },
+    {
+      "email": "target17@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target17@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 19
+    },
+    {
+      "email": "target18@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target18@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 20
+    },
+    {
+      "email": "target19@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target18@example.com",
+        "details": {
+          "method": "password",
+          "suppressed_count": 1
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 20
+    },
+    {
+      "email": "target20@example.com",
+      "offset": 0,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "target18@example.com",
+        "details": {
+          "method": "password",
+          "suppressed_count": 2
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 20
+    },
+    {
+      "email": "victim@example.com",
+      "offset": 300,
+      "result": null,
+      "count": 20
+    },
+    {
+      "email": "victim@example.com",
+      "offset": 301,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "victim@example.com",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 21
+    },
+    {
+      "email": "hunter2",
+      "offset": 301,
+      "result": {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "[unrecognized]",
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "198.51.100.9",
+        "user_agent": "Audit browser"
+      },
+      "count": 22
+    },
+    {
+      "email": "not a password",
+      "offset": 301,
+      "result": null,
+      "count": 22
+    }
+  ]
+}

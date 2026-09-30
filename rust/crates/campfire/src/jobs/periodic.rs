@@ -119,15 +119,83 @@ impl Loops {
     }
 }
 
-/// `Periodic::Runner`'s tasks that have been ported and registered.
-pub fn periodic(_intervals: PeriodicIntervals) -> Periodic<App> {
-    use crate::integrations::action_claims;
+/// Messaging tasks with domain implementations; notification policy is owned by WS17.
+pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     let mut periodic = Periodic::new("Periodic");
+    periodic.task(Task::new(
+        "saved item reminders",
+        intervals.reminders,
+        |app: App| async move { saved_item_reminders(&app.db).await },
+    ));
+    periodic.task(Task::new(
+        "scheduled messages",
+        intervals.reminders,
+        |app: App| async move { scheduled_messages(&app.db).await },
+    ));
+    periodic.task(Task::new(
+        "poll closing",
+        intervals.reminders,
+        |app: App| async move { poll_closing(&app.db).await },
+    ));
+    periodic.task(Task::new("stuck rooms", Duration::from_secs(5*MINUTE), |app: App| async move {
+        app.db.write(|tx|campfire_db::models::room_delete::reenqueue_stuck(tx,600)).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("retention prune", intervals.retention, |app: App| async move {
+        app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
+        Ok(())
+    }));
+    use crate::integrations::action_claims;
     periodic.task(Task::new("stuck GitHub claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
         action_claims::recover_stuck_claims(&app.db, action_claims::GITHUB, app.db.env().now()).await;
         Ok(())
     }));
     periodic
+}
+pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
+    let now = db.env().now();
+    let ids = db
+        .read(move |conn| campfire_db::SavedItem::due_reminder_ids(conn, now))
+        .await?;
+    for id in ids {
+        if let Err(error) = db
+            .write(move |tx| campfire_db::SavedItem::dispatch_reminder(tx, id, now))
+            .await
+        {
+            tracing::error!(id,%error,"Saved item reminder failed");
+        }
+    }
+    Ok(())
+}
+pub(super) async fn scheduled_messages(db: &Database) -> anyhow::Result<()> {
+    let now = db.env().now();
+    let ids = db
+        .read(move |conn| campfire_db::ScheduledMessage::due_candidate_ids(conn, now))
+        .await?;
+    for id in ids {
+        if let Err(error) = db
+            .write(move |tx| campfire_db::ScheduledMessage::dispatch(tx, id, now, false))
+            .await
+        {
+            tracing::error!(id,%error,"Scheduled message failed");
+        }
+    }
+    Ok(())
+}
+pub(super) async fn poll_closing(db: &Database) -> anyhow::Result<()> {
+    let now = db.env().now();
+    let ids = db
+        .read(move |conn| campfire_db::Poll::due(conn, now))
+        .await?;
+    for id in ids {
+        if let Err(error) = db
+            .write(move |tx| campfire_db::Poll::close_by_id(tx, id, now))
+            .await
+        {
+            tracing::error!(id,%error,"Poll closing failed");
+        }
+    }
+    Ok(())
 }
 
 /// `Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once)`.

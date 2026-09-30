@@ -131,6 +131,22 @@ impl Event {
     pub fn job_in<J: Job>(wait: Duration, arguments: &J) -> Self {
         Event::Job(JobRequest::new(arguments).wait(wait))
     }
+
+    /// The job request, if this is a domain job of class `J`.
+    pub fn as_job<J: Job>(&self) -> Option<J> {
+        match self {
+            Event::Job(request) => request.decode::<J>().and_then(|decoded| decoded.ok()),
+            _ => None,
+        }
+    }
+
+    /// The WS8 messaging description, if this is its broadcast kind.
+    pub fn as_broadcast(&self) -> Option<crate::broadcasts::Broadcast> {
+        match self {
+            Event::Broadcast(request) => request.decode::<crate::broadcasts::Broadcast>().and_then(|value| value.ok()),
+            _ => None,
+        }
+    }
 }
 
 pub trait EventSink: Send + Sync {

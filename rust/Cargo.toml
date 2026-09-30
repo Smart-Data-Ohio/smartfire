@@ -18,6 +18,9 @@ campfire_cable    = { path = "crates/cable" }
 campfire_assets   = { path = "crates/assets" }
 campfire_views    = { path = "crates/views" }
 campfire_jobs     = { path = "crates/jobs" }
+campfire_mail     = { path = "crates/mail" }
+mailparse        = "0.16"
+lettre           = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1-rustls", "ring", "rustls-native-certs", "hostname", "builder"] }
 
 tokio        = { version = "1", features = ["full"] }
 axum         = { version = "0.8", features = ["ws", "multipart"] }
@@ -53,6 +56,7 @@ uuid         = { version = "1", features = ["v4"] }
 percent-encoding = "2"
 url          = "2"
 regex        = "1"
+caseless     = "0.2.2"
 unicode-segmentation = "=1.13.3"
 async-trait  = "0.1"
 libc         = "0.2"

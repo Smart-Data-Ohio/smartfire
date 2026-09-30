@@ -13,6 +13,9 @@
 /NOTES.md
 /AGENTS.md
 /CLAUDE.md
+/ops/tests
+/ops/README.md
+/.scratch
 /Dockerfile
 /.dockerignore
 

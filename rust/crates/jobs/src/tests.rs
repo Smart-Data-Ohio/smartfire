@@ -14,6 +14,7 @@ use crate::*;
 
 mod periodic_test;
 mod runner_test;
+mod ws8_messaging_test;
 
 /// Enqueues `Event::Job`s on the queue, as the app's sink does.
 pub(crate) struct QueueSink {
@@ -174,3 +175,5 @@ impl Concurrency {
 }
 
 pub(crate) type Log = Arc<Mutex<Vec<String>>>;
+
+mod ws8_slash_test;

@@ -1,0 +1,983 @@
+{
+  "parser": [
+    {
+      "raw": null,
+      "parsed": {
+        "raw": "",
+        "text": "",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": true,
+        "text_tokens": [],
+        "match_expression": null,
+        "chips": []
+      }
+    },
+    {
+      "raw": "",
+      "parsed": {
+        "raw": "",
+        "text": "",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": true,
+        "text_tokens": [],
+        "match_expression": null,
+        "chips": []
+      }
+    },
+    {
+      "raw": "cats AND dogs",
+      "parsed": {
+        "raw": "cats AND dogs",
+        "text": "cats AND dogs",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "cats",
+          "AND",
+          "dogs"
+        ],
+        "match_expression": "\"cats\" \"AND\" \"dogs\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "from:@jz has:file launch",
+      "parsed": {
+        "raw": "from:@jz has:file launch",
+        "text": "launch",
+        "from_names": [
+          "jz"
+        ],
+        "in_rooms": [],
+        "has_values": [
+          "file"
+        ],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [
+          "launch"
+        ],
+        "match_expression": "\"launch\"",
+        "chips": [
+          {
+            "token": "from:@jz",
+            "label": "from: jz",
+            "remove_query": "has:file launch"
+          },
+          {
+            "token": "has:file",
+            "label": "has: file",
+            "remove_query": "from:@jz launch"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "from:jason hello",
+      "parsed": {
+        "raw": "from:jason hello",
+        "text": "hello",
+        "from_names": [
+          "jason"
+        ],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [
+          "hello"
+        ],
+        "match_expression": "\"hello\"",
+        "chips": [
+          {
+            "token": "from:jason",
+            "label": "from: jason",
+            "remove_query": "hello"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "in:#Designers hi",
+      "parsed": {
+        "raw": "in:#Designers hi",
+        "text": "hi",
+        "from_names": [],
+        "in_rooms": [
+          "Designers"
+        ],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [
+          "hi"
+        ],
+        "match_expression": "\"hi\"",
+        "chips": [
+          {
+            "token": "in:#Designers",
+            "label": "in: Designers",
+            "remove_query": "hi"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "from:@jz, in:#Designers) hi",
+      "parsed": {
+        "raw": "from:@jz, in:#Designers) hi",
+        "text": "hi",
+        "from_names": [
+          "jz"
+        ],
+        "in_rooms": [
+          "Designers"
+        ],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [
+          "hi"
+        ],
+        "match_expression": "\"hi\"",
+        "chips": [
+          {
+            "token": "from:@jz,",
+            "label": "from: jz",
+            "remove_query": "in:#Designers) hi"
+          },
+          {
+            "token": "in:#Designers)",
+            "label": "in: Designers",
+            "remove_query": "from:@jz, hi"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "from:@!!! has:bogus hello",
+      "parsed": {
+        "raw": "from:@!!! has:bogus hello",
+        "text": "from:@!!! has:bogus hello",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "from",
+          "has",
+          "bogus",
+          "hello"
+        ],
+        "match_expression": "\"from\" \"has\" \"bogus\" \"hello\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "has:FILE has:file has:image",
+      "parsed": {
+        "raw": "has:FILE has:file has:image",
+        "text": "",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [
+          "file",
+          "image"
+        ],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [],
+        "match_expression": null,
+        "chips": [
+          {
+            "token": "has:FILE",
+            "label": "has: file",
+            "remove_query": "has:file has:image"
+          },
+          {
+            "token": "has:file",
+            "label": "has: file",
+            "remove_query": "has:FILE has:image"
+          },
+          {
+            "token": "has:image",
+            "label": "has: image",
+            "remove_query": "has:FILE has:file"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "before:2026-13-45 hi",
+      "parsed": {
+        "raw": "before:2026-13-45 hi",
+        "text": "before:2026-13-45 hi",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "before",
+          "2026",
+          "13",
+          "45",
+          "hi"
+        ],
+        "match_expression": "\"before\" \"2026\" \"13\" \"45\" \"hi\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "before:2024-02-29 after:2025-01-01 on:2026-03-10",
+      "parsed": {
+        "raw": "before:2024-02-29 after:2025-01-01 on:2026-03-10",
+        "text": "",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": "2024-02-29",
+        "after_date": "2025-01-01",
+        "on_date": "2026-03-10",
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [],
+        "match_expression": null,
+        "chips": [
+          {
+            "token": "before:2024-02-29",
+            "label": "before: 2024-02-29",
+            "remove_query": "after:2025-01-01 on:2026-03-10"
+          },
+          {
+            "token": "after:2025-01-01",
+            "label": "after: 2025-01-01",
+            "remove_query": "before:2024-02-29 on:2026-03-10"
+          },
+          {
+            "token": "on:2026-03-10",
+            "label": "on: 2026-03-10",
+            "remove_query": "before:2024-02-29 after:2025-01-01"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "before:2026-03-10 before:2026-03-11",
+      "parsed": {
+        "raw": "before:2026-03-10 before:2026-03-11",
+        "text": "",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": "2026-03-11",
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [],
+        "match_expression": null,
+        "chips": [
+          {
+            "token": "before:2026-03-10",
+            "label": "before: 2026-03-10",
+            "remove_query": "before:2026-03-11"
+          },
+          {
+            "token": "before:2026-03-11",
+            "label": "before: 2026-03-11",
+            "remove_query": "before:2026-03-10"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "is:THREAD hello",
+      "parsed": {
+        "raw": "is:THREAD hello",
+        "text": "hello",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": true,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [
+          "hello"
+        ],
+        "match_expression": "\"hello\"",
+        "chips": [
+          {
+            "token": "is:THREAD",
+            "label": "is: true",
+            "remove_query": "hello"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "FROM:David hi",
+      "parsed": {
+        "raw": "FROM:David hi",
+        "text": "FROM:David hi",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "FROM",
+          "David",
+          "hi"
+        ],
+        "match_expression": "\"FROM\" \"David\" \"hi\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "xfrom:David hi",
+      "parsed": {
+        "raw": "xfrom:David hi",
+        "text": "xfrom:David hi",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "xfrom",
+          "David",
+          "hi"
+        ],
+        "match_expression": "\"xfrom\" \"David\" \"hi\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "from:David\tfrom:Jason hi",
+      "parsed": {
+        "raw": "from:David\tfrom:Jason hi",
+        "text": "hi",
+        "from_names": [
+          "David",
+          "Jason"
+        ],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [
+          "hi"
+        ],
+        "match_expression": "\"hi\"",
+        "chips": [
+          {
+            "token": "from:David",
+            "label": "from: David",
+            "remove_query": "from:Jason hi"
+          },
+          {
+            "token": "from:Jason",
+            "label": "from: Jason",
+            "remove_query": "from:David hi"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "from:  has:file",
+      "parsed": {
+        "raw": "from:  has:file",
+        "text": "from:",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [
+          "file"
+        ],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [
+          "from"
+        ],
+        "match_expression": "\"from\"",
+        "chips": [
+          {
+            "token": "has:file",
+            "label": "has: file",
+            "remove_query": "from:"
+          }
+        ]
+      }
+    },
+    {
+      "raw": " from:David hi",
+      "parsed": {
+        "raw": " from:David hi",
+        "text": "from:David hi",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "from",
+          "David",
+          "hi"
+        ],
+        "match_expression": "\"from\" \"David\" \"hi\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "café δog é _42 你好",
+      "parsed": {
+        "raw": "café δog é _42 你好",
+        "text": "café δog é _42 你好",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "café",
+          "δog",
+          "é",
+          "_42",
+          "你好"
+        ],
+        "match_expression": "\"café\" \"δog\" \"é\" \"_42\" \"你好\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "\" OR 1=1 --",
+      "parsed": {
+        "raw": "\" OR 1=1 --",
+        "text": "\" OR 1=1 --",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "OR",
+          "1",
+          "1"
+        ],
+        "match_expression": "\"OR\" \"1\" \"1\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "in:#_ from:@%",
+      "parsed": {
+        "raw": "in:#_ from:@%",
+        "text": "",
+        "from_names": [
+          "%"
+        ],
+        "in_rooms": [
+          "_"
+        ],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [],
+        "match_expression": null,
+        "chips": [
+          {
+            "token": "in:#_",
+            "label": "in: _",
+            "remove_query": "from:@%"
+          },
+          {
+            "token": "from:@%",
+            "label": "from: %",
+            "remove_query": "in:#_"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "from:@\" OR \"1\"=\"1 injection",
+      "parsed": {
+        "raw": "from:@\" OR \"1\"=\"1 injection",
+        "text": "OR \"1\"=\"1 injection",
+        "from_names": [
+          "\""
+        ],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": true,
+        "blank_query": false,
+        "text_tokens": [
+          "OR",
+          "1",
+          "1",
+          "injection"
+        ],
+        "match_expression": "\"OR\" \"1\" \"1\" \"injection\"",
+        "chips": [
+          {
+            "token": "from:@\"",
+            "label": "from: \"",
+            "remove_query": "OR \"1\"=\"1 injection"
+          }
+        ]
+      }
+    },
+    {
+      "raw": "has:pin, on:2026-03-10,",
+      "parsed": {
+        "raw": "has:pin, on:2026-03-10,",
+        "text": "has:pin, on:2026-03-10,",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "has",
+          "pin",
+          "on",
+          "2026",
+          "03",
+          "10"
+        ],
+        "match_expression": "\"has\" \"pin\" \"on\" \"2026\" \"03\" \"10\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "from: from:@ in:# is:no",
+      "parsed": {
+        "raw": "from: from:@ in:# is:no",
+        "text": "from: from:@ in:# is:no",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "from",
+          "from",
+          "in",
+          "is",
+          "no"
+        ],
+        "match_expression": "\"from\" \"from\" \"in\" \"is\" \"no\"",
+        "chips": []
+      }
+    },
+    {
+      "raw": "hello\n  world again",
+      "parsed": {
+        "raw": "hello\n  world again",
+        "text": "hello world again",
+        "from_names": [],
+        "in_rooms": [],
+        "has_values": [],
+        "before_date": null,
+        "after_date": null,
+        "on_date": null,
+        "thread_only": false,
+        "filters": false,
+        "blank_query": false,
+        "text_tokens": [
+          "hello",
+          "world",
+          "again"
+        ],
+        "match_expression": "\"hello\" \"world\" \"again\"",
+        "chips": []
+      }
+    }
+  ],
+  "rows": [
+    {
+      "client": "ws8-root",
+      "creator": "david",
+      "room": "designers",
+      "body": "ws8search ordinary",
+      "date": "2026-03-09 12:00:00"
+    },
+    {
+      "client": "ws8-link",
+      "creator": "jz",
+      "room": "designers",
+      "body": "ws8search <a href=\"https://example.test\">link</a>",
+      "date": "2026-03-10 12:00:00"
+    },
+    {
+      "client": "ws8-drive",
+      "creator": "jason",
+      "room": "watercooler",
+      "body": "ws8search drive",
+      "drive": true,
+      "date": "2026-03-11 12:00:00"
+    },
+    {
+      "client": "ws8-image",
+      "creator": "david",
+      "room": "designers",
+      "body": "ws8search image",
+      "image": true,
+      "date": "2026-03-10 12:00:00"
+    },
+    {
+      "client": "ws8-pin",
+      "creator": "david",
+      "room": "designers",
+      "body": "ws8search pin",
+      "pin": true,
+      "date": "2026-03-10 12:00:00"
+    },
+    {
+      "client": "ws8-thread",
+      "creator": "david",
+      "room": "designers",
+      "body": "ws8search thread",
+      "thread": true,
+      "date": "2026-03-10 12:00:00"
+    },
+    {
+      "client": "ws8-note",
+      "creator": "david",
+      "room": "designers",
+      "body": "ws8search note",
+      "system_note": true,
+      "date": "2026-03-10 12:00:00"
+    },
+    {
+      "client": "ws8-stream",
+      "creator": "david",
+      "room": "designers",
+      "body": "ws8search stream",
+      "streaming": true,
+      "date": "2026-03-10 12:00:00"
+    },
+    {
+      "client": "ws8-hidden",
+      "creator": "kevin",
+      "room": "hidden",
+      "body": "ws8search hidden",
+      "date": "2026-03-10 12:00:00"
+    },
+    {
+      "client": "ws8-deleted",
+      "creator": "david",
+      "room": "deleted",
+      "body": "ws8search deleted",
+      "date": "2026-03-10 12:00:00"
+    }
+  ],
+  "results": [
+    {
+      "raw": "ws8search",
+      "clients": [
+        "ws8-root",
+        "ws8-link",
+        "ws8-image",
+        "ws8-pin",
+        "ws8-thread",
+        "ws8-drive"
+      ]
+    },
+    {
+      "raw": "from:@david ws8search",
+      "clients": [
+        "ws8-root",
+        "ws8-image",
+        "ws8-pin",
+        "ws8-thread"
+      ]
+    },
+    {
+      "raw": "from:@david from:@jz ws8search",
+      "clients": [
+        "ws8-root",
+        "ws8-link",
+        "ws8-image",
+        "ws8-pin",
+        "ws8-thread"
+      ]
+    },
+    {
+      "raw": "in:#design ws8search",
+      "clients": [
+        "ws8-root",
+        "ws8-link",
+        "ws8-image",
+        "ws8-pin",
+        "ws8-thread"
+      ]
+    },
+    {
+      "raw": "in:#Design in:#Water ws8search",
+      "clients": [
+        "ws8-root",
+        "ws8-link",
+        "ws8-image",
+        "ws8-pin",
+        "ws8-thread"
+      ]
+    },
+    {
+      "raw": "has:link ws8search",
+      "clients": [
+        "ws8-link"
+      ]
+    },
+    {
+      "raw": "has:file ws8search",
+      "clients": [
+        "ws8-image",
+        "ws8-drive"
+      ]
+    },
+    {
+      "raw": "has:image ws8search",
+      "clients": [
+        "ws8-image"
+      ]
+    },
+    {
+      "raw": "has:pin ws8search",
+      "clients": [
+        "ws8-pin"
+      ]
+    },
+    {
+      "raw": "before:2026-03-10 ws8search",
+      "clients": [
+        "ws8-root"
+      ]
+    },
+    {
+      "raw": "after:2026-03-10 ws8search",
+      "clients": [
+        "ws8-drive"
+      ]
+    },
+    {
+      "raw": "on:2026-03-10 ws8search",
+      "clients": [
+        "ws8-link",
+        "ws8-image",
+        "ws8-pin",
+        "ws8-thread"
+      ]
+    },
+    {
+      "raw": "after:2026-03-09 before:2026-03-11 ws8search",
+      "clients": [
+        "ws8-link",
+        "ws8-image",
+        "ws8-pin",
+        "ws8-thread"
+      ]
+    },
+    {
+      "raw": "is:thread ws8search",
+      "clients": [
+        "ws8-thread"
+      ]
+    },
+    {
+      "raw": "from:@jz in:#Designers ws8search",
+      "clients": [
+        "ws8-link"
+      ]
+    },
+    {
+      "raw": "from:@% ws8search",
+      "clients": []
+    },
+    {
+      "raw": "in:#_ ws8search",
+      "clients": []
+    },
+    {
+      "raw": "from:@nosuch ws8search",
+      "clients": []
+    },
+    {
+      "raw": "has:image has:pin ws8search",
+      "clients": []
+    },
+    {
+      "raw": "in:#WS8 from:@david",
+      "clients": []
+    },
+    {
+      "raw": "from:@david",
+      "clients": [
+        "x-card-fixture",
+        "ws8-root",
+        "0002",
+        "0006",
+        "0010",
+        "ws8-image",
+        "ws8-pin",
+        "ws8-thread",
+        "ws8-stream"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "clients": [
+        "ws8-page-5",
+        "ws8-page-6",
+        "ws8-page-7",
+        "ws8-page-8",
+        "ws8-page-9",
+        "ws8-page-10",
+        "ws8-page-11",
+        "ws8-page-12",
+        "ws8-page-13",
+        "ws8-page-14",
+        "ws8-page-15",
+        "ws8-page-16",
+        "ws8-page-17",
+        "ws8-page-18",
+        "ws8-page-19",
+        "ws8-page-20",
+        "ws8-page-21",
+        "ws8-page-22",
+        "ws8-page-23",
+        "ws8-page-24",
+        "ws8-page-25",
+        "ws8-page-26",
+        "ws8-page-27",
+        "ws8-page-28",
+        "ws8-page-29",
+        "ws8-page-30",
+        "ws8-page-31",
+        "ws8-page-32",
+        "ws8-page-33",
+        "ws8-page-34",
+        "ws8-page-35",
+        "ws8-page-36",
+        "ws8-page-37",
+        "ws8-page-38",
+        "ws8-page-39",
+        "ws8-page-40",
+        "ws8-page-41",
+        "ws8-page-42",
+        "ws8-page-43",
+        "ws8-page-44"
+      ],
+      "has_more": true
+    },
+    {
+      "clients": [
+        "ws8-page-0",
+        "ws8-page-1",
+        "ws8-page-2",
+        "ws8-page-3",
+        "ws8-page-4"
+      ],
+      "has_more": false
+    }
+  ]
+}
