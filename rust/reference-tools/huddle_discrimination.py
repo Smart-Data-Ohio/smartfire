@@ -56,6 +56,8 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("public-huddle-returned-grant-id-corrupted", F, lambda s: replace_once(s, '"grant_id":grant.id', '"grant_id":grant.id + 1'), "campfire", "huddle_controller_reuses_the_actual_opaque_grant_across_post_requests"),
+    ("public-huddle-leave-effects-bypassed", F, lambda s: replace_once(s, "for id in ids {", "for id in ids.into_iter().take(0) {"), "campfire", "huddle_controller_leave_keeps_the_other_device_and_sends_one_room_refresh"),
     ("composed-sidebar-call-sections-bypassed", ROOT / "rust/crates/views/templates/users/sidebars/show.html", lambda s: replace_once(s, "{{ self.call_sections()|safe }}", ""), "campfire", "stage_sidebar_live_dot_and_call_sections_follow_current_stream_state"),
     ("composed-stage-publish-hint-bypassed", ROOT / "rust/crates/views/src/rooms/navigation.rs", lambda s: replace_once(s,'.map(|s| s.viewer().role != "listener"),','.map(|_| true),'),"campfire","stage_page_composes_listener_permissions_and_sti_targets"),
     ("composed-edit-github-section-bypassed", ROOT / "rust/crates/views/templates/rooms/calls/_edit.html", lambda s: replace_once(s,'{{ form.github_section(ctx)|safe }}','{{ "" }}'),"campfire","complete_voice_and_stage_form_pages_match_fourteen_rails_renders"),

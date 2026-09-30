@@ -12,6 +12,8 @@ mod call_lifecycle_tests;
 #[cfg(test)]
 mod public_huddle_tests;
 #[cfg(test)]
+mod huddle_declaration_tests;
+#[cfg(test)]
 mod call_channel_tests;
 #[cfg(test)]
 mod call_channel_broadcast_tests;

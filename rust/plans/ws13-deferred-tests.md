@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 185 declarations now have complete assertion coverage mapped below. The other 363 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 197 declarations now have complete assertion coverage mapped below. The other 351 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -24,7 +24,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | --- | ---: | ---: | ---: |
 | `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 38 | 0 |
 | `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
-| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 23 | 13 |
+| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 35 | 1 |
 | `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
 | `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
@@ -55,7 +55,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **185** | **363** |
+| **Total** | **548** | **197** | **351** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -117,30 +117,30 @@ Owner: WS13. Partial: 13/19 declarations passed; the other 6 remain WS13 work.
 
 ## test/controllers/rooms/huddles_controller_test.rb
 
-Owner: WS13. Partial: 23/36 declarations passed; the other 13 remain open.
+Owner: WS13. Partial: 35/36 declarations passed. `huddle_declaration_tests.rs` completes invitation enqueue capture and recipients, opaque reuse, membership/removal denials, sign-out cleanup, URL alias denial with global grant count, and exactly one real Cable room refresh on leave. The concurrent issuance exception injection remains open.
 
 - **Passed:** an authorized room member receives a narrowly scoped join token
-- the active grant is reused while its random participant identity remains opaque
+- **Passed:** the active grant is reused while its random participant identity remains opaque
 - **Passed:** direct rooms use their participant-based display name
-- starting a one-to-one DM huddle invites only the other participant
-- starting a channel huddle creates no invitation
-- group direct rooms can start a huddle
-- a nonmember cannot get a grant in a group DM and a removed member loses theirs
+- **Passed:** starting a one-to-one DM huddle invites only the other participant
+- **Passed:** starting a channel huddle creates no invitation
+- **Passed:** group direct rooms can start a huddle
+- **Passed:** a nonmember cannot get a grant in a group DM and a removed member loses theirs
 - **Passed:** GET confirms ongoing access without returning credentials
 - **Passed:** GET denies access after room membership is revoked
 - **Passed:** GET denies access to a soft-deleted room
 - **Passed:** participants lists the room's in-call members without caching
 - **Passed:** participants reflects only in-call grants
-- a member removed mid-call is revoked and disappears from participants
+- **Passed:** a member removed mid-call is revoked and disappears from participants
 - **Passed:** participants is reported for group direct rooms
-- participants denies non-members, outsiders, and unauthenticated requests
+- **Passed:** participants denies non-members, outsiders, and unauthenticated requests
 - **Passed:** participants denies bots and inactive users
 - **Passed:** participants requires LiveKit configuration
-- GET denies access after sign out
-- a nonmember cannot join a closed room
+- **Passed:** GET denies access after sign out
+- **Passed:** a nonmember cannot join a closed room
 - **Passed:** a nonmember cannot mint voice credentials
 - **Passed:** participants denies a member after removal
-- an outsider cannot join a direct room
+- **Passed:** an outsider cannot join a direct room
 - **Passed:** an unauthenticated request receives JSON instead of a redirect
 - **Passed:** bots cannot join
 - **Passed:** bots cannot join through an ordinary session
@@ -150,8 +150,8 @@ Owner: WS13. Partial: 23/36 declarations passed; the other 13 remain open.
 - **Passed:** a stage listener's token cannot publish anything
 - **Passed:** stage speakers and hosts publish like any other participant
 - **Passed:** voice and direct room tokens still publish
-- a public URL pointing directly at the internal LiveKit address is rejected
-- leaving drops the session's grants out of the call without revoking
+- **Passed:** a public URL pointing directly at the internal LiveKit address is rejected
+- **Passed:** leaving drops the session's grants out of the call without revoking
 - **Passed:** leaving works for voice rooms and group directs, like participants
 - **Passed:** leaving twice, or without ever joining, still answers no content
 - **Passed:** leaving denies non-members, bots, and unauthenticated requests
