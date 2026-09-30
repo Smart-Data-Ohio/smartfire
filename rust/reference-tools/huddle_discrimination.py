@@ -56,6 +56,7 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("runtime-chrome-request-adapter-bypassed", ROOT / "rust/crates/campfire/src/controllers/presenters/view_context.rs", lambda s: replace_once(s, "Some(user_id) => user_preferences_at(conn, user_id, now)?,", "Some(user_id) => { let mut p=user_preferences_at(conn, user_id, now)?; p.notification_sounds=Default::default(); p },"), "campfire", "runtime_chrome_reads_twenty_three_recorded_rails_sound_and_drive_states"),
     ("remaining-stage-type-isolation-bypassed", R, lambda s: replace_once(s, "if room.stage() =>", "if !room.direct() =>"), "campfire", "remaining_call_security_keeps_stage_actions_private_and_type_scoped"),
     ("remaining-internal-steady-check-writes", I, lambda s: replace_once(s, "if !authorized || seen_due {", "if true || !authorized || seen_due {"), "campfire", "remaining_gateway_steady_state_has_no_transaction_and_denial_revokes_once"),
     ("remaining-personal-roster-bypassed", B, lambda s: replace_body(s, "pub(crate) fn stage_roster(", "Ok(())"), "campfire", "remaining_hands_roles_and_mute_deliver_exact_personalized_frames"),

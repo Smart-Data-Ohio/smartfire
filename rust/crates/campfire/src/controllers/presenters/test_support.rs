@@ -146,6 +146,10 @@ impl TestApp {
     }
 
     pub async fn boot_with_huddle_and_clock(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_with_settings(huddle,clock,&[]).await
+    }
+
+    pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str,&str)]) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -158,7 +162,7 @@ impl TestApp {
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
             "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
-            _ => None,
+            _ => settings.iter().find(|(key,_)|*key==name).map(|(_,value)|(*value).to_string()),
         })
         .unwrap();
         config.huddle = huddle;

@@ -35,7 +35,7 @@ pub struct Layout {
     pub app_version: String,
     /// `Time.zone` for the request (`SetTimeZone`).
     pub time_zone: Zone,
-    /// The layout's chrome from other domains. Only what this crate can answer yet is filled in;
+    /// The layout's read-only chrome from persisted settings and configuration;
     /// see `campfire_views::layouts::Chrome` for the owners.
     pub chrome: Chrome,
 }
@@ -49,7 +49,8 @@ impl Layout {
         let secrets = app.secrets.clone();
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
-        let (account, has_logo, preferences, brand_icon_names) = app
+        let now = campfire_db::Timestamp::from_jiff(app.clock.now());
+        let (account, has_logo, preferences, brand_icon_names, recent_searches) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
@@ -58,10 +59,10 @@ impl Layout {
                     None => false,
                 };
                 let preferences = match user_id {
-                    Some(user_id) => user_preferences(conn, user_id)?,
+                    Some(user_id) => user_preferences_at(conn, user_id, now)?,
                     None => UserPreferences::default(),
                 };
-                Ok((account, has_logo, preferences, super::client_icon_names(conn)?))
+                Ok((account, has_logo, preferences, super::client_icon_names(conn)?, super::runtime_chrome::recent_searches(conn,user_id)?))
             })
             .await
             .map_err(Error::internal)?;
@@ -72,10 +73,10 @@ impl Layout {
         let chrome = Chrome {
             service_worker_auto_register: true,
             brand_icon_names,
-            google_picker: None,
+            google_picker: user.as_ref().and(app.config.google_picker.clone()),
             huddle_configured: app.config.huddle.configured(),
             global_search_query: None,
-            recent_searches: Vec::new(),
+            recent_searches,
         };
         Ok(Self {
             current_user,
@@ -259,4 +260,8 @@ pub async fn page_or_frame_in_any_format(
 /// whatever the `Accept` header preferred.
 pub fn find_template(c: &mut Ctx, template: campfire_kit::Format) -> Result<()> {
     c.respond_to(&[template]).map(|_| ())
+}
+
+pub(crate) fn user_preferences_at(conn: &campfire_db::Connection, user_id: i64, now: campfire_db::Timestamp) -> campfire_db::Result<UserPreferences> {
+    super::runtime_chrome::preferences(conn,user_id,now,user_preferences(conn,user_id)?)
 }

@@ -546,7 +546,7 @@ pub fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> 
     static NAMES: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
         let brands: Vec<Brand> = serde_yaml::from_str(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../../config/icons.yml"
+            "/vendor/icons.yml"
         )))
         .expect("brand icon registry");
         brands
@@ -586,3 +586,8 @@ mod tests {
 
 #[cfg(test)]
 pub(crate) mod sql_probe;
+
+#[cfg(test)]
+mod chrome_tests;
+
+pub(crate) mod runtime_chrome;
