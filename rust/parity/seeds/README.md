@@ -73,3 +73,24 @@ order. A migration timestamp initializer allows later-dated migrations at the fr
 libfaketime is built without FAKE_PTHREAD so waits remain real and Puma/Resque do not spin.
 Namespace images/containers/network with PARITY_NAMESPACE and ownership with PARITY_OWNER.
 Native/host-browser modes are conveniences, not acceptance runs.
+
+## Rust CI seeds
+
+The Rust test workflow builds `default` and `first_run` from the full Rails SHA in
+`parity/reference.sha` (currently `d7c7de92`). `parity/bin/ci-seed prepare` archives that commit
+into ignored `parity/.ci/reference`; it never builds Rails from the changing Rust branch.
+`ci-seed image` builds or loads the canonical reference image, `ci-seed build` creates both
+seeds, and `ci-seed validate` runs the Rails validator at the frozen seed clock every time.
+The same four commands can be run locally from any directory.
+
+The image cache holds a Docker archive. Its exact identity includes the Rails pin (covering
+all reference code, fixtures, schema, Dockerfile and bundle inputs), parity Docker inputs and
+the build/cache tooling. The seed identity also includes all seed scripts, the fixed environment
+and the Rails validator. There are no fallback keys. The image's embedded Rails revision is
+checked after load, and cached seeds still undergo Rails validation before tests run.
+Only pushes to main save caches; PRs read them and use no application secrets.
+
+Every app seed loader fails if its seed is missing and `CI` is set, even to an empty value.
+Locally it may return early with a clear skip message. `first_run` is required by the account
+creation test as well as `default` by the other request and cable tests. The CI setup summary
+prints elapsed time and both cache-hit flags for cold/warm comparisons.
