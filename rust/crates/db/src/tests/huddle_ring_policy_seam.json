@@ -1,0 +1,693 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "default",
+      "title": "an invitation rings a member who is not in do-not-disturb",
+      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
+      "outcomes": [
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dnd",
+      "title": "do-not-disturb silences the ring",
+      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
+      "outcomes": [
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "dnd",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "allowed_dnd",
+      "title": "a caller allowed during do-not-disturb still rings",
+      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
+      "outcomes": [
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "dnd",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        },
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "dnd",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 712064548,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 712064548,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "Kevin",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "quiet_override",
+      "title": "a quiet check override replaces the policy",
+      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
+      "outcomes": [
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": null,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": true,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        },
+        {
+          "context": {
+            "recipient": {
+              "id": 127326141,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": null,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": true,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_127326141_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "Jason",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "meeting",
+      "title": "quiet-during-meetings silences the ring during a busy interval",
+      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
+      "outcomes": [
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": true,
+              "meeting_dnd_enabled": true,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": {
+              "id": 1,
+              "busy_intervals": [
+                [
+                  "2026-09-23T11:55:00Z",
+                  "2026-09-23T12:55:00Z"
+                ]
+              ],
+              "created_at": "2026-09-23 12:00:00 UTC",
+              "fetch_error": null,
+              "fetched_at": "2026-09-23 12:00:00 UTC",
+              "in_meeting_broadcast": null,
+              "ooo_intervals": [],
+              "refresh_pending_at": null,
+              "updated_at": "2026-09-23 12:00:00 UTC",
+              "user_id": 149087659
+            }
+          },
+          "sound_allowed": false,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "allowed_meeting",
+      "title": "a caller allowed during do-not-disturb still rings through a meeting",
+      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
+      "outcomes": [
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": true,
+              "meeting_dnd_enabled": true,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": {
+              "id": 1,
+              "busy_intervals": [
+                [
+                  "2026-09-23T11:55:00Z",
+                  "2026-09-23T12:55:00Z"
+                ]
+              ],
+              "created_at": "2026-09-23 12:00:00 UTC",
+              "fetch_error": null,
+              "fetched_at": "2026-09-23 12:00:00 UTC",
+              "in_meeting_broadcast": null,
+              "ooo_intervals": [],
+              "refresh_pending_at": null,
+              "updated_at": "2026-09-23 12:00:00 UTC",
+              "user_id": 149087659
+            }
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        },
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": true,
+              "meeting_dnd_enabled": true,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 712064548,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": {
+              "id": 1,
+              "busy_intervals": [
+                [
+                  "2026-09-23T11:55:00Z",
+                  "2026-09-23T12:55:00Z"
+                ]
+              ],
+              "created_at": "2026-09-23 12:00:00 UTC",
+              "fetch_error": null,
+              "fetched_at": "2026-09-23 12:00:00 UTC",
+              "in_meeting_broadcast": null,
+              "ooo_intervals": [],
+              "refresh_pending_at": null,
+              "updated_at": "2026-09-23 12:00:00 UTC",
+              "user_id": 149087659
+            }
+          },
+          "sound_allowed": false,
+          "sender_id": 712064548,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "Kevin",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ooo",
+      "title": "out of office silences the ring unless the member keeps notifications on",
+      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
+      "outcomes": [
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": "2026-09-24 12:00:00 UTC",
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        },
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": "2026-09-24 12:00:00 UTC",
+              "ooo_notify_enabled": true
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "allowed_ooo",
+      "title": "a caller allowed during do-not-disturb still rings through out of office",
+      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
+      "outcomes": [
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": "2026-09-24 12:00:00 UTC",
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        },
+        {
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": "2026-09-24 12:00:00 UTC",
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 712064548,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 712064548,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "Kevin",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

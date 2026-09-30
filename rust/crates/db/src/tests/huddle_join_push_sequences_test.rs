@@ -129,11 +129,13 @@ macro_rules! case {
 case!(recipient_payload_and_throttle, 1);
 case!(second_push_throttled, 2);
 case!(eleven_minutes_push_again, 3);
-case!(dnd_policy_input, 4);
-case!(starred_policy_input, 5);
-case!(quiet_hours_policy_input, 6);
-case!(meeting_policy_input, 7);
-case!(ooo_policy_inputs, 8);
+// Each of these five declarations depends on WS17 to derive the policy input.
+// Actual seam payload, subscription, throttle and quiet outcomes run today.
+case!(ws17_dnd_policy_input, 4);
+case!(ws17_starred_policy_input, 5);
+case!(ws17_quiet_hours_policy_input, 6);
+case!(ws17_meeting_policy_input, 7);
+case!(ws17_ooo_policy_inputs, 8);
 case!(connected_does_not_claim, 9);
 case!(off_hidden_scopes_do_not_claim, 10);
 case!(muted_scope_does_not_claim, 11);

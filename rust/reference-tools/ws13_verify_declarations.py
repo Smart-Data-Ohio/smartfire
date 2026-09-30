@@ -18,7 +18,7 @@ for name,total,passed,remaining in rows:
     titles=re.findall(r"^\s*test [\"'](.*?)[\"'] do",raw,re.M)
     assert len(titles)==int(total),(name,len(titles),total)
     section=s.split('## '+name+'\n',1)[1].split('\n## ',1)[0]
-    actual=re.findall(r'^- (?:\*\*Passed:\*\* )?(.*)$',section,re.M)
+    actual=re.findall(r'^- (?:\*\*(?:Passed|WS17-dependent):\*\* )?(.*)$',section,re.M)
     assert sorted(titles)==sorted(actual),name
     assert section.count('- **Passed:** ')==int(passed),name
 print(f'Rails declaration catalogue: 548 titles retained; {total_passed} passed; {total_remaining} partial/deferred; 33 files; source titles match')

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare eight freshly generated pinned Rails corpora to committed JSON.
+"""Compare twelve freshly generated pinned Rails corpora to committed JSON.
 
 Generate each script into DIRECTORY/<script stem>.json using parity/bin/reference.
 """
@@ -36,4 +36,28 @@ assert len(actual["presence"]["counts"]) == 3 and actual["presence"]["missing"] 
 assert len(actual["reconciler"]) == 5
 assert actual == expected, "huddle_job_contracts"
 print("huddle_job_contracts: 4 invitation jobs; 3 presence streams; 5 reconciler cases; regenerated JSON matches")
-print("WS13b corpora: all 8 regenerated corpora match d7c7de92")
+for script, path, count in [
+    ("huddle_render_assertions", "campfire/src/jobs/huddle_render_assertions.json", 20),
+    ("huddle_query_assertions", "db/src/tests/huddle_query_assertions.json", 8),
+    ("huddle_neighbor_mention", "campfire/src/jobs/huddle_neighbor_mention.json", None),
+    ("huddle_ring_policy_seam", "db/src/tests/huddle_ring_policy_seam.json", 8),
+]:
+    actual = json.loads((generated / f"{script}.json").read_text())
+    expected = json.loads((ROOT / "rust/crates" / path).read_text())
+    assert actual["reference_pin"] == "d7c7de92", script
+    assert actual == expected, script
+    if count is not None:
+        assert len(actual["cases"]) == count, script
+    if script == "huddle_render_assertions":
+        assert sum(len(case["steps"]) for case in actual["cases"]) == 28
+        detail = "20 cases; 28 steps"
+    elif script == "huddle_neighbor_mention":
+        assert len(actual["guards"]) == 11
+        detail = "1 neighboring mention; 11 guards; recorder idempotence"
+    elif script == "huddle_ring_policy_seam":
+        assert sum(len(case["outcomes"]) for case in actual["cases"]) == 13
+        detail = "8 WS17-dependent declarations; 13 policy-input outcomes"
+    else:
+        detail = "8 SQL/lock/cache cases"
+    print(f"{script}: {detail}; regenerated JSON matches")
+print("WS13b corpora: all 12 regenerated corpora match d7c7de92")

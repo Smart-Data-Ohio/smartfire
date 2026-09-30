@@ -21,6 +21,7 @@ mod huddle_membership_creation_test;
 mod huddle_join_push_sequences_test;
 mod huddle_invitation_job_test;
 mod huddle_query_assertions_test;
+mod huddle_ring_policy_seam_test;
 mod membership_test;
 mod keyword_alert_test;
 mod message_edit_test;

@@ -421,16 +421,16 @@ Owner: WS13b. Passed: 33/33 declarations. The 33 notifier sequences compare exac
 
 ## test/models/huddle/join_pusher_test.rb
 
-Owner: WS13b with WS17 for transport/policy integration. Partial: 8/13 complete assertions at the unchanged `prepare_push` seam. Thirteen Rails sequences cover payload/subscriptions, repeated pushes, timestamp preservation, connection and inbox gates, hidden/off/muted scopes and empty-subscription claims. Five DND/starred/quiet-hours/meeting/OOO declarations retain the WS17 policy decision: their huddle-side outcomes pass with pinned policy inputs. Hidden/off/muted scopes are also exercised with policy allowed, so those complete assertions do not depend on the input decision.
+Owner: WS13b with WS17 for transport/policy integration. Partial: 8/13 complete assertions at the unchanged `prepare_push` seam. Thirteen Rails sequences cover payload/subscriptions, repeated pushes, timestamp preservation, connection and inbox gates, hidden/off/muted scopes and empty-subscription claims. Each of the five `ws17_*_policy_input` tests runs the assertion against the existing seam and is marked below as depending on WS17. Their huddle-side outcomes pass with pinned Rails policy inputs; policy derivation awaits WS17. Hidden/off/muted scopes are also exercised with policy allowed, so those complete assertions do not depend on the input decision.
 
 - **Passed:** pushes the join to the recipient's subscriptions and stamps the throttle
 - **Passed:** a second push inside ten minutes is throttled
 - **Passed:** a push ten minutes later goes out again
-- a DND recipient gets no push and burns no throttle window
-- a starred joiner still pushes through DND
-- a recipient in quiet hours gets no push
-- a recipient quiet in a meeting gets no push
-- an out-of-office recipient gets no push unless they keep notifications on
+- **WS17-dependent:** a DND recipient gets no push and burns no throttle window
+- **WS17-dependent:** a starred joiner still pushes through DND
+- **WS17-dependent:** a recipient in quiet hours gets no push
+- **WS17-dependent:** a recipient quiet in a meeting gets no push
+- **WS17-dependent:** an out-of-office recipient gets no push unless they keep notifications on
 - **Passed:** a connected recipient gets no push and burns no throttle window
 - **Passed:** a switched-off or hidden room gets no push
 - **Passed:** a muted room gets no push and burns no throttle window
@@ -439,16 +439,16 @@ Owner: WS13b with WS17 for transport/policy integration. Partial: 8/13 complete 
 
 ## test/models/huddle/ring_policy_test.rb
 
-Owner: WS13b with WS17 for Notifications::Policy. All eight remain partial: invitation traces verify `publish_ring` payload behavior with explicit sound decisions, while this branch has no WS17 policy implementation. DND/allow-list/meeting/OOO and the RingPolicy override-to-policy adapter remain open. No seam signature changed and main has not been merged.
+Owner: WS13b with WS17 for Notifications::Policy. All eight assertions are ported and run in `huddle_ring_policy_seam_test.rs`: thirteen actual pinned Rails policy outcomes and complete invitation frames pass through the unchanged `publish_ring` seam. Each `ws17_input_*` test supplies the captured policy decision explicitly; the fixture preserves recipient/caller/allow-list/meeting/OOO/override context for integration. All eight remain WS17-dependent until WS17 derives the decision and wires RingPolicy/quiet-check. No test is silently skipped, no policy implementation is claimed, and main has not been merged.
 
-- an invitation rings a member who is not in do-not-disturb
-- do-not-disturb silences the ring
-- a caller allowed during do-not-disturb still rings
-- a quiet check override replaces the policy
-- quiet-during-meetings silences the ring during a busy interval
-- a caller allowed during do-not-disturb still rings through a meeting
-- out of office silences the ring unless the member keeps notifications on
-- a caller allowed during do-not-disturb still rings through out of office
+- **WS17-dependent:** an invitation rings a member who is not in do-not-disturb
+- **WS17-dependent:** do-not-disturb silences the ring
+- **WS17-dependent:** a caller allowed during do-not-disturb still rings
+- **WS17-dependent:** a quiet check override replaces the policy
+- **WS17-dependent:** quiet-during-meetings silences the ring during a busy interval
+- **WS17-dependent:** a caller allowed during do-not-disturb still rings through a meeting
+- **WS17-dependent:** out of office silences the ring unless the member keeps notifications on
+- **WS17-dependent:** a caller allowed during do-not-disturb still rings through out of office
 
 ## test/models/huddle_grant_test.rb
 
