@@ -138,6 +138,11 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "rooms/huddles#show" => arc(rooms::huddles::show),
+        "rooms/huddles#create" => arc(rooms::huddles::create),
+        "rooms/huddles#participants" => arc(rooms::huddles::participants),
+        "rooms/huddles#leave" => arc(rooms::huddles::leave),
+        "users/huddle_presence#show" => arc(rooms::huddles::presence),
         "rooms/stage/roles#update" => arc(rooms::stage_participation::role),
         "rooms/stage/hands#create" => arc(rooms::stage_participation::raise),
         "rooms/stage/hands#destroy" => arc(rooms::stage_participation::lower),
@@ -532,6 +537,7 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "rooms/huddles#show", "rooms/huddles#create", "rooms/huddles#participants", "rooms/huddles#leave", "users/huddle_presence#show",
         "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",
         "sessions/transfers#update", "sessions#new", "sessions#create", "sessions#destroy",
         "content_security_policy_reports#create", "accounts/users#index", "accounts/users#update",

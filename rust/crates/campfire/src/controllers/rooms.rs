@@ -9,7 +9,10 @@
 
 #[cfg(test)]
 mod call_lifecycle_tests;
+#[cfg(test)]
+mod public_huddle_tests;
 pub mod call_moderation;
+pub mod huddles;
 pub mod stage_streams;
 pub mod stage_participation;
 pub mod closeds;

@@ -33,6 +33,7 @@ C = ROOT / "rust/crates/db/src/models/call_moderation.rs"
 P = ROOT / "rust/crates/db/src/models/stage_streams.rs"
 Q = ROOT / "rust/crates/db/src/models/stage_participation.rs"
 R = ROOT / "rust/crates/campfire/src/controllers/rooms/stage_participation.rs"
+F = ROOT / "rust/crates/campfire/src/controllers/rooms/huddles.rs"
 
 
 def replace_once(source, before, after):
@@ -52,6 +53,12 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("public-auth-overrides-bypassed", F, lambda s: replace_once(s,"Some(request_authentication),","None,"),"campfire","public_huddle_authentication_errors_precede_csrf_and_configuration"),
+    ("public-cache-prepend-bypassed", F, lambda s: replace_once(s,'c.set_header("cache-control", "no-store");',""),"campfire","public_huddle_authentication_errors_precede_csrf_and_configuration"),
+    ("public-deleted-room-exposed", F, lambda s: replace_once(s,"if !room.deleted()","if true"),"campfire","public_huddle_http_matches_production_rails"),
+    ("public-session-leave-scope-bypassed", F, lambda s: replace_once(s,"session_id=? AND room_id=?", "session_id!=? AND room_id=?"),"campfire","public_huddle_http_matches_production_rails"),
+    ("public-in-call-boundary-included", F, lambda s: replace_once(s,"last_seen_at>?", "last_seen_at>=?"),"campfire","public_huddle_http_matches_production_rails"),
+
     ("stage-note-delivery-bypassed", B, lambda s: replace_body(s,"pub(crate) fn stage_ended_note(","Ok(())"),"campfire","last_host_departure_delivers_a_quiet_note_to_the_room_socket"),
     ("role-rank-bypassed", Q, lambda s: replace_once(s,"&& !administrator\n    {","&& false && !administrator\n    {"),"campfire","stage_role_and_hand_security_keep_grants_and_imported_hands_on_denial"),
     ("role-demotion-without-grant-left-live", Q, lambda s: replace_once(s,"Stream::end_for_membership(tx, room_id, target.id)?;",""),"campfire_db","stage_roles_and_hands_match_thirty_four_rails_controller_scenarios"),

@@ -26,6 +26,7 @@ outputs={
  'stage_views':'rust/crates/views/src/huddle_stage_vectors.json',
  'participation':'rust/crates/db/src/models/huddle_participation_vectors.json',
  'stage_note':'rust/crates/campfire/src/channels/huddle_stage_note_vectors.json',
+ 'public':'rust/crates/campfire/src/controllers/rooms/public_huddle_vectors.json',
 }
 for name,path in outputs.items():
  output_path=scratch/f'{name}.json'
