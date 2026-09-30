@@ -36,9 +36,11 @@ bytes for three rooms and two viewers; no membership or presence write occurs.
    client IDs, creators, content and owner feature records are not replaced.
 3. The current membership's `last_read_message_id` and `unread_at` produce
    `divider.message_id: Option<i64>` and `divider.count: i64`. The exact call is
-   `presenter.room_message_list(&messages, divider.message_id, divider.count)` under
+   `room_native::message_list(&presenter, &messages, divider.message_id, divider.count)` under
    `fragment_cache::with(&app.fragment_cache, ...)`. Its returned string is assigned
-   unchanged to `ShowView.shell.message_list = Some(list)`. Viewer dividers remain
+   unchanged to `ShowView.shell.message_list = Some(list)`. The adapter calls the unchanged
+   owner `presenter.room_message_list` seam and contributes the exact rooms/show prefix
+   `"\n    \n"`; standalone owner list callers receive no extra bytes. Viewer dividers remain
    outside the shared per-message cache.
 4. `ShowView.room`: ID, owner `RoomKind` (Open/Closed/Direct; voice/stage/board currently
    use Closed until their screen-owner integration), persisted name, viewer display name, resolved
@@ -64,7 +66,10 @@ Inside the request rendering scope, `room_native::components` renders:
   as the trusted `scheduled_control` argument to WS8bm `composer::Composer`.
 - WS8bm `channel_threads::PendingTemplate { ctx, user: &show.user }`.
 
-Those returned bytes become `shell.composer = Some(...)` and
+The root footer adapter removes the owner composer's one initial source newline and
+contributes two spaces, reproducing Rails capture/content_for. The pending-template
+adapter preserves Rails' final source newline. The adapted bytes become
+`shell.composer = Some(...)` and
 `shell.message_template = Some(...)`. The actual HTTP page mounts all three native
 components; it does not inject Rails message/composer fragments. Request tests check
 selected roots, around-anchor roots, schedule controls, real viewer token ownership,
@@ -97,8 +102,11 @@ for its viewer and rejected for another viewer. No response bytes are normalized
 The strict native comparison checks three seeded room root collections and all nine
 complete list/composer/pending-template regions. It deliberately exits nonzero on
 any difference, with no masks, allowlists, ignored app cases or substituted fragments.
-Current reconciliation needs owner caller whitespace and the missing WS15 provider
-card integration for the populated Designers list. The app suite proves native
+All six composer/template regions and both DM list regions now match exactly.
+The remaining populated Designers list differs only in four empty owner card slots:
+GitHub, Fizzy, generic link embed and LinkedIn. `ws8br-native-residual.json` retains
+each exact Rails/Rust region; the strict checker still exits 1. The owner message
+list and composer internals are unchanged. The app suite proves native
 mounting and controller behavior, not byte-identical full-page acceptance.
 
 Browser/system acceptance is inventoried for the end-to-end phase. Previously shipped

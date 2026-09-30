@@ -35,20 +35,20 @@
         {
           "name": "show renders a link preview written by hand without its off-scheme image and link",
           "line": 32,
-          "rust_result": "deferred",
-          "deferred_to": "WS8bm message renderer and WS15e embed provider"
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_renders_a_link_preview_written_by_hand_without_its_off_scheme_image_and_link",
+          "rust_result": "passed"
         },
         {
           "name": "show renders a link preview written by hand without its image pointed at this Smartfire",
           "line": 47,
-          "rust_result": "deferred",
-          "deferred_to": "WS8bm message renderer and WS15e embed provider"
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_renders_a_link_preview_written_by_hand_without_its_image_pointed_at_this_smartfire",
+          "rust_result": "passed"
         },
         {
           "name": "show renders an unfurled link preview",
           "line": 63,
-          "rust_result": "deferred",
-          "deferred_to": "WS8bm message renderer and WS15e embed provider"
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_renders_an_unfurled_link_preview",
+          "rust_result": "passed"
         },
         {
           "name": "show renders the unread divider above the first unread message on the page",
@@ -186,10 +186,10 @@
       "declared_count": 29,
       "rails_tests_run": 29,
       "rails_pass_count": 29,
-      "status": "24 source-declared cases individually executed in Rust; 5 deferred",
-      "rust_cases_run": 24,
-      "rust_pass_count": 24,
-      "rust_cases_deferred": 5,
+      "status": "27 source-declared cases individually executed in Rust; 2 deferred",
+      "rust_cases_run": 27,
+      "rust_pass_count": 27,
+      "rust_cases_deferred": 2,
       "rust_extra_tests": [],
       "rails_assertions": 153
     },
@@ -1308,17 +1308,17 @@
         {
           "name": "show costs a constant number of queries as rooms, people and threads grow",
           "line": 67,
-          "rust_result": "deferred",
-          "deferred_to": "Full-request query instrumentation; existing pure read-model budget tests do not claim this HTTP case"
+          "rust_test": "controllers::rooms::switchers_rails_cases::show_costs_a_constant_number_of_queries_as_rooms_people_and_threads_grow",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 5,
       "rails_pass_count": 5,
-      "status": "4 source-declared cases individually executed in Rust; 1 deferred",
-      "rust_cases_run": 4,
-      "rust_pass_count": 4,
-      "rust_cases_deferred": 1,
+      "status": "5 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 5,
+      "rust_pass_count": 5,
+      "rust_cases_deferred": 0,
       "rust_extra_tests": [],
       "rails_assertions": 33
     },
@@ -1501,17 +1501,17 @@
         {
           "name": "sidebar query count does not grow with group DMs, named or not",
           "line": 215,
-          "rust_result": "deferred",
-          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
+          "rust_test": "controllers::rooms::sidebars_rails_cases::sidebar_query_count_does_not_grow_with_group_dms_named_or_not",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 14,
       "rails_tests_run": 14,
       "rails_pass_count": 14,
-      "status": "5 source-declared cases individually executed in Rust; 9 deferred",
-      "rust_cases_run": 5,
-      "rust_pass_count": 5,
-      "rust_cases_deferred": 9,
+      "status": "6 source-declared cases individually executed in Rust; 8 deferred",
+      "rust_cases_run": 6,
+      "rust_pass_count": 6,
+      "rust_cases_deferred": 8,
       "rust_extra_tests": [],
       "rails_assertions": 76
     },
