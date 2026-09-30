@@ -6,14 +6,14 @@
 //! controllers use (`controllers::presenters::DbResolver`): checking out another connection here
 //! deadlocks once every pooled reader is waiting on the writer.
 
-use std::sync::{Arc,LazyLock};
+use std::sync::{Arc, LazyLock};
 
 use campfire_db::{BasicRichText, Connection, RichText};
 use campfire_kit::SharedClock;
-use campfire_richtext::{RenderContext,AttachableResolver,GidLookup};
-use campfire_richtext::markdown::{self,Icon,IconCatalog};
-use serde::Deserialize;
+use campfire_richtext::markdown::{self, Icon, IconCatalog};
+use campfire_richtext::{AttachableResolver, GidLookup, RenderContext};
 use rails_compat::Secrets;
+use serde::Deserialize;
 
 use crate::controllers::presenters::DbResolver;
 
@@ -28,7 +28,11 @@ impl AppRichText {
     }
 
     fn with_context<T>(&self, conn: &Connection, f: impl FnOnce(&RenderContext) -> T) -> T {
-        let resolver = DbResolver { conn, secrets: &self.secrets, now: self.clock.now() };
+        let resolver = DbResolver {
+            conn,
+            secrets: &self.secrets,
+            now: self.clock.now(),
+        };
         f(&resolver.render_context(None))
     }
 }
@@ -113,6 +117,36 @@ impl RichText for AppRichText {
         };
         markdown::render(source, &mentions, &icons(conn)?).map_err(|e| e.to_string())
     }
+    fn try_canonicalize_html(&self, conn: &Connection, html: &str) -> Result<String, String> {
+        self.with_context(conn, |ctx| {
+            campfire_richtext::Content::load(html, ctx).map(|c| c.to_html())
+        })
+        .map_err(|e| e.to_string())
+    }
+    fn try_to_plain_text(
+        &self,
+        conn: &Connection,
+        html: &str,
+        _: campfire_db::rich_text::UserNames<'_>,
+    ) -> Result<String, String> {
+        self.with_context(conn, |ctx| campfire_richtext::to_plain_text(html, ctx))
+            .map_err(|e| e.to_string())
+    }
+    fn try_markdown_plain_text(
+        &self,
+        conn: &Connection,
+        html: &str,
+        _: campfire_db::rich_text::UserNames<'_>,
+    ) -> Result<String, String> {
+        let icons = icons(conn)?;
+        self.with_context(conn, |ctx| markdown::plain_text(html, ctx, &icons))
+            .map_err(|e| e.to_string())
+    }
+    fn try_mentioned_user_ids(&self, conn: &Connection, html: &str) -> Result<Vec<i64>, String> {
+        self.with_context(conn, |ctx| campfire_richtext::mentioned_users(html, ctx))
+            .map(|users| users.into_iter().map(|u| u.id).collect())
+            .map_err(|e| e.to_string())
+    }
     fn canonicalize_html(&self, conn: &Connection, html: &str) -> String {
         match self.with_context(conn, |ctx| {
             campfire_richtext::Content::load(html, ctx).map(|content| content.to_html())
@@ -143,10 +177,14 @@ impl RichText for AppRichText {
         }
     }
 
-
-    /// `message.body.to_plain_text`. Where Rails would raise, the save would fail; the models
-    /// can't fail here, so it's logged and the tag-stripped text is used instead.
-    fn to_plain_text(&self, conn: &Connection, html: &str, user_names: campfire_db::rich_text::UserNames<'_>) -> String {
+    /// Compatibility callers still receive a logged fallback. Message writes and reads use
+    /// the fallible methods above, so renderer errors reach their transaction.
+    fn to_plain_text(
+        &self,
+        conn: &Connection,
+        html: &str,
+        user_names: campfire_db::rich_text::UserNames<'_>,
+    ) -> String {
         match self.with_context(conn, |ctx| campfire_richtext::to_plain_text(html, ctx)) {
             Ok(text) => text,
             Err(error) => {
@@ -238,5 +276,109 @@ mod tests {
                 .unwrap();
             assert_eq!(actual, row["plain"].as_str().unwrap(), "{}", row["source"]);
         }
+    }
+    #[test]
+    fn runtime_scheduled_edit_and_forward_match_rails() {
+        use campfire_db::models::forwarder::{self, BlobCopier, Destination};
+        use campfire_db::{Message, MessageChanges, NewScheduledMessage, ScheduledMessage};
+        struct NoAttachments;
+        impl BlobCopier for NoAttachments {
+            fn copy(
+                &self,
+                _: &mut campfire_db::Tx<'_>,
+                _: &campfire_db::Blob,
+            ) -> campfire_db::Result<campfire_db::Blob> {
+                panic!("no attachment")
+            }
+            fn discard(&self, _: &[campfire_db::Blob]) {}
+        }
+        let (db, adapter, _dir) = fixture();
+        let mut config = Config::new(db.path());
+        config.prepare = false;
+        let now = Timestamp::parse_db("2026-03-10 12:00:00").unwrap();
+        let db = Database::open(
+            config,
+            Env {
+                clock: Arc::new(campfire_db::TestClock::frozen_at(now)),
+                rich_text: Arc::new(adapter),
+                ..Env::default()
+            },
+        )
+        .unwrap();
+        let g = golden()["flows"].clone();
+        let source = g["scheduled"]["source"].as_str().unwrap().to_owned();
+        let sent = db
+            .write_blocking(move |tx| {
+                let item = ScheduledMessage::create(
+                    tx,
+                    NewScheduledMessage {
+                        user_id: fixtures::identify("david"),
+                        room_id: fixtures::identify("designers"),
+                        markdown_source: source,
+                        send_at: now.since(jiff::SignedDuration::from_secs(3600)),
+                        thread_id: None,
+                        reply_to_message_id: None,
+                    },
+                )?;
+                assert!(ScheduledMessage::dispatch(tx, item.id, now, true)?);
+                Message::find(
+                    tx.conn(),
+                    ScheduledMessage::find(tx.conn(), item.id)?
+                        .sent_message_id
+                        .unwrap(),
+                )
+            })
+            .unwrap();
+        let observation = |msg: &Message| {
+            db.read_blocking(|c|Ok(serde_json::json!({"body":msg.body_html(c)?.unwrap(),"plain":msg.plain_text_body(c,&*db.env().rich_text)?}))).unwrap()
+        };
+        assert_eq!(observation(&sent)["body"], g["scheduled"]["body"]);
+        assert_eq!(observation(&sent)["plain"], g["scheduled"]["plain"]);
+        let edit = g["edited"]["source"].as_str().unwrap().to_owned();
+        let edited = db
+            .write_blocking(move |tx| {
+                let mut msg = sent;
+                msg.edit(
+                    tx,
+                    MessageChanges {
+                        markdown_source: Some(edit),
+                        ..Default::default()
+                    },
+                )?;
+                Ok(msg)
+            })
+            .unwrap();
+        assert_eq!(observation(&edited)["body"], g["edited"]["body"]);
+        assert_eq!(observation(&edited)["plain"], g["edited"]["plain"]);
+        let forwarded = db
+            .write_blocking(move |tx| {
+                Ok(forwarder::forward(
+                    tx,
+                    &edited,
+                    &[Destination::room(fixtures::identify("watercooler"))],
+                    Some("Note @[David]"),
+                    fixtures::identify("david"),
+                    &NoAttachments,
+                )?
+                .unwrap()
+                .remove(0)
+                .message)
+            })
+            .unwrap();
+        let mut obs = observation(&forwarded);
+        obs["markdown_source"] = serde_json::to_value(&forwarded.markdown_source).unwrap();
+        obs["forwarded_markdown"] = serde_json::json!(forwarded.forwarded_markdown);
+        obs["mentionees"] = db
+            .read_blocking(|c| {
+                Ok(serde_json::json!(
+                    forwarded
+                        .mentionees(c, &*db.env().rich_text)?
+                        .into_iter()
+                        .map(|u| u.id)
+                        .collect::<Vec<_>>()
+                ))
+            })
+            .unwrap();
+        assert_eq!(obs, g["forwarded"]);
     }
 }

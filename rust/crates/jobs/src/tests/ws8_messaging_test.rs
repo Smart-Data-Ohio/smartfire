@@ -276,14 +276,20 @@ fn source_edit_rolls_back_with_a_failed_quote_refresh_enqueue() {
 fn room_mark_and_memberships_roll_back_with_a_failed_destroy_enqueue() {
     let (h, _, room, _) = messaging_harness();
     let before=h.db.read_blocking(move|c|Room::find(c,room)).unwrap();
+    let mark=move|tx:&mut Tx<'_>|campfire_db::models::room_delete::begin_destroy(tx,&Room::find(tx.conn(),room)?,&campfire_db::models::room_delete::HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:true});
     reject_jobs(&h);
-    assert!(h.db.write_blocking(move|tx|Room::find(tx.conn(),room)?.begin_destroy(tx)).is_err());
+    assert!(h.db.write_blocking(mark).is_err());
     assert_eq!(h.db.read_blocking(move|c|Room::find(c,room)).unwrap(),before);
     assert_eq!(h.db.read_blocking(move|c|Ok(Room::find(c,room)?.memberships(c)?.len())).unwrap(),1);
+    assert_eq!(h.db.read_blocking(|c|Ok(c.query_row::<i64,_,_>("SELECT COUNT(*) FROM huddle_cleanups",[],|r|r.get(0))?)).unwrap(),0);
     assert!(h.jobs().is_empty());
     restore_jobs(&h);
-    h.db.write_blocking(move|tx|Room::find(tx.conn(),room)?.begin_destroy(tx)).unwrap();
-    assert_eq!(h.jobs()[0].class,"Room::DestroyJob");
+    h.db.write_blocking(mark).unwrap();
+    let jobs=h.jobs();
+    assert_eq!(jobs.len(),2);
+    assert!(jobs.iter().any(|j|j.class=="Room::DestroyJob"));
+    assert!(jobs.iter().any(|j|j.class=="Huddle::CleanupJob"));
+
 }
 #[test]
 fn stuck_room_claim_rolls_back_with_a_failed_destroy_enqueue() {

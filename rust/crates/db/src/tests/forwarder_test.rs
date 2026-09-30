@@ -19,7 +19,7 @@ struct Copier {
 }
 
 impl BlobCopier for Copier {
-    fn copy(&self, tx: &Tx<'_>, blob: &Blob) -> Result<Blob> {
+    fn copy(&self, tx: &mut Tx<'_>, blob: &Blob) -> Result<Blob> {
         let mut made = self.made.lock().unwrap();
         if self.fail_on == Some(made.len() + 1) {
             return Err(Error::Other("storage is down".into()));

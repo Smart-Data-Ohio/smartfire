@@ -459,7 +459,7 @@ fn export_database_for_rails() {
         )?;
         struct NoAttachments;
         impl crate::models::forwarder::BlobCopier for NoAttachments {
-            fn copy(&self, _: &Tx<'_>, _: &crate::Blob) -> Result<crate::Blob> {
+            fn copy(&self, _: &mut Tx<'_>, _: &crate::Blob) -> Result<crate::Blob> {
                 unreachable!("the source has no attachment")
             }
             fn discard(&self, _: &[crate::Blob]) {}
@@ -471,6 +471,12 @@ fn export_database_for_rails() {
         Ok(())
     })
     .unwrap();
+
+    // Room deletion marking and its cleanup claim remain readable and valid to Rails.
+    db.write_blocking(|tx| {
+        let room=crate::Room::create_for(tx,crate::RoomType::Closed,Some("Rust deleted room"),id("david"),&[id("david")])?;
+        crate::models::room_delete::begin_destroy(tx,&room,&crate::models::room_delete::HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:true})
+    }).unwrap();
 
     // A multiple-choice poll with votes, closed; and an open one closing later.
     db.write_blocking(|tx| {

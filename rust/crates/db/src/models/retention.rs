@@ -40,40 +40,37 @@ async fn prune(
     Ok(())
 }
 pub async fn perform(db: &Database) -> Result<()> {
-    let now = db.env().now();
-    for (table, predicate, cutoff) in [
-        (
-            "agent_events",
-            "created_at < ?",
-            now.ago(jiff::SignedDuration::from_secs(90 * 86400)),
-        ),
-        ("two_factor_remembered_devices", "expires_at <= ?", now),
-        ("two_factor_setup_secrets", "expires_at <= ?", now),
+    // Rails evaluates each relation's cutoff when that branch starts, not at job start.
+    for (table, predicate, days) in [
+        ("agent_events", "created_at < ?", 90),
+        ("two_factor_remembered_devices", "expires_at <= ?", 0),
+        ("two_factor_setup_secrets", "expires_at <= ?", 0),
         (
             "activity_items",
             "read_at IS NOT NULL AND updated_at < ?",
-            now.ago(jiff::SignedDuration::from_secs(180 * 86400)),
+            180,
         ),
-        (
-            "github_webhook_deliveries",
-            "created_at < ?",
-            now.ago(jiff::SignedDuration::from_secs(14 * 86400)),
-        ),
+        ("github_webhook_deliveries", "created_at < ?", 14),
         (
             "huddle_cleanups",
             "completed_at IS NOT NULL AND completed_at < ?",
-            now.ago(jiff::SignedDuration::from_secs(7 * 86400)),
+            7,
         ),
-        ("audit_logs", "created_at < ?", audit_cutoff(now)?),
-        (
-            "fizzy_card_caches",
-            "updated_at < ?",
-            now.ago(jiff::SignedDuration::from_secs(86400)),
-        ),
+        ("audit_logs", "created_at < ?", -1),
+        ("fizzy_card_caches", "updated_at < ?", 1),
     ] {
+        let now = db.env().now();
+        let cutoff = if table == "audit_logs" {
+            audit_cutoff(now)?
+        } else {
+            now.ago(jiff::SignedDuration::from_secs(days * 86400))
+        };
         prune(db, table, predicate.to_owned(), cutoff).await?;
     }
-    let cutoff = now.ago(jiff::SignedDuration::from_secs(30 * 86400));
+    let cutoff = db
+        .env()
+        .now()
+        .ago(jiff::SignedDuration::from_secs(30 * 86400));
     loop {
         let ids:Vec<i64>=db.read(move |conn|query_all(conn,&format!("SELECT id FROM huddle_grants WHERE revoked_at < ? ORDER BY id LIMIT {BATCH_SIZE}"),[cutoff],|r|r.get(0))).await?;
         if ids.is_empty() {

@@ -653,10 +653,8 @@ impl ChannelThread {
     /// memberships and the other dependents' rows, then the thread; the parent message is stamped
     /// (`after_destroy :stamp_parent_message`) and its indicator hidden after commit.
     ///
-    /// WS12:
-    /// the deleted-work snapshot and `work_unassigned` event, and the board row removal. The work
-    /// events, links, handoffs, SLA nudges, agent steps and PR thread rows are deleted without
-    /// their own callbacks until their owners (WS11, WS12, WS15) port them.
+    /// Work/SLA inbox dependencies are destroyed here. The deleted-work snapshot,
+    /// work_unassigned ledger/webhook and board row removal remain WS11/WS12/WS8b's.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
         for tag in ThreadTag::for_thread(tx.conn(), self.id)? {
@@ -668,6 +666,10 @@ impl ChannelThread {
         // WorkThreadEvent's dependent inbox rows must be destroyed before its FK cascade.
         tx.conn().execute_cached(
             "DELETE FROM activity_items WHERE source_type='WorkThreadEvent' AND source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id=?)",
+            [self.id],
+        )?;
+        tx.conn().execute_cached(
+            "DELETE FROM activity_items WHERE source_type='BoardSlaNudge' AND source_id IN (SELECT id FROM board_sla_nudges WHERE channel_thread_id=?)",
             [self.id],
         )?;
         for sql in [

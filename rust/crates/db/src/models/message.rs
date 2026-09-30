@@ -483,11 +483,26 @@ impl Message {
                     .rich_text()
                     .render_markdown(tx.conn(), source, attributes.room_id)
                     .map_err(crate::error::Error::Other)?;
-                Ok(Some(rendered))
+                Ok(Some(Self::prepare_body(tx, &rendered, true)?))
             }
             Some(_) => Ok(None),
-            None => Ok(attributes.body.clone()),
+            None => attributes.body.as_deref().map(|body| Self::prepare_body(tx, body, false)).transpose(),
         }
+    }
+
+    fn prepare_body(tx: &Tx<'_>, body: &str, markdown: bool) -> Result<String> {
+        let text = tx.rich_text();
+        let body = text.try_canonicalize_html(tx.conn(), body).map_err(crate::Error::Other)?;
+        // Resolve before committing: index/receive callbacks must not hide renderer failures
+        // after the originating row has already committed.
+        let names = |id| User::find_by_id(tx.conn(), id).ok().flatten().map(|u| u.name);
+        if markdown {
+            text.try_markdown_plain_text(tx.conn(), &body, &names).map_err(crate::Error::Other)?;
+        } else {
+            text.try_to_plain_text(tx.conn(), &body, &names).map_err(crate::Error::Other)?;
+        }
+        text.try_mentioned_user_ids(tx.conn(), &body).map_err(crate::Error::Other)?;
+        Ok(body)
     }
 
     /// The validations of `app/models/message.rb` for a new message.
@@ -620,6 +635,8 @@ impl Message {
     /// the search index follows after commit. A streaming message is saved even when the body
     /// is unchanged, which restarts its activity clock and touches the room.
     pub fn update_body(&mut self, tx: &mut Tx<'_>, body: &str) -> Result<()> {
+        let body = Self::prepare_body(tx, body, self.markdown())?;
+        let body = body.as_str();
         self.touch_streaming_activity(tx)?;
         match RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
             Some(record) if record.body.as_deref() == Some(body) => return Ok(()),
@@ -667,8 +684,8 @@ impl Message {
             return Ok(false);
         }
         let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
-        let has_text = |html: &str| !rich_text.to_plain_text(conn, html, &names).trim().is_empty();
-        Ok(has_text(body) || has_text(&previous))
+        let has_text = |html: &str| rich_text.try_to_plain_text(conn, html, &names).map(|s| !s.trim().is_empty()).map_err(crate::Error::Other);
+        Ok(has_text(body)? || has_text(&previous)?)
     }
 
     fn markdown_source_will_change(&self, changes: &MessageChanges) -> bool {
@@ -694,6 +711,7 @@ impl Message {
             }
             _ => changes.body.clone(),
         };
+        let body = body.as_deref().map(|body| Self::prepare_body(tx, body, markdown_source.is_some())).transpose()?;
         let current_body = self.body_html(conn)?;
         let body = body.filter(|body| current_body.as_deref() != Some(body.as_str()));
         let references_changed = !self.streaming && (markdown_source != self.markdown_source || body.is_some());
@@ -1002,9 +1020,9 @@ impl Message {
         if let Some(html) = self.body_html(conn)? {
             let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
             text = if self.markdown() {
-                rich_text.markdown_plain_text(conn, &html, &names)
+                rich_text.try_markdown_plain_text(conn, &html, &names).map_err(crate::Error::Other)?
             } else {
-                rich_text.to_plain_text(conn, &html, &names)
+                rich_text.try_to_plain_text(conn, &html, &names).map_err(crate::Error::Other)?
             };
         }
         if text.trim().is_empty() {
@@ -1065,7 +1083,7 @@ impl Message {
             return forward_note_mentionees(conn, self.room_id, self.forward_note.as_deref().unwrap_or(""));
         }
         let ids = match self.body_html(conn)? {
-            Some(html) => rich_text.mentioned_user_ids(conn, &html),
+            Some(html) => rich_text.try_mentioned_user_ids(conn, &html).map_err(crate::Error::Other)?,
             None => Vec::new(),
         };
         mentionees_in_room(conn, self.room_id, &ids)

@@ -41,6 +41,21 @@ pub trait RichText: Send + Sync {
     fn markdown_plain_text(&self, conn: &Connection, html: &str, user_names: UserNames<'_>) -> String {
         self.to_plain_text(conn, html, user_names)
     }
+    /// Fallible write/read paths. Defaults keep lightweight test/owner adapters compatible;
+    /// production overrides these so parsing/resolution failures abort the caller's write.
+    fn try_canonicalize_html(&self, conn: &Connection, html: &str) -> Result<String, String> {
+        Ok(self.canonicalize_html(conn, html))
+    }
+    fn try_to_plain_text(&self, conn: &Connection, html: &str, names: UserNames<'_>) -> Result<String, String> {
+        Ok(self.to_plain_text(conn, html, names))
+    }
+    fn try_markdown_plain_text(&self, conn: &Connection, html: &str, names: UserNames<'_>) -> Result<String, String> {
+        Ok(self.markdown_plain_text(conn, html, names))
+    }
+    fn try_mentioned_user_ids(&self, conn: &Connection, html: &str) -> Result<Vec<i64>, String> {
+        Ok(self.mentioned_user_ids(conn, html))
+    }
+
 }
 
 /// `Message::Markdown::MENTION_TOKEN_PATTERN` (`/(?<!\\)@\[(?<name>[^\[\]\r\n]+)\]/`): the

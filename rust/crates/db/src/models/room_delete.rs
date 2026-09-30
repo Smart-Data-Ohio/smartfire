@@ -353,10 +353,11 @@ fn finish_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Result
     }
     // Stage owns streams dependent:destroy (no destroy callbacks). AgentGrant has no
     // room FK/dependent destroy: Rails retains its revoked grant with the old room id.
-    for table in ["streams", "github_pull_request_threads"] {
+    if room.stage() {
         tx.conn()
-            .execute(&format!("DELETE FROM {table} WHERE room_id=?"), [room.id])?;
+            .execute_cached("DELETE FROM streams WHERE room_id=?", [room.id])?;
     }
+    tx.conn().execute_cached("DELETE FROM github_pull_request_threads WHERE room_id=?", [room.id])?;
     tx.conn()
         .execute_cached("DELETE FROM rooms WHERE id=?", [room.id])?;
     Ok(())

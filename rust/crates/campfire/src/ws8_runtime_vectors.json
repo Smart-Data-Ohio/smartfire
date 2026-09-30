@@ -100,5 +100,38 @@
     "id": 1,
     "name": "ws8custom",
     "title": "WS8 custom"
+  },
+  "flows": {
+    "scheduled": {
+      "source": "**Scheduled** @[David] and :gpt:",
+      "body": "<p><strong>Scheduled</strong> <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment> and <img class=\"icon icon--brand\" src=\"/assets/icons/brands/openai-a0bb8578.svg\" alt=\":openai:\" title=\"OpenAI\" draggable=\"false\"></p>",
+      "plain": "Scheduled @David and :openai:"
+    },
+    "edited": {
+      "source": "## Edited\n\n- [x] ready @[Jason]",
+      "body": "<h2>Edited</h2>\n<ul>\n<li><input type=\"checkbox\" checked=\"\" disabled=\"disabled\"> ready <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTQ5MDg3NjU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--2d7e85bc60af2ffd9f0bcdef54c409b3a50e3726\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment></li>\n</ul>",
+      "plain": "Edited\n\n ready @Jason"
+    },
+    "forwarded": {
+      "body": "<h2>Edited</h2>\n<ul>\n<li><input type=\"checkbox\" checked=\"\" disabled=\"disabled\"> ready <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTQ5MDg3NjU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--2d7e85bc60af2ffd9f0bcdef54c409b3a50e3726\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment></li>\n</ul>",
+      "plain": "Note @[David]\n\nEdited•  ready @Jason",
+      "markdown_source": null,
+      "forwarded_markdown": true,
+      "mentionees": [
+        127326141
+      ]
+    }
+  },
+  "attachment_copy": {
+    "filename": "ws8.txt",
+    "content_type": "text/plain",
+    "byte_size": 9,
+    "checksum": "PrIkCiTJVC0/MuhckfiYBA==",
+    "metadata": {
+      "ws8": "metadata",
+      "identified": true,
+      "analyzed": true
+    },
+    "service_name": "test"
   }
 }

@@ -154,6 +154,16 @@ check("dropped schedule") do
     dropped.activity_items.sole.event_type == "scheduled_message_dropped"
 end
 
+deleted_room=Room.find_by!(name: "Rust deleted room")
+old_huddle_secret=ENV["LIVEKIT_API_SECRET"]
+ENV["LIVEKIT_API_SECRET"]="fixture-secret"
+cleanup_room_name=Huddle.room_name(deleted_room.id)
+ENV["LIVEKIT_API_SECRET"]=old_huddle_secret
+check("room deletion and cleanup claim") do
+  deleted_room.deleted? && deleted_room.memberships.empty? && deleted_room.destroy_enqueued_at.present? &&
+    HuddleCleanup.where(operation: "delete_room",room_name: cleanup_room_name).any? { |r| r.valid? && r.enqueued_at.present? && r.next_attempt_at == r.enqueued_at + 1.minute }
+end
+
 bot = User.find_by!(name: "Rust Bot")
 bot_key = File.read("/out/rust_export.sqlite3.bot_key")
 tampered = bot_key.sub(/.\z/) { _1 == "a" ? "b" : "a" }

@@ -12,5 +12,20 @@ canonical=html.map{|body|{input:body,output:ActionText::Content.new(body).to_htm
 runner=Periodic::Runner.new(reminders_interval:17,retention_interval:123)
 tasks=runner.instance_variable_get(:@tasks).select{|t|["saved item reminders","scheduled messages","poll closing","stuck rooms","retention prune"].include?(t.name)}.map{|t|{name:t.name,seconds:t.interval.to_i}}
 broadcasts=[{kind:"remove",stream:"gid://campfire/User/1:rooms",target:"list_rooms_direct_4",payload:ApplicationController.helpers.turbo_stream_action_tag(:remove,target:"list_rooms_direct_4")},{kind:"cable",stream:"user_1_unread_threads",payload:{threadId:4}}]
-File.write(ARGV.fetch(0),JSON.pretty_generate({markdown:markdown,canonical:canonical,tasks:tasks,broadcasts:broadcasts,custom:{id:icon.id,name:icon.name,title:icon.title}})+"\n")
-puts "WS8 runtime vectors: #{markdown.size} Markdown, #{canonical.size} canonicalization, #{tasks.size} periodic tasks, #{broadcasts.size} template-free broadcasts"
+flow_source = "**Scheduled** @[David] and :gpt:"
+flow_edit = "## Edited\n\n- [x] ready @[Jason]"
+scheduled = ScheduledMessage.create!(user:user,room:room,markdown_source:flow_source,send_at:1.hour.from_now)
+ScheduledMessage::Dispatcher.dispatch_now!(scheduled)
+posted = scheduled.reload.sent_message
+flows = {scheduled:{source:flow_source,body:posted.body.body.to_html,plain:posted.plain_text_body}}
+posted.update!(markdown_source:flow_edit)
+flows[:edited] = {source:flow_edit,body:posted.body.body.to_html,plain:posted.plain_text_body}
+destination = Room.find(ActiveRecord::FixtureSet.identify("watercooler"))
+forward = Messages::Forwarder.call(source:posted,destinations:[{room_id:destination.id}],note:"Note @[David]",creator:user).first.message
+flows[:forwarded] = {body:forward.body.body.to_html,plain:forward.plain_text_body,markdown_source:forward.markdown_source,forwarded_markdown:forward.forwarded_markdown?,mentionees:forward.mentionees.map(&:id)}
+attachment = room.messages.create!(creator:user,body:"Attachment")
+attachment.attachment.attach(io:StringIO.new("WS8 copy\n"),filename:"ws8.txt",content_type:"text/plain",identify:false,metadata:{"ws8"=>"metadata"})
+copy = Messages::Forwarder.call(source:attachment,destinations:[{room_id:destination.id}],creator:user).first.message.attachment.blob
+attachment_copy = copy.attributes.slice("filename","content_type","byte_size","checksum","metadata","service_name")
+File.write(ARGV.fetch(0),JSON.pretty_generate({markdown:markdown,canonical:canonical,tasks:tasks,broadcasts:broadcasts,custom:{id:icon.id,name:icon.name,title:icon.title},flows:flows,attachment_copy:attachment_copy})+"\n")
+puts "WS8 runtime vectors: #{markdown.size} Markdown, #{canonical.size} canonicalization, #{tasks.size} periodic tasks, #{broadcasts.size} template-free broadcasts, #{flows.size} write flows, 1 attachment copy"

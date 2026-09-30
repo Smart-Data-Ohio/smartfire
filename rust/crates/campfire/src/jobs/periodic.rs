@@ -147,7 +147,7 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     }));
     periodic
 }
-async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
+pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::SavedItem::due_reminder_ids(conn, now))
@@ -162,7 +162,7 @@ async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
     }
     Ok(())
 }
-async fn scheduled_messages(db: &Database) -> anyhow::Result<()> {
+pub(super) async fn scheduled_messages(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::ScheduledMessage::due_candidate_ids(conn, now))
@@ -177,7 +177,7 @@ async fn scheduled_messages(db: &Database) -> anyhow::Result<()> {
     }
     Ok(())
 }
-async fn poll_closing(db: &Database) -> anyhow::Result<()> {
+pub(super) async fn poll_closing(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::Poll::due(conn, now))

@@ -67,7 +67,7 @@ fn invalid(message: &str) -> Refusal {
 /// filename, content type and metadata) and inserts its row in `tx`. `discard` removes the copies'
 /// files when the forward fails (`purge_copied_blobs`); their rows roll back with the write.
 pub trait BlobCopier {
-    fn copy(&self, tx: &Tx<'_>, blob: &Blob) -> Result<Blob>;
+    fn copy(&self, tx: &mut Tx<'_>, blob: &Blob) -> Result<Blob>;
     fn discard(&self, blobs: &[Blob]);
 }
 
@@ -198,7 +198,7 @@ fn build_forward(
     copied: &mut Vec<Blob>,
 ) -> Result<NewMessage> {
     let body = snapshot_body(tx.conn(), source)?;
-    let body = tx.rich_text().canonicalize_html(tx.conn(), &body);
+    let body = tx.rich_text().try_canonicalize_html(tx.conn(), &body).map_err(Error::Other)?;
     let attachment_blob_id = match source.attachment(tx.conn())? {
         Some((_, blob)) => {
             let copy = copier.copy(tx, &blob)?;

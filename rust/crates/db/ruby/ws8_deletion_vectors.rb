@@ -12,6 +12,8 @@ thread = ChannelThread.create!(room: room, creator: user, name: "Discussion")
 thread.post_message!(creator: other, attributes: {markdown_source: "Reply"})
 work = thread.work_thread_events.create!(actor: user, event_type: "work_update", to_status: "planned")
 ActivityItem.create!(user: other, source: work, event_type: "work_update")
+nudge = BoardSlaNudge.create!(room:room,channel_thread:thread,recipient:other,work_status:"planned",stage:"nudge",status_entered_at:1.hour.ago)
+ActivityItem.create!(user:other,source:nudge,event_type:"work_sla")
 scheduled = ScheduledMessage.create!(user: user, room: room, thread: thread, markdown_source: "Pending", send_at: 1.hour.from_now)
 scheduled.drop!(reason: "fixture")
 event = room.events.create!(organizer: user, title: "Meeting", starts_at: 2.days.from_now, time_zone: "UTC")
@@ -48,7 +50,7 @@ progress += [check("SELECT id FROM rooms WHERE id=#{room.id}"),check("SELECT roo
 Room::DestroyJob.perform_now(room.id)
 tables = %w[memberships messages channel_threads scheduled_messages events huddle_grants streams github_repository_subscriptions agent_grants message_pins board_tag_assignments board_sla_rules board_sla_nudges board_stale_digests]
 finished = tables.map { |t| check("SELECT id FROM #{t} WHERE room_id=#{room.id}") }
-finished += [check("SELECT id FROM rooms WHERE id=#{room.id}"), check("SELECT room_id FROM agent_events WHERE id=#{ledger.id}"), check("SELECT room_id FROM agent_approvals WHERE id=#{approval.id}"), check("SELECT huddle_grant_id,room_name,identity FROM huddle_cleanups WHERE room_name IN ('ws8-livekit-room','#{Huddle.room_name(room.id)}') ORDER BY id"), check("SELECT id FROM event_calendar_entries WHERE event_id=#{event.id}"), check("SELECT id FROM event_attendances WHERE event_id=#{event.id}"), check("SELECT id FROM github_notifications WHERE subscription_id=#{subscription.id}"), check("SELECT id FROM activity_items WHERE (source_type='ScheduledMessage' AND source_id=#{scheduled.id}) OR (source_type='HuddleGrant' AND source_id=#{grant.id}) OR (source_type='WorkThreadEvent' AND source_id=#{work.id}) OR (source_type='Event' AND source_id=#{event.id})")]
+finished += [check("SELECT id FROM rooms WHERE id=#{room.id}"), check("SELECT room_id FROM agent_events WHERE id=#{ledger.id}"), check("SELECT room_id FROM agent_approvals WHERE id=#{approval.id}"), check("SELECT huddle_grant_id,room_name,identity FROM huddle_cleanups WHERE room_name IN ('ws8-livekit-room','#{Huddle.room_name(room.id)}') ORDER BY id"), check("SELECT id FROM event_calendar_entries WHERE event_id=#{event.id}"), check("SELECT id FROM event_attendances WHERE event_id=#{event.id}"), check("SELECT id FROM github_notifications WHERE subscription_id=#{subscription.id}"), check("SELECT id FROM activity_items WHERE (source_type='ScheduledMessage' AND source_id=#{scheduled.id}) OR (source_type='HuddleGrant' AND source_id=#{grant.id}) OR (source_type='WorkThreadEvent' AND source_id=#{work.id}) OR (source_type='Event' AND source_id=#{event.id}) OR (source_type='BoardSlaNudge' AND source_id=#{nudge.id})")]
 calendar_jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j[:job] == Calendar::RemoteDeleteJob }.map { |j| j[:args] }
 result = {now: Time.current.to_fs(:db), room_id: room.id, setup_sql: setup, begun: begun, finished: finished, calendar_jobs: calendar_jobs, progress: progress}
 ActiveRecord::FixtureSet.reset_cache

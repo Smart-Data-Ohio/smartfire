@@ -754,14 +754,216 @@ fn ws8_template_free_broadcast_payloads_match_rails() {
 
 #[tokio::test]
 async fn ws8_room_and_retention_workers_run_in_the_real_app() {
-    let (booted, _dir)=app().await; let app=booted.app.clone();
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
     app.db.write(|tx| {
         tx.emit_after_commit(Event::job(&campfire_db::models::room_delete::DestroyJob{room_id:999}));
         tx.emit_after_commit(Event::job(&campfire_db::models::retention::PruneJob{}));
         assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('Room::DestroyJob','Retention::PruneJob')",[],|r|r.get::<_,i64>(0))?,2);
         Ok(())
     }).await.unwrap();
-    let rows=wait_for(&app,"maintenance jobs",|r|r.is_empty() || r.iter().any(|r|r.status=="failed")).await;
-    assert!(rows.is_empty(),"{rows:?}");
+    let rows = wait_for(&app, "maintenance jobs", |r| {
+        r.is_empty() || r.iter().any(|r| r.status == "failed")
+    })
+    .await;
+    assert!(rows.is_empty(), "{rows:?}");
     booted.jobs.shutdown(Duration::from_secs(5)).await;
+}
+
+#[tokio::test]
+async fn ws8_storage_copies_match_rails_and_rollback_on_durable_enqueue_failure() {
+    use campfire_db::models::forwarder::{self, Destination};
+    use campfire_db::{Message, NewMessage, NewUser, Room, RoomType, User};
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    let g: serde_json::Value =
+        serde_json::from_str(include_str!("../ws8_runtime_vectors.json")).unwrap();
+    let storage = app.storage.clone();
+    let staged = storage
+        .stage_bytes(
+            b"WS8 copy\n",
+            campfire_storage::Filename::new("ws8.txt"),
+            Some("text/plain"),
+        )
+        .unwrap();
+    // The source carries metadata that must survive copying. Use the Rails blob fields.
+    let mut source = staged.blob().clone();
+    source.metadata =
+        campfire_storage::Json::parse(&g["attachment_copy"]["metadata"].to_string()).unwrap();
+    let source_key = source.key.clone();
+    let (message, dest) = app
+        .db
+        .write(move |tx| {
+            let u = User::create(
+                tx,
+                NewUser {
+                    name: "Copy sender".into(),
+                    ..Default::default()
+                },
+            )?;
+            let room = Room::create_for(tx, RoomType::Closed, Some("Copy source"), u.id, &[u.id])?;
+            let dest = Room::create_for(
+                tx,
+                RoomType::Closed,
+                Some("Copy destination"),
+                u.id,
+                &[u.id],
+            )?;
+            let saved = source
+                .insert(tx.conn(), tx.now().jiff())
+                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            crate::active_storage::keep_after_commit(tx, staged);
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    creator_id: u.id,
+                    room_id: room.id,
+                    body: Some("Attachment".into()),
+                    attachment_blob_id: Some(saved.id),
+                    ..Default::default()
+                },
+            )?;
+            tx.conn().execute_batch("DELETE FROM background_jobs")?;
+            Ok((message, dest.id))
+        })
+        .await
+        .unwrap();
+    let service = app.storage.service.clone();
+    let copier = crate::messaging::ForwarderCopier::new(app.storage.clone());
+    let msg = message.clone();
+    let copy = app
+        .db
+        .write(move |tx| {
+            Ok(forwarder::forward(
+                tx,
+                &msg,
+                &[Destination::room(dest)],
+                None,
+                msg.creator_id,
+                &copier,
+            )?
+            .unwrap()
+            .remove(0)
+            .message)
+        })
+        .await
+        .unwrap();
+    let blob = app
+        .db
+        .read(move |c| Ok(copy.attachment(c)?.unwrap().1))
+        .await
+        .unwrap();
+    assert_ne!(blob.key, source_key);
+    assert_eq!(
+        service.download(&blob.key).unwrap(),
+        service.download(&source_key).unwrap()
+    );
+    let expected = &g["attachment_copy"];
+    assert_eq!(
+        serde_json::json!({"filename":blob.filename,"content_type":blob.content_type,"byte_size":blob.byte_size,"checksum":blob.checksum,"metadata":serde_json::from_str::<serde_json::Value>(blob.metadata.as_deref().unwrap()).unwrap()}),
+        serde_json::json!({"filename":expected["filename"],"content_type":expected["content_type"],"byte_size":expected["byte_size"],"checksum":expected["checksum"],"metadata":expected["metadata"]})
+    );
+    let before = app
+        .db
+        .read(|c| {
+            Ok(
+                c.query_row::<i64, _, _>("SELECT COUNT(*) FROM active_storage_blobs", [], |r| {
+                    r.get(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; CREATE TRIGGER reject_ws8_copy_job BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT,'queue unavailable'); END")?;Ok(())}).await.unwrap();
+    let copier = crate::messaging::ForwarderCopier::new(app.storage.clone());
+    assert!(
+        app.db
+            .write(move |tx| forwarder::forward(
+                tx,
+                &message,
+                &[Destination::room(dest)],
+                None,
+                message.creator_id,
+                &copier
+            ))
+            .await
+            .is_err()
+    );
+    let count = app
+        .db
+        .read(|c| {
+            Ok(
+                c.query_row::<i64, _, _>("SELECT COUNT(*) FROM active_storage_blobs", [], |r| {
+                    r.get(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, before);
+    // The failed copy has no row whose key can be queried; inspect real storage files.
+    fn file_count(path: &std::path::Path) -> usize {
+        std::fs::read_dir(path)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .map(|p| if p.is_dir() { file_count(&p) } else { 1 })
+            .sum()
+    }
+    assert_eq!(file_count(service.root()), before as usize);
+    assert!(service.exist(&source_key));
+}
+
+#[tokio::test]
+async fn ws8_periodic_row_failures_continue_like_rails() {
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    let g: serde_json::Value =
+        serde_json::from_str(include_str!("../ws8_loop_vectors.json")).unwrap();
+    let now = campfire_db::Timestamp::parse_db(g["now"].as_str().unwrap()).unwrap();
+    let sql = g["setup_sql"].as_str().unwrap().to_owned();
+    app.db
+        .write(move |tx| {
+            campfire_db::fixtures::load(
+                tx.conn(),
+                &campfire_db::fixtures::reference_dir(),
+                &campfire_db::fixtures::Options {
+                    now,
+                    bcrypt_cost: 4,
+                },
+            )?;
+            tx.conn().execute_batch("PRAGMA defer_foreign_keys=ON")?;
+            tx.conn().execute_batch(&sql)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    periodic::saved_item_reminders(&app.db).await.unwrap();
+    periodic::scheduled_messages(&app.db).await.unwrap();
+    periodic::poll_closing(&app.db).await.unwrap();
+    for check in g["checks"].as_array().unwrap() {
+        let sql = check["sql"].as_str().unwrap().to_owned();
+        let rows = app
+            .db
+            .read(move |c| {
+                let mut stmt = c.prepare(&sql)?;
+                let n = stmt.column_count();
+                Ok(stmt
+                    .query_map([], |r| {
+                        (0..n)
+                            .map(|i| r.get::<_, i64>(i))
+                            .collect::<rusqlite::Result<Vec<_>>>()
+                    })?
+                    .collect::<rusqlite::Result<Vec<_>>>()?)
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(rows).unwrap(),
+            check["rows"],
+            "{}",
+            check["sql"]
+        );
+    }
 }
