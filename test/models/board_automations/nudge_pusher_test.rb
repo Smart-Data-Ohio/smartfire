@@ -18,9 +18,19 @@ class BoardAutomations::NudgePusherTest < ActiveSupport::TestCase
       payload.fetch(:title) == "Launch" &&
         payload.fetch(:body) == "SLA breach: Stale work sitting in In progress" &&
         payload.fetch(:path) == Rails.application.routes.url_helpers.room_path(@board, thread: @post.id) &&
+        payload.fetch(:tag) == "board-nudge-#{@post.id}" &&
         subscriptions.map(&:user_id) == [ users(:jz).id ]
     end
 
+    BoardAutomations::NudgePusher.new(nudge: @nudge).push
+  end
+
+  test "nudge and escalation notifications can be built by the delivery pool" do
+    Rails.configuration.x.web_push_pool.delivery_pool.expects(:post).twice
+
+    BoardAutomations::NudgePusher.new(nudge: @nudge).push
+
+    @nudge.update!(stage: "escalation")
     BoardAutomations::NudgePusher.new(nudge: @nudge).push
   end
 
@@ -29,7 +39,8 @@ class BoardAutomations::NudgePusherTest < ActiveSupport::TestCase
 
     pool = Rails.configuration.x.web_push_pool
     pool.expects(:queue).with do |payload, _subscriptions|
-      payload.fetch(:body) == "Escalated: Stale work sitting in In progress"
+      payload.fetch(:body) == "Escalated: Stale work sitting in In progress" &&
+        payload.fetch(:tag) == "board-nudge-#{@post.id}"
     end
 
     BoardAutomations::NudgePusher.new(nudge: @nudge).push
