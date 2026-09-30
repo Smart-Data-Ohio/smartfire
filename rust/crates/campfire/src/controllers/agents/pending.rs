@@ -45,6 +45,7 @@ pub async fn operation(
     args: Value,
 ) -> Result<ServiceResult> {
     match operation {
+        "start_stream" | "append_stream" | "finalize_stream" => return super::conversations::stream(c,agent_id,operation,args).await,
         "get_context" => return super::conversations::context(c,agent_id,args).await,
         "post_message" => return super::conversations::post(c,agent_id,args).await,
         "open_dm" => return super::conversations::dm(c,agent_id,args).await,

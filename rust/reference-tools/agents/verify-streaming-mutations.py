@@ -3,7 +3,7 @@
 from pathlib import Path
 import os,re,subprocess
 root=Path(__file__).resolve().parents[2];scratch=root.parent/'.scratch'/'ws11-streaming-mutations';scratch.mkdir(parents=True,exist_ok=True)
-env=dict(os.environ,CI='1',TMPDIR=str(root.parent/'.scratch'),CARGO_TARGET_DIR=str(root/'target'),CABLE_TEST_PORT_RANGE='52200-52249',MAIL_TEST_PORT_RANGE='52200-52249',INTEGRATION_TEST_PORT_RANGE='52250-52299')
+env=dict(os.environ,CI='1',TMPDIR=str(root.parent/'.scratch'),CARGO_TARGET_DIR=str(root/'target'),CABLE_TEST_PORT_RANGE='52900-52919',MAIL_TEST_PORT_RANGE='52920-52949',INTEGRATION_TEST_PORT_RANGE='52920-52949')
 mutations=[
  ('membership','agent_streaming.rs','if !exists(','if false && !exists(','campfire_db'),
  ('post-grant','agent_streaming.rs','if !agent_access::capability_for_agent','if false && !agent_access::capability_for_agent','campfire_db'),

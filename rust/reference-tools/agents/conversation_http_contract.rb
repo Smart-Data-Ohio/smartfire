@@ -36,6 +36,29 @@ add.call("dm_invalid_drive", :post, "/agents/dms", {user_id:127326141,body:"Hell
 ].each_with_index do |(tool,args),i|
  add.call("mcp_#{tool}_#{i}", :post, "/agents/mcp", {jsonrpc:"2.0",id:11,method:"tools/call",params:{name:tool,arguments:args}})
 end
+add.call("stream_start", :post, "/rooms/#{room}/agents/streaming_messages", {message:{markdown_source:"**Start** α & β",client_message_id:"wire-stream",drive_file_ids:["bad"]}})
+add.call("stream_replay_over_budget", :post, "/rooms/#{room}/agents/streaming_messages", {message:{markdown_source:"ignored",client_message_id:"wire-agent"}}, {cap:0})
+add.call("stream_append", :patch, "/agents/streaming_messages/#{base+1}", {append:" **Next** α & β",markdown_source:"ignored"}, {stream:true})
+add.call("stream_replace", :patch, "/agents/streaming_messages/#{base+1}", {markdown_source:"Replacement α & β"}, {stream:true})
+add.call("stream_finalize", :post, "/agents/streaming_messages/#{base+1}/finalize", {}, {stream:true})
+add.call("stream_finalize_again", :post, "/agents/streaming_messages/#{base+1}/finalize", {})
+add.call("stream_not_streaming", :patch, "/agents/streaming_messages/#{base+1}", {append:"Next"})
+add.call("stream_no_append", :patch, "/agents/streaming_messages/#{base+1}", {}, {stream:true})
+add.call("stream_wrong_author", :post, "/agents/streaming_messages/#{base}/finalize", {})
+add.call("stream_thread_start", :post, "/rooms/#{room}/agents/streaming_messages", {thread_id:thread,message:{markdown_source:"Thread stream",client_message_id:"wire-stream"}})
+add.call("stream_locked", :patch, "/agents/streaming_messages/#{base+2}", {append:"Next"}, {thread_stream:true,locked:true})
+[
+ ["start_stream",{room_id:room,markdown_source:"**Start** α & β",client_message_id:"wire-stream"},{}],
+ ["append_stream",{message_id:base+1,append:" **Next** α & β"},{stream:true}],
+ ["finalize_stream",{message_id:base+1},{stream:true}],
+ ["finalize_stream",{message_id:base+1},{}],
+ ["append_stream",{message_id:base+1,append:false},{stream:true}],
+ ["append_stream",{message_id:base+1,append:{name:"test"}},{stream:true}],
+ ["append_stream",{message_id:base+1,append:[]},{stream:true}],
+ ["append_stream",{message_id:base+1},{}]
+].each_with_index do |(tool,args,setup),i|
+ add.call("mcp_stream_#{tool}_#{i}",:post,"/agents/mcp",{jsonrpc:"2.0",id:11,method:"tools/call",params:{name:tool,arguments:args}},setup)
+end
 travel_to Time.utc(2026,3,2,16) do
  results = cases.map do |item|
   result = nil
@@ -46,9 +69,11 @@ travel_to Time.utc(2026,3,2,16) do
    agent.agent_credentials.create!(name:"HTTP contract", created_by_id:127326141, token_digest:AgentCredential.digest(secret), token_last_four:AgentCredential.digest(secret).first(4))
    ActiveRecord::Base.connection.execute("UPDATE sqlite_sequence SET seq=#{base-1} WHERE name='messages'")
    Message.create!(room_id:room,creator_id:127326141,markdown_source:"Source α & β",client_message_id:"wire-source")
-   Message.create!(room_id:room,creator_id:394959859,markdown_source:"Agent",client_message_id:"wire-agent")
+   Message.create!(room_id:room,creator_id:394959859,markdown_source:"Agent",client_message_id:"wire-agent",streaming:!!item[:setup][:stream])
    ActiveRecord::Base.connection.execute("INSERT INTO channel_threads(id,name,room_id,creator_id,parent_message_id,last_activity_at,created_at,updated_at) VALUES(#{thread},'Wire thread',#{room},394959859,#{base},'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')")
-   Message.create!(room_id:room,creator_id:394959859,thread_id:thread,markdown_source:"Thread source",client_message_id:"wire-thread")
+   Message.create!(room_id:room,creator_id:394959859,thread_id:thread,markdown_source:"Thread source",client_message_id:"wire-thread",streaming:!!item[:setup][:thread_stream])
+   Message.where(id:base+1).update_all(streaming:true,streaming_updated_at:Time.current) if item[:setup][:stream]
+   Message.where(id:base+2).update_all(streaming:true,streaming_updated_at:Time.current) if item[:setup][:thread_stream]
    ChannelThread.where(id:thread).update_all(locked_at:Time.current) if item[:setup][:locked]
    ActiveRecord::Base.connection.execute("UPDATE sqlite_sequence SET seq=1900600010 WHERE name='messages'")
    ActiveRecord::Base.connection.execute("UPDATE sqlite_sequence SET seq=1900600020 WHERE name='rooms'")

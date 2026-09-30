@@ -5,7 +5,7 @@ use crate::concerns;
 use crate::controllers::{messages, presenters::page::db_error};
 use campfire_db::models::{
     agent_access, agent_context, agent_direct_messages, agent_posting,
-    agent_service::ServiceResult, audit_log,
+    agent_service::ServiceResult, agent_streaming, audit_log,
 };
 use campfire_db::{Agent, NewMessage, Room};
 use campfire_kit::{Ctx, Result};
@@ -87,7 +87,16 @@ async fn canonical(c: &Ctx, args: &Value) -> Result<NewMessage> {
 }
 
 pub async fn post(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
-    let a = canonical(c, &args).await?;
+    start(c, agent_id, args, false).await
+}
+async fn start(c: &Ctx, agent_id: i64, args: Value, streaming: bool) -> Result<ServiceResult> {
+    let a = if streaming {
+        let mut a = attributes(&args);
+        a.body = None;
+        a
+    } else {
+        canonical(c, &args).await?
+    };
     let drive = drive(&args);
     let outcome = c
         .app()
@@ -112,7 +121,12 @@ pub async fn post(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> 
                     403,
                 )));
             }
-            match agent_posting::post_service(tx, agent_id, a, drive) {
+            let result = if streaming {
+                agent_streaming::start(tx, agent_id, a)
+            } else {
+                agent_posting::post_service(tx, agent_id, a, drive)
+            };
+            match result {
                 Err(campfire_db::Error::RecordNotFound(_)) => {
                     Ok(agent_posting::PostResult::Denied(ServiceResult::fail(
                         "Reply target not found",
@@ -124,13 +138,24 @@ pub async fn post(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> 
         })
         .await
         .map_err(db_error)?;
+    present_post(c, outcome, 201, streaming).await
+}
+async fn present_post(
+    c: &Ctx,
+    outcome: agent_posting::PostResult,
+    status: u16,
+    streaming: bool,
+) -> Result<ServiceResult> {
     match outcome {
         agent_posting::PostResult::Denied(result) => Ok(result),
         agent_posting::PostResult::Posted(message) => {
             messages::present(c, move |p| {
                 let mut payload = p.agent_message_payload(&message)?;
                 payload["thread_id"] = json!(message.thread_id);
-                Ok(ServiceResult::ok(payload, 201))
+                if streaming {
+                    payload["streaming"] = json!(message.streaming);
+                }
+                Ok(ServiceResult::ok(payload, status))
             })
             .await
         }
@@ -160,4 +185,27 @@ pub async fn dm(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
             Ok(ServiceResult::ok(json!({"room":{"id":room.id,"name":room.name,"direct":true},"message":p.agent_message_payload(&message)?,"thread_id":message.thread_id}),201))
         }).await,
     }
+}
+
+pub async fn stream(c: &Ctx, agent_id: i64, operation: &str, args: Value) -> Result<ServiceResult> {
+    if operation == "start_stream" {
+        return start(c, agent_id, args, true).await;
+    }
+    let id = present_id(&args, "message_id").unwrap_or(0);
+    let append = text(args.get("append"));
+    let markdown = text(args.get("markdown_source"));
+    let finalize = operation == "finalize_stream";
+    let outcome = c
+        .app()
+        .db
+        .write(move |tx| {
+            if finalize {
+                agent_streaming::finalize(tx, agent_id, id)
+            } else {
+                agent_streaming::update(tx, agent_id, id, append.as_deref(), markdown.as_deref())
+            }
+        })
+        .await
+        .map_err(db_error)?;
+    present_post(c, outcome, 200, true).await
 }
