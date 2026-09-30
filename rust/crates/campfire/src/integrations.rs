@@ -15,6 +15,7 @@
 
 mod jobs;
 mod agent_jobs;
+pub mod agent_repositories;
 mod agent_streaming;
 pub mod net;
 pub mod opengraph;

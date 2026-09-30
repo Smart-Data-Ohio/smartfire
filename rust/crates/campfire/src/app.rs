@@ -39,6 +39,7 @@ pub struct AppState {
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
     pub mail: crate::mail::State,
+    pub agent_repositories: crate::integrations::agent_repositories::State,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
@@ -155,6 +156,7 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
         cable,
         jobs,
         mail,
+        agent_repositories: crate::integrations::agent_repositories::State::default(),
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         web_push,
