@@ -20,6 +20,7 @@ use crate::jobs::{PushMessageJob, Registry, WebhookJob, discard_missing};
 
 /// Registers `Room::PushMessageJob` and `Bot::WebhookJob`.
 pub fn register_jobs(registry: &mut Registry) {
+    super::agent_jobs::register(registry);
     registry.register(push_message);
     registry.register(deliver_webhook);
 }
@@ -115,7 +116,7 @@ async fn deliver_webhook(app: App, job: WebhookJob, _: Execution) -> JobResult {
 /// `room.messages.create!(body: text, creator: user)`: the text is assigned to the rich text
 /// body, which stores it canonicalized (as `MessagesController` does; there's no request host
 /// in a job).
-async fn create_text_reply(app: &App, room: &Room, bot: &User, trigger: Option<Message>, text: String) -> anyhow::Result<Message> {
+pub(super) async fn create_text_reply(app: &App, room: &Room, bot: &User, trigger: Option<Message>, text: String) -> anyhow::Result<Message> {
     let (room_id, creator_id) = (room.id, bot.id);
     let body = canonicalize_body(app, text, None).await.map_err(|e| anyhow!("{e:?}"))?;
     let message = app
@@ -128,7 +129,7 @@ async fn create_text_reply(app: &App, room: &Room, bot: &User, trigger: Option<M
 /// `ActiveStorage::Blob.create_and_upload!` (its own save), then
 /// `room.messages.create_with_attachment!(attachment:, creator: user)`, which processes the
 /// attachment.
-async fn create_attachment_reply(app: &App, room: &Room, bot: &User, trigger: Message, attachment: webhook::Attachment) -> anyhow::Result<Message> {
+pub(super) async fn create_attachment_reply(app: &App, room: &Room, bot: &User, trigger: Message, attachment: webhook::Attachment) -> anyhow::Result<Message> {
     let storage = app.storage.clone();
     let staged = tokio::task::spawn_blocking(move || attachment.stage_blob(&storage)).await??;
     let blob = app.db.write(move |tx| save_staged(tx, staged)).await?;
@@ -155,7 +156,7 @@ fn create_reply(tx: &mut campfire_db::Tx<'_>, trigger: Option<&Message>, mut att
 }
 
 /// `message.broadcast_create`, rendered without a request (`ApplicationController.renderer`).
-async fn broadcast_create(app: &App, room: &Room, message: &Message) -> anyhow::Result<()> {
+pub(super) async fn broadcast_create(app: &App, room: &Room, message: &Message) -> anyhow::Result<()> {
     let (app, room, message) = (app.clone(), room.clone(), message.clone());
     let db = app.db.clone();
     db.read(move |conn| {

@@ -14,6 +14,7 @@
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
 mod jobs;
+mod agent_jobs;
 pub mod net;
 pub mod opengraph;
 pub mod search;

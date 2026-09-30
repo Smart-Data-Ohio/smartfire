@@ -467,6 +467,7 @@ impl Message {
             // room's archive state.
             ChannelThread::close_stale_in(tx, Some(message.room_id))?;
         }
+        crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)

@@ -716,10 +716,12 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     });
     let tasks: Vec<_> = periodic
         .tasks()
-        .filter(|t| t.name() != "clear plaintext bot tokens")
+        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
+    assert_eq!(recovery.interval(), Duration::from_secs(30));
 }
 
 #[tokio::test]

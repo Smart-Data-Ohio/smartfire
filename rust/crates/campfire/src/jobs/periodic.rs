@@ -118,6 +118,9 @@ impl Loops {
 pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     let mut periodic = Periodic::new("Periodic");
     periodic.task(clear_plaintext_bot_tokens_task());
+    periodic.task(Task::new("stranded agent webhooks", Duration::from_secs(30), |app: App| async move {
+        stranded_agent_webhooks(&app.db).await
+    }));
     periodic.task(Task::new(
         "saved item reminders",
         intervals.reminders,
@@ -224,4 +227,19 @@ pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> 
         healed += updated;
     }
     Ok(healed)
+}
+
+/// Rails rescues each recovery enqueue independently. Each row's job and stamp still commit
+/// atomically on the durable queue, including when a different candidate's queue write fails.
+pub(crate) async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
+    use campfire_db::models::agent_delivery as domain;
+    let now=db.env().now();
+    let candidates=db.read(move |c|domain::recovery_candidates(c,now)).await?;
+    db.write(move |tx|domain::fail_exhausted(tx,now)).await?;
+    for candidate in candidates {
+        if let Err(error)=db.write(move |tx|domain::recover_one(tx,candidate)).await {
+            tracing::error!(%error,"Stranded agent delivery recovery failed");
+        }
+    }
+    Ok(())
 }

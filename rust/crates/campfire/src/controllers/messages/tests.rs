@@ -595,3 +595,21 @@ async fn ws11_replay_and_budget_precede_attachment_validation() {
     let overflow = bot.send(Req::new(Method::POST, &path).header("content-type", "application/json").body(r#"{"attachment":123,"message":{"client_message_id":"ws11-new-bad-attachment"}}"#)).await;
     assert_eq!(overflow.status.as_u16(), vectors["malformed_overflow"]["status"].as_u64().unwrap() as u16);
 }
+
+#[tokio::test]
+async fn ws11_agent_delivery_enqueue_failure_rolls_the_http_message_back() {
+    let app=TestApp::boot().await.expect("default seed");
+    app.db().write(|tx| {
+        tx.conn().execute("UPDATE rooms SET type='Rooms::Direct' WHERE id=?", [ALL_TALK])?;
+        tx.conn().execute_batch("CREATE TRIGGER reject_agent_delivery BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::DeliveryJob' BEGIN SELECT RAISE(ABORT,'WS11 queue rejected'); END;")?;Ok(())
+    }).await.unwrap();
+    let before=messages_in(&app,ALL_TALK).await.len();
+    let mut david=app.david();
+    let response=david.write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages")).header("accept",TURBO_STREAM_ACCEPT).form(&[("message[body]","Atomic delivery")])).await;
+    assert_eq!(response.status,StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(messages_in(&app,ALL_TALK).await.len(),before);
+    app.db().read(|c| {
+        let n:i64=c.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='direct_message'",[],|r|r.get(0))?;
+        assert_eq!(n,0);Ok(())
+    }).await.unwrap();
+}

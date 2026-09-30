@@ -5,6 +5,7 @@ use rusqlite::params;
 
 use crate::{Message, Result, Room, Tx, User};
 use crate::sql::{query_all, query_one};
+use super::agent_delivery::AgentEvent;
 
 pub const HOP_LIMIT: i64 = 3;
 const TRIGGER_WINDOW: SignedDuration = SignedDuration::from_secs(5 * 60);
@@ -35,14 +36,18 @@ pub fn deliver(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
 /// Human messages start at zero; agents continue their latest authorized trigger across
 /// rooms. A legacy bot follows its reply source or the newest plausible room trigger.
 pub fn hop_for_message(tx: &Tx<'_>, message: &Message) -> Result<i64> {
+    Ok(hop_and_chain_for_message(tx, message)?.0)
+}
+
+pub fn hop_and_chain_for_message(tx: &Tx<'_>, message: &Message) -> Result<(i64, Option<String>)> {
     let sender_agent: Option<i64> = query_one(tx.conn(), "SELECT id FROM agents WHERE user_id = ? LIMIT 1", [message.creator_id], |row| row.get(0))?;
     if let Some(agent_id) = sender_agent {
-        let hop: Option<i64> = query_one(tx.conn(),
-            "SELECT hop FROM agent_events WHERE agent_id = ? AND event_type IN ('mention','direct_message','reply','work_assigned','work_unassigned','work_handed_off') AND outcome IN ('pending','delivered','acknowledged') AND created_at >= ? AND (actor_id IS NULL OR actor_id != ?) ORDER BY id DESC LIMIT 1",
-            params![agent_id, tx.now().ago(TRIGGER_WINDOW), message.creator_id], |row| row.get(0))?;
-        return Ok(hop.map_or(0, |hop| hop + 1));
+        let hop: Option<AgentEvent> = query_one(tx.conn(),
+            "SELECT * FROM agent_events WHERE agent_id = ? AND event_type IN ('mention','direct_message','reply','work_assigned','work_unassigned','work_handed_off') AND outcome IN ('pending','delivered','acknowledged') AND created_at >= ? AND (actor_id IS NULL OR actor_id != ?) ORDER BY id DESC LIMIT 1",
+            params![agent_id, tx.now().ago(TRIGGER_WINDOW), message.creator_id], AgentEvent::from_row)?;
+        return Ok(hop.map_or((0, None), |event| (event.hop() + 1, event.chain_id)));
     }
-    if !message.creator(tx.conn())?.is_bot() { return Ok(0); }
+    if !message.creator(tx.conn())?.is_bot() { return Ok((0, None)); }
     let source = if let Some(source) = message.reply_to_message_id {
         Some(source)
     } else {
@@ -53,7 +58,7 @@ pub fn hop_for_message(tx: &Tx<'_>, message: &Message) -> Result<i64> {
         for id in ids {
             let candidate = Message::find(tx.conn(), id)?;
             let replied_to_bot = if let Some(reply) = candidate.reply_to_message_id {
-                Message::find(tx.conn(), reply)?.creator_id == message.creator_id
+                Message::find_by_id(tx.conn(), reply)?.is_some_and(|reply| reply.creator_id == message.creator_id)
             } else { false };
             if replied_to_bot || candidate.mentionees(tx.conn(), tx.rich_text())?.iter().any(|user| user.id == message.creator_id) {
                 found = Some(id);
@@ -62,7 +67,7 @@ pub fn hop_for_message(tx: &Tx<'_>, message: &Message) -> Result<i64> {
         }
         found
     };
-    let Some(source) = source else { return Ok(0) };
-    let hop: Option<i64> = query_one(tx.conn(), "SELECT hop FROM agent_events WHERE message_id = ? AND outcome IN ('pending','delivered','acknowledged') ORDER BY hop DESC, id DESC LIMIT 1", [source], |row| row.get(0))?;
-    Ok(hop.map_or(0, |hop| hop + 1))
+    let Some(source) = source else { return Ok((0, None)) };
+    let hop: Option<AgentEvent> = query_one(tx.conn(), "SELECT * FROM agent_events WHERE message_id = ? AND outcome IN ('pending','delivered','acknowledged') ORDER BY hop DESC, id DESC LIMIT 1", [source], AgentEvent::from_row)?;
+    Ok(hop.map_or((0, None), |event| (event.hop() + 1, event.chain_id)))
 }

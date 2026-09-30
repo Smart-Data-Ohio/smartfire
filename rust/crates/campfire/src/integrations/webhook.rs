@@ -94,6 +94,7 @@ pub struct Posted {
     pub status: u16,
     pub content_type: Option<String>,
     pub body: Vec<u8>,
+    pub headers: hyper::HeaderMap,
 }
 
 /// `post(payload)` over `Net::HTTP.new(uri.host, uri.port)`: the status, content type and body.
@@ -119,15 +120,16 @@ pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(net: &Networ
     let timeouts = Timeouts { open: ENDPOINT_TIMEOUT, read: ENDPOINT_TIMEOUT };
     let response = http::exchange(net, &endpoint, request, &timeouts).await.map_err(WebhookError::Http)?;
     let (status, content_type) = (response.status, response.content_type());
+    let headers = response.headers.clone();
     let body = match response.read_body(usize::MAX).await.map_err(WebhookError::Http)? {
         Body::Complete(body) => body,
         Body::TooLarge => unreachable!("a Vec cannot exceed usize::MAX"),
     };
-    Ok(Posted { status, content_type, body })
+    Ok(Posted { status, content_type, body, headers })
 }
 
 /// `extract_text_from`, else `extract_attachment_from`.
-fn reply(status: u16, content_type: Option<String>, body: Vec<u8>) -> Result<WebhookReply, WebhookError> {
+pub(super) fn reply(status: u16, content_type: Option<String>, body: Vec<u8>) -> Result<WebhookReply, WebhookError> {
     if !(200..300).contains(&status) { return Ok(WebhookReply::None); }
     let Some(content_type) = content_type else { return Ok(WebhookReply::None) };
     if status == 200 && (content_type == "text/html" || content_type == "text/plain") {
