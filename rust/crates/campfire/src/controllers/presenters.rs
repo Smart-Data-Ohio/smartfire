@@ -175,7 +175,7 @@ impl<'a> Presenter<'a> {
 
     /// `room_display_name(room, for_user:)`.
     pub fn room_display_name(&self, room: &Room, for_user: Option<&User>) -> Result<String> {
-        let names: Vec<String> = if room.direct() {
+        let mut names: Vec<String> = if room.direct() {
             room.users(self.conn)?
                 .into_iter()
                 .filter(|user| for_user.is_none_or(|for_user| for_user.id != user.id))
@@ -184,6 +184,21 @@ impl<'a> Presenter<'a> {
         } else {
             Vec::new()
         };
+        // Rooms::Direct#direct_display_name uses the custom group name, otherwise up to
+        // three first names separated by commas. Detached message fragments include every
+        // member; a room/composer viewer excludes themselves through the query above.
+        if room.direct() {
+            if let Some(name) = room.name.as_deref().filter(|name| !campfire_views::helpers::is_blank(name)) {return Ok(name.to_string());}
+            names.sort_by_cached_key(|name| name.to_ascii_lowercase());
+            return Ok(match names.as_slice() {
+                [] => for_user.map(|user| user.name.clone()).unwrap_or_default(),
+                [name] => name.clone(),
+                _ => {
+                    let preview = names.iter().take(3).map(|name| name.split_whitespace().next().unwrap_or("")).collect::<Vec<_>>().join(", ");
+                    if names.len() > 3 {format!("{preview} +{}", names.len() - 3)} else {preview}
+                }
+            });
+        }
         Ok(room_display_name(room.name.as_deref(), room.direct(), &names, for_user.map(|u| u.name.as_str())))
     }
 

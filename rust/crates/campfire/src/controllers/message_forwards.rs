@@ -45,9 +45,19 @@ pub async fn create(c: &mut Ctx) -> Result {
     let copier = ForwarderCopier::new(c.app().storage.clone());
     let creator = require_current_user(c)?.id;
     let snapshot = original.clone();
+    // Test-only input boundary for the Rails fixture's Random.uuid provider. Production
+    // requests always use the domain's random IDs and never recognize this header.
+    #[cfg(test)]
+    let fixture_ids = c.request.header("x-ws8bm-forward-client-ids").map(|ids| ids.split(',').map(str::to_string).collect::<Vec<_>>());
     let results = c.app().db.write(move |tx| {
         // Source authorization is rechecked alongside all destination writes.
         Message::find_reachable(tx.conn(), creator, snapshot.id)?;
+        #[cfg(test)]
+        if let Some(ids) = fixture_ids {
+            let mut ids = ids.into_iter();
+            return forwarder::forward_with_client_ids(tx, &snapshot, &destinations, note.as_deref(), creator, &copier,
+                &mut || ids.next().expect("forward fixture ID per destination"));
+        }
         forwarder::forward(tx, &snapshot, &destinations, note.as_deref(), creator, &copier)
     }).await;
     let results = match results {
@@ -60,8 +70,6 @@ pub async fn create(c: &mut Ctx) -> Result {
     let mut rows = Vec::new();
     for result in results {
         let id = result.message.id;
-        let blob = c.app().db.read(move |conn| campfire_storage::Blob::attached(conn, "Message", id, "attachment").map_err(crate::controllers::presenters::storage_error)).await.map_err(db_error)?;
-        if let Some(blob) = blob { messages::process_attachment(c.app(), blob).await?; }
         let record = c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)?;
         messages::broadcast_create(c, &result.room, &record).await?;
         rows.push((result.room.id, result.thread.map(|thread| thread.id), record));

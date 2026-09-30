@@ -41,7 +41,7 @@ pub mod accounts;
 pub mod channel_threads;
 mod message_forwards;
 #[cfg(test)]
-mod message_forwards_tests;
+pub(crate) mod message_forwards_tests;
 pub mod channel_thread_messages;
 pub mod autocompletable;
 pub mod csp_reports;

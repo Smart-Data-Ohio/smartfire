@@ -586,7 +586,7 @@ async fn analyze_attachment(app: &App, blob: Blob) -> Result<Blob> {
 }
 
 /// `Blob#touch_attachments`: each attached record is touched (a message also touches its room).
-fn touch_attachment_records(tx: &mut campfire_db::Tx<'_>, blob_id: i64) -> campfire_db::Result<()> {
+pub(crate) fn touch_attachment_records(tx: &mut campfire_db::Tx<'_>, blob_id: i64) -> campfire_db::Result<()> {
     for (record_type, record_id) in campfire_storage::blob::attachment_records(tx.conn(), blob_id).map_err(storage_error)? {
         if record_type == "Message" {
             Message::find(tx.conn(), record_id)?.touch(tx)?;
