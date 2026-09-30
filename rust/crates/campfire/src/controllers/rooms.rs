@@ -411,7 +411,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
             let room_gid = crate::channels::room_gid(&room).to_param();
             let drive=presenter.composer_drive_flow(&user,false)?;
             let composer=presenter.composer_facts(&room,&user,None,drive)?;
-            let list=presenter.room_message_list(&messages,divider.message_id,divider.count)?;
+            let list=super::presenters::room_native::message_list(&presenter,&messages,divider.message_id,divider.count)?;
             Ok((campfire_views::rooms::ShowView {
                 shell:campfire_views::rooms::ShellComponents{message_list:Some(list),..Default::default()},scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,
                 room: presenter.room_view(&room, &user)?,

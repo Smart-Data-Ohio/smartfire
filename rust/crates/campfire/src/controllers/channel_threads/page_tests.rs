@@ -124,7 +124,7 @@ async fn complete_standalone_thread_templates_match_rails_layout_bytes() {
             }))
         }).await.unwrap();
         let expected = row["full_body"].as_str().unwrap();
-        if actual != expected {rails_mismatch(&actual, expected, row["name"].as_str().unwrap());}
+        if !crate::app::asset_goldens::compare(row["name"].as_str().unwrap(),&actual,expected) {rails_mismatch(&actual, expected, row["name"].as_str().unwrap());}
     }
 }
 

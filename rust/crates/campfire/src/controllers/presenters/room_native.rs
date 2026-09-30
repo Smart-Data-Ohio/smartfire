@@ -20,3 +20,9 @@ pub fn render(ctx:&ViewContext<'_>,show:&ShowView,composer:&Facts,frame:bool)->a
     let page=Show{ctx,show:&show};
     if frame {campfire_views::layouts::frame(ctx,page.as_head(),page.as_content())} else {page.render()}
 }
+
+/// Only rooms/show contributes this whitespace. The message owner's standalone list seam
+/// remains byte-identical to its own collection corpus, including unread/anchor windows.
+pub(crate) fn message_list(presenter:&super::Presenter<'_>,records:&[campfire_db::Message],divider_id:Option<i64>,unread_count:i64)->campfire_db::Result<String> {
+    presenter.room_message_list(records,divider_id,unread_count).map(|list|format!("\n    \n{list}"))
+}

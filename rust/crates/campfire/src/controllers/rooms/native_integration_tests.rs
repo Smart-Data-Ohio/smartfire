@@ -56,7 +56,7 @@ async fn native_component_capture_matches_rails_root_selection() {
    let room=campfire_db::Room::find(conn,room_id)?;let user=campfire_db::User::find(conn,user_id)?;
    let records=crate::controllers::presenters::room_shell::find_messages(conn,room_id,None)?;
    let mut presenter=crate::controllers::presenters::Presenter::new(conn,&state,Some("campfire.test".into()));presenter.cache_base_url=Some("http://campfire.test".into());
-   let list=presenter.room_message_list(&records,None,0)?;
+   let list=crate::controllers::presenters::room_native::message_list(&presenter,&records,None,0)?;
    let flow=presenter.composer_drive_flow(&user,false)?;
    let facts=presenter.composer_facts(&room,&user,None,flow)?;
    let viewer=crate::controllers::presenters::user_view(&state.secrets,&user);
