@@ -15,7 +15,7 @@ use crate::controllers::presenters::{self, accounts::string_attribute};
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let user = concerns::require_current_user(c)?.clone();
-    render_show(c, StatusCode::OK, user, None).await
+    render_show(c, StatusCode::OK, user, None, None).await
 }
 
 async fn render_show(
@@ -23,6 +23,10 @@ async fn render_show(
     status: StatusCode,
     user: campfire_db::User,
     current_password_error: Option<&'static str>,
+    settings_error: Option<(
+        campfire_db::models::user::profile_settings::Changes,
+        campfire_db::Errors,
+    )>,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
     let has_password = user
@@ -49,6 +53,45 @@ async fn render_show(
     let id = user.id;
     let now = c.now();
     let google = c.app().two_factor.google().is_some();
+    let mut appearance = c
+        .app()
+        .db
+        .read(move |conn| campfire_db::models::user::profile_settings::appearance(conn, id))
+        .await
+        .map_err(Error::internal)?;
+    let errors = if let Some((changes, errors)) = settings_error {
+        if let Some(theme) = changes.theme {
+            appearance.theme = theme;
+        }
+        if let Some(text_size) = changes.text_size {
+            appearance.text_size = text_size;
+        }
+        if let Some(time_zone) = changes.time_zone {
+            appearance.time_zone = Some(time_zone);
+        }
+        errors
+    } else {
+        campfire_db::Errors::default()
+    };
+    let appearance = users::AppearanceData {
+        theme: appearance.theme,
+        text_size: appearance.text_size,
+        zone_identifier: appearance
+            .time_zone
+            .as_deref()
+            .and_then(campfire_db::models::user::profile_settings::zone_identifier),
+        theme_errors: errors.on("theme").into_iter().map(str::to_owned).collect(),
+        text_size_errors: errors
+            .on("text_size")
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+        time_zone_errors: errors
+            .on("time_zone")
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+    };
     let security = c
         .app()
         .db
@@ -80,6 +123,7 @@ async fn render_show(
     let user = presenters::user_summary(&secrets, &user);
     framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
+        appearance: appearance.clone(),
         has_password,
         current_password_error,
         security: security.clone(),
@@ -98,14 +142,41 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let mut user = concerns::require_current_user(c)?.clone();
 
-    // params.require(:user).permit(:name, :avatar, :email_address, :password, :bio).compact
-    let params = c.params.require("user")?.permit(&permit_keys(&[
+    let mut permitted = permit_keys(&[
         "name",
         "avatar",
         "email_address",
         "password",
         "bio",
-    ]));
+        "time_zone",
+        "theme",
+        "text_size",
+        "voice_mode",
+        "push_to_talk_key",
+        "github_login",
+    ]);
+    permitted.push(campfire_kit::Permit::Nested(
+        "inbox_preferences".into(),
+        permit_keys(campfire_db::models::user::profile_settings::INBOX_KEYS),
+    ));
+    let params = c.params.require("user")?.permit(&permitted);
+    let settings = campfire_db::models::user::profile_settings::Changes {
+        theme: compact_string(&params, "theme"),
+        text_size: compact_string(&params, "text_size"),
+        time_zone: compact_string(&params, "time_zone"),
+        zone_submitted: c
+            .params
+            .get("user")
+            .and_then(|p| p.get("time_zone"))
+            .is_some(),
+        voice_mode: compact_string(&params, "voice_mode"),
+        push_to_talk_key: compact_string(&params, "push_to_talk_key"),
+        github_login: compact_string(&params, "github_login"),
+        inbox_preferences: params
+            .get("inbox_preferences")
+            .filter(|p| !p.is_null())
+            .map(|p| p.to_json()),
+    };
     let password_changing = params.get("password").is_some_and(|p| p.is_present());
     // Rails checks the raw request before strong parameters discard non-scalars.
     let email_changing = c
@@ -148,6 +219,7 @@ pub async fn update(c: &mut Ctx) -> Result {
                 } else {
                     "is incorrect"
                 }),
+                Some((settings, campfire_db::Errors::default())),
             )
             .await;
         }
@@ -180,10 +252,22 @@ pub async fn update(c: &mut Ctx) -> Result {
     };
 
     let avatar = avatar.stage(c.app()).await?;
+    let preview_settings = settings.clone();
+    let mut preview = user.clone();
+    if let Some(name) = &changes.name {
+        preview.name = name.clone();
+    }
+    if let Some(email) = &changes.email_address {
+        preview.email_address = email.clone();
+    }
+    if let Some(bio) = &changes.bio {
+        preview.bio = bio.clone();
+    }
     let pending = c
         .app()
         .db
         .write(move |tx| {
+            campfire_db::models::user::profile_settings::update(tx, user.id, settings)?;
             crate::authentication::update_profile(
                 tx,
                 &mut user,
@@ -194,8 +278,22 @@ pub async fn update(c: &mut Ctx) -> Result {
             )?;
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
-        .await
-        .map_err(Error::internal)?;
+        .await;
+    let pending = match pending {
+        Ok(pending) => pending,
+        Err(campfire_db::Error::RecordInvalid(errors)) => {
+            c.set_current(concerns::CurrentUser(preview.clone()));
+            return render_show(
+                c,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                preview,
+                None,
+                Some((preview_settings, errors)),
+            )
+            .await;
+        }
+        Err(error) => return Err(Error::internal(error)),
+    };
     attachments::analyze_later(c.app(), pending);
 
     let location = c.url_for(&campfire_routes::user_profile());

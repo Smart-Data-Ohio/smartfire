@@ -14,6 +14,8 @@ pub mod tours;
 mod preferences_tests;
 #[cfg(test)]
 mod people_tests;
+#[cfg(test)]
+mod profile_settings_tests;
 pub mod sessions;
 
 use askama::Template;

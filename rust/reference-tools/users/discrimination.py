@@ -11,6 +11,8 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("profile-settings", "crates/db/src/models/user/profile_settings.rs", "crate::slash_commands::user_settings::update(tx, user, Value::Object(attrs))", "let _ = attrs; Ok(())", "manual_profile_settings_match_pinned_rails_patch_vectors"),
+    ("profile-fields", "crates/views/src/users/appearance.rs", "errors.is_empty()", "!errors.is_empty()", "appearance_partial_matches_all_pinned_rails_bytes"),
     ("people-auth", "crates/campfire/src/controllers/users/cards.rs", "Before::default()", "Before::default().allow_unauthenticated_access()", "cards_require_sign_in_and_unknown_people_are_not_found"),
     ("people-self", "crates/db/src/models/user/presentation.rs", "u.id!=:viewer", "u.id=:viewer", "directory_requires_sign_in_and_excludes_the_viewer"),
     ("people-star", "crates/db/src/models/user/presentation.rs", "!person.starred", "person.starred", "directories_match_complete_rails_body_and_starred_order"),

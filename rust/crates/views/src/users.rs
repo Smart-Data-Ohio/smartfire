@@ -13,6 +13,8 @@ mod summary;
 pub use summary::*;
 mod people;
 pub use people::*;
+mod appearance;
+pub use appearance::*;
 
 #[derive(Clone)]
 pub struct UserSession {
@@ -152,6 +154,7 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
+    pub appearance: AppearanceData,
     pub has_password: bool,
     pub current_password_error: Option<&'a str>,
     pub security: crate::two_factor::ProfileData,
@@ -165,6 +168,9 @@ pub struct ProfileShow<'a> {
 }
 
 impl<'a> ProfileShow<'a> {
+    fn appearance_panel(&self) -> h::Html {
+        h::raw(Appearance {ctx:self.ctx,data:self.appearance.clone()}.render().unwrap())
+    }
     fn security_panel(&self) -> h::Html {
         h::raw(
             crate::two_factor::Profile {

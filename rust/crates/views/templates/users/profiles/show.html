@@ -15,7 +15,7 @@
       </button>
 {% endfilter %}  </div>
 {% endblock %}
-{% block content %}<section class="panel flex flex-column gap" style="view-transition-name: avatar-{{ user.id }}">
+{% block content %}<section class="panel profile-settings flex flex-column gap" style="view-transition-name: avatar-{{ user.id }}">
   {% include "pwa/_install_instructions.html" %}
 
   <div class="align-center center avatar__form gap" data-controller="upload-preview">
@@ -89,6 +89,8 @@
       {{ h::profile_form_submit_button(ctx) }}
     </div>
 {% endfilter %}
+  {{ self.appearance_panel() }}
+
   <div class="margin-block pad-inline pad-block fill-shade border-radius">
     <menu class="flex flex-column gap margin-none pad">
       {% for membership in shared_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}
@@ -97,7 +99,7 @@
       {% for membership in direct_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}    </menu>
   </div>
 
-  {{ self.security_panel() }}
+  {% if !user.bot() %}{{ self.security_panel() }}{% endif %}
 
   {% include "users/profiles/_sessions.html" %}
 

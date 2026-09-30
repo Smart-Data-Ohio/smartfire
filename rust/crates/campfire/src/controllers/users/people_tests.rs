@@ -35,7 +35,7 @@ async fn setup_case(app: &TestApp, id: i64, setup: serde_json::Value) {
     }).await.unwrap();
 }
 
-fn render(app: &TestApp, f: impl FnOnce(&ViewContext) -> String) -> String {
+pub(super) fn render(app: &TestApp, f: impl FnOnce(&ViewContext) -> String) -> String {
     struct Tokens;
     impl h::request_forgery::AuthenticityTokens for Tokens {
         fn global(&self) -> String {

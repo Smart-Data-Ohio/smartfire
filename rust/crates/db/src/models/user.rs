@@ -14,6 +14,7 @@ use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::{SQLITE_NOW, Timestamp};
 
 pub mod presentation;
+pub mod profile_settings;
 
 /// `enum :role, %i[ member administrator bot ]`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
