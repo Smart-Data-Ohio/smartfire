@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Verify the Rails implementation and test declarations inside the oracle image."""
+import hashlib
+import os
+from pathlib import Path
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[2]
+PATHS = [
+    "app/models/huddle_grant.rb", "app/models/huddle_cleanup.rb", "app/models/membership.rb",
+    "app/models/session.rb", "app/models/user.rb", "app/models/user/bannable.rb", "app/models/room.rb",
+    "app/jobs/room/destroy_job.rb", "app/models/rooms/voice.rb", "test/models/huddle_revocation_test.rb",
+]
+image = os.environ.get("PARITY_IMAGE", "ws13-reference:d7c7de92")
+raw = subprocess.check_output(["docker", "run", "--rm", "--name", "ws13b-source-check", "--network", "none", "--entrypoint", "sha256sum", image, *[f"/rails/{path}" for path in PATHS]], text=True, cwd=ROOT)
+for line in raw.splitlines():
+    digest, path = line.split()
+    local = path.removeprefix("/rails/")
+    expected = hashlib.sha256(subprocess.check_output(["git", "show", f"d7c7de92:{local}"], cwd=ROOT)).hexdigest()
+    assert digest == expected, local
+print(f"WS13b reference identity: {len(PATHS)} files match d7c7de92")

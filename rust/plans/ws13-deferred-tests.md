@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 91 declarations now have complete assertion coverage mapped below. The other 457 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 100 declarations now have complete assertion coverage mapped below. The other 448 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -43,7 +43,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
 | `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
 | `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
-| `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
+| `test/models/huddle_revocation_test.rb` | 9 | 9 | 0 |
 | `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
 | `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
 | `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
@@ -55,7 +55,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **91** | **457** |
+| **Total** | **548** | **100** | **448** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -340,14 +340,14 @@ Owner: WS13. Deferred.
 
 ## test/jobs/huddle/broadcast_presence_job_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - broadcasts the room's current stacks
 - missing grants and rooms stay silent
 
 ## test/jobs/huddle/join_notice_job_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - a first sighting enqueues the join notice alongside the presence broadcast
 - a repeat sighting enqueues no join notice
@@ -356,7 +356,7 @@ Owner: WS13. Deferred.
 
 ## test/jobs/huddle/push_invitation_job_test.rb
 
-Owner: WS13 with WS17 for transport/policy integration. Deferred.
+Owner: WS13b with WS17 for transport/policy integration. Deferred.
 
 - pushes the invitation to the recipient only
 - an opted-out recipient gets no push subscriptions
@@ -379,7 +379,7 @@ Owner: WS13. Passed: all nine declarations, mapped to the 29-case Rails resolver
 
 ## test/models/huddle/join_notifier_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - an in-call DM member is told when the peer joins, and the joiner is not
 - a member with no access to the room is told nothing
@@ -417,7 +417,7 @@ Owner: WS13. Deferred.
 
 ## test/models/huddle/join_pusher_test.rb
 
-Owner: WS13 with WS17 for transport/policy integration. Deferred.
+Owner: WS13b with WS17 for transport/policy integration. Deferred.
 
 - pushes the join to the recipient's subscriptions and stamps the throttle
 - a second push inside ten minutes is throttled
@@ -435,7 +435,7 @@ Owner: WS13 with WS17 for transport/policy integration. Deferred.
 
 ## test/models/huddle/ring_policy_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - an invitation rings a member who is not in do-not-disturb
 - do-not-disturb silences the ring
@@ -448,7 +448,7 @@ Owner: WS13. Deferred.
 
 ## test/models/huddle_grant_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - an active session and membership reuse one random grant
 - revoking and restoring room membership never resurrects the old grant
@@ -486,7 +486,7 @@ Owner: WS13. Deferred.
 
 ## test/models/huddle_invitation_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - issuing a grant in a one-to-one DM invites only the other participant
 - issuing a grant never schedules a delayed job
@@ -529,21 +529,21 @@ Owner: WS13. Deferred.
 
 ## test/models/huddle_revocation_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Passed against nine pinned Rails lifecycle scenarios in `huddle_revocation_test.rs`; five additional cleanup-failure rollback tests cover atomicity. LiveKit transport remains WS17.
 
-- membership revocation persists cleanup for only that grant
-- session removal revokes its grants in every room and leaves another session active
-- banning a user revokes grants even though sessions are bulk deleted first
-- deactivating a user revokes grants after memberships and sessions are bulk deleted
-- destroying a room revokes grants and persists one room deletion
-- removing a voice member mid-call revokes only their grant
-- destroying a voice room revokes its grants and persists one room deletion
-- deactivating a user ends their voice session
-- revocation remains durable while LiveKit is unavailable
+- **Passed:** membership revocation persists cleanup for only that grant
+- **Passed:** session removal revokes its grants in every room and leaves another session active
+- **Passed:** banning a user revokes grants even though sessions are bulk deleted first
+- **Passed:** deactivating a user revokes grants after memberships and sessions are bulk deleted
+- **Passed:** destroying a room revokes grants and persists one room deletion
+- **Passed:** removing a voice member mid-call revokes only their grant
+- **Passed:** destroying a voice room revokes its grants and persists one room deletion
+- **Passed:** deactivating a user ends their voice session
+- **Passed:** revocation remains durable while LiveKit is unavailable
 
 ## test/models/rooms/stage_test.rb
 
-Owner: WS13. Partial: 12/27 declarations passed against the hand, lifecycle and participation corpora plus existing WS8a room tests; the other 15 remain open.
+Owner: WS13b. Partial: 12/27 declarations passed against the hand, lifecycle and participation corpora plus existing WS8a room tests; the other 15 remain open.
 
 - **Passed:** type predicate
 - stage rooms are listed without directs but outside the voice scope
@@ -575,7 +575,7 @@ Owner: WS13. Partial: 12/27 declarations passed against the hand, lifecycle and 
 
 ## test/models/rooms/voice_test.rb
 
-Owner: WS13. Partial: 2/5 declarations passed; the other 3 remain WS13 work.
+Owner: WS13b. Partial: 2/5 declarations passed; the other 3 remain WS13 work.
 
 - **Passed:** type predicate
 - voices scope and channel queries include voice rooms
@@ -585,7 +585,7 @@ Owner: WS13. Partial: 2/5 declarations passed; the other 3 remain WS13 work.
 
 ## test/models/stream_test.rb
 
-Owner: WS13. Partial: 14/27 declarations passed; the other 13 remain WS13 work.
+Owner: WS13b. Partial: 14/27 declarations passed; the other 13 remain WS13 work.
 
 - **Passed:** quality must be a known preset
 - **Passed:** started_at defaults to now
@@ -617,7 +617,7 @@ Owner: WS13. Partial: 14/27 declarations passed; the other 13 remain WS13 work.
 
 ## test/services/huddle/reconciler_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - one pass resolves overdue invitations, ends stale streams, and reconciles cleanup
 - a resolver failure is logged and does not stop cleanup reconciliation
