@@ -142,21 +142,6 @@
       ]
     },
     {
-      "rails_file": "test/models/webhook_agent_key_test.rb",
-      "owner": "WS11; WS8 presenter; WS15g live private repository access",
-      "remaining_named_case_ports": [
-        "deliver without agent context for an agent-backed bot sends no agent key or bot key",
-        "deliver for a legacy bot without an agent row sends the signed reply path as room.path",
-        "deliver for an agent-backed bot sends no reply url",
-        "deliver with agent context adds the agent key alongside existing keys",
-        "agent key renders null owner for ownerless agents",
-        "agent delivery in a PR thread carries the pull_request object",
-        "agent delivery signs the raw body and timestamps the post",
-        "approval, work, and completion deliveries sign with the agent secret",
-        "agent delivery outside PR threads carries a null pull_request"
-      ]
-    },
-    {
       "rails_file": "test/models/agent_kill_switch_test.rb",
       "owner": "WS11; WS15g/WS15e approved-action execution callbacks",
       "remaining_named_case_ports": [

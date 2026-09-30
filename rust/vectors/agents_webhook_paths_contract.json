@@ -1,0 +1,56 @@
+{
+  "reference_pin": "d7c7de92",
+  "secret": "ws11-public-test-signing-secret",
+  "cases": {
+    "without_context": {
+      "body": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\"}}",
+      "timestamp": "1772467200",
+      "signature": null
+    },
+    "with_context": {
+      "body": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\",\"drive_attachments\":[]},\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":123},\"pull_request\":null}",
+      "timestamp": "1772467200",
+      "signature": "sha256=30cf5a93e18e2b95ac480549eca3d8c2cb182f0fb06a08022439d43c8fc7e110"
+    },
+    "ownerless": {
+      "body": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\",\"drive_attachments\":[]},\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":null,\"delivery_id\":7},\"pull_request\":null}",
+      "timestamp": "1772467200",
+      "signature": "sha256=63d5eb2803a00f5dd0085ff2f12221c9558010bf24d8aae19abc70f5aef12b3d"
+    },
+    "public_pr": {
+      "body": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\",\"drive_attachments\":[]},\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":9},\"pull_request\":{\"url\":\"https://github.com/rails/rails/pull/12\",\"owner\":\"rails\",\"repo\":\"rails\",\"number\":12,\"title\":\"Fix login\",\"state\":\"open\",\"head_branch\":\"shiny\",\"base_branch\":\"main\",\"review_decision\":\"approved\",\"checks_state\":\"passing\"}}",
+      "timestamp": "1772467200",
+      "signature": "sha256=6a31d99c3ee0aa0488c285dbf7a558e94c3d4855a5a7030f957a8dfc26ad134b"
+    },
+    "ordinary_thread": {
+      "body": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\",\"drive_attachments\":[]},\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":10},\"pull_request\":null}",
+      "timestamp": "1772467200",
+      "signature": "sha256=babdcd54666464d5a0b9df751b121cb93786a2153bce211d578a9e1365512caf"
+    },
+    "ordinary_room": {
+      "body": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\",\"drive_attachments\":[]},\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":11},\"pull_request\":null}",
+      "timestamp": "1772467200",
+      "signature": "sha256=7a040b70c4d7b783e4e4a42b1779bd6badea87c66696d2e6be698543bec85286"
+    },
+    "approval": {
+      "body": "{\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":7},\"approval\":{\"approval_id\":900191101,\"status\":\"pending\",\"decided_by\":null,\"note\":null}}",
+      "timestamp": "1772467200",
+      "signature": "sha256=cd7732390035eece55d121e3f31e00473195632aeddabe371ad3568ce9f06929"
+    },
+    "work": {
+      "body": "{\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":900191201},\"event_type\":\"work_assigned\",\"work\":{\"title\":\"Signed work\"}}",
+      "timestamp": "1772467200",
+      "signature": "sha256=38ad0e16bcdeb4c01acdfece11393fa77405550b04824578b940376cb4e34a32"
+    },
+    "completion": {
+      "body": "{\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":900191202},\"github_action\":{\"approval_id\":900191101,\"action\":\"github.comment\",\"status\":\"completed\"}}",
+      "timestamp": "1772467200",
+      "signature": "sha256=c1e1099a6cfa571517a35ee764d8e4a8971c94f27aa1fb657ffc78b82de9535d"
+    },
+    "legacy": {
+      "body": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696/eyJfcmFpbHMiOnsiZGF0YSI6eyJib3RfaWQiOjM5NDk1OTg1OSwicm9vbV9pZCI6NDg2Nzc3Njk2fSwiZXhwIjoiMjAyNi0wMy0wMlQxNjoxNTowMC4wMDBaIn19--35db5027abd19b1a6a00ee5e40b0d3867b9f0446/messages\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\"},\"reply_url\":\"/rooms/486777696/eyJfcmFpbHMiOnsiZGF0YSI6eyJib3RfaWQiOjM5NDk1OTg1OSwicm9vbV9pZCI6NDg2Nzc3Njk2fSwiZXhwIjoiMjAyNi0wMy0wMlQxNjoxNTowMC4wMDBaIn19--35db5027abd19b1a6a00ee5e40b0d3867b9f0446/messages\"}",
+      "timestamp": "1772467200",
+      "signature": null
+    }
+  }
+}
