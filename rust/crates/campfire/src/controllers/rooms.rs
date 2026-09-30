@@ -413,6 +413,14 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 invitation: original && !Message::paged(conn, Timeline::Room(room.id))?,
                 join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
                 messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
+                ooo_notice_members:
+                    crate::controllers::presenters::status_settings::ooo_notice_members(
+                        conn,
+                        &app.secrets,
+                        &room,
+                        user.id,
+                        app.db.env().now(),
+                    )?,
             })
         })
         .await
@@ -468,3 +476,5 @@ mod opens_rails_cases;
 
 #[cfg(test)]
 mod closeds_rails_cases;
+#[path = "rooms/ws17_ooo_tests.rs"]
+mod ws17_ooo_tests;

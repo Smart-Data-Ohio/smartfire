@@ -16,6 +16,7 @@ use campfire_db::{Broadcast, BroadcastRequest, Event, RoomRemovalBroadcast};
 use super::broadcasts::{ROOMS, dom_id};
 use super::{Cable, revocation, user_gid};
 use crate::app::App;
+use askama::Template;
 
 /// Delivers `event` if it belongs to the cable server; returns false for the rest.
 pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
@@ -44,6 +45,18 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     if let Err(error) = result {
         tracing::warn!(kind = request.kind, %error, "broadcast failed");
     }
+}
+
+fn status_badge(cable: &Cable, b: campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast) -> anyhow::Result<()> {
+    let html=campfire_views::users::statuses::StatusBadge{presence:&b.presence,status_text:b.status_text.as_deref()}.render()?;
+    cable.broadcast_action_to(&[&user_gid(b.user_id).to_param(),"status"],Action::Update,Target::Target(&dom_id("user",b.user_id,Some("status_badge"))),Some(&html),&[]);
+    Ok(())
+}
+
+fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updates::OooNoticeBroadcast) -> anyhow::Result<()> {
+    let html=campfire_views::users::statuses::OooNotice{name:&b.name,visible:b.visible,until_date:b.until_date.as_deref(),note:b.note.as_deref()}.render()?;
+    cable.broadcast_action_to(&[&user_gid(b.user_id).to_param(),"ooo_notice"],Action::Update,Target::Target(&dom_id("user",b.user_id,Some("ooo_notice"))),Some(&html),&[]);
+    Ok(())
 }
 
 /// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these

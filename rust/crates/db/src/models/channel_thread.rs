@@ -771,8 +771,9 @@ impl ChannelThread {
             None => None,
         };
         let mut candidates = Vec::new();
+        let mut users: HashMap<i64, User> = User::where_ids(conn, &user_ids)?.into_iter().map(|user| (user.id, user)).collect();
         for membership in memberships {
-            let recipient = User::find(conn, membership.user_id)?;
+            let recipient = users.remove(&membership.user_id).or_not_found("User")?;
             candidates.push(ThreadPushCandidate {
                 mentioned: mention_ids.contains(&membership.user_id),
                 reply_to_recipient: Some(membership.user_id) == reply_author_id && message.reply_notify_author,
@@ -813,12 +814,28 @@ impl ChannelThread {
             let title = if candidate.reply_to_recipient { format!("Reply in {}", thread.name) } else { thread.name.clone() };
             pushes.push(ThreadPush {
                 user_id: candidate.recipient.id,
-                payload: PushPayload::fitted(title, body.clone(), path.clone()),
+                payload: PushPayload::new(title, body.clone(), path.clone(), Some(format!("room-{}", thread.room_id))),
                 tag: format!("room-{}", thread.room_id),
                 subscriptions,
             });
         }
         Ok(pushes)
+    }
+
+    /// The production policy, with status/cache and DND exceptions preloaded once per batch.
+    pub fn push_recipients_with_policy(conn: &Connection, rich_text: &dyn RichText, thread_id: i64, message_id: i64, now: Timestamp) -> Result<Vec<ThreadPush>> {
+        let Some(message) = Message::find_by_id(conn, message_id)? else { return Ok(Vec::new()) };
+        let ids: Vec<i64> = query_all(conn, "SELECT user_id FROM thread_memberships WHERE thread_id=?", [thread_id], |row| row.get(0))?;
+        let users = crate::UserStatusSettings::for_ids(conn, &ids)?;
+        let exceptions = super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
+        Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
+            crate::NotificationPolicy {
+                recipient: users.get(&candidate.recipient.id), kind: crate::NotificationKind::ThreadMessage,
+                room_involvement: candidate.room_membership.as_ref().map(|m| m.involvement), thread_involvement: Some(candidate.thread_membership.involvement),
+                mentioned: candidate.mentioned, reply_to_recipient: candidate.reply_to_recipient, keyword_matched: false,
+                dnd_exception: exceptions.contains(&candidate.recipient.id), now,
+            }.push()
+        })
     }
 }
 

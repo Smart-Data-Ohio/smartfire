@@ -1,0 +1,7 @@
+{% if direct && !members.is_empty() %}  <div id="ooo-notices" class="ooo-notices">
+{% for member in members %}      {{ h::turbo_stream_from(member.stream_name.as_str()) }}
+      <div id="ooo_notice_user_{{ member.id }}">
+        {{ member.line() }}
+      </div>
+{% endfor %}  </div>
+{% endif %}{{ "" }}

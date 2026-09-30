@@ -23,7 +23,7 @@
   <button class="message-area__return-to-latest btn" data-action="messages#returnToLatest" data-messages-target="latest" hidden="hidden"><img aria-hidden="true" src="{{ ctx.asset("arrow-down.svg") }}" width="20" height="20" /><span class="for-screen-reader">Jump to newest message</span></button>
 </div>
 
-{{ h::raw(show.shell.ooo_notices.as_str()) }}
+{% if show.shell.ooo_notices.is_empty() %}{{ self.ooo_notices() }}{% else %}{{ h::raw(show.shell.ooo_notices.as_str()) }}{% endif %}
 
 {{ h::raw(show.shell.poll_builder.as_str()) }}
 {% endblock %}

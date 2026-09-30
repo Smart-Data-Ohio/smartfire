@@ -4,7 +4,7 @@ use campfire_jobs::inspect::{self, JobRow};
 use tokio::sync::Notify;
 
 use super::*;
-use crate::app::{Booted, boot};
+use crate::app::{Booted, boot_with_services};
 
 /// An app booted over an empty storage directory.
 async fn app_in(dir: &std::path::Path) -> Booted {
@@ -16,7 +16,14 @@ async fn app_in(dir: &std::path::Path) -> Booted {
         _ => None,
     })
     .unwrap();
-    boot(config).await.unwrap()
+    // Worker tests own their queue entries. Periodic-host tests start their loops
+    // explicitly; an automatic retention tick must not race these queue assertions.
+    boot_with_services(
+        config,
+        campfire_kit::clock::from_env().unwrap(),
+        crate::integrations::net::Network::system(),
+        periodic::Intervals { periodic: None, huddle: None },
+    ).await.unwrap()
 }
 
 async fn app() -> (Booted, tempfile::TempDir) {
@@ -730,7 +737,12 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .tasks()
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
+    let mut expected = golden["tasks"].as_array().unwrap().clone();
+    expected.push(ws17["presence_task"].clone());
+    let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
+    expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
+    assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
 }
 
 #[tokio::test]

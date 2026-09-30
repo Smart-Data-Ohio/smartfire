@@ -40,6 +40,7 @@ pub struct Notification {
     pub title: String,
     pub body: String,
     pub path: String,
+    pub tag: Option<String>,
     pub badge: i64,
     pub subscription: PushSubscription,
 }
@@ -51,6 +52,7 @@ impl Notification {
             title: payload.title.clone(),
             body: payload.body.clone(),
             path: payload.path.clone(),
+            tag: payload.tag.clone(),
             badge: subscription.badge(conn)?,
             subscription: subscription.clone(),
         })
@@ -60,7 +62,7 @@ impl Notification {
     pub fn encoded_message(&self) -> String {
         serde_json::json!({
             "title": self.title,
-            "options": { "body": self.body, "icon": ICON_PATH, "data": { "path": self.path, "badge": self.badge } }
+            "options": { "body": self.body, "icon": ICON_PATH, "tag": self.tag, "data": { "path": self.path, "badge": self.badge } }
         })
         .to_string()
     }
@@ -110,12 +112,10 @@ pub enum DeliveryError {
 }
 
 impl DeliveryError {
-    /// Whether the subscription can never be delivered to, so the pool destroys it.
-    /// `WebPush::Pool#deliver` also destroys it for a 410 and any `OpenSSL::OpenSSLError`,
-    /// which includes TLS failures and a bad VAPID key; those say nothing about the
-    /// subscription, and a 404 does (RFC 8030, section 7.3).
+    /// Match our WebPush::Pool#deliver rescue: expired (410) or OpenSSL errors.
+    /// A 404 is logged and retained; TLS errors invalidate, exactly as in Rails.
     pub fn invalidates_subscription(&self) -> bool {
-        matches!(self, DeliveryError::SubscriptionGone { .. } | DeliveryError::InvalidSubscriptionKey(_))
+        matches!(self, DeliveryError::SubscriptionGone { status: 410, .. } | DeliveryError::InvalidSubscriptionKey(_) | DeliveryError::Tls(_))
     }
 
     /// The Ruby exception class, for the pool's log line.
@@ -204,6 +204,7 @@ fn verify_response(status: u16, reason: &str, host: &str) -> Result<u16, Deliver
 /// `Users::PushSubscriptions::TestNotificationsController#create`: a "Campfire Test"
 /// notification with a random body, delivered inline. `path` is `user_push_subscriptions_url`
 /// (a full URL); `badge` is the subscriber's unread count. Errors propagate, as in Rails.
+#[cfg(test)]
 pub async fn deliver_test_notification(
     net: &Network,
     vapid: &VapidConfig,
@@ -212,7 +213,8 @@ pub async fn deliver_test_notification(
     path: &str,
 ) -> Result<(), DeliveryError> {
     let notification = Notification {
-        title: "Campfire Test".into(),
+        title: "Smartfire Test".into(),
+        tag: Some("test-notification".into()),
         body: uuid::Uuid::new_v4().to_string(),
         path: path.to_string(),
         badge,
@@ -222,12 +224,14 @@ pub async fn deliver_test_notification(
 }
 
 /// `Room::PushMessageJob#perform` / `Room::MessagePusher#push`: the payload goes to the
-/// subscriptions of everyone involved in everything, then to mentioned users involved in
-/// mentions. Badges are counted here; delivery happens on the pool.
+/// distinct union of eligible subscriptions, as one pool handoff. Badges are counted here;
+/// delivery happens on the pool.
 pub fn push_message(pool: &Pool, conn: &Connection, rich_text: &dyn RichText, message: &Message, now: Timestamp) -> campfire_db::Result<PushPayload> {
-    let (payload, everything, mentions) = PushSubscription::pushes_for(conn, rich_text, message, now)?;
-    pool.queue(conn, &payload, everything)?;
-    pool.queue(conn, &payload, mentions)?;
+    let (payload, mut subscriptions, mentions) = PushSubscription::pushes_for(conn, rich_text, message, now)?;
+    subscriptions.extend(mentions);
+    subscriptions.sort_by_key(|s| s.id);
+    subscriptions.dedup_by_key(|s| s.id);
+    pool.queue(conn, &payload, subscriptions)?;
     Ok(payload)
 }
 

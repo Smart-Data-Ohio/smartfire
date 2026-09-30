@@ -6,6 +6,7 @@ pub mod accounts;
 pub mod rooms_directory;
 pub mod room_shell;
 pub mod switcher;
+pub mod status_settings;
 pub mod attachments;
 pub mod page;
 pub mod pagination;
