@@ -476,3 +476,7 @@ async fn render_room_not_found(c: &mut Ctx) -> Result {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "messages/ws17_activity_tests.rs"]
+mod ws17_activity_tests;

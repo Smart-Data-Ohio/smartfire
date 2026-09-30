@@ -28,6 +28,7 @@ files = [
     "app/helpers/users/presence_helper.rb", "app/views/users/profiles/_two_factor.html.erb",
     "app/models/calendar/meeting_dispatcher.rb", "app/models/calendar/ooo_dispatcher.rb",
     "app/jobs/calendar/meeting_refresh_job.rb",
+    "app/services/activity_items/recorder.rb", "app/models/activity_item.rb", "app/models/message.rb",
     "app/controllers/users/profiles_controller.rb", "app/helpers/users/profiles_helper.rb",
     "app/views/users/profiles/_appearance.html.erb", "app/controllers/users/push_subscriptions_controller.rb",
     "app/views/users/push_subscriptions/index.html.erb", "app/views/users/push_subscriptions/_push_subscription.html.erb",

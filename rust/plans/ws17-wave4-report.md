@@ -6,7 +6,7 @@ Reference Rails `d7c7de92`; merged main `21a7332f` with merge commit `56aa9f62`.
 
 Earlier pushed slices (`7b9267a3`, `32b49aa4`, `76c34826`, `0adcae95`, `12c448d7`) provide typed notification policy, tagged Web Push with Smartfire subject and IP pinning, durable room/thread/saved/test push transport, presence leases/HTTP/pruner, validated dirty-tracked settings writes, status and notification PATCH, DND allowances, keyword-list replacement, cache reconciliation, manual OOO claims, and complete badge/OOO broadcast HTML. PWA worker/offline bytes are pinned. Existing Rails oracle vectors remain exercised by the full suites below.
 
-Current profile/subscription/allowance slice:
+Profile/subscription/allowance slice pushed at `ba916992`; current keyword recording slice:
 
 | Files | Change and verification |
 | --- | --- |
@@ -16,6 +16,8 @@ Current profile/subscription/allowance slice:
 | `controllers/users/push_subscriptions.rs`, `push_subscriptions/ws17_tests.rs`; `app.rs`, test support | All six named subscription HTTP scenarios, including legacy revalidation and private-IP refusal. Per-app DNS dependency permits deterministic DNS answers while testing the real endpoint guard/model/HTTP stack. Production uses system DNS. Current-user deletion scope checked additionally. Real user-agent rendering matches four Rails cases. |
 | `views/templates/users/push_subscriptions/index.html`, `tests/ws17_settings.rs` | Complete subscription content byte comparison, including full row forms, fixed shared test CSRF values, actual asset URLs, escaping and whitespace. |
 | `controllers/users/dnd_allowances.rs` | Repeated star remains one row; deterministic real UNIQUE-index failure at insert follows Rails' success redirect, in addition to existing concurrent HTTP requests. No mocks of the writer. |
+| `db/models/activity_item/message_recorder.rs`, message callback, `tests/message_activity_test.rs`, JSON oracle | Message-only recorder: flat scoped membership/keyword queries, policy winner, active-human/self exclusion, idempotent source rows, grouped followed-thread updates, unchanged read/handled state on repeated non-grouped recording. Thirty-one actual Rails callback/candidate vectors; all eleven keyword recorder titles and thirteen message-only recorder titles. Real SQLite trace checks stay flat at five versus thirty members. |
+| `campfire/controllers/messages/ws17_activity_tests.rs`, DB Cargo dev dependency | Full HTTP message callback records during DND; real rendered mentions win over keywords. Rejecting the activity INSERT rolls back message, FTS index and durable jobs. SQLite tracing is a test-only rusqlite feature. |
 | `reference-tools/ws17_profile_ui.rb`, regeneration script, verifier and injection runner | Actual pinned source/output verification; no Rails changes, output masks, allowlist changes or new ignores. |
 
 User/profile security, GitHub/inbox/voice settings and connected-service UI belong to WS9/WS11/WS12/WS13/WS14/WS15. The existing basic profile update path still needs those owners' callbacks. This slice adds only the owned appearance attributes, without claiming whole-profile parity.
@@ -48,6 +50,7 @@ WS13 builds invitation/join `PushPayload` and candidate room-membership facts. W
 Keep Rails' pusher scopes before delivery: visible/disconnected memberships, invitations exclude `nothing`, joins exclude `nothing` and `muted`; SQL-null exclusions follow Rails SQL rather than adding eligibility. Join also checks the huddle inbox preference and claims its ten-minute throttle only after policy and subscriptions permit an actual push. The dedicated durable huddle adapter/DTO and throttle-claim seam are **still outstanding**; the signatures above are the shared transport, not a claim that huddle push jobs are finished. WS13 owns payload/source construction, WS17 the gate/transport. `PushPayload::new` preserves supplied strings/tag without automatic truncation. Pool reads fresh badges and delivers through current VAPID and stored pinned endpoint IP. Preserve transactional claim/enqueue when connecting the source.
 
 
+
 ## Current verification
 
 All commands run in this worktree, own `rust/target`, pinned toolchain and `-j 4`. Seeded app tests require the built default/first-run seeds, not a silent local skip. Existing app ignores are main's cable recording/latency tests and WS11's `manages_bots`; no new ignore was added. DB's three existing oracle/export ignores require their dedicated external environment.
@@ -72,15 +75,33 @@ profile-sound-metadata: detected
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 382 filtered out; finished in 0.49s
 ```
 
+`python3 rust/reference-tools/ws17_regenerate_message_activity.py`
+
+```text
+pinned Rails source verified: 45 files match d7c7de92
+Rails message activity: 31 complete callback/candidate cases
+```
+
+`python3 rust/reference-tools/ws17_injections.py keyword`
+
+```text
+keyword-priority: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 449 filtered out; finished in 0.90s
+keyword-read-state: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 449 filtered out; finished in 0.12s
+keyword-atomic: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 384 filtered out; finished in 0.42s
+```
+
 `CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -p campfire_views -- --test-threads=4`
 
 ```text
-test result: ok. 436 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 37.73s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.85s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.92s
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 448 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 34.70s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.81s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -89,35 +110,35 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 `CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire -- --test-threads=4`
 
 ```text
-test result: ok. 380 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 29.94s
+test result: ok. 382 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 28.71s
 ```
 
 `mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.69s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.46s
 ```
 
-The pre-change appearance HTTP test failed on persisted `system` versus submitted `dark`: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.48s`. Complete form comparison also failed before correcting dynamic zone labels; subscription content failed before correcting its exact leading/collection whitespace. The four committed injections remove the theme save, accept private DNS, remove unique-index rescue, and erase sound metadata; each must produce an actual failed test, not a compiler error. Sources are restored by the runner before final suites.
+The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 439 filtered out; finished in 0.04s`. Three keyword injections remove mention priority, reset read/handled state on conflict, and commit before the callback write; all produce real failed tests. The pre-change appearance HTTP test failed on persisted `system` versus submitted `dark`: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.48s`. Complete form comparison also failed before correcting dynamic zone labels; subscription content failed before correcting its exact leading/collection whitespace. The four committed injections remove the theme save, accept private DNS, remove unique-index rescue, and erase sound metadata; each must produce an actual failed test, not a compiler error. Sources are restored by the runner before final suites.
 
 ## Precisely remaining
 
 1. Profile/UI integration stays partial: Smartfire's complete profile contains other owners' sections; sidebar/DM presence composition must connect to WS8b/WS13's full room templates and request-free broadcasts. Badge and OOO notice-line bytes and transport are already ported. Full page/browser/pixel parity and Rails rollback/readback rehearsal have not run. Appearance, subscription and allowance gaps above are closed.
-2. Keyword-alert activity recording (priority, active-human/membership/thread gating, grouping/idempotency, callbacks) is next; main has only the matcher and reminder inbox writer. WS12 owns full source/render/access rules.
+2. Message keyword recording is delivered. WS12 still owns generic/caller-authorized recording, work events, inbox queries/controllers/source rendering and access rules. `ActivityItem::record_message(tx: &mut Tx, message: &Message) -> Result<Vec<ActivityItem>>` is the minimal shared seam. WS11 must call it on a live stream finalize; WS16 must gate it for importing together with the existing message callback chain. This slice gates normal creation on non-streaming/non-system-note state; edits do not re-record.
 3. Meeting/OOO due sweeps, meeting conditional claims, stale refresh deduplication, periodic registration, expiration cleanup and concurrent dispatcher tests remain. WS14 owns Google execution at the documented job seam.
 4. Event, board and huddle pushers/jobs, durable huddle DTO/throttle claim, recipient/source payload vectors and atomic claim/enqueue tests remain. WS12/14/13 supply sources/payloads; WS17 supplies policy and transport. Room handler audit remains.
 5. Remaining exact named scenarios below, largest files first; pure vector coverage is not claimed as a replay of every named sequence.
 
 ## Named scenario coverage by file
 
-347 selected exact Rails titles: **115 passed equivalent; 232 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
+347 selected exact Rails titles: **139 passed equivalent; 208 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
 
 | Rails file | Passed equivalent | Deferred |
 | --- | ---: | ---: |
 | `test/models/notifications/policy_test.rb` | 0 | 52 |
 | `test/controllers/users/statuses_controller_test.rb` | 22 | 0 |
 | `test/models/user/out_of_office_test.rb` | 0 | 22 |
-| `test/services/activity_items/recorder_test.rb` | 0 | 20 |
+| `test/services/activity_items/recorder_test.rb` | 13 | 7 |
 | `test/models/push/subscription_test.rb` | 13 | 5 |
 | `test/models/user/meeting_status_test.rb` | 0 | 14 |
 | `test/models/user/status_settings_test.rb` | 10 | 4 |
@@ -126,7 +147,7 @@ The pre-change appearance HTTP test failed on persisted `system` versus submitte
 | `test/models/huddle/join_pusher_test.rb` | 0 | 13 |
 | `test/models/calendar/ooo_dispatcher_test.rb` | 0 | 12 |
 | `test/models/calendar/meeting_dispatcher_test.rb` | 0 | 11 |
-| `test/services/activity_items/recorder_keyword_test.rb` | 0 | 11 |
+| `test/services/activity_items/recorder_keyword_test.rb` | 11 | 0 |
 | `test/controllers/users/notification_settings_controller_test.rb` | 10 | 0 |
 | `test/integration/ooo_dm_notice_test.rb` | 0 | 10 |
 | `test/models/event/reminder_pusher_test.rb` | 0 | 10 |
@@ -352,34 +373,10 @@ The pre-change appearance HTTP test failed on persisted `system` versus submitte
 | `test/models/notifications/keyword_matcher_test.rb` | treats phrases literally, not as patterns | WS17 continuation |
 | `test/models/notifications/keyword_matcher_test.rb` | ignores blank phrases and blank text | WS17 continuation |
 | `test/models/notifications/keyword_matcher_test.rb` | a phrase matches across a line break and not inside a longer Unicode word | WS17 continuation |
-| `test/services/activity_items/recorder_keyword_test.rb` | a keyword match on a room message records a keyword alert | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | a keyword match needs a word boundary | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | the author never matches their own keywords | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | an invisible member matches nothing but a notifications-off member matches | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | a mention wins over a keyword match for the same message | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | a thread keyword match reaches thread members only | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | a muted thread member matches no keywords | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | thread activity wins over a keyword match for a follower | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | a room keyword match loads only the matching members' memberships | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | a room message keeps candidate queries flat as the roster grows | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_keyword_test.rb` | matching queries the keyword table a constant number of times as followers grow | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | records a mention for an opted-in active human and excludes the author | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | a reply follows the reply author's current preference | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | mention takes precedence when one message matches multiple activity reasons | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | followed thread activity uses thread preferences | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | work events notify followed thread members | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | a direct mention reaches a member with notifications off but not an invisible one | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | a member with notifications off gets no reply but a mentions member does | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | a member with notifications off gets no thread activity but a mentions member does | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | a member with notifications off gets no work items but a mentions member does | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | changing involvement leaves existing items untouched | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | ten thread replies collapse into one thread activity item that reads unread again | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | a status update after a work assignment keeps the assignment item and repoints the update item | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | work updates for one thread collapse into a single item | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | a thread message that mentions and replies to a follower yields one mention item | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | work assigned by an agent honors the recipient's agent_work switch | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | work assigned by a bot without an agent ignores the agent_work switch | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | a caller-authorized record skips the source check but keeps idempotency | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | recording the same source twice is idempotent | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | recording a thread message queries memberships a constant number of times as followers grow | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/services/activity_items/recorder_test.rb` | a root message loads only the mentionee and reply-author memberships | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |

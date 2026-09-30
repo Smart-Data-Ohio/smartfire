@@ -11,6 +11,7 @@ mod forwarder_test;
 mod fixtures_test;
 mod membership_test;
 mod keyword_alert_test;
+mod message_activity_test;
 mod message_edit_test;
 mod message_pin_test;
 mod message_reference_test;

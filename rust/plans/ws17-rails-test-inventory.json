@@ -2216,107 +2216,107 @@
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "a keyword match on a room message records a keyword alert",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "a keyword match needs a word boundary",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "the author never matches their own keywords",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "an invisible member matches nothing but a notifications-off member matches",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "a mention wins over a keyword match for the same message",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "a thread keyword match reaches thread members only",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "a muted thread member matches no keywords",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "thread activity wins over a keyword match for a follower",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "a room keyword match loads only the matching members' memberships",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "a room message keeps candidate queries flat as the roster grows",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "test": "matching queries the keyword table a constant number of times as followers grow",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (actual Rails callbacks and SQLite trace ceilings)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "records a mention for an opted-in active human and excludes the author",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a reply follows the reply author's current preference",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "mention takes precedence when one message matches multiple activity reasons",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "followed thread activity uses thread preferences",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2328,23 +2328,23 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a direct mention reaches a member with notifications off but not an invisible one",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a member with notifications off gets no reply but a mentions member does",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a member with notifications off gets no thread activity but a mentions member does",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2356,16 +2356,16 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "changing involvement leaves existing items untouched",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "ten thread replies collapse into one thread activity item that reads unread again",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2384,9 +2384,9 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a thread message that mentions and replies to a follower yields one mention item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2412,23 +2412,23 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "recording the same source twice is idempotent",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "recording a thread message queries memberships a constant number of times as followers grow",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a root message loads only the mentionee and reply-author memberships",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     }
   ]
 }
