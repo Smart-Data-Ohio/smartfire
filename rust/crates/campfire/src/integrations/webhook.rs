@@ -62,7 +62,7 @@ pub enum WebhookError {
     #[error("{0}")]
     InvalidUrl(String),
     #[error("{0}")]
-    Http(HttpError),
+    Http(#[source] HttpError),
     /// `Mime::Type::InvalidMimeType`
     #[error("{0:?} is not a valid MIME type")]
     InvalidMimeType(String),
@@ -73,12 +73,12 @@ pub enum WebhookError {
 /// An unsigned legacy delivery, with the system clock. App jobs use `deliver_signed`.
 #[cfg(test)]
 pub async fn deliver(net: &Network, url: &str, payload: String) -> Result<WebhookDelivery, WebhookError> {
-    deliver_signed(net, url, payload, None, jiff::Timestamp::now(), false).await
+    deliver_signed(net, url, payload, None, jiff::Timestamp::now, false).await
 }
 
 /// `Webhook#deliver`: the agent flag controls timeout propagation, not signing policy.
-pub async fn deliver_signed(
-    net: &Network, url: &str, payload: String, secret: Option<&str>, now: jiff::Timestamp, agent: bool,
+pub async fn deliver_signed<F: Fn() -> jiff::Timestamp + Send + Sync>(
+    net: &Network, url: &str, payload: String, secret: Option<&str>, now: F, agent: bool,
 ) -> Result<WebhookDelivery, WebhookError> {
     match post_payload(net, url, payload, secret, now).await {
         Ok(response) => Ok(WebhookDelivery { status: Some(response.status), reply: reply(response.status, response.content_type, response.body)? }),
@@ -97,7 +97,7 @@ pub struct Posted {
 }
 
 /// `post(payload)` over `Net::HTTP.new(uri.host, uri.port)`: the status, content type and body.
-pub async fn post_payload(net: &Network, url: &str, payload: String, secret: Option<&str>, now: jiff::Timestamp) -> Result<Posted, WebhookError> {
+pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(net: &Network, url: &str, payload: String, secret: Option<&str>, now: F) -> Result<Posted, WebhookError> {
     let uri = uri::parse(url).map_err(|_| WebhookError::InvalidUrl(format!("bad URI (is not URI?): {url:?}")))?;
     if !uri.is_http() {
         return Err(WebhookError::InvalidUrl("not an HTTP URI".into()));
@@ -110,6 +110,7 @@ pub async fn post_payload(net: &Network, url: &str, payload: String, secret: Opt
 
     let hostname = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')).unwrap_or(&host);
     let uri_host = if port == if https { 443 } else { 80 } { hostname.to_string() } else { format!("{hostname}:{port}") };
+    let now = now();
     let headers = rails_compat::webhook::smartfire_headers(secret, payload.as_bytes(), now)
         .into_iter().map(|(name, value)| (name.to_string(), value)).collect();
     let mut request = http::Request::net_http(hyper::Method::POST, http::request_uri(&uri), Some(uri_host), headers).transport(false, &endpoint);
@@ -263,7 +264,7 @@ mod tests {
         let runs = cases.iter().map(|c| {
             let net = net.clone();
             let url = c["url"].as_str().map(str::to_string).unwrap_or_else(|| format!("http://webhook.example:{}/{}", server.addr.port(), c["name"].as_str().unwrap()));
-            async move { deliver_signed(&net, &url, r#"{"message":"hi"}"#.to_string(), None, "2026-03-02T16:00:00Z".parse().unwrap(), false).await }
+            async move { deliver_signed(&net, &url, r#"{"message":"hi"}"#.to_string(), None, || "2026-03-02T16:00:00Z".parse().unwrap(), false).await }
         });
         let outcomes = futures_join_all(runs).await;
 
@@ -371,7 +372,7 @@ mod tests {
         let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
         let net = network(resolver, dialer);
         for case in vectors["signatures"].as_array().unwrap() {
-            post_payload(&net, "http://bots.example:8080/hook", case["body"].as_str().unwrap().into(), Some(case["secret"].as_str().unwrap()), vectors["now"].as_str().unwrap().parse().unwrap()).await.unwrap();
+            post_payload(&net, "http://bots.example:8080/hook", case["body"].as_str().unwrap().into(), Some(case["secret"].as_str().unwrap()), || vectors["now"].as_str().unwrap().parse().unwrap()).await.unwrap();
             let request = server.received().pop().unwrap();
             assert_eq!(request.header("X-Smartfire-Timestamp"), case["timestamp"].as_str());
             assert_eq!(request.header("X-Smartfire-Signature"), case["signature"].as_str());
@@ -400,6 +401,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn ws11_timestamp_is_sampled_after_resolution() {
+        use crate::integrations::net::{BoxFuture, Resolver};
+        use std::sync::atomic::{AtomicI64, Ordering};
+        struct SlowResolver(Arc<AtomicI64>);
+        impl Resolver for SlowResolver {
+            fn lookup<'a>(&'a self, _: &'a str) -> BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {
+                Box::pin(async move {
+                    tokio::time::sleep(Duration::from_millis(1100)).await;
+                    self.0.store(jiff::Timestamp::now().as_second(), Ordering::SeqCst);
+                    Ok(vec!["93.184.216.34".parse().unwrap()])
+                })
+            }
+        }
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 204)]).await;
+        let resolved_at = Arc::new(AtomicI64::new(0));
+        let net = Network { resolver: Arc::new(SlowResolver(resolved_at.clone())), dialer: Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) }), tls: crate::integrations::net::tls_config(crate::integrations::test_support::test_tls_roots()) };
+        deliver(&net, "http://bots.example:8080/hook", "{}".into()).await.unwrap();
+        let timestamp: i64 = server.received()[0].header("X-Smartfire-Timestamp").unwrap().parse().unwrap();
+        assert!(timestamp >= resolved_at.load(Ordering::SeqCst), "timestamp was sampled before DNS resolution");
+    }
+
+    #[tokio::test]
+    async fn ws11_http_guard_matches_rails_vectors() {
+        let vectors: Value = serde_json::from_str(include_str!("../../../../vectors/agents_webhook_contract.json")).unwrap();
+        let cases: Vec<_> = vectors["guards"].as_array().unwrap().iter().chain(vectors["dns"].as_array().unwrap()).collect();
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 204)]).await;
+        let resolver = Arc::new(FakeResolver::default());
+        let public = cases.iter().filter_map(|case| case["address"].as_str()).map(|ip| ip.parse().unwrap()).collect();
+        let dialer = Arc::new(MappingDialer { public, to: server.addr, dialed: Mutex::new(Vec::new()) });
+        let net = network(resolver.clone(), dialer);
+        for case in cases {
+            let host = case["host"].as_str().unwrap();
+            if let Some(answers) = case.get("answers") {
+                resolver.set(host, vec![answers.as_array().unwrap().iter().map(|ip| ip.as_str().unwrap().parse().unwrap()).collect()]);
+            }
+            let uri_host = if host.contains(':') && !host.starts_with('[') { format!("[{host}]") } else { host.to_string() };
+            let response = deliver(&net, &format!("http://{uri_host}:8080/hook"), "{}".into()).await;
+            match case["error"].as_str() {
+                Some("RestrictedHTTP::Violation") => assert!(matches!(response, Err(WebhookError::Guard(crate::integrations::net::guard::GuardError::Violation(_)))), "{host}: {response:?}"),
+                Some("Surfguard::Unresolvable") => assert!(matches!(response, Err(WebhookError::Guard(crate::integrations::net::guard::GuardError::Unresolvable))), "{host}: {response:?}"),
+                None => assert_eq!(response.unwrap().status, Some(204), "{host}"),
+                other => panic!("unknown Rails error: {other:?}"),
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn ws11_agent_timeouts_propagate_while_legacy_gets_a_root_reply() {
         let mut route = Route::new("POST", "*", "/hook", 200);
         route.delay = Duration::from_secs(8);
@@ -408,7 +456,7 @@ mod tests {
         let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
         let net = network(resolver, dialer);
         let now = "2026-03-02T16:00:00Z".parse().unwrap();
-        let (legacy, agent) = tokio::join!(deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), None, now, false), deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), Some("test-secret"), now, true));
+        let (legacy, agent) = tokio::join!(deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), None, || now, false), deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), Some("test-secret"), || now, true));
         assert_eq!(legacy.unwrap(), WebhookDelivery { status: None, reply: WebhookReply::Text("Failed to respond within 7 seconds".into()) });
         assert!(matches!(agent, Err(WebhookError::Http(HttpError::ReadTimeout))));
     }

@@ -93,10 +93,13 @@ impl Webhook {
         self.encrypted_signing_secret.as_deref().map(|value| encryption.decrypt(value).map_err(|error| Error::Other(error.to_string()))).transpose()
     }
 
-    /// `ensure_signing_secret!`: reload under the single writer's transaction, so stale
-    /// instances adopt the winner's secret. Encryption and the row update commit together.
+    /// `ensure_signing_secret!`: a loaded present value returns immediately. Blank
+    /// instances reload under the writer transaction and adopt a first-generation winner's secret. Encryption and the row update commit together.
     pub fn ensure_signing_secret(&mut self, tx: &Tx<'_>, encryption: &ArEncryption) -> Result<String> {
-        self.encrypted_signing_secret = tx.conn().query_row_cached("SELECT signing_secret FROM webhooks WHERE id = ?", [self.id], |row| row.get(0))?;
+        if let Some(secret) = self.signing_secret(encryption)?.filter(|secret| !campfire_richtext::ruby::is_blank(secret)) {
+            return Ok(secret);
+        }
+        *self = query_one(tx.conn(), "SELECT webhooks.* FROM webhooks WHERE id = ? LIMIT 1", [self.id], Self::from_row)?.ok_or(Error::RecordNotFound("Webhook"))?;
         if let Some(secret) = self.signing_secret(encryption)?.filter(|secret| !campfire_richtext::ruby::is_blank(secret)) {
             return Ok(secret);
         }

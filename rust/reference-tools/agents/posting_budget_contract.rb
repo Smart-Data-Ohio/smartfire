@@ -13,6 +13,10 @@ travel_to Time.utc(2026, 3, 2, 16) do
   raw = %({"message":{"client_message_id":"ws11-retry","body":"Replacement"}})
   client.post path, params: raw, headers: { "CONTENT_TYPE" => "application/json" }
   replay = { status: client.response.status, original_id: existing.id, returned_id: client.response.headers["Location"].split('/').last.to_i, notices: AgentBudgetNotice.count }
+  client.post path, params: %({"attachment":123,"message":{"client_message_id":"ws11-retry"}}), headers: { "CONTENT_TYPE" => "application/json" }
+  malformed_replay = { status: client.response.status, returned_id: client.response.headers["Location"].split('/').last.to_i }
+  client.post path, params: %({"attachment":123,"message":{"client_message_id":"ws11-new-bad-attachment"}}), headers: { "CONTENT_TYPE" => "application/json" }
+  malformed_overflow = { status: client.response.status }
   client.post path, params: "Over budget", headers: { "CONTENT_TYPE" => "text/plain" }
   overflow = { status: client.response.status, body: client.response.body, retry_after_header: client.response.headers["Retry-After"] }
   client.post path, params: "Over budget again", headers: { "CONTENT_TYPE" => "text/plain" }
@@ -23,5 +27,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
       { zone: zone, now: now.iso8601(6), day: current.to_date.to_s, start: current.beginning_of_day.utc.iso8601(6), end: current.end_of_day.utc.iso8601(6), retry_after: Agents::Budgets.seconds_until_reset(now: current) }
     end
   end
-  puts JSON.pretty_generate(reference_pin: 'd7c7de92', replay: replay, overflow: overflow, notices: notices, reset: reset)
+  puts JSON.pretty_generate(reference_pin: 'd7c7de92', replay: replay, malformed_replay: malformed_replay, malformed_overflow: malformed_overflow, overflow: overflow, notices: notices, reset: reset)
 end

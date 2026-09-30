@@ -6,6 +6,13 @@
     "returned_id": 935962058,
     "notices": 0
   },
+  "malformed_replay": {
+    "status": 201,
+    "returned_id": 935962058
+  },
+  "malformed_overflow": {
+    "status": 429
+  },
   "overflow": {
     "status": 429,
     "body": "{\"error\":\"Daily message budget exceeded (1/day)\",\"cap\":\"messages\",\"limit\":1,\"retry_after\":28799}",

@@ -473,6 +473,13 @@ async fn ws11_webhook_secrets_reload_encrypt_and_rotate() {
     let export = app.db().write(move |tx| {
         assert_eq!(winner.signing_secret(&encryption)?.as_deref(), Some(expected.as_str()));
         let secret = winner.reset_signing_secret(tx, &encryption)?;
+        assert_ne!(secret, expected);
+        // Rails returns an already-loaded present secret without reloading it.
+        assert_eq!(stale.ensure_signing_secret(tx, &encryption)?, expected);
+        tx.conn().execute("UPDATE webhooks SET signing_secret=NULL WHERE user_id=?", [BENDER])?;
+        winner = campfire_db::Webhook::find_by_user(tx.conn(), BENDER)?.unwrap();
+        stale = winner.clone();
+        let secret = winner.ensure_signing_secret(tx, &encryption)?;
         assert_eq!(stale.ensure_signing_secret(tx, &encryption)?, secret);
         let first_ciphertext = stale.encrypted_signing_secret.clone();
         assert_eq!(stale.ensure_signing_secret(tx, &encryption)?, secret);
@@ -570,4 +577,21 @@ async fn ws11_legacy_bot_keeps_raw_body_and_ignores_client_message_id() {
         }
         Ok(())
     }).await.unwrap();
+}
+
+#[tokio::test]
+async fn ws11_replay_and_budget_precede_attachment_validation() {
+    let vectors: serde_json::Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/agents_posting_budget_contract.json"))).unwrap();
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let original = app.db().write(|tx| {
+        tx.conn().execute("UPDATE agents SET daily_message_cap=1 WHERE user_id=?", [BENDER])?;
+        Message::create(tx, campfire_db::NewMessage { room_id: ALL_TALK, creator_id: BENDER, client_message_id: Some("ws11-bad-attachment".into()), body: Some("Original".into()), ..Default::default() })
+    }).await.unwrap();
+    let mut bot = app.anonymous();
+    let path = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages");
+    let replay = bot.send(Req::new(Method::POST, &path).header("content-type", "application/json").body(r#"{"attachment":123,"message":{"client_message_id":"ws11-bad-attachment"}}"#)).await;
+    assert_eq!(replay.status.as_u16(), vectors["malformed_replay"]["status"].as_u64().unwrap() as u16);
+    assert_eq!(replay.location().unwrap().rsplit('/').next().unwrap(), original.id.to_string());
+    let overflow = bot.send(Req::new(Method::POST, &path).header("content-type", "application/json").body(r#"{"attachment":123,"message":{"client_message_id":"ws11-new-bad-attachment"}}"#)).await;
+    assert_eq!(overflow.status.as_u16(), vectors["malformed_overflow"]["status"].as_u64().unwrap() as u16);
 }

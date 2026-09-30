@@ -43,9 +43,21 @@ pub async fn create(c: &mut Ctx) -> Result {
     if room.board() {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    // MessagesController#create
+    let client_message_id = c.params.get("message").and_then(|p| p.get("client_message_id")).filter(|p| !p.is_null()).and_then(Param::to_s);
+    // Posting's replay/budget checks precede attachment validation and staging. The final
+    // write repeats the check in its transaction so concurrent posts cannot overrun a cap.
+    let (user_id, room_id, replay_id) = (require_current_user(c)?.id, room.id, client_message_id.clone());
+    let preflight = c.app().db.write(move |tx| campfire_db::models::agent_posting::prepare_for_user(tx, user_id, room_id, replay_id.as_deref())).await.map_err(db_error)?;
+    match preflight {
+        Some(campfire_db::models::agent_posting::PostingCheck::Replay(message)) => {
+            let location = c.url_for(&campfire_routes::message(message.id));
+            return c.head_with_location(StatusCode::CREATED, &location);
+        }
+        Some(campfire_db::models::agent_posting::PostingCheck::Budget(payload)) => return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &format::JSON, payload.to_string())),
+        _ => {},
+    }
     let mut attributes = message_params(c)?;
-    attributes.client_message_id = c.params.get("message").and_then(|p| p.get("client_message_id")).filter(|p| !p.is_null()).and_then(Param::to_s);
+    attributes.client_message_id = client_message_id;
     let message = match create_message_with_agent_policy(c, &room, attributes, true).await? {
         campfire_db::models::agent_posting::PostingOutcome::Created(message) => {
             broadcast_create(c, &room, &message).await?;

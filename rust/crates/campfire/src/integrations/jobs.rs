@@ -102,7 +102,7 @@ async fn deliver_webhook(app: App, job: WebhookJob, _: Execution) -> JobResult {
         .await?
         .context("undefined method 'deliver' for nil (the bot has no webhook)")?;
 
-    let delivery = webhook::deliver_signed(&Network::system(), url.as_deref().unwrap_or(""), payload, secret.as_deref(), now, false).await?;
+    let delivery = webhook::deliver_signed(&Network::system(), url.as_deref().unwrap_or(""), payload, secret.as_deref(), || app.clock.now(), false).await?;
     let message = match delivery.reply {
         WebhookReply::None => return Ok(Outcome::Done),
         WebhookReply::Text(text) => create_text_reply(&app, &room, &bot, delivery.status.map(|_| trigger.clone()), text).await?,
@@ -174,6 +174,21 @@ async fn broadcast_create(app: &App, room: &Room, message: &Message) -> anyhow::
 mod tests {
     use super::*;
     use crate::controllers::presenters::test_support::{TestApp, ALL_TALK, BENDER, DAVID};
+
+    #[test]
+    fn ws11_legacy_webhook_retry_policy_keeps_transient_sources() {
+        use campfire_jobs::JobKind;
+        use crate::integrations::net::http::HttpError;
+        use crate::integrations::webhook::WebhookError;
+        let policy = WebhookJob::retry_policy();
+        let timeout = anyhow::Error::new(WebhookError::Http(HttpError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "write timed out"))));
+        assert!((policy.retry_on)(&timeout));
+        let refused = anyhow::Error::new(WebhookError::Http(HttpError::Io(std::io::Error::new(std::io::ErrorKind::ConnectionRefused, "refused"))));
+        assert!(!(policy.retry_on)(&refused));
+        assert!(!(policy.retry_on)(&anyhow::Error::new(WebhookError::InvalidUrl("bad URI".into()))));
+        let delays: Vec<_> = (1..=5).map(|attempt| policy.retry_delay(attempt, None, 0.0).map(|delay| delay.as_secs())).collect();
+        assert_eq!(delays, vec![Some(3), Some(18), Some(83), Some(258), None]);
+    }
 
     #[tokio::test]
     async fn ws11_sync_replies_use_root_links_threads_boards_and_locking() {
