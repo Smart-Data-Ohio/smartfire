@@ -49,10 +49,10 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
         fields.google.connected = reason.as_deref().is_none_or(is_blank);
         fields.google.calendar = is_blank(scopes)
             || scopes
-                .split(|c| matches!(c, ' ' | '\t' | '\n' | '\r' | '\u{000b}' | '\u{000c}'))
+                .split([' ', '\t', '\n', '\r', '\u{000b}', '\u{000c}'])
                 .any(|s| s == "https://www.googleapis.com/auth/calendar.events");
         fields.google.drive = scopes
-            .split(|c| matches!(c, ' ' | '\t' | '\n' | '\r' | '\u{000b}' | '\u{000c}'))
+            .split([' ', '\t', '\n', '\r', '\u{000b}', '\u{000c}'])
             .any(|s| s == "https://www.googleapis.com/auth/drive.file");
     }
     // WS17 replaces manual-only return dates with the shared effective Calendar/OOO reader.
