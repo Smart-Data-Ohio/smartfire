@@ -139,7 +139,7 @@ docker_name() { echo "$NAMESPACE-reference-$1"; }
 docker_build() {
   log "building $APP_IMAGE from $REFERENCE_ROOT/Dockerfile"
   docker build -t "$APP_IMAGE" -f "$REFERENCE_ROOT/Dockerfile" \
-    --build-arg APP_VERSION=parity --build-arg GIT_REVISION="$(git -C "$REFERENCE_ROOT" rev-parse HEAD)" \
+    --build-arg APP_VERSION=parity --build-arg GIT_REVISION="${PARITY_REFERENCE_REVISION:-$(git -C "$REFERENCE_ROOT" rev-parse HEAD)}" \
     "$REFERENCE_ROOT"
   log "building $IMAGE from parity/docker/Dockerfile"
   docker build -t "$IMAGE" --build-arg BASE_IMAGE="$APP_IMAGE" -f "$PARITY/docker/Dockerfile" \

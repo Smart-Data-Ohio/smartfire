@@ -19,18 +19,32 @@ pub type Frame = crate::socket::Frame;
 
 /// One subscription's stream of frames, as a connection reads it: it ends when the stream is
 /// stopped.
-pub(crate) type Deliveries = Abortable<BoxStream<'static, Result<Frame, RecvError>>>;
+pub(crate) type Deliveries = Abortable<BoxStream<'static, Result<Delivery, RecvError>>>;
+
+/// Publication order is assigned under the hub lock, shared across broadcastings (including
+/// the internal disconnect channel). It stays off the wire.
+#[derive(Clone)]
+pub(crate) struct Delivery {
+    pub sequence: u64,
+    pub frame: Frame,
+}
 
 pub struct Hub {
     capacity: usize,
-    streams: Mutex<HashMap<String, Vec<Group>>>,
+    state: Mutex<State>,
+}
+
+#[derive(Default)]
+struct State {
+    streams: HashMap<String, Vec<Group>>,
+    sequence: u64,
 }
 
 /// The subscribers of one broadcasting that receive identical frames: the payload wrapped for
 /// the same encoded channel identifier, or the raw payload when `identifier` is `None`.
 struct Group {
     identifier: Option<Arc<str>>,
-    sender: broadcast::Sender<Frame>,
+    sender: broadcast::Sender<Delivery>,
 }
 
 impl Group {
@@ -51,17 +65,19 @@ pub enum RecvError {
 
 impl Hub {
     pub fn new(capacity: usize) -> Arc<Self> {
-        Arc::new(Self { capacity, streams: Mutex::new(HashMap::new()) })
+        Arc::new(Self { capacity, state: Mutex::new(State::default()) })
     }
 
     /// Publishes to every current subscriber of `broadcasting`. Returns how many received it.
     pub fn broadcast(&self, broadcasting: &str, payload: &str) -> usize {
-        let mut streams = self.streams.lock().unwrap();
-        let Some(groups) = streams.get_mut(broadcasting) else {
+        let mut state = self.state.lock().unwrap();
+        state.sequence += 1;
+        let sequence = state.sequence;
+        let Some(groups) = state.streams.get_mut(broadcasting) else {
             return 0;
         };
         let mut receivers = 0;
-        groups.retain(|group| match group.sender.send(group.frame(payload)) {
+        groups.retain(|group| match group.sender.send(Delivery { sequence, frame: group.frame(payload) }) {
             Ok(count) => {
                 receivers += count;
                 true
@@ -69,7 +85,7 @@ impl Hub {
             Err(_) => false,
         });
         if groups.is_empty() {
-            streams.remove(broadcasting);
+            state.streams.remove(broadcasting);
         }
         receivers
     }
@@ -77,8 +93,8 @@ impl Hub {
     /// Subscribes to `broadcasting`, receiving each payload wrapped as a message frame for the
     /// encoded channel `identifier`, or raw when it's `None`.
     pub fn subscribe(self: &Arc<Self>, broadcasting: &str, identifier: Option<Arc<str>>) -> Subscriber {
-        let mut streams = self.streams.lock().unwrap();
-        let groups = streams.entry(broadcasting.to_string()).or_default();
+        let mut state = self.state.lock().unwrap();
+        let groups = state.streams.entry(broadcasting.to_string()).or_default();
         let receiver = match groups.iter().find(|group| group.identifier == identifier) {
             Some(group) => group.sender.subscribe(),
             None => {
@@ -92,17 +108,17 @@ impl Hub {
 
     /// Number of broadcastings with at least one live subscriber channel.
     pub fn stream_count(&self) -> usize {
-        self.streams.lock().unwrap().len()
+        self.state.lock().unwrap().streams.len()
     }
 
     fn release(&self, broadcasting: &str, identifier: &Option<Arc<str>>) {
-        let mut streams = self.streams.lock().unwrap();
-        let Some(groups) = streams.get_mut(broadcasting) else {
+        let mut state = self.state.lock().unwrap();
+        let Some(groups) = state.streams.get_mut(broadcasting) else {
             return;
         };
         groups.retain(|group| group.identifier != *identifier || group.sender.receiver_count() > 0);
         if groups.is_empty() {
-            streams.remove(broadcasting);
+            state.streams.remove(broadcasting);
         }
     }
 }
@@ -111,7 +127,7 @@ pub struct Subscriber {
     hub: Arc<Hub>,
     broadcasting: String,
     identifier: Option<Arc<str>>,
-    receiver: Option<broadcast::Receiver<Frame>>,
+    receiver: Option<broadcast::Receiver<Delivery>>,
 }
 
 impl Subscriber {
@@ -120,6 +136,10 @@ impl Subscriber {
     }
 
     pub async fn recv(&mut self) -> Result<Frame, RecvError> {
+        self.recv_delivery().await.map(|delivery| delivery.frame)
+    }
+
+    async fn recv_delivery(&mut self) -> Result<Delivery, RecvError> {
         match self.receiver.as_mut().expect("receiver is present until drop").recv().await {
             Ok(frame) => Ok(frame),
             Err(broadcast::error::RecvError::Lagged(_)) => Err(RecvError::Lagged),
@@ -130,8 +150,12 @@ impl Subscriber {
     /// The frames as a stream, which ends if the hub goes away. It holds the subscription until
     /// it's dropped.
     pub fn deliveries(self) -> BoxStream<'static, Result<Frame, RecvError>> {
+        self.ordered_deliveries().map(|result| result.map(|delivery| delivery.frame)).boxed()
+    }
+
+    pub(crate) fn ordered_deliveries(self) -> BoxStream<'static, Result<Delivery, RecvError>> {
         futures_util::stream::unfold(self, |mut subscriber| async move {
-            match subscriber.recv().await {
+            match subscriber.recv_delivery().await {
                 Err(RecvError::Closed) => None,
                 result => Some((result, subscriber)),
             }
@@ -184,7 +208,7 @@ mod tests {
 
         drop(other);
         drop(raw);
-        assert_eq!(hub.streams.lock().unwrap()["room"].len(), 1);
+        assert_eq!(hub.state.lock().unwrap().streams["room"].len(), 1);
     }
 
     #[tokio::test]
