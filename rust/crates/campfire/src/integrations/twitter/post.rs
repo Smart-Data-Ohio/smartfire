@@ -46,6 +46,12 @@ impl Post {
             Self::from_row,
         )?)
     }
+    pub fn for_message(conn: &Connection, message_id: i64) -> Result<Vec<Self>> {
+        let mut query=conn.prepare("SELECT p.* FROM twitter_posts p JOIN twitter_post_references r ON r.twitter_post_id=p.id WHERE r.message_id=? ORDER BY r.id")?;
+        Ok(query
+            .query_map([message_id], Self::from_row)?
+            .collect::<std::result::Result<Vec<_>, _>>()?)
+    }
     pub fn view_url(&self) -> String {
         self.url
             .as_deref()
