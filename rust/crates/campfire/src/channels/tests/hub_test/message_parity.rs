@@ -30,10 +30,9 @@ async fn compare(client: &mut Client, streams: &[String], step: &str) {
     for expected in row["frames"].as_array().unwrap().iter().filter(|frame| streams.contains(&frame["stream"].as_str().unwrap().to_owned())) {
         let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
         if actual["message"] != expected["payload"] {
-            let scratch = std::path::PathBuf::from(std::env::var_os("TMPDIR").unwrap());
-            std::fs::write(scratch.join("broadcast.actual.txt"), actual["message"].as_str().unwrap_or(&actual.to_string())).unwrap();
-            std::fs::write(scratch.join("broadcast.expected.txt"), expected["payload"].as_str().unwrap_or(&expected.to_string())).unwrap();
-            panic!("{step}: publisher bytes differ; TMPDIR/broadcast.*.txt");
+            crate::controllers::presenters::test_support::rails_mismatch(
+                actual["message"].as_str().unwrap_or(&actual.to_string()),
+                expected["payload"].as_str().unwrap_or(&expected.to_string()), step);
         }
         if let Some(html) = actual["message"].as_str() {
             assert_eq!(campfire_cable::turbo::session_bound(html), None);

@@ -14,6 +14,23 @@ use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
+/// Failure artifacts are output, never fixture inputs. Create their parent and a private
+/// directory even when neither TMPDIR nor any previous target directory exists.
+pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
+    let byte = actual.bytes().zip(expected.bytes()).position(|(a, b)| a != b)
+        .unwrap_or(actual.len().min(expected.len()));
+    let parent = Path::new(ROOT).join("target/ws8bm-diffs");
+    let directory = std::fs::create_dir_all(&parent).ok()
+        .and_then(|_| tempfile::Builder::new().prefix("difference-").tempdir_in(&parent).ok());
+    if let Some(directory) = directory {
+        let path = directory.keep();
+        let _ = std::fs::write(path.join("actual.txt"), actual);
+        let _ = std::fs::write(path.join("expected.txt"), expected);
+        panic!("{label}: byte {byte}; actual {} bytes, Rails {} bytes; {}", actual.len(), expected.len(), path.display());
+    }
+    panic!("{label}: byte {byte}; actual {} bytes, Rails {} bytes", actual.len(), expected.len());
+}
+
 pub const DAVID: i64 = 127326141;
 pub const JASON: i64 = 149087659;
 pub const KEVIN: i64 = 712064548;

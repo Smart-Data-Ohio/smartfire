@@ -123,11 +123,7 @@ async fn standalone_message_wrapper_matches_rails_bytes() {
         }).await.unwrap();
         let expected = row["html"].as_str().unwrap();
         if html != expected {
-            let scratch = std::path::PathBuf::from(std::env::var_os("TMPDIR").unwrap());
-            std::fs::write(scratch.join("show.actual.html"), &html).unwrap();
-            std::fs::write(scratch.join("show.expected.html"), expected).unwrap();
-            let byte = html.bytes().zip(expected.bytes()).position(|(a,b)| a != b).unwrap_or(html.len().min(expected.len()));
-            panic!("standalone message differs at byte {byte}; TMPDIR/show.*.html");
+            rails_mismatch(&html, expected, "standalone message");
         }
         assert_eq!(campfire_cable::turbo::session_bound(&html), None);
     }

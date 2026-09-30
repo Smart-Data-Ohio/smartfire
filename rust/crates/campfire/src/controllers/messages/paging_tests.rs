@@ -42,11 +42,7 @@ async fn pages_match_rails_tuple_edges_formats_and_etag_bytes() {
         if let Some(html) = row["html"].as_str() {
             let actual = reply.text();
             if actual != html {
-                let scratch = std::path::PathBuf::from(std::env::var_os("TMPDIR").unwrap());
-                std::fs::write(scratch.join("paging.actual.html"), &actual).unwrap();
-                std::fs::write(scratch.join("paging.expected.html"), html).unwrap();
-                let byte = actual.bytes().zip(html.bytes()).position(|(a,b)| a != b).unwrap_or(actual.len().min(html.len()));
-                panic!("{} differs at byte {byte}; actual {} bytes, Rails {} bytes (TMPDIR/paging.*.html)", row["name"], actual.len(), html.len());
+                rails_mismatch(&actual, html, row["name"].as_str().unwrap());
             }
         }
     }
