@@ -32,12 +32,24 @@ mutations = [
     ("fetch-file-cap", "fetcher.rs", ".take(100)", ".take(usize::MAX)", "github_fetch_persisted_fields", 1),
     ("notifier-private-title", "notifier.rs", "!public && !subscription.verified", "false", "github_notifier_security", 1),
     ("notifier-mention", "notifier.rs", '.replace("@[", "@\\u{200b}[")', '.replace("@[", "@[")', "github_notifier_security", 1),
-    ("notifier-dedupe", "notifier.rs", "ON CONFLICT(subscription_id,dedupe_key) DO NOTHING RETURNING id", "ON CONFLICT(subscription_id,dedupe_key) DO UPDATE SET updated_at=excluded.updated_at RETURNING id", "github_notifier_concurrent_duplicates", 1),
+    ("notifier-dedupe", "subscriptions.rs", "ON CONFLICT(subscription_id,dedupe_key) DO NOTHING RETURNING id", "ON CONFLICT(subscription_id,dedupe_key) DO UPDATE SET updated_at=excluded.updated_at RETURNING id", "github_notifier_concurrent_duplicates", 1),
     ("notifier-deleted-room", "notifier.rs", "r.deleted_at IS NULL AND s.owner", "s.owner", "github_notifier_posts_claims", 1),
     ("notifier-invisible-reviewer", "notifier.rs", "AND (m.involvement IS NULL OR m.involvement!='invisible')", "", "github_notifier_posts_claims", 1),
     ("notifier-open-grant", "../../../../db/src/models/user.rs", "}, false)\n    }\n\n    fn create_with_open_room_grant", "}, true)\n    }\n\n    fn create_with_open_room_grant", "github_notifier_queue_failure", 1),
     ("notifier-broadcast-registration", "../../channels/sink.rs", "crate::integrations::github::notifier::MessageCreated::KIND =>", '"Github::Notifier#missing_broadcast" =>', "github_notifier_durable_handler", 1),
 
+    ("message-reference-registration", "../../app.rs", "message_reference_syncs: vec![crate::integrations::github::references::sync]", "message_reference_syncs: vec![]", "github_message_reference_security", 1),
+    ("reference-cap", "references.rs", "if triples.len() == 4", "if triples.len() == 8", "github_message_reference_security", 1),
+    ("pr-private-agent-details", "pull_requests.rs", "if self.private == Some(false)", "if self.private == Some(true)", "github_pr_agent_payload_security", 1),
+    ("card-broadcast-registration", "../../channels/sink.rs", "crate::integrations::github::pull_requests::CardUpdated::KIND =>", '"Github::PullRequest#missing_broadcast" =>', "github_pr_registered_card_callbacks", 1),
+    ("viewer-reference-context", "pull_requests.rs", "message.room_id!=room_id||!conn.query_row", "message.room_id!=room_id||false && !conn.query_row", "github_viewer_card_security", 1),
+    ("deleted-room-scope", "../../concerns.rs", "if room.deleted() { return Ok(None) }", "if false && room.deleted() { return Ok(None) }", "github_viewer_card_security", 1),
+    ("pr-noop-timestamp", "pull_requests.rs", "if changed {", "if true {", "github_pr_identity_display_files", 1),
+    ("thread-combined-error-cleanup", "threads.rs", 'e.0==vec![("github_pull_request_id","has already been taken".into())]', 'e.0.iter().any(|(field,_)|*field=="github_pull_request_id")', "github_pr_thread_uniqueness", 1),
+    ("health-cutoff", "health.rs", "created_at>=?", "created_at>?", "github_health_counts", 1),
+    ("subscription-member-authority", "../../controllers/github/subscriptions.rs", "if !user.can_administer(Some(room.creator_id), false)", "if false && !user.can_administer(Some(room.creator_id), false)", "github_subscription_http_security", 1),
+    ("subscription-override-authority", "../../controllers/github/subscriptions.rs", "administrator_override: user.is_administrator()", "administrator_override: true", "github_subscription_http_status", 1),
+    ("subscription-section-authority", "../../../../views/src/github/subscriptions.rs", "if !self.can_administer", "if false && !self.can_administer", "github_subscription_sections", 1),
 ]
 for name, filename, before, after, test_filter, expected_failures in mutations:
     path = base / filename
