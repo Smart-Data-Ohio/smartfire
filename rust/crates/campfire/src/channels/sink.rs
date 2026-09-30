@@ -39,7 +39,10 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
-        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, app, &broadcast)),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
+            if let Some(app) = app && super::message_features::deliver(cable, app, &broadcast)? { return Ok(()); }
+            messaging(cable, app, &broadcast)
+        }),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {

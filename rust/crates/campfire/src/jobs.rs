@@ -44,6 +44,7 @@ use crate::config::Config;
 pub mod periodic;
 mod messaging;
 mod notifications;
+pub(crate) mod reminders;
 
 /// The app's job classes and their handlers, which get the [`App`].
 pub type Registry = campfire_jobs::Registry<App>;
@@ -151,6 +152,7 @@ pub fn registry() -> Registry {
     registry.register(quote_cards_refresh);
     messaging::register(&mut registry);
     notifications::register(&mut registry);
+    reminders::register(&mut registry);
     // Room::PushMessageJob and Bot::WebhookJob
     crate::integrations::register_jobs(&mut registry);
     crate::mail::register(&mut registry);

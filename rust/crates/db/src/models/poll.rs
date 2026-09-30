@@ -69,7 +69,7 @@ fn invalid(attribute: &'static str, message: &str) -> Error {
 }
 
 impl Poll {
-    fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+    pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
             id: row.get("id")?,
             message_id: row.get("message_id")?,
@@ -345,7 +345,7 @@ pub fn json_time(time: Timestamp) -> String {
 }
 
 impl PollOption {
-    fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+    pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
             id: row.get("id")?,
             poll_id: row.get("poll_id")?,
@@ -395,7 +395,7 @@ impl PollOption {
 }
 
 impl PollVote {
-    fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+    pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
             id: row.get("id")?,
             poll_id: row.get("poll_id")?,

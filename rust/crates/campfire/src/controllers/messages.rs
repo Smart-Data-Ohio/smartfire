@@ -4,6 +4,7 @@
 //! delivering webhooks and the broadcasts.
 
 pub mod boosts;
+pub mod pins;
 pub mod by_bots;
 pub(crate) mod payload;
 mod freshness;
@@ -363,7 +364,8 @@ pub(crate) async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thre
     let id = message.id;
     let app = c.app().clone();
     let host = Some(c.request.host());
-    let (id, blob) = c.app().db.write(move |tx| {
+    let origin = page::renderer_base_url(c);
+    let (id, blob) = c.app().db.write_scoped(move || crate::channels::message_features::origin(&origin), move |tx| {
         if let Some(thread) = thread_id
             && campfire_db::ChannelThread::find(tx.conn(), thread)?.locked_at.is_some() {
             return Err(campfire_db::Error::Other(campfire_db::channel_thread::LOCKED_MESSAGE.into()));
@@ -672,7 +674,8 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
 /// `@message.destroy` then `@message.broadcast_remove`.
 pub(crate) async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let destroyed = message.clone();
-    let (replies, thread) = c.app().db.write(move |tx| {
+    let origin = page::renderer_base_url(c);
+    let (replies, thread) = c.app().db.write_scoped(move || crate::channels::message_features::origin(&origin), move |tx| {
         let replies = tx.conn().prepare("SELECT id FROM messages WHERE reply_to_message_id = ? ORDER BY id")?
             .query_map([destroyed.id], |row| row.get::<_, i64>(0))?.collect::<std::result::Result<Vec<_>, _>>()?;
         let thread = campfire_db::ChannelThread::find_by_parent_message(tx.conn(), destroyed.id)?.map(|thread| thread.id);
@@ -722,6 +725,16 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
             app.broadcasts.message_replace(&room, &message, &partials);
+            // WS8bm2 owning quote-container seam: Rails update replaces this target
+            // after presentation/meta even when the edited message has no quotes.
+            let html = page::render_detached_at(&app, account.as_ref(), &base_url,
+                |ctx| campfire_views::message_links::cards(ctx, &view).0);
+            let html = campfire_cable::turbo::action_tag(campfire_cable::turbo::Action::Replace,
+                campfire_cable::turbo::Target::Target(&campfire_db::broadcasts::message_dom_id(&message, Some("message_link_cards"))),
+                Some(&html), &[("maintain_scroll", Some("true"))]);
+            let stream = campfire_db::broadcasts::conversation_messages(conn, &message)?.iter()
+                .map(campfire_db::broadcasts::Streamable::to_param).collect::<Vec<_>>().join(":");
+            app.cable.broadcast_stream_to(&[&stream], &html);
             Ok(())
         })
         .await
@@ -735,7 +748,7 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
 /// rows commit, or roll back, with the message; each is held for [`WEBHOOK_HOLD`] so a bot can't
 /// be told (and reply) before the room sees the message, and [`release_webhooks`] makes them due
 /// once it has been broadcast.
-fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
+pub(crate) fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
     let _ = room;
     for bot in campfire_db::models::bot_webhook_fanout::recipients(tx, message)? {
         if bot.webhook(tx.conn())?.is_some() {

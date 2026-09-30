@@ -47,6 +47,7 @@ pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
 pub mod messages;
+pub(crate) mod message_features;
 pub mod presenters;
 pub mod pwa;
 pub mod qr_code;
@@ -54,6 +55,8 @@ pub mod rooms;
 pub mod room_categories;
 pub mod searches;
 pub mod switchers;
+pub mod saved_items;
+pub mod scheduled_messages;
 pub mod sessions;
 pub mod sudos;
 pub mod two_factor;
@@ -220,7 +223,27 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/dnd_allowances#destroy" => arc(users::dnd_allowances::destroy),
         "users/notification_settings#update" => arc(users::notification_settings::update),
         "users/statuses#update" => arc(users::statuses::update),
+        "rooms/message_links#show" => arc(rooms::message_links::show),
+        "rooms/files#index" => arc(rooms::files::index),
+        "rooms/slash_commands#create" => arc(rooms::slash_commands::create),
+        "autocompletable/icons#index" => arc(autocompletable::icons::index),
+        "autocompletable/slash_commands#index" => arc(autocompletable::slash_commands::index),
         "autocompletable/users#index" => arc(autocompletable::users::index),
+        "scheduled_messages#index" => arc(scheduled_messages::index),
+        "scheduled_messages#create" => arc(scheduled_messages::create),
+        "scheduled_messages#update" => arc(scheduled_messages::update),
+        "scheduled_messages#destroy" => arc(scheduled_messages::destroy),
+        "scheduled_messages#send_now" => arc(scheduled_messages::send_now),
+        "saved_items#index" => arc(saved_items::index),
+        "saved_items#create" => arc(saved_items::create),
+        "saved_items#update" => arc(saved_items::update),
+        "saved_items#destroy" => arc(saved_items::destroy),
+        "rooms/polls#create" => arc(rooms::polls::create),
+        "rooms/polls#show" => arc(rooms::polls::show),
+        "rooms/polls#vote" => arc(rooms::polls::vote),
+        "messages/pins#create" => arc(messages::pins::create),
+        "messages/pins#destroy" => arc(messages::pins::destroy),
+        "rooms/pins#index" => arc(rooms::pins::index),
         "messages#index" => arc(messages::index),
         "messages#create" => arc(messages::create),
         "messages#preview" => arc(messages::preview),
@@ -687,6 +710,12 @@ mod tests {
         "users/dnd_allowances#create", "users/dnd_allowances#destroy",
         "users/notification_settings#update",
         "users/statuses#update",
+        "scheduled_messages#index", "scheduled_messages#create", "scheduled_messages#update", "scheduled_messages#destroy", "scheduled_messages#send_now",
+        "saved_items#index", "saved_items#create", "saved_items#update", "saved_items#destroy",
+        "rooms/polls#create", "rooms/polls#show", "rooms/polls#vote",
+        "messages/pins#create", "messages/pins#destroy", "rooms/pins#index",
+        "rooms/message_links#show", "rooms/files#index",
+        "rooms/slash_commands#create", "autocompletable/icons#index", "autocompletable/slash_commands#index",
         "autocompletable/users#index", "messages#index", "messages#create", "messages#edit", "messages#show",
         "messages#update", "messages#destroy", "messages/boosts/by_bots#create",
         "messages/boosts/by_bots#destroy", "messages/by_bots#index", "messages/by_bots#create",

@@ -134,6 +134,7 @@ pub struct MessageDetails {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct MessageComponents {
+    pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub twitter_cards: Vec<String>,
     pub event_cards: Vec<String>,

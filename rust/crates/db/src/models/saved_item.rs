@@ -225,6 +225,11 @@ impl SavedItem {
         Ok(())
     }
 
+    /// WS8bm2 reminder job checks membership before evaluating recipient policy.
+    pub fn reminder_room_member(&self, conn: &Connection) -> Result<bool> {
+        Self::room_member(conn, self.message_id, self.user_id)
+    }
+
     fn room_member(conn: &Connection, message_id: i64, user_id: i64) -> Result<bool> {
         sql::exists(
             conn,

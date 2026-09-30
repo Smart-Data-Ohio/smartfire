@@ -19,7 +19,6 @@ pub mod agent_repositories;
 mod agent_streaming;
 pub mod net;
 pub mod opengraph;
-pub mod search;
 pub mod web_push;
 pub mod webhook;
 

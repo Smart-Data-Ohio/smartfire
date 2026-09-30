@@ -1,125 +1,224 @@
-//! `SearchesController` (reference/app/controllers/searches_controller.rb). `set_messages` runs
-//! before every action, so a query that FTS5 rejects fails `create` and `clear` too.
-
-use campfire_db::{Message, Search};
-use campfire_kit::{Ctx, Error, Result, StatusCode};
+//! `app/controllers/searches_controller.rb`.
+pub(crate) mod preloads;
+use crate::app::AppCtx;
+use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
+use crate::controllers::messages::present;
+use crate::controllers::presenters::page::db_error;
+use askama::Template;
+use campfire_db::{Search, search_query::SearchQuery};
+use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format};
 use campfire_views::searches::{Index, IndexView, search_path};
 
-use crate::app::AppCtx;
-use crate::concerns::{self, Before, before_actions, require_current_user};
-use crate::controllers::messages::present;
-use crate::controllers::presenters::page::{self, db_error};
-
+pub fn display_query(c: &Ctx) -> Option<String> {
+    let raw = c.param("q").and_then(Param::to_s).unwrap_or_default();
+    let q = raw.split_whitespace().collect::<Vec<_>>().join(" ");
+    (!q.is_empty()).then_some(q)
+}
+fn parsed(c: &Ctx) -> SearchQuery {
+    SearchQuery::parse(&c.param("q").and_then(Param::to_s).unwrap_or_default())
+}
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let q = query_param(c)?;
-    let messages = set_messages(c, q.as_deref()).await?;
     let user_id = require_current_user(c)?.id;
-    let query = query(q.as_deref()).filter(|query| is_present(query));
-    let recent_searches: Vec<String> = c
+    let q = parsed(c);
+    let query = display_query(c);
+    let older = c.param("before").is_some_and(Param::is_present);
+    // Rails does not resolve a cursor for a blank query: set_messages returns early.
+    let before = if !q.blank_query() && older {
+        Some(
+            c.param("before")
+                .and_then(Param::to_s)
+                .and_then(|s| cast_integer(&s))
+                .ok_or(Error::NotFound)?,
+        )
+    } else {
+        None
+    };
+    let stream =
+        older && *c.respond_to(&[&format::HTML, &format::TURBO_STREAM])? == format::TURBO_STREAM;
+    let zone = super::message_features::user_zone(c).await?;
+    let dbq = q.clone();
+    let (window, sections, recent_searches) = c
         .app()
         .db
-        .read(move |conn| Ok(Search::ordered_for_user(conn, user_id)?.into_iter().map(|search| search.query).collect()))
+        .read(move |conn| {
+            let window = dbq.messages_for_user(conn, user_id, zone.tz().clone(), before)?;
+            let sections = if !older && !dbq.blank_query() {
+                dbq.sections_for_user(conn, user_id)?
+            } else {
+                vec![]
+            };
+            let recents = Search::recent_for_user(conn, user_id)?
+                .into_iter()
+                .map(|row| campfire_views::layouts::RecentSearch {
+                    id: row.id,
+                    query: row.query,
+                })
+                .collect();
+            Ok((window, sections, recents))
+        })
         .await
         .map_err(db_error)?;
-    let return_to_room_id = concerns::last_room_visited(c).await?.map(|room| room.id).unwrap_or_default();
-    let messages = present(c, move |presenter| presenter.messages(&messages)).await?;
-    let index = IndexView { query, q, messages, recent_searches, return_to_room_id };
-    let response = page::framed_page!(c, StatusCode::OK, |ctx| Index { ctx, index: &index }).await?;
-    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &index.messages, &c.url_for(""));
+    let oldest_id = window.messages.first().map(|m| m.id);
+    let messages = present(c, move |presenter| {
+        search_messages(presenter, &window.messages)
+    })
+    .await?;
+    let return_to_room = concerns::last_room_visited(c).await?;
+    let user = require_current_user(c)?.clone();
+    let back = if let Some(room) = return_to_room {
+        Some(
+            present(c, move |p| {
+                Ok((room.id, p.room_display_name(&room, Some(&user))?))
+            })
+            .await?,
+        )
+    } else {
+        None
+    };
+    let index = IndexView {
+        query: query.clone(),
+        q: query,
+        messages,
+        recent_searches,
+        return_to_room: back,
+        has_more: window.has_more,
+        oldest_id,
+        chips: q
+            .chips
+            .into_iter()
+            .map(|chip| campfire_views::searches::Chip {
+                label: chip.label,
+                remove_query: chip.remove_query,
+            })
+            .collect(),
+        sections: sections.into_iter().map(section_view).collect(),
+    };
+    if stream {
+        let layout = super::presenters::view_context::Layout::load(c).await?;
+        let body = layout.render(c, |ctx| {
+            campfire_views::searches::Older { ctx, index: &index }.render()
+        })?;
+        return Ok(c.render(StatusCode::OK, &format::TURBO_STREAM, body));
+    }
+    let response = super::presenters::view_context::page_or_frame_in_any_format(
+        c,
+        StatusCode::OK,
+        |ctx| Index { ctx, index: &index }.render(),
+        |ctx| {
+            let page = Index { ctx, index: &index };
+            campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
+        },
+    )
+    .await?;
+    let fragments = campfire_views::messages::MessageItem::cached_fragments(
+        &c.app().fragment_cache,
+        &index.messages,
+        &c.url_for(""),
+    );
     Ok(response.with_cached_fragments(fragments))
 }
-
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let q = query_param(c)?;
-    set_messages(c, q.as_deref()).await?;
+    if parsed(c).blank_query() {
+        return super::message_features::redirect(
+            c,
+            &campfire_routes::searches(),
+            Some("Enter a word to search for.".into()),
+            None,
+            true,
+            None,
+        );
+    }
+    let query = display_query(c).unwrap_or_default();
+    let recorded = query.clone();
     let user_id = require_current_user(c)?.id;
-    let query = query(q.as_deref());
-    // Current.user.searches.record(query): a nil query violates `query`'s NOT NULL.
-    let recorded = query.clone().ok_or_else(|| Error::internal(anyhow::anyhow!("NOT NULL constraint failed: searches.query")))?;
-    c.app().db.write(move |tx| Search::record(tx, user_id, &recorded).map(|_| ())).await.map_err(db_error)?;
-    let path = match &query {
-        Some(query) => search_path(query),
-        None => campfire_routes::searches(),
-    };
-    let url = c.url_for(&path);
+    c.app()
+        .db
+        .write(move |tx| Search::record(tx, user_id, &recorded).map(|_| ()))
+        .await
+        .map_err(db_error)?;
+    let url = c.url_for(&search_path(&query));
     c.redirect_to(&url)
 }
-
 pub async fn clear(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let q = query_param(c)?;
-    set_messages(c, q.as_deref()).await?;
+    let stream = *c.respond_to(&[&format::HTML, &format::TURBO_STREAM])? == format::TURBO_STREAM;
     let user_id = require_current_user(c)?.id;
-    c.app().db.write(move |tx| Search::destroy_all_for_user(tx, user_id)).await.map_err(db_error)?;
-    let url = c.url_for(&campfire_routes::searches());
-    c.redirect_to(&url)
-}
-
-/// `params[:q]`; anything but a string makes `gsub` raise.
-fn query_param(c: &Ctx) -> Result<Option<String>> {
-    match c.param("q") {
-        None => Ok(None),
-        Some(param) if param.is_null() => Ok(None),
-        Some(param) => param
-            .as_str()
-            .map(|q| Some(q.to_string()))
-            .ok_or_else(|| Error::internal(anyhow::anyhow!("undefined method 'gsub'"))),
+    c.app()
+        .db
+        .write(move |tx| Search::destroy_all_for_user(tx, user_id))
+        .await
+        .map_err(db_error)?;
+    if stream {
+        let layout = super::presenters::view_context::Layout::load(c).await?;
+        let body = layout.render(c, |ctx| campfire_views::searches::Clear { ctx }.render())?;
+        Ok(c.render(StatusCode::OK, &format::TURBO_STREAM, body))
+    } else {
+        super::message_features::redirect(c, &campfire_routes::searches(), None, None, true, None)
     }
 }
-
-/// `params[:q]&.gsub(/[^[:word:]]/, " ")`
-pub fn query(q: Option<&str>) -> Option<String> {
-    crate::integrations::search::sanitize_query(q)
+// The existing root presenter/partial remains owned by WS8b-m. Supply search's
+// show_room_icon local only on a cache miss; a shared fragment hit stays unchanged.
+fn search_messages(
+    p: &super::presenters::Presenter<'_>,
+    messages: &[campfire_db::Message],
+) -> campfire_db::Result<Vec<campfire_views::messages::MessageItem>> {
+    use campfire_views::{helpers::IconSource, messages::MessageItem};
+    if messages.is_empty() { return Ok(vec![]); }
+    let p = p.preload_search(messages)?;
+    let mut items = p.messages(messages)?;
+    let data = p.search_preloads.as_ref().expect("search preload installed");
+    let icons = data.records.room_icons.iter().map(|(id,name)|(*id,name.as_deref().and_then(|n|p.resolve_avatar_icon(n)))).collect::<std::collections::HashMap<_,_>>();
+    for item in &mut items {
+        if let MessageItem::View(view) = item {
+            view.details.room_icon = icons.get(&view.room_id).cloned().flatten();
+        }
+    }
+    Ok(items)
 }
-
-fn is_present(value: &str) -> bool {
-    !value.chars().all(char::is_whitespace)
+fn section_view(
+    section: campfire_db::search_query::SearchSection,
+) -> campfire_views::searches::Section {
+    let kind = section.kind;
+    campfire_views::searches::Section {
+        id: kind.into(),
+        heading: match kind {
+            "board-posts" => "Board posts",
+            "work-threads" => "Work threads",
+            _ => "Events",
+        }
+        .into(),
+        records: section
+            .records
+            .into_iter()
+            .map(|r| campfire_views::searches::SectionRow {
+                title: r.title,
+                path: if kind == "events" {
+                    campfire_routes::room_event(r.room_id, r.id)
+                } else {
+                    campfire_routes::room_thread(r.room_id, r.id)
+                },
+                room_label: if r.room_type == "Rooms::Direct" {
+                    "a direct message".into()
+                } else {
+                    r.room_name.unwrap_or_default()
+                },
+                time: r.time.jiff(),
+                status: if kind == "events" {
+                    r.cancelled.then(|| "Cancelled".into())
+                } else {
+                    r.status.map(|s| match s.as_str() {
+                        "planned" => "Planned".into(),
+                        "in_progress" => "In progress".into(),
+                        "blocked" => "Blocked".into(),
+                        "done" => "Done".into(),
+                        _ => s,
+                    })
+                },
+            })
+            .collect(),
+    }
 }
-
-/// `set_messages`: `Current.user.reachable_messages.search(query).last(100)` when there's a query.
-async fn set_messages(c: &Ctx, q: Option<&str>) -> Result<Vec<Message>> {
-    let Some(query) = query(q).filter(|query| is_present(query)) else { return Ok(Vec::new()) };
-    let user_id = require_current_user(c)?.id;
-    c.app().db.read(move |conn| Message::search_reachable(conn, user_id, &query)).await.map_err(db_error)
-}
-
 #[cfg(test)]
-mod tests {
-    use axum::http::{Method, StatusCode};
-
-    use super::query;
-    use crate::controllers::presenters::test_support::*;
-
-    #[tokio::test]
-    async fn searching_records_and_clears_recent_searches() {
-        let Some(app) = TestApp::boot().await else { return };
-        let mut david = app.david();
-        let empty = david.get("/searches").await;
-        assert_eq!(empty.status, StatusCode::OK);
-        assert!(empty.text().contains("<title>Search</title>"));
-
-        let recorded = david.write(Req::new(Method::POST, "/searches").form(&[("q", "hello, world")])).await;
-        assert_eq!(recorded.location(), Some("http://campfire.test/searches?q=hello++world"));
-        let results = david.get("/searches?q=hello++world").await;
-        assert_eq!(results.status, StatusCode::OK);
-        assert!(results.text().contains("“hello  world”"), "{}", results.text());
-
-        let cleared = david.write(Req::new(Method::DELETE, "/searches/clear")).await;
-        assert_eq!(cleared.location(), Some("http://campfire.test/searches"));
-        let count = app.db().read(|conn| campfire_db::Search::count_for_user(conn, DAVID)).await.unwrap();
-        assert_eq!(count, 0);
-
-        let missing = david.write(Req::new(Method::POST, "/searches")).await;
-        assert_eq!(missing.status, StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
-    #[test]
-    fn non_word_characters_become_spaces() {
-        assert_eq!(query(Some("hello, world!")).as_deref(), Some("hello  world "));
-        assert_eq!(query(Some("café_1 日本")).as_deref(), Some("café_1 日本"));
-        assert_eq!(query(Some("\"quoted\" AND-x")).as_deref(), Some(" quoted  AND x"));
-        assert_eq!(query(None), None);
-    }
-}
+mod ports;

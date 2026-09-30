@@ -22,6 +22,9 @@ pub mod rooms;
 pub mod messages;
 pub mod channel_threads;
 pub mod searches;
+pub mod pins;
+pub mod saved_items;
+pub mod scheduled_messages;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the
 /// helpers read from `Current`, `request`, `flash` and the session.
@@ -161,3 +164,6 @@ pub struct Platform {
     /// `ApplicationPlatform#operating_system` ("macOS", "Windows", "iPhone", ...).
     pub operating_system: String,
 }
+
+pub mod room_files;
+pub mod message_links;

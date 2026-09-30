@@ -1,0 +1,299 @@
+{
+  "reference": "d7c7de92",
+  "rows": {
+    "messages": [
+      {
+        "id": 935962058,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "integration-source-0",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "quote integration 0 & <words>",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962059,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "integration-source-1",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "quote integration 1 & <words>",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 486777696,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962060,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "integration-source-2",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "quote integration 2 & <words>",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 186869642,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962061,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "integration-quote-0",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "see /rooms/699448326/@935962058",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962062,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "integration-quote-1",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "see /rooms/486777696/@935962059",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962063,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "integration-quote-2",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "see /rooms/186869642/@935962060",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 186869642,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962064,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "integration-empty",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "nothing quoted",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 699448326,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "action_text_rich_texts": [
+      {
+        "id": 935962058,
+        "body": "<p>quote integration 0 &amp; </p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962058,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962059,
+        "body": "<p>quote integration 1 &amp; </p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962059,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962060,
+        "body": "<p>quote integration 2 &amp; </p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962060,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962061,
+        "body": "<p>see /rooms/699448326/@935962058</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962061,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962062,
+        "body": "<p>see /rooms/486777696/@935962059</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962062,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962063,
+        "body": "<p>see /rooms/186869642/@935962060</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962063,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935962064,
+        "body": "<p>nothing quoted</p>",
+        "created_at": "2026-03-02 16:00:00",
+        "name": "body",
+        "record_id": 935962064,
+        "record_type": "Message",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "message_references": [
+      {
+        "id": 2,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962061,
+        "referenced_message_id": 935962058,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 3,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962062,
+        "referenced_message_id": 935962059,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 4,
+        "created_at": "2026-03-02 16:00:00",
+        "message_id": 935962063,
+        "referenced_message_id": 935962060,
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ]
+  },
+  "containers": [
+    {
+      "id": 935962061,
+      "html": "<div id=\"message_link_cards_message_integration-quote-0\" class=\"message-link-cards\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">David</span>\n    <span class=\"message-quote__room\">in Quiet Corner</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">quote integration 0 &amp;</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/699448326/@935962058\">Jump to message</a>\n</blockquote>\n\n</div>\n"
+    },
+    {
+      "id": 935962062,
+      "html": "<div id=\"message_link_cards_message_integration-quote-1\" class=\"message-link-cards\">\n    <turbo-frame loading=\"lazy\" class=\"message-link-frame\" id=\"message_link_card_message_reference_3\" src=\"/rooms/699448326/message_links/3\"></turbo-frame>\n</div>\n"
+    },
+    {
+      "id": 935962063,
+      "html": "<div id=\"message_link_cards_message_integration-quote-2\" class=\"message-link-cards\">\n    <blockquote class=\"message-quote\">\n  <div class=\"message-quote__meta\">\n    <span class=\"message-quote__author\">David</span>\n    <span class=\"message-quote__room\">in a direct message</span>\n    <time class=\"message-quote__time\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n  </div>\n  <p class=\"message-quote__excerpt\">quote integration 2 &amp;</p>\n  <a class=\"message-quote__jump\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/186869642/@935962060\">Jump to message</a>\n</blockquote>\n\n</div>\n"
+    },
+    {
+      "id": 935962064,
+      "html": "<div id=\"message_link_cards_message_integration-empty\" class=\"message-link-cards\"></div>\n"
+    }
+  ],
+  "sources": [
+    935962058,
+    935962059,
+    935962060
+  ],
+  "quotes": [
+    935962061,
+    935962062,
+    935962063
+  ],
+  "empty": 935962064
+}

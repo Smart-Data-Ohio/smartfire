@@ -97,6 +97,12 @@ pub(crate) fn local(
     let time = Time::new(hour, minute, second, nanosecond).ok()?;
     resolve(DateTime::from_parts(date, time), zone, None)
 }
+/// Resolve a freshly parsed local datetime like ActiveSupport::TimeZone: prefer DST at
+/// folds and advance one hour at a time through gaps, including non-hour transitions.
+pub fn local_datetime(datetime: DateTime, zone: &TimeZone) -> Option<Timestamp> {
+    resolve(datetime, zone, None)
+}
+
 fn resolve(
     mut dt: DateTime,
     zone: &TimeZone,
