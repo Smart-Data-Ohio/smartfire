@@ -144,7 +144,7 @@ pub struct FakeServer {
 
 impl FakeServer {
     pub async fn start(routes: Vec<Route>) -> Self {
-        Self::start_with(routes, None).await
+        Self::start_with(routes, None, None).await
     }
 
     pub async fn start_tls(routes: Vec<Route>) -> Self {
@@ -152,6 +152,10 @@ impl FakeServer {
     }
 
     pub async fn start_tls_with(routes: Vec<Route>, cert: &[u8], key: &[u8]) -> Self {
+        Self::start_tls_with_ports(routes, cert, key, None).await
+    }
+
+    pub async fn start_tls_with_ports(routes: Vec<Route>, cert: &[u8], key: &[u8], ports: Option<std::ops::RangeInclusive<u16>>) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};
         let certs = vec![CertificateDer::from_pem_slice(cert).unwrap()];
@@ -163,11 +167,24 @@ impl FakeServer {
             .with_no_client_auth()
             .with_single_cert(certs, key)
             .unwrap();
-        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config)))).await
+        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), ports).await
     }
 
-    async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>) -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, ports: Option<std::ops::RangeInclusive<u16>>) -> Self {
+        let listener = match ports {
+            None => TcpListener::bind("127.0.0.1:0").await.unwrap(),
+            Some(ports) => {
+                let mut listener = None;
+                for port in ports {
+                    match TcpListener::bind(("127.0.0.1", port)).await {
+                        Ok(bound) => { listener = Some(bound); break; }
+                        Err(error) if error.kind() == io::ErrorKind::AddrInUse => {}
+                        Err(error) => panic!("fake listener bind: {error}"),
+                    }
+                }
+                listener.expect("a free port in the worker's assigned range")
+            }
+        };
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
