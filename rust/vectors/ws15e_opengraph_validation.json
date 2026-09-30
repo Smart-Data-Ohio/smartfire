@@ -1,0 +1,42 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "name": "missing",
+      "attributes": {
+        "url": "https://www.example.com"
+      },
+      "valid": false,
+      "full_messages": [
+        "Title can't be blank",
+        "Description can't be blank"
+      ],
+      "json": "{\"url\":\"https://www.example.com\",\"context_for_validation\":{\"context\":null},\"errors\":{\"title\":[\"can't be blank\"],\"description\":[\"can't be blank\"]},\"title\":null,\"description\":null}"
+    },
+    {
+      "name": "markup",
+      "attributes": {
+        "url": "https://www.example.com",
+        "title": "<img src='x' onerror='alert(document.domain)'/>",
+        "description": "<img src='x' onerror='alert(document.domain)'/>"
+      },
+      "valid": false,
+      "full_messages": [
+        "Title can't be blank",
+        "Description can't be blank"
+      ],
+      "json": "{\"url\":\"https://www.example.com\",\"title\":\"\",\"description\":\"\",\"context_for_validation\":{\"context\":null},\"errors\":{\"title\":[\"can't be blank\"],\"description\":[\"can't be blank\"]}}"
+    },
+    {
+      "name": "valid",
+      "attributes": {
+        "url": "https://www.example.com",
+        "title": "Hey!",
+        "description": "Hello"
+      },
+      "valid": true,
+      "full_messages": [],
+      "json": "{\"url\":\"https://www.example.com\",\"title\":\"Hey!\",\"description\":\"Hello\",\"context_for_validation\":{\"context\":null},\"errors\":{}}"
+    }
+  ]
+}

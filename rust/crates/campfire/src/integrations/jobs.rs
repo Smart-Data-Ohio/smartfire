@@ -22,6 +22,10 @@ use crate::jobs::{PushMessageJob, Registry, WebhookJob, discard_missing};
 pub fn register_jobs(registry: &mut Registry) {
     super::agent_jobs::register(registry);
     super::agent_streaming::register(registry);
+    registry.register(super::link_embed::perform);
+    registry.register(super::twitter::fetcher::perform);
+    registry.register(super::fizzy::fetch::perform);
+    registry.register(super::fizzy::agent_job::perform);
     registry.register(push_message);
     registry.register(deliver_webhook);
 }
@@ -73,6 +77,10 @@ pub fn web_push_pool(config: &Config, db: &Database) -> Option<web_push::Pool> {
 /// `Bot::WebhookJob#perform(bot, message)`: `bot.deliver_webhook(message)`, i.e.
 /// `webhook.deliver(message)`, then the reply.
 async fn deliver_webhook(app: App, job: WebhookJob, _: Execution) -> JobResult {
+    deliver_webhook_with_network(&app, job, &Network::system()).await
+}
+
+pub(super) async fn deliver_webhook_with_network(app: &App, job: WebhookJob, network: &Network) -> JobResult {
     let WebhookJob { bot_id, message_id } = job;
     // A bot or message that's gone discards the job.
     let (bot, message) = app.db.read(move |conn| Ok((User::find(conn, bot_id)?, Message::find(conn, message_id)?))).await.map_err(discard_missing)?;
@@ -104,13 +112,13 @@ async fn deliver_webhook(app: App, job: WebhookJob, _: Execution) -> JobResult {
         .await?
         .context("undefined method 'deliver' for nil (the bot has no webhook)")?;
 
-    let delivery = webhook::deliver_signed(&Network::system(), url.as_deref().unwrap_or(""), payload, secret.as_deref(), || app.clock.now(), false).await?;
+    let delivery = webhook::deliver_signed(network, url.as_deref().unwrap_or(""), payload, secret.as_deref(), || app.clock.now(), false).await?;
     let message = match delivery.reply {
         WebhookReply::None => return Ok(Outcome::Done),
-        WebhookReply::Text(text) => create_text_reply(&app, &room, &bot, delivery.status.map(|_| trigger.clone()), text).await?,
-        WebhookReply::Attachment(attachment) => create_attachment_reply(&app, &room, &bot, trigger, attachment).await?,
+        WebhookReply::Text(text) => create_text_reply(app, &room, &bot, delivery.status.map(|_| trigger.clone()), text).await?,
+        WebhookReply::Attachment(attachment) => create_attachment_reply(app, &room, &bot, trigger, attachment).await?,
     };
-    broadcast_create(&app, &room, &message).await?;
+    broadcast_create(app, &room, &message).await?;
     Ok(Outcome::Done)
 }
 

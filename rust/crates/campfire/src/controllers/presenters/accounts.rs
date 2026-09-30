@@ -260,14 +260,14 @@ pub fn bot(conn: &Connection, secrets: &Secrets, bot: &User) -> campfire_db::Res
 
 /// Read-only facts for the bot edit form. Reading a legacy bot never creates an Agent.
 pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, bot: &User, zone: &campfire_views::time::Zone) -> campfire_db::Result<BotForm> {
-    use campfire_db::models::{agent_posting::{self, Cap}, agent_profile, webhook::Webhook};
+    use campfire_db::models::{agent_posting::{self, Cap}, webhook::Webhook};
     use rusqlite::OptionalExtension;
     let avatar = attachments::attached_blob(conn, "User", bot.id, "avatar")?;
     let icon_name: Option<String> = conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| row.get(0))?;
     let profile = campfire_db::Agent::for_user(conn, bot.id)?;
     let webhook = Webhook::find_by_user(conn, bot.id)?;
     // Ruby's || falls back only for nil, not for an empty agent secret.
-    let agent_secret = profile.as_ref().map(|agent| agent_profile::webhook_signing_secret(conn, &app.ar_encryption, agent.id)).transpose()?.flatten();
+    let agent_secret = profile.as_ref().map(|agent| agent.webhook_signing_secret(conn, &app.ar_encryption)).transpose()?.flatten();
     let signing_secret = match agent_secret {
         Some(value) => Some(value),
         None => webhook.as_ref().map(|webhook| webhook.signing_secret(&app.ar_encryption)).transpose()?.flatten(),
@@ -277,7 +277,7 @@ pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, b
         let cells = [(Cap::Messages, agent.daily_message_cap, "messages"),
             (Cap::BoardPosts, agent.daily_board_post_cap, "board posts"),
             (Cap::ExternalActions, agent.daily_external_action_cap, "external actions")].into_iter().map(|(cap, limit, noun)| {
-                let used = agent_posting::usage(conn, agent.id, bot.id, cap, &window)?;
+                let used = agent_posting::cap_usage(conn, agent.id, bot.id, cap, &window)?;
                 Ok(limit.map(|limit| format!("{used}/{limit} {noun}")).unwrap_or_else(|| format!("{used} {noun}")))
             }).collect::<campfire_db::Result<Vec<_>>>()?;
         Ok(cells.join(" · "))

@@ -94,16 +94,19 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
     let mut owner = test.browser("198.51.100.157");
     owner.sign_in(&test.label("emails.kevin")).await;
     for rollback in [false, true] {
-        let (approval_id,item_id) = test.booted.app.db.write(move |tx| {
+        let approval_id = test.booted.app.db.write(move |tx| {
             let approval = AgentApproval::create(tx,NewApproval {
                 agent_id,action:"deploy".into(),summary:"Private approval summary".into(),
                 ..Default::default()
             })?;
-            let item = campfire_db::ActivityItem::find_by_user_and_source(tx.conn(),owner_id,"AgentApproval",approval.id)?.unwrap();
             if rollback {
                 tx.conn().execute_batch("CREATE TRIGGER reject_live_decision_audit BEFORE INSERT ON audit_logs WHEN NEW.action='agent.approval.decide' BEGIN SELECT RAISE(ABORT,'test audit rejection'); END;")?;
             }
-            Ok((approval.id,item.id))
+            Ok(approval.id)
+        }).await.unwrap();
+        // WS11 now fans out in a separate after-commit writer, as Rails does.
+        let item_id = test.booted.app.db.read(move |conn| {
+            Ok(campfire_db::ActivityItem::find_by_user_and_source(conn,owner_id,"AgentApproval",approval_id)?.expect("committed inbox fanout").id)
         }).await.unwrap();
         let created = receive(&mut owner_socket).await;
         assert_eq!(created["message"], json!({"activityItemId":item_id}));

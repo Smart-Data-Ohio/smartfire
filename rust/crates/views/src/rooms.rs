@@ -88,6 +88,9 @@ pub struct ShowView {
     pub join_code: String,
     /// `Turbo::StreamsChannel.signed_stream_name([room, :messages])`.
     pub messages_stream_name: String,
+    /// Other active human DM members, including currently off members so each live stream is mounted.
+    #[serde(default)]
+    pub ooo_notice_members: Vec<crate::users::statuses::OooNoticeMember>,
 }
 
 /// `rooms/show`.
@@ -119,6 +122,16 @@ impl Show<'_> {
 
     fn loaded_at(&self) -> i64 {
         epoch_ms(self.show.updated_at)
+    }
+    fn ooo_notices(&self) -> h::Html {
+        h::raw(
+            crate::users::statuses::OooNotices {
+                direct: self.show.room.is_direct(),
+                members: &self.show.ooo_notice_members,
+            }
+            .render()
+            .expect("OOO notices"),
+        )
     }
 }
 

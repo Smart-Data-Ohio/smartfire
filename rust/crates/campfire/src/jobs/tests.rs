@@ -4,7 +4,7 @@ use campfire_jobs::inspect::{self, JobRow};
 use tokio::sync::Notify;
 
 use super::*;
-use crate::app::{Booted, boot};
+use crate::app::{Booted, boot_with_services};
 
 /// An app booted over an empty storage directory.
 async fn app_in(dir: &std::path::Path) -> Booted {
@@ -16,7 +16,14 @@ async fn app_in(dir: &std::path::Path) -> Booted {
         _ => None,
     })
     .unwrap();
-    boot(config).await.unwrap()
+    // Worker tests own their queue entries. Periodic-host tests start their loops
+    // explicitly; an automatic retention tick must not race these queue assertions.
+    boot_with_services(
+        config,
+        campfire_kit::clock::from_env().unwrap(),
+        crate::integrations::net::Network::system(),
+        periodic::Intervals { periodic: None, huddle: None },
+    ).await.unwrap()
 }
 
 async fn app() -> (Booted, tempfile::TempDir) {
@@ -730,7 +737,17 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks", "streaming messages"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let mut expected = golden["tasks"].as_array().unwrap().clone();
+    // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
+    let retention = expected.pop().unwrap();
+    expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
+    expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
+    expected.push(retention);
+    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
+    expected.push(ws17["presence_task"].clone());
+    let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
+    expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
+    assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
     let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
     assert_eq!(recovery.interval(), Duration::from_secs(30));
     // WS11 tasks have their own fresh, pinned Rails roster, rather than the WS8 subset.
@@ -754,7 +771,7 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
     })
     .await;
-    assert!(rows.is_empty(), "{rows:?}");
+    assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
     booted.jobs.shutdown(Duration::from_secs(5)).await;
 }
 

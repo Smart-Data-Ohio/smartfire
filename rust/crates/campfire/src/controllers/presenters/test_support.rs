@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_clock};
+use crate::app::{Booted, boot_with_services};
 use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -129,12 +129,24 @@ impl TestApp {
         Self::boot_with_clock(seed_clock()).await
     }
 
+    pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+        Self::boot_with_services(seed_clock(), network, &[]).await
+    }
+
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
         Self::boot_with_clock_and_env(clock, &[]).await
     }
 
     pub async fn boot_with_clock_and_env(
         clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_services(clock, crate::integrations::net::Network::system(), extra).await
+    }
+
+    async fn boot_with_services(
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
         let seed = seed_dir("default")?;
@@ -159,10 +171,17 @@ impl TestApp {
                 .map(|(_, value)| (*value).into()),
         })
         .unwrap();
-        Some(TestApp {
-            booted: boot_with_clock(config, clock).await.unwrap(),
-            _dir: dir,
-        })
+        Some(TestApp { booted: boot_with_services(config, clock, network, crate::jobs::periodic::Intervals { periodic: None, huddle: None }).await.unwrap(), _dir: dir })
+    }
+
+    pub async fn stop_jobs(self) -> (crate::app::App, tempfile::TempDir) {
+        let Self { booted, _dir } = self;
+        let app = booted.app.clone();
+        booted
+            .jobs
+            .shutdown(std::time::Duration::from_secs(5))
+            .await;
+        (app, _dir)
     }
 
     pub fn db(&self) -> &campfire_db::Database {
@@ -326,6 +345,19 @@ pub fn encode(value: &str) -> String {
 }
 
 impl Browser<'_> {
+    /// Rails-compatible sudo session for controller tests; no confirmation endpoint shortcut.
+    pub(crate) async fn grant_sudo(&mut self) {
+        use campfire_kit::Crypto;
+        self.authenticity_token().await;
+        let key = campfire_kit::session::SESSION_KEY;
+        let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
+        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap()).decode_utf8().unwrap();
+        let mut session = crypto.decrypt_cookie(key, &raw, jiff::Timestamp::now()).unwrap();
+        session["sudo_verified_at"] = serde_json::json!(self.app.booted.app.clock.now().as_second());
+        let encrypted = crypto.encrypt_cookie(key, &session, None);
+        self.cookies.insert(key.into(), campfire_kit::cookies::escape(&encrypted));
+    }
+
     pub fn cookie_header(&self) -> String {
         self.cookies.iter().map(|(k,v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ")
     }

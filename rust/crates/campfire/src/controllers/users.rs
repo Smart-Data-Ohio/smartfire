@@ -3,7 +3,11 @@
 
 pub mod avatars;
 pub mod bans;
+pub mod dnd_allowances;
+pub mod notification_settings;
+pub mod statuses;
 pub mod profiles;
+pub mod presences;
 pub mod push_subscriptions;
 pub mod sidebars;
 pub mod sessions;
@@ -79,21 +83,43 @@ pub async fn show(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
+    let id = user.id;
+    let viewer_id = concerns::require_current_user(c)?.id;
+    let now = c.app().db.env().now();
+    let status_secrets = secrets.clone();
+    let profile_status = c
+        .app()
+        .db
+        .read(move |conn| {
+            presenters::status_settings::profile_status(conn, &status_secrets, id, viewer_id, now)
+        })
+        .await
+        .map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     view_context::page_or_frame(
         c,
         StatusCode::OK,
-        |ctx| show_page(ctx, &user, &transfer_id).render(),
+        |ctx| show_page(ctx, &user, &transfer_id, &profile_status).render(),
         |ctx| {
-            let page = show_page(ctx, &user, &transfer_id);
+            let page = show_page(ctx, &user, &transfer_id, &profile_status);
             campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
         },
     )
     .await
 }
 
-fn show_page<'a>(ctx: &'a campfire_views::ViewContext<'a>, user: &users::UserSummary, transfer_id: &str) -> users::Show<'a> {
-    users::Show { ctx, user: user.clone(), transfer_id: transfer_id.to_string() }
+fn show_page<'a>(
+    ctx: &'a campfire_views::ViewContext<'a>,
+    user: &users::UserSummary,
+    transfer_id: &str,
+    status: &users::statuses::ProfileStatus,
+) -> users::Show<'a> {
+    users::Show {
+        ctx,
+        user: user.clone(),
+        transfer_id: transfer_id.to_string(),
+        profile_status: Some(status.clone()),
+    }
 }
 
 /// `User.find(params[key])`: 404 when there's no such user.

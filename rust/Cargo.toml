@@ -9,6 +9,7 @@ publish = false
 
 [workspace.dependencies]
 httpdate = "1.0.3"
+cc = "1.2"
 rails_compat      = { path = "crates/rails_compat" }
 campfire_kit      = { path = "crates/kit" }
 campfire_routes   = { path = "crates/routes" }
@@ -29,7 +30,7 @@ tower        = "0.5"
 tower-http   = { version = "0.6", features = ["limit", "timeout", "fs"] }
 hyper        = "1"
 serde        = { version = "1", features = ["derive"] }
-serde_json   = { version = "1", features = ["preserve_order"] }
+serde_json   = { version = "1", features = ["preserve_order", "raw_value"] }
 serde_yaml   = "0.9"
 rusqlite     = { version = "0.37", features = ["bundled", "functions", "hooks", "serde_json"] }
 askama       = "0.14"

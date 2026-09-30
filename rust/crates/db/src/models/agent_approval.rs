@@ -232,7 +232,8 @@ impl AgentApproval {
         Self::validate(tx.conn(), &a, tx.now(), None)?.into_result()?;
         let id=tx.conn().query_row("INSERT INTO agent_approvals(agent_id,agent_credential_id,room_id,action,summary,payload,external_id,status,expires_at,decided_by_id,decided_at,decision_note,github_account_id,github_login,fizzy_connected_account_id,fizzy_user_id,fizzy_user_name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.agent_credential_id,a.room_id,a.action,a.summary,a.payload,a.external_id,a.status,a.expires_at,a.decided_by_id,a.decided_at,a.decision_note,a.github_account_id,a.github_login,a.fizzy_connected_account_id,a.fizzy_user_id,a.fizzy_user_name,tx.now(),tx.now()],|r|r.get(0))?;
         let record = Self::find(tx.conn(), id)?.expect("inserted approval");
-        record.fan_out_inbox_items(tx)?;
+        let approval = record.clone();
+        tx.after_commit(move |tx| approval.fan_out_inbox_items_after_commit(tx));
         Ok(record)
     }
     fn attributes(&self) -> NewApproval {
@@ -436,33 +437,43 @@ impl AgentApproval {
         )
     }
     pub fn fan_out_inbox_items(&self, tx: &mut Tx<'_>) -> Result<()> {
+        for user in self.decider_ids(tx.conn())? { self.fan_out_inbox_item(tx, user)?; }
+        Ok(())
+    }
+    fn fan_out_inbox_items_after_commit(&self, tx: &mut Tx<'_>) -> Result<()> {
         for user in self.decider_ids(tx.conn())? {
-            let raw: Option<Value> = tx.conn().query_row(
-                "SELECT inbox_preferences FROM users WHERE id=?",
-                [user],
-                |r| r.get(0),
+            // Rails' after_create_commit loops over create_or_find_by!: a later
+            // recipient's failure does not roll back earlier recipients' items.
+            crate::database::run_write(tx.conn(), tx.env(), |tx| self.fan_out_inbox_item(tx, user))?;
+        }
+        Ok(())
+    }
+    fn fan_out_inbox_item(&self, tx: &mut Tx<'_>, user: i64) -> Result<()> {
+        let raw: Option<Value> = tx.conn().query_row(
+            "SELECT inbox_preferences FROM users WHERE id=?",
+            [user],
+            |r| r.get(0),
+        )?;
+        let enabled = raw
+            .as_ref()
+            .and_then(|v| v.get("agent_approvals"))
+            .is_none_or(|v| {
+                !matches!(v, Value::Bool(false))
+                    && *v != json!(0)
+                    && *v != json!("0")
+                    && *v != json!("false")
+            });
+        if enabled
+            && ActivityItem::find_by_user_and_source(tx.conn(), user, "AgentApproval", self.id)?
+                .is_none()
+        {
+            ActivityItem::refresh_unread(
+                tx,
+                user,
+                "AgentApproval",
+                self.id,
+                "agent_approval_request",
             )?;
-            let enabled = raw
-                .as_ref()
-                .and_then(|v| v.get("agent_approvals"))
-                .is_none_or(|v| {
-                    !matches!(v, Value::Bool(false))
-                        && *v != json!(0)
-                        && *v != json!("0")
-                        && *v != json!("false")
-                });
-            if enabled
-                && ActivityItem::find_by_user_and_source(tx.conn(), user, "AgentApproval", self.id)?
-                    .is_none()
-            {
-                ActivityItem::refresh_unread(
-                    tx,
-                    user,
-                    "AgentApproval",
-                    self.id,
-                    "agent_approval_request",
-                )?;
-            }
         }
         Ok(())
     }

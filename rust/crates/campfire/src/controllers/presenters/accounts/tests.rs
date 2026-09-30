@@ -240,7 +240,7 @@ impl Browser<'_> {
         for cookie in reply.set_cookies() {
             let pair = cookie.split(';').next().unwrap();
             let (name, value) = pair.split_once('=').unwrap();
-            let deleted = cookie_is_deleted(&cookie);
+            let deleted = cookie_tombstone(&cookie);
             if deleted || value.is_empty() {
                 self.cookies.remove(name);
             } else {
@@ -349,13 +349,7 @@ impl Browser<'_> {
     }
 }
 
-fn cookie_is_deleted(cookie: &str) -> bool {
-    cookie.split(';').skip(1).any(|attribute| {
-        let Some((name, value)) = attribute.trim().split_once('=') else { return false };
-        (name.eq_ignore_ascii_case("max-age") && value.trim().parse::<i64>().is_ok_and(|age| age <= 0))
-            || (name.eq_ignore_ascii_case("expires") && value.contains("1970"))
-    })
-}
+
 
 #[test]
 fn browser_keeps_valid_signed_cookies_with_epoch_digits_in_the_signature() {
@@ -369,11 +363,11 @@ fn browser_keeps_valid_signed_cookies_with_epoch_digits_in_the_signature() {
     }).expect("deterministic signed-cookie fixture contains epoch digits");
     assert_eq!(crypto.verify_signed_cookie("session_token", &signed, seed_clock().now()), Some(token));
     let header = format!("session_token={signed}; Path=/; HttpOnly; SameSite=Lax");
-    assert!(!cookie_is_deleted(&header), "valid signature digits are not an expiry attribute");
-    assert!(!cookie_is_deleted("session_token=fixture; Path=/1970; Expires=Mon, 02 Mar 2046 16:00:00 GMT"));
-    assert!(cookie_is_deleted("session_token=fixture; Max-Age=0; Path=/"));
-    assert!(cookie_is_deleted("session_token=fixture; max-age=-1; Path=/"));
-    assert!(cookie_is_deleted("session_token=fixture; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"));
+    assert!(!cookie_tombstone(&header), "valid signature digits are not an expiry attribute");
+    assert!(!cookie_tombstone("session_token=fixture; Path=/1970; Expires=Mon, 02 Mar 2046 16:00:00 GMT"));
+    assert!(cookie_tombstone("session_token=fixture; Max-Age=0; Path=/"));
+    assert!(cookie_tombstone("session_token=fixture; max-age=-1; Path=/"));
+    assert!(cookie_tombstone("session_token=fixture; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"));
 }
 
 fn encode(value: &str) -> String {
@@ -1257,4 +1251,32 @@ async fn agent_directory_bot_session_is_forbidden() {
     let Some(app) = crate::controllers::presenters::test_support::TestApp::boot().await else { return };
     let mut bot = app.sign_in(crate::controllers::presenters::test_support::BENDER).await;
     assert_eq!(bot.get("/agents").await.status, StatusCode::FORBIDDEN);
+}
+
+// Set-Cookie values are opaque; only attributes determine deletion.
+fn cookie_tombstone(cookie: &str) -> bool {
+    cookie.split(';').skip(1).any(|attribute| {
+        let Some((name,value))=attribute.trim().split_once('=') else {return false};
+        (name.eq_ignore_ascii_case("max-age") && value.trim().parse::<i64>().is_ok_and(|seconds|seconds<=0))
+            || (name.eq_ignore_ascii_case("expires") && value.trim().eq_ignore_ascii_case("Thu, 01 Jan 1970 00:00:00 GMT"))
+    })
+}
+
+#[tokio::test]
+async fn browser_cookie_value_1970_is_not_an_expiry_attribute() {
+    let mut test = boot_seed("default").await.expect("pinned seed required");
+    test.booted.router = axum::Router::new().route("/cookie-probe", axum::routing::get(|| async {
+        ([(header::SET_COOKIE, "session_token=signed1970value; path=/; expires=Tue, 02 Mar 2027 16:00:00 GMT; httponly")], StatusCode::NO_CONTENT)
+    }));
+    let mut browser = test.browser("198.51.100.14");
+    browser.get("/cookie-probe").await;
+    assert_eq!(browser.cookies.get("session_token").map(String::as_str), Some("signed1970value"));
+}
+
+#[test]
+fn browser_cookie_deletion_requires_real_attribute() {
+    assert!(!cookie_tombstone("session_token=opaque1970value; expires=Tue, 02 Mar 2027 16:00:00 GMT"));
+    assert!(!cookie_tombstone("session_token=signed; max-age=01"));
+    assert!(cookie_tombstone("session_token=signed; Max-Age=0"));
+    assert!(cookie_tombstone("session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT"));
 }

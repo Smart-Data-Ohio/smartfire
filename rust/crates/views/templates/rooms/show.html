@@ -28,6 +28,7 @@
   <turbo-cable-stream-source channel="RoomMessagesChannel" signed-stream-name="{{ show.messages_stream_name }}"></turbo-cable-stream-source>
   <button class="message-area__return-to-latest btn" data-action="messages#returnToLatest" data-messages-target="latest" hidden="hidden"><img aria-hidden="true" src="{{ ctx.asset("arrow-down.svg") }}" width="20" height="20" /><span class="for-screen-reader">Jump to newest message</span></button>
 </div>
+{{ self.ooo_notices() }}
 {%- endblock %}
 
 {%- block footer %}{% let room = &show.room %}{% include "rooms/show/_composer.html" %}{% endblock %}

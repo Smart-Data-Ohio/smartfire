@@ -159,6 +159,7 @@ fn repeated_phrases_match_every_holder_once() {
 
 #[test]
 fn ignores_blank_phrases_and_text() {
+    assert!(matches(&[(1, &["  "])], "Deploy now").is_empty());
     assert_eq!(matches(&[(1, &["  ", "deploy"])], "Deploy now"), [1]);
     assert!(matches(&[(1, &["deploy"])], "   ").is_empty());
     assert!(matches(&[], "Deploy now").is_empty());

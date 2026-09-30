@@ -16,6 +16,7 @@ use campfire_db::{Broadcast, BroadcastRequest, Event, RoomRemovalBroadcast};
 use super::broadcasts::{ROOMS, dom_id};
 use super::{Cable, revocation, user_gid};
 use crate::app::App;
+use askama::Template;
 
 /// Delivers `event` if it belongs to the cable server; returns false for the rest.
 pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
@@ -37,12 +38,37 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 /// it still run.
 fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
-        RoomRemovalBroadcast::KIND => {
-            decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env)))
-        }
-        campfire_db::broadcasts::Broadcast::KIND => {
-            decode(request).and_then(|broadcast| messaging(cable, &broadcast))
-        }
+        RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
+        crate::integrations::link_embed::store::CardUpdate::KIND => decode::<crate::integrations::link_embed::store::CardUpdate>(request)
+            .and_then(|event| {
+                let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+                crate::controllers::presenters::link_embeds::broadcast_updates(app, event.embed_id)
+            }),
+        crate::integrations::fizzy::cards::CardUpdate::KIND => decode::<crate::integrations::fizzy::cards::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            crate::controllers::presenters::fizzy_cards::broadcast_updates(app, event.card_id)
+        }),
+        crate::integrations::twitter::post::CardUpdate::KIND => decode::<crate::integrations::twitter::post::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            crate::controllers::presenters::twitter_cards::broadcast_updates(app, event.post_id)
+        }),
+        campfire_db::models::user::lifecycle::QuietStreamFinal::KIND => decode::<campfire_db::models::user::lifecycle::QuietStreamFinal>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            let copy = app.clone();
+            app.db.read_blocking(move |conn| {
+                let message = campfire_db::Message::find(conn, event.message_id)?;
+                let room = campfire_db::Room::find(conn, message.room_id)?;
+                let view = crate::controllers::presenters::Presenter::new(conn, &copy, None).message(&message)?;
+                let html = crate::controllers::presenters::page::render_detached(&copy, None, |ctx| campfire_views::messages::message(ctx, &view));
+                copy.broadcasts.turbo(&super::broadcasts::Stream::conversation(&room, &message), Action::Replace,
+                    &super::broadcasts::message_dom_id(&message, None), Some(&html), false);
+                Ok(())
+            })?;
+            Ok(())
+        }),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, app, &broadcast)),
+        campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND => decode(request).and_then(|b| status_badge(cable, b)),
+        campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND => decode(request).and_then(|b| ooo_notice(cable, b)),
         campfire_db::models::agent::AgentStatusChange::KIND => {
             decode(request).and_then(|broadcast| agent_status(app, &broadcast))
         }
@@ -156,13 +182,44 @@ fn agent_status(
     Ok(())
 }
 
-/// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
-/// partial descriptions belongs to WS8b; template-free frames are delivered now.
-fn messaging(cable: &Cable, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
+fn status_badge(cable: &Cable, b: campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast) -> anyhow::Result<()> {
+    let html=campfire_views::users::statuses::StatusBadge{presence:&b.presence,status_text:b.status_text.as_deref()}.render()?;
+    cable.broadcast_action_to(&[&user_gid(b.user_id).to_param(),"status"],Action::Update,Target::Target(&dom_id("user",b.user_id,Some("status_badge"))),Some(&html),&[]);
+    Ok(())
+}
+
+fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updates::OooNoticeBroadcast) -> anyhow::Result<()> {
+    let html=campfire_views::users::statuses::OooNotice{name:&b.name,visible:b.visible,until_date:b.until_date.as_deref(),note:b.note.as_deref()}.render()?;
+    cable.broadcast_action_to(&[&user_gid(b.user_id).to_param(),"ooo_notice"],Action::Update,Target::Target(&dom_id("user",b.user_id,Some("ooo_notice"))),Some(&html),&[]);
+    Ok(())
+}
+
+/// WS8 domain frames share WS7's publisher and conservative Turbo guard.
+/// Stream replacements render after commit with no request/session context.
+fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
     use campfire_db::broadcasts::Broadcast;
-    let (stream, payload) = template_free_broadcast(broadcast).ok_or_else(|| {
-        anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}")
-    })?;
+    if let Broadcast::Turbo(frame) = broadcast
+        && frame.action == campfire_db::broadcasts::TurboAction::Replace
+        && let Some(campfire_db::broadcasts::Partial::MessageReplace {message_id}) = &frame.partial
+    {
+        let app=app.ok_or_else(||anyhow::anyhow!("app not booted"))?;
+        let copy=app.clone();let message_id=*message_id;
+        let html=app.db.read_blocking(move|conn| {
+            let message=campfire_db::Message::find(conn,message_id)?;
+            let view=crate::controllers::presenters::Presenter::new(conn,&copy,None).message(&message)?;
+            Ok(crate::controllers::presenters::page::render_detached(&copy,None,|ctx|campfire_views::messages::message(ctx,&view)))
+        })?;
+        if campfire_views::helpers::request_forgery::has_token_slots(&html) {
+            anyhow::bail!("refusing unresolved CSRF token slots in a message replacement");
+        }
+        let streamables:Vec<_>=frame.streamables.iter().map(|s|s.to_param()).collect();
+        let streamables:Vec<_>=streamables.iter().map(String::as_str).collect();
+        let attrs:&[(&str,Option<&str>)]=if frame.maintain_scroll {&[("maintain_scroll",Some("true"))]} else {&[]};
+        cable.broadcast_action_to(&streamables,Action::Replace,Target::Target(&frame.target),Some(&html),attrs);
+        return Ok(());
+    }
+    let (stream, payload) = template_free_broadcast(broadcast)
+        .ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
     match broadcast {
         Broadcast::Cable { .. } => {
             cable.broadcast(&stream, &payload);

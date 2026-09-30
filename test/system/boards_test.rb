@@ -75,6 +75,12 @@ class BoardsTest < ApplicationSystemTestCase
     visit room_thread_path(board, post)
     assert_selector ".board-post__header h1", text: "Ship it"
     assert_top_aligned ".board-post__header", "post page"
+    assert_no_selector "body.board-post"
+    assert_equal evaluate_script("window.innerWidth"), evaluate_script("document.body.getBoundingClientRect().width").round,
+      "expected the post page not to narrow the app shell"
+
+    visit new_room_thread_path(board)
+    assert_no_selector "body.board-post"
   end
 
   test "a non-member cannot open the board" do
@@ -88,6 +94,19 @@ class BoardsTest < ApplicationSystemTestCase
       assert_no_selector ".board-post"
       assert_not_equal room_path(board), current_path
     end
+  end
+
+  test "replying on a board post sends and clears the composer" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) }, users: [ users(:david) ])
+    post = ChannelThread.create!(room: board, creator: users(:david), name: "Ship it", work_status: "planned")
+
+    visit room_thread_path(board, post)
+    fill_in "Write a thread reply", with: "Reply from the board post."
+    click_button "Send Reply"
+
+    assert_selector ".board-post__messages", text: "Reply from the board post."
+    assert_field "Write a thread reply", with: ""
+    assert_equal "Reply from the board post.", post.messages.reload.last&.plain_text_body
   end
 
   private

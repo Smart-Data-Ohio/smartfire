@@ -304,6 +304,100 @@
       ]
     },
     {
+      "rails_file": "test/jobs/agent/delivery_job_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_delivery_cases_test.rs",
+      "cases": [
+        {
+          "rails": "mentioning an agent enqueues delivery and performing marks it delivered",
+          "rust": "ws11_delivery_case_mentioning_an_agent_enqueues_delivery_and_performing_marks_it_delivered"
+        },
+        {
+          "rails": "delivery without a webhook still marks the row delivered",
+          "rust": "ws11_delivery_case_delivery_without_a_webhook_still_marks_the_row_delivered"
+        },
+        {
+          "rails": "revoked at perform time writes a suppression row",
+          "rust": "ws11_delivery_case_revoked_at_perform_time_writes_a_suppression_row"
+        },
+        {
+          "rails": "membership removed before delivery writes a suppression row",
+          "rust": "ws11_delivery_case_membership_removed_before_delivery_writes_a_suppression_row"
+        },
+        {
+          "rails": "a delivery claimed inside a rolled-back transaction enqueues no webhook",
+          "rust": "ws11_delivery_case_a_delivery_claimed_inside_a_rolled_back_transaction_enqueues_no_webhook"
+        },
+        {
+          "rails": "room soft-deleted before delivery suppresses without a new suppression row",
+          "rust": "ws11_delivery_case_room_soft_deleted_before_delivery_suppresses_without_a_new_suppression_row"
+        },
+        {
+          "rails": "message deleted before delivery suppresses without crashing or posting",
+          "rust": "ws11_delivery_case_message_deleted_before_delivery_suppresses_without_crashing_or_posting"
+        },
+        {
+          "rails": "rate limit drops the 21st delivery with a suppression row and no job",
+          "rust": "ws11_delivery_case_rate_limit_drops_the_21st_delivery_with_a_suppression_row_and_no_job"
+        },
+        {
+          "rails": "rate limit is per agent per room",
+          "rust": "ws11_delivery_case_rate_limit_is_per_agent_per_room"
+        },
+        {
+          "rails": "reply to an agent's message creates a reply event",
+          "rust": "ws11_delivery_case_reply_to_an_agent_s_message_creates_a_reply_event"
+        },
+        {
+          "rails": "a message that both mentions and replies records a single reply event",
+          "rust": "ws11_delivery_case_a_message_that_both_mentions_and_replies_records_a_single_reply_event"
+        },
+        {
+          "rails": "direct room messages create direct_message events",
+          "rust": "ws11_delivery_case_direct_room_messages_create_direct_message_events"
+        },
+        {
+          "rails": "agent posting writes a posted row",
+          "rust": "ws11_delivery_case_agent_posting_writes_a_posted_row"
+        },
+        {
+          "rails": "agent never receives its own messages",
+          "rust": "ws11_delivery_case_agent_never_receives_its_own_messages"
+        },
+        {
+          "rails": "bot without an agent row receives no events",
+          "rust": "ws11_delivery_case_bot_without_an_agent_row_receives_no_events"
+        },
+        {
+          "rails": "hop limit suppresses a chain that reaches hop 3",
+          "rust": "ws11_delivery_case_hop_limit_suppresses_a_chain_that_reaches_hop_3"
+        },
+        {
+          "rails": "replying to an old low-hop message does not reset the chain",
+          "rust": "ws11_delivery_case_replying_to_an_old_low_hop_message_does_not_reset_the_chain"
+        },
+        {
+          "rails": "suppression rows are never hop triggers",
+          "rust": "ws11_delivery_case_suppression_rows_are_never_hop_triggers"
+        },
+        {
+          "rails": "pending rows are hop triggers",
+          "rust": "ws11_delivery_case_pending_rows_are_hop_triggers"
+        },
+        {
+          "rails": "deliveries older than five minutes are not hop triggers",
+          "rust": "ws11_delivery_case_deliveries_older_than_five_minutes_are_not_hop_triggers"
+        },
+        {
+          "rails": "bridging rooms carries the hop chain instead of resetting it",
+          "rust": "ws11_delivery_case_bridging_rooms_carries_the_hop_chain_instead_of_resetting_it"
+        },
+        {
+          "rails": "an agent's own posts are not hop triggers",
+          "rust": "ws11_delivery_case_an_agent_s_own_posts_are_not_hop_triggers"
+        }
+      ]
+    },
+    {
       "rails_file": "test/lib/restricted_http/private_network_guard_test.rb",
       "rust_file": "rust/crates/campfire/src/integrations/net/guard_case_tests.rs",
       "cases": [
@@ -420,11 +514,655 @@
           "rust": "ws11_private_guard_case_resolve_raises_unresolvable_not_violation_when_the_host_resolves_to_nothing"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/message_streaming_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_streaming_cases_test.rs",
+      "cases": [
+        {
+          "rails": "a streaming create fires no side effects",
+          "rust": "ws11_stream_case_create_fires_no_side_effects"
+        },
+        {
+          "rails": "finalizing a thread stream fans out no legacy webhook",
+          "rust": "ws11_stream_case_thread_finalize_fans_out_no_legacy_webhook"
+        },
+        {
+          "rails": "finalizing a thread stream sends no unread-room broadcast",
+          "rust": "ws11_stream_case_thread_finalize_sends_no_unread_room_broadcast"
+        },
+        {
+          "rails": "stream broadcasts coalesce to about four per second",
+          "rust": "ws11_stream_case_broadcasts_coalesce_four_per_second"
+        },
+        {
+          "rails": "a trailing broadcast stays quiet once a newer broadcast lands",
+          "rust": "ws11_stream_case_trailing_quiet_after_newer_broadcast"
+        },
+        {
+          "rails": "a trailing broadcast stays quiet after finalize",
+          "rust": "ws11_stream_case_trailing_quiet_after_finalize"
+        },
+        {
+          "rails": "starting and appending stamp the stream's last activity",
+          "rust": "ws11_stream_case_start_append_and_replace_stamp_last_activity"
+        },
+        {
+          "rails": "an append after a finalize is refused and leaves the final alone",
+          "rust": "ws11_stream_case_append_or_replace_after_finalize_refused"
+        },
+        {
+          "rails": "a finalized stream can never resume",
+          "rust": "ws11_stream_case_finalized_stream_never_resumes"
+        },
+        {
+          "rails": "the overdue sweep query uses the streaming activity index",
+          "rust": "ws11_stream_case_sweep_uses_streaming_activity_index"
+        },
+        {
+          "rails": "finalize skips side effects for a suspended agent",
+          "rust": "ws11_stream_case_suspended_agent_finalize_quiet"
+        },
+        {
+          "rails": "finalize skips side effects for a deactivated agent",
+          "rust": "ws11_stream_case_deactivated_agent_finalize_quiet"
+        },
+        {
+          "rails": "finalize clears the streaming agent's working presence",
+          "rust": "ws11_stream_case_finalize_clears_working_presence"
+        },
+        {
+          "rails": "a stream may start empty and require no body until finalize",
+          "rust": "ws11_stream_case_empty_start_and_finalize_allowed"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/message_streaming_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_streaming/case_tests.rs",
+      "cases": [
+        {
+          "rails": "overdue streams finalize from the sweep, fresh ones stay streaming",
+          "rust": "ws11_stream_case_sweep_finalizes_overdue_not_fresh"
+        },
+        {
+          "rails": "the sweep keys on inactivity, not creation",
+          "rust": "ws11_stream_case_sweep_keys_on_inactivity_not_creation"
+        },
+        {
+          "rails": "the sweep skips streams in locked threads until unlock",
+          "rust": "ws11_stream_case_sweep_skips_locked_thread_until_unlock"
+        },
+        {
+          "rails": "the sweep finalizes a suspended agent's streams quietly",
+          "rust": "ws11_stream_case_sweep_suspended_agent_quiet"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_approval_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_approval_cases_test.rs",
+      "cases": [
+        {
+          "rails": "requires action, summary, and expires_at with valid formats",
+          "rust": "ws11_approval_case_requires_action_summary_defaults_expiry"
+        },
+        {
+          "rails": "rejects actions outside the allowed charset or length",
+          "rust": "ws11_approval_case_action_charset_and_length"
+        },
+        {
+          "rails": "rejects summaries over 500 characters",
+          "rust": "ws11_approval_case_summary_length"
+        },
+        {
+          "rails": "rejects payloads over 4 KB",
+          "rust": "ws11_approval_case_payload_four_kilobytes"
+        },
+        {
+          "rails": "defaults expires_at to 24 hours",
+          "rust": "ws11_approval_case_default_twenty_four_hours"
+        },
+        {
+          "rails": "rejects expiry windows outside 5 minutes to 7 days",
+          "rust": "ws11_approval_case_expiry_five_minutes_to_seven_days"
+        },
+        {
+          "rails": "enforces unique external_id per agent",
+          "rust": "ws11_approval_case_external_id_unique_per_agent"
+        },
+        {
+          "rails": "allows multiple rows without an external_id",
+          "rust": "ws11_approval_case_multiple_without_external_id"
+        },
+        {
+          "rails": "effective_status reads expired once the deadline passes",
+          "rust": "ws11_approval_case_effective_expired_without_persisting"
+        },
+        {
+          "rails": "expire_if_due! persists expired only for overdue pending rows",
+          "rust": "ws11_approval_case_expire_only_overdue_pending"
+        },
+        {
+          "rails": "decide! rejects expired and already-decided rows",
+          "rust": "ws11_approval_case_decide_rejects_expired_and_decided"
+        },
+        {
+          "rails": "cancel_by_agent! rejects decided and expired rows",
+          "rust": "ws11_approval_case_cancel_rejects_expired_and_decided"
+        },
+        {
+          "rails": "rejects decision notes over 200 characters",
+          "rust": "ws11_approval_case_decision_note_length"
+        },
+        {
+          "rails": "creates one inbox item per decider",
+          "rust": "ws11_approval_case_inbox_per_decider"
+        },
+        {
+          "rails": "deciders fall back to administrators when the agent has no owner",
+          "rust": "ws11_approval_case_ownerless_admin_deciders"
+        },
+        {
+          "rails": "decision webhook is enqueued after the transaction commits",
+          "rust": "ws11_approval_case_decision_enqueues_after_commit"
+        },
+        {
+          "rails": "decision webhook waits for a wrapping transaction",
+          "rust": "ws11_approval_case_decision_waits_for_outer_transaction"
+        },
+        {
+          "rails": "a second decision on an already decided request appends no second event",
+          "rust": "ws11_approval_case_second_stale_decision_no_event"
+        },
+        {
+          "rails": "cancelling and expiring mark decider inbox items handled",
+          "rust": "ws11_approval_case_cancel_and_expire_handle_inbox"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/jobs/agent/event_webhook_job_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/case_tests.rs",
+      "cases": [
+        {
+          "rails": "a successful post marks the row delivered",
+          "rust": "ws11_event_webhook_case_success_marks_delivered"
+        },
+        {
+          "rails": "a transport failure records the attempt and retries with backoff",
+          "rust": "ws11_event_webhook_case_transport_failure_retries_then_succeeds"
+        },
+        {
+          "rails": "a timeout records the attempt in the ledger and retries",
+          "rust": "ws11_event_webhook_case_timeout_records_attempt_without_reply"
+        },
+        {
+          "rails": "the fifth failure marks the row failed without re-enqueueing",
+          "rust": "ws11_event_webhook_case_fifth_failure_exhausts_without_enqueue"
+        },
+        {
+          "rails": "a 201 response counts as delivered",
+          "rust": "ws11_event_webhook_case_created_counts_as_delivered"
+        },
+        {
+          "rails": "a 500 response retries with backoff and fails after five attempts",
+          "rust": "ws11_event_webhook_case_server_error_retries_then_exhausts"
+        },
+        {
+          "rails": "a 429 response waits out Retry-After before retrying",
+          "rust": "ws11_event_webhook_case_retry_after_forty_five"
+        },
+        {
+          "rails": "a 429 response without Retry-After retries with the default backoff",
+          "rust": "ws11_event_webhook_case_retry_after_absent_uses_default"
+        },
+        {
+          "rails": "a 408 response retries instead of failing fast",
+          "rust": "ws11_event_webhook_case_request_timeout_retries"
+        },
+        {
+          "rails": "a 404 response fails fast without retrying",
+          "rust": "ws11_event_webhook_case_not_found_fails_fast"
+        },
+        {
+          "rails": "an error response with an attachment body creates no sync reply",
+          "rust": "ws11_event_webhook_case_error_attachment_creates_no_reply"
+        },
+        {
+          "rails": "a guard refusal fails fast without retrying",
+          "rust": "ws11_event_webhook_case_guard_refuses_without_post"
+        },
+        {
+          "rails": "an unresolvable host fails fast without retrying",
+          "rust": "ws11_event_webhook_case_unresolvable_fails_without_post"
+        },
+        {
+          "rails": "a message deleted before the post fails fast without retrying",
+          "rust": "ws11_event_webhook_case_deleted_message_fails_without_post"
+        },
+        {
+          "rails": "a removed webhook configuration clears the owed post",
+          "rust": "ws11_event_webhook_case_removed_configuration_clears_owed_post"
+        },
+        {
+          "rails": "an already delivered row posts nothing",
+          "rust": "ws11_event_webhook_case_delivered_row_posts_nothing"
+        },
+        {
+          "rails": "acking a pending row does not cancel its webhook",
+          "rust": "ws11_event_webhook_case_ack_does_not_cancel_pending_webhook"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_bot_cases_test.rs",
+      "cases": [
+        {
+          "rails": "authenticate",
+          "rust": "ws11_bot_case_authenticate_created_bot"
+        },
+        {
+          "rails": "creation writes the digest alone and stored bots hide their key",
+          "rust": "ws11_bot_case_digest_alone_and_stored_key_hidden"
+        },
+        {
+          "rails": "leftover plaintext is never consulted",
+          "rust": "ws11_bot_case_leftover_plaintext_never_consulted"
+        },
+        {
+          "rails": "a bot without a digest cannot authenticate until its key is reset",
+          "rust": "ws11_bot_case_missing_digest_requires_reset"
+        },
+        {
+          "rails": "reset stores the digest alone, clears leftover plaintext, and retires the old key",
+          "rust": "ws11_bot_case_reset_clears_plaintext_retires_old_key"
+        },
+        {
+          "rails": "authenticate refuses wrong, empty, and malformed keys",
+          "rust": "ws11_bot_case_wrong_empty_and_malformed_keys_refused"
+        },
+        {
+          "rails": "a deactivated bot's key is refused",
+          "rust": "ws11_bot_case_deactivated_key_refused"
+        },
+        {
+          "rails": "existing keys keep working after the digest migration",
+          "rust": "ws11_bot_case_pre_migration_fixture_digest_keeps_working"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/case_tests.rs",
+      "cases": [
+        {
+          "rails": "bot auth keeps working after plaintext clearing",
+          "rust": "ws11_bot_case_auth_keeps_working_after_plaintext_clearing"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/webhook_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/webhook_cases.rs",
+      "cases": [
+        {
+          "rails": "payload",
+          "rust": "ws11_webhook_case_payload"
+        },
+        {
+          "rails": "delivery",
+          "rust": "ws11_webhook_case_delivery"
+        },
+        {
+          "rails": "delivery with OK text reply",
+          "rust": "ws11_webhook_case_ok_text_reply"
+        },
+        {
+          "rails": "sync text reply lands in the triggering message's thread",
+          "rust": "ws11_webhook_case_agent_thread_text_reply"
+        },
+        {
+          "rails": "legacy sync reply lands in the triggering message's thread",
+          "rust": "ws11_webhook_case_legacy_thread_text_reply"
+        },
+        {
+          "rails": "sync reply to a board post lands in the post",
+          "rust": "ws11_webhook_case_board_text_reply"
+        },
+        {
+          "rails": "sync reply to a root message references the trigger",
+          "rust": "ws11_webhook_case_root_references_trigger"
+        },
+        {
+          "rails": "sync attachment reply lands in the triggering message's thread",
+          "rust": "ws11_webhook_case_agent_thread_attachment_reply"
+        },
+        {
+          "rails": "agent delivery that times out raises instead of posting",
+          "rust": "ws11_webhook_case_agent_timeout_raises_without_posting"
+        },
+        {
+          "rails": "agent sync reply into a locked thread is logged, not raised",
+          "rust": "ws11_webhook_case_agent_locked_reply_logged"
+        },
+        {
+          "rails": "legacy delivery without a secret sends no signature",
+          "rust": "ws11_webhook_case_legacy_without_secret_unsigned"
+        },
+        {
+          "rails": "legacy delivery with a secret signs the body",
+          "rust": "ws11_webhook_case_legacy_with_secret_signs_body"
+        },
+        {
+          "rails": "legacy sync reply into a locked thread still raises",
+          "rust": "ws11_webhook_case_legacy_locked_reply_raises"
+        },
+        {
+          "rails": "delivery with OK attachment reply",
+          "rust": "ws11_webhook_case_ok_attachment_reply"
+        },
+        {
+          "rails": "delivery with error reply",
+          "rust": "ws11_webhook_case_error_reply_posts_nothing"
+        },
+        {
+          "rails": "delivery that times out",
+          "rust": "ws11_webhook_case_legacy_timeout_posts_failure"
+        },
+        {
+          "rails": "delivery to a loopback URL is refused without posting",
+          "rust": "ws11_webhook_case_loopback_refused"
+        },
+        {
+          "rails": "delivery to a hostname resolving to a private address is refused",
+          "rust": "ws11_webhook_case_dns_private_refused"
+        },
+        {
+          "rails": "agent delivery to a refused URL raises instead of replying",
+          "rust": "ws11_webhook_case_agent_private_refused_without_reply"
+        },
+        {
+          "rails": "agent approval webhook to a refused URL raises",
+          "rust": "ws11_webhook_case_approval_private_refused"
+        },
+        {
+          "rails": "delivery to an unresolvable hostname raises without posting",
+          "rust": "ws11_webhook_case_dns_unresolvable_refused"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/webhook_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_bot_cases_test.rs",
+      "cases": [
+        {
+          "rails": "signing secret generation mints exactly one secret when raced",
+          "rust": "ws11_webhook_case_signing_secret_generation_adopts_winner"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/message_streaming_test.rb",
+      "rust_file": "rust/crates/campfire/src/controllers/presenters/agent_payload.rs",
+      "cases": [
+        {
+          "rails": "link references sync at finalize, not while streaming",
+          "rust": "ws11_stream_case_link_references_sync_only_at_finalize"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent/delivery_recovery_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/recovery_cases.rs",
+      "cases": [
+        {
+          "rails": "a stranded pending row gets recovered",
+          "rust": "ws11_recovery_case_old_pending_recovered"
+        },
+        {
+          "rails": "a stranded row with attempts remaining but some spent gets recovered",
+          "rust": "ws11_recovery_case_spent_attempts_recovered"
+        },
+        {
+          "rails": "a fresh pending row is left alone",
+          "rust": "ws11_recovery_case_fresh_pending_left_alone"
+        },
+        {
+          "rails": "an exhausted pending row past its grace is marked failed",
+          "rust": "ws11_recovery_case_exhausted_old_null_and_scheduled_fail"
+        },
+        {
+          "rails": "a recently exhausted pending row is left alone",
+          "rust": "ws11_recovery_case_exhausted_recent_left_pending"
+        },
+        {
+          "rails": "settled webhook rows are left alone",
+          "rust": "ws11_recovery_case_settled_rows_left_alone"
+        },
+        {
+          "rails": "a 429 with Retry-After 600 is not re-posted by the sweeper before 600 seconds",
+          "rust": "ws11_recovery_case_retry_after_never_reposted_early"
+        },
+        {
+          "rails": "the sweeper does not overwrite a Retry-After stored after its read",
+          "rust": "ws11_recovery_case_snapshot_cannot_overwrite_new_retry_after"
+        },
+        {
+          "rails": "a recovery pass keeps going past an enqueue failure",
+          "rust": "ws11_recovery_case_enqueue_failure_keeps_recovering"
+        },
+        {
+          "rails": "a job with a stale attempt number exits without posting",
+          "rust": "ws11_recovery_case_stale_attempt_exits_without_post"
+        },
+        {
+          "rails": "a scheduled retry records its next attempt in the future",
+          "rust": "ws11_recovery_case_scheduled_retry_records_future"
+        },
+        {
+          "rails": "the sweeper recovers a stranded pending delivery for a webhook-enabled agent",
+          "rust": "ws11_recovery_case_stranded_pending_delivery_recovered"
+        },
+        {
+          "rails": "the sweeper leaves a fresh pending delivery alone",
+          "rust": "ws11_recovery_case_fresh_pending_delivery_left_alone"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_budgets_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_budget_cases_test.rs",
+      "cases": [
+        {
+          "rails": "usage counts today's messages, board posts, and approvals",
+          "rust": "ws11_budget_case_usage_counts_persisted_rows"
+        },
+        {
+          "rails": "a board post's first message counts only toward the board-post cap",
+          "rust": "ws11_budget_case_board_opener_counts_only_as_post"
+        },
+        {
+          "rails": "an opener does not burn the message budget but replies do",
+          "rust": "ws11_budget_case_opener_passes_reply_exhausts"
+        },
+        {
+          "rails": "usage ignores yesterday's rows",
+          "rust": "ws11_budget_case_yesterday_is_excluded"
+        },
+        {
+          "rails": "unlimited caps always pass",
+          "rust": "ws11_budget_case_unlimited_caps_pass"
+        },
+        {
+          "rails": "a hit cap answers 429 and notifies the owner once per day",
+          "rust": "ws11_budget_case_denial_notifies_owner_once_per_day"
+        },
+        {
+          "rails": "each cap notifies separately",
+          "rust": "ws11_budget_case_each_cap_notifies_separately"
+        },
+        {
+          "rails": "an ownerless agent notifies administrators",
+          "rust": "ws11_budget_case_ownerless_notifies_active_human_admins"
+        },
+        {
+          "rails": "caps must be positive integers",
+          "rust": "ws11_budget_case_caps_require_positive_integer"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_event_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_event_cases_test.rs",
+      "cases": [
+        {
+          "rails": "requires a known event type",
+          "rust": "ws11_event_case_requires_known_type"
+        },
+        {
+          "rails": "accepts every documented event type",
+          "rust": "ws11_event_case_accepts_documented_types"
+        },
+        {
+          "rails": "requires a known outcome",
+          "rust": "ws11_event_case_requires_known_outcome"
+        },
+        {
+          "rails": "room, message, credential, and actor are optional",
+          "rust": "ws11_event_case_optional_associations"
+        },
+        {
+          "rails": "deliverable scope covers message types, approval decisions, work assignments, and github completions",
+          "rust": "ws11_event_case_deliverable_scope"
+        },
+        {
+          "rails": "message_deliverable scope excludes approval decisions, work assignments, and github completions",
+          "rust": "ws11_event_case_message_deliverable_scope"
+        },
+        {
+          "rails": "hop defaults to zero and reads metadata",
+          "rust": "ws11_event_case_hop_defaults_and_metadata"
+        },
+        {
+          "rails": "acknowledged! is idempotent",
+          "rust": "ws11_event_case_acknowledgment_idempotent"
+        },
+        {
+          "rails": "destroying the agent removes its events",
+          "rust": "ws11_event_case_destroying_agent_removes_events"
+        },
+        {
+          "rails": "agent exposes its events",
+          "rust": "ws11_event_case_agent_exposes_own_ledger"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_step_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_step_cases_test.rs",
+      "cases": [
+        {
+          "rails": "attaches to the agent's own message",
+          "rust": "ws11_step_case_attaches_to_own_message"
+        },
+        {
+          "rails": "attaches to a work thread the agent owns",
+          "rust": "ws11_step_case_attaches_to_owned_work"
+        },
+        {
+          "rails": "requires exactly one parent",
+          "rust": "ws11_step_case_exactly_one_parent"
+        },
+        {
+          "rails": "rejects another author's message",
+          "rust": "ws11_step_case_rejects_foreign_message"
+        },
+        {
+          "rails": "rejects threads the agent does not own",
+          "rust": "ws11_step_case_rejects_unowned_thread"
+        },
+        {
+          "rails": "rejects non-work threads",
+          "rust": "ws11_step_case_rejects_nonwork_thread"
+        },
+        {
+          "rails": "caps the count per parent",
+          "rust": "ws11_step_case_count_capped_per_parent"
+        },
+        {
+          "rails": "caps field sizes",
+          "rust": "ws11_step_case_field_sizes_capped"
+        },
+        {
+          "rails": "positions follow creation order",
+          "rust": "ws11_step_case_positions_follow_creation"
+        },
+        {
+          "rails": "steps die with their message and thread",
+          "rust": "ws11_step_case_parent_deletion_cascades"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/jobs/agent/delivery_job_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/delivery_path_cases.rs",
+      "cases": [
+        {
+          "rails": "delivery posts the webhook with the additive agent key",
+          "rust": "ws11_delivery_path_additive_agent_key"
+        },
+        {
+          "rails": "performing the same event twice posts the webhook only once",
+          "rust": "ws11_delivery_path_same_event_posts_once"
+        },
+        {
+          "rails": "a job that loses the delivery race exits without posting",
+          "rust": "ws11_delivery_path_lost_delivery_claim_posts_nothing"
+        },
+        {
+          "rails": "a job that loses the suppression race writes no duplicate row",
+          "rust": "ws11_delivery_path_lost_suppression_claim_inserts_nothing"
+        },
+        {
+          "rails": "agent and legacy bot ping-pong escalates until the agent side suppresses",
+          "rust": "ws11_delivery_path_agent_legacy_ping_pong_stops_at_three"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/jobs/agent/delivery_concurrency_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/delivery_path_cases.rs",
+      "cases": [
+        {
+          "rails": "concurrent mentions cannot exceed the rate limit",
+          "rust": "ws11_delivery_path_concurrent_mentions_obey_rate_limit"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/message/bot_webhook_fanout_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_delivery_cases_test.rs",
+      "cases": [
+        {
+          "rails": "delivers a normal message mentioning a legacy bot",
+          "rust": "ws11_fanout_case_normal_message_mentions_legacy_bot"
+        },
+        {
+          "rails": "skips system notes mentioning a legacy bot",
+          "rust": "ws11_fanout_case_system_note_mentions_legacy_bot"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
-    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8."
+    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
+    "test/models/message_streaming_test.rb": "19 named comparisons include installed production link-reference callbacks. Four complete start/trailing cable, activity and finalization cases remain unmapped; generic MessageReplace rendering and WS15e reference callbacks are now installed. WS12 activity and remaining WS14/WS15g reference peers remain separate boundaries.",
+    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation.",
+    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence.",
+    "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred."
   }
 }

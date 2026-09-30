@@ -68,7 +68,7 @@ impl Fresh {
                     password_digest: Some(digest),
                     role: Role::Administrator,
                     bio: None,
-                    bot_token_digest: None,
+                    icon_name: None, bot_token_digest: None,
                 };
                 User::create(tx, david)
             })
@@ -340,7 +340,7 @@ async fn bot_reply_tokens_sign_in_their_bot_for_their_room() {
         .write(move |tx| {
             let bot = User::create(
                 tx,
-                NewUser { name: "Replier".into(), email_address: None, password_digest: None, role: Role::Bot, bio: None, bot_token_digest: None },
+                NewUser { name: "Replier".into(), email_address: None, password_digest: None, role: Role::Bot, bio: None, icon_name: None, bot_token_digest: None },
             )?;
             let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Bots"), david.id, &[david.id, bot.id])?;
             let other = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Elsewhere"), david.id, &[david.id])?;

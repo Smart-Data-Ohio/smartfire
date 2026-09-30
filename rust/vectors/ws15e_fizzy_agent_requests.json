@@ -1,0 +1,687 @@
+{
+  "reference": "d7c7de92",
+  "requests": [
+    {
+      "name": "comment",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 202,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.comment",
+          "summary": "Comment on Fizzy card #579 (account 897362094): Nice work",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"comment\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":\"Nice work\"}",
+          "external_id": null,
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "create",
+      "fields": {
+        "kind": "create",
+        "number": 579,
+        "body": " Nice work ",
+        "board_id": "board",
+        "title": " Ship it ",
+        "description": "Description"
+      },
+      "status": 202,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): Ship it",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"Ship it\",\"description\":\"Description\",\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "move",
+      "fields": {
+        "kind": "move",
+        "number": 579,
+        "body": " Nice work ",
+        "column_id": "col"
+      },
+      "status": 202,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.move",
+          "summary": "Move Fizzy card #579 (account 897362094) to column col",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"move\",\"board_id\":null,\"number\":579,\"column_id\":\"col\",\"title\":null,\"description\":null,\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "close",
+      "fields": {
+        "kind": "close",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 202,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Close Fizzy card #579 (account 897362094)",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"close\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "reopen",
+      "fields": {
+        "kind": "reopen",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 202,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.reopen",
+          "summary": "Reopen Fizzy card #579 (account 897362094)",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"reopen\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "override",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work ",
+        "account_id": "other"
+      },
+      "status": 202,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.comment",
+          "summary": "Comment on Fizzy card #579 (account other): Nice work",
+          "payload": "{\"account_id\":\"other\",\"kind\":\"comment\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":\"Nice work\"}",
+          "external_id": null,
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "pref_optout",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 202,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.comment",
+          "summary": "Comment on Fizzy card #579 (account 897362094): Nice work",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"comment\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":\"Nice work\"}",
+          "external_id": null,
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "blank_external",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work ",
+        "external_id": "  "
+      },
+      "status": 202,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.comment",
+          "summary": "Comment on Fizzy card #579 (account 897362094): Nice work",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"comment\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":\"Nice work\"}",
+          "external_id": null,
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "replay",
+      "fields": {
+        "external_id": " replay ",
+        "kind": "invalid"
+      },
+      "status": 200,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.comment",
+          "summary": "Comment on Fizzy card #579 (account 897362094): Nice work",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"comment\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":\"Nice work\"}",
+          "external_id": " replay ",
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "replay_expired",
+      "fields": {
+        "external_id": " replay ",
+        "kind": "invalid"
+      },
+      "status": 200,
+      "body": {
+        "status": "expired"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.comment",
+          "summary": "Comment on Fizzy card #579 (account 897362094): Nice work",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"comment\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":\"Nice work\"}",
+          "external_id": " replay ",
+          "status": "expired",
+          "ttl": 0,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": true,
+          "read": true
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": true,
+          "read": true
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "replay_cap",
+      "fields": {
+        "external_id": " replay ",
+        "kind": "invalid"
+      },
+      "status": 200,
+      "body": {
+        "status": "pending"
+      },
+      "error": null,
+      "approvals": [
+        {
+          "action": "fizzy.comment",
+          "summary": "Comment on Fizzy card #579 (account 897362094): Nice work",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"comment\",\"board_id\":null,\"number\":579,\"column_id\":null,\"title\":null,\"description\":null,\"body\":\"Nice work\"}",
+          "external_id": " replay ",
+          "status": "pending",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": true,
+          "identity_name": "Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "forbidden",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 403,
+      "body": {
+        "error": "Forbidden: agent lacks external_action capability"
+      },
+      "error": "Forbidden: agent lacks external_action capability",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "room_grant",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 403,
+      "body": {
+        "error": "Forbidden: agent lacks external_action capability"
+      },
+      "error": "Forbidden: agent lacks external_action capability",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "suspended",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 403,
+      "body": {
+        "error": "Forbidden: agent lacks external_action capability"
+      },
+      "error": "Forbidden: agent lacks external_action capability",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "missing_owner",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 422,
+      "body": {
+        "error": "Agent has no owner recorded"
+      },
+      "error": "Agent has no owner recorded",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "no_account",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 422,
+      "body": {
+        "error": "Agent owner has no usable Fizzy account"
+      },
+      "error": "Agent owner has no usable Fizzy account",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "disconnected",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 422,
+      "body": {
+        "error": "Agent owner has no usable Fizzy account"
+      },
+      "error": "Agent owner has no usable Fizzy account",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "invalid",
+      "fields": {
+        "kind": "comment",
+        "number": 579
+      },
+      "status": 422,
+      "body": {
+        "errors": {
+          "body": [
+            "is required for a comment"
+          ]
+        }
+      },
+      "error": "Body is required for a comment",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "invalid_multiple",
+      "fields": {
+        "kind": "move",
+        "number": "-1",
+        "body": " Nice work ",
+        "account_id": "bad/id",
+        "column_id": null
+      },
+      "status": 422,
+      "body": {
+        "errors": {
+          "account_id": [
+            "is invalid"
+          ],
+          "number": [
+            "is required"
+          ],
+          "column_id": [
+            "is required to move a card"
+          ]
+        }
+      },
+      "error": "Account is invalid, Number is required, and Column is required to move a card",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "budget",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work "
+      },
+      "status": 429,
+      "body": {
+        "error": "Daily external action budget exceeded (1/day)",
+        "cap": "external_actions",
+        "limit": 1,
+        "retry_after": 28799
+      },
+      "error": "Daily external action budget exceeded (1/day)",
+      "approvals": [
+        {
+          "action": "other",
+          "summary": "Other request",
+          "payload": null,
+          "external_id": null,
+          "status": "denied",
+          "ttl": 86400,
+          "room": null,
+          "identity_match": false,
+          "identity_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "recipient": "Admin",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_approval_request",
+          "handled": false,
+          "read": false
+        },
+        {
+          "recipient": "Owner",
+          "type": "agent_budget_exceeded",
+          "handled": false,
+          "read": false
+        }
+      ],
+      "notices": [
+        {
+          "cap": "external_actions",
+          "day": "2026-03-02"
+        }
+      ]
+    },
+    {
+      "name": "payload_large",
+      "fields": {
+        "kind": "create",
+        "number": 579,
+        "body": " Nice work ",
+        "board_id": "board",
+        "title": " Ship it ",
+        "description": "界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界"
+      },
+      "status": 422,
+      "body": {
+        "error": "Payload is too large (maximum is 4 KB)"
+      },
+      "error": "Payload is too large (maximum is 4 KB)",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "summary_large",
+      "fields": {
+        "kind": "comment",
+        "number": 579,
+        "body": " Nice work ",
+        "account_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "status": 422,
+      "body": {
+        "error": "Summary is too long (maximum is 500 characters)"
+      },
+      "error": "Summary is too long (maximum is 500 characters)",
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    }
+  ]
+}

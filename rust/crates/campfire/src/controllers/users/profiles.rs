@@ -14,24 +14,59 @@ use crate::controllers::presenters::{self, accounts::string_attribute};
 /// `set_user` (`Current.user`); memberships partitioned into direct and shared rooms.
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    let user = concerns::require_current_user(c)?.clone();
-    render_show(c, StatusCode::OK, user, None).await
+    c.respond_to(&[&format::HTML])?;
+    let id = concerns::require_current_user(c)?.id;
+    let user = c
+        .app()
+        .db
+        .read(move |conn| campfire_db::UserStatusSettings::find(conn, id))
+        .await
+        .map_err(Error::internal)?;
+    render_settings(c, StatusCode::OK, user, campfire_db::Errors::default()).await
 }
 
-async fn render_show(
+/// Failed settings writes keep submitted values in the forms and fetch the rolled-back keyword list.
+pub(super) async fn render_settings(
     c: &mut Ctx,
     status: StatusCode,
-    user: campfire_db::User,
+    settings: campfire_db::UserStatusSettings,
+    errors: campfire_db::Errors,
+) -> Result {
+    render_profile(c, status, settings, errors, true, None).await
+}
+
+async fn render_profile(
+    c: &mut Ctx,
+    status: StatusCode,
+    settings: campfire_db::UserStatusSettings,
+    errors: campfire_db::Errors,
+    settings_error: bool,
     current_password_error: Option<&'static str>,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
+    c.set_current(presenters::view_context::RenderedSettings(settings.clone()));
+    let user = settings.user.clone();
+    if settings_error && !errors.is_empty() && user.role != campfire_db::Role::Bot {
+        // At the pin, both settings controllers render profiles/show without setting
+        // @two_factor_devices. The enabled-credential branch calls nil.any? and returns 500.
+        // Preserve this observed failure until the reference/WS9 template contract changes.
+        let id = user.id;
+        let enabled=c.app().db.read(move |conn|Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM two_factor_credentials WHERE user_id=? AND confirmed_at IS NOT NULL)",[id],|r|r.get::<_,bool>(0))?)).await.map_err(Error::internal)?;
+        if enabled {
+            return Err(Error::internal(anyhow::anyhow!(
+                "profiles/two_factor: undefined method any? for nil remembered devices"
+            )));
+        }
+    }
     let has_password = user
         .password_digest
         .as_deref()
         .is_some_and(|s| !campfire_richtext::ruby::is_blank(s));
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
-    let (avatar_attached, (direct_memberships, shared_memberships)) = {
+    let now = c.app().db.env().now();
+    let google_configured = presenters::status_settings::google_configured();
+    let (avatar_attached, (direct_memberships, shared_memberships), settings) = {
         let user = user.clone();
         c.app()
             .db
@@ -41,6 +76,13 @@ async fn render_show(
                 Ok((
                     attached,
                     presenters::accounts::profile_memberships(conn, &user)?,
+                    presenters::status_settings::forms(
+                        conn,
+                        &settings,
+                        errors,
+                        now,
+                        google_configured,
+                    )?,
                 ))
             })
             .await
@@ -89,6 +131,7 @@ async fn render_show(
         transfer_id: transfer_id.clone(),
         shared_memberships: shared_memberships.clone(),
         direct_memberships: direct_memberships.clone(),
+        settings: settings.clone(),
     })
     .await
 }
@@ -98,19 +141,37 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let mut user = concerns::require_current_user(c)?.clone();
 
-    // Rails computes presence/key checks before strong parameters discard non-scalars.
+    // Rails checks raw keys/presence before strong parameters discard compound values.
     let raw = c.params.require("user")?;
     let password_changing = raw.get("password").is_some_and(|p| p.is_present());
     let time_zone_submitted = raw.get("time_zone").is_some();
-    // `user_params.compact`: nil scalar values are dropped below.
     let params = c.params.require("user")?.permit(&permit_keys(&[
         "name",
         "avatar",
         "email_address",
         "password",
         "bio",
+        "theme",
+        "text_size",
         "time_zone",
     ]));
+    let present = |key: &str| compact_string(&params, key);
+    let id = user.id;
+    let mut settings = c
+        .app()
+        .db
+        .read(move |conn| campfire_db::UserStatusSettings::find(conn, id))
+        .await
+        .map_err(Error::internal)?;
+    if let Some(theme) = present("theme") {
+        settings.theme = theme;
+    }
+    if let Some(size) = present("text_size") {
+        settings.text_size = size;
+    }
+    if let Some(zone) = present("time_zone") {
+        settings.time_zone = Some(zone);
+    }
     // Rails checks the raw request before strong parameters discard non-scalars.
     let email_changing = c
         .params
@@ -135,10 +196,13 @@ pub async fn update(c: &mut Ctx) -> Result {
             // Rails assigns the submitted non-secret attributes only to the error view.
             assign_error_attributes(&mut user, &params);
             c.set_current(concerns::CurrentUser(user.clone()));
-            return render_show(
+            settings.user = user;
+            return render_profile(
                 c,
                 StatusCode::UNPROCESSABLE_ENTITY,
-                user,
+                settings,
+                campfire_db::Errors::default(),
+                false,
                 Some(if missing {
                     "is required to change your email address"
                 } else {
@@ -148,8 +212,10 @@ pub async fn update(c: &mut Ctx) -> Result {
             .await;
         }
     }
+    if time_zone_submitted {
+        settings.time_zone_explicit = true;
+    }
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    let present = |key: &str| compact_string(&params, key);
     let changes = UserChanges {
         name: present("name"),
         email_address: present("email_address").map(Some),
@@ -164,6 +230,16 @@ pub async fn update(c: &mut Ctx) -> Result {
         time_zone_explicit: time_zone_submitted.then_some(true),
         ..UserChanges::default()
     };
+    let mut submitted = settings.clone();
+    if let Some(name) = &changes.name {
+        submitted.user.name = name.clone();
+    }
+    if let Some(email) = &changes.email_address {
+        submitted.user.email_address = email.clone();
+    }
+    if let Some(bio) = &changes.bio {
+        submitted.user.bio = bio.clone();
+    }
     let avatar = match Assignment::from_params(&params, "avatar")? {
         // `.compact` drops a nil avatar before it's assigned.
         Assignment::Delete if params.get("avatar").is_none_or(|p| p.is_null()) => {
@@ -178,12 +254,12 @@ pub async fn update(c: &mut Ctx) -> Result {
     };
 
     let avatar = avatar.stage(c.app()).await?;
-    let mut error_user = user.clone();
-    assign_error_attributes(&mut error_user, &params);
-    let pending = c
+    let error_user = submitted.user.clone();
+    let result = c
         .app()
         .db
         .write(move |tx| {
+            settings.save(tx)?;
             crate::authentication::update_profile(
                 tx,
                 &mut user,
@@ -195,11 +271,19 @@ pub async fn update(c: &mut Ctx) -> Result {
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
         .await;
-    let pending = match pending {
+    let pending = match result {
         Ok(pending) => pending,
-        Err(campfire_db::Error::RecordInvalid(_)) => {
-            c.set_current(concerns::CurrentUser(error_user.clone()));
-            return render_show(c, StatusCode::UNPROCESSABLE_ENTITY, error_user, None).await;
+        Err(campfire_db::Error::RecordInvalid(errors)) => {
+            c.set_current(concerns::CurrentUser(error_user));
+            return render_profile(
+                c,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                submitted,
+                errors,
+                false,
+                None,
+            )
+            .await;
         }
         Err(error) => return Err(Error::internal(error)),
     };
@@ -233,3 +317,7 @@ fn compact_string(params: &campfire_kit::ParamMap, key: &str) -> Option<String> 
     params.get(key).filter(|p| !p.is_null())?;
     string_attribute(params, key).flatten()
 }
+
+#[cfg(test)]
+#[path = "profiles/ws17_tests.rs"]
+mod ws17_tests;

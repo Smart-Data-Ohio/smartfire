@@ -461,7 +461,7 @@ impl Message {
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
-            if !message.system_note { tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?; }
+            if !message.system_note { crate::ActivityItem::record_message(tx, &message)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?; }
             message.sync_all_references(tx)?;
             message.push_later_in_conversation(tx);
         }
@@ -474,6 +474,14 @@ impl Message {
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)
+    }
+
+    /// Network-card owners plug into the real create/edit callbacks through the app sink.
+    /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
+    /// must not warm previews. Import callers pass false to retain DB references without fetches.
+    pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
+        let sink = tx.env().sink.clone();
+        sink.sync_message_references(tx, self, enqueue)
     }
 
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
@@ -621,12 +629,25 @@ impl Message {
         self.thread_id.is_some() && !self.system_note && !self.streaming
     }
 
+    /// Rails validates the saved false -> true transition on every update.
+    /// Compare the persisted row, so a stale or manually edited model cannot
+    /// bypass the stream's irreversible finalization claim.
+    fn validate_streaming_state(&self, conn: &Connection) -> Result<()> {
+        if self.streaming && !Self::find(conn, self.id)?.streaming {
+            let mut errors = Errors::default();
+            errors.add("streaming", "cannot resume once finalized");
+            return errors.into_result();
+        }
+        Ok(())
+    }
+
     /// `before_save :touch_streaming_activity, if: :streaming?`: every save while streaming
     /// restarts the finalize sweep's inactivity clock. That's a saved change, so it touches the
     /// room too (`belongs_to :room, touch: true`), even when nothing else changed. (`touch` isn't
     /// a save, so boosts don't restart the clock.) `save_touches_test` holds each save path to
     /// Rails' answer.
     fn touch_streaming_activity(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.validate_streaming_state(tx.conn())?;
         if !self.streaming {
             return Ok(());
         }
@@ -654,7 +675,9 @@ impl Message {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
             }
         }
-        self.touch(tx)
+        self.touch(tx)?;
+        if !self.streaming { self.sync_external_references(tx, true)?; }
+        Ok(())
     }
 
     /// The edit endpoints' save (`MessagesController#update`,
@@ -707,6 +730,7 @@ impl Message {
     /// in this transaction (Rails' `after_update_commit :update_in_index` is moved here so a
     /// failed renderer cannot leave a partially processed write).
     fn save_changes(&mut self, tx: &mut Tx<'_>, changes: MessageChanges, stamp_edited: bool) -> Result<()> {
+        self.validate_streaming_state(tx.conn())?;
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
         let markdown_source =
@@ -1147,7 +1171,8 @@ impl Message {
             tx.model_callback(phase, self.id)?;
         }
         crate::models::message_reference::sync(tx,self)?;
-        tx.model_callback(Phase::MessageLinkReferences, self.id)
+        tx.model_callback(Phase::MessageLinkReferences, self.id)?;
+        self.sync_external_references(tx, true)
     }
 
     /// Claim first, like Rails' `update_all`, then run the deferred callbacks.
@@ -1164,7 +1189,7 @@ impl Message {
             self.create_in_index(tx)?;
             self.receive_in_conversation(tx)?;
             self.push_later_in_conversation(tx);
-            if !self.system_note { tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
+            if !self.system_note { crate::ActivityItem::record_message(tx, self)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
             crate::models::agent_delivery::enqueue_for_message(tx,self)?;
             self.sync_all_references(tx)?;
             crate::models::bot_webhook_fanout::deliver(tx,self)?;

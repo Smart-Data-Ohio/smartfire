@@ -5,7 +5,11 @@
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
-    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8."
+    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
+    "test/models/message_streaming_test.rb": "19 named comparisons include installed production link-reference callbacks. Four complete start/trailing cable, activity and finalization cases remain unmapped; generic MessageReplace rendering and WS15e reference callbacks are now installed. WS12 activity and remaining WS14/WS15g reference peers remain separate boundaries.",
+    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation.",
+    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence.",
+    "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred."
   },
   "files": [
     {
@@ -61,34 +65,7 @@
       "rails_file": "test/jobs/agent/delivery_job_test.rb",
       "owner": "WS11 domain",
       "remaining_named_case_ports": [
-        "mentioning an agent enqueues delivery and performing marks it delivered",
-        "delivery posts the webhook with the additive agent key",
-        "delivery without a webhook still marks the row delivered",
-        "revoked at perform time writes a suppression row",
-        "membership removed before delivery writes a suppression row",
-        "performing the same event twice posts the webhook only once",
-        "a job that loses the delivery race exits without posting",
-        "a delivery claimed inside a rolled-back transaction enqueues no webhook",
-        "a job that loses the suppression race writes no duplicate row",
-        "room soft-deleted before delivery suppresses without a new suppression row",
-        "message deleted before delivery suppresses without crashing or posting",
         "rate check and insert run inside the agent lock",
-        "rate limit drops the 21st delivery with a suppression row and no job",
-        "rate limit is per agent per room",
-        "reply to an agent's message creates a reply event",
-        "a message that both mentions and replies records a single reply event",
-        "direct room messages create direct_message events",
-        "agent posting writes a posted row",
-        "agent never receives its own messages",
-        "bot without an agent row receives no events",
-        "hop limit suppresses a chain that reaches hop 3",
-        "replying to an old low-hop message does not reset the chain",
-        "suppression rows are never hop triggers",
-        "pending rows are hop triggers",
-        "deliveries older than five minutes are not hop triggers",
-        "bridging rooms carries the hop chain instead of resetting it",
-        "agent and legacy bot ping-pong escalates until the agent side suppresses",
-        "an agent's own posts are not hop triggers",
         "self-assigned work does not raise the agent's own hop count"
       ]
     },
@@ -131,106 +108,17 @@
       "rails_file": "test/models/message_streaming_test.rb",
       "owner": "WS11 finalization; WS12 activity; WS14/15 external reference sync",
       "remaining_named_case_ports": [
-        "a streaming create fires no side effects",
         "stream start broadcasts the append without the unread broadcast",
         "finalize fires every side effect exactly once",
-        "finalizing a thread stream fans out no legacy webhook",
-        "finalizing a thread stream sends no unread-room broadcast",
         "appends re-render without firing side effects",
-        "stream broadcasts coalesce to about four per second",
-        "a coalesced update sends a trailing broadcast with the final text",
-        "a trailing broadcast stays quiet once a newer broadcast lands",
-        "a trailing broadcast stays quiet after finalize",
-        "overdue streams finalize from the sweep, fresh ones stay streaming",
-        "the sweep keys on inactivity, not creation",
-        "starting and appending stamp the stream's last activity",
-        "an append after a finalize is refused and leaves the final alone",
-        "a finalized stream can never resume",
-        "the overdue sweep query uses the streaming activity index",
-        "the sweep skips streams in locked threads until unlock",
-        "finalize skips side effects for a suspended agent",
-        "the sweep finalizes a suspended agent's streams quietly",
-        "finalize skips side effects for a deactivated agent",
-        "finalize clears the streaming agent's working presence",
-        "a stream may start empty and require no body until finalize",
-        "link references sync at finalize, not while streaming"
-      ]
-    },
-    {
-      "rails_file": "test/models/webhook_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "payload",
-        "delivery",
-        "delivery with OK text reply",
-        "sync text reply lands in the triggering message's thread",
-        "legacy sync reply lands in the triggering message's thread",
-        "sync reply to a board post lands in the post",
-        "sync reply to a root message references the trigger",
-        "sync attachment reply lands in the triggering message's thread",
-        "agent delivery that times out raises instead of posting",
-        "agent sync reply into a locked thread is logged, not raised",
-        "legacy delivery without a secret sends no signature",
-        "legacy delivery with a secret signs the body",
-        "legacy sync reply into a locked thread still raises",
-        "delivery with OK attachment reply",
-        "delivery with error reply",
-        "delivery that times out",
-        "delivery to a loopback URL is refused without posting",
-        "delivery to a hostname resolving to a private address is refused",
-        "agent delivery to a refused URL raises instead of replying",
-        "agent approval webhook to a refused URL raises",
-        "delivery to an unresolvable hostname raises without posting",
-        "signing secret generation mints exactly one secret when raced"
+        "a coalesced update sends a trailing broadcast with the final text"
       ]
     },
     {
       "rails_file": "test/models/agent_approval_test.rb",
       "owner": "WS11 domain; WS11-ui human approval controller/pages",
       "remaining_named_case_ports": [
-        "requires action, summary, and expires_at with valid formats",
-        "rejects actions outside the allowed charset or length",
-        "rejects summaries over 500 characters",
-        "rejects payloads over 4 KB",
-        "defaults expires_at to 24 hours",
-        "rejects expiry windows outside 5 minutes to 7 days",
-        "enforces unique external_id per agent",
-        "allows multiple rows without an external_id",
-        "effective_status reads expired once the deadline passes",
-        "expire_if_due! persists expired only for overdue pending rows",
-        "decide! rejects expired and already-decided rows",
-        "cancel_by_agent! rejects decided and expired rows",
-        "rejects decision notes over 200 characters",
-        "creates one inbox item per decider",
-        "a decider with approvals switched off gets no item but stays a decider",
-        "deciders fall back to administrators when the agent has no owner",
-        "decision webhook is enqueued after the transaction commits",
-        "decision webhook waits for a wrapping transaction",
-        "a second decision on an already decided request appends no second event",
-        "cancelling and expiring mark decider inbox items handled"
-      ]
-    },
-    {
-      "rails_file": "test/jobs/agent/event_webhook_job_test.rb",
-      "owner": "WS11 delivery; WS15g live repository reader",
-      "remaining_named_case_ports": [
-        "a successful post marks the row delivered",
-        "a transport failure records the attempt and retries with backoff",
-        "a timeout records the attempt in the ledger and retries",
-        "the fifth failure marks the row failed without re-enqueueing",
-        "a 201 response counts as delivered",
-        "a 500 response retries with backoff and fails after five attempts",
-        "a 429 response waits out Retry-After before retrying",
-        "a 429 response without Retry-After retries with the default backoff",
-        "a 408 response retries instead of failing fast",
-        "a 404 response fails fast without retrying",
-        "an error response with an attachment body creates no sync reply",
-        "a guard refusal fails fast without retrying",
-        "an unresolvable host fails fast without retrying",
-        "a message deleted before the post fails fast without retrying",
-        "a removed webhook configuration clears the owed post",
-        "an already delivered row posts nothing",
-        "acking a pending row does not cancel its webhook"
+        "a decider with approvals switched off gets no item but stays a decider"
       ]
     },
     {
@@ -239,87 +127,18 @@
       "remaining_named_case_ports": [
         "create bot",
         "reset bot key",
-        "authenticate",
-        "creation writes the digest alone and stored bots hide their key",
-        "leftover plaintext is never consulted",
-        "bot auth keeps working after plaintext clearing",
-        "a bot without a digest cannot authenticate until its key is reset",
-        "reset stores the digest alone, clears leftover plaintext, and retires the old key",
         "reply token authenticates its bot for its room only",
         "reply token expires",
         "reply token is refused once the bot leaves or deactivates",
-        "authenticate refuses wrong, empty, and malformed keys",
-        "a deactivated bot's key is refused",
-        "existing keys keep working after the digest migration",
         "deliver message by webhook"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent/delivery_recovery_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "a stranded pending row gets recovered",
-        "a stranded row with attempts remaining but some spent gets recovered",
-        "a fresh pending row is left alone",
-        "an exhausted pending row past its grace is marked failed",
-        "a recently exhausted pending row is left alone",
-        "settled webhook rows are left alone",
-        "a 429 with Retry-After 600 is not re-posted by the sweeper before 600 seconds",
-        "the sweeper does not overwrite a Retry-After stored after its read",
-        "a recovery pass keeps going past an enqueue failure",
-        "a job with a stale attempt number exits without posting",
-        "a scheduled retry records its next attempt in the future",
-        "the sweeper recovers a stranded pending delivery for a webhook-enabled agent",
-        "the sweeper leaves a fresh pending delivery alone"
       ]
     },
     {
       "rails_file": "test/models/agent_budgets_test.rb",
       "owner": "WS11 domain",
       "remaining_named_case_ports": [
-        "usage counts today's messages, board posts, and approvals",
-        "a board post's first message counts only toward the board-post cap",
-        "an opener does not burn the message budget but replies do",
-        "usage ignores yesterday's rows",
-        "unlimited caps always pass",
-        "a hit cap answers 429 and notifies the owner once per day",
-        "each cap notifies separately",
-        "an ownerless agent notifies administrators",
         "a stranger cannot read another agent's budget item",
-        "caps must be positive integers",
         "an agent-created handoff counts toward no budget, even with caps exhausted"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_event_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "requires a known event type",
-        "accepts every documented event type",
-        "requires a known outcome",
-        "room, message, credential, and actor are optional",
-        "deliverable scope covers message types, approval decisions, work assignments, and github completions",
-        "message_deliverable scope excludes approval decisions, work assignments, and github completions",
-        "hop defaults to zero and reads metadata",
-        "acknowledged! is idempotent",
-        "destroying the agent removes its events",
-        "agent exposes its events"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_step_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "attaches to the agent's own message",
-        "attaches to a work thread the agent owns",
-        "requires exactly one parent",
-        "rejects another author's message",
-        "rejects threads the agent does not own",
-        "rejects non-work threads",
-        "caps the count per parent",
-        "caps field sizes",
-        "positions follow creation order",
-        "steps die with their message and thread"
       ]
     },
     {
@@ -405,21 +224,6 @@
         "re-keys the digest from the plaintext, then clears it",
         "a key reset between the read and the write wins over the stale plaintext",
         "repeat runs are no-ops"
-      ]
-    },
-    {
-      "rails_file": "test/models/message/bot_webhook_fanout_test.rb",
-      "owner": "WS11; WS16 import suppression integration",
-      "remaining_named_case_ports": [
-        "delivers a normal message mentioning a legacy bot",
-        "skips system notes mentioning a legacy bot"
-      ]
-    },
-    {
-      "rails_file": "test/jobs/agent/delivery_concurrency_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "concurrent mentions cannot exceed the rate limit"
       ]
     }
   ]

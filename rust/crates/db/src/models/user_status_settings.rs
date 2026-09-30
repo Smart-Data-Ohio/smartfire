@@ -1,6 +1,3 @@
-//! FLAGGED WS17 integration: read-only extraction from 604fa0fe910fd597b903477742a725ff0badd727
-//! (`rust/ws17-push-presence`, UserStatusSettings/MeetingCache). Replace this file with
-//! the owner module when merged; no status/calendar write implementation is imported.
 //! User::StatusSettings readers and writers. Expired settings read as off without modifying rows.
 //! Calendar caches are preloaded: these methods never contact Google or acquire a write lock.
 
@@ -11,6 +8,10 @@ use serde_json::Value;
 
 use crate::sql::{placeholders, query_all};
 use crate::{Result, Role, Status, Timestamp, User};
+
+pub mod updates;
+mod writes;
+pub use writes::{clock_time_to_minutes, minutes_to_clock_time, replace_keyword_alerts};
 
 #[derive(Debug, Clone)]
 pub struct UserStatusSettings {
@@ -36,6 +37,8 @@ pub struct UserStatusSettings {
     pub ooo_notify_enabled: bool,
     pub ooo_broadcast: Option<bool>,
     pub meeting_cache: Option<MeetingCache>,
+    /// Active Record dirty tracking uses the loaded record, not a new row read during save.
+    original_attributes: Vec<(&'static str, rusqlite::types::Value)>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +52,27 @@ pub struct MeetingCache {
 }
 
 impl MeetingCache {
+    /// Calendar::MeetingCache#claim_broadcast!: the loaded object deliberately stays stale.
+    pub fn claim_broadcast(&self, tx: &mut crate::Tx<'_>, active: bool) -> Result<bool> {
+        Ok(tx.conn().execute(
+            "UPDATE calendar_meeting_caches SET in_meeting_broadcast=?,updated_at=? WHERE id=? AND (in_meeting_broadcast IS NULL OR in_meeting_broadcast!=?)",
+            rusqlite::params![active,tx.now(),self.id,active],
+        )? == 1)
+    }
+
+    /// WS14's push-throttle seam. The winner must enqueue the follow-up on this same Tx.
+    pub fn claim_refresh_followup(
+        &self,
+        tx: &mut crate::Tx<'_>,
+        now: Timestamp,
+        window: jiff::SignedDuration,
+    ) -> Result<bool> {
+        Ok(tx.conn().execute(
+            "UPDATE calendar_meeting_caches SET refresh_pending_at=?,updated_at=? WHERE id=? AND (refresh_pending_at IS NULL OR refresh_pending_at<=?)",
+            rusqlite::params![now,tx.now(),self.id,now.since(-window)],
+        )? == 1)
+    }
+
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         let json = |name| -> rusqlite::Result<Value> {
             Ok(row
@@ -120,8 +144,18 @@ impl MeetingCache {
 }
 
 impl UserStatusSettings {
+    /// Keep the loaded status attributes in step with User#deactivate's persisted OOO reset.
+    pub fn deactivate(&mut self, tx: &mut crate::Tx<'_>) -> Result<()> {
+        self.user.deactivate(tx)?;
+        self.ooo_until = None;
+        self.ooo_note = None;
+        self.ooo_broadcast = None;
+        self.original_attributes = self.attributes();
+        Ok(())
+    }
+
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
-        let user = Self {
+        let mut user = Self {
             user: User::from_row(row)?,
             presence_setting: row.get("presence_setting")?,
             custom_status_emoji: row.get("custom_status_emoji")?,
@@ -144,7 +178,9 @@ impl UserStatusSettings {
             ooo_notify_enabled: row.get("ooo_notify_enabled")?,
             ooo_broadcast: row.get("ooo_broadcast")?,
             meeting_cache: None,
+            original_attributes: Vec::new(),
         };
+        user.original_attributes = user.attributes();
         Ok(user)
     }
 

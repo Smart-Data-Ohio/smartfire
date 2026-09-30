@@ -7,7 +7,9 @@ ROOT = Path(__file__).resolve().parents[3]
 subprocess.run(['python3', 'rust/reference-tools/agents/domain-case-inventory.py'], cwd=ROOT, check=True)
 inventory = json.loads((ROOT / '.scratch/ws11-domain-case-inventory.json').read_text())
 ports = json.loads((Path(__file__).parent / 'case-ports.json').read_text())
-completed = {group['rails_file']: {case['rails'] for case in group['cases']} for group in ports['files']}
+completed = {}
+for group in ports['files']:
+    completed.setdefault(group['rails_file'], set()).update(case['rails'] for case in group['cases'])
 shared = {
     'test/models/agent_test.rb': 'WS11-ui rendered broadcast cases; WS11 domain cases compared',
     'test/jobs/agent/event_webhook_job_test.rb': 'WS11 delivery; WS15g live repository reader',
