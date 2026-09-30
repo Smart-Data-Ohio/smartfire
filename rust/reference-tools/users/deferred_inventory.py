@@ -42,6 +42,13 @@ covered_before = {
 }
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
+    "system/people_group_dms_test.rb": {
+        "Esc with a closed profile card stays unhandled for later listeners",
+        "multi-selecting three people in the directory lands in their group DM",
+        "shift-click extends the checkbox range", "long-press selects a row on touch",
+        "agents are selectable for messages but excluded from huddles",
+        "start huddle keeps agents in the DM but out of the call",
+    },
     "controllers/first_runs_controller_test.rb": {"new is permitted when no other users exit", "new is not permitted when account exist", "create", "create is not vulnerable to race conditions"},
     "controllers/welcome_controller_test.rb": {"redirects to the first created visible room the user has access to", "redirects to the last room visited, if we have one"},
     "controllers/accounts/logos_controller_test.rb": {"show stock", "show stock small size", "show custom", "show custom small size", "show stock when custom logo cannot be resized", "destroy"},
