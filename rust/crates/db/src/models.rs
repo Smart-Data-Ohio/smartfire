@@ -56,6 +56,8 @@ pub mod user;
 pub mod user_device;
 pub mod webhook;
 pub mod workspace_presence_lease;
+pub mod user_status_settings;
+pub mod room_members;
 
 pub use account::{Account, AccountSettings};
 pub use auth_audit::{AuthAudit, SudoVerifier};

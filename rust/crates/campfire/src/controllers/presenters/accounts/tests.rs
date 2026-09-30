@@ -36,6 +36,8 @@ mod webhook_secrets;
 mod kill_switch;
 #[path = "tests/member_panel.rs"]
 mod member_panel;
+#[path = "tests/member_polling.rs"]
+mod member_polling;
 
 struct Test {
     booted: Booted,
@@ -44,6 +46,10 @@ struct Test {
 }
 
 async fn boot_seed(name: &str) -> Option<Test> {
+    boot_seed_with_clock(name, seed_clock()).await
+}
+
+async fn boot_seed_with_clock(name: &str, clock: campfire_kit::SharedClock) -> Option<Test> {
     let seed = seed_dir(name)?;
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -70,7 +76,7 @@ async fn boot_seed(name: &str) -> Option<Test> {
     })
     .unwrap();
     Some(Test {
-        booted: boot_with_clock(config, seed_clock()).await.unwrap(),
+        booted: boot_with_clock(config, clock).await.unwrap(),
         labels,
         _dir: dir,
     })
