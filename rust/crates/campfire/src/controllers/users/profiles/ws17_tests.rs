@@ -326,17 +326,10 @@ async fn ws17_rejected_profile_layout_metadata_matches_loaded_unsaved_rails_valu
         let html = response.text();
         for (name, fragment) in row["metadata"].as_object().unwrap() {
             let fragment = fragment.as_str().unwrap();
-            if name == "time_zone" && fragment.trim().is_empty() {
-                assert!(
-                    !html.contains("name=\"current-user-time-zone\""),
-                    "{theme}/{size}: Rails omits time-zone metadata on this rejection"
-                );
-            } else {
-                assert!(
-                    html.contains(fragment),
-                    "{theme}/{size} {name}: expected {fragment:?}"
-                );
-            }
+            assert!(
+                html.contains(fragment),
+                "{theme}/{size} {name}: expected {fragment:?}"
+            );
         }
         assert_eq!(appearance(&app).await, before);
     }
