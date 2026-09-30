@@ -2,11 +2,11 @@
 # Generate slash expectations from our immutable Rails pin, with no Rails source edits.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../../.." && pwd)
-scratch=/home/riels/.cache/rust-port/ws8slash
+scratch=/home/riels/.cache/rust-port/ws8/slash
 pin=fec615be407f2350de9c364f78a322c4ad48a2cf
 mkdir -p "$scratch/pin" "$scratch/tmp"
 git -C "$root" archive "$pin" app db lib config test Gemfile Gemfile.lock | tar -x -C "$scratch/pin"
-docker run --rm --cpus 2 --name ws8slash-oracle --entrypoint '' \
+docker run --rm --cpus 2 --name ws8-slash-oracle --entrypoint '' \
   --env-file "$root/rust/parity/.env.reference" -e RAILS_ENV=test -e TMPDIR=/rails/tmp \
   -e CAMPFIRE_FIXTURES_NOW='2026-09-23 12:00:00' \
   -v "$scratch/pin/app:/rails/app:ro" -v "$scratch/pin/db:/rails/db:ro" \

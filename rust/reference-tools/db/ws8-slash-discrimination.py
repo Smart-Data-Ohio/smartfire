@@ -5,8 +5,8 @@ import pathlib
 import subprocess
 
 root = pathlib.Path(__file__).resolve().parents[3]
-scratch = pathlib.Path('/home/riels/.cache/rust-port/ws8slash')
-scratch.mkdir(parents=True, exist_ok=True)
+scratch = pathlib.Path('/home/riels/.cache/rust-port/ws8/slash')
+(scratch / 'tmp').mkdir(parents=True, exist_ok=True)
 env = os.environ | {'TMPDIR': str(scratch / 'tmp'), 'CARGO_TARGET_DIR': str(root / 'rust/target')}
 
 def run(label, relative, before, after, package, test, required):
@@ -15,7 +15,7 @@ def run(label, relative, before, after, package, test, required):
     assert before in source, (label, 'mutation anchor changed')
     try:
         path.write_text(source.replace(before, after, 1))
-        command = ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '-j', '6', '--manifest-path', str(root / 'rust/Cargo.toml'), '-p', package, test, '--', '--test-threads=4']
+        command = ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '-j', '4', '--manifest-path', str(root / 'rust/Cargo.toml'), '-p', package, test, '--', '--test-threads=4']
         result = subprocess.run(command, cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (scratch / f'discrimination-{label}.log').write_text(result.stdout)
         assert result.returncode != 0 and 'test result: FAILED.' in result.stdout, (label, result.stdout[-3000:])

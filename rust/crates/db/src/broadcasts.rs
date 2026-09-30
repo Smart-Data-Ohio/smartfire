@@ -187,6 +187,10 @@ impl Broadcast {
     }
 }
 
+impl crate::events::Broadcast for Broadcast {
+    const KIND: &'static str = "Messaging#broadcast";
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,8 +207,4 @@ mod tests {
         assert_eq!(room_param_key(RoomType::Direct), "rooms_direct");
         assert_eq!(dom_id("message", "abc", Some("thread_indicator")), "thread_indicator_message_abc");
     }
-}
-
-impl crate::events::Broadcast for Broadcast {
-    const KIND: &'static str = "Messaging#broadcast";
 }

@@ -107,6 +107,27 @@ fn endpoint_address(value: &str) -> Option<(String, u16)> {
     Some((host.to_ascii_lowercase(), uri.port.unwrap_or(default_port)))
 }
 
+pub(crate) fn template_free_broadcast(
+    broadcast: &campfire_db::broadcasts::Broadcast,
+) -> Option<(String, serde_json::Value)> {
+    use campfire_db::broadcasts::{Broadcast, TurboAction};
+    match broadcast {
+        Broadcast::Cable { stream, payload } => Some((stream.clone(), payload.clone())),
+        Broadcast::Turbo(frame)
+            if frame.action == TurboAction::Remove && frame.partial.is_none() =>
+        {
+            let html = campfire_cable::turbo::action_tag(
+                campfire_cable::turbo::Action::Remove,
+                campfire_cable::turbo::Target::Target(&frame.target),
+                None,
+                &[],
+            );
+            Some((broadcast.stream_name(), serde_json::Value::String(html)))
+        }
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -135,26 +156,5 @@ mod tests {
         assert!(!configured(&vars));
         vars[1].1 = "livekit.internal:7880";
         assert!(!configured(&vars));
-    }
-}
-
-pub(crate) fn template_free_broadcast(
-    broadcast: &campfire_db::broadcasts::Broadcast,
-) -> Option<(String, serde_json::Value)> {
-    use campfire_db::broadcasts::{Broadcast, TurboAction};
-    match broadcast {
-        Broadcast::Cable { stream, payload } => Some((stream.clone(), payload.clone())),
-        Broadcast::Turbo(frame)
-            if frame.action == TurboAction::Remove && frame.partial.is_none() =>
-        {
-            let html = campfire_cable::turbo::action_tag(
-                campfire_cable::turbo::Action::Remove,
-                campfire_cable::turbo::Target::Target(&frame.target),
-                None,
-                &[],
-            );
-            Some((broadcast.stream_name(), serde_json::Value::String(html)))
-        }
-        _ => None,
     }
 }
