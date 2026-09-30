@@ -36,11 +36,15 @@ pub async fn index(c: &mut Ctx) -> Result {
     if messages.is_empty() {
         return Ok(c.head(StatusCode::NO_CONTENT));
     }
-    // fresh_when @messages: the records' cache keys, their latest updated_at, and the template.
-    let etag = messages.iter().map(|m| cache_key_with_version("messages", m.id, m.updated_at.jiff())).collect::<Vec<_>>().join("/");
+    // WS8bm2 composite-cache integration: Rails' body-free related stamp and pin
+    // set digest precede preloads. Last-Modified cannot represent an unpin.
+    let ids = messages.clone();
+    let (related, pins) = c.app().db.read(move |conn|
+        campfire_db::models::message_rendering::page_validators(conn, &ids)).await.map_err(db_error)?;
+    let records = messages.iter().map(|m| cache_key_with_version("messages", m.id, m.updated_at.jiff())).collect::<Vec<_>>().join("/");
+    let etag = format!("{records}/{}/{pins}/{}", related.unwrap_or_default(), campfire_views::fragment_cache::keys::PRESENTATION_CACHE_VERSION);
     let freshness = Freshness {
         etag: Some(etag),
-        last_modified: messages.iter().map(|m| m.updated_at.jiff()).max(),
         template: Some(TEMPLATE_DIGEST_INDEX.into()),
         ..Freshness::default()
     };
@@ -692,11 +696,13 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
+    let cache_time_zone = super::message_features::user_zone(c).await?;
     c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
+            presenter.cache_time_zone = cache_time_zone;
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
             campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))
         })

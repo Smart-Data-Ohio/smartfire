@@ -133,6 +133,8 @@ pub struct MessageDetails {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct MessageComponents {
+    /// Expanded Rails composite facts, built from preloads in the request's zone.
+    pub cache_key: Option<String>,
     pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub twitter_cards: Vec<String>,
@@ -328,11 +330,7 @@ impl MessageItem {
             .iter()
             .filter_map(|item| match item {
                 MessageItem::Fragment { html, .. } => Some(html.clone()),
-                MessageItem::View(message) => cache.get(&message_fragment_key(
-                    message.id,
-                    message.updated_at,
-                    base_url,
-                )),
+                MessageItem::View(message) => cache.get(&view_fragment_key(message, base_url)),
             })
             .filter(|html| !crate::helpers::request_forgery::has_token_slots(html))
             .collect()
@@ -560,7 +558,7 @@ pub struct MessagePartial<'a> {
 /// (and whose collection renders are `cached: true`), so a message version renders once.
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
-        || message_fragment_key(message.id, message.updated_at, &ctx.base_url),
+        || view_fragment_key(message, &ctx.base_url),
         || {
             MessagePartial { ctx, message }
                 .render()
@@ -605,6 +603,19 @@ fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str) -> Strin
         fragment_cache::cache_key_with_version("messages", id, updated_at),
         fragment_cache::keys::PRESENTATION_CACHE_VERSION,
     )
+}
+
+fn view_fragment_key(message: &MessageView, base_url: &str) -> String {
+    match message.components.cache_key.as_deref() {
+        Some(key) => composite_fragment_key(key, base_url),
+        None => message_fragment_key(message.id, message.updated_at, base_url),
+    }
+}
+fn composite_fragment_key(key: &str, base_url: &str) -> String {
+    format!("views/messages/_message:{}/{key}/{base_url}", message_digest())
+}
+pub fn cached_composite_fragment(key: &str, base_url: &str) -> Option<fragment_cache::Fragment> {
+    fragment_cache::read(&composite_fragment_key(key, base_url))
 }
 
 /// `messages/boosts/_boost`, whose body is `cache boost`.

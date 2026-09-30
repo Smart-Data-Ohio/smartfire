@@ -46,6 +46,14 @@ check("quote-inline-privacy", "rust/crates/campfire/src/controllers/presenters.r
 check("quote-neutral-label", "rust/crates/campfire/src/controllers/presenters.rs",
       '"a direct message".into()', '"David and Jason".into()',
       "controllers::message_features::quote_integration_tests::two_cached_direct_room_viewers_see_the_same_neutral_quote_label")
+check("cache-root-fragment", "rust/crates/views/src/messages.rs",
+      "Some(key) => composite_fragment_key(key, base_url)",
+      "Some(_key) => message_fragment_key(message.id, message.updated_at, base_url)",
+      "controllers::message_features::root_cache_tests::warm_root_fragments_refresh_after_legacy_source_edit_and_name_changes")
+check("cache-pin-validator", "rust/crates/campfire/src/controllers/messages.rs",
+      'let etag = format!("{records}/{}/{pins}/{}",',
+      'let etag = format!("{records}/{}/{}",',
+      "controllers::message_features::root_cache_tests::message_page_conditional_get_tracks_related_stamps_and_unpin_without_last_modified")
 
 check("membership", "rust/crates/campfire/src/controllers/message_features.rs",
       "let (_, room) = concerns::set_room(c).await?;",

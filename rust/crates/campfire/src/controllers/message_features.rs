@@ -200,3 +200,5 @@ mod links_files_tests;
 mod reminder_tests;
 #[cfg(test)]
 mod quote_integration_tests;
+#[cfg(test)]
+mod root_cache_tests;

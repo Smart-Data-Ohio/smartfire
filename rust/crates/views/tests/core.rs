@@ -615,7 +615,7 @@ fn custom_fragment_keys_match_pr148_rails() {
                                     .max(timestamp(&source["updated_at"]))
                                     .unwrap(),
                                 source["creator"].as_str().unwrap().into(),
-                                source["room"].as_str().unwrap().into(),
+                                source["room"].as_str().map(str::to_owned),
                             )
                         })
                         .collect()

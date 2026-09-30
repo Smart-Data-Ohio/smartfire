@@ -1,11 +1,51 @@
 //! Page-scoped reads for Message.with_rendering_details. No HTML or viewer state.
 use crate::models::poll::{Poll, PollOption, PollVote};
-use crate::{Boost, Message, Result, Room, User};
+use crate::{Boost, Message, Result, Room, Timestamp, User};
 use rusqlite::{Connection, Row, params_from_iter};
+use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
+
+/// Rails MessagesController's body-free conditional-GET aggregates. Unpins need
+/// their own digest; a maximum timestamp cannot detect removal of an older pin.
+pub fn page_validators(
+    conn: &Connection,
+    messages: &[Message],
+) -> Result<(Option<String>, String)> {
+    let ids = messages.iter().map(|m| m.id).collect::<Vec<_>>();
+    let stamp=rows(conn,"WITH page AS (SELECT * FROM messages WHERE id IN ($ids)) SELECT MAX(stamp) FROM (
+        SELECT edited_at AS stamp FROM page
+        UNION ALL SELECT m.updated_at FROM messages m JOIN page ON m.id=page.reply_to_message_id
+        UNION ALL SELECT m.edited_at FROM messages m JOIN page ON m.id=page.reply_to_message_id
+        UNION ALL SELECT c.updated_at FROM github_pull_request_references r JOIN github_pull_requests c ON c.id=r.github_pull_request_id JOIN page ON page.id=r.message_id
+        UNION ALL SELECT c.updated_at FROM twitter_post_references r JOIN twitter_posts c ON c.id=r.twitter_post_id JOIN page ON page.id=r.message_id
+        UNION ALL SELECT c.updated_at FROM link_embed_references r JOIN link_embeds c ON c.id=r.link_embed_id JOIN page ON page.id=r.message_id
+        UNION ALL SELECT c.updated_at FROM event_references r JOIN events c ON c.id=r.event_id JOIN page ON page.id=r.message_id
+        UNION ALL SELECT c.updated_at FROM polls c JOIN page ON page.id=c.message_id
+        UNION ALL SELECT m.updated_at FROM messages m JOIN message_references r ON r.referenced_message_id=m.id JOIN page ON page.id=r.message_id
+        UNION ALL SELECT m.edited_at FROM messages m JOIN message_references r ON r.referenced_message_id=m.id JOIN page ON page.id=r.message_id
+        UNION ALL SELECT u.updated_at FROM users u JOIN page ON page.creator_id=u.id
+    )",&ids,|r|r.get::<_,Option<Timestamp>>(0))?.into_iter().next().flatten()
+        .map(|t|t.jiff().strftime("%Y-%m-%d %H:%M:%S%.6f").to_string());
+    let pairs = rows(
+        conn,
+        "SELECT message_id,id FROM message_pins WHERE message_id IN ($ids) ORDER BY message_id,id",
+        &ids,
+        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
+    )?;
+    let inspect = format!(
+        "[{}]",
+        pairs
+            .iter()
+            .map(|(message, pin)| format!("[{message}, {pin}]"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    Ok((stamp, format!("{:x}", Sha256::digest(inspect))))
+}
 
 #[derive(Clone)]
 pub struct AgentStep {
+    pub updated_at: Timestamp,
     pub name: String,
     pub status: String,
     pub duration_ms: Option<i64>,
@@ -19,6 +59,10 @@ pub struct RenderingUser {
 }
 #[derive(Default)]
 pub struct RenderingRecords {
+    pub cache: HashMap<i64, CacheDetails>,
+    pub pr_thread_stamps: HashMap<i64, Timestamp>,
+    pub private_prs: HashMap<i64, Vec<i64>>,
+    pub fizzy_cards: HashMap<i64, Vec<i64>>,
     pub sources: HashMap<i64, Message>,
     pub quotes: HashMap<i64, Vec<(i64, i64)>>,
     pub rooms: HashMap<i64, Room>,
@@ -33,6 +77,13 @@ pub struct RenderingRecords {
     pub polls: HashMap<i64, Poll>,
     pub options: HashMap<i64, Vec<PollOption>>,
     pub votes: HashMap<i64, Vec<(PollVote, Option<String>)>>,
+}
+#[derive(Default)]
+pub struct CacheDetails {
+    pub cards: Vec<Timestamp>,
+    pub embeds: Vec<(i64, Option<Timestamp>)>,
+    pub pins: Vec<Timestamp>,
+    pub has_pull_requests: bool,
 }
 /// IDs always originate in the authorized, bounded search window. Empty sets never load a table.
 fn rows<T>(
@@ -57,10 +108,58 @@ impl RenderingRecords {
             return Ok(data);
         }
         let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
-        for (message, reference, source) in rows(conn,
+        // WS8bm2 root cache seam. These association reads are bounded by the page,
+        // and cache invalidation must include public and private provider rows alike.
+        for (message, stamp) in rows(conn, "WITH page AS (SELECT id FROM messages WHERE id IN ($ids))
+            SELECT r.message_id,c.updated_at FROM github_pull_request_references r JOIN github_pull_requests c ON c.id=r.github_pull_request_id JOIN page ON page.id=r.message_id
+            UNION ALL SELECT r.message_id,c.updated_at FROM fizzy_card_references r JOIN fizzy_cards c ON c.id=r.fizzy_card_id JOIN page ON page.id=r.message_id
+            UNION ALL SELECT r.message_id,c.updated_at FROM twitter_post_references r JOIN twitter_posts c ON c.id=r.twitter_post_id JOIN page ON page.id=r.message_id
+            UNION ALL SELECT r.message_id,c.updated_at FROM event_references r JOIN events c ON c.id=r.event_id JOIN page ON page.id=r.message_id",
+            &ids, |r| Ok((r.get(0)?,r.get(1)?)))? {
+            data.cache.entry(message).or_default().cards.push(stamp);
+        }
+        for (message, reference, stamp) in rows(
+            conn,
+            "SELECT r.message_id,r.id,c.updated_at FROM link_embed_references r LEFT JOIN link_embeds c ON c.id=r.link_embed_id WHERE r.message_id IN ($ids) ORDER BY r.id",
+            &ids,
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )? {
+            data.cache
+                .entry(message)
+                .or_default()
+                .embeds
+                .push((reference, stamp));
+        }
+        for (message, card, public) in rows(
+            conn,
+            "SELECT r.message_id,c.id,c.private=0 FROM github_pull_request_references r JOIN github_pull_requests c ON c.id=r.github_pull_request_id WHERE r.message_id IN ($ids) ORDER BY c.owner,c.repo,c.number",
+            &ids,
+            |r| Ok((r.get(0)?, r.get(1)?, r.get::<_, Option<bool>>(2)?)),
+        )? {
+            data.cache.entry(message).or_default().has_pull_requests = true;
+            // Public PR content is supplied by WS15; private/unknown rows carry no facts.
+            if public != Some(true) {
+                data.private_prs.entry(message).or_default().push(card);
+            }
+        }
+        for (message, card) in rows(
+            conn,
+            "SELECT r.message_id,c.id FROM fizzy_card_references r JOIN fizzy_cards c ON c.id=r.fizzy_card_id WHERE r.message_id IN ($ids) ORDER BY c.account_id,c.number",
+            &ids,
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )? {
+            data.fizzy_cards.entry(message).or_default().push(card);
+        }
+        for (message, reference, source) in rows(
+            conn,
             "SELECT message_id,id,referenced_message_id FROM message_references WHERE message_id IN ($ids) ORDER BY id",
-            &ids, |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))? {
-            data.quotes.entry(message).or_default().push((reference, source));
+            &ids,
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )? {
+            data.quotes
+                .entry(message)
+                .or_default()
+                .push((reference, source));
         }
         let reply_ids: Vec<_> = messages
             .iter()
@@ -97,6 +196,9 @@ impl RenderingRecords {
             &room_ids,
             |r| Ok((Room::from_row(r)?, r.get::<_, Option<String>>("icon_name")?)),
         )?;
+        data.pr_thread_stamps = rows(conn,
+            "SELECT room_id,MAX(updated_at) FROM github_pull_request_threads WHERE room_id IN ($ids) GROUP BY room_id",
+            &room_ids, |r| Ok((r.get(0)?,r.get(1)?)))?.into_iter().collect();
         for (room, icon) in rooms {
             data.room_icons.insert(room.id, icon);
             data.rooms.insert(room.id, room);
@@ -123,14 +225,15 @@ impl RenderingRecords {
         )? {
             data.boosts.entry(boost.message_id).or_default().push(boost);
         }
-        data.pinned = rows(
+        for (message, stamp) in rows(
             conn,
-            "SELECT message_id FROM message_pins WHERE message_id IN ($ids)",
+            "SELECT message_id,updated_at FROM message_pins WHERE message_id IN ($ids)",
             &ids,
-            |r| r.get(0),
-        )?
-        .into_iter()
-        .collect();
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )? {
+            data.pinned.insert(message);
+            data.cache.entry(message).or_default().pins.push(stamp);
+        }
         data.reply_counts = rows(conn,"SELECT parent_message_id,messages_count FROM channel_threads WHERE parent_message_id IN ($ids)",&ids,|r|Ok((r.get(0)?,r.get(1)?)))?.into_iter().collect();
         for (id, file) in rows(
             conn,
@@ -148,6 +251,7 @@ impl RenderingRecords {
                 Ok((
                     r.get("message_id")?,
                     AgentStep {
+                        updated_at: r.get("updated_at")?,
                         name: r.get("name")?,
                         status: r.get("status")?,
                         duration_ms: r.get("duration_ms")?,

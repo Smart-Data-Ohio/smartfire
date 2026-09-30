@@ -197,6 +197,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let message_id = c.param_str("message_id").and_then(cast_integer);
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
+    let cache_time_zone = super::message_features::user_zone(c).await?;
     let show = c
         .app()
         .db
@@ -207,6 +208,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
             };
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
+            presenter.cache_time_zone = cache_time_zone;
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
             Ok(campfire_views::rooms::ShowView {

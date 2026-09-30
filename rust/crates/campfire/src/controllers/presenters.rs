@@ -129,6 +129,7 @@ pub struct Presenter<'a> {
     /// `Current.request_host`, which opengraph embeds are checked against.
     pub request_host: Option<String>,
     pub cache_base_url: Option<String>,
+    pub cache_time_zone: campfire_views::time::Zone,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
     // WS8bm2 shared rendering-details seam for root and search pages.
@@ -145,6 +146,7 @@ impl<'a> Presenter<'a> {
             now: app.clock.now(),
             request_host,
             cache_base_url: None,
+            cache_time_zone: campfire_views::time::Zone::utc(),
             users: RefCell::default(),
             room_names: RefCell::default(),
             search_preloads: None,
@@ -157,7 +159,7 @@ impl<'a> Presenter<'a> {
     pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
         let data = super::searches::preloads::Preloads::load(self, messages)?;
         Ok(Self { conn:self.conn,secrets:self.secrets,storage:self.storage,rich_text:self.rich_text,now:self.now,
-            request_host:self.request_host.clone(),cache_base_url:self.cache_base_url.clone(),
+            request_host:self.request_host.clone(),cache_base_url:self.cache_base_url.clone(),cache_time_zone:self.cache_time_zone.clone(),
             users:RefCell::default(),room_names:RefCell::default(),search_preloads:Some(data) })
     }
     fn stored_body(&self, message: &Message) -> Result<Option<String>> {
@@ -251,7 +253,9 @@ impl<'a> Presenter<'a> {
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff(), base)) {
+        if self.search_preloads.is_none() { return self.preload_search(std::slice::from_ref(message))?.message_item(message); }
+        let key = self.message_cache_key(message)?;
+        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_composite_fragment(&key, base)) {
             Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
             None => MessageItem::View(Box::new(self.message(message)?)),
         })
@@ -319,7 +323,46 @@ impl<'a> Presenter<'a> {
                 } else { None };
                 Ok(campfire_views::message_links::Reference { id, card })
             }).collect::<Result<Vec<_>>>()?;
-        Ok(campfire_views::messages::MessageComponents { quote_references: Some(references), ..Default::default() })
+        let frame = |id:i64, provider:&str, param:&str, class:&str, indent:&str| {
+            let html=campfire_views::helpers::turbo_frame_tag(&format!("card_for_message_{}_{param}_{id}",message.id),
+                Some(&format!("/rooms/{}/{provider}/{id}/card?message_id={}",message.room_id,message.id)),None,
+                campfire_views::helpers::attrs().attr("loading","lazy").class(class),"").0;
+            format!("\n{indent}{html}\n")
+        };
+        Ok(campfire_views::messages::MessageComponents {
+            cache_key: Some(self.message_cache_key(message)?), quote_references: Some(references),
+            github_cards: data.records.private_prs.get(&message.id).into_iter().flatten()
+                .map(|id| frame(*id,"github/pull_requests","github_pull_request","github-pr-card-frame","    ")).collect(),
+            fizzy_cards: data.records.fizzy_cards.get(&message.id).into_iter().flatten()
+                .map(|id| frame(*id,"fizzy/cards","fizzy_card","fizzy-card-frame","  ")).collect(),
+            ..Default::default()
+        })
+    }
+
+    pub(crate) fn message_cache_key(&self, message: &Message) -> Result<String> {
+        use campfire_views::fragment_cache::{keys, cache_key_with_version};
+        let records=&self.search_preloads.as_ref().expect("preloaded cache facts").records;
+        let facts=records.cache.get(&message.id);
+        let quotes=records.quotes.get(&message.id).into_iter().flatten()
+            .filter_map(|(_,id)| records.sources.get(id))
+            .map(|source| -> Result<_> {
+                let room=records.rooms.get(&source.room_id).ok_or(campfire_db::Error::RecordNotFound("Room"))?;
+                Ok((source.updated_at.jiff().max(source.edited_at.map(|t|t.jiff()).unwrap_or(source.updated_at.jiff())),
+                    self.user(source.creator_id)?.name,room.name.clone()))
+            }).collect::<Result<Vec<_>>>()?;
+        let key=keys::MessageKey {
+            record:cache_key_with_version("messages",message.id,message.updated_at.jiff()),
+            cards:facts.map(|f| f.cards.iter().map(|t|t.jiff()).collect()).unwrap_or_default(),
+            embeds:facts.map(|f| f.embeds.iter().map(|(id,t)|(*id,t.map(|t|t.jiff()))).collect()).unwrap_or_default(),
+            has_pull_requests:facts.is_some_and(|f| f.has_pull_requests),
+            pr_threads_stamp:records.pr_thread_stamps.get(&message.room_id).map(|t|t.jiff()),
+            pins:facts.map(|f|f.pins.iter().map(|t|t.jiff()).collect()).unwrap_or_default(),
+            thread_messages_count:records.reply_counts.get(&message.id).map(|n|*n as i64),
+            poll:records.polls.get(&message.id).map(|p|p.updated_at.jiff()),
+            system_note:message.system_note,streaming:message.streaming,
+            agent_steps:records.steps.get(&message.id).into_iter().flatten().map(|s|s.updated_at.jiff()).collect(),quotes,
+        };
+        Ok(keys::expand(&keys::message_with_pr_cards(&key), &self.cache_time_zone))
     }
 
     fn message_details(&self, message: &Message) -> Result<campfire_views::messages::MessageDetails> {

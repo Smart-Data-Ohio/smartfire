@@ -56,7 +56,7 @@ pub struct MessageKey {
     pub streaming: bool,
     pub agent_steps: Vec<Timestamp>,
     /// `max(updated_at, edited_at)` for each source, and the creator/room names.
-    pub quotes: Vec<(Timestamp, String, String)>,
+    pub quotes: Vec<(Timestamp, String, Option<String>)>,
 }
 
 fn stamp(value: Option<Timestamp>) -> Key {
@@ -93,7 +93,7 @@ pub fn message_with_pr_cards(data: &MessageKey) -> Key {
         if data.quotes.is_empty() {
             Key::Null
         } else {
-            Key::Text(quote_names_digest(
+            Key::Text(quote_nullable_names_digest(
                 &data
                     .quotes
                     .iter()
@@ -122,6 +122,10 @@ pub fn sidebar_membership(
 
 /// Ruby Array#inspect, used by message_quote_names_digest instead of JSON encoding.
 pub fn quote_names_inspect(names: &[(String, String)]) -> String {
+    quote_nullable_names_inspect(&names.iter().map(|(creator, room)| (creator.clone(), Some(room.clone()))).collect::<Vec<_>>())
+}
+
+pub fn quote_nullable_names_inspect(names: &[(String, Option<String>)]) -> String {
     fn inspect(value: &str) -> String {
         let mut output = String::from("\"");
         let mut chars = value.chars().peekable();
@@ -156,7 +160,7 @@ pub fn quote_names_inspect(names: &[(String, String)]) -> String {
         "[{}]",
         names
             .iter()
-            .map(|(creator, room)| format!("[{}, {}]", inspect(creator), inspect(room)))
+            .map(|(creator, room)| format!("[{}, {}]", inspect(creator), room.as_deref().map(inspect).unwrap_or_else(|| "nil".into())))
             .collect::<Vec<_>>()
             .join(", ")
     )
@@ -164,4 +168,7 @@ pub fn quote_names_inspect(names: &[(String, String)]) -> String {
 
 pub fn quote_names_digest(names: &[(String, String)]) -> String {
     format!("{:x}", Sha256::digest(quote_names_inspect(names)))
+}
+pub fn quote_nullable_names_digest(names: &[(String, Option<String>)]) -> String {
+    format!("{:x}", Sha256::digest(quote_nullable_names_inspect(names)))
 }
