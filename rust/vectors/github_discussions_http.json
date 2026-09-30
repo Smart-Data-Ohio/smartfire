@@ -1,0 +1,129 @@
+[
+  {
+    "name": "new",
+    "request_body": {
+      "pull_request_id": 816,
+      "message_id": 818
+    },
+    "status": 303,
+    "location": "http://example.org/rooms/815/threads/818",
+    "body": "",
+    "threads": 1,
+    "mappings": 1,
+    "mapping_thread": 818,
+    "joined": true,
+    "fetches": 1
+  },
+  {
+    "name": "existing",
+    "mapping": true,
+    "request_body": {
+      "pull_request_id": 816,
+      "message_id": 818
+    },
+    "status": 303,
+    "location": "http://example.org/rooms/815/threads/817",
+    "body": "",
+    "threads": 1,
+    "mappings": 1,
+    "mapping_thread": 817,
+    "joined": false,
+    "fetches": 0
+  },
+  {
+    "name": "nonmember",
+    "member": false,
+    "request_body": {
+      "pull_request_id": 816,
+      "message_id": 818
+    },
+    "status": 404,
+    "location": null,
+    "body": null,
+    "threads": 0,
+    "mappings": 0,
+    "mapping_thread": null,
+    "joined": null,
+    "fetches": 0
+  },
+  {
+    "name": "unreferenced",
+    "reference": false,
+    "request_body": {
+      "pull_request_id": 816,
+      "message_id": 818
+    },
+    "status": 404,
+    "location": null,
+    "body": null,
+    "threads": 0,
+    "mappings": 0,
+    "mapping_thread": null,
+    "joined": null,
+    "fetches": 0
+  },
+  {
+    "name": "reply",
+    "reply": true,
+    "request_body": {
+      "pull_request_id": 816,
+      "message_id": 818
+    },
+    "status": 404,
+    "location": null,
+    "body": null,
+    "threads": 1,
+    "mappings": 0,
+    "mapping_thread": null,
+    "joined": null,
+    "fetches": 0
+  },
+  {
+    "name": "direct",
+    "kind": "Rooms::Direct",
+    "request_body": {
+      "pull_request_id": 816,
+      "message_id": 818
+    },
+    "status": 422,
+    "location": null,
+    "body": null,
+    "threads": 0,
+    "mappings": 0,
+    "mapping_thread": null,
+    "joined": null,
+    "fetches": 0
+  },
+  {
+    "name": "missing_pr",
+    "pull_request_id": 9999,
+    "request_body": {
+      "pull_request_id": 9999,
+      "message_id": 818
+    },
+    "status": 404,
+    "location": null,
+    "body": null,
+    "threads": 0,
+    "mappings": 0,
+    "mapping_thread": null,
+    "joined": null,
+    "fetches": 0
+  },
+  {
+    "name": "wrong_room",
+    "message_id": 828,
+    "request_body": {
+      "pull_request_id": 816,
+      "message_id": 828
+    },
+    "status": 404,
+    "location": null,
+    "body": null,
+    "threads": 0,
+    "mappings": 0,
+    "mapping_thread": null,
+    "joined": null,
+    "fetches": 0
+  }
+]

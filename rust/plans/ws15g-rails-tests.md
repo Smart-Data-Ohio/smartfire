@@ -1,6 +1,6 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 269 mapped to Rust assertions; 157 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 274 mapped to Rust assertions; 152 explicitly deferred.
 
 These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors; profile/bot view and lifecycle cases remain explicit. GitHub health data/section pass independently; shared health-page wiring remains deferred. Remaining room-page/controller/system parity, helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
@@ -14,7 +14,6 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
 | `test/controllers/github/pull_request_reviews_controller_test.rb` | 0/9 | 9 |
 | `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
-| `test/controllers/github/pull_request_threads_controller_test.rb` | 0/7 | 7 |
 | `test/jobs/audit_log_github_execution_test.rb` | 0/6 | 6 |
 | `test/controllers/github/connections_controller_test.rb` | 8/13 | 5 |
 | `test/controllers/github/pull_request_write_actions_controller_test.rb` | 0/5 | 5 |
@@ -23,6 +22,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/controllers/github/webhooks_controller_test.rb` | 18/21 | 3 |
 | `test/jobs/github/deliver_subscription_event_job_test.rb` | 34/37 | 3 |
 | `test/system/github_pr_write_actions_test.rb` | 0/3 | 3 |
+| `test/controllers/github/pull_request_threads_controller_test.rb` | 5/7 | 2 |
 | `test/controllers/rooms/github/pull_request_cards_controller_test.rb` | 13/15 | 2 |
 | `test/jobs/github/fetch_pull_request_job_test.rb` | 20/22 | 2 |
 | `test/jobs/github/perform_agent_action_job_test.rb` | 34/36 | 2 |
@@ -183,13 +183,13 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| discuss creates a thread with the card message as parent and records the mapping | Deferred; WS15g continuation | — |
-| discuss reuses the room's existing thread for the PR | Deferred; WS15g continuation | — |
+| discuss creates a thread with the card message as parent and records the mapping | Mapped to grouped Rust assertions; WS15g | `github_discuss_http_redirect_persistence_membership_and_fetch_match_rails` |
+| discuss reuses the room's existing thread for the PR | Mapped to grouped Rust assertions; WS15g | `github_discuss_http_redirect_persistence_membership_and_fetch_match_rails` |
 | discuss reuses the winner and drops the loser when the race is lost at the unique index | Deferred; WS15g continuation | — |
 | discuss reuses the winner and drops the loser when the race is lost at the validation | Deferred; WS15g continuation | — |
-| non-members get not found | Deferred; WS15g continuation | — |
-| a message that does not reference the PR gets not found | Deferred; WS15g continuation | — |
-| a thread reply cannot parent a discussion | Deferred; WS15g continuation | — |
+| non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_discuss_security_requires_membership_root_parent_and_exact_reference` |
+| a message that does not reference the PR gets not found | Mapped to grouped Rust assertions; WS15g | `github_discuss_security_requires_membership_root_parent_and_exact_reference` |
+| a thread reply cannot parent a discussion | Mapped to grouped Rust assertions; WS15g | `github_discuss_security_requires_membership_root_parent_and_exact_reference` |
 
 ## `test/controllers/github/pull_request_write_actions_controller_test.rb` (5 tests)
 

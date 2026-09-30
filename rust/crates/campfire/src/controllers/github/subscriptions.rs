@@ -50,7 +50,7 @@ fn events(params: &ParamMap) -> Value {
     }
     Value::Array(result)
 }
-fn sentence(errors: &Errors) -> String {
+pub(super) fn sentence(errors: &Errors) -> String {
     let messages = errors.full_messages();
     match messages.len() {
         0 => String::new(),

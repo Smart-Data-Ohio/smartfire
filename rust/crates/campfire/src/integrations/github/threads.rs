@@ -99,3 +99,36 @@ impl PullRequestThread {
         }
     }
 }
+
+/// Discuss creates and joins through WS8's real thread hooks. Queue persistence shares the write.
+pub fn discuss(
+    tx: &mut Tx<'_>,
+    room_id: i64,
+    user_id: i64,
+    pull_request_id: i64,
+    parent_id: i64,
+) -> Result<PullRequestThread> {
+    PullRequest::find(tx.conn(), pull_request_id)?;
+    let parent = campfire_db::Message::find(tx.conn(), parent_id)?;
+    if parent.room_id!=room_id||parent.thread_id.is_some()||!tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM github_pull_request_references WHERE github_pull_request_id=? AND message_id=?)",params![pull_request_id,parent_id],|r|r.get::<_,bool>(0))? {return Err(campfire_db::Error::RecordNotFound("Message"));}
+    if let Some(existing) = PullRequestThread::for_room_pr(tx.conn(), room_id, pull_request_id)? {
+        return Ok(existing);
+    }
+    let thread = ChannelThread::create(
+        tx,
+        campfire_db::NewChannelThread {
+            room_id,
+            creator_id: user_id,
+            parent_message_id: Some(parent_id),
+            ..Default::default()
+        },
+    )?;
+    campfire_db::ThreadMembership::join(tx, thread.id, user_id)?;
+    let mapping = PullRequestThread::create_or_reuse(tx, pull_request_id, room_id, thread.id)?;
+    if mapping.channel_thread_id == thread.id {
+        tx.emit_after_commit(campfire_db::Event::job(&super::jobs::FetchPullRequestJob {
+            pull_request_id,
+        }));
+    }
+    Ok(mapping)
+}

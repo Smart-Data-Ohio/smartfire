@@ -5,6 +5,7 @@ mod card_tests;
 mod subscription_tests;
 pub mod cards;
 pub mod connections;
+pub mod discussions;
 pub mod subscriptions;
 pub mod webhooks;
 
@@ -15,3 +16,6 @@ mod test_support;
 
 #[cfg(test)]
 mod health_tests;
+
+#[cfg(test)]
+mod discussion_tests;
