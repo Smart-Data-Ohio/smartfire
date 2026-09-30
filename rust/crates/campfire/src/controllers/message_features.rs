@@ -1,5 +1,7 @@
 //! Shared HTTP seams for the message features, kept separate from message-root ownership.
 #[cfg(test)]
+mod saved_tests;
+#[cfg(test)]
 mod tests;
 
 use crate::app::AppCtx;
@@ -27,8 +29,9 @@ pub(crate) fn active_human(c: &Ctx) -> Result<()> {
 pub(crate) async fn reachable_message(c: &Ctx) -> Result<Message> {
     let user_id = require_current_user(c)?.id;
     let id = c
-        .param_str("message_id")
-        .and_then(cast_integer)
+        .param("message_id")
+        .and_then(Param::to_s)
+        .and_then(|raw| cast_integer(&raw))
         .ok_or(Error::NotFound)?;
     c.app()
         .db
@@ -180,4 +183,9 @@ pub(crate) fn poll_view(
         votes,
         vote_error: error,
     })
+}
+
+/// Rails JSON encodes Time in UTC with millisecond precision.
+pub(crate) fn json_time(time: Timestamp) -> String {
+    time.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
 }

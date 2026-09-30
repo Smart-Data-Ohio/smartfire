@@ -4,6 +4,10 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
+
+FILTER = sys.argv[1] if len(sys.argv) > 1 else ""
+COUNT = 0
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRATCH = ROOT / ".scratch/features-discrimination"
@@ -13,10 +17,14 @@ ENV = dict(os.environ, CI="1", TMPDIR=str(ROOT / ".scratch/tmp"), CARGO_TARGET_D
 
 
 def check(name, relative, old, new, test):
+    global COUNT
+    if FILTER and not name.startswith(FILTER):
+        return
+    COUNT += 1
     source = ROOT / relative
     original = source.read_text()
     assert old in original, f"missing mutation anchor: {name}"
-    full_test = test if test.startswith("channels::") else f"controllers::message_features::tests::{test}"
+    full_test = test if test.startswith(("channels::", "controllers::")) else f"controllers::message_features::tests::{test}"
     try:
         source.write_text(original.replace(old, new, 1))
         run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
@@ -78,4 +86,13 @@ check("pin-order", "rust/crates/db/src/models/message_pin.rs",
 check("origin-restoration", "rust/crates/campfire/src/channels/message_features.rs",
       "ORIGIN.with(|origin| origin.replace(self.0.take()));", "let _ = &self.0;",
       "channels::message_features::tests::origin_is_present_for_commit_callbacks_and_restored_after_errors_and_panics")
-print("WS8bm2 discrimination: 16 compiled regressions detected; sources restored", flush=True)
+check("saved-json", "rust/crates/campfire/src/controllers/saved_items.rs",
+      'format!("{}.json", campfire_routes::saved_item(item.id))', 'format!("{}", campfire_routes::saved_item(item.id))',
+      "controllers::message_features::saved_tests::saved_http_matches_rails_exact_json_and_no_store_headers")
+check("saved-partials", "rust/crates/views/templates/saved_items/_item.html", 'class="saved-item__body"', 'class="saved-item__body-broken"',
+      "controllers::message_features::saved_tests::saved_partials_match_rails_for_reminders_statuses_zones_and_empty_page")
+check("saved-csrf", "rust/crates/campfire/src/controllers/saved_items.rs", "before_actions(c, Before::default()).await?;", "before_actions(c, Before::default().skip_forgery_protection()).await?;",
+      "controllers::message_features::saved_tests::saved_mutations_require_csrf_and_turbo_redirects_keep_the_filter")
+check("saved-reminder-job", "rust/crates/campfire/src/jobs.rs", "let id = self.queue.enqueue(tx, &request)?;", "let id = 0;",
+      "controllers::message_features::saved_tests::reminder_dispatch_rolls_back_failed_jobs_and_refires_the_same_inbox_item")
+print(f"WS8bm2 discrimination: {COUNT} compiled regressions detected; sources restored", flush=True)

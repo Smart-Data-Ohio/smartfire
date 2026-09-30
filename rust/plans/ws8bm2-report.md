@@ -1,6 +1,6 @@
 # WS8bm2 report — partial poll/pin slice
 
-Status: **PARTIAL**. This branch ports the normal poll and pin HTTP paths and their detached broadcasts. It does not complete the full WS8bm2 brief, browser/pixel parity, or root-message cache integration. Do not treat it as cutover-ready.
+Status: **PARTIAL**. This branch now ports poll/pin HTTP and broadcasts plus saved-item CRUD/list/reminder HTTP and the verified reminder claim/rearm path. It does not complete the full WS8bm2 brief, browser/pixel parity, or root-message cache integration. Do not treat it as cutover-ready.
 
 Base: `9c8efaef6a4fd11e7b290db77dd524ed2ab0e5f9` (WS8b-m), including main `21a7332f2d3c324f0862cdf448baf17a84395aa0`. Worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm2`, branch `rust/ws8bm2-message-features`. Reference pin: `d7c7de9264c63015be398001d7a1094e7695a6db`.
 
@@ -194,7 +194,7 @@ Covered controller behaviors are ported as grouped Rust tests and pinned HTTP/pa
 
 Every test in these files is deferred to **WS8bm2** (none implemented by this slice):
 
-- `test/controllers/saved_items_controller_test.rb` (12 tests): index lists saved messages with status filters; index hides items whose room access was lost; create saves with a reminder; create without a reminder leaves remind_at blank; create again updates the reminder instead of duplicating; create again after a fired reminder re-arms it; create rejects past and unparseable reminders; create is 404 for a message the user cannot see; update marks done and reopens; update rejects an invalid status; update and destroy are 404 for hidden or foreign items; destroy removes the item.
+- **Now covered in the continuation below:** `test/controllers/saved_items_controller_test.rb` (12 cases; 12 named Rust request tests pass, plus four additional checks): index lists saved messages with status filters; index hides items whose room access was lost; create saves with a reminder; create without a reminder leaves remind_at blank; create again updates the reminder instead of duplicating; create again after a fired reminder re-arms it; create rejects past and unparseable reminders; create is 404 for a message the user cannot see; update marks done and reopens; update rejects an invalid status; update and destroy are 404 for hidden or foreign items; destroy removes the item.
 - `test/controllers/scheduled_messages_controller_test.rb` (19 tests): index lists upcoming and past rows; index hides other people's rows; index shows stranded rows so they can be cancelled; creates a scheduled message; create rejects past times; create is 404 outside membership; updates text and time; update during an active claim is refused; update during an active claim redirects with a notice in HTML; update after the claim goes stale is allowed; update is 404 for sent rows and other people's rows; destroy cancels pending rows only; a send that lands between the lookup and the lock refuses the cancel; a send that lands between the lookup and the lock refuses the edit; destroy during an active claim is refused; send_now posts immediately; send_now drops rows without access; send_now drops rows the model rejects with the reason; bots are forbidden.
 - `test/controllers/searches_controller_test.rb` (36 tests): index initial view; finding reachable messages; unreachable messages are not found; operator words are searched literally instead of raising; a leading operator returns 200; a boolean-looking query does not exclude terms; a quote character returns 200 with sensible results; create does not run the search; clear does not run the search; clear answers Turbo with streams that empty the header and page recents in place; clear leaves recents alone when it can't answer the requested format; the header renders at most ten recents even when older rows exceed the trim; clear without Turbo returns to the page it came from; index renders the page for a Turbo Stream request without an older-results cursor; the header search field renders on every signed-in page, empty outside search; the search page without a query lists recents instead of a watermark; a query with no results shows an empty state; results page through Load older results; an older window renders as a page without JavaScript; create saves the search term; create with no searchable words redirects back with a notice and records nothing; clear search history; from: narrows results to that author; in: narrows results to that room; in: a room the user is not in returns nothing; sections exclude soft-deleted rooms; has:pin narrows results to pinned messages; has:link narrows results to messages carrying a link; on: narrows results to that day; is:thread narrows results to thread messages; filter-only queries list without text and show chips; chips link back without their operator; boards, work threads, and events render as sections scoped to access; search sections cost the same queries regardless of section size; search sections label direct rooms neutrally; operator values cannot inject SQL or FTS syntax.
 - `test/controllers/rooms/slash_commands_controller_test.rb` (10 tests): shrug posts through the dispatcher; unknown commands answer an error without posting; status answers ephemeral confirmation; event answers an open_url; bare event opens the blank form; poll answers open_poll; agent commands invoke through the room; thread commands dispatch with the thread; non-members get 404; bots are forbidden.
@@ -211,7 +211,7 @@ The WS8bm2 owner retains `/play` presentation parity and any matching play tests
 
 ## Remaining work / integration questions
 
-1. **Unimplemented WS8bm2 scope:** saved-item CRUD/list/reminders; scheduled-message CRUD/send-now/rows; search controllers/operator chips/preloads/tuple cursor/date coercion/timezone parity; slash/autocomplete icons/commands/users and `/play`; room message-links/quote visibility; Files upload/Drive listing/filtering/pagination.
+1. **Unimplemented WS8bm2 scope:** scheduled-message CRUD/send-now/rows; search controllers/operator chips/preloads/tuple cursor/date coercion/timezone parity; slash/autocomplete icons/commands/users and `/play`; room message-links/quote visibility; Files upload/Drive listing/filtering/pagination.
 2. **WS8b-m cache integration:** `Presenter::message_item` reads `cached_message_fragment(id, message.updated_at, origin)`; poll updates touch the poll, not the parent message. Wire the already available Rails composite message key (including poll stamp) through root-message cache reads/writes. Current standalone live poll card works; root-message reload/cache behavior is not proven and can be stale. No root message partial was edited here.
 3. **Other callback origins:** own vote/pin/unpin writes use the scoped origin. WS8b-m message deletion and other owners' deletion/unpin operations must adopt the scope where their request-origin pin-list frames require it. Jobs correctly use detached `http://example.org`. General message/thread/quote broadcast rendering remains WS8b-m's adapter, not this slice's fallback.
 4. **WS8b-r shell:** pins count/list/frame are available, but `rooms/pins/_panel`, header button/dialog and end-user opening flow are not wired by this slice. Confirm ownership with the room shell worker.
@@ -219,4 +219,84 @@ The WS8bm2 owner retains `/play` presentation parity and any matching play tests
 6. **WS11 auth boundary:** real session bot denial, bot-key denial and unknown Bearer credential rejection are tested. Valid agent-token authorization and its endpoint 403 parity are not proven until WS11's authentication seam exists.
 7. **Verification gaps:** no browser/pixel matrix or allowlist changes; no constant-query-count proof for poll/pin adapters (some name/body reads are per row); no actual periodic-close runtime end-to-end socket test; no full workspace tests or Rust Docker image build. Model/scheduler tests that ran in the application suite do not replace those missing checks.
 
-Restart at the saved-items/reminder controller slice, retaining these poll/pin commits and coordinating the cache, panel and auth seams above. No schema, dependencies/lockfile, Rails source, parity masks or allowlists were changed.
+Restart at the scheduled-message controller slice, retaining the poll/pin and saved-item commits and coordinating the cache, panel and auth seams above. No schema, dependencies/lockfile, Rails source, parity masks or allowlists were changed.
+
+
+## Continuation slice 1: saved items and reminders
+
+Saved-item controllers, forms and list are implemented. All 12 Rails controller cases have individually named request ports (12/12 passing); four extra tests cover exact HTTP/partial bytes, CSRF/Turbo redirects, and the periodic reminder path. Browser/system/pixel cases remain deferred; push delivery awaits WS17's missing `SavedItem::ReminderPushJob` handler and notification policy. The existing menu save dialog is already in the shared message-actions template; it was not modified here.
+
+Files added: `crates/campfire/src/controllers/saved_items.rs`, `controllers/message_features/saved_tests.rs`, `crates/views/src/saved_items.rs`, `templates/saved_items/{index,_item}.html`, `reference-tools/messaging/saved.rb`, `vectors/messaging/saved.json`. Module/route seams in `controllers.rs`, `views/src/lib.rs`, and `message_features.rs`. Shared form helper `button_to_form_params` accepts pre-flattened ordered hidden parameters and preserves existing callers through delegation; this is the small WS6 seam for Rails' status button forms. The existing periodic reminder entry point was exposed as `pub(crate)` solely to exercise the actual runtime function from request tests (WS3 seam); its behavior was not changed.
+
+WS8a still owns SavedItem validations (associated user/message, per-user uniqueness, status inclusion, changed-reminder future time), the `clear_fired_claim` callback, and dependent activity destruction. No domain algorithm was changed. The HTTP tests prove idempotency, rearm, invalid/past time rejection, status changes, reachable messages, hidden/foreign mutation denial, no-store/no-cache headers and deletion. A SQLite trigger refuses the reminder push-job insert after an HTTP-created reminder becomes due; the real periodic entry leaves both claim and inbox insert rolled back. Removing the trigger allows one firing; rearming refreshes the same inbox source. This is not proof that the pending WS17 push handler delivers.
+
+Twelve controller tests failed before routes were added:
+
+```text
+test result: FAILED. 0 passed; 12 failed; 0 ignored; 0 measured; 348 filtered out; finished in 0.72s
+```
+
+Additional checks rejected four deliberate compiled regressions:
+
+```sh
+python3 rust/reference-tools/messaging/features-discriminate.py saved > .scratch/saved-discriminate.log 2>&1
+```
+
+```text
+saved-json: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.52s
+saved-partials: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.10s
+saved-csrf: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.38s
+saved-reminder-job: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.45s
+WS8bm2 discrimination: 4 compiled regressions detected; sources restored
+```
+
+The Rails checker was extended to seven consumed saved-item controller/model/dispatcher/pusher/job/template files:
+
+```sh
+PARITY_IMAGE=ws8bm2-reference:d7c7de92 python3 rust/reference-tools/messaging/features-reference-check.py > .scratch/saved-source.log 2>&1
+```
+
+```text
+WS8bm2 reference source check: 22 controller, model, helper and template files match d7c7de92
+WS8bm2 reference check self-test: 2 injected source-byte/file-set differences rejected
+```
+
+Actual pinned Rails oracle (private seed, no normalization):
+
+```sh
+mkdir -p .scratch/saved-oracle2
+cp -a rust/parity/.seed/default/. .scratch/saved-oracle2/
+PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 rust/parity/bin/reference runner --storage "$PWD/.scratch/saved-oracle2" rust/reference-tools/messaging/saved.rb /rails/storage/db/saved.json > .scratch/saved-oracle2.log 2>&1
+```
+
+```text
+WS8bm2 saved Rails oracle: 11 HTTP responses; 6 item partials; 1 empty page
+```
+
+Cargo from `rust/` with the same private target/TMPDIR/CI/ports environment documented above:
+
+```sh
+mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire saved_tests -- --test-threads=4 > ../.scratch/saved-green.log 2>&1
+```
+
+```text
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 348 filtered out; finished in 0.90s
+```
+
+```sh
+mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire -- --test-threads=4 > ../.scratch/saved-app.log 2>&1
+```
+
+```text
+test result: ok. 361 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 27.85s
+```
+
+```sh
+mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --workspace --exclude html5ever --all-targets -- -D warnings > ../.scratch/saved-clippy.log 2>&1
+```
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.95s
+```
+
+No new ignores or seed skips. The three application ignores remain those listed above. Date parsing still has the bounded grammar caveat; browser tomorrow-9am/custom-reminder flows and WS17 push runtime remain partial.

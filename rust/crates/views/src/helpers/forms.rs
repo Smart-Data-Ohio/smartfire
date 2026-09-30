@@ -389,7 +389,12 @@ pub fn button_to(url: &str, options: Attrs, content: &str) -> Html {
 /// `button_to(url, options.merge(form: form_options)) { content }`: `form_options` are the
 /// `<form>`'s attributes, ahead of its `method` and `action`. Its `class` defaults to
 /// `form_class`, else "button_to".
-pub fn button_to_form(url: &str, mut options: Attrs, form_options: Attrs, content: &str) -> Html {
+pub fn button_to_form(url: &str, options: Attrs, form_options: Attrs, content: &str) -> Html {
+    button_to_form_params(url, options, form_options, content, &[])
+}
+
+/// `button_to(..., params:)`: callers supply Rails' ordered, flattened form parameters.
+pub fn button_to_form_params(url: &str, mut options: Attrs, form_options: Attrs, content: &str, params: &[(&str, &str)]) -> Html {
     let authenticity_token = options.remove("authenticity_token") != Some(Value::Bool(false));
     let method = options
         .remove("method")
@@ -428,8 +433,11 @@ pub fn button_to_form(url: &str, mut options: Attrs, form_options: Attrs, conten
     let button = content_tag("button", &options, content).0;
 
     let form = form.method(form_method).attr("action", url);
+    let parameters: String = params.iter().map(|(name, value)| {
+        legacy_tag("input", attrs().type_("hidden").name(*name).value(*value)).0
+    }).collect();
     Safe(format!(
-        "<form{}>{method_field}{button}{token}</form>",
+        "<form{}>{method_field}{button}{token}{parameters}</form>",
         form.render()
     ))
 }

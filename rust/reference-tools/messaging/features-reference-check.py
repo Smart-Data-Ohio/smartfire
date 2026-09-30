@@ -13,6 +13,9 @@ FILES = [
     "app/views/polls/_poll.html.erb", "app/views/messages/_pin_badge.html.erb",
     "app/views/rooms/pins/_count.html.erb", "app/views/rooms/pins/_list.html.erb", "app/views/rooms/pins/index.html.erb",
     "app/helpers/messages_helper.rb", "app/helpers/time_helper.rb",
+    "app/controllers/saved_items_controller.rb", "app/models/saved_item.rb",
+    "app/models/saved_item/reminder_dispatcher.rb", "app/models/saved_item/reminder_pusher.rb",
+    "app/jobs/saved_item/reminder_push_job.rb", "app/views/saved_items/index.html.erb", "app/views/saved_items/_item.html.erb",
 ]
 image = os.environ.get("PARITY_IMAGE", "ws8bm2-reference:d7c7de92")
 output = subprocess.check_output(["docker", "run", "--rm", "--name", f"ws8bm2-reference-check-{os.getpid()}",

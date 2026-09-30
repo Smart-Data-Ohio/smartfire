@@ -48,6 +48,7 @@ pub mod pwa;
 pub mod qr_code;
 pub mod rooms;
 pub mod searches;
+pub mod saved_items;
 pub mod sessions;
 pub mod unfurl_links;
 pub mod users;
@@ -178,6 +179,10 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),
         "users/push_subscriptions#destroy" => arc(users::push_subscriptions::destroy),
         "autocompletable/users#index" => arc(autocompletable::users::index),
+        "saved_items#index" => arc(saved_items::index),
+        "saved_items#create" => arc(saved_items::create),
+        "saved_items#update" => arc(saved_items::update),
+        "saved_items#destroy" => arc(saved_items::destroy),
         "rooms/polls#create" => arc(rooms::polls::create),
         "rooms/polls#show" => arc(rooms::polls::show),
         "rooms/polls#vote" => arc(rooms::polls::vote),
@@ -538,6 +543,7 @@ mod tests {
         "users/avatars#destroy", "users/bans#create", "users/bans#destroy", "users/sidebars#show",
         "users/profiles#show", "users/profiles#update", "users/push_subscriptions/test_notifications#create",
         "users/push_subscriptions#index", "users/push_subscriptions#create", "users/push_subscriptions#destroy",
+        "saved_items#index", "saved_items#create", "saved_items#update", "saved_items#destroy",
         "rooms/polls#create", "rooms/polls#show", "rooms/polls#vote",
         "messages/pins#create", "messages/pins#destroy", "rooms/pins#index",
         "autocompletable/users#index", "messages#index", "messages#create", "messages#edit", "messages#show",
