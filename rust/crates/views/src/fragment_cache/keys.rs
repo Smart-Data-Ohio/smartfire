@@ -165,3 +165,20 @@ pub fn quote_names_inspect(names: &[(String, String)]) -> String {
 pub fn quote_names_digest(names: &[(String, String)]) -> String {
     format!("{:x}", Sha256::digest(quote_names_inspect(names)))
 }
+
+/// Direct rooms have nil names in Ruby's quote-name digest. This additive adapter keeps the
+/// existing named-room API and the MessageKey fields stable for other view owners.
+pub fn quote_names_digest_nullable(names: &[(String, Option<String>)]) -> Result<String, &'static str> {
+    let mut names = names.to_vec();
+    names.sort();
+    if names.windows(2).any(|pair| pair[0].0 == pair[1].0 && pair[0].1.is_none() != pair[1].1.is_none()) {
+        return Err("comparison of Array with Array failed");
+    }
+    let pairs = names.into_iter().map(|(user, room)| {
+        let one = quote_names_inspect(&[(user, room.clone().unwrap_or_default())]);
+        let pair = one.strip_prefix('[').unwrap().strip_suffix(']').unwrap();
+        if room.is_some() { pair.to_owned() }
+        else { pair.strip_suffix("\"\"]").unwrap().to_owned() + "nil]" }
+    }).collect::<Vec<_>>();
+    Ok(format!("{:x}", Sha256::digest(format!("[{}]", pairs.join(", ")))))
+}

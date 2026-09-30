@@ -86,7 +86,7 @@ pub fn renderer_base_url(c: &Ctx) -> String {
 
 /// [`render_detached`] during a request: URLs get the request's host through
 /// `default_url_options` (`SetCurrentRequest`), see [`renderer_base_url`].
-pub fn render_detached_at<T>(app: &App, account: Option<&Account>, base_url: &str, render: impl FnOnce(&ViewContext) -> T) -> T {
+pub fn render_detached_at<T>(app: &crate::app::AppState, account: Option<&Account>, base_url: &str, render: impl FnOnce(&ViewContext) -> T) -> T {
     let asset_path = |path: &str| campfire_assets::asset_path(path);
     let stylesheets = crate::controllers::presenters::view_context::stylesheet_tags();
     let signed_stream_name = |streamables: &[&str]| rails_compat::turbo::signed_stream_name(&app.secrets, streamables);

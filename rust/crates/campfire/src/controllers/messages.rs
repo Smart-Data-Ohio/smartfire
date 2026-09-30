@@ -12,6 +12,8 @@ pub(crate) mod rendered;
 mod root_tests;
 #[cfg(test)]
 mod paging_tests;
+#[cfg(test)]
+mod collection_tests;
 
 use askama::Template;
 use campfire_db::{Job as _, Message, NewMessage, Role, Room, Status, Timeline};
@@ -91,9 +93,8 @@ async fn create_action(c: &mut Ctx) -> Result {
         message
     };
 
-    // The message partial comes out of the fragment cache `broadcast_create` just filled
-    // (`cache [ message, "presentation-v3" ]`), so it's the request-less rendering: no CSRF
-    // tokens in its forms.
+    // Rails renders the individual message without collection caching, in a request-less
+    // context: no CSRF tokens in its forms.
     c.respond_to(&[&format::TURBO_STREAM])?;
     let kind = room_kind(room.room_type);
     let app = c.app().clone();
@@ -638,7 +639,7 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
             let presenter = Presenter::new(conn, &app, None);
             let view = presenter.message(&message)?;
             let account = campfire_db::Account::first(conn)?;
-            let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::message(ctx, &view));
+            let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::uncached_message(ctx, &view));
             let partials = Rendered { message: Some(html), ..Rendered::default() };
             app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)
         })

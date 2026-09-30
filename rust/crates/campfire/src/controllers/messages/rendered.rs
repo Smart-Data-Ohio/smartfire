@@ -40,7 +40,7 @@ pub async fn broadcast_tombstones(c: &Ctx, ids: Vec<i64>) -> Result<()> {
             let message = Message::find(conn, id)?;
             let room = Room::find(conn, message.room_id)?;
             let view = presenter.message(&message)?;
-            let html = page::render_detached_at(&app, account.as_ref(), &base, |ctx| views::message(ctx, &view));
+            let html = page::render_detached_at(&app, account.as_ref(), &base, |ctx| views::uncached_message(ctx, &view));
             app.broadcasts.turbo(&Stream::conversation(&room, &message), campfire_cable::turbo::Action::Replace,
                 &message_dom_id(&message, None), Some(&html), true);
         }
@@ -76,7 +76,7 @@ pub fn domain_partial(app: &App, partial: &campfire_db::broadcasts::Partial) -> 
             if let Some(count) = count {
                 view.details.reply_count = count.try_into().map_err(|_| campfire_db::Error::Other("negative reply count".into()))?;
                 views::ThreadIndicatorPartial { ctx, message: &view }.render().map(Some).map_err(|error| campfire_db::Error::Other(error.to_string()))
-            } else { Ok(Some(views::message(ctx, &view))) }
+            } else { Ok(Some(views::uncached_message(ctx, &view))) }
         })
     })
 }

@@ -279,10 +279,8 @@ pub struct ReactionGroup<'a> {
 }
 
 /// A message on its way into `messages/_message`: the fragment itself when the cache already
-/// holds this message version, else the view to render it from. `cache [ message,
-/// "presentation-v3" ]` wraps the whole partial, so on a hit Rails evaluates none of it (no rich
-/// text, attachment, avatar or boosts); [`cached_message_fragment`] lets the presenter look first
-/// and build a [`MessageView`] only on a miss.
+/// holds the full collection presentation key, else the view to render individually. The
+/// presenter skips rich text, attachments, avatars and boosts on collection cache hits.
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageItem {
     Fragment {
@@ -555,8 +553,9 @@ pub struct MessagePartial<'a> {
     pub message: &'a MessageView,
 }
 
-/// `render message`: `messages/_message`, whose body is `cache [ message, "presentation-v3" ]`
-/// (and whose collection renders are `cached: true`), so a message version renders once.
+/// The original record-version cache API, retained for existing view consumers. HTTP
+/// presenters use [`collection_fragment_key`]; individual pages/broadcasts use
+/// [`uncached_message`] because Rails only caches collection rendering.
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
         || message_fragment_key(message.id, message.updated_at, &ctx.base_url),
@@ -573,6 +572,16 @@ pub fn cached_message(ctx: &ViewContext, message: &MessageView) -> crate::helper
     askama::filters::Safe(self::message(ctx, message))
 }
 
+/// Rails renders individual messages without collection caching. Use this for standalone
+/// pages and broadcasts, whose streaming state can change without touching the message row.
+pub fn uncached_message(ctx: &ViewContext, message: &MessageView) -> String {
+    MessagePartial { ctx, message }.render().expect("messages/_message renders")
+}
+
+pub fn uncached_message_html(ctx: &ViewContext, message: &MessageView) -> crate::helpers::Html {
+    askama::filters::Safe(uncached_message(ctx, message))
+}
+
 /// [`cached_message`] for a [`MessageItem`]: a fragment found up front goes out as it is, with
 /// this render's tokens in its slots.
 pub fn cached_message_item<'a>(
@@ -583,7 +592,7 @@ pub fn cached_message_item<'a>(
         MessageItem::Fragment { html, .. } => {
             crate::helpers::request_forgery::fill_token_slots(html)
         }
-        MessageItem::View(message) => std::borrow::Cow::Owned(self::message(ctx, message)),
+        MessageItem::View(message) => std::borrow::Cow::Owned(uncached_message(ctx, message)),
     })
 }
 
@@ -604,6 +613,12 @@ fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str) -> Strin
         fragment_cache::cache_key_with_version("messages", id, updated_at),
         fragment_cache::keys::PRESENTATION_CACHE_VERSION,
     )
+}
+
+/// Collection fragments carry the domain's full presentation key. The Index/MessageItem API
+/// stays unchanged; presenters return its existing Fragment variant on both misses and hits.
+pub fn collection_fragment_key(presentation_key: &str, base_url: &str) -> String {
+    format!("views/messages/_message:{}/{presentation_key}/{base_url}", message_digest())
 }
 
 /// `messages/boosts/_boost`, whose body is `cache boost`.

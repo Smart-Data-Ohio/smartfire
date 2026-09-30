@@ -7,6 +7,7 @@ pub mod attachments;
 pub mod page;
 pub mod pagination;
 pub mod rich_text;
+mod message_cache;
 pub mod view_context;
 #[cfg(test)]
 pub mod test_support;
@@ -118,6 +119,7 @@ pub fn user_json(secrets: &Secrets, base_url: &str, user: &User) -> UserJson {
 /// Everything a page of messages needs, with the rows it looks up along the way remembered
 /// (Rails preloads them with `with_creator`, `with_boosts` and friends).
 pub struct Presenter<'a> {
+    app: &'a AppState,
     pub conn: &'a Connection,
     pub secrets: &'a Secrets,
     pub storage: &'a Storage,
@@ -133,6 +135,7 @@ pub struct Presenter<'a> {
 impl<'a> Presenter<'a> {
     pub fn new(conn: &'a Connection, app: &'a AppState, request_host: Option<String>) -> Self {
         Self {
+            app,
             conn,
             secrets: &app.secrets,
             storage: &app.storage,
@@ -207,19 +210,26 @@ impl<'a> Presenter<'a> {
         message.plain_text_body(self.conn, self.rich_text)
     }
 
-    /// `render @messages`: each message's cached fragment when the current store has its version
-    /// (`cache [ message, "presentation-v3" ]` wraps the whole partial, so Rails evaluates none of
-    /// it on a hit), else its view.
+    /// `render @messages, cached: message_with_pr_cards_cache_key`: collection hits skip
+    /// rendering, while individual messages bypass the collection cache.
     pub fn messages(&self, messages: &[Message]) -> Result<Vec<MessageItem>> {
         messages.iter().map(|message| self.message_item(message)).collect()
     }
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff(), base)) {
-            Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
-            None => MessageItem::View(Box::new(self.message(message)?)),
-        })
+        let Some(base) = self.cache_base_url.as_deref() else { return Ok(MessageItem::View(Box::new(self.message(message)?))) };
+        let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
+        let html = fragment_cache::try_fetch_value(|| key, || {
+            let view = self.message(message)?;
+            let account = campfire_db::Account::first(self.conn)?;
+            page::render_detached_at(self.app, account.as_ref(), base, |ctx| {
+                use askama::Template;
+                campfire_views::messages::MessagePartial { ctx, message: &view }.render()
+                    .map(std::sync::Arc::new).map_err(|error| campfire_db::Error::Other(error.to_string()))
+            })
+        })?;
+        Ok(MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html })
     }
 
     /// A message as `messages/_message` shows it.
