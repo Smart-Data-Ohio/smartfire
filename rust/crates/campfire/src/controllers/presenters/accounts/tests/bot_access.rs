@@ -641,6 +641,9 @@ async fn concurrent_grant_creation_writes_one_grant_and_audit() {
     first.sign_in(&test.label("emails.david")).await;
     first.grant_sudo_access();
     let mut second = test.browser("198.51.100.233");
+    // This test needs two verified sessions, not a replay of one frozen TOTP.
+    // Use Rails' committed seed device for the second browser's real password login.
+    second.cookies.insert(rails_compat::cookies::TWO_FACTOR_REMEMBER.into(), test.label("two_factor_cookies.david"));
     second.sign_in(&test.label("emails.david")).await;
     second.grant_sudo_access();
     let path = format!("/account/bots/{}/grants", test.label("users.bender"));
