@@ -20,6 +20,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
     let message = set_message(c).await?;
     deny_bot_reply_token(c)?;
+    concerns::ensure_agent_capability(c, "react", message.room_id).await?;
     // ensure_content_present
     let content = raw_request_body(c);
     if is_blank(&content) {
@@ -45,6 +46,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         Err(error) => return Err(error),
     };
     deny_bot_reply_token(c)?;
+    concerns::ensure_agent_capability(c, "react", message.room_id).await?;
     destroy_boost(c, &message, boost).await?;
     Ok(c.head(StatusCode::NO_CONTENT))
 }

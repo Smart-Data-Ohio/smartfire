@@ -30,5 +30,41 @@ travel_to Time.utc(2026, 3, 2, 16) do
   client.get Rails.application.routes.url_helpers.room_bot_messages_path(room, plain_key)
   page = { status: client.response.status, total: client.response.headers["X-Total-Count"].to_i,
            expected_total: count, excludes_reply: client.response.parsed_body.none? { |m| m["id"] == reply.id } }
-  puts JSON.pretty_generate(reference_pin: "d7c7de92", reply_denials: denied, system_note_denials: system_note, root_page: page)
+  agent = bot.agent
+  secret = "ws11-test-credential"
+  digest = AgentCredential.digest(secret)
+  credential = AgentCredential.create!(agent: agent, created_by: User.find(127326141), name: "WS11",
+    token_digest: digest, token_last_four: digest[0, 4])
+  headers = { "Authorization" => ["Bearer", secret].join(" ") }
+  auth = []
+  client.get "/rooms/#{room.id}", headers: headers
+  auth << { name: "valid credential human endpoint", status: client.response.status }
+  credential.update!(revoked_at: Time.current)
+  client.get "/rooms/#{room.id}", headers: headers
+  auth << { name: "revoked", status: client.response.status }
+  credential.update!(revoked_at: nil, expires_at: Time.current)
+  client.get "/rooms/#{room.id}", headers: headers
+  auth << { name: "expired at exact boundary", status: client.response.status }
+  key_path = Rails.application.routes.url_helpers.room_bot_messages_path(room, plain_key)
+  grants = []
+  client.get key_path
+  grants << { name: "legacy", status: client.response.status }
+  grant = agent.agent_grants.create!(capability: "read_messages", granted_by: User.find(127326141), revoked_at: Time.current)
+  client.get key_path
+  grants << { name: "revoked only", status: client.response.status, body: client.response.parsed_body }
+  grant.update!(revoked_at: nil)
+  client.get key_path
+  grants << { name: "workspace-wide", status: client.response.status }
+  client.post key_path, params: "Missing posting grant", headers: { "CONTENT_TYPE" => "text/plain" }
+  grants << { name: "missing post", status: client.response.status, body: client.response.parsed_body }
+  grant.update!(room: Room.find(340026324))
+  client.get key_path
+  grants << { name: "wrong room", status: client.response.status }
+  grant.update!(room: room)
+  client.get key_path
+  grants << { name: "room scoped", status: client.response.status }
+  grant.revoke!
+  client.get key_path
+  grants << { name: "revoked next request", status: client.response.status }
+  puts JSON.pretty_generate(reference_pin: "d7c7de92", reply_denials: denied, system_note_denials: system_note, root_page: page, credential_digest: digest, credential_auth: auth, grants: grants)
 end

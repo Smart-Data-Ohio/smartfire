@@ -1,6 +1,7 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod agent_access;
 pub mod audit_log;
 pub mod activity_item;
 pub mod active_storage;

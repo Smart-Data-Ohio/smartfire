@@ -37,5 +37,56 @@
     "total": 133,
     "expected_total": 133,
     "excludes_reply": true
-  }
+  },
+  "credential_digest": "e1cb586b5d7f4756469ef71c0c296aa4bd399f12049bbb02b910672ddf73d8b1",
+  "credential_auth": [
+    {
+      "name": "valid credential human endpoint",
+      "status": 403
+    },
+    {
+      "name": "revoked",
+      "status": 401
+    },
+    {
+      "name": "expired at exact boundary",
+      "status": 401
+    }
+  ],
+  "grants": [
+    {
+      "name": "legacy",
+      "status": 200
+    },
+    {
+      "name": "revoked only",
+      "status": 403,
+      "body": {
+        "error": "Forbidden: agent lacks read_messages capability"
+      }
+    },
+    {
+      "name": "workspace-wide",
+      "status": 200
+    },
+    {
+      "name": "missing post",
+      "status": 403,
+      "body": {
+        "error": "Forbidden: agent lacks post_messages capability"
+      }
+    },
+    {
+      "name": "wrong room",
+      "status": 403
+    },
+    {
+      "name": "room scoped",
+      "status": 200
+    },
+    {
+      "name": "revoked next request",
+      "status": 403
+    }
+  ]
 }

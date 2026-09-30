@@ -14,6 +14,10 @@ const PNG: &[u8] = &[
 
 const TURBO_STREAM_ACCEPT: &str = "text/vnd.turbo-stream.html, text/html, application/xhtml+xml";
 
+fn ws11_oracle() -> serde_json::Value {
+    serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/agents_bot_contract.json"))).unwrap()
+}
+
 // WS11: security regressions through the real router, database and verifier.
 #[tokio::test]
 async fn ws11_reply_token_only_creates_messages() {
@@ -26,7 +30,7 @@ async fn ws11_reply_token_only_creates_messages() {
     let created = bot.send(Req::new(Method::POST, &base).body("Reply token message")).await;
     assert_eq!(created.status, StatusCode::CREATED);
     let id: i64 = created.location().unwrap().rsplit('/').next().unwrap().parse().unwrap();
-    let oracle: serde_json::Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/agents_bot_contract.json"))).unwrap();
+    let oracle = ws11_oracle();
     for (index, (method, path)) in [
         (Method::GET, base.clone()),
         (Method::PUT, format!("{base}/{id}")),
@@ -330,4 +334,68 @@ async fn the_bot_api() {
     // A bot key doesn't open the rest of the app.
     let denied = bot.get(&format!("/rooms/{ALL_TALK}/messages?bot_key={BENDER_KEY}")).await;
     assert_eq!(denied.status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn ws11_agent_credentials_are_authenticated_then_denied_on_human_endpoints() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let oracle = ws11_oracle();
+    let secret = "ws11-test-credential";
+    let digest = campfire_db::user::digest_bot_token(secret);
+    assert_eq!(digest, oracle["credential_digest"]);
+    let credential = app.db().write(move |tx| {
+        let agent: i64 = tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
+        tx.conn().execute("INSERT INTO agent_credentials(agent_id,created_by_id,name,token_digest,token_last_four,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
+            rusqlite::params![agent,DAVID,"WS11",digest,&digest[..4],tx.now(),tx.now()])?;
+        Ok(tx.conn().last_insert_rowid())
+    }).await.unwrap();
+    let header = format!("Bearer {secret}");
+    let mut client = app.anonymous();
+    for path in [format!("/rooms/{ALL_TALK}"), format!("/rooms/{ALL_TALK}/BOT_KEY/messages")] {
+        let response = client.send(Req::new(Method::GET,&path).header("authorization",&header)).await;
+        assert_eq!(response.status,StatusCode::FORBIDDEN,"{path}");
+    }
+    let stamps = app.db().read(move |conn| Ok(conn.query_row("SELECT last_used_at,last_used_ip FROM agent_credentials WHERE id=?",[credential],|r|Ok((r.get::<_,Option<String>>(0)?,r.get::<_,Option<String>>(1)?)))?)).await.unwrap();
+    assert!(stamps.0.is_some());
+    let second = client.send(Req::new(Method::GET,&format!("/rooms/{ALL_TALK}")).header("authorization",&header).header("x-forwarded-for","203.0.113.99")).await;
+    assert_eq!(second.status,StatusCode::FORBIDDEN);
+    let repeated = app.db().read(move |conn| Ok(conn.query_row("SELECT last_used_at,last_used_ip FROM agent_credentials WHERE id=?",[credential],|r|Ok((r.get::<_,Option<String>>(0)?,r.get::<_,Option<String>>(1)?)))?)).await.unwrap();
+    assert_eq!(stamps,repeated,"a use inside one minute must not rewrite the activity stamp");
+    for column in ["revoked_at", "expires_at"] {
+        app.db().write(move |tx| {
+            tx.conn().execute(&format!("UPDATE agent_credentials SET revoked_at=NULL, expires_at=NULL, {column}=? WHERE id=?"),rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(1)),credential])?;
+            Ok(())
+        }).await.unwrap();
+        assert_eq!(client.send(Req::new(Method::GET,&format!("/rooms/{ALL_TALK}")).header("authorization",&header)).await.status,StatusCode::UNAUTHORIZED);
+    }
+}
+
+#[tokio::test]
+async fn ws11_bot_grants_are_checked_on_every_request_after_membership() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let mut client = app.anonymous();
+    let path = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages");
+    assert_eq!(client.get(&path).await.status,StatusCode::OK,"legacy capabilities before any grant");
+    let grant = app.db().write(|tx| {
+        let agent: i64 = tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
+        tx.conn().execute("INSERT INTO agent_grants(agent_id,granted_by_id,capability,created_at,updated_at,revoked_at) VALUES(?,?,'read_messages',?,?,?)",
+            rusqlite::params![agent,DAVID,tx.now(),tx.now(),tx.now()])?;
+        Ok(tx.conn().last_insert_rowid())
+    }).await.unwrap();
+    let oracle = ws11_oracle();
+    let denied = client.get(&path).await;
+    assert_eq!(denied.status,StatusCode::FORBIDDEN);
+    assert_eq!(denied.json(),oracle["grants"][1]["body"]);
+    assert_eq!(client.get(&format!("/rooms/{DIRECT_DAVID_JASON}/{BENDER_KEY}/messages")).await.status,StatusCode::NOT_FOUND);
+    app.db().write(move |tx| {tx.conn().execute("UPDATE agent_grants SET revoked_at=NULL WHERE id=?",[grant])?;Ok(())}).await.unwrap();
+    assert_eq!(client.get(&path).await.status,StatusCode::OK,"workspace-wide grant");
+    let create = client.send(Req::new(Method::POST,&path).body("Missing posting grant")).await;
+    assert_eq!(create.status,StatusCode::FORBIDDEN);
+    assert_eq!(create.json(),oracle["grants"][3]["body"]);
+    app.db().write(move |tx| {tx.conn().execute("UPDATE agent_grants SET room_id=? WHERE id=?",[DIRECT_KEVIN_BENDER,grant])?;Ok(())}).await.unwrap();
+    assert_eq!(client.get(&path).await.status,StatusCode::FORBIDDEN,"grant for another room");
+    app.db().write(move |tx| {tx.conn().execute("UPDATE agent_grants SET room_id=? WHERE id=?",[ALL_TALK,grant])?;Ok(())}).await.unwrap();
+    assert_eq!(client.get(&path).await.status,StatusCode::OK,"room-scoped grant");
+    app.db().write(move |tx| {tx.conn().execute("UPDATE agent_grants SET revoked_at=? WHERE id=?",rusqlite::params![tx.now(),grant])?;Ok(())}).await.unwrap();
+    assert_eq!(client.get(&path).await.status,StatusCode::FORBIDDEN,"revocation takes effect next request");
 }

@@ -22,6 +22,7 @@ pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
     deny_bot_reply_token(c)?;
     let room = set_room(c).await?;
+    concerns::ensure_agent_capability(c, "read_messages", room.id).await?;
     let messages = find_paged_messages(c, &room).await?;
     set_pagination_headers(c, &room, &messages).await?;
     c.respond_to(&[&format::JSON])?;
@@ -37,6 +38,7 @@ pub async fn index(c: &mut Ctx) -> Result {
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
     let room = set_room(c).await?;
+    concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
     ensure_body_or_attachment_present(c)?;
     if room.board() {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
@@ -57,6 +59,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let room = set_room(c).await?;
     let message = set_message(c, &room).await?;
     ensure_can_manage_bot_message(c, &message)?;
+    concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
     // MessagesController#update
     let attributes = message_params(c)?;
     let message = update_message(c, message, attributes).await?;
@@ -76,6 +79,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let room = set_room(c).await?;
     let message = set_message(c, &room).await?;
     ensure_can_manage_bot_message(c, &message)?;
+    concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
     destroy_message(c, &room, &message).await?;
     Ok(c.head(StatusCode::NO_CONTENT))
 }
