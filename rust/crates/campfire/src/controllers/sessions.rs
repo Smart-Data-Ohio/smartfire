@@ -117,10 +117,12 @@ async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
         .read(presenters::accounts::help_contact)
         .await
         .map_err(Error::internal)?;
+    let google_domains = c.app().google.sign_in().config.configured().then(||super::google_sign_in::domain_list(c));
     framed_page!(c, status, |ctx| sessions::New {
         ctx,
         email_address: email_address.clone(),
-        help_contact: help_contact.clone()
+        help_contact: help_contact.clone(),
+        google_domains: google_domains.clone()
     })
     .await
 }

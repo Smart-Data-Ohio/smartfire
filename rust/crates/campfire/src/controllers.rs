@@ -41,6 +41,7 @@ pub mod accounts;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
+pub mod google_sign_in;
 pub mod messages;
 pub mod presenters;
 pub mod pwa;
@@ -154,6 +155,11 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "first_runs#create" => arc(first_runs::create),
         "sessions/transfers#show" => arc(sessions::transfers::show),
         "sessions/transfers#update" => arc(sessions::transfers::update),
+        "sessions/google#create" => arc(google_sign_in::create),
+        "sessions/google#callback" => arc(google_sign_in::callback),
+        "users/google_sign_in_links#create" => arc(google_sign_in::link),
+        "accounts/users/google_links#create" => arc(google_sign_in::admin_allow),
+        "accounts/users/google_links#destroy" => arc(google_sign_in::admin_unlink),
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
@@ -201,7 +207,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/sessions#index" => arc(users::sessions::index),
         "users/sessions#destroy" => arc(users::sessions::destroy),
         "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
-        "accounts/users/two_factor_resets#create" => arc(accounts::users::two_factor_resets::create),
+        "accounts/users/two_factor_resets#create" => {
+            arc(accounts::users::two_factor_resets::create)
+        }
         "users/push_subscriptions/test_notifications#create" => {
             arc(users::push_subscriptions::test_notifications::create)
         }

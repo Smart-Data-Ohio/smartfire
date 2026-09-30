@@ -63,3 +63,5 @@ tokio-tungstenite.workspace = true
 futures-util.workspace = true
 tempfile.workspace = true
 rusqlite.workspace = true
+
+ring.workspace = true

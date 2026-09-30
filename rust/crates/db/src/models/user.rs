@@ -146,6 +146,8 @@ pub struct UserChanges {
     pub time_zone_explicit: Option<bool>,
     /// `Users::ProfilesController`: blocks Google email auto-linking after a self-change.
     pub email_self_changed_at: Option<Timestamp>,
+    /// Administrator vouching clears the self-change marker and permits email linking.
+    pub allow_google_email_link: bool,
 }
 
 const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
@@ -437,6 +439,19 @@ impl User {
         }
         if let Some(at) = changes.email_self_changed_at {
             sets.push(("email_self_changed_at", Box::new(at)));
+        }
+        if changes.allow_google_email_link {
+            let (at, allowed): (Option<Timestamp>, bool) = tx.conn().query_row(
+                "SELECT email_self_changed_at,google_email_link_allowed FROM users WHERE id=?",
+                [self.id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )?;
+            if at.is_some() {
+                sets.push(("email_self_changed_at", Box::new(None::<Timestamp>)));
+            }
+            if !allowed {
+                sets.push(("google_email_link_allowed", Box::new(true)));
+            }
         }
         // These profile preferences are not part of the compact User projection. Compare
         // stored values so an unchanged assignment doesn't touch updated_at (Rails dirty tracking).

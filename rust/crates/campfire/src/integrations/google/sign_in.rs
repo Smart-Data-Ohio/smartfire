@@ -1,5 +1,4 @@
-use std::sync::Mutex;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
 
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use jiff::Timestamp;
@@ -13,10 +12,7 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
-use crate::integrations::net::{
-    Network,
-    http::{self, Body, Endpoint, Request, Timeouts},
-};
+use crate::integrations::net::{Network, http};
 
 pub const FLOW_SESSION_KEY: &str = "google_sign_in_request";
 pub const FLOW_TTL: i64 = 600;
@@ -64,14 +60,17 @@ impl Config {
 
 pub struct SignIn {
     pub config: Config,
-    network: Network,
+    client: Arc<dyn super::client::Client>,
     keys: Mutex<Option<(i64, Jwks)>>,
 }
 impl SignIn {
     pub fn new(config: Config, network: Network) -> Self {
+        Self::with_client(config, Arc::new(super::client::HttpClient(network)))
+    }
+    pub fn with_client(config: Config, client: Arc<dyn super::client::Client>) -> Self {
         Self {
             config,
-            network,
+            client,
             keys: Mutex::new(None),
         }
     }
@@ -237,42 +236,30 @@ impl SignIn {
         target: &str,
         body: Option<String>,
     ) -> Result<(u16, Vec<u8>), Error> {
-        let endpoint = Endpoint {
-            https: true,
-            host: host.into(),
-            port: 443,
-            pinned_ip: None,
-        };
         let method = if body.is_some() {
             hyper::Method::POST
         } else {
             hyper::Method::GET
         };
-        let mut request = Request::net_http(method, target.into(), Some(host.into()), vec![]);
-        if let Some(body) = body {
-            request.headers.push((
-                "Content-Type".into(),
-                "application/x-www-form-urlencoded".into(),
-            ));
-            request.body = body.into_bytes();
-        }
-        let timeouts = Timeouts {
-            open: Duration::from_secs(10),
-            read: Duration::from_secs(10),
-        };
-        let response = http::exchange(&self.network, &endpoint, request, &timeouts)
+        let headers = body
+            .as_ref()
+            .map(|_| {
+                vec![(
+                    "Content-Type".into(),
+                    "application/x-www-form-urlencoded".into(),
+                )]
+            })
+            .unwrap_or_default();
+        self.client
+            .request(
+                host,
+                method,
+                target,
+                headers,
+                body.unwrap_or_default().into_bytes(),
+            )
             .await
-            .map_err(|_| Error::Unavailable)?;
-        let status = response.status;
-        let body = match response
-            .read_body(usize::MAX)
-            .await
-            .map_err(|_| Error::Unavailable)?
-        {
-            Body::Complete(body) => body,
-            Body::TooLarge => return Err(Error::Unavailable),
-        };
-        Ok((status, body))
+            .map_err(|_| Error::Unavailable)
     }
 }
 

@@ -109,6 +109,7 @@ async fn complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks(
                         }
                         match name.as_str() {
                             "sign_in" => sessions::New {
+                                google_domains: None,
                                 ctx: &ctx,
                                 email_address: None,
                                 help_contact: help.clone(),

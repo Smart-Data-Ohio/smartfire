@@ -1,4 +1,5 @@
 use super::*;
+use std::time::Duration;
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route};
 use rustls::pki_types::{CertificateDer, pem::PemObject};
 use std::sync::Arc;

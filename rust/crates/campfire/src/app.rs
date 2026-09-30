@@ -40,6 +40,7 @@ pub struct AppState {
     pub mail: crate::mail::State,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
+    pub google: crate::integrations::google::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
@@ -154,9 +155,13 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
         mail,
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
+        google: crate::integrations::google::State::default(),
         web_push,
         fragment_cache,
     });
+
+    app.sudo.install_google(Arc::new(app.google.clone()));
+    app.two_factor.install_google(Arc::new(app.google.clone()));
 
     let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);
 
@@ -479,9 +484,13 @@ mod full_page_tests;
 #[cfg(test)]
 mod profile_security_tests;
 #[cfg(test)]
-mod round_three_security_tests;
-#[cfg(test)]
 mod round_four_security_tests;
+#[cfg(test)]
+mod round_three_security_tests;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod google_tests;
+

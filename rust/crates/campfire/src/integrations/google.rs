@@ -1,4 +1,53 @@
-//! Google identity-only OAuth: `app/models/google/sign_in.rb` and
-//! `app/controllers/concerns/google_sign_in_flow.rb`. Calendar grants are separate.
-#[allow(dead_code)] // Staged domain slice: WS14g still needs the controller/session adapters.
+//! Google identity and opt-in Calendar/Drive integrations.
+pub mod client;
 pub mod sign_in;
+use crate::app::AppCtx;
+use campfire_kit::{Ctx, Response, Result};
+use std::sync::{Arc, RwLock};
+#[derive(Clone)]
+pub struct State(Arc<RwLock<Arc<sign_in::SignIn>>>);
+impl Default for State {
+    fn default() -> Self {
+        Self(Arc::new(RwLock::new(Arc::new(sign_in::SignIn::new(
+            sign_in::Config::from_env(),
+            crate::integrations::net::Network::system(),
+        )))))
+    }
+}
+impl State {
+    pub fn sign_in(&self) -> Arc<sign_in::SignIn> {
+        self.0.read().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+    #[cfg(test)]
+    pub fn install(&self, service: sign_in::SignIn) {
+        *self.0.write().unwrap_or_else(|e| e.into_inner()) = Arc::new(service);
+    }
+    pub fn start(&self, c: &mut Ctx, purpose: &str, user_id: Option<i64>) -> Result<Response> {
+        let service = self.sign_in();
+        let (flow, location) = service.start(
+            &c.app().secrets,
+            &c.url_for("/session/google/callback"),
+            purpose,
+            user_id,
+            c.now(),
+        );
+        c.session().insert(sign_in::FLOW_SESSION_KEY, flow);
+        c.redirect_to_with(&location,campfire_kit::Redirect {allow_other_host:true,..Default::default()})
+    }
+}
+impl crate::concerns::sudo::GoogleSudo for State {
+    fn configured(&self) -> bool {
+        self.sign_in().config.configured()
+    }
+    fn start(&self, c: &mut Ctx, user_id: i64) -> Result<Response> {
+        self.start(c, "sudo", Some(user_id))
+    }
+}
+impl crate::concerns::two_factor::GoogleReauthentication for State {
+    fn configured(&self) -> bool {
+        self.sign_in().config.configured()
+    }
+    fn start(&self, c: &mut Ctx, user_id: i64) -> Result<Response> {
+        self.start(c, "reauth", Some(user_id))
+    }
+}

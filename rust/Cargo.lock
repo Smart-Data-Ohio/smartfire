@@ -366,6 +366,7 @@ dependencies = [
  "rails_compat",
  "rand 0.9.5",
  "regex",
+ "ring",
  "rusqlite",
  "rustls",
  "rustls-native-certs",
