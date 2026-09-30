@@ -14,6 +14,7 @@ mod huddle_grant_sequences_test;
 mod huddle_revocation_test;
 mod huddle_notices_test;
 mod huddle_invitations_test;
+mod huddle_invitation_sequences_test;
 mod membership_test;
 mod keyword_alert_test;
 mod message_edit_test;

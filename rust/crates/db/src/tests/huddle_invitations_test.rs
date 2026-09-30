@@ -18,7 +18,7 @@ fn normalize(value: &mut Value) {
     }
 }
 
-fn snapshot(conn: &Connection, table: &str) -> crate::Result<Value> {
+pub(crate) fn snapshot(conn: &Connection, table: &str) -> crate::Result<Value> {
     let mut statement = conn.prepare(&format!("SELECT * FROM {table} ORDER BY id"))?;
     let columns = statement
         .column_names()

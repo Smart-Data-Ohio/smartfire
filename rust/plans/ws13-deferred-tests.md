@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 119 declarations now have complete assertion coverage mapped below. The other 429 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 156 declarations now have complete assertion coverage mapped below. The other 392 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -18,7 +18,7 @@ Passed titles are backed jointly by those differential tests, the real HTTP/Cabl
 
 ## WS13b domain slices
 
-WS13b adds nine complete revocation declarations and nineteen complete grant declarations. These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. No production methods or WS17 seam signatures changed. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
+WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. No production methods or WS17 seam signatures changed. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
 
 ## Rails declaration coverage by file
 
@@ -27,7 +27,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | Rails file | Original | Assertions covered (passed) | Partial/deferred |
 | --- | ---: | ---: | ---: |
 | `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 16 | 22 |
-| `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
+| `test/models/huddle_invitation_test.rb` | 38 | 37 | 1 |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
 | `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
 | `test/models/huddle_grant_test.rb` | 33 | 19 | 14 |
@@ -59,7 +59,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **119** | **429** |
+| **Total** | **548** | **156** | **392** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -490,46 +490,46 @@ Owner: WS13b. Nineteen complete domain declarations are covered by `huddle_grant
 
 ## test/models/huddle_invitation_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Partial: 37/38 complete declarations covered by 38 pinned Rails sequences in `huddle_invitation_sequences_test.rs`. Each step compares all grant/item attributes, huddle JSON and immediate push-job IDs. The disabled-items declaration retains its neighboring message-mention assertion for WS8/WS12; its banner and timeout assertions pass.
 
-- issuing a grant in a one-to-one DM invites only the other participant
-- issuing a grant never schedules a delayed job
-- a quiet check silences the invitation payload but keeps the item
-- a recipient with notifications off or invisible gets no invitation
+- **Passed:** issuing a grant in a one-to-one DM invites only the other participant
+- **Passed:** issuing a grant never schedules a delayed job
+- **Passed:** a quiet check silences the invitation payload but keeps the item
+- **Passed:** a recipient with notifications off or invisible gets no invitation
 - a recipient with huddle items switched off still gets the banner but no item
-- a switched-off user hears one banner across reissues inside the window and a fresh one after
-- a switched-off user is not rung again when the same session reissues its grant
-- channel huddles create no invitation
-- voice channel huddles create no invitation
-- no invitation while the other participant is in the call
-- an invitation fires when the other participant's grant went quiet
-- reusing the same grant rings again once the dedup window has passed
-- a second grant for the same starter does not ring again inside two minutes
-- no ring inside the two-minute window after a missed invitation
-- a handled invitation still suppresses the next ring inside two minutes
-- an invitation older than two minutes re-rings through the same row
-- a handled invitation older than two minutes re-rings through the same row
-- a missed invitation older than two minutes re-rings through the same row
-- revoking the starter's in-call grant broadcasts call-ended to the invitee
-- the starter leaving the call broadcasts call-ended to the invitee
-- revoking a quiet grant broadcasts no call-ended
-- no call-ended when the recipient already joined
-- a suppressed ring ends with a banner-only call-ended
-- no banner-only call-ended when the ring long stopped
-- the starter leaving a group call while others remain sends no call-ended
-- revoking the starter's grant while others remain in a group call sends no call-ended
-- call-ended fires when the last participant leaves a group call
-- a group ring continues for remaining invitees until their ring timeout
-- retrying after the window with a new grant reuses the unhandled item
-- a retry after a handled attempt opens a new item
-- a retry from the first device re-rings through its own item
-- the same attempt reuses its item inside ten minutes and opens a new one after
-- obtaining a grant clears the recipient's open invitations for the room
-- joining late clears the missed item
-- a DM with only bots besides the starter gets no invitation
-- issuing a grant in a group DM invites every other human member
-- group DM invitations skip bots and members who switched the room off
-- a removed group member gets no invitation and loses their grant
+- **Passed:** a switched-off user hears one banner across reissues inside the window and a fresh one after
+- **Passed:** a switched-off user is not rung again when the same session reissues its grant
+- **Passed:** channel huddles create no invitation
+- **Passed:** voice channel huddles create no invitation
+- **Passed:** no invitation while the other participant is in the call
+- **Passed:** an invitation fires when the other participant's grant went quiet
+- **Passed:** reusing the same grant rings again once the dedup window has passed
+- **Passed:** a second grant for the same starter does not ring again inside two minutes
+- **Passed:** no ring inside the two-minute window after a missed invitation
+- **Passed:** a handled invitation still suppresses the next ring inside two minutes
+- **Passed:** an invitation older than two minutes re-rings through the same row
+- **Passed:** a handled invitation older than two minutes re-rings through the same row
+- **Passed:** a missed invitation older than two minutes re-rings through the same row
+- **Passed:** revoking the starter's in-call grant broadcasts call-ended to the invitee
+- **Passed:** the starter leaving the call broadcasts call-ended to the invitee
+- **Passed:** revoking a quiet grant broadcasts no call-ended
+- **Passed:** no call-ended when the recipient already joined
+- **Passed:** a suppressed ring ends with a banner-only call-ended
+- **Passed:** no banner-only call-ended when the ring long stopped
+- **Passed:** the starter leaving a group call while others remain sends no call-ended
+- **Passed:** revoking the starter's grant while others remain in a group call sends no call-ended
+- **Passed:** call-ended fires when the last participant leaves a group call
+- **Passed:** a group ring continues for remaining invitees until their ring timeout
+- **Passed:** retrying after the window with a new grant reuses the unhandled item
+- **Passed:** a retry after a handled attempt opens a new item
+- **Passed:** a retry from the first device re-rings through its own item
+- **Passed:** the same attempt reuses its item inside ten minutes and opens a new one after
+- **Passed:** obtaining a grant clears the recipient's open invitations for the room
+- **Passed:** joining late clears the missed item
+- **Passed:** a DM with only bots besides the starter gets no invitation
+- **Passed:** issuing a grant in a group DM invites every other human member
+- **Passed:** group DM invitations skip bots and members who switched the room off
+- **Passed:** a removed group member gets no invitation and loses their grant
 
 ## test/models/huddle_revocation_test.rb
 
