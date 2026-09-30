@@ -48,12 +48,13 @@ output[:collections]=[]
 Time.use_zone("UTC") do
   event=Event.new(id:401,room:,organizer:user,title:"Planning session",starts_at:Time.utc(2026,10,5,9),ends_at:Time.utc(2026,10,5,10),time_zone:"UTC")
   second=Event.new(id:402,room:,organizer:user,title:"Second",starts_at:Time.utc(2026,10,6,9),time_zone:"UTC",cancelled_at:Time.utc(2026,9,20))
-  [[],[second,event]].each do |events|
+  [[[],"ws14e-golden-message"],[[second,event],"ws14e-golden-message"],[[event],%{bad"<&}]].each do |events,key|
+    message.client_message_id=key
     message.association(:events).target=events
     message.association(:events).loaded!
     html=renderer.render(partial:"rooms/events/cards",locals:{message:},layout:false)
     facts=events.sort_by(&:starts_at).map {|e|{id:e.id,room_id:room.id,title:e.title,organizer_name:user.name,starts_at:e.starts_at.utc.iso8601,ends_at:e.ends_at&.utc&.iso8601,time_zone:e.time_zone,series:e.series?,cancelled:e.cancelled?,venue_name:nil,meet_link:nil}}
-    output[:collections]<<{events:facts,html:}
+    output[:collections]<<{events:facts,message_key:key,html:}
   end
 end
 File.write("/rails/storage/db/event-fragments.json",JSON.pretty_generate(output)+"\n")

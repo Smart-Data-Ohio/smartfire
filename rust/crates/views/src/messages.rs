@@ -848,7 +848,7 @@ pub fn event_cards(ctx: &ViewContext, message: &MessageView) -> h::Html {
     let bodies = format!("{}{}", message.components.event_cards.concat(), crate::events::card_entries(&message.components.event_views, &message.id.to_string(), &ctx.time_zone).concat());
     h::raw(format!(
         "  <div id=\"{}\" class=\"event-cards\">\n{}  </div>\n",
-        message.dom_id("event_cards"),
+        h::escape(&message.dom_id("event_cards")),
         bodies
     ))
 }

@@ -466,6 +466,7 @@
   "collections": [
     {
       "events": [],
+      "message_key": "ws14e-golden-message",
       "html": ""
     },
     {
@@ -497,7 +498,27 @@
           "meet_link": null
         }
       ],
+      "message_key": "ws14e-golden-message",
       "html": "  <div id=\"event_cards_message_ws14e-golden-message\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n      <article class=\"event-card event-card--cancelled\" data-event-card=\"402\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n      <span class=\"event-card__state\">Cancelled</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/402\">Second</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-06T09:00:00Z\" data-local-time-target=\"datetime\">October 6, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_402\" src=\"/rooms/654632876/events/402/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n"
+    },
+    {
+      "events": [
+        {
+          "id": 401,
+          "room_id": 654632876,
+          "title": "Planning session",
+          "organizer_name": "David",
+          "starts_at": "2026-10-05T09:00:00Z",
+          "ends_at": "2026-10-05T10:00:00Z",
+          "time_zone": "UTC",
+          "series": false,
+          "cancelled": false,
+          "venue_name": null,
+          "meet_link": null
+        }
+      ],
+      "message_key": "bad\"<&",
+      "html": "  <div id=\"event_cards_message_bad&quot;&lt;&amp;\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n"
     }
   ]
 }

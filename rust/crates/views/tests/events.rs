@@ -81,11 +81,70 @@ fn event_card_collections_match_rails_empty_and_populated() {
         let events: Vec<CardView> = serde_json::from_value(vector["events"].clone()).unwrap();
         let entries = campfire_views::events::card_entries(&events, "601", &Zone::utc());
         let actual = campfire_views::events::Cards {
-            message_key: "ws14e-golden-message",
+            message_key: vector["message_key"].as_str().unwrap(),
             entries: &entries,
         }
         .render()
         .unwrap();
         assert_bytes(&actual, vector["html"].as_str().unwrap(), "collection");
+        use campfire_views::messages::{MessageComponents, MessageContent, MessageView, UserView};
+        let message = MessageView {
+            id: 601,
+            client_message_id: vector["message_key"].as_str().unwrap().into(),
+            room_id: 1,
+            room_name: String::new(),
+            creator: UserView {
+                id: 1,
+                name: String::new(),
+                title: String::new(),
+                avatar_url: String::new(),
+                icon: None,
+            },
+            created_at: "2026-09-22T12:00:00Z".parse().unwrap(),
+            updated_at: "2026-09-22T12:00:00Z".parse().unwrap(),
+            all_emoji: false,
+            content: MessageContent::Text {
+                html: String::new(),
+            },
+            boosts: Vec::new(),
+            details: Default::default(),
+            components: MessageComponents {
+                event_views: events,
+                ..Default::default()
+            },
+        };
+        assert_bytes(
+            &campfire_views::messages::event_cards(&context(), &message).0,
+            vector["html"].as_str().unwrap(),
+            "message event collection",
+        );
+    }
+}
+
+fn context() -> campfire_views::ViewContext<'static> {
+    campfire_views::ViewContext {
+        current_user: None,
+        account: campfire_views::AccountSummary {
+            name: String::new(),
+            logo_url: String::new(),
+            has_logo: false,
+        },
+        flash_notice: None,
+        flash_alert: None,
+        platform: Default::default(),
+        vapid_public_key: None,
+        asset_path: &|path| path.into(),
+        importmap_tags: "",
+        stylesheet_tags: "",
+        custom_styles: None,
+        cable_url: String::new(),
+        base_url: String::new(),
+        request_url: String::new(),
+        referrer: None,
+        last_room_visited_id: None,
+        app_version: String::new(),
+        signed_stream_name: &|_| String::new(),
+        time_zone: Zone::utc(),
+        chrome: Default::default(),
     }
 }
