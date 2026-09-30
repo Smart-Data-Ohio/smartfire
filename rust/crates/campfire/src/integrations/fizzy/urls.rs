@@ -46,3 +46,7 @@ pub fn extract(text: &str, base: &str) -> Result<Vec<Reference>, &'static str> {
     }
     Ok(refs)
 }
+
+#[cfg(test)]
+#[path = "rails_url_tests.rs"]
+mod rails_tests;
