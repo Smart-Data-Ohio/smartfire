@@ -1,0 +1,16 @@
+{
+  "cases": [
+    {
+      "name": "review malformed JSON invalid UTF8 first colon",
+      "body": "<action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSIgIv8ifX0=\"></action-text-attachment>"
+    },
+    {
+      "name": "review retained mutation 141 of xss name attribute",
+      "body": "<a name='a b\"c'>n<\t/a>"
+    },
+    {
+      "name": "review retained mutation 206 of xss name attribute",
+      "body": "<a name='a b\"c?'>n<=/a> b\"c?'>n<=//a<select>>b\"c?'>n<=//a>"
+    }
+  ]
+}

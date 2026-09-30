@@ -713,6 +713,14 @@ mod tests {
     }
 
     #[test]
+    fn gumbo_adoption_agency_keeps_the_fourth_formatting_element_on_the_stack() {
+        let cases: serde_json::Value = serde_json::from_str(include_str!("../tests/markdown/parser.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            assert_eq!(roundtrip(case["input"].as_str().unwrap()), case["output"].as_str().unwrap());
+        }
+    }
+
+    #[test]
     fn serializes_like_nokogiri() {
         assert_eq!(roundtrip("<td>x</td>"), "x");
         assert_eq!(roundtrip("<p><table><tr><td>a</td></tr></table>"), "<p></p><table><tbody><tr><td>a</td></tr></tbody></table>");

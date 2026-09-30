@@ -6,7 +6,9 @@
 //! An `ActionController::API`: no session, cookies, forgery protection or `ApplicationController`
 //! chain, so nothing authenticated to forge. It's reached without the Rails route table
 //! (`app::router` mounts it), and it's rate-limited per IP in a store of its own, so a report
-//! flood never touches the shared one.
+//! flood never touches the shared one. Its body is its own to read (`unparsed_action`): Rails
+//! parses a JSON body only when something asks for `params`, which nothing here does, so a
+//! malformed or oversized report is logged as nothing rather than refused.
 
 use std::sync::{Arc, LazyLock};
 
@@ -30,9 +32,12 @@ fn rate_limit() -> RateLimit {
 
 pub async fn create(c: &mut Ctx) -> Result {
     if c.rate_limited(&rate_limit(), None)? {
+        c.read_body(0).await;
         return Ok(c.head(StatusCode::TOO_MANY_REQUESTS));
     }
-    for violation in violations(c.request.raw_post()).iter().take(MAX_VIOLATIONS) {
+    // `request.body.read(MAX_BODY + 1)`
+    let body = c.read_body(MAX_BODY + 1).await;
+    for violation in violations(&body).iter().take(MAX_VIOLATIONS) {
         tracing::warn!("CSP violation: {}", describe_csp_violation(violation));
     }
     Ok(c.head(StatusCode::NO_CONTENT))

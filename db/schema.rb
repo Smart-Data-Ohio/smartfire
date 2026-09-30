@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_28_143600) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_29_193000) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -244,6 +244,23 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_28_143600) do
     t.index ["actor_id"], name: "index_audit_logs_on_actor_id"
     t.index ["created_at"], name: "index_audit_logs_on_created_at"
     t.index ["target_type", "target_id"], name: "index_audit_logs_on_target_type_and_target_id"
+  end
+
+  create_table "background_jobs", force: :cascade do |t|
+    t.json "arguments", null: false
+    t.integer "attempts", default: 0, null: false
+    t.string "claimed_by"
+    t.datetime "created_at", null: false
+    t.datetime "failed_at"
+    t.string "job_class", null: false
+    t.text "last_error"
+    t.datetime "lease_expires_at"
+    t.integer "payload_version", default: 1, null: false
+    t.string "queue_name", null: false
+    t.datetime "run_at", null: false
+    t.string "status", default: "ready", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status", "queue_name", "run_at"], name: "index_background_jobs_for_claiming"
   end
 
   create_table "bans", force: :cascade do |t|
