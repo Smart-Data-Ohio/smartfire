@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 230 declarations now have complete assertion coverage mapped below. The other 318 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 250 declarations now have complete assertion coverage mapped below. The other 298 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -30,11 +30,11 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/models/huddle_invitation_test.rb` | 38 | 37 | 1 |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
 | `test/models/huddle/join_notifier_test.rb` | 33 | 32 | 1 |
-| `test/models/huddle_grant_test.rb` | 33 | 19 | 14 |
+| `test/models/huddle_grant_test.rb` | 33 | 33 | 0 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
 | `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
 | `test/models/rooms/stage_test.rb` | 27 | 23 | 4 |
-| `test/models/stream_test.rb` | 27 | 20 | 7 |
+| `test/models/stream_test.rb` | 27 | 26 | 1 |
 | `test/controllers/rooms/stages_controller_test.rb` | 24 | 0 | 24 |
 | `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
 | `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
@@ -59,7 +59,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 4 | 0 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 4 | 0 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 2 | 0 |
-| **Total** | **548** | **230** | **318** |
+| **Total** | **548** | **250** | **298** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -452,7 +452,7 @@ Owner: WS13b with WS17 for Notifications::Policy. All eight remain partial: invi
 
 ## test/models/huddle_grant_test.rb
 
-Owner: WS13b. Nineteen complete domain declarations are covered by `huddle_grant_sequences_test.rs` (13 pinned Rails sequences, 54 intermediate results) and `huddle_grant_test.rs` (real uniqueness conflicts and liveness boundaries). Fourteen presence/render declarations remain partial; WS13 owns the rendering integration.
+Owner: WS13b. Passed: 33/33 declarations. The grant sequence corpus covers domain state; `jobs/huddle_render_tests.rs` closes all fourteen presence assertions with complete pinned Rails Turbo Stream bytes, destination counts, real registered presence-job execution, repeat-sighting silence and unconfigured/deleted-room gates.
 
 - **Passed:** an active session and membership reuse one random grant
 - **Passed:** revoking and restoring room membership never resurrects the old grant
@@ -463,30 +463,30 @@ Owner: WS13b. Nineteen complete domain declarations are covered by `huddle_grant
 - **Passed:** rejoining the same room keeps the session's grant there
 - **Passed:** in_call reflects gateway liveness within twenty seconds
 - **Passed:** record_seen! persists liveness at most once per ten seconds
-- mark_out_of_call! drops liveness without revoking and refreshes presence
+- **Passed:** mark_out_of_call! drops liveness without revoking and refreshes presence
 - **Passed:** mark_out_of_call! is silent when the grant was never seen
 - **Passed:** mark_out_of_call! keeps a sighting newer than the disconnect
 - **Passed:** participants_for lists distinct in-call users by name
 - **Passed:** participants_for drops revoked and quiet grants
-- issuing a voice grant refreshes the presence stacks
-- revoking a voice grant refreshes the presence stacks
-- first sighting in the call enqueues a presence refresh, later sightings stay silent
-- issuing an open channel grant refreshes every sidebar and the header
-- issuing a closed channel grant refreshes every sidebar and the header
-- issuing a direct grant refreshes both sidebars and the header
-- revoking a channel grant refreshes every sidebar and the header
-- revoking a direct grant refreshes both sidebars and the header
-- first sighting in a channel enqueues a presence refresh, later sightings stay silent
-- no presence broadcasts without huddle configuration
-- revoking a destroyed room's grants stays silent
+- **Passed:** issuing a voice grant refreshes the presence stacks
+- **Passed:** revoking a voice grant refreshes the presence stacks
+- **Passed:** first sighting in the call enqueues a presence refresh, later sightings stay silent
+- **Passed:** issuing an open channel grant refreshes every sidebar and the header
+- **Passed:** issuing a closed channel grant refreshes every sidebar and the header
+- **Passed:** issuing a direct grant refreshes both sidebars and the header
+- **Passed:** revoking a channel grant refreshes every sidebar and the header
+- **Passed:** revoking a direct grant refreshes both sidebars and the header
+- **Passed:** first sighting in a channel enqueues a presence refresh, later sightings stay silent
+- **Passed:** no presence broadcasts without huddle configuration
+- **Passed:** revoking a destroyed room's grants stays silent
 - **Passed:** a stage grant records the membership role it was issued for
 - **Passed:** non-stage grants record no role
 - **Passed:** a stage role change revokes the member's active grants with cleanup
 - **Passed:** a host-speaker change updates the grant's role in place without revoking
 - **Passed:** authorize_or_revoke! revokes a grant whose issued role no longer matches
 - **Passed:** rejoining after a role change issues a new grant for the new role
-- issuing a stage grant refreshes the presence stacks
-- revoking a stage grant refreshes the presence stacks
+- **Passed:** issuing a stage grant refreshes the presence stacks
+- **Passed:** revoking a stage grant refreshes the presence stacks
 
 ## test/models/huddle_invitation_test.rb
 
@@ -589,7 +589,7 @@ Owner: WS13b. Passed: 5/5 declarations. The extended domain lifecycle corpus add
 
 ## test/models/stream_test.rb
 
-Owner: WS13b. Partial: 20/27 declarations passed. The extended domain lifecycle corpus adds live scope, unrelated-member revocation, authorization revocation, presenter membership removal/deactivation with a grant, and room stream destruction. Six complete rendering/fan-out declarations and the non-stage stream-query assertion remain open.
+Owner: WS13b. Partial: 26/27 declarations passed. Domain lifecycle sequences cover persistence. Six render declarations now compare complete pinned Rails badge/dot/personalized-panel/event bytes and destination counts over real WebSockets in `jobs/huddle_render_tests.rs`. Only the non-stage stream-query assertion remains open.
 
 - **Passed:** quality must be a known preset
 - **Passed:** started_at defaults to now
@@ -597,14 +597,14 @@ Owner: WS13b. Partial: 20/27 declarations passed. The extended domain lifecycle 
 - **Passed:** one live stream per room
 - **Passed:** an ended stream frees the room for another
 - **Passed:** end! is idempotent
-- starting broadcasts the badge, dot, and per-viewer panel
+- **Passed:** starting broadcasts the badge, dot, and per-viewer panel
 - **Passed:** starting broadcasts the event venue dot
 - **Passed:** ending broadcasts the cleared event venue dot
-- ending broadcasts the cleared badge, dot, and panel
-- ending twice broadcasts once
-- a host stop appends a stream-stopped event to the presenter's persistent target
-- a presenter stop appends no stream-stopped event
-- an automatic end appends no stream-stopped event
+- **Passed:** ending broadcasts the cleared badge, dot, and panel
+- **Passed:** ending twice broadcasts once
+- **Passed:** a host stop appends a stream-stopped event to the presenter's persistent target
+- **Passed:** a presenter stop appends no stream-stopped event
+- **Passed:** an automatic end appends no stream-stopped event
 - **Passed:** revoking the presenter's last grant for the room ends the stream
 - **Passed:** revoking another member's grant leaves the stream live
 - **Passed:** a grant revoked through authorization ends the stream
