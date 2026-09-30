@@ -69,6 +69,7 @@ covered.update({
         "agents can be messaged but not called", "inactive users show status without message actions", "card requires sign-in",
     },
     "controllers/users/profiles_controller_test.rb": {
+        "show gives the Edge install instructions to a browser identifying only as Edge", "profile shows Google Calendar as not configured without credentials", "profile shows no Drive row when Google is not configured", "profile lists the quiet-during-meetings switch", "profile lists the notification switches with explanations", "profile lists the call settings with their defaults", "a github login cannot be claimed by a second user", "profile rejects non-boolean notification input", "profile rejects an unknown microphone mode", "DND switch reflects the effective state after a timed expiry", "DND switch stays on while a timer runs",
         "show", "update", "updates are limited to the current user", "linking a github login strips and downcases it",
         "profile saves the notification switches", "profile saves the call settings", "clearing a github login unlinks it",
         "changing email requires the current password", "changing email with a wrong current password is refused",

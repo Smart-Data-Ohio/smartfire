@@ -59,6 +59,7 @@ async fn render_show(
         .read(move |conn| campfire_db::models::user::profile_settings::appearance(conn, id))
         .await
         .map_err(Error::internal)?;
+    let preview_settings = settings_error.as_ref().map(|(changes, _)| changes.clone());
     let errors = if let Some((changes, errors)) = settings_error {
         if let Some(theme) = changes.theme {
             appearance.theme = theme;
@@ -120,9 +121,38 @@ async fn render_show(
         })
         .await
         .map_err(Error::internal)?;
+    let mut sections = c
+        .app()
+        .db
+        .read(move |conn| presenters::profile_sections::load(conn, id, now))
+        .await
+        .map_err(Error::internal)?;
+    // WS9 owns sign-in configuration and identity rows directly; WS14g completes Calendar.
+    sections.google.sign_in_configured = google;
+    if google {
+        sections.google.identity_email = c
+            .app()
+            .db
+            .read(move |conn| {
+                use rusqlite::OptionalExtension;
+                Ok(conn
+                    .query_row(
+                        "SELECT email FROM google_identities WHERE user_id=?",
+                        [id],
+                        |r| r.get(0),
+                    )
+                    .optional()?)
+            })
+            .await
+            .map_err(Error::internal)?;
+    }
+    if let Some(changes) = preview_settings {
+        presenters::profile_sections::preview(&mut sections, &changes, &errors);
+    }
     let user = presenters::user_summary(&secrets, &user);
     framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
+        sections: sections.clone(),
         appearance: appearance.clone(),
         has_password,
         current_password_error,

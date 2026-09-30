@@ -1,0 +1,53 @@
+{% let form = h::form_with("/users/me/status").model("user").method("patch").data("controller", "form").class("flex flex-column gap") %}{% filter form_with(form) %}
+  <fieldset class="margin-none">
+    <legend class="txt-large">Status</legend>
+    <p class="txt-small margin-none">Automatic shows you online while you're here and idle after 10 quiet minutes. Your custom status shows beside your name.</p>
+
+    {% include "users/profiles/_status_fields.html" %}
+    <div class="flex flex-wrap align-center gap pad-block-half">
+      {{ h::profile_form_submit_button(ctx) }}
+      {{ h::button_tag(h::attrs().name("user[clear_custom_status]").value("1").class("btn txt-small"), "Clear status") }}
+    </div>
+  </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Meetings</legend>
+{% if !sections.google.calendar_configured %}      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+{% endif %}
+    {{ h::profile_form_submit_button(ctx) }}
+  </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Out of office</legend>
+{% if let Some(date) = sections.status.ooo_return %}      <p class="txt-small margin-none">
+{% if sections.status.manual_ooo %}          Out of office until {{ date }}.
+{% else %}          Out of office until {{ date }} from your Google Calendar.
+{% endif %}      </p>
+{% endif %}    <p class="txt-small margin-none">Show "Out of office" beside your name until the end you pick. It clears itself when the end passes, and wins over a custom status, DND, and the meeting label.</p>
+
+    <div class="flex align-center gap pad-block-half">
+      {{ h::content_tag_text("label", h::attrs().class("txt-medium").attr("for", "user_ooo_preset"), "Out until") }}
+      {{ self.select("ooo_preset", "", [("Don't change", ""), ("Until tomorrow", "tomorrow"), ("Until Monday", "monday"), ("1 week", "week"), ("Custom date and time", "custom")], h::attrs().name("user[ooo_preset]").id("user_ooo_preset").class("input")) }}
+    </div>
+
+    <div class="flex flex-wrap align-center gap pad-block-half">
+      {{ h::content_tag_text("label", h::attrs().class("txt-medium").attr("for", "user_ooo_until_custom"), "Custom end") }}
+      {{ h::datetime_local_field_tag("user[ooo_until_custom]", None, h::attrs().class("input").id("user_ooo_until_custom")) }}
+      <span class="txt-small">in your time zone</span>
+    </div>
+
+    <div class="flex align-center gap pad-block-half">
+      {{ h::content_tag_text("label", h::attrs().class("txt-medium").attr("for", "user_ooo_note"), "Note") }}
+      {{ h::legacy_tag("input", h::attrs().type_("text").name("user[ooo_note]").id("user_ooo_note").attr_opt("value", sections.status.ooo_note.as_deref()).class("input flex-item-grow").maxlength(140).placeholder("Back soon, slow to reply…").autocomplete("off")) }}
+    </div>
+
+    <div class="flex flex-wrap align-center gap pad-block-half">
+      {{ h::profile_form_submit_button(ctx) }}
+      {{ h::button_tag(h::attrs().name("user[clear_ooo]").value("1").class("btn txt-small"), "Clear out of office") }}
+    </div>
+
+{% if !sections.google.calendar_configured %}      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+{% endif %}
+    {{ h::profile_form_submit_button(ctx) }}
+  </fieldset>
+{% endfilter %}

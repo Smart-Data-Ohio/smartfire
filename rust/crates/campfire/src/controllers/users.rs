@@ -141,3 +141,6 @@ async fn verify_join_code(c: &mut Ctx) -> Result<Account> {
 fn user_params(c: &Ctx) -> Result<ParamMap> {
     Ok(c.params.require("user")?.permit(&permit_keys(&["name", "avatar", "email_address", "password"])))
 }
+
+#[cfg(test)]
+mod profile_page_tests;

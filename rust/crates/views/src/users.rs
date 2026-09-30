@@ -154,6 +154,7 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
+    pub sections: ProfileSections,
     pub appearance: AppearanceData,
     pub has_password: bool,
     pub current_password_error: Option<&'a str>,
@@ -229,3 +230,6 @@ impl Page for PushSubscriptionsIndex<'_> {
         Some("Push notification subscriptions".into())
     }
 }
+
+mod profile_sections;
+pub use profile_sections::*;

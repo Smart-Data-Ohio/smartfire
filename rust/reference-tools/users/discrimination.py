@@ -11,6 +11,8 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("first-run-repeat", "crates/campfire/src/controllers/first_runs.rs", "    if any {", "    if !any {", "signup_body_matches_rails_and_is_available_until_account_exists"),
+    ("profile-inbox", "crates/views/templates/users/profiles/_inbox_calls.html", 'legend class="txt-large">Notifications', 'legend class="txt-large">Notificationz', "whole_profile_matches_rails_seed_without_masks"),
     ("icons-svg", "crates/storage/src/workspace_icon.rs", '"script" => return Some("must not contain script elements")', '"script_never" => return Some("must not contain script elements")', "all_committed_media_and_field_validation_cases_match_rails"),
     ("audit-csv-formula", "crates/campfire/src/controllers/accounts/audit_logs.rs", "['=', '+', '-', '@', '\\t', '\\r']", "['X', '+', '-', '@', '\\t', '\\r']", "html_navigation_csv_and_filtered_order_match_rails"),
     ("icons-header", "crates/campfire/src/controllers/workspace_icons.rs", 'c.set_header("x-content-type-options", "nosniff");', 'c.set_header("x-content-type-options", "sniff");', "serving_svg_and_png_uses_private_bytes_and_checksum_conditionals"),

@@ -1,0 +1,17 @@
+<div class="flex align-center gap pad-block-half">
+  {{ form.label("presence_setting", "Presence", h::attrs().class("txt-medium")) }}
+  {{ self.select("presence_setting", sections.status.presence.as_str(), [("Automatic", "auto"), ("Do not disturb", "dnd"), ("Invisible (appear offline)", "invisible")], h::attrs().class("input").id("user_presence_setting")) }}
+</div>
+
+<div class="flex align-center gap pad-block-half">
+  {{ form.label("custom_status_emoji", "Emoji", h::attrs().class("txt-medium")) }}
+  {{ form.text_field("custom_status_emoji", sections.status.emoji.as_deref(), h::attrs().class("input").maxlength(8).placeholder("😀").autocomplete("off").attr("size", 6).id("user_custom_status_emoji")) }}
+  {{ form.label("custom_status_text", "Status text", h::attrs().class("txt-medium for-screen-reader")) }}
+  {{ form.text_field("custom_status_text", sections.status.text.as_deref(), h::attrs().class("input flex-item-grow").maxlength(100).placeholder("Working from the train…").autocomplete("off").id("user_custom_status_text")) }}
+</div>
+
+<div class="flex align-center gap pad-block-half">
+  {{ form.label("custom_status_expires_in", "Clear after", h::attrs().class("txt-medium")) }}
+  {{ self.select("custom_status_expires_in", "never", [("30 minutes", "minutes_30"), ("1 hour", "hour_1"), ("4 hours", "hours_4"), ("Today", "today"), ("This week", "week"), ("Never", "never")], h::attrs().class("input").id("user_custom_status_expires_in")) }}
+</div>
+{{ "\n" }}
