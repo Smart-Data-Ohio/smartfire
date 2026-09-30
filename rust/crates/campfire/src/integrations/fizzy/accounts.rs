@@ -55,6 +55,13 @@ impl Account {
             .is_none_or(|s| s.chars().all(char::is_whitespace))
     }
     pub fn usable_token(&self, tx: &Tx<'_>, crypto: &ArEncryption) -> Result<Option<String>> {
+        let deactivated: bool = tx.conn().query_row(
+            "SELECT EXISTS(SELECT 1 FROM users WHERE id=? AND status=1)", [self.user_id], |r| r.get(0),
+        )?;
+        if deactivated {
+            self.mark_disconnected(tx, "Account deactivated")?;
+            return Ok(None);
+        }
         if !self.connected() {
             return Ok(None);
         }

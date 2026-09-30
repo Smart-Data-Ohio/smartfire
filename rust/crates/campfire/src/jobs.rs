@@ -213,6 +213,16 @@ impl Jobs {
 }
 
 impl EventSink for Jobs {
+    fn disconnect_user_accounts(&self, tx: &mut Tx<'_>, user_id: i64) -> campfire_db::Result<()> {
+        if let Some(account) = crate::integrations::fizzy::accounts::Account::for_user(tx.conn(), user_id)? {
+            account.mark_disconnected(tx, "Account deactivated")?;
+        }
+        if let Some(account) = crate::integrations::github::accounts::Account::for_user(tx.conn(), user_id)? {
+            crate::integrations::github::accounts::Account::mark_disconnected(tx, account.id, "Account deactivated")?;
+        }
+        Ok(())
+    }
+
     fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
         let app = self.app.get().and_then(Weak::upgrade);
         let crypto = app.as_ref().map(|app| rails_compat::ar_encryption::ArEncryption::new(&app.secrets));
