@@ -63,3 +63,13 @@ at runtime to keep encoded authorization headers out of source fixtures.
 The corpus includes sanitized structures from 32 public real-email HTML parts and two
 archived Authentication-Results fields; provenance and redaction rules live under
 `reference-tools/mail/corpus/`. Modern mail-client coverage remains limited.
+
+Production MIME depth is recorded with
+`CAMPFIRE_REFERENCE=/absolute/pinned/reference rust/reference-tools/mail/measure-depth.sh --calibrate`.
+The recorder submits an authenticated relay request, then runs the exact production Procfile
+`resque-pool` command against a cloned parity seed. It records actual statuses, post sources
+and exceptions in the WS10 cache's `mime-depth/out/mime-depth.json`; copy that generated profile
+to `vectors/mail/mime-depth.json`. Explicit depths are also supported. `--calibrate --resume`
+reuses completed samples only when the pinned image and runtime metadata match.
+Per the "cutoff errs low" decision, routing's limit is the last successful production depth
+minus at least 10%. Greater depth produces a terminal bounce with no post or staged files.

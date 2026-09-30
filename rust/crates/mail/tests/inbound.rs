@@ -388,14 +388,28 @@ async fn measured_mime_depth_boundary_matches_rails_with_terminal_bounce() {
     let profile: serde_json::Value =
         serde_json::from_str(include_str!("../../../vectors/mail/mime-depth.json")).unwrap();
     assert_eq!(
-        campfire_mail::parse::MAX_MIME_DEPTH as u64,
-        profile["maximum_mime_depth"].as_u64().unwrap()
+        profile["runtime"]["worker_command"],
+        "FORK_PER_JOB=false INTERVAL=0.1 bundle exec resque-pool"
     );
-    assert_eq!(
-        profile["first_overflow_depth"].as_u64().unwrap(),
-        campfire_mail::parse::MAX_MIME_DEPTH as u64 + 1
-    );
-    for case in profile["fixtures"].as_array().unwrap() {
+    let cutoff = profile["maximum_mime_depth"].as_u64().unwrap();
+    let production_maximum = profile["production_maximum_mime_depth"].as_u64().unwrap();
+    let fixtures = profile["fixtures"].as_array().unwrap();
+    for depth in [
+        cutoff,
+        cutoff + 1,
+        production_maximum,
+        production_maximum + 1,
+        1_751,
+    ] {
+        assert!(
+            fixtures
+                .iter()
+                .any(|case| case["depth"].as_u64() == Some(depth)),
+            "missing depth {depth}"
+        );
+    }
+    for case in fixtures {
+        assert_eq!(case["ingress_status"], 204);
         let h = Harness::new().await;
         let raw = case["raw"].as_str().unwrap().replace(
             "room-token@mail.test",
@@ -405,8 +419,9 @@ async fn measured_mime_depth_boundary_matches_rails_with_terminal_bounce() {
             .await
             .unwrap()
             .unwrap();
-        let overflow = case["error"] == "SystemStackError";
-        let renderer: Option<Arc<dyn inbound::Renderer>> = if overflow {
+        let bounces = case["depth"].as_u64().unwrap() > cutoff;
+        // The conservative-margin fixture must bounce even without a renderer.
+        let renderer: Option<Arc<dyn inbound::Renderer>> = if bounces && case["error"].is_null() {
             None
         } else {
             Some(Arc::new(render))
@@ -442,7 +457,7 @@ async fn measured_mime_depth_boundary_matches_rails_with_terminal_bounce() {
             "measured depth={} route={routed:?} status={status} posts={posts}",
             case["depth"]
         );
-        if overflow {
+        if bounces {
             assert_eq!(routed, Routed::Bounced);
             assert_eq!((status, posts), (Status::Bounced as i64, 0));
         } else {
@@ -457,6 +472,22 @@ async fn measured_mime_depth_boundary_matches_rails_with_terminal_bounce() {
             );
         }
     }
+    assert_eq!(
+        campfire_mail::parse::MAX_MIME_DEPTH as u64,
+        profile["maximum_mime_depth"].as_u64().unwrap()
+    );
+    assert_eq!(
+        profile["first_bounce_depth"].as_u64().unwrap(),
+        campfire_mail::parse::MAX_MIME_DEPTH as u64 + 1
+    );
+    assert_eq!(
+        profile["maximum_mime_depth"].as_u64().unwrap(),
+        production_maximum * 9 / 10
+    );
+    assert_eq!(
+        profile["first_overflow_depth"].as_u64().unwrap(),
+        production_maximum + 1
+    );
 }
 
 #[tokio::test]

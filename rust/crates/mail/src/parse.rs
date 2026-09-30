@@ -5,10 +5,11 @@ use mailparse::{MailAddr, MailHeaderMap, ParsedMail};
 use regex::Regex;
 use std::sync::LazyLock;
 
-/// Last successful depth in pinned production Rails (Mail 2.9.1, 1 MiB Ruby VM stack).
-/// Depth 1,752 raises SystemStackError; the WS10 decision makes that a terminal bounce.
-/// Root multipart counts as one. See vectors/mail/mime-depth.json and its reference tool.
-pub const MAX_MIME_DEPTH: usize = 1_751;
+/// Pinned Rails (fec615be) posts through depth 1,748 in production resque-pool;
+/// 1,749 overflows. The WS10 "cutoff errs low" decision in decisions.md requires
+/// at least 10% margin: floor(1,748 * 0.9) = 1,573. Root multipart counts as one.
+/// See vectors/mail/mime-depth.json and reference-tools/mail/measure-depth.sh.
+pub const MAX_MIME_DEPTH: usize = 1_573;
 
 pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, address: &str) -> bool {
     let Some(authserv_id) = authserv_id.filter(|s| !blank(s)) else {
