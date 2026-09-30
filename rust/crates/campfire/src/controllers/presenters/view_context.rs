@@ -73,7 +73,7 @@ impl Layout {
             service_worker_auto_register: true,
             brand_icon_names: Vec::new(),
             google_picker: None,
-            huddle_configured: false,
+            huddle_configured: app.config.huddle.configured(),
             global_search_query: None,
             recent_searches: Vec::new(),
         };

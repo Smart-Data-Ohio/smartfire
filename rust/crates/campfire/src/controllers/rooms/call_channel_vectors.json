@@ -1,0 +1,6156 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "voices_show",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "show",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "get",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": null,
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_new",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "new",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/new",
+      "method": "get",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": null,
+      "status": 200,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_edit",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "edit",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001/edit",
+      "method": "get",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": null,
+      "status": 200,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_create",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "create",
+      "actor_id": 127326141,
+      "path": "/rooms/voices",
+      "method": "post",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/699448333",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": [
+        {
+          "action": "room.create",
+          "details": {
+            "name": "After"
+          }
+        }
+      ]
+    },
+    {
+      "name": "voices_create_creator_omitted",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "create",
+      "actor_id": 127326141,
+      "path": "/rooms/voices",
+      "method": "post",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/699448334",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": [
+        {
+          "action": "room.create",
+          "details": {
+            "name": "After"
+          }
+        }
+      ]
+    },
+    {
+      "name": "voices_create_unknown_icon",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "create",
+      "actor_id": 127326141,
+      "path": "/rooms/voices",
+      "method": "post",
+      "params": {
+        "room": {
+          "name": "After",
+          "icon_name": ":notanicon:"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&room[icon_name]=%3Anotanicon%3A&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 422,
+      "location": null,
+      "error": "Icon name is not a known icon",
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_new_restricted",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": true
+      },
+      "action": "new",
+      "actor_id": 712064548,
+      "path": "/rooms/voices/new",
+      "method": "get",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": null,
+      "status": 403,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_create_restricted",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": true
+      },
+      "action": "create",
+      "actor_id": 712064548,
+      "path": "/rooms/voices",
+      "method": "post",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 403,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_non_creator",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 712064548,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 403,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_creator_member",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 712064548,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 712064548,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 712064548
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_update",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_update_icon",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After",
+          "icon_name": ":FIRE:"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&room[icon_name]=%3AFIRE%3A&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": "fire",
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_clear_icon",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": "openai",
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After",
+          "icon_name": ""
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&room[icon_name]=&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_update_unknown_icon",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After",
+          "icon_name": ":notanicon:"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&room[icon_name]=%3Anotanicon%3A&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 422,
+      "location": null,
+      "error": "Icon name is not a known icon",
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_unchanged_members",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_remove_member",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": [
+        {
+          "action": "room.membership.change",
+          "details": {
+            "granted": [],
+            "revoked": [
+              "Kevin"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "voices_remove_creator",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": [
+        {
+          "action": "room.membership.change",
+          "details": {
+            "granted": [],
+            "revoked": [
+              "David"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "voices_empty",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": []
+      },
+      "request_body": "room[name]=After&user_ids[]=",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_outsider",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_wrong_open",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Open",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Open",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_wrong_closed",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Closed",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Closed",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_wrong_direct",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Direct",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Direct",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "voices_wrong_other",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/voices/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_show",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "show",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "get",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": null,
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_new",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "new",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/new",
+      "method": "get",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": null,
+      "status": 200,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_edit",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "edit",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001/edit",
+      "method": "get",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": null,
+      "status": 200,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_create",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "create",
+      "actor_id": 127326141,
+      "path": "/rooms/stages",
+      "method": "post",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/699448335",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": [
+        {
+          "action": "room.create",
+          "details": {
+            "name": "After"
+          }
+        }
+      ]
+    },
+    {
+      "name": "stages_create_creator_omitted",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "create",
+      "actor_id": 127326141,
+      "path": "/rooms/stages",
+      "method": "post",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/699448336",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": [
+        {
+          "action": "room.create",
+          "details": {
+            "name": "After"
+          }
+        }
+      ]
+    },
+    {
+      "name": "stages_create_unknown_icon",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "create",
+      "actor_id": 127326141,
+      "path": "/rooms/stages",
+      "method": "post",
+      "params": {
+        "room": {
+          "name": "After",
+          "icon_name": ":notanicon:"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&room[icon_name]=%3Anotanicon%3A&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 422,
+      "location": null,
+      "error": "Icon name is not a known icon",
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_new_restricted",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": true
+      },
+      "action": "new",
+      "actor_id": 712064548,
+      "path": "/rooms/stages/new",
+      "method": "get",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": null,
+      "status": 403,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_create_restricted",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": true
+      },
+      "action": "create",
+      "actor_id": 712064548,
+      "path": "/rooms/stages",
+      "method": "post",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 403,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_non_creator",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 712064548,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 403,
+      "location": null,
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_creator_member",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 712064548,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 712064548,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 712064548
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "host"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_update",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_update_icon",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After",
+          "icon_name": ":FIRE:"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&room[icon_name]=%3AFIRE%3A&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": "fire",
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_clear_icon",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": "openai",
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After",
+          "icon_name": ""
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&room[icon_name]=&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_update_unknown_icon",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After",
+          "icon_name": ":notanicon:"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&room[icon_name]=%3Anotanicon%3A&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 422,
+      "location": null,
+      "error": "Icon name is not a known icon",
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_unchanged_members",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_remove_member",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": [
+        {
+          "action": "room.membership.change",
+          "details": {
+            "granted": [],
+            "revoked": [
+              "Kevin"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "stages_remove_creator",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 422,
+      "location": null,
+      "error": "Promote another host before removing David",
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_empty",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": []
+      },
+      "request_body": "room[name]=After&user_ids[]=",
+      "status": 422,
+      "location": null,
+      "error": "Promote another host before removing David",
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_outsider",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 149087659,
+          "stage_role": "listener"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_wrong_open",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Open",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Open",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_wrong_closed",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Closed",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Closed",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_wrong_direct",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Direct",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Direct",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_wrong_other",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=127326141&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/",
+      "error": null,
+      "room": {
+        "type": "Rooms::Voice",
+        "name": "Before",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 127326141,
+          "stage_role": null
+        },
+        {
+          "user_id": 149087659,
+          "stage_role": null
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": null
+        }
+      ],
+      "notes": 0,
+      "audits": []
+    },
+    {
+      "name": "stages_remove_host_with_successor",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-03-02 16:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Before",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-03-02 16:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-03-02 16:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-03-02 16:00:00 UTC",
+            "user_id": 712064548
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "role": "administrator"
+          },
+          {
+            "id": 149087659,
+            "role": "member"
+          },
+          {
+            "id": 712064548,
+            "role": "member"
+          }
+        ],
+        "restricted": false
+      },
+      "action": "update",
+      "actor_id": 127326141,
+      "path": "/rooms/stages/9001",
+      "method": "put",
+      "params": {
+        "room": {
+          "name": "After"
+        },
+        "user_ids": [
+          149087659,
+          712064548
+        ]
+      },
+      "request_body": "room[name]=After&user_ids[]=149087659&user_ids[]=712064548",
+      "status": 302,
+      "location": "https://campfire.test/rooms/9001",
+      "error": null,
+      "room": {
+        "type": "Rooms::Stage",
+        "name": "After",
+        "icon_name": null,
+        "creator_id": 127326141
+      },
+      "members": [
+        {
+          "user_id": 149087659,
+          "stage_role": "host"
+        },
+        {
+          "user_id": 712064548,
+          "stage_role": "listener"
+        }
+      ],
+      "notes": 0,
+      "audits": [
+        {
+          "action": "room.membership.change",
+          "details": {
+            "granted": [],
+            "revoked": [
+              "David"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "deletions": [
+    {
+      "stage": false,
+      "status": 200,
+      "body": {
+        "deleted": true,
+        "room_id": 9001
+      },
+      "deleted": true,
+      "claimed": true,
+      "members": 0,
+      "revoked": true,
+      "stream_ended": null,
+      "audits": [
+        {
+          "action": "room.destroy",
+          "details": {
+            "name": "Delete me"
+          }
+        }
+      ]
+    },
+    {
+      "stage": true,
+      "status": 200,
+      "body": {
+        "deleted": true,
+        "room_id": 9001
+      },
+      "deleted": true,
+      "claimed": true,
+      "members": 0,
+      "revoked": true,
+      "stream_ended": true,
+      "audits": [
+        {
+          "action": "room.destroy",
+          "details": {
+            "name": "Delete me"
+          }
+        }
+      ]
+    }
+  ]
+}

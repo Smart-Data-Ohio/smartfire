@@ -46,7 +46,7 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::huddle_effects::Presence::KIND => decode::<campfire_db::models::huddle_effects::Presence>(request).and_then(|effect| {
             app.map_or(Ok(()), |app| super::huddle_effects::presence(app, effect.room_id))
         }),
-        RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
+        RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, app.map_or_else(||huddle_configured(env),|app|app.config.huddle.configured()))),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };

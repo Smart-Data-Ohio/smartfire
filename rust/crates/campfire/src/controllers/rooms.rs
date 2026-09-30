@@ -11,7 +11,12 @@
 mod call_lifecycle_tests;
 #[cfg(test)]
 mod public_huddle_tests;
+#[cfg(test)]
+mod call_channel_tests;
+#[cfg(test)]
+mod call_channel_broadcast_tests;
 pub mod call_moderation;
+pub mod call_channels;
 pub mod huddles;
 pub mod stage_streams;
 pub mod stage_participation;
@@ -39,14 +44,18 @@ pub enum Scope {
     WithoutDirects,
     /// `Current.user.rooms.directs` (directs)
     Directs,
+    Voices,
+    Stages,
 }
 
 impl Scope {
     fn includes(self, room: &Room) -> bool {
         match self {
             Scope::All => true,
-            Scope::WithoutDirects => room.room_type != RoomType::Direct,
+            Scope::WithoutDirects => matches!(room.room_type,RoomType::Open|RoomType::Closed),
             Scope::Directs => room.room_type == RoomType::Direct,
+            Scope::Voices => room.room_type == RoomType::Voice,
+            Scope::Stages => room.room_type == RoomType::Stage,
         }
     }
 }
@@ -79,6 +88,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
     ensure_can_administer(c, &room)?;
+    if room.voice() || room.stage() { return call_channels::destroy(c, room).await; }
     destroy_room(c, room).await
 }
 

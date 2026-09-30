@@ -33,6 +33,9 @@ C = ROOT / "rust/crates/db/src/models/call_moderation.rs"
 P = ROOT / "rust/crates/db/src/models/stage_streams.rs"
 Q = ROOT / "rust/crates/db/src/models/stage_participation.rs"
 R = ROOT / "rust/crates/campfire/src/controllers/rooms/stage_participation.rs"
+K = ROOT / "rust/crates/campfire/src/controllers/rooms/call_channels.rs"
+O = ROOT / "rust/crates/campfire/src/controllers/rooms.rs"
+Z = ROOT / "rust/crates/campfire/src/channels/sink.rs"
 F = ROOT / "rust/crates/campfire/src/controllers/rooms/huddles.rs"
 
 
@@ -53,6 +56,11 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("call-channel-update-policy-bypassed", K, lambda s: replace_once(s,"    ensure_can_administer(c, &room)?;",""),"campfire","call_channel_updates_deny_unprivileged_members_and_wrong_namespaces"),
+    ("call-channel-sole-host-check-bypassed", K, lambda s: replace_once(s,"if room.stage() && has_remaining_ids {","if false && room.stage() && has_remaining_ids {"),"campfire","stage_member_edit_cannot_remove_the_sole_host_or_commit_the_rename"),
+    ("call-channel-broadcast-bypassed", K, lambda s: replace_body(s,"async fn broadcast(","Ok(())"),"campfire","call_channel_create_and_member_revision_deliver_ordered_sidebar_and_header_frames"),
+    ("call-channel-removal-header-bypassed", Z, lambda s: replace_once(s,"app.config.huddle.configured()","false && app.config.huddle.configured()"),"campfire","call_channel_create_and_member_revision_deliver_ordered_sidebar_and_header_frames"),
+    ("call-channel-deletion-seam-bypassed", K, lambda s: replace_once(s,"campfire_db::models::room_delete::begin_destroy(tx, &deleted, &config)?;","deleted.destroy(tx)?;"),"campfire","deleting_a_call_channel_uses_ws8a_marking_and_ends_grants_and_streams_before_reply"),
     ("public-auth-overrides-bypassed", F, lambda s: replace_once(s,"Some(request_authentication),","None,"),"campfire","public_huddle_authentication_errors_precede_csrf_and_configuration"),
     ("public-cache-prepend-bypassed", F, lambda s: replace_once(s,'c.set_header("cache-control", "no-store");',""),"campfire","public_huddle_authentication_errors_precede_csrf_and_configuration"),
     ("public-deleted-room-exposed", F, lambda s: replace_once(s,"if !room.deleted()","if true"),"campfire","public_huddle_http_matches_production_rails"),

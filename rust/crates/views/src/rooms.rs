@@ -1,6 +1,8 @@
 //! Views for `reference/app/views/rooms`, plus `RoomsHelper`, `Rooms::InvolvementsHelper` and
 //! the `MessagesHelper` tags the room screen uses.
 
+pub mod calls;
+
 use askama::Template;
 use jiff::Timestamp;
 use serde::Deserialize;
