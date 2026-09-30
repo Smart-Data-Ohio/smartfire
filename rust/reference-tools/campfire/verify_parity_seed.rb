@@ -1,7 +1,7 @@
 # Validate the built Smartfire corpus using the reference's actual models and encrypted secrets.
 require "json"
 seed = ARGV.first || "default"
-abort "unknown parity seed #{seed}" unless %w[default first_run unread live_rooms imports].include?(seed)
+abort "unknown parity seed #{seed}" unless %w[default first_run unread live_rooms imports agents_ui].include?(seed)
 if seed == "first_run"
   checks = { no_account: !Account.exists?, no_users: !User.exists?, no_rooms: !Room.exists?, no_messages: !Message.exists? }
 else
@@ -38,6 +38,19 @@ checks = {
 }
   checks[:no_presence_leases] = !WorkspacePresenceLease.exists?
   case seed
+  when "agents_ui"
+    ui_agent = Agent.joins(:user).find_by!(users: { name: "Deploy Bot" })
+    checks[:ui_owner] = ui_agent.owner == User.find_by!(email_address: "kevin@37signals.com")
+    checks[:ui_credentials] = ui_agent.agent_credentials.count == 3
+    checks[:ui_digest_identifiers] = ui_agent.agent_credentials.all? { |credential| credential.token_last_four == credential.token_digest[0, 4] }
+    checks[:ui_credential_states] = ui_agent.agent_credentials.any?(&:revoked?) && ui_agent.agent_credentials.any?(&:expired?)
+    checks[:ui_grants] = ui_agent.agent_grants.active.count == 4 && !ui_agent.legacy_capabilities?
+    checks[:ui_revoked_grant] = ui_agent.agent_grants.where.not(revoked_at: nil).exists?
+    checks[:ui_steps] = AgentStep.where(agent: ui_agent).count == 2
+    checks[:ui_pending_and_denied] = ui_agent.agent_approvals.where(status: "pending").exists? && ui_agent.agent_approvals.where(status: "denied").exists?
+    checks[:ui_overdue] = ui_agent.agent_approvals.where(status: "pending").any?(&:expired_effective?)
+    checks[:ui_ledger] = ui_agent.agent_events.where(webhook_status: "failed", webhook_attempts: 2).exists?
+    checks[:ui_status] = ui_agent.status == "working" && ui_agent.status_note.present?
   when "unread"
     checks[:unread_memberships] = Membership.where.not(unread_at: nil).count >= 3
   when "live_rooms"

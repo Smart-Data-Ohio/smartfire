@@ -28,6 +28,7 @@ custom_styles/restricted/crowd fixture tools do not add states to this inventory
 | first_run | Empty schema; real first-run form |
 | live_rooms | default plus participant, speaker and live stream; synthetic gateway env from reference_env.* labels on both targets |
 | imports | default plus workspace/personal Slack previews and failed run, with recorded conversation/sample payloads |
+| agents_ui (optional) | default plus an owner-managed agent, active/expired/revoked credentials, enforced and revoked grants, pending/denied/overdue approvals, failed webhook ledger delivery, live status and two work-thread steps. Labels use the `ui` or `agent_ui` suffix. Build explicitly for agent page captures; it preserves default's no-grant legacy behavior. |
 
 The retained media corpus covers rich text/code/tables/mentions, old SGIDs, sounds/unfurls,
 Twitter cards, image/video/files, boosts, bot/deactivated authors, edits and a busy timeline.
