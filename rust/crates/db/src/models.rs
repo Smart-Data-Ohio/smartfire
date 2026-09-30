@@ -10,6 +10,7 @@ pub mod boost;
 pub mod channel_thread;
 pub mod direct_room;
 pub mod first_run;
+pub mod google_identity;
 pub mod forwarder;
 pub mod membership;
 pub mod keyword_alert;
