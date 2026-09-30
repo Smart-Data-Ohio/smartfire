@@ -13,8 +13,8 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "show gives Edge the install instructions" do
-    edge = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
+  test "show gives the Edge install instructions to a browser identifying only as Edge" do
+    edge = "Edge/124.0.0.0"
 
     get user_profile_url, headers: { "User-Agent" => edge }
 
