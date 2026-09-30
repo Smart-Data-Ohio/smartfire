@@ -9,6 +9,7 @@ pub mod mcp;
 pub mod approvals;
 pub mod pending;
 pub mod conversations;
+pub mod repository_access;
 pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {
@@ -135,16 +136,15 @@ pub async fn poll(
     limit: Option<Value>,
 ) -> Result<Value> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
+    let access = repository_access::resolve(c, agent_id).await?;
     super::messages::present(c, move |presenter| {
-        // WS11/WS15g supplies live private-repository access decisions. The default
-        // set reveals only public fields, matching the current delivery adapter.
         agent_event_polling::poll(
             presenter.conn,
             agent_id,
             since.as_ref(),
             limit.as_ref(),
             now,
-            &Default::default(),
+            &access,
             |message| presenter.agent_message_payload(message),
         )
     })

@@ -116,9 +116,7 @@ async fn agent_conversation_stream_bytes() {
     group("stream_").await;
 }
 
-#[tokio::test]
-async fn agent_stream_http_enqueue_failure_rolls_back_rest_and_mcp() {
-    for mcp in [false,true] {
+async fn stream_http_enqueue_failure(mcp: bool) {
         let app=setup().await;
         let id=app.db().write(|tx| {
             let campfire_db::models::agent_posting::PostResult::Posted(message)=campfire_db::models::agent_streaming::start(tx,AGENT,NewMessage{room_id:486777696,markdown_source:Some("Before".into()),client_message_id:Some("atomic-stream".into()),..Default::default()})? else {panic!("stream start");};
@@ -137,5 +135,7 @@ async fn agent_stream_http_enqueue_failure_rolls_back_rest_and_mcp() {
             assert_eq!(count,0);
             Ok(())
         }).await.unwrap();
-    }
 }
+
+#[tokio::test] async fn agent_stream_http_enqueue_failure_rest() {stream_http_enqueue_failure(false).await;}
+#[tokio::test] async fn agent_stream_http_enqueue_failure_mcp() {stream_http_enqueue_failure(true).await;}

@@ -59,6 +59,26 @@ add.call("stream_locked", :patch, "/agents/streaming_messages/#{base+2}", {appen
 ].each_with_index do |(tool,args,setup),i|
  add.call("mcp_stream_#{tool}_#{i}",:post,"/agents/mcp",{jsonrpc:"2.0",id:11,method:"tools/call",params:{name:tool,arguments:args}},setup)
 end
+add.call("post_nested_scalar_filter",:post,"/rooms/#{room}/agents/messages",{message:{markdown_source:["ignored"],body:"Body",client_message_id:"wire-post"}})
+add.call("post_nested_extra_does_not_win",:post,"/rooms/#{room}/agents/messages",{body:"ignored",message:{body:"Body",client_message_id:"wire-post"}})
+add.call("dm_top_reply_ignored",:post,"/agents/dms",{user_id:127326141,body:"Body",reply_to_message_id:0,client_message_id:"wire-dm"})
+add.call("post_reply_false",:post,"/rooms/#{room}/agents/messages",{message:{body:"Body",reply_to_message_id:false,client_message_id:"wire-post"}})
+[
+ ["post_message",{room_id:room,body:"Body",client_message_id:"wire-post",message:{body:"ignored",client_message_id:"wire-ignored"}}],
+ ["post_message",{room_id:room,markdown_source:["A","B"],client_message_id:"wire-post"}],
+ ["post_message",{room_id:room,markdown_source:{name:"A"},client_message_id:"wire-post"}],
+ ["post_message",{room_id:room,markdown_source:true,client_message_id:"wire-post"}],
+ ["post_message",{room_id:room,body:"Body",reply_to_message_id:false,client_message_id:"wire-post"}],
+ ["open_dm",{user_id:127326141,body:"Body",reply_to_message_id:0,client_message_id:"wire-dm"}],
+ ["open_dm",{user_id:127326141,body:"Body",client_message_id:"wire-dm",message:{body:"ignored",client_message_id:"wire-ignored"}}]
+].each_with_index do |(tool,args),i|
+ add.call("mcp_input_#{i}",:post,"/agents/mcp",{jsonrpc:"2.0",id:11,method:"tools/call",params:{name:tool,arguments:args}})
+end
+add.call("post_bad_reply",:post,"/rooms/#{room}/agents/messages",{message:{body:"Body",reply_to_message_id:0,client_message_id:"wire-post"}})
+add.call("dm_nested_bad_reply",:post,"/agents/dms",{user_id:127326141,message:{body:"Body",reply_to_message_id:0,client_message_id:"wire-dm"}})
+add.call("post_message_scalar",:post,"/rooms/#{room}/agents/messages",{message:"wrong"})
+add.call("post_message_array",:post,"/rooms/#{room}/agents/messages",{message:["wrong"]})
+add.call("stream_message_scalar",:post,"/rooms/#{room}/agents/streaming_messages",{message:"wrong"})
 travel_to Time.utc(2026,3,2,16) do
  results = cases.map do |item|
   result = nil

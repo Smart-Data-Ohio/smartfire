@@ -1,5 +1,5 @@
 //! REST/MCP presentation around WS11's context, Posting and DirectMessages services.
-use super::{integer, ruby_i64, text};
+use super::{ruby_i64, text};
 use crate::app::AppCtx;
 use crate::concerns;
 use crate::controllers::{messages, presenters::page::db_error};
@@ -33,33 +33,45 @@ pub async fn context(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResul
     .await
 }
 
-fn scalar<'a>(fields: &'a Value, key: &str) -> Option<&'a Value> {
-    fields.get(key).filter(|v| !v.is_array() && !v.is_object())
+// Strong parameters filter REST attributes; MCP passes its documented slice directly.
+fn fields(args: &Value, rest: bool) -> &Value {
+    if rest {
+        args.get("message")
+            .filter(|v| v.is_object())
+            .unwrap_or(args)
+    } else {
+        args
+    }
 }
-fn attributes(args: &Value) -> NewMessage {
-    let fields = args
-        .get("message")
-        .filter(|v| v.is_object())
-        .unwrap_or(args);
+fn attribute<'a>(fields: &'a Value, key: &str, rest: bool) -> Option<&'a Value> {
+    fields
+        .get(key)
+        .filter(|v| !rest || (!v.is_array() && !v.is_object()))
+}
+fn attributes(args: &Value, rest: bool, dm: bool) -> NewMessage {
+    let fields = fields(args, rest);
+    let replies = !dm || (rest && args.get("message").is_some_and(Value::is_object));
+    let reply = attribute(fields, "reply_to_message_id", rest).filter(|v| !super::mcp::blank(v));
     NewMessage {
         room_id: args.get("room_id").map_or(0, ruby_i64),
         thread_id: present_id(args, "thread_id"),
-        client_message_id: super::attribute_string(scalar(fields, "client_message_id")),
-        body: text(scalar(fields, "body")),
-        markdown_source: super::attribute_string(scalar(fields, "markdown_source")),
-        reply_to_message_id: integer(scalar(fields, "reply_to_message_id")),
-        reply_notify_author: scalar(fields, "reply_notify_author")
-            .and_then(|v| text(Some(v)))
-            .as_deref()
-            .and_then(campfire_db::account::cast_boolean),
+        client_message_id: super::attribute_string(attribute(fields, "client_message_id", rest)),
+        body: text(attribute(fields, "body", rest)),
+        markdown_source: super::attribute_string(attribute(fields, "markdown_source", rest)),
+        reply_to_message_id: if replies { reply.map(ruby_i64) } else { None },
+        reply_notify_author: if replies {
+            attribute(fields, "reply_notify_author", rest)
+                .and_then(|v| text(Some(v)))
+                .as_deref()
+                .and_then(campfire_db::account::cast_boolean)
+        } else {
+            None
+        },
         ..Default::default()
     }
 }
-fn drive(args: &Value) -> agent_posting::DriveInput {
-    let fields = args
-        .get("message")
-        .filter(|v| v.is_object())
-        .unwrap_or(args);
+fn drive(args: &Value, rest: bool) -> agent_posting::DriveInput {
+    let fields = fields(args, rest);
     match fields.get("drive_file_ids") {
         None => agent_posting::DriveInput::Absent,
         Some(Value::Array(ids)) => {
@@ -76,8 +88,8 @@ fn drive(args: &Value) -> agent_posting::DriveInput {
         _ => agent_posting::DriveInput::Invalid,
     }
 }
-async fn canonical(c: &Ctx, args: &Value) -> Result<NewMessage> {
-    let mut a = attributes(args);
+async fn canonical(c: &Ctx, args: &Value, rest: bool, dm: bool) -> Result<NewMessage> {
+    let mut a = attributes(args, rest, dm);
     if a.markdown_source.is_none()
         && let Some(body) = a.body.take()
     {
@@ -86,18 +98,28 @@ async fn canonical(c: &Ctx, args: &Value) -> Result<NewMessage> {
     Ok(a)
 }
 
-pub async fn post(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
-    start(c, agent_id, args, false).await
+pub async fn post(c: &Ctx, agent_id: i64, args: Value, rest: bool) -> Result<ServiceResult> {
+    start(c, agent_id, args, false, rest).await
 }
-async fn start(c: &Ctx, agent_id: i64, args: Value, streaming: bool) -> Result<ServiceResult> {
+async fn start(
+    c: &Ctx,
+    agent_id: i64,
+    args: Value,
+    streaming: bool,
+    rest: bool,
+) -> Result<ServiceResult> {
+    if rest && args.get("message").is_some_and(|v| !v.is_object()) {
+        // Rails params.require(:message).permit raises for non-Parameters values.
+        return Err(campfire_kit::Error::internal(anyhow::anyhow!("message does not support permit")));
+    }
     let a = if streaming {
-        let mut a = attributes(&args);
+        let mut a = attributes(&args, rest, false);
         a.body = None;
         a
     } else {
-        canonical(c, &args).await?
+        canonical(c, &args, rest, false).await?
     };
-    let drive = drive(&args);
+    let drive = drive(&args, rest);
     let outcome = c
         .app()
         .db
@@ -162,9 +184,9 @@ async fn present_post(
     }
 }
 
-pub async fn dm(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
-    let a = canonical(c, &args).await?;
-    let drive = drive(&args);
+pub async fn dm(c: &Ctx, agent_id: i64, args: Value, rest: bool) -> Result<ServiceResult> {
+    let a = canonical(c, &args, rest, true).await?;
+    let drive = drive(&args, rest);
     let target = args.get("user_id").map_or(0, ruby_i64);
     let audit = audit_log::Context {
         actor: concerns::current_user(c).map(Into::into),
@@ -187,9 +209,15 @@ pub async fn dm(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
     }
 }
 
-pub async fn stream(c: &Ctx, agent_id: i64, operation: &str, args: Value) -> Result<ServiceResult> {
+pub async fn stream(
+    c: &Ctx,
+    agent_id: i64,
+    operation: &str,
+    args: Value,
+    rest: bool,
+) -> Result<ServiceResult> {
     if operation == "start_stream" {
-        return start(c, agent_id, args, true).await;
+        return start(c, agent_id, args, true, rest).await;
     }
     let id = present_id(&args, "message_id").unwrap_or(0);
     let append = text(args.get("append"));

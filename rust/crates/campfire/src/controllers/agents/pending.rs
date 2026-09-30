@@ -44,11 +44,14 @@ pub async fn operation(
     operation: &str,
     args: Value,
 ) -> Result<ServiceResult> {
+    dispatch(c,agent_id,operation,args,false).await
+}
+async fn dispatch(c: &Ctx, agent_id: i64, operation: &str, args: Value, rest: bool) -> Result<ServiceResult> {
     match operation {
-        "start_stream" | "append_stream" | "finalize_stream" => return super::conversations::stream(c,agent_id,operation,args).await,
+        "start_stream" | "append_stream" | "finalize_stream" => return super::conversations::stream(c,agent_id,operation,args,rest).await,
         "get_context" => return super::conversations::context(c,agent_id,args).await,
-        "post_message" => return super::conversations::post(c,agent_id,args).await,
-        "open_dm" => return super::conversations::dm(c,agent_id,args).await,
+        "post_message" => return super::conversations::post(c,agent_id,args,rest).await,
+        "open_dm" => return super::conversations::dm(c,agent_id,args,rest).await,
         _ => {}
     }
     let operation = operation.to_owned();
@@ -411,7 +414,12 @@ async fn rest(c: &mut Ctx, settings: Action) -> Result {
             args[key] = json!(id(c, "id"));
         }
     }
-    let result = operation(c, identity.agent_id, op, args).await?;
+    let result = dispatch(c, identity.agent_id, op, args, true).await?;
+    // Pinned Agents::MessagesController calls an undefined render_room_not_found
+    // in this rescue. Match its production 500; MCP retains the service's 404.
+    if op=="post_message" && result.error.as_deref()==Some("Reply target not found") {
+        return Err(Error::internal(anyhow::anyhow!("Rails render_room_not_found is undefined")));
+    }
     render_result(c, result)
 }
 

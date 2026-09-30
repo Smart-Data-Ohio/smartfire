@@ -25,7 +25,7 @@ def run(file):
     result = subprocess.run([
         'docker', 'run', '--rm', '--name', 'ws11api-test-' + name, '--network', 'none',
         '--user', f'{os.getuid()}:{os.getgid()}', '--env-file', str(root / 'rust/parity/.env.reference'),
-        '-e', 'RAILS_ENV=test', '-e', 'PARALLEL_WORKERS=1', '-e', 'PARITY_REDIS=1', '-e', 'BUNDLE_WITHOUT=development',
+        '-e', 'RAILS_ENV=test', '-e', 'PARITY_REDIS=1', '-e', 'BUNDLE_WITHOUT=development',
         '-v', f'{root / "test"}:/rails/test:ro', '-v', f'{storage / "db"}:/rails/storage/db',
         '-v', f'{storage / "files"}:/rails/storage/files', 'ws11api-reference:d7c7de92', 'bin/rails', 'test', file,
     ], capture_output=True, text=True)

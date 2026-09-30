@@ -838,6 +838,299 @@
         "rooms": 0,
         "drive_attachments": 0
       }
+    },
+    {
+      "name": "post_nested_scalar_filter",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"markdown_source\":[\"ignored\"],\"body\":\"Body\",\"client_message_id\":\"wire-post\"}}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900600011,\"client_message_id\":\"wire-post\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Body\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Body\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900600011\",\"thread_id\":null}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "post_nested_extra_does_not_win",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"body\":\"ignored\",\"message\":{\"body\":\"Body\",\"client_message_id\":\"wire-post\"}}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900600011,\"client_message_id\":\"wire-post\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Body\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Body\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900600011\",\"thread_id\":null}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "dm_top_reply_ignored",
+      "method": "post",
+      "path": "/agents/dms",
+      "body": "{\"user_id\":127326141,\"body\":\"Body\",\"reply_to_message_id\":0,\"client_message_id\":\"wire-dm\"}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"room\":{\"id\":1900600021,\"name\":null,\"direct\":true},\"message\":{\"id\":1900600011,\"client_message_id\":\"wire-dm\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Body\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Body\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":1900600021,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/1900600021/@1900600011\"},\"thread_id\":null}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 1,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "post_reply_false",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"body\":\"Body\",\"reply_to_message_id\":false,\"client_message_id\":\"wire-post\"}}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900600011,\"client_message_id\":\"wire-post\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Body\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Body\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900600011\",\"thread_id\":null}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "mcp_input_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"post_message\",\"arguments\":{\"room_id\":486777696,\"body\":\"Body\",\"client_message_id\":\"wire-post\",\"message\":{\"body\":\"ignored\",\"client_message_id\":\"wire-ignored\"}}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900600011,\\\"client_message_id\\\":\\\"wire-post\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Body\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  Body\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@1900600011\\\",\\\"thread_id\\\":null}\"}],\"structuredContent\":{\"id\":1900600011,\"client_message_id\":\"wire-post\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Body\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Body\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900600011\",\"thread_id\":null},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "mcp_input_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"post_message\",\"arguments\":{\"room_id\":486777696,\"markdown_source\":[\"A\",\"B\"],\"client_message_id\":\"wire-post\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900600011,\\\"client_message_id\\\":\\\"wire-post\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"[\\\\\\\"A\\\\\\\", \\\\\\\"B\\\\\\\"]\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>[\\\\\\\"A\\\\\\\", \\\\\\\"B\\\\\\\"]</p></div>\\\",\\\"markdown_source\\\":\\\"[\\\\\\\"A\\\\\\\", \\\\\\\"B\\\\\\\"]\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@1900600011\\\",\\\"thread_id\\\":null}\"}],\"structuredContent\":{\"id\":1900600011,\"client_message_id\":\"wire-post\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"[\\\"A\\\", \\\"B\\\"]\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>[\\\"A\\\", \\\"B\\\"]</p></div>\",\"markdown_source\":\"[\\\"A\\\", \\\"B\\\"]\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900600011\",\"thread_id\":null},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "mcp_input_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"post_message\",\"arguments\":{\"room_id\":486777696,\"markdown_source\":{\"name\":\"A\"},\"client_message_id\":\"wire-post\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900600011,\\\"client_message_id\\\":\\\"wire-post\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"{\\\\\\\"name\\\\\\\" => \\\\\\\"A\\\\\\\"}\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>{\\\\\\\"name\\\\\\\" =&gt; \\\\\\\"A\\\\\\\"}</p></div>\\\",\\\"markdown_source\\\":\\\"{\\\\\\\"name\\\\\\\" => \\\\\\\"A\\\\\\\"}\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@1900600011\\\",\\\"thread_id\\\":null}\"}],\"structuredContent\":{\"id\":1900600011,\"client_message_id\":\"wire-post\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"{\\\"name\\\" => \\\"A\\\"}\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>{\\\"name\\\" =&gt; \\\"A\\\"}</p></div>\",\"markdown_source\":\"{\\\"name\\\" => \\\"A\\\"}\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900600011\",\"thread_id\":null},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "mcp_input_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"post_message\",\"arguments\":{\"room_id\":486777696,\"markdown_source\":true,\"client_message_id\":\"wire-post\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900600011,\\\"client_message_id\\\":\\\"wire-post\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"t\\\",\\\"html\\\":\\\"<div class=\\\\\\\"markdown-body\\\\\\\" data-controller=\\\\\\\"drive-link\\\\\\\"><p>t</p></div>\\\",\\\"markdown_source\\\":\\\"t\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@1900600011\\\",\\\"thread_id\\\":null}\"}],\"structuredContent\":{\"id\":1900600011,\"client_message_id\":\"wire-post\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"t\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>t</p></div>\",\"markdown_source\":\"t\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900600011\",\"thread_id\":null},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "mcp_input_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"post_message\",\"arguments\":{\"room_id\":486777696,\"body\":\"Body\",\"reply_to_message_id\":false,\"client_message_id\":\"wire-post\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900600011,\\\"client_message_id\\\":\\\"wire-post\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Body\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  Body\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":486777696,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/486777696/@1900600011\\\",\\\"thread_id\\\":null}\"}],\"structuredContent\":{\"id\":1900600011,\"client_message_id\":\"wire-post\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Body\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Body\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900600011\",\"thread_id\":null},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "mcp_input_5",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"open_dm\",\"arguments\":{\"user_id\":127326141,\"body\":\"Body\",\"reply_to_message_id\":0,\"client_message_id\":\"wire-dm\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"room\\\":{\\\"id\\\":1900600021,\\\"name\\\":null,\\\"direct\\\":true},\\\"message\\\":{\\\"id\\\":1900600011,\\\"client_message_id\\\":\\\"wire-dm\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Body\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  Body\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":1900600021,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/1900600021/@1900600011\\\"},\\\"thread_id\\\":null}\"}],\"structuredContent\":{\"room\":{\"id\":1900600021,\"name\":null,\"direct\":true},\"message\":{\"id\":1900600011,\"client_message_id\":\"wire-dm\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Body\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Body\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":1900600021,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/1900600021/@1900600011\"},\"thread_id\":null},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 1,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "mcp_input_6",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"open_dm\",\"arguments\":{\"user_id\":127326141,\"body\":\"Body\",\"client_message_id\":\"wire-dm\",\"message\":{\"body\":\"ignored\",\"client_message_id\":\"wire-ignored\"}}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"room\\\":{\\\"id\\\":1900600021,\\\"name\\\":null,\\\"direct\\\":true},\\\"message\\\":{\\\"id\\\":1900600011,\\\"client_message_id\\\":\\\"wire-dm\\\",\\\"created_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"updated_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"body\\\":{\\\"plain_text\\\":\\\"Body\\\",\\\"html\\\":\\\"<div class=\\\\\\\"trix-content\\\\\\\">\\\\n  Body\\\\n</div>\\\\n\\\"},\\\"creator\\\":{\\\"id\\\":394959859,\\\"name\\\":\\\"Bender Bot\\\",\\\"role\\\":\\\"bot\\\",\\\"avatar_url\\\":\\\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\\\",\\\"icon_name\\\":null,\\\"icon_avatar_url\\\":null},\\\"room\\\":{\\\"id\\\":1900600021,\\\"icon_name\\\":null},\\\"drive_attachments\\\":[],\\\"url\\\":\\\"http://campfire.test/rooms/1900600021/@1900600011\\\"},\\\"thread_id\\\":null}\"}],\"structuredContent\":{\"room\":{\"id\":1900600021,\"name\":null,\"direct\":true},\"message\":{\"id\":1900600011,\"client_message_id\":\"wire-dm\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Body\",\"html\":\"<div class=\\\"trix-content\\\">\\n  Body\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":1900600021,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/1900600021/@1900600011\"},\"thread_id\":null},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 1,
+        "rooms": 1,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "post_bad_reply",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":{\"body\":\"Body\",\"reply_to_message_id\":0,\"client_message_id\":\"wire-post\"}}",
+      "setup": {},
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "dm_nested_bad_reply",
+      "method": "post",
+      "path": "/agents/dms",
+      "body": "{\"user_id\":127326141,\"message\":{\"body\":\"Body\",\"reply_to_message_id\":0,\"client_message_id\":\"wire-dm\"}}",
+      "setup": {},
+      "status": 404,
+      "response_body": "",
+      "response_headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 1,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "post_message_scalar",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":\"wrong\"}",
+      "setup": {},
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "post_message_array",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{\"message\":[\"wrong\"]}",
+      "setup": {},
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "stream_message_scalar",
+      "method": "post",
+      "path": "/rooms/486777696/agents/streaming_messages",
+      "body": "{\"message\":\"wrong\"}",
+      "setup": {},
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
     }
   ]
 }
