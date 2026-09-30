@@ -16,7 +16,8 @@ async fn forward_endpoints_scope_sources_and_reject_bots_and_forgery_first() {
         assert_eq!(browser.get(&path).await.status, StatusCode::NOT_FOUND);
     }
     let path = format!("/rooms/{ALL_TALK}/messages/{root}/forwards.json");
-    assert_eq!(browser.send(Req::new(Method::POST, &path).header("origin", "https://forged.test")).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(browser.send(Req::new(Method::POST, &path).header("origin", "https://forged.test")
+        .header("content-type", "application/json").body(serde_json::json!({"destinations": [{"room_id": QUIET_CORNER}]}).to_string())).await.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(app.anonymous().get(&format!("/rooms/{ALL_TALK}/messages/{root}/forwards/destinations.json?bot_key={BENDER_KEY}")).await.status, StatusCode::FORBIDDEN);
     assert_eq!(app.sign_in(KEVIN).await.write(Req::new(Method::POST, &path)).await.status, StatusCode::NOT_FOUND);
 }
