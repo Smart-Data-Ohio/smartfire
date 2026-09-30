@@ -56,6 +56,7 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("call-channel-creator-update-guard-bypassed", K, lambda s: replace_once(s, "    ensure_can_administer(c, &room)?;\n    let name = room_name_param(c)?;", "    let name = room_name_param(c)?;"), "campfire", "call_channel_members_and_outsiders_cannot_edit_read_messages_or_receive_denial_frames"),
     ("internal-first-sighting-bypassed", I, lambda s: replace_once(s, "let seen_due = record_seen", "let seen_due = false && record_seen"), "campfire", "huddle_gateway_liveness_is_exact_throttled_and_independent_of_expired_tokens"),
     ("internal-authorization-payload-corrupted", I, lambda s: replace_once(s, "c.json(StatusCode::OK, &grant.authorization_payload())", 'c.json(StatusCode::OK, &serde_json::json!({"grant_id":grant.id + 1}))'), "campfire", "huddle_gateway_all_ninety_eight_recorded_token_shapes_execute_through_http"),
     ("public-huddle-returned-grant-id-corrupted", F, lambda s: replace_once(s, '"grant_id":grant.id', '"grant_id":grant.id + 1'), "campfire", "huddle_controller_reuses_the_actual_opaque_grant_across_post_requests"),

@@ -16,6 +16,8 @@ mod huddle_declaration_tests;
 #[cfg(test)]
 mod call_channel_tests;
 #[cfg(test)]
+mod call_channel_declaration_tests;
+#[cfg(test)]
 pub(super) mod call_channel_broadcast_tests;
 pub mod call_moderation;
 pub mod call_channels;

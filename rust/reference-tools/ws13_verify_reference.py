@@ -8,6 +8,7 @@ paths=['app/controllers/rooms/huddles_controller.rb','app/controllers/users/hudd
 paths += ['app/views/rooms/show/_nav.html.erb', 'app/views/rooms/show/_header_identity.html.erb', 'app/views/rooms/show/_header_overflow.html.erb', 'app/views/rooms/pins/_panel.html.erb', 'app/views/rooms/pins/_count.html.erb', 'app/views/rooms/layouts/_edit.html.erb', 'app/views/rooms/layouts/_new.html.erb', 'app/views/rooms/github_subscriptions/_section.html.erb', 'app/views/rooms/inbound_email_addresses/_section.html.erb', 'config/icons.yml', 'app/helpers/rooms_helper.rb', 'app/helpers/rooms/involvements_helper.rb']
 paths += ['app/views/users/sidebars/show.html.erb', 'app/controllers/users/sidebars_controller.rb', 'app/helpers/users/sidebar_helper.rb']
 paths += ['test/controllers/rooms/stage/streams_controller_test.rb', 'test/controllers/rooms/stage_view_test.rb', 'test/controllers/rooms/huddles_controller_test.rb', 'test/controllers/internal/huddle_controller_test.rb']
+paths += ['test/controllers/rooms/stages_controller_test.rb', 'test/controllers/rooms/voices_controller_test.rb']
 raw=subprocess.check_output(['docker','run','--rm','--name','ws13-source-check-current','--network','none','--entrypoint','sha256sum','ws13-reference:d7c7de92',*[f'/rails/{path}' for path in paths]],text=True,cwd=root)
 for line in raw.splitlines():
  digest,path=line.split();local=path.removeprefix('/rails/')

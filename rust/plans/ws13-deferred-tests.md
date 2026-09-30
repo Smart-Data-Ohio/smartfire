@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 224 declarations now have complete assertion coverage mapped below. The other 324 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; new request tests close 27/29 internal controller declarations. Both SQL statement-count assertions remain open. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 237 declarations now have complete assertion coverage mapped below. The other 311 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; new request tests close 27/29 internal controller declarations. Both SQL statement-count assertions remain open. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -31,10 +31,10 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/controllers/internal/huddle_controller_test.rb` | 29 | 27 | 2 |
 | `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
 | `test/models/stream_test.rb` | 27 | 14 | 13 |
-| `test/controllers/rooms/stages_controller_test.rb` | 24 | 15 | 9 |
+| `test/controllers/rooms/stages_controller_test.rb` | 24 | 23 | 1 |
 | `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
 | `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
-| `test/controllers/rooms/voices_controller_test.rb` | 18 | 13 | 5 |
+| `test/controllers/rooms/voices_controller_test.rb` | 18 | 18 | 0 |
 | `test/controllers/rooms/stage_view_test.rb` | 16 | 16 | 0 |
 | `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
@@ -55,7 +55,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **224** | **324** |
+| **Total** | **548** | **237** | **311** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -267,36 +267,36 @@ Owner: WS13. Passed: all 16 declarations; actual seeded page and sidebar request
 
 ## test/controllers/rooms/stages_controller_test.rb
 
-Owner: WS13. Partial: 15/24 declarations passed; the other 9 remain open.
+Owner: WS13. Partial: 23/24 declarations passed. `call_channel_declaration_tests.rs` completes request role/default, denial silence, new-form validation, empty/hostless room and exact member-only icon Cable effects. The SQL lock/transaction assertion remains open.
 
 - **Passed:** show redirects to get general show
 - **Passed:** new
 - **Passed:** create makes the creator host and the rest listeners
 - **Passed:** create prepends the stage row into the stage section
 - **Passed:** create forbidden by non-admin when account restricts creation to admins
-- update with membership revisions makes new members listeners
+- **Passed:** update with membership revisions makes new members listeners
 - **Passed:** removing a member tells them to drop the sidebar row and header stack
 - **Passed:** a non-administrator creator can manage members of their own stage room
-- only admins or creators can update
+- **Passed:** only admins or creators can update
 - **Passed:** the sole host cannot remove themselves while others remain
-- create with an unknown icon re-renders the new form
+- **Passed:** create with an unknown icon re-renders the new form
 - **Passed:** update with an unknown icon re-renders the edit form without revising members
 - **Passed:** update with an icon normalizes the shortcode
 - **Passed:** update clears the icon with a blank shortcode
-- updating the icon replaces sidebar rows and headers for members only
+- **Passed:** updating the icon replaces sidebar rows and headers for members only
 - **Passed:** a host removes themselves once another host exists
 - the sole-host check and revision run in one locked transaction
-- removing everyone including the last host empties the room
-- the room page and the members edit render with zero hosts
-- non-members cannot see the room page or its messages
-- non-members cannot reach the stage namespace
+- **Passed:** removing everyone including the last host empties the room
+- **Passed:** the room page and the members edit render with zero hosts
+- **Passed:** non-members cannot see the room page or its messages
+- **Passed:** non-members cannot reach the stage namespace
 - **Passed:** open, closed, and voice rooms cannot be converted to stage
 - **Passed:** stage rooms cannot be converted through the open, closed, or voice namespaces
 - **Passed:** a direct room can't be converted to stage and have its participants revised
 
 ## test/controllers/rooms/voices_controller_test.rb
 
-Owner: WS13. Partial: 13/18 declarations passed; the other 5 remain open.
+Owner: WS13. Passed: all 18 original declarations. Shared request tests additionally prove denial silence, unknown-icon creation, self-removal and non-member page/message/namespace isolation.
 
 - **Passed:** show redirects to get general show
 - **Passed:** new
@@ -304,15 +304,15 @@ Owner: WS13. Partial: 13/18 declarations passed; the other 5 remain open.
 - **Passed:** create prepends the voice row into the voice section
 - **Passed:** create forbidden by non-admin when account restricts creation to admins
 - **Passed:** update with an icon normalizes the shortcode
-- create with an unknown icon re-renders the new form
+- **Passed:** create with an unknown icon re-renders the new form
 - **Passed:** update with an unknown icon re-renders the edit form
 - **Passed:** update with membership revisions
 - **Passed:** removing a member tells them to drop the sidebar row and header stack
 - **Passed:** a non-administrator creator can manage members of their own voice room
-- only admins or creators can update
-- remove yourself
-- non-members cannot see the room page or its messages
-- non-members cannot reach the voice namespace
+- **Passed:** only admins or creators can update
+- **Passed:** remove yourself
+- **Passed:** non-members cannot see the room page or its messages
+- **Passed:** non-members cannot reach the voice namespace
 - **Passed:** open and closed rooms cannot be converted to voice
 - **Passed:** voice rooms cannot be converted through the open or closed namespaces
 - **Passed:** a direct room can't be converted to voice and have its participants revised
