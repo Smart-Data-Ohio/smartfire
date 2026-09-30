@@ -182,53 +182,48 @@ pub fn html_escape(value: &str) -> String {
 /// Inspect parsed HTML attributes, not text such as `<div>nonce="example"</div>`.
 /// Token fields and meta tags are forbidden; an empty nonce attribute is harmless.
 pub fn session_bound(html: &str) -> Option<&'static str> {
-    use html5ever::tendril::StrTendril;
-    use html5ever::tokenizer::{BufferQueue, StartTag, TagToken, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts};
-    use std::cell::Cell;
+    use html5ever::{QualName, local_name, ns, parse_fragment, tendril::TendrilSink};
+    use markup5ever_rcdom::{NodeData, RcDom};
 
-    #[derive(Default)]
-    struct Secrets(Cell<Option<&'static str>>);
-
-    impl TokenSink for Secrets {
-        type Handle = ();
-
-        fn process_token(&self, token: Token, _: u64) -> TokenSinkResult<()> {
-            if let TagToken(tag) = token
-                && tag.kind == StartTag
-            {
-                let attr = |name: &str| tag.attrs.iter().find(|a| a.name.local.as_ref() == name).map(|a| a.value.as_ref());
-                let reason = match (tag.name.as_ref(), attr("name")) {
+    // The tree builder handles namespaces, self-closing foreign elements and HTML raw text
+    // as a browser does. A tokenizer alone cannot determine which tags create elements.
+    let dom = parse_fragment(
+        RcDom::default(),
+        Default::default(),
+        QualName::new(None, ns!(html), local_name!("body")),
+        vec![],
+        false,
+    )
+    .one(html);
+    let mut nodes = vec![dom.document.clone()];
+    while let Some(node) = nodes.pop() {
+        if let NodeData::Element { name, attrs, template_contents, .. } = &node.data {
+            let attrs = attrs.borrow();
+            let attr = |name: &str| {
+                attrs.iter().find(|a| a.name.ns == ns!() && a.name.local.as_ref() == name).map(|a| a.value.as_ref())
+            };
+            if name.ns == ns!(html) {
+                let reason = match (name.local.as_ref(), attr("name")) {
                     ("input", Some("authenticity_token")) => Some("a CSRF token"),
                     ("meta", Some("csrf-token" | "csrf-param")) => Some("a CSRF meta tag"),
                     ("meta", Some("csp-nonce")) if attr("content").is_some_and(|v| !v.is_empty()) => Some("a CSP nonce"),
-                    _ if attr("nonce").is_some_and(|v| !v.is_empty()) => Some("a CSP nonce"),
                     _ => None,
                 };
-                if self.0.get().is_none() {
-                    self.0.set(reason);
-                }
-                // Text inside these elements cannot create token fields or nonce attributes.
-                use html5ever::tokenizer::states::RawKind;
-                match tag.name.as_ref() {
-                    "title" | "textarea" => return TokenSinkResult::RawData(RawKind::Rcdata),
-                    "style" | "xmp" | "iframe" | "noembed" | "noframes" => {
-                        return TokenSinkResult::RawData(RawKind::Rawtext);
-                    }
-                    "script" => return TokenSinkResult::RawData(RawKind::ScriptData),
-                    "plaintext" => return TokenSinkResult::Plaintext,
-                    _ => {}
+                if reason.is_some() {
+                    return reason;
                 }
             }
-            TokenSinkResult::Continue
+            if attr("nonce").is_some_and(|v| !v.is_empty()) {
+                return Some("a CSP nonce");
+            }
+            // Turbo Stream partials live in template contents, outside the element's children.
+            if let Some(contents) = template_contents.borrow().as_ref() {
+                nodes.push(contents.clone());
+            }
         }
+        nodes.extend(node.children.borrow().iter().rev().cloned());
     }
-
-    let tokenizer = Tokenizer::new(Secrets::default(), TokenizerOpts::default());
-    let input = BufferQueue::default();
-    input.push_back(StrTendril::from_slice(html));
-    let _ = tokenizer.feed(&input);
-    tokenizer.end();
-    tokenizer.sink.0.get()
+    None
 }
 
 /// `Turbo::StreamsChannel.broadcast_*_to`. Streamables are the stream name parts (GID params
@@ -380,6 +375,67 @@ mod tests {
             "<meta name=csp-nonce content=secret>",
         ] {
             assert_eq!(session_bound(html), Some("a CSP nonce"), "{html}");
+        }
+    }
+
+    fn assert_session_bound_fragment(html: &str, reason: &'static str) {
+        assert_eq!(session_bound(html), Some(reason), "{html}");
+        let broadcast = action_tag(Action::Append, Target::Target("messages"), Some(html), &[]);
+        assert_eq!(session_bound(&broadcast), Some(reason), "{broadcast}");
+    }
+
+    #[test]
+    fn session_bound_svg_self_closing_style_token() {
+        for html in [
+            "<svg><style/></svg><input name=authenticity_token value=secret>",
+            "<svg><style/><foreignObject><input name=authenticity_token value=secret></foreignObject></svg>",
+        ] {
+            assert_session_bound_fragment(html, "a CSRF token");
+        }
+    }
+
+    #[test]
+    fn session_bound_svg_self_closing_style_nonce() {
+        for html in [
+            "<svg><style/></svg><script nonce=secret></script>",
+            "<svg><style/><script nonce=secret></script></svg>",
+        ] {
+            assert_session_bound_fragment(html, "a CSP nonce");
+        }
+    }
+
+    #[test]
+    fn session_bound_mathml_self_closing_style_token() {
+        for html in [
+            "<math><style/></math><input name=authenticity_token value=secret>",
+            "<math><style/><mtext><input name=authenticity_token value=secret></mtext></math>",
+        ] {
+            assert_session_bound_fragment(html, "a CSRF token");
+        }
+    }
+
+    #[test]
+    fn session_bound_mathml_self_closing_style_nonce() {
+        for html in [
+            "<math><style/></math><script nonce=secret></script>",
+            "<math><style/><script nonce=secret></script></math>",
+        ] {
+            assert_session_bound_fragment(html, "a CSP nonce");
+        }
+    }
+
+    #[test]
+    fn session_bound_preserves_text_controls() {
+        for html in [
+            "<div>nonce=\"example\" name=\"authenticity_token\" csrf-token csp-nonce</div>",
+            "<textarea><input name=authenticity_token><script nonce=example></script></textarea>",
+            "<title><input name=authenticity_token><script nonce=example></script></title>",
+            "<script>const example = '<input name=authenticity_token><script nonce=example>';</script>",
+            "<p>&lt;input name=authenticity_token&gt;&lt;script nonce=example&gt;</p>",
+        ] {
+            assert_eq!(session_bound(html), None, "{html}");
+            let broadcast = action_tag(Action::Append, Target::Target("messages"), Some(html), &[]);
+            assert_eq!(session_bound(&broadcast), None, "{broadcast}");
         }
     }
 

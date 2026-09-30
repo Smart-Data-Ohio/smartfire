@@ -18,6 +18,7 @@ hyper-util.workspace = true
 sha1.workspace = true
 flate2.workspace = true
 html5ever.workspace = true
+markup5ever_rcdom.workspace = true
 
 [dev-dependencies]
 tokio-tungstenite.workspace = true
