@@ -3,6 +3,7 @@
 //! partials) computed up front.
 
 pub mod accounts;
+pub mod switcher;
 pub mod attachments;
 pub mod page;
 pub mod pagination;

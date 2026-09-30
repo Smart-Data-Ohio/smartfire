@@ -48,6 +48,7 @@ pub mod qr_code;
 pub mod rooms;
 pub mod room_categories;
 pub mod searches;
+pub mod switchers;
 pub mod sessions;
 pub mod unfurl_links;
 pub mod users;
@@ -194,6 +195,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts#create" => arc(messages::boosts::create),
         "messages/boosts#new" => arc(messages::boosts::new),
         "messages/boosts#destroy" => arc(messages::boosts::destroy),
+        "switchers#show" => arc(switchers::show),
         "rooms/refreshes#show" => arc(rooms::refreshes::show),
         "room_categories#index" => arc(room_categories::index),
         "room_categories#create" => arc(room_categories::create),
@@ -532,6 +534,7 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "switchers#show",
         "rooms#leave", "rooms/directs#update", "rooms/directs#add_members", "rooms/directs#leave",
         "room_categories#index", "room_categories#create", "room_categories#update", "room_categories#destroy",
         "rooms/categories#update", "rooms/favorites#create", "rooms/favorites#update", "rooms/favorites#destroy", "rooms/inbound_email_addresses#create",
