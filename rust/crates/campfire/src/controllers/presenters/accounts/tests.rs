@@ -20,6 +20,9 @@ const HOST: &str = "campfire.test";
 const PASSWORD: &str = "secret123456";
 const CHROME: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
+#[path = "tests/bot_mutations.rs"]
+mod bot_mutations;
+
 struct Test {
     booted: Booted,
     labels: serde_json::Value,
@@ -471,8 +474,10 @@ async fn manages_bots() {
 
     let new = admin.get("/account/bots/new").await;
     new.assert_form("/account/bots");
+    admin.grant_sudo_access();
     let reply = admin.form("post", "/account/bots", &[("user[name]", "Robo"), ("user[webhook_url]", "https://example.com/robo")]).await;
-    assert_redirect(&reply, "http://campfire.test/account/bots");
+    assert_eq!(reply.status, StatusCode::CREATED);
+    assert_eq!(reply.header("cache-control"), Some("no-store"));
     assert!(admin.get("/account/bots").await.text().contains("Robo"));
 
     let bender = test.label("users.bender");

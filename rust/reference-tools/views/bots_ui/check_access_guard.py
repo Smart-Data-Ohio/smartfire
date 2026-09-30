@@ -7,10 +7,10 @@ import subprocess
 root = Path(__file__).resolve().parents[3]
 source = root / "crates/campfire/src/controllers/accounts/bots.rs"
 original = source.read_text()
-needle = "if !manages {"
+needle = "if manages {"
 assert original.count(needle) == 1, "management guard changed; review the injection"
 try:
-    source.write_text(original.replace(needle, "if false && !manages {"))
+    source.write_text(original.replace(needle, "if true || manages {"))
     result = subprocess.run(
         ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
          "-p", "campfire", "bot_edit_pages_follow_admin_owner_and_legacy_access", "--", "--nocapture"],
