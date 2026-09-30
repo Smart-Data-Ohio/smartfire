@@ -24,7 +24,11 @@ pub async fn show(c: &mut Ctx) -> Result {
 
 pub async fn new(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    page::framed_page!(c, StatusCode::OK, |ctx| DirectsNew { ctx }).await
+    let viewer = require_current_user(c)?.id;
+    let now = campfire_db::Timestamp::from_jiff(c.now());
+    let people = c.app().db.read(move |conn| campfire_db::models::user::presentation::directory(conn, viewer, now)).await.map_err(db_error)?;
+    let people = people.into_iter().map(|person| super::super::presenters::people::person(&c.app().secrets, person)).collect::<Vec<_>>();
+    page::framed_page!(c, StatusCode::OK, |ctx| DirectsNew { ctx, people: people.clone() }).await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -291,3 +295,6 @@ async fn broadcast_create_room(c: &Ctx, room: &Room) -> Result<()> {
         .await
         .map_err(db_error)
 }
+
+#[cfg(test)]
+mod picker_tests;

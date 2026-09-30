@@ -11,6 +11,7 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("dm-picker-view", "crates/views/templates/rooms/directs/new.html", "Type names to filter…", "Type names to filtez…", "seed_picker"),
     ("status-prefix", "crates/views/src/users/status_popup.rs", 'id_prefix: "status_popup".into()', 'id_prefix: "user".into()', "complete_popup_bodies_match_post_pin_rails"),
     ("status-redirect", "crates/campfire/src/controllers/users/statuses.rs", 'status: Some(StatusCode::SEE_OTHER)', 'status: Some(StatusCode::FOUND)', "popup_update_matches_rails_redirects_errors_and_current_user_state"),
     ("status-csrf", "crates/campfire/src/controllers/users/statuses.rs", 'pub async fn update(c: &mut Ctx) -> Result {\n    concerns::before_actions(c, Before::default()).await?;', 'pub async fn update(c: &mut Ctx) -> Result {\n    concerns::before_actions(c, Before::default().skip_forgery_protection()).await?;', "status_mutations_require_csrf_and_roll_back_on_write_failure"),

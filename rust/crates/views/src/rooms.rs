@@ -297,6 +297,12 @@ impl FormRoom {
 #[template(path = "rooms/directs/new.html", blocks = ["head", "content"])]
 pub struct DirectsNew<'a> {
     pub ctx: &'a ViewContext<'a>,
+    pub people: Vec<crate::users::Person>,
+}
+impl DirectsNew<'_> {
+    fn multi_select(&self) -> askama::Result<h::Html> {
+        Ok(h::raw(crate::shared::MultiSelectBar { exit_button: false }.render()?))
+    }
 }
 
 impl Page for DirectsNew<'_> {}

@@ -43,6 +43,11 @@ covered_before = {
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
     "system/people_group_dms_test.rb": {
+        "the new-DM picker filters as you type with no suggestion bubble or submit button",
+        "picker selections survive filtering and Message starts the DM",
+        "Enter in the picker filter selects the single visible match",
+        "clicking a picker row toggles it while the name still opens the profile card",
+        "the new-DM picker does not overflow at phone width",
         "Esc with a closed profile card stays unhandled for later listeners",
         "multi-selecting three people in the directory lands in their group DM",
         "shift-click extends the checkbox range", "long-press selects a row on touch",
