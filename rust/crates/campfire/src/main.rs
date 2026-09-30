@@ -8,6 +8,7 @@ mod concerns;
 mod config;
 mod controllers;
 mod integrations;
+mod huddle;
 mod jobs;
 mod mail;
 mod rich_text;
