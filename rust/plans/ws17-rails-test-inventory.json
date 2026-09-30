@@ -1,0 +1,2434 @@
+{
+  "reference": "d7c7de92",
+  "tests": [
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a room mention records and pushes for a mentions member",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a room mention still records with notifications off but sends no push",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "an invisible room membership gets nothing at all",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a room reply records and pushes for mentions and everything members",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a room reply stays silent with notifications off",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a plain room message pushes everything followers without an inbox item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a plain room message does nothing for mentions members",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a room keyword match records without pushing for mentions and notifications-off members",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "an everything member's keyword match still pushes as a broadcast",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a room message without a membership records nothing, not even mentions or keywords",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "mention beats reply beats keyword for one room message",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a followed thread records activity and pushes",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "an unfollowed thread stays silent for plain messages",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a thread mention records and pushes for mentions and everything members",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a muted thread gets nothing, not even mentions or keywords",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a thread reply records and pushes for followers only",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a thread keyword match records for unfollowed members without pushing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "room notifications off suppresses thread activity but not keywords",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a non-member of the thread gets nothing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "bots and deactivated recipients record nothing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a muted room mention records and pushes",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a muted room keyword match records without pushing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a muted room reply stays silent",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "muted room thread activity stays silent for followers",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a muted board post stays silent for members outside the thread",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "DND silences a muted room mention push but keeps the inbox item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "manual DND suppresses push and sound but still records the inbox item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a starred sender still pushes through DND",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a preloaded DND exception decides without another lookup",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "quiet hours suppress push inside the window only",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "quiet hours follow the recipient's time zone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a starred sender still pushes through quiet hours",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "reminders push unless DND is on, and carry no sender exception",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "huddle invitations push unless DND is on without a starred caller",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "huddle join notices push for live memberships and record no inbox item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "huddle join notices stay silent when muted, off, hidden, or no membership",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "huddle join notices honor DND with a starred-caller exception",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "huddle join notices stay silent during meetings and out of office",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "quiet-during-meetings suppresses push and sound but still records the inbox item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "quiet-during-meetings pushes outside busy intervals",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "quiet-during-meetings needs meeting status on",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a starred sender still pushes through quiet-during-meetings",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "reminders and huddles stay silent during meetings with no sender exception",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "out of office suppresses push and sound but still records the inbox item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "out of office pushes when the member keeps notifications on",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a starred sender still pushes through out of office",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "reminders and huddles stay silent during out of office",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "calendar out of office quiets like a manual one",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "an expired out of office pushes again",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "a missing recipient pushes nothing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "an unknown kind raises",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/policy_test.rb",
+      "test": "dnd exceptions load for a batch in one query",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "room push skips a DND recipient but the inbox item is still recorded",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "room push skips a DND-presence recipient but the inbox item is still recorded",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "room push still reaches a starred sender's recipient during DND",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "room push skips a recipient inside quiet hours",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "thread push notifies followers with the thread payload",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "thread push skips a DND follower",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "a thread reply pushes its follower author but not an unfollowed one",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "reminder push skips a DND attendee",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "huddle push honors DND with a starred-caller exception",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/room/push_test.rb",
+      "test": "deliver new message to other room users with push subscriptions",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::deliver_new_message_to_other_room_users_with_push_subscriptions"
+    },
+    {
+      "file": "test/models/room/push_test.rb",
+      "test": "notifies subscribed users",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::notifies_subscribed_users"
+    },
+    {
+      "file": "test/models/room/push_test.rb",
+      "test": "replies notify their author only when opted in",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::ws17_replies_notify_only_opted_in_authors_and_merge_duplicate_scopes"
+    },
+    {
+      "file": "test/models/room/push_test.rb",
+      "test": "message pushes carry the room tag so notifications group per room",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::payloads"
+    },
+    {
+      "file": "test/models/room/push_test.rb",
+      "test": "a forwarded note follows the mention push path while its snapshot does not",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/room/push_test.rb",
+      "test": "does not notify for connected rooms",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::does_not_notify_for_connected_rooms"
+    },
+    {
+      "file": "test/models/room/push_test.rb",
+      "test": "does not notify for invisible rooms",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::does_not_notify_for_invisible_rooms"
+    },
+    {
+      "file": "test/models/room/push_test.rb",
+      "test": "destroys invalid subscriptions",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::pushes_messages_and_destroys_expired_subscriptions"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "valid subscription with permitted endpoint",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::valid_subscription_with_permitted_endpoint"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects endpoint with non-https scheme",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_with_non_https_scheme"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects endpoint with non-permitted host",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_with_non_permitted_host"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects endpoint whose host only suffix-matches a permitted host",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_whose_host_only_suffix_matches_a_permitted_host"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects blank endpoint",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_blank_endpoint"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects endpoint on a non-default port",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_on_a_non_default_port"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects endpoint that resolves to private IP",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_that_resolves_to_private_ip"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects endpoint that resolves to loopback IP",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects endpoint that resolves to link-local IP (AWS IMDS)",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "rejects endpoint whose host resolves to nothing without raising",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "resolved_endpoint_ip returns the pinned public IP",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::resolved_endpoint_ip_returns_the_pinned_public_ip"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "endpoint resolution is deferred from the enqueue path to the delivery worker",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "delivery is skipped when the endpoint no longer resolves to a public IP",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "delivery is skipped for a non-permitted host even when it resolves publicly",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::delivery_is_skipped_for_a_non_permitted_host_or_port"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "delivery is skipped for a permitted host on a non-default port",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::delivery_is_skipped_for_a_non_permitted_host_or_port"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "delivery sends with the pinned endpoint_ip",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::delivers_to_the_pinned_address_with_the_gems_headers"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "the encoded message carries the notification tag for room grouping",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::encodes_the_message_like_json_generate"
+    },
+    {
+      "file": "test/models/push/subscription_test.rb",
+      "test": "accepts all permitted push service domains",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/push_test.rs::accepts_all_permitted_push_service_domains"
+    },
+    {
+      "file": "test/lib/web_push/persistent_request_test.rb",
+      "test": "pins delivery to endpoint_ip instead of re-resolving the host",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::delivers_to_the_pinned_address_with_the_gems_headers"
+    },
+    {
+      "file": "test/lib/web_push/persistent_request_test.rb",
+      "test": "ignores proxy env so the pin can't be routed through a re-resolving proxy",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "an unexpired lease backed by an existing session makes its user online",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_fresh_lease_is_online_and_has_a_uuid_and_90_second_ttl"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "a stale lease does not make its user online",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_expiry_is_inclusive_and_reads_never_prune"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "deleting one lease leaves a user online while another connection is live",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_deleting_one_connection_keeps_the_other_live"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "a lease without its session does not make its user online",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_revoked_session_refresh_deletes_lease"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "refresh deletes the lease when its session has been revoked",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_revoked_session_refresh_deletes_lease"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "cannot establish or refresh presence for an inactive user",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_inactive_user_cannot_establish_or_refresh"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "cannot establish a lease for another user's session",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_session_mismatch_is_absent_and_pruned"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "online lookup rejects a lease whose session belongs to another user",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_session_mismatch_is_absent_and_pruned"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "prune removes leases whose session belongs to another user",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_session_mismatch_is_absent_and_pruned"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "prune removes expired leases in bounded batches",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_prune_has_bounded_batches"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "a fresh lease reads online, then idle after ten quiet minutes",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_quiet_heartbeat_extends_only_expiry_and_active_heartbeat_restores_online"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "an active heartbeat extends activity while a quiet one only extends the lease",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_quiet_heartbeat_extends_only_expiry_and_active_heartbeat_restores_online"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "any active connection keeps the user online",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_any_recent_or_legacy_null_activity_keeps_user_online"
+    },
+    {
+      "file": "test/models/workspace_presence_lease_test.rb",
+      "test": "users without a lease are absent from the presence map",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_absent_users_and_expired_leases_are_not_returned"
+    },
+    {
+      "file": "test/channels/workspace_presence_channel_test.rb",
+      "test": "subscribing establishes a server-owned presence lease",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_subscribing_establishes_a_server_owned_presence_lease"
+    },
+    {
+      "file": "test/channels/workspace_presence_channel_test.rb",
+      "test": "unsubscribing deletes only this connection lease",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_unsubscribing_deletes_only_this_connections_lease"
+    },
+    {
+      "file": "test/channels/workspace_presence_channel_test.rb",
+      "test": "heartbeat extends the lease",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_heartbeat_extends_the_lease"
+    },
+    {
+      "file": "test/channels/workspace_presence_channel_test.rb",
+      "test": "heartbeat rejects and deletes presence after session revocation",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_heartbeat_rejects_and_deletes_presence_after_session_revocation"
+    },
+    {
+      "file": "test/channels/workspace_presence_channel_test.rb",
+      "test": "heartbeat destroys an idle-timed-out administrator session and rejects",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_heartbeat_destroys_an_idle_timed_out_administrator_session_and_rejects"
+    },
+    {
+      "file": "test/channels/workspace_presence_channel_test.rb",
+      "test": "heartbeat replaces a valid lease that was pruned",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_heartbeat_replaces_a_valid_lease_that_was_pruned"
+    },
+    {
+      "file": "test/channels/workspace_presence_channel_test.rb",
+      "test": "rejects a subscription without a verified session",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_rejects_a_subscription_without_a_session"
+    },
+    {
+      "file": "test/controllers/users/presences_controller_test.rb",
+      "test": "returns presence and custom status for workspace users",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
+    },
+    {
+      "file": "test/controllers/users/presences_controller_test.rb",
+      "test": "an expired custom status reads as blank",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
+    },
+    {
+      "file": "test/controllers/users/presences_controller_test.rb",
+      "test": "a presence lookup never prunes expired leases",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
+    },
+    {
+      "file": "test/controllers/users/presences_controller_test.rb",
+      "test": "invisible members read offline",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
+    },
+    {
+      "file": "test/controllers/users/presences_controller_test.rb",
+      "test": "returns the meeting label while in a meeting",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
+    },
+    {
+      "file": "test/controllers/users/presences_controller_test.rb",
+      "test": "a custom status wins over the meeting label in the lookup",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
+    },
+    {
+      "file": "test/controllers/users/presences_controller_test.rb",
+      "test": "returns the OOO label while out of office",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "defaults to automatic presence, no DND, and the system theme",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "rejects unknown presence, theme, and time zone values",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "DND is manual-only outside quiet hours",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "the DND presence silences like the DND switch",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "quiet hours cover an overnight window in the user's time zone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "quiet hours need a start and an end while enabled",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "malformed quiet-hours input reads as blank",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "quiet-hours input tolerates seconds",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "an expired custom status reads as blank",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "custom status expiry presets resolve in the user's time zone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "an unknown custom status expiry raises",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "replacing keywords strips, dedupes, and caps the list",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "replacing keywords past the cap fails with errors",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/status_settings_test.rb",
+      "test": "effective presence folds the manual setting over the lease state",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "meeting status and quiet-during-meetings default off",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "in_meeting? needs the opt-in and a covering interval",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "in_meeting? is false without a cache row",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "the meeting label shows while in a meeting",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "a custom status wins over the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "an expired custom status yields to the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "manual DND wins over the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "the DND presence wins over the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "quiet hours win over the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "invisible hides the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "quiet-during-meetings never suppresses the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "quiet-during-meetings only works while meeting status is on",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "quiet-during-meetings applies through a custom status",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/meeting_status_test.rb",
+      "test": "quiet-during-meetings is off outside busy intervals",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "out of office defaults off",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "a manual OOO is active until its end, then reads as off",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "setting an OOO end in the past is invalid, but an expired end left behind still saves",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "a note longer than 140 characters is invalid",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "the status line names the return date and the note",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "the return date renders in the OOO member's own zone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "OOO wins over a custom status, DND, and the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "invisible hides the OOO label but OOO still reads as active",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "OOO quiet never suppresses the OOO label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "calendar OOO needs the opt-in and a covering interval",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "a calendar OOO outside its intervals reads as off",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "overlapping manual and calendar OOO show the later end",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "the note shows only while the manual OOO is active",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "OOO presets run to the end of the day in the member's zone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "the Monday preset is a week out on Mondays",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "the custom preset parses a datetime-local value in the member's zone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "an unknown preset raises",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "claim_ooo_broadcast! wins the first claim and each flip, and loses re-runs",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "claiming an end clears the expired manual columns",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "claiming an end keeps a manual OOO set racing the sweep",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "OOO quiets notifications unless the member keeps them on",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/user/out_of_office_test.rb",
+      "test": "deactivating clears the manual OOO columns",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "in_meeting? is true inside an interval, with an inclusive start and exclusive end",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "in_meeting? is false without intervals",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "in_meeting? ignores malformed pairs instead of raising",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "quiet_window_epochs returns epoch windows and skips malformed pairs",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "in_ooo? is true inside an OOO interval, with an inclusive start and exclusive end",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "in_ooo? reads only the OOO intervals, not the busy ones",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "ooo_end_covering returns the latest covering end",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "ooo_end_covering is nil while uncovered",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "ooo_window_epochs returns epoch windows and skips malformed pairs",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "claim_broadcast! wins the first claim and each flip, and loses re-runs",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "claim_broadcast! lets only one concurrent claimant win",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "one cache per user",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "the cache row references its member with a cascading foreign key",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "a meeting start broadcasts the badge",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "a re-run with no flip broadcasts nothing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "a steady-state tick issues no claim write",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "a meeting end broadcasts the badge",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "a broadcast carries the meeting label",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "a stale cache enqueues a refresh",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "a missing cache enqueues a refresh without broadcasting",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "a fresh cache enqueues nothing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "members who never opted in are ignored",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "deactivated members are ignored",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/meeting_dispatcher_test.rb",
+      "test": "one failing member does not stop the sweep",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "a manual OOO start broadcasts the badge and the DM notice",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "a re-run with no flip broadcasts nothing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "a steady-state tick issues no claim write",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "an OOO end broadcasts and clears the manual columns",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "the broadcasts carry the OOO label, the note, and the return date",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "a calendar OOO start broadcasts the badge and the notice",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "a stale OOO-only cache enqueues a refresh",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "a member with both opt-ins refreshes through the meeting dispatcher only",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "a missing cache enqueues a refresh without broadcasting",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "members with neither a manual OOO nor the calendar opt-in are ignored",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "deactivated members are ignored",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/calendar/ooo_dispatcher_test.rb",
+      "test": "one failing member does not stop the sweep",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/saved_item/reminder_pusher_test.rb",
+      "test": "pushes the reminder to the saver with a message link",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/saved_item_test.rs::pushes_the_reminder_to_the_saver_with_a_message_link"
+    },
+    {
+      "file": "test/models/saved_item/reminder_pusher_test.rb",
+      "test": "no push goes out after the saver loses room access",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/saved_item_test.rs::no_push_goes_out_after_the_saver_loses_room_access"
+    },
+    {
+      "file": "test/models/saved_item/reminder_pusher_test.rb",
+      "test": "no push goes out while the saver is in Do Not Disturb",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver"
+    },
+    {
+      "file": "test/models/saved_item/reminder_pusher_test.rb",
+      "test": "a thread message reminder links into its thread",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/saved_item_test.rs::a_thread_message_reminder_links_into_its_thread"
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "pushes the reminder to going and maybe attendees who are still members",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "push reminders ignore the event_reminders inbox switch",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "the push body names the venue",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "a direct room reminder is titled by the organizer",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "the push body counts down the actual minutes",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "the push body uses the singular minute",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "an event starting now says so",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "a recently started event still says starting now",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "an event that already ended is skipped",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/event/reminder_pusher_test.rb",
+      "test": "an event that started long ago is skipped",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS14 (event source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/board_automations/nudge_pusher_test.rb",
+      "test": "pushes the nudge payload to the recipient subscriptions",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS12 (board source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/board_automations/nudge_pusher_test.rb",
+      "test": "escalations push with the escalated prefix",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS12 (board source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/board_automations/nudge_pusher_test.rb",
+      "test": "skips a recipient who left the board",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS12 (board source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/board_automations/nudge_pusher_test.rb",
+      "test": "dnd silences the push like other reminders",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (push); WS12 (board source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "pushes the join to the recipient's subscriptions and stamps the throttle",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a second push inside ten minutes is throttled",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a push ten minutes later goes out again",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a DND recipient gets no push and burns no throttle window",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a starred joiner still pushes through DND",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a recipient in quiet hours gets no push",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a recipient quiet in a meeting gets no push",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "an out-of-office recipient gets no push unless they keep notifications on",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a connected recipient gets no push and burns no throttle window",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a switched-off or hidden room gets no push",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a muted room gets no push and burns no throttle window",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a recipient with huddle invitations switched off gets no push and burns no throttle window",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/models/huddle/join_pusher_test.rb",
+      "test": "a recipient with no subscriptions burns no throttle window",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "pushes the invitation to the recipient only",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "an opted-out recipient gets no push subscriptions",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "a connected recipient gets no push",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "missing invitations are ignored",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "updates presence and the custom status with an expiry",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "clears the custom status",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "rejects an unknown presence with errors",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "requires sign-in",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "opting into meeting status enqueues a first refresh",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "opting out of meeting status drops the cached intervals",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "opting out while in a meeting broadcasts the cleared badge",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "opting out without cached intervals broadcasts nothing",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "saving other status settings leaves meeting refreshes alone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "sets out of office with a preset and a note, and broadcasts it",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "sets out of office with a custom date and time in the member's zone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "rejects an unknown OOO preset without saving anything",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "rejects a blank or past custom OOO end without saving anything",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "rejects an OOO note over 140 characters",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "clears out of office early and broadcasts the cleared state",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "clearing early ends only the manual OOO while calendar OOO covers",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "edits the OOO note alone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "opting into calendar OOO enqueues a first refresh",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "opting out of calendar OOO clears its intervals and broadcasts",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "opting out of calendar OOO keeps the row while meeting status is on",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "opting out of meeting status keeps the row while calendar OOO is on",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/statuses_controller_test.rb",
+      "test": "saving other status settings leaves calendar OOO refreshes alone",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/dnd_allowances_controller_test.rb",
+      "test": "starring and unstarring someone for DND",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/dnd_allowances_controller_test.rb",
+      "test": "starring twice stays a single exception",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/dnd_allowances_controller_test.rb",
+      "test": "a concurrent star reports success instead of an error",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/dnd_allowances_controller_test.rb",
+      "test": "cannot star yourself",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/dnd_allowances_controller_test.rb",
+      "test": "cannot star a bot",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "enables DND with quiet hours and keywords",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "disables DND and clears keywords",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "enables quiet-during-meetings",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "toggles keep-notifying while out of office, defaulting to off",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "quiet hours without a window render errors",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "a failed save keeps the previous keywords",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "requires sign-in",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "enabling DND after a timed expiry starts it indefinitely",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "disabling DND clears a running timer",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/notification_settings_controller_test.rb",
+      "test": "saving settings preserves a running DND timer",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/dnd_allowed_user_test.rb",
+      "test": "allows starring another active person",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/dnd_allowed_user_test.rb",
+      "test": "rejects duplicates, self-stars, and bots",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/push_subscriptions_controller_test.rb",
+      "test": "create new push subscription",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/push_subscriptions_controller_test.rb",
+      "test": "touch existing subscription",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/push_subscriptions_controller_test.rb",
+      "test": "rejects subscription with non-permitted endpoint",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/push_subscriptions_controller_test.rb",
+      "test": "rejects subscription with endpoint resolving to a private IP",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/push_subscriptions_controller_test.rb",
+      "test": "re-registering a legacy invalid subscription is rejected with 422",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/controllers/users/push_subscriptions_controller_test.rb",
+      "test": "destroy a push subscription via dev mode",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/service_worker_test.rb",
+      "test": "the worker caches static assets and never authenticated responses",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/service_worker_test.rb",
+      "test": "the offline shell renders with working retry behavior",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/status_notifications_test.rb",
+      "test": "setting presence and a custom status",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/status_notifications_test.rb",
+      "test": "enabling DND mutes sounds and persists quiet hours",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/status_notifications_test.rb",
+      "test": "chat sounds follow the live quiet-hours window without a reload",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/status_notifications_test.rb",
+      "test": "switching the theme applies without a reload flash",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/status_notifications_test.rb",
+      "test": "switching the text size rescales the page",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/status_notifications_test.rb",
+      "test": "button icons follow the manual theme, not the OS",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/status_notifications_test.rb",
+      "test": "the status form works at phone width",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/meeting_status_test.rb",
+      "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/meeting_status_test.rb",
+      "test": "the profile links to connect without a Google account",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/system/out_of_office_test.rb",
+      "test": "set OOO until tomorrow, badge and DM notice show for another user, then clear it",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "a DM with an OOO member shows the notice above the composer",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "the notice escapes the member's note",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "the notice renders per viewer, never from a shared fragment",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "a group DM shows one line per OOO recipient",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "a channel shows no notice even while a member is out",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "a DM with nobody out shows no notice",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "an invisible member's manual OOO shows no notice",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "an invisible member's calendar OOO shows no notice",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "an invisible member's OOO flip broadcasts an emptied notice line",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/integration/ooo_dm_notice_test.rb",
+      "test": "an OOO end broadcasts an emptied notice line",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "matches case-insensitively",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_case_insensitively"
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "matches on word boundaries only",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_on_word_boundaries_only"
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "matches multi-word phrases",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_multi_word_phrases"
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "treats phrases literally, not as patterns",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "returns every user with a match",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::returns_every_user_with_a_match"
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "overlapping phrases across users all match",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::overlapping_phrases_across_users_all_match"
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "nested phrases match the same user once",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::nested_phrases_match_the_same_user_once"
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "repeated phrases match every holder once",
+      "status": "ported-equivalent-rerun",
+      "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
+      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::repeated_phrases_match_every_holder_once"
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "ignores blank phrases and blank text",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/models/notifications/keyword_matcher_test.rb",
+      "test": "a phrase matches across a line break and not inside a longer Unicode word",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "a keyword match on a room message records a keyword alert",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "a keyword match needs a word boundary",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "the author never matches their own keywords",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "an invisible member matches nothing but a notifications-off member matches",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "a mention wins over a keyword match for the same message",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "a thread keyword match reaches thread members only",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "a muted thread member matches no keywords",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "thread activity wins over a keyword match for a follower",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "a room keyword match loads only the matching members' memberships",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "a room message keeps candidate queries flat as the roster grows",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_keyword_test.rb",
+      "test": "matching queries the keyword table a constant number of times as followers grow",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "records a mention for an opted-in active human and excludes the author",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a reply follows the reply author's current preference",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "mention takes precedence when one message matches multiple activity reasons",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "followed thread activity uses thread preferences",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work events notify followed thread members",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a direct mention reaches a member with notifications off but not an invisible one",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a member with notifications off gets no reply but a mentions member does",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a member with notifications off gets no thread activity but a mentions member does",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a member with notifications off gets no work items but a mentions member does",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "changing involvement leaves existing items untouched",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "ten thread replies collapse into one thread activity item that reads unread again",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work updates for one thread collapse into a single item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a thread message that mentions and replies to a follower yields one mention item",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work assigned by an agent honors the recipient's agent_work switch",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work assigned by a bot without an agent ignores the agent_work switch",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a caller-authorized record skips the source check but keeps idempotency",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "recording the same source twice is idempotent",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "recording a thread message queries memberships a constant number of times as followers grow",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a root message loads only the mentionee and reply-author memberships",
+      "status": "deferred-exact-scenario",
+      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
+      "evidence": null
+    }
+  ]
+}
