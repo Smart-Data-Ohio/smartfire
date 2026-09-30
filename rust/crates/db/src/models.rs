@@ -8,6 +8,7 @@ pub mod agent_approvals;
 pub mod agent_service;
 pub mod agent_slash_command;
 pub mod agent_step;
+pub mod agent_working_presence;
 pub mod agent_credential;
 pub mod agent_grant;
 pub mod agent_delivery;

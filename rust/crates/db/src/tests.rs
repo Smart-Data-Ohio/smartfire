@@ -7,6 +7,7 @@ mod agent_approval_test;
 mod agent_record_test;
 mod agent_slash_command_test;
 mod agent_step_test;
+mod agent_working_presence_test;
 mod agent_delivery_test;
 mod agent_event_access_test;
 mod agent_event_polling_test;
