@@ -46,6 +46,7 @@ impl Client for HttpClient {
                 &Timeouts {
                     open: Duration::from_secs(10),
                     read: Duration::from_secs(10),
+                    write: Duration::from_secs(10),
                 },
             )
             .await
