@@ -1,5 +1,90 @@
 # WS17 Wave 4 — review fixes complete; workstream partial, 332 of 347 selected scenarios delivered
 
+## Main integration and live-asset verification (2026-09-30)
+
+Merged `origin/main` **`b66199b7`** (#166 WS15e and #168 shared asset golden helper) with merge commit **`b747a1af`**. The merge preserves both endpoint lists, room embed-fetch handoffs plus WS17 OOO members, and the combined periodic registrations. Pushed **`68051a62`** changes only the two WS17 view test files to resolve actual assets and use the shared `asset_goldens` comparison. No captured bytes, runtime behavior or four P2 fix commits were altered. Asset-free status/OOO frames remain exact, and the helper keeps non-asset bytes strict.
+
+The first full seeded integration run exposed an imported periodic test expecting main's seven tasks instead of all ten merged registrations. **`1c660eee`** adds only `presence leases`, `meeting status` and `out of office` to that exact expectation; its 29-second/30-second assertions remain unchanged. This is merge-test integration, not a runtime change. Raw initial result (`tests-before-registration-expectation.log`):
+
+```text
+     Summary [ 207.488s] 1559 tests run: 1558 passed, 1 failed, 7 skipped
+```
+
+The corrected full rerun below is from the HTTPS fresh clone `.scratch/main-merge-fresh`, fast-forwarded from the remote to **`1c660eee895bfc3dbc34886fa6f5dc0b4daece06`**, with an initially empty private target and registry. Both seeds were independently built with pinned Rails and validated through its actual models. Raw summaries:
+
+```text
+seed: default -> parity/.seed/default (6.1M)
+seed: first_run -> parity/.seed/first_run (1.5M)
+  "passed": 29,
+  "failed": 0
+  "passed": 4,
+  "failed": 0
+Parsed 15 Cargo.toml files; 76 unique workspace dependency keys; no duplicate keys.
+```
+
+Locked cargo metadata passed after the merge and in the fresh clone. The fresh command was `mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1` (JSON archived in `metadata.log`); exit 0. Python `tomllib` strictly parsed all fifteen manifests, including `[workspace.dependencies]`; no duplicate key was accepted.
+
+Clippy and all five requested suites use the **unchanged CI runner** and existing pinned media toolchain `ws15e-media-toolchain:latest` (`sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2`). Each Docker invocation reserved one existing machine-wide compiler slot through the host's unchanged `rustc-throttle.sh`; cargo builds use one job and tests use four threads. The slot FD was observed in the Docker client's process. No throttle bypass, larger parallelism, source exemption, new ignore or pixel-diff work was used.
+
+Environment: `CI=true`, host `CARGO_BUILD_JOBS=2`, `RUNNER_TEMP=$PWD/.scratch/runner-temp`, `RUST_CI_IMAGE=ws15e-media-toolchain:latest`, `RUST_CI_CONTAINER_PREFIX=ws17-main-merge`, `CARGO_HOME=/src/.scratch/cargo-home`, `CARGO_TARGET_DIR=/src/rust/target`. Private Cargo configuration forwards the owned cable/mail port range 52450–52499 and the required-seed flag into the CI container. The unchanged CI script's build-job default is overridden by the explicit one-job arguments below. Executed from the fresh clone root:
+
+```bash
+bash rust/ci/cargo.sh clippy --locked -j1 --workspace --exclude html5ever --all-targets -- -D warnings
+bash rust/ci/cargo.sh nextest run --locked --build-jobs 1 -p campfire -p campfire_db -p campfire_views -p campfire_assets -p campfire_storage --profile ci --no-fail-fast --test-threads 4
+bash rust/ci/cargo.sh test --locked -j1 -p campfire -p campfire_db -p campfire_views -p campfire_assets -p campfire_storage --doc --no-fail-fast -- --test-threads=4
+bash rust/ci/cargo.sh build --locked -j1 -p campfire
+```
+
+The first nextest invocation supplied both `-j1` and `--test-threads 4`; nextest treats `-j` as test concurrency and rejected that invocation before executing any tests. It was corrected to the separate `--build-jobs 1` flag. Initial CLI diagnostic is retained in `tests-invocation-error.log`; it is not counted as a runtime regression.
+
+Raw final results (ANSI stripped only):
+
+```text
+        PASS [   0.498s] ( 498/1559) campfire::bin/campfire integrations::action_claims::tests::github_claim_registered_periodic_task_executes_and_obeys_its_interval
+        PASS [   5.520s] (1558/1559) campfire_storage::vectors pipeline_matches_the_reference
+     Summary [ 219.880s] 1559 tests run: 1559 passed, 7 skipped
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 24.67s
+   Doc-tests campfire_assets
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_db
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_storage
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests campfire_views
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Per-binary counts from the actual nextest JUnit artifact:
+
+| Binary | Executed and passed | Existing ignores |
+| --- | ---: | ---: |
+| `campfire::bin/campfire` | 796 | 3 |
+| `campfire_assets` | 5 | 0 |
+| `campfire_assets::reference` | 8 | 0 |
+| `campfire_db` | 612 | 4 |
+| `campfire_storage` | 8 | 0 |
+| `campfire_storage::vectors` | 8 | 0 |
+| `campfire_views` | 46 | 0 |
+| `campfire_views::core` | 44 | 0 |
+| `campfire_views::ws17_dm_profile` | 15 | 0 |
+| `campfire_views::ws17_settings` | 17 | 0 |
+
+The pinned storage pipeline ran normally under CI with its exact media tools; no environment skip is credited as a pass. The seven explicit existing ignores remain the app's three reference/bot/latency cases and DB's four differential/export/rollback cases. All five package suites pass with zero failures and no test-name filter.
+
+The normal app binary was built in that same CI environment. The existing **unchanged** `ws17_browser.mjs` ran against it on owned 52471 using a private seed copy, via `.scratch/run-main-merge-browser.py`; the browser/server driver is scratch only. This avoids rebuilding a second native target or changing the committed browser checks. Raw interaction results:
+
+```text
+test/system/status_notifications_test.rb: 7 passed; 0 failed
+test/system/meeting_status_test.rb: 1 passed; 0 failed
+test/system/out_of_office_test.rb: 1 passed; 0 failed
+test/system/service_worker_test.rb: 2 passed; 0 failed
+WS17 Chromium: 11 passed; 0 failed
+```
+
+All fresh-clone target directories were deleted after capturing results. Evidence remains in `.scratch/main-merge-evidence`; no WS17 test/server container remains running. The final report-only commit changes no code. Under the new common rule, pixel diffs are neither a gate nor deferred work; the existing Chromium behavior checks and complete response comparisons stay. Earlier review-fix evidence below describes the original pre-integration milestone.
+
+## Previous review-fix milestone
+
 Reference Rails `d7c7de92`, with the approved board tag from `a6f10a25` and shared layout/assets from `2e20b24c`. Main `2e20b24c` was merged at `093ca4ea`, retaining auth/board merge `68cd54bf` and the earlier `21a7332f` merge. Branch `rust/ws17-push-presence`. All four assigned independent-review P2s are fixed and proven against `1021be6a`. Review slices pushed: `5b6e7192` (pinned Ruby Unicode, matcher and nearby casing audit fixes), `ebccec8d` (Rails URI endpoint validation), `03c4475c` (baseline reproduction and real-constructor oracle rejection). The complete seeded workspace suite, strict clippy and all 11 Chromium cases ran in a fresh remote clone at **`03c4475c45428ad3538523ade8105c93c49a8013`**. The final report-only commit changes no runtime or test code; the delivery reply supplies its pushed SHA. This tracked report exactly mirrors the requested external report.
 
 The earlier continuation closed 43 of the former 58 deferred exact titles. Original selected inventory remains **332/347 passed equivalent and 15 source-owner deferrals**. A read-only fetch found main at `eaba80d5` (#168 asset-golden drift); no WS12/WS13/WS14 owner prerequisite landed after the merged `2e20b24c`. That unrelated main change was not merged during this review-fix task. The accepted at-most-once durable Web Push handoff is unchanged; the full-profile gap remains WS8b-r2-owned; WS9's fresh-clone `session_keys` correction is integrated and passes here.
@@ -177,7 +262,7 @@ Remaining WS17 transformations are JSON serialization of times/symbols, determin
 
 Repository-wide scan also identified inherited `campfire/controllers_a/replay.py:122–132`: `normalize_body` masks CSRF/transfer/UUID/QR/bot/join values **and changes inter-tag/trailing whitespace** before HTTP comparison. This older WS8b-a harness is not used by the WS17 byte-identical assertions and was not altered here; the lead should treat its whitespace normalization as an owner audit item. `kit/security_vectors.rb:92` canonicalizes response header names/list values, and richtext/mail generators expand explicit fixture token placeholders before calling Rails. Those input/representation seams are visible; their outputs are not evidence of raw full-page parity. No additional `reverse_merge` or `validate:false` repair remains in WS17 capture code. Mutation runners deliberately alter isolated Rust sources as defect tests, not oracle outputs.
 
-## Current verification
+## Review-fix verification before main integration
 
 Fresh clone `.scratch/review-fresh-20260930` was cloned from the pushed GitHub branch, with an initially empty private `rust/target` and independently constructed **default and first_run** seeds. It initially checked runtime slice `ebccec8d`, then fast-forwarded to `03c4475c` and reran the complete workspace, clippy and browser suite below. No database, seed or target was copied from the assigned checkout. All seeded app tests ran under the required-seed gate; there were zero failures. Final workspace totals from the raw lines below: **1,761 passed, 0 failed, 11 existing ignores**. No ignore, output mask or allowlist entry was added. The suite excludes the unchanged vendored html5ever test package per rust/AGENTS.md; clippy checks every workspace target.
 
@@ -332,8 +417,8 @@ The retained fresh-clone and completed baseline target directories are removed a
 
 ## Precisely remaining
 
-1. **15 exact cases:** WS12 owns 7 generic/work/caller-authorized recorder cases; WS13/WS13b owns 6 invitation-source/missed-call cases; WS14g owns 2 validated-cache/Google-fetch browser cases. These source owners have not landed on this branch or the merged main; the read-only main eaba80d5 fetch also contains no new prerequisite from those owners. Every exact title and seam is below. All 43 formerly deferred cases whose owned prerequisites were present are ported.
-2. **Whole-profile/sidebar/room composition:** owned settings, security integration, profile badge/allowance controls and uncached DM OOO wrapper are delivered. WS8b-r/WS8b-r2 provide complete sidebar presence/DM polling composition; WS11 supplies agent profile settings, WS12 inbox, WS13 voice/huddles, WS14 Google/Event, WS15 GitHub. Eleven owned Chromium scenarios pass; full-page/pixel comparison across all source sections remains pending. The adopted #163 status-popup controllers, edit/_fields views, remaining profile/card/sidebar popup composition and new scenario file are WS8b-r2-owned and remain unported here; the common layout listener/assets integration is delivered. Existing status/presence writers stay available through UserStatusSettings::save_status and the documented broadcast methods.
+1. **15 exact cases:** WS12 owns 7 generic/work/caller-authorized recorder cases; WS13/WS13b owns 6 invitation-source/missed-call cases; WS14g owns 2 validated-cache/Google-fetch browser cases. These source owners have not landed on this branch or the merged main b66199b7; this integration adds no prerequisite from those owners. Every exact title and seam is below. All 43 formerly deferred cases whose owned prerequisites were present are ported.
+2. **Whole-profile/sidebar/room composition:** owned settings, security integration, profile badge/allowance controls and uncached DM OOO wrapper are delivered. WS8b-r/WS8b-r2 provide complete sidebar presence/DM polling composition; WS11 supplies agent profile settings, WS12 inbox, WS13 voice/huddles, WS14 Google/Event, WS15 GitHub. Eleven owned Chromium scenarios pass; complete response comparison across all source sections remains pending. The adopted #163 status-popup controllers, edit/_fields views, remaining profile/card/sidebar popup composition and new scenario file are WS8b-r2-owned and remain unported here; the common layout listener/assets integration is delivered. Existing status/presence writers stay available through UserStatusSettings::save_status and the documented broadcast methods.
 3. **WS12 board and WS14e event source callbacks:** final `BoardNudgeJob { nudge_id }` and `EventReminderJob { event_id }` APIs, registry handlers, recipient policy and transport adapters are implemented. The approved board tag, real constructor payload and registered encrypted delivery are verified. WS12 still owns the source-claim callback. Source owners enqueue them on the same writer transaction that claims the reminder/nudge. `ActivityItem::record_message(&mut Tx, &Message) -> Result<Vec<ActivityItem>>` is final; WS11 must call it on streaming finalization, and WS16 must gate it during imports. Generic source authorization/grouping remains WS12.
 4. **WS13 invitation/join lifecycle:** final `Notifications::HuddlePushJob` JSON and registered `enqueue_huddle_request(&mut Tx, HuddlePushRequest) -> Result<bool>` are delivered. Owner JSON was checked against `origin/rust/ws13-huddles` at `6f498b9f`; its source emitter remains `enqueue_huddle_push(&mut Tx, &PushRequest)`. WS13 integrates actual grant/activity item/source jobs and payload construction. The WS17 writer owns the single throttle claim; also calling `prepare_push` would double-claim. Group fan-out batching/performance needs the real owner notifier.
 5. **WS14g refresh/cache:** final `Calendar::MeetingRefreshJob { user_id }` is default queue/version 1. WS14 registers the actual fetch/update handler and clears `refresh_pending_at` on successful fetch. The final dispatch/claim/broadcast signatures above require no transport changes. No successful Google refresh is faked.
