@@ -3,14 +3,15 @@
 ## Slash commands
 
 Branch: `rust/ws8a-slash`, forked from `fa404c9fbc9be81887dad01cbbe59e25f72d5c77`.
-Implementation commits: `89e433e3`, `e50176d446d5b75c94c3d08bbd5c3691d2fb49e7`.
+Initial implementation commits: `89e433e3`, `e50176d446d5b75c94c3d08bbd5c3691d2fb49e7`.
+Review fixes: `3768ff9a89f4aba4359a94709f27e308a565eb41`.
 Reference: our Rails app at `fec615be407f2350de9c364f78a322c4ad48a2cf`, extracted with `git archive`; no upstream Ruby expectations.
 
 ### Done
 
 - Registry metadata, builtin lookup, member/root-only permissions, recognition, dispatcher, escaped/invalid input, case folding, unknown-command lists (including ordered room agent registrations), and locked-thread errors. Rails' MEMBER permission always returns true; active-human, room membership and room-scoped thread authorization remain the HTTP caller's responsibility, as in the Ruby controller.
-- Leading/trailing parser precedence and its documented relative, today/tomorrow, weekday/next-weekday and ISO language, plus common explicit date/time fallbacks. Minute/hour arithmetic is elapsed time; parser day/week arithmetic follows the invoker's zone. Rails-generated timezone aliases, invalid-zone fallback, DST folds/gaps, Dublin negative DST, Lord Howe half-hour transitions, Kathmandu offsets and Apia's skipped date are covered. Missing local times advance in hourly steps, as TimeWithZone does. Ruby date normalization and leading-prefix parsing quirks are preserved in the corpus.
-- `/shrug`, `/me`, `/remind`, `/status`, `/dnd`, `/ooo`, `/poll`. Poll returns `open_poll` and creates no poll rows. Remind posts and saves for later; it does not invent an immediate reminder job. DND keeps Ruby's uncaught RecordInvalid behavior. Status expiry and OOO bare-day/month-date expiry retain microseconds and local end-of-day semantics; DND/OOO shorthand durations use Rails' UTC application clock arithmetic.
+- Leading/trailing precedence and the tested relative, today/tomorrow, weekday/next-weekday, ISO and fallback forms match both Rails corpora. Minute/hour arithmetic is elapsed time; day/week arithmetic is civil. Civil changes retain the actual source timezone period when available at a fold; fresh parses use Rails' DST preference. Period identity is checked by transition boundaries, including a fold one year later. Gaps advance hourly, including Lord Howe and Apia. Regex whitespace is ASCII and ISO leading/trailing `T` is case sensitive; lowercase `t` can still reach Ruby's whole-string fallback. `24:00` and second `60` normalize before resolving the zone. Ruby's date-gem vocabulary generates the timezone offset table; abbreviation, DST, standard/daylight-time and normalization checks add 2,444 supplemental cases.
+- `/shrug`, `/me`, `/remind`, `/status`, `/dnd`, `/ooo`, `/poll`. Poll returns `open_poll` and creates no poll rows. Remind posts and saves for later; it does not invent an immediate reminder job. DND keeps Ruby's uncaught RecordInvalid behavior. Status and OOO expiry use `change(23:59:59.999999)` with the source period, rather than next-midnight subtraction; status changes the current time and OOO changes a freshly parsed midnight. Status checks argument presence before accessing an invalid persisted timezone; DND/OOO shorthand durations use Rails' UTC application clock arithmetic.
 - Message and thread writes reuse the existing models: Markdown/source limits, board root rejection, locked-thread rejection, membership/join/reopen/count/touch behavior, search indexing, reference sync and push enqueue. Slash messages have no attachment assignment, so processing attachments is a no-op. Root posts append and send membership-filtered unread frames and legacy bot webhooks; thread posts append without root webhook fanout. Agent-backed bots are excluded from legacy fanout.
 - User writes validate presence, theme, text size, status emoji/text length, OOO note/future end, quiet-hour bounds/completeness, known timezone, inbox boolean values (including arbitrary persisted keys), voice settings/key length and existing GitHub-login uniqueness. Login/icon/status-change callbacks do not fire because these commands do not assign those attributes. SavedItem writes use its existing belongs-to/uniqueness/status/future-reminder validation.
 - Calendar OOO coverage is read from cached intervals, with inclusive start/exclusive end and the later manual/calendar return date. Manual-off retains a covering calendar interval. The conditional broadcast-state claim and both status-badge and OOO-notice broadcasts match the reference data events.
@@ -29,14 +30,22 @@ Reference: our Rails app at `fec615be407f2350de9c364f78a322c4ad48a2cf`, extracte
 - **WS11:** registered agent command invocation, capability/rate/event/webhook handling, and the inherited `Message::AgentDelivery` callbacks. This is explicitly the non-agent dispatcher slice; invoking a registered agent command is not implemented here.
 - **WS12/WS14/WS15:** inherited Message activity-inbox and integration-reference callbacks retain the baseline's named-owner deferrals. This branch does not implement those domains or prove mention/agent/network fanout end to end. The command handlers reuse Message/ChannelThread rather than replacing their lifecycle.
 - **WS13/WS14/WS8b/WS5:** the deferred adapters above still need their owning UI/execution paths.
-- The parser corpus proves the documented language and the tested fallback formats, not every obscure Ruby Date._parse format. Ruby dates beyond the existing Rust Timestamp civil range and further adversarial/coercion inputs are not proven compatible. No exhaustive fallback-parser parity or cutover claim is made.
+- There are zero residual mismatches in the adopted 2,610-case review corpus, its 12 command/row cases, and the 2,444-case supplemental corpus. No reviewed fallback-format case is excepted or masked. Full Ruby Date._parse grammar, dates outside Rust Timestamp's civil range, and further adversarial/coercion inputs remain unproven; these results are corpus parity, not exhaustive grammar or cutover acceptance.
 - The three ignored DB tests require external fixture/scenario/export inputs; they were not run by the full DB command below. The slash exports instead ran through their own pinned Rails rollback validator. The broader app/workspace test suite and browser suite were not run. There are no parity allowlist or mask changes.
+
+### Astra review corrections
+
+The initial report overstated documented-language, DST and ISO parity. At `a98a0311`, the broader corpus was **1,638 passed / 972 failed**, and its combined command regressions were **2 passed / 10 failed**. Both new tests failed by assertions before changing the implementation. The reviewer ran at `d7c7de92`; the relevant Ruby is identical to `fec615be`. Regeneration at the required pin produced identical values for all 2,610 parsing and all 12 row cases, in the original order, with no hand-written expectations.
+
+Corrected Dublin fold preference, Nuuk end-of-day folds, explicit Ruby timezone abbreviations, ISO 24:00/leap-second normalization, ASCII regex whitespace, ISO case sensitivity, month/year fallback, two-digit fallback days, and status argument-validation order. Supplemental generation found 40 abbreviation/calendar-order failures before the clock-and-zone removal fix, then two cross-year period-identity failures before the transition-boundary fix. There are no residual corpus exceptions to list.
+
+The generator and corpus are checked in as `rust/crates/db/ruby/ws8_slash_review_vectors.rb` and `rust/crates/db/src/tests/ws8_slash_review_vectors.json`. The real AppRichText row check now includes the review's four posted cases, and the exported-user check includes its status, OOO and DND changes.
 
 ### Verification
 
-All scratch, logs, pin snapshots and exported databases are under `/home/riels/.cache/rust-port/ws8slash/`; cargo uses this worktree's `rust/target`. Every cargo command used `-j 6` and `mise exec rust@1.98.1 --`. No stash, Rails source, migration/schema, production-data or deployment changes. Shared registration edits only append a module/partial/method. This external report is the task's explicit exception to rust-only writes; its tracked copy is `rust/plans/ws8-slash-report.md`.
+All scratch, logs, pin snapshots and exported databases are under `/home/riels/.cache/rust-port/ws8slash/`; cargo uses this worktree's `rust/target`. Every cargo command used `-j 6` and `mise exec rust@1.98.1 --`. No stash, schema, Rails source, production-data or deployment changes. The requested report outside `rust/` is the task's explicit report exception; its identical tracked copy is `rust/plans/ws8-slash-report.md`. No parity allowlist or mask changes.
 
-Oracle generation (the wrapper mounts the pinned app/db/config/lib/test and checks Gemfile.lock against the image):
+Oracle regeneration at `fec615be`:
 
 ```sh
 bash rust/reference-tools/db/ws8-slash-vectors.sh
@@ -44,42 +53,47 @@ bash rust/reference-tools/db/ws8-slash-vectors.sh
 
 ```text
 WS8 slash Rails vectors: 3328 parsing, 10 registry, 13 recognition, 227 dispatch/row/callback cases
+WS8 slash review Rails vectors: 2610 parsing, 10 registry, 13 recognition, 12 dispatch/row/callback cases
+WS8 slash supplemental Rails vectors: 2444 parsing cases
 ```
 
-Full database and queue tests (no seed-based skips in these crates):
+Full database/queue suites, including both review differentials (no seed-based skips):
 
 ```sh
-TMPDIR=/home/riels/.cache/rust-port/ws8slash/tmp WS8_SLASH_EXPORT_DIR=/home/riels/.cache/rust-port/ws8slash/exports CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 6 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -- --test-threads=4
+TMPDIR=/home/riels/.cache/rust-port/ws8slash/tmp WS8_SLASH_EXPORT_DIR=/home/riels/.cache/rust-port/ws8slash/review-exports CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 6 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -- --test-threads=4 --nocapture
 ```
 
 ```text
-test result: ok. 360 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 35.56s
-test result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.14s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.97s
+Review command differential: 12 passed; 0 failed
+Review parser differential: 2610 passed; 0 failed
+Supplemental parser differential: 2444 passed; 0 failed
+test result: ok. 362 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 34.75s
+test result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.99s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-Real application adapter (the one selected test always executes; 181 other app tests are filtered):
+Real app adapter, always executed without parity seeds; other 181 app tests filtered:
 
 ```sh
-TMPDIR=/home/riels/.cache/rust-port/ws8slash/tmp WS8_SLASH_EXPORT_DIR=/home/riels/.cache/rust-port/ws8slash/exports CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 6 --manifest-path rust/Cargo.toml -p campfire slash_runtime_ -- --test-threads=4 --nocapture
+TMPDIR=/home/riels/.cache/rust-port/ws8slash/tmp WS8_SLASH_EXPORT_DIR=/home/riels/.cache/rust-port/ws8slash/review-exports CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 6 --manifest-path rust/Cargo.toml -p campfire slash_runtime_ -- --test-threads=4 --nocapture
 ```
 
 ```text
-WS8 slash runtime: 15 Rails-generated rich-text/FTS row comparisons
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 181 filtered out; finished in 3.55s
+WS8 slash runtime: 19 Rails-generated rich-text/FTS row comparisons
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 181 filtered out; finished in 2.78s
 ```
 
-Pinned Rails read/validation/edit of exported message/rich-text/FTS/reminder/thread and user-status scenarios:
+Pinned Rails read/validation/edit of the exported rows:
 
 ```sh
 scratch=/home/riels/.cache/rust-port/ws8slash
-docker run --rm --cpus 2 --name ws8slash-rollback --entrypoint '' --env-file rust/parity/.env.reference -e RAILS_ENV=test -e TMPDIR=/rails/tmp -v "$scratch/pin/app:/rails/app:ro" -v "$scratch/pin/config:/rails/config:ro" -v "$scratch/pin/lib:/rails/lib:ro" -v "$scratch/pin/db:/rails/db:ro" -v "$PWD/rust/crates/db/ruby:/tools:ro" -v "$scratch/exports:/exports" -v "$scratch/tmp:/rails/tmp" ws8-reference-models bin/rails runner /tools/ws8_slash_validate_export.rb /exports
+docker run --rm --cpus 2 --name ws8slash-review-rollback --entrypoint '' --env-file rust/parity/.env.reference -e RAILS_ENV=test -e TMPDIR=/rails/tmp -v "$scratch/pin/app:/rails/app:ro" -v "$scratch/pin/config:/rails/config:ro" -v "$scratch/pin/lib:/rails/lib:ro" -v "$scratch/pin/db:/rails/db:ro" -v "$PWD/rust/crates/db/ruby:/tools:ro" -v "$scratch/review-exports:/exports" -v "$scratch/tmp:/rails/tmp" ws8-reference-models bin/rails runner /tools/ws8_slash_validate_export.rb /exports
 ```
 
 ```text
-WS8 slash Rails rollback: 47 Rust-written scenarios read, validated and edited
+WS8 slash Rails rollback: 56 Rust-written scenarios read, validated and edited
 ```
 
 Workspace clippy, exit 0:
@@ -89,14 +103,30 @@ TMPDIR=/home/riels/.cache/rust-port/ws8slash/tmp CARGO_TARGET_DIR="$PWD/rust/tar
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.81s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.74s
 ```
+
 
 ### Failing-first evidence
 
-Three initial tests failed against compiled empty scaffolds (parser, registry/recognition, dispatch/rows). The callback test first failed with append omitted; persisted-user validation first failed with its validation result bypassed. Each queue test fails when the real push/webhook enqueue is removed; SQL/setup and compilation mistakes were corrected and are not counted as evidence. The app row test first failed with the real renderer bypassed, then still failed with the real renderer restored because stored Action Text had a trailing newline; canonicalization fixed the latter failure. No expectations were edited by hand.
+Original nine tests retain their discrimination checks. The two added tests first failed against `a98a0311` with the exact broader Rails corpus (`review-before.log`):
 
-The committed reproducer rejects compilation-only failures, requires each named test to fail by assertion and restores every source in finally. It replays the discrimination checks; it does not rewrite development chronology.
+```text
+Review parser differential: 1638 passed; 972 failed
+Review command differential: 2 passed; 10 failed
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 363 filtered out; finished in 7.37s
+```
+
+Additional generated inputs caught real failures before their fixes:
+
+```text
+Supplemental parser differential: 2402 passed; 40 failed
+Supplemental parser differential: 2442 passed; 2 failed
+```
+
+The reproducer adds a source-period omission mutation that requires both review tests to fail by assertions. It rejects compilation-only failures and restores every source in `finally`. No deliberate mutation is committed.
+
+Discrimination rerun:
 
 ```sh
 python3 rust/reference-tools/db/ws8-slash-discrimination.py
@@ -104,20 +134,22 @@ python3 rust/reference-tools/db/ws8-slash-discrimination.py
 
 ```text
 registry: detected (1 named tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 362 filtered out; finished in 0.03s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 364 filtered out; finished in 0.03s
 parser: detected (1 named tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 362 filtered out; finished in 0.04s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 364 filtered out; finished in 0.04s
 dispatch: detected (1 named tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 362 filtered out; finished in 0.12s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 364 filtered out; finished in 0.10s
 callbacks: detected (1 named tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 362 filtered out; finished in 3.47s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 364 filtered out; finished in 3.43s
 validation: detected (1 named tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 362 filtered out; finished in 0.76s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 364 filtered out; finished in 0.74s
 push-atomicity: detected (3 named tests)
-test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 47 filtered out; finished in 0.15s
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 47 filtered out; finished in 0.13s
 webhook-atomicity: detected (1 named tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 49 filtered out; finished in 0.08s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 49 filtered out; finished in 0.09s
 runtime-richtext: detected (1 named tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 181 filtered out; finished in 0.19s
-WS8 slash discrimination: 8 mutations detected; all 9 new tests failed; sources restored
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 181 filtered out; finished in 0.18s
+review-fold: detected (2 named tests)
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 363 filtered out; finished in 7.85s
+WS8 slash discrimination: 9 mutations detected; all 11 new tests failed; sources restored
 ```
