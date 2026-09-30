@@ -96,6 +96,19 @@ class BoardsTest < ApplicationSystemTestCase
     end
   end
 
+  test "replying on a board post sends and clears the composer" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) }, users: [ users(:david) ])
+    post = ChannelThread.create!(room: board, creator: users(:david), name: "Ship it", work_status: "planned")
+
+    visit room_thread_path(board, post)
+    fill_in "Write a thread reply", with: "Reply from the board post."
+    click_button "Send Reply"
+
+    assert_selector ".board-post__messages", text: "Reply from the board post."
+    assert_field "Write a thread reply", with: ""
+    assert_equal "Reply from the board post.", post.messages.reload.last&.plain_text_body
+  end
+
   private
     def assert_top_aligned(selector, label)
       gap = evaluate_script(<<~JS, selector)
