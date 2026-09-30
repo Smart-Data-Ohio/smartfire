@@ -22,6 +22,12 @@ async fn check(case: &Value) {
         if config["locked"].as_bool()==Some(true) {tx.conn().execute("UPDATE channel_threads SET locked_at=? WHERE id=1900600008",[tx.now()])?;}
         tx.conn().execute("UPDATE sqlite_sequence SET seq=1900600010 WHERE name='messages'",[])?;
         tx.conn().execute("UPDATE sqlite_sequence SET seq=1900600020 WHERE name='rooms'",[])?;
+        if config["different_owner"].as_bool()==Some(true) {tx.conn().execute("UPDATE agents SET owner_id=149087659 WHERE id=?",[AGENT])?;}
+        if let Some(action)=config["owner_action"].as_str() {
+            let mut user=campfire_db::User::find(tx.conn(),if config["different_target"].as_bool()==Some(true) {712064548} else {127326141})?;
+            tx.conn().execute("UPDATE sessions SET ip_address='203.0.113.31' WHERE user_id=?",[user.id])?;
+            if action=="ban" {user.ban(tx)?;} else {user.deactivate(tx)?;}
+        }
         Ok(())
     }).await.unwrap();
     let counts = |conn: &campfire_db::Connection| -> campfire_db::Result<Value> {
@@ -39,8 +45,8 @@ async fn check(case: &Value) {
         case["path"].as_str().unwrap(),
     )
     .header("accept", "application/json")
-    .header("content-type", "application/json")
-    .header("authorization", &["Bearer", SECRET].join(" "));
+    .header("content-type", "application/json");
+    if case["setup"]["bot"].as_bool()!=Some(true) {req=req.header("authorization", &["Bearer", SECRET].join(" "));}
     if let Some(body) = case["body"].as_str() {
         req = req.body(body);
     }
@@ -139,3 +145,6 @@ async fn stream_http_enqueue_failure(mcp: bool) {
 
 #[tokio::test] async fn agent_stream_http_enqueue_failure_rest() {stream_http_enqueue_failure(false).await;}
 #[tokio::test] async fn agent_stream_http_enqueue_failure_mcp() {stream_http_enqueue_failure(true).await;}
+
+#[tokio::test] async fn agent_owner_lifecycle_credentials() {group("security_owner_token_").await;}
+#[tokio::test] async fn agent_owner_lifecycle_bot_keys() {group("security_owner_bot_").await;}

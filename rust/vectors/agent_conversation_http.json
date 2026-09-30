@@ -1131,6 +1131,152 @@
         "rooms": 0,
         "drive_attachments": 0
       }
+    },
+    {
+      "name": "security_owner_token_deactivate",
+      "method": "get",
+      "path": "/agents/me",
+      "body": null,
+      "setup": {
+        "owner_action": "deactivate"
+      },
+      "status": 401,
+      "response_body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "security_owner_token_mcp",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"ping\"}",
+      "setup": {
+        "owner_action": "deactivate"
+      },
+      "status": 401,
+      "response_body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "security_owner_token_ban",
+      "method": "get",
+      "path": "/agents/me",
+      "body": null,
+      "setup": {
+        "owner_action": "ban"
+      },
+      "status": 401,
+      "response_body": "",
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "security_owner_bot_deactivate",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "\"Blocked\"",
+      "setup": {
+        "owner_action": "deactivate",
+        "bot": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "security_owner_bot_ban",
+      "method": "post",
+      "path": "/rooms/486777696/394959859-BenderToken1/messages",
+      "body": "\"Blocked\"",
+      "setup": {
+        "owner_action": "ban",
+        "bot": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "security_owner_token_other_owner",
+      "method": "get",
+      "path": "/agents/me",
+      "body": null,
+      "setup": {
+        "owner_action": "deactivate",
+        "different_owner": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":149087659,\"name\":\"Jason\"},\"status\":\"idle\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
+    },
+    {
+      "name": "security_owner_token_other_banned",
+      "method": "get",
+      "path": "/agents/me",
+      "body": null,
+      "setup": {
+        "owner_action": "ban",
+        "different_target": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":773018776,\"kind\":\"workspace\",\"name\":\"Bender Bot\",\"user_id\":394959859,\"owner\":{\"id\":127326141,\"name\":\"David\"},\"status\":\"idle\",\"last_seen_at\":\"2026-03-02T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "rooms": 0,
+        "drive_attachments": 0
+      }
     }
   ]
 }

@@ -79,9 +79,18 @@ add.call("dm_nested_bad_reply",:post,"/agents/dms",{user_id:127326141,message:{b
 add.call("post_message_scalar",:post,"/rooms/#{room}/agents/messages",{message:"wrong"})
 add.call("post_message_array",:post,"/rooms/#{room}/agents/messages",{message:["wrong"]})
 add.call("stream_message_scalar",:post,"/rooms/#{room}/agents/streaming_messages",{message:"wrong"})
+add.call("security_owner_token_deactivate",:get,"/agents/me",nil,{owner_action:"deactivate"})
+add.call("security_owner_token_mcp",:post,"/agents/mcp",{jsonrpc:"2.0",id:11,method:"ping"},{owner_action:"deactivate"})
+add.call("security_owner_token_ban",:get,"/agents/me",nil,{owner_action:"ban"})
+add.call("security_owner_bot_deactivate",:post,"/rooms/#{room}/394959859-BenderToken1/messages","Blocked",{owner_action:"deactivate",bot:true})
+add.call("security_owner_bot_ban",:post,"/rooms/#{room}/394959859-BenderToken1/messages","Blocked",{owner_action:"ban",bot:true})
+add.call("security_owner_token_other_owner",:get,"/agents/me",nil,{owner_action:"deactivate",different_owner:true})
+add.call("security_owner_token_other_banned",:get,"/agents/me",nil,{owner_action:"ban",different_target:true})
 travel_to Time.utc(2026,3,2,16) do
  results = cases.map do |item|
   result = nil
+  execution = Rails.application.executor.run!(reset: true)
+  begin
   ActiveRecord::Base.transaction do
    agent = Agent.find(773018776)
    agent.agent_events.delete_all; agent.agent_grants.delete_all; agent.agent_credentials.delete_all
@@ -97,16 +106,27 @@ travel_to Time.utc(2026,3,2,16) do
    ChannelThread.where(id:thread).update_all(locked_at:Time.current) if item[:setup][:locked]
    ActiveRecord::Base.connection.execute("UPDATE sqlite_sequence SET seq=1900600010 WHERE name='messages'")
    ActiveRecord::Base.connection.execute("UPDATE sqlite_sequence SET seq=1900600020 WHERE name='rooms'")
+   agent.update_columns(owner_id:149087659) if item[:setup][:different_owner]
+   if item[:setup][:owner_action]
+    target = item[:setup][:different_target] ? 712064548 : 127326141
+    Session.where(user_id:target).update_all(ip_address:"203.0.113.31")
+    User.find(target).public_send(item[:setup][:owner_action])
+   end
    Rails.cache = ActiveSupport::Cache::MemoryStore.new
    session=ActionDispatch::Integration::Session.new(Rails.application); session.host! "campfire.test"
    counts = -> { {messages:Message.count,rooms:Room.count,drive_attachments:DriveAttachment.count} }
    before=counts.call
    body=item[:body]&.to_json
-   session.public_send(item[:method],item[:path],params:body,headers:{"Accept"=>"application/json","Content-Type"=>"application/json","Authorization"=>["Bearer",secret].join(" ")})
+   headers={"Accept"=>"application/json","Content-Type"=>"application/json"}
+   headers["Authorization"]=["Bearer",secret].join(" ") unless item[:setup][:bot]
+   session.public_send(item[:method],item[:path],params:body,headers:headers)
    response=session.response
    after=counts.call
    result=item.merge(body:body,status:response.status,response_body:response.body,response_headers:response.headers.slice("Content-Type","Cache-Control","Pragma","Retry-After","Location"),delta:before.transform_values.with_index { |v,i| after.values[i]-v })
    raise ActiveRecord::Rollback
+  end
+  ensure
+   execution.complete!
   end
   result
  end
