@@ -6,8 +6,11 @@
 pub mod boosts;
 pub mod by_bots;
 mod payload;
+mod freshness;
 #[cfg(test)]
 mod root_tests;
+#[cfg(test)]
+mod paging_tests;
 
 use askama::Template;
 use campfire_db::{Job as _, Message, NewMessage, Role, Room, Status, Timeline};
@@ -22,7 +25,7 @@ use crate::app::{App, AppCtx};
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::page::{self, Rendered, db_error};
 use crate::controllers::presenters::attachments::Assignment;
-use crate::controllers::presenters::{DbResolver, Presenter, cache_key_with_version, room_kind, storage_error};
+use crate::controllers::presenters::{DbResolver, Presenter, room_kind, storage_error};
 use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
 
 // --- Actions ------------------------------------------------------------------------------------
@@ -32,15 +35,17 @@ pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_root_room(c).await?;
     let messages = find_paged_messages(c, &room).await?;
+    let json = c.format()? == Some(&format::JSON);
+    if json { c.no_store(); }
     if messages.is_empty() {
+        if !json { c.expires_now(); }
         return Ok(c.head(StatusCode::NO_CONTENT));
     }
-    // fresh_when @messages: the records' cache keys, their latest updated_at, and the template.
-    let etag = messages.iter().map(|m| cache_key_with_version("messages", m.id, m.updated_at.jiff())).collect::<Vec<_>>().join("/");
+    let records = messages.clone();
+    let etag = c.app().db.read(move |conn| freshness::etag(conn, &records)).await.map_err(db_error)?;
     let freshness = Freshness {
         etag: Some(etag),
-        last_modified: messages.iter().map(|m| m.updated_at.jiff()).max(),
-        template: Some(TEMPLATE_DIGEST_INDEX.into()),
+        template: Some(freshness::INDEX_TEMPLATE_DIGEST.trim().into()),
         ..Freshness::default()
     };
     if let Some(not_modified) = c.fresh_when(freshness) {
@@ -52,10 +57,6 @@ pub async fn index(c: &mut Ctx) -> Result {
     let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &views, &c.url_for(""));
     Ok(response.with_cached_fragments(fragments))
 }
-
-/// Stands in for the digest `ETagWithTemplateDigest` adds for `messages/index` (only the ETag's
-/// shape has to match the reference).
-const TEMPLATE_DIGEST_INDEX: &str = "messages/index";
 
 /// `create`: `set_room` runs inside the action, and a room that's gone renders `room_not_found`.
 pub async fn create(c: &mut Ctx) -> Result {
