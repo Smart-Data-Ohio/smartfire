@@ -12,6 +12,8 @@ pub mod events;
 #[cfg(feature = "test-support")]
 pub mod fixtures;
 pub mod models;
+pub mod migrations;
+pub mod additive;
 pub mod rich_text;
 pub mod schema;
 pub mod time;

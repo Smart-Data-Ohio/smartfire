@@ -1,6 +1,7 @@
 //! The Campfire server: controllers, channels, jobs and integrations wired over the crates.
 
 mod active_storage;
+mod admin;
 mod app;
 mod channels;
 mod concerns;
@@ -28,6 +29,9 @@ pub static JEMALLOC_CONF: Option<&'static std::ffi::c_char> =
 
 fn main() -> anyhow::Result<()> {
     disable_transparent_huge_pages();
+    if let Some(status) = admin::run(&std::env::args().skip(1).collect::<Vec<_>>()) {
+        std::process::exit(status);
+    }
     app::run()
 }
 
