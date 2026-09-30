@@ -25,9 +25,9 @@
     {%- let join_code = show.join_code.clone() %}
     {% include "rooms/show/_invitation.html" %}
     {%- endif %}
-    {%- for message in show.messages %}
-    {% if self.at_unread(loop.index0) %}{{ crate::rooms::shell::unread(show.shell.unread_count)|safe }}{% endif %}{{ crate::messages::cached_message_item(ctx, message) }}
-    {%- endfor %}
+    {%- if !show.messages.is_empty() %}
+{{ self.timeline()|safe }}
+    {%- endif %}
 </div>
   <turbo-cable-stream-source channel="RoomMessagesChannel" signed-stream-name="{{ show.messages_stream_name }}"></turbo-cable-stream-source>
   {% if show.shell.unread_message_id.is_some() || show.shell.jump_url.is_some() %}{{ crate::rooms::shell::jump(ctx, show.shell.jump_url.as_deref()) }}{% endif %}

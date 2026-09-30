@@ -117,7 +117,19 @@ impl Show<'_> {
     fn composition(&self,partial:&str)->String {composition::request(self.ctx,&self.show.room,self.show.thread_panel_name.as_deref(),partial)}
     fn footer(&self)->String {let markup=self.composition("composer");format!("  {}",markup.strip_prefix('\n').unwrap_or(&markup))}
     fn panel(&self,partial:&str)->String {format!("  {}\n",self.composition(partial))}
-    fn at_unread(&self,index:&usize)->bool {self.show.shell.unread_index==Some(*index)}
+    fn timeline(&self) -> String {
+        let collection = |messages: &[MessageItem]| messages.iter()
+            .map(|message| crate::messages::cached_message_item(self.ctx, message).0.into_owned())
+            .collect::<String>();
+        let prefix = if self.show.invitation { "      " } else { "    \n      " };
+        let body = if let Some(index) = self.show.shell.unread_index {
+            format!("{}\n      {}\n      {}", collection(&self.show.messages[..index]),
+                shell::unread(self.show.shell.unread_count), collection(&self.show.messages[index..]))
+        } else {
+            collection(&self.show.messages)
+        };
+        format!("{prefix}{body}")
+    }
     fn notices(&self) -> String {shell::Notices {ctx:self.ctx,notices:&self.show.shell.notices}.render().expect("notices render")}
     fn loaded_at(&self) -> i64 {
         epoch_ms(self.show.updated_at)

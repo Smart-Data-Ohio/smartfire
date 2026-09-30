@@ -5,15 +5,81 @@ use campfire_views::{
     rooms::{Show, ShowView},
 };
 #[tokio::test]
-async fn full_room_pages_match_twenty_complete_rails_pages() {
+async fn full_room_pages_match_thirty_six_complete_rails_pages() {
     let Some(test) = TestApp::boot().await else {
         return;
     };
     let v: serde_json::Value =
         serde_json::from_str(include_str!("full_room_vectors.json")).unwrap();
-    assert_eq!(v["cases"].as_array().unwrap().len(), 20);
+    assert_eq!(v["cases"].as_array().unwrap().len(), 36);
+    let deferred = v["deferred"].as_array().unwrap();
+    assert_eq!(deferred.len(), 2);
+    assert!(deferred.iter().all(|case| {
+        case["input"]["room"]["id"] == 654632876
+            && case["reason"]
+                .as_str()
+                .unwrap()
+                .contains("Shared message renderer")
+    }));
+    let mut mismatches = Vec::new();
     for case in v["cases"].as_array().unwrap() {
-        let show: ShowView = serde_json::from_value(case["input"].clone()).unwrap();
+        let mut show: ShowView = serde_json::from_value(case["input"].clone()).unwrap();
+        if let Some(at) = case["membership_unread_at"].as_str() {
+            let at = campfire_db::Timestamp::parse_db(at).unwrap();
+            let room_id = show.room.id;
+            let user_id = show.user.id;
+            test.db().write(move |tx| {
+                tx.conn().execute("UPDATE memberships SET unread_at=?,last_read_message_id=NULL WHERE room_id=? AND user_id=?",rusqlite::params![at,room_id,user_id])?;
+                Ok(())
+            }).await.unwrap();
+        }
+        if let Some(ids) = case["message_ids"].as_array() {
+            let expected_ids: Vec<i64> = ids.iter().map(|id| id.as_i64().unwrap()).collect();
+            let app = test.booted.app.clone();
+            let room_id = show.room.id;
+            let user_id = show.user.id;
+            let (room, navigation, shell, items) = test
+                .db()
+                .read(move |conn| {
+                    use campfire_db::{Message, Room, Timeline, User};
+                    let room = Room::find(conn, room_id)?;
+                    let user = User::find(conn, user_id)?;
+                    let messages = Message::last_page(conn, Timeline::Room(room_id))?;
+                    assert_eq!(
+                        messages.iter().map(|m| m.id).collect::<Vec<_>>(),
+                        expected_ids
+                    );
+                    let mut presenter = crate::controllers::presenters::Presenter::new(
+                        conn,
+                        &app,
+                        Some("campfire.test".into()),
+                    );
+                    presenter.cache_base_url = Some("http://campfire.test/".into());
+                    Ok((
+                        presenter.room_view(&room, &user)?,
+                        super::call_navigation::model(&app, conn, &room, &user)?,
+                        super::shell::load(
+                            conn,
+                            &room,
+                            user_id,
+                            &messages,
+                            campfire_db::Timestamp::from_second(1772467200),
+                        )?,
+                        presenter.messages(&messages)?,
+                    ))
+                })
+                .await
+                .unwrap();
+            assert_eq!(room, show.room, "{} room adapter", case["name"]);
+            assert_eq!(
+                Some(&navigation),
+                show.navigation.as_ref(),
+                "{} header adapter",
+                case["name"]
+            );
+            assert_eq!(shell, show.shell, "{} shell adapter", case["name"]);
+            show.messages = items;
+        }
         let id = show.user.id;
         let now = test.booted.app.db.env().now();
         let (actor, account, prefs, icons, last, recents) = test
@@ -78,12 +144,17 @@ async fn full_room_pages_match_twenty_complete_rails_pages() {
                 expected,
             ) {
                 let dir = std::path::PathBuf::from(std::env::var_os("TMPDIR").unwrap());
-                std::fs::write(dir.join("full-room-actual.html"), &actual).unwrap();
-                std::fs::write(dir.join("full-room-expected.html"), expected).unwrap();
-                panic!("{} {part}: see full-room-actual/expected", case["name"]);
+                let label = format!("{}-{part}", case["name"].as_str().unwrap());
+                std::fs::write(dir.join(format!("{label}-actual.html")), &actual).unwrap();
+                std::fs::write(dir.join(format!("{label}-expected.html")), expected).unwrap();
+                mismatches.push(label);
             }
         }
     }
+    assert!(
+        mismatches.is_empty(),
+        "whole-page mismatches: {mismatches:?}"
+    );
     test.booted
         .jobs
         .shutdown(std::time::Duration::from_secs(1))
