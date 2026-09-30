@@ -6,9 +6,7 @@
 //!   makes a throwaway one, as Rails does for asset precompilation).
 //! - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: `config/initializers/vapid.rb`. Checked at boot:
 //!   when either is missing or they aren't a matching P-256 key pair, Web Push is off (logged).
-//! - `VAPID_SUBJECT`: the contact push services see in the VAPID JWT's `sub` (a `mailto:` or
-//!   `https:` URL). The reference hardcodes `mailto:support@37signals.com`; this defaults to
-//!   `https://` and the first `TLS_DOMAIN`, or the project's URL without one.
+//! - Web Push identifies Smartfire as `mailto:support@smartdata.net`.
 //! - `DISABLE_SSL`: `config/environments/production.rb` (`assume_ssl`/`force_ssl` unless present).
 //! - `APP_VERSION`, `GIT_REVISION`: `config/initializers/version.rb` (`X-Version`, `X-Rev`).
 //! - `RAILS_ENV`: names the database file (`storage/db/<env>.sqlite3`, `config/database.yml`).
@@ -141,7 +139,7 @@ impl Config {
             github_webhook_secret: present("GITHUB_WEBHOOK_SECRET"),
             vapid_public_key: present("VAPID_PUBLIC_KEY"),
             vapid_private_key: present("VAPID_PRIVATE_KEY"),
-            vapid_subject: present("VAPID_SUBJECT").unwrap_or_else(|| default_vapid_subject(present("TLS_DOMAIN"))),
+            vapid_subject: "mailto:support@smartdata.net".into(),
             disable_ssl: present("DISABLE_SSL").is_some(),
             app_version: present("APP_VERSION").or_else(|| present("GIT_REVISION")).unwrap_or_else(|| "0".into()),
             git_revision: get("GIT_REVISION"),
@@ -163,15 +161,6 @@ pub fn admin_session_idle_timeout(days: Option<String>) -> jiff::SignedDuration 
     let days = crate::concerns::ruby_to_i(days.as_deref().unwrap_or("7"));
     let days = if days < 1 { 7 } else { days };
     jiff::SignedDuration::from_hours(days.saturating_mul(24))
-}
-
-/// The install's own HTTPS URL when it has a TLS domain; the project's otherwise.
-fn default_vapid_subject(tls_domains: Option<String>) -> String {
-    let domain = tls_domains.as_deref().and_then(|domains| domains.split(',').map(str::trim).find(|domain| !domain.is_empty()));
-    match domain {
-        Some(domain) => format!("https://{domain}"),
-        None => "https://github.com/basecamp/once-campfire-rust".into(),
-    }
 }
 
 fn dummy_secret() -> String {
@@ -264,11 +253,11 @@ mod tests {
     }
 
     #[test]
-    fn vapid_subject_defaults_to_the_tls_domain() {
+    fn vapid_subject_matches_smartfire() {
         let subject = |vars: &[(&str, &str)]| config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat()).unwrap().vapid_subject;
-        assert_eq!(subject(&[("VAPID_SUBJECT", "mailto:ops@example.com"), ("TLS_DOMAIN", "chat.example.com")]), "mailto:ops@example.com");
-        assert_eq!(subject(&[("TLS_DOMAIN", " , chat.example.com,other.example.com")]), "https://chat.example.com");
-        assert_eq!(subject(&[("VAPID_SUBJECT", " ")]), "https://github.com/basecamp/once-campfire-rust");
+        assert_eq!(subject(&[("VAPID_SUBJECT", "mailto:ops@example.com"), ("TLS_DOMAIN", "chat.example.com")]), "mailto:support@smartdata.net");
+        assert_eq!(subject(&[("TLS_DOMAIN", " , chat.example.com,other.example.com")]), "mailto:support@smartdata.net");
+        assert_eq!(subject(&[("VAPID_SUBJECT", " ")]), "mailto:support@smartdata.net");
     }
 
     #[test]

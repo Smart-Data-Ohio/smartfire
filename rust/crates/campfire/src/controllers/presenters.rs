@@ -4,6 +4,7 @@
 
 pub mod accounts;
 pub mod agent_payload;
+pub mod status_settings;
 pub mod attachments;
 pub mod link_embeds;
 pub mod fizzy_cards;

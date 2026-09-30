@@ -3,6 +3,8 @@
 //! inbox itself (`accessible_to`, filters, grouping, mark read and handled, every other event
 //! type's writer) is WS12's.
 
+pub mod message_recorder;
+
 use rusqlite::{Connection, Row, params};
 
 use crate::broadcasts::Broadcast;

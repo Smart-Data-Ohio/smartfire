@@ -461,7 +461,7 @@ impl Message {
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
-            if !message.system_note { tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?; }
+            if !message.system_note { crate::ActivityItem::record_message(tx, &message)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?; }
             message.sync_all_references(tx)?;
             message.push_later_in_conversation(tx);
         }
@@ -1189,7 +1189,7 @@ impl Message {
             self.create_in_index(tx)?;
             self.receive_in_conversation(tx)?;
             self.push_later_in_conversation(tx);
-            if !self.system_note { tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
+            if !self.system_note { crate::ActivityItem::record_message(tx, self)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
             crate::models::agent_delivery::enqueue_for_message(tx,self)?;
             self.sync_all_references(tx)?;
             crate::models::bot_webhook_fanout::deliver(tx,self)?;
