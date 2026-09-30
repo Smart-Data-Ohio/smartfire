@@ -2,6 +2,7 @@
 //! join code, and a user's page.
 
 pub mod avatars;
+pub mod cards;
 pub mod bans;
 pub mod profiles;
 pub mod push_subscriptions;
@@ -11,6 +12,8 @@ pub mod tours;
 
 #[cfg(test)]
 mod preferences_tests;
+#[cfg(test)]
+mod people_tests;
 
 use askama::Template;
 use campfire_db::{Account, NewUser, User};
@@ -22,6 +25,15 @@ use super::presenters::{self, view_context};
 use crate::app::AppCtx;
 use crate::controllers::presenters::page::framed_page;
 use crate::concerns::{self, Before, cast_integer};
+
+pub async fn index(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default()).await?;
+    let viewer = concerns::require_current_user(c)?.id;
+    let now = campfire_db::Timestamp::from_jiff(c.now());
+    let people = c.app().db.read(move |conn| campfire_db::models::user::presentation::directory(conn,viewer,now)).await.map_err(Error::internal)?;
+    let people = people.into_iter().map(|person| presenters::people::person(&c.app().secrets,person)).collect::<Vec<_>>();
+    framed_page!(c,StatusCode::OK,|ctx| users::Directory { ctx,people:people.clone() }).await
+}
 
 /// `require_unauthenticated_access only: %i[ new create ]`, `before_action :verify_join_code`
 pub async fn new(c: &mut Ctx) -> Result {

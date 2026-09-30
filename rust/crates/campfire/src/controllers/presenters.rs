@@ -3,6 +3,7 @@
 //! partials) computed up front.
 
 pub mod accounts;
+pub mod people;
 pub mod rooms_directory;
 pub mod room_shell;
 pub mod switcher;

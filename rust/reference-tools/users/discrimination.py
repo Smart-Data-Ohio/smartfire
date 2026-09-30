@@ -11,6 +11,11 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("people-auth", "crates/campfire/src/controllers/users/cards.rs", "Before::default()", "Before::default().allow_unauthenticated_access()", "cards_require_sign_in_and_unknown_people_are_not_found"),
+    ("people-self", "crates/db/src/models/user/presentation.rs", "u.id!=:viewer", "u.id=:viewer", "directory_requires_sign_in_and_excludes_the_viewer"),
+    ("people-star", "crates/db/src/models/user/presentation.rs", "!person.starred", "person.starred", "directories_match_complete_rails_body_and_starred_order"),
+    ("people-call", "crates/views/templates/users/cards/show.html", "{% if !person.user.bot() %}", "{% if person.user.bot() %}", "agents_can_be_messaged_but_not_called"),
+    ("people-status", "crates/db/src/models/user/presentation.rs", "expiry > now", "expiry < now", "card_shows_presence_dot_and_custom_status_badge"),
     ("public-date", "crates/campfire/src/public_policy.rs", r"\p{Decimal_Number}", r"\p{Number}", "policy_matches_rails_environment_vectors"),
     ("public-cookie", "crates/campfire/src/controllers/public_pages.rs", "let formats = c.formats()?;", "let _ = c.form_authenticity_token();\n    let formats = c.formats()?;", "public_pages_bypass_authentication_browser_and_private_state"),
     ("public-escaping", "crates/views/templates/public_pages/about.html", "{{ operator_name }}", "{{ operator_name|safe }}", "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"),

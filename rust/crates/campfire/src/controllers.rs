@@ -168,6 +168,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts#edit" => arc(accounts::edit),
         "accounts#update" => arc(accounts::update),
         "users#new" => arc(users::new),
+        "users#index" => arc(users::index),
+        "users/cards#show" => arc(users::cards::show),
         "users#create" => arc(users::create),
         "users#show" => arc(users::show),
         "qr_code#show" => arc(qr_code::show),

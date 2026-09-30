@@ -11,6 +11,8 @@ mod sidebar;
 pub use sidebar::*;
 mod summary;
 pub use summary::*;
+mod people;
+pub use people::*;
 
 /// `users/new.html.erb` (the join page).
 #[derive(Template)]

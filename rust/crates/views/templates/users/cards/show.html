@@ -1,0 +1,45 @@
+{% filter turbo_frame_tag("user_card",h::attrs()) %}
+  <div class="profile-card">
+    <header class="profile-card__header">
+      <span class="avatar profile-card__avatar">
+        {{ h::image_tag(ctx,person.user.avatar_path.as_str(),h::attrs().size(64).alt("")) }}
+      </span>
+
+      <div class="profile-card__identity min-width">
+        <strong class="profile-card__name overflow-ellipsis">{{ person.user.name }}</strong>
+
+        <span class="profile-card__presence">
+{% if person.user.active() %}            {{ person.status_subscription(ctx) }}
+            <span id="status_badge_user_{{ person.user.id }}">{{ person.status_badge()? }}</span>
+{% else if person.user.deactivated() %}            Deactivated
+{% else %}            Banned
+{% endif %}        </span>
+
+{% if person.user.administrator() || person.agent || person.user.bot() %}          <span class="profile-card__badges">
+{% if person.user.administrator() %}              <span class="profile-card__badge">Admin</span>
+{% endif %}{% if person.agent %}              <span class="profile-card__badge">Agent</span>
+{% else if person.user.bot() %}              <span class="profile-card__badge">Bot</span>
+{% endif %}          </span>
+{% endif %}
+{% if let Some(owner) = person.agent_owner %}          <span class="profile-card__owner">Agent owned by {{ owner }}</span>
+{% endif %}      </div>
+    </header>
+
+    <div class="profile-card__actions">
+{% if ctx.is_current_user(person.user.id) %}        {{ h::link_to("/users/me/profile",h::attrs().class("btn btn--reversed full-width").data("turbo_frame","_top"),"Edit profile") }}
+{% else if person.user.active() %}        {{ self.action_button(false) }}
+{% if !person.user.bot() %}          {{ self.action_button(true) }}
+{% endif %}        {{ h::link_to(&h::routes::user(person.user.id),h::attrs().class("btn full-width").data("turbo_frame","_top"),"View profile") }}
+{% if let Some(mention) = person.mention %}          {% filter button_to_copy_to_clipboard(mention) %}
+            Copy mention
+{% endfilter %}{% endif %}{% else %}        {{ h::link_to(&h::routes::user(person.user.id),h::attrs().class("btn full-width").data("turbo_frame","_top"),"View profile") }}
+{% endif %}    </div>
+
+{% if !ctx.is_current_user(person.user.id) && person.user.active() %}      <div class="profile-card__star">
+        {% filter turbo_frame_tag("star_user_" ~ person.user.id,h::attrs()) %}
+{% if person.starred %}    {{ self.star_button() }}
+{% else %}    {{ self.star_button() }}
+{% endif %}{% endfilter %}
+      </div>
+{% endif %}  </div>
+{% endfilter %}
