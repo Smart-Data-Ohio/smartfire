@@ -401,6 +401,306 @@
         "metadata": null
       },
       "message_count": 187
+    },
+    {
+      "name": "root_file_reattach",
+      "method": "patch",
+      "path": "/rooms/486777696/messages/935962058.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-root",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6ImJsb2JfaWQifX0=--a0455e433db5e221e639c005cae8178fee0270ad",
+          "markdown_source": "Retained root caption"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 200,
+      "body": "{\"id\":935962058,\"client_message_id\":\"signed-root\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:01.000Z\",\"body\":{\"plain_text\":\"Retained root caption\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Retained root caption</p></div>\",\"markdown_source\":\"Retained root caption\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@935962058\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8",
+      "cache_control": "max-age=0, private, must-revalidate",
+      "message": {
+        "id": 935962058,
+        "client_message_id": "signed-root",
+        "markdown_source": "Retained root caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "thread_file_reattach",
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9/messages/935962059.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-thread",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6ImJsb2JfaWQifX0=--a0455e433db5e221e639c005cae8178fee0270ad",
+          "markdown_source": "Retained thread caption"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 200,
+      "body": "{\"id\":935962059,\"client_message_id\":\"signed-thread\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:01.000Z\",\"body\":{\"plain_text\":\"Retained thread caption\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>Retained thread caption</p></div>\",\"markdown_source\":\"Retained thread caption\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":9,\"name\":\"Signed attachments\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=935962059&thread=9\"}",
+      "location": null,
+      "content_type": "application/json; charset=utf-8",
+      "cache_control": "no-store",
+      "message": {
+        "id": 935962059,
+        "client_message_id": "signed-thread",
+        "markdown_source": "Retained thread caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "tampered_root_edit",
+      "method": "patch",
+      "path": "/rooms/486777696/messages/935962058.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-root",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6ImJsb2JfaWQifX0=--a0455e433db5e221e639c005cae8178fee0270adx",
+          "markdown_source": "Rejected root edit"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 500,
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "location": null,
+      "content_type": "application/json; charset=UTF-8",
+      "cache_control": null,
+      "message": {
+        "id": 935962058,
+        "client_message_id": "signed-root",
+        "markdown_source": "Retained root caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "tampered_thread_edit",
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9/messages/935962059.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-thread",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6ImJsb2JfaWQifX0=--a0455e433db5e221e639c005cae8178fee0270adx",
+          "markdown_source": "Rejected thread edit"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 500,
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "location": null,
+      "content_type": "application/json; charset=UTF-8",
+      "cache_control": null,
+      "message": {
+        "id": 935962059,
+        "client_message_id": "signed-thread",
+        "markdown_source": "Retained thread caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "wrong_purpose_root_edit",
+      "method": "patch",
+      "path": "/rooms/486777696/messages/935962058.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-root",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6Im5vdF9hX21lc3NhZ2VfYXR0YWNobWVudCJ9fQ==--533fe65ef2b1d366d76852ee238152c8316cf876",
+          "markdown_source": "Rejected root edit"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 500,
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "location": null,
+      "content_type": "application/json; charset=UTF-8",
+      "cache_control": null,
+      "message": {
+        "id": 935962058,
+        "client_message_id": "signed-root",
+        "markdown_source": "Retained root caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "wrong_purpose_thread_edit",
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9/messages/935962059.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-thread",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsInB1ciI6Im5vdF9hX21lc3NhZ2VfYXR0YWNobWVudCJ9fQ==--533fe65ef2b1d366d76852ee238152c8316cf876",
+          "markdown_source": "Rejected thread edit"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 500,
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "location": null,
+      "content_type": "application/json; charset=UTF-8",
+      "cache_control": null,
+      "message": {
+        "id": 935962059,
+        "client_message_id": "signed-thread",
+        "markdown_source": "Retained thread caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "missing_blob_root_edit",
+      "method": "patch",
+      "path": "/rooms/486777696/messages/935962058.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-root",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6OTk5OTk5OTksInB1ciI6ImJsb2JfaWQifX0=--b11ce82f8b812a15c5843ed926f4b150f2750614",
+          "markdown_source": "Rejected root edit"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 404,
+      "body": "{\"status\":404,\"error\":\"Not Found\"}",
+      "location": null,
+      "content_type": "application/json; charset=UTF-8",
+      "cache_control": null,
+      "message": {
+        "id": 935962058,
+        "client_message_id": "signed-root",
+        "markdown_source": "Retained root caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "missing_blob_thread_edit",
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9/messages/935962059.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-thread",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6OTk5OTk5OTksInB1ciI6ImJsb2JfaWQifX0=--b11ce82f8b812a15c5843ed926f4b150f2750614",
+          "markdown_source": "Rejected thread edit"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 404,
+      "body": "{\"status\":404,\"error\":\"Not Found\"}",
+      "location": null,
+      "content_type": "application/json; charset=UTF-8",
+      "cache_control": null,
+      "message": {
+        "id": 935962059,
+        "client_message_id": "signed-thread",
+        "markdown_source": "Retained thread caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "expired_root_edit",
+      "method": "patch",
+      "path": "/rooms/486777696/messages/935962058.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-root",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsImV4cCI6IjIwMjYtMDMtMDJUMTY6MDA6MDEuMDAwWiIsInB1ciI6ImJsb2JfaWQifX0=--5dd05c9f516d1207bd06dd388664420e49e774ca",
+          "markdown_source": "Rejected root edit"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 500,
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "location": null,
+      "content_type": "application/json; charset=UTF-8",
+      "cache_control": null,
+      "message": {
+        "id": 935962058,
+        "client_message_id": "signed-root",
+        "markdown_source": "Retained root caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
+    },
+    {
+      "name": "expired_thread_edit",
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9/messages/935962059.json",
+      "input": {
+        "message": {
+          "client_message_id": "signed-thread",
+          "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MTMsImV4cCI6IjIwMjYtMDMtMDJUMTY6MDA6MDEuMDAwWiIsInB1ciI6ImJsb2JfaWQifX0=--5dd05c9f516d1207bd06dd388664420e49e774ca",
+          "markdown_source": "Rejected thread edit"
+        }
+      },
+      "now": "2026-03-02T16:00:01Z",
+      "status": 500,
+      "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "location": null,
+      "content_type": "application/json; charset=UTF-8",
+      "cache_control": null,
+      "message": {
+        "id": 935962059,
+        "client_message_id": "signed-thread",
+        "markdown_source": "Retained thread caption",
+        "attachment_id": 13,
+        "content_type": "text/plain",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        }
+      },
+      "message_count": 187
     }
   ]
 }

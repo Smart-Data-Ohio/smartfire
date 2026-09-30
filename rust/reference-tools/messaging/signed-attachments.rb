@@ -46,5 +46,11 @@ capture.call('expired_boundary_root', :post, "/rooms/#{room.id}/messages.turbo_s
 capture.call('expired_boundary_thread', :post, "/rooms/#{room.id}/threads/#{thread.id}/messages.json", {message: {client_message_id: 'signed-expired-thread', attachment: expiring}})
 capture.call('expired_retry_root', :post, "/rooms/#{room.id}/messages.turbo_stream", {message: {client_message_id: 'signed-root', attachment: expiring, markdown_source: 'Must be ignored'}})
 capture.call('expired_retry_thread', :post, "/rooms/#{room.id}/threads/#{thread.id}/messages.json", {message: {client_message_id: 'signed-thread', attachment: expiring, markdown_source: 'Must be ignored'}})
+capture.call('root_file_reattach', :patch, "/rooms/#{room.id}/messages/#{root.id}.json", {message: {client_message_id: 'signed-root', attachment: file, markdown_source: 'Retained root caption'}})
+capture.call('thread_file_reattach', :patch, "/rooms/#{room.id}/threads/#{thread.id}/messages/#{child.id}.json", {message: {client_message_id: 'signed-thread', attachment: file, markdown_source: 'Retained thread caption'}})
+[['tampered',file + 'x'],['wrong_purpose',wrong_purpose],['missing_blob',missing_blob],['expired',expiring]].each do |name, capability|
+  capture.call("#{name}_root_edit", :patch, "/rooms/#{room.id}/messages/#{root.id}.json", {message: {client_message_id: 'signed-root', attachment: capability, markdown_source: 'Rejected root edit'}})
+  capture.call("#{name}_thread_edit", :patch, "/rooms/#{room.id}/threads/#{thread.id}/messages/#{child.id}.json", {message: {client_message_id: 'signed-thread', attachment: capability, markdown_source: 'Rejected thread edit'}})
+end
 File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', thread_id: thread.id, rows:) + "\n")
-puts "WS8bm signed-attachments oracle: #{rows.size} actual root/thread requests; attach/replace/delete, expiry/purpose/missing-blob rejection and expired retries"
+puts "WS8bm signed-attachments oracle: #{rows.size} actual root/thread requests; attach/replace/delete, expiry/purpose/missing-blob rejection, expired retries and failed-edit preservation"

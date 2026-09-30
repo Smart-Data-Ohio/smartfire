@@ -1,6 +1,6 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records the independently executed Rust aggregate tests and Rails reference counts separately. All names below still require explicit case-level Rust attribution/signoff; no one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
@@ -105,7 +105,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/messages/boosts_controller_test.rb
 
-17 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+17 named declarations. Three cases have the component/action evidence below; merged room/browser signoff and the remaining named attribution stay pending. Reference execution counts are in the main report.
 
 - create — WS8bm.
 - destroy — WS8bm.
@@ -121,9 +121,9 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - keycaps, flags, ZWJ sequences, VS16 and modifiers aggregate and toggle — WS8bm.
 - plain digits and letters stay per-person legacy boosts without toggling — WS8bm.
 - free text stays a per-person legacy boost without toggling — WS8bm.
-- the boost action opens the soft keyboard — WS12 / WS11; WS8bm HTTP seam.
-- action metadata groups reaction counts by distinct reactor — WS8bm.
-- the reaction tooltip lists reactors as plain text, never interactive content — WS8bm.
+- the boost action opens the soft keyboard — WS8bm; `boost_pages_match_complete_rails_forms_distinct_counts_and_escaped_reactors`, complete `index_empty`/`index_mixed` Rails components with `soft-keyboard#open` and actual successful index requests. Keyboard interaction remains system-phase work.
+- action metadata groups reaction counts by distinct reactor — WS8bm; the same test's actual `actions_david`/`actions_jason` requests compare whole JSON with three duplicate boosts, two distinct reactors and viewer-specific activity.
+- the reaction tooltip lists reactors as plain text, never interactive content — WS8bm; the same test's complete `index_hostile_name` component escapes an interactive-looking reactor name. Merged room HTTP/browser signoff remains pending; this component comparison alone is not that signoff.
 
 ## test/controllers/channel_threads_controller_test.rb
 
