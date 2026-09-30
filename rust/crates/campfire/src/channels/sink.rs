@@ -35,8 +35,11 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 /// Runs the broadcast's handler. A broadcast that fails is logged and dropped: the model
 /// callbacks rescue and report it (`Rails.error.report(..., handled: true)`), so the ones after
 /// it still run.
-fn broadcast(cable: &Cable, _app: Option<&App>, request: &BroadcastRequest) {
+fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
+        campfire_db::models::huddle_effects::Presence::KIND => decode::<campfire_db::models::huddle_effects::Presence>(request).and_then(|effect| {
+            app.map_or(Ok(()), |app| super::huddle_effects::presence(app, effect.room_id))
+        }),
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),

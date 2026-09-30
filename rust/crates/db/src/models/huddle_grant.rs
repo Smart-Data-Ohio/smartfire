@@ -132,6 +132,9 @@ impl HuddleGrant {
             {
                 continue;
             }
+            if let Ok(grant) = &result {
+                crate::models::huddle_effects::broadcast_presence(tx, grant.room_id);
+            }
             return result;
         }
         unreachable!()
@@ -253,6 +256,7 @@ impl HuddleGrant {
         if last_stage_grant {
             Self::end_streams_for_membership(tx, self.room_id, self.membership_id)?;
         }
+        crate::models::huddle_effects::broadcast_presence(tx, self.room_id);
         Ok(())
     }
     pub(crate) fn end_streams_for_membership(
@@ -367,6 +371,7 @@ impl HuddleGrant {
             [self.id],
         )?;
         self.last_seen_at = None;
+        crate::models::huddle_effects::broadcast_presence(tx, self.room_id);
         Ok(true)
     }
     pub fn participants_for(

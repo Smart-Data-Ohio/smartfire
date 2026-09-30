@@ -11,6 +11,7 @@ pub mod direct_room;
 pub mod first_run;
 pub mod huddle_cleanup;
 pub mod huddle_grant;
+pub mod huddle_effects;
 pub mod forwarder;
 pub mod membership;
 pub mod keyword_alert;

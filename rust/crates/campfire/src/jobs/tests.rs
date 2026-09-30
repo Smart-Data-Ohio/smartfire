@@ -24,6 +24,40 @@ async fn app() -> (Booted, tempfile::TempDir) {
     (app_in(dir.path()).await, dir)
 }
 
+#[tokio::test]
+async fn huddle_presence_worker_discards_missing_grants_successfully() {
+    let (booted, _dir) = app().await;
+    booted.app.db.write(|tx| {
+        tx.emit_after_commit(Event::job(&campfire_db::models::huddle_grant::PresenceJob { grant_id: -1 }));
+        Ok(())
+    }).await.unwrap();
+    wait_for(&booted.app, "the presence worker", |rows| rows.iter().all(|job| job.class != "Huddle::BroadcastPresenceJob")).await;
+    booted.jobs.shutdown(Duration::from_secs(2)).await;
+}
+
+#[tokio::test]
+async fn huddle_presence_recovers_only_the_previous_unknown_class_failures() {
+    let (booted, _dir) = app().await;
+    booted.jobs.shutdown(Duration::from_secs(2)).await;
+    booted.app.db.write(|tx| {
+        for (class, error) in [("Huddle::BroadcastPresenceJob", "no handler is registered for Huddle::BroadcastPresenceJob"), ("Huddle::BroadcastPresenceJob", "real rendering failure"), ("WS13OtherJob", "no handler is registered for WS13OtherJob")] {
+            let id = boot_insert_failed_job(tx, class, error)?;
+            assert!(id > 0);
+        }
+        Ok(())
+    }).await.unwrap();
+    assert_eq!(super::huddle::recover_unregistered(&booted.app.db).await.unwrap(), 1);
+    let rows = jobs(&booted.app);
+    assert_eq!(rows.iter().filter(|row| row.status == "ready").count(), 1);
+    assert_eq!(rows.iter().filter(|row| row.status == "failed").count(), 2);
+    assert_eq!(super::huddle::recover_unregistered(&booted.app.db).await.unwrap(), 0);
+}
+
+fn boot_insert_failed_job(tx: &Tx<'_>, class: &str, error: &str) -> campfire_db::Result<i64> {
+    use campfire_db::CachedStatements;
+    Ok(tx.conn().query_row_cached("INSERT INTO background_jobs(job_class,queue_name,arguments,payload_version,status,attempts,run_at,last_error,failed_at,created_at,updated_at) VALUES(?1,'default','{\"grant_id\":-1}',1,'failed',1,?3,?2,?3,?3,?3) RETURNING id", rusqlite::params![class, error, tx.now()], |row| row.get(0))?)
+}
+
 fn jobs(app: &App) -> Vec<JobRow> {
     app.db.read_blocking(inspect::all).unwrap()
 }

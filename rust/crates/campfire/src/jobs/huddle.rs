@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::Registry;
 use crate::app::App;
 use crate::huddle::{Config, RoomService};
+use campfire_db::CachedStatements;
 
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
@@ -22,8 +23,32 @@ impl JobKind for Cleanup {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct Presence(campfire_db::models::huddle_grant::PresenceJob);
+impl campfire_db::Job for Presence { const CLASS: &'static str = "Huddle::BroadcastPresenceJob"; }
+impl JobKind for Presence {}
+
+async fn presence(app: App, job: Presence, _: Execution) -> JobResult {
+    let room = app.db.read(move |conn| Ok(campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, job.0.grant_id)?.map(|grant| grant.room_id))).await?;
+    if let Some(room_id) = room {
+        tokio::task::spawn_blocking(move || crate::channels::huddle_effects::presence(&app, room_id)).await??;
+    }
+    Ok(Outcome::Done)
+}
+
+/// Previous WS13 builds persisted sightings before the handler was available. Retry only
+/// those exact unknown-class failures, preserving genuine rendering/validation failures.
+pub(crate) async fn recover_unregistered(db: &Database) -> campfire_db::Result<usize> {
+    db.write(|tx| Ok(tx.conn().execute_cached(
+        "UPDATE background_jobs SET status='ready',attempts=0,run_at=?1,failed_at=NULL,updated_at=?1 WHERE status='failed' AND job_class IN ('Huddle::BroadcastPresenceJob') AND last_error='no handler is registered for ' || job_class",
+        [tx.now()],
+    )?)).await
+}
+
 pub(super) fn register(registry: &mut Registry) {
     registry.register(cleanup);
+    registry.register(presence);
 }
 
 async fn cleanup(app: App, job: Cleanup, _: Execution) -> JobResult {

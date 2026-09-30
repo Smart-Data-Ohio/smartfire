@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRATCH = ROOT / ".scratch" / "ws13-discrimination"
@@ -18,6 +19,8 @@ D = ROOT / "rust/crates/db/src/models/huddle_cleanup.rs"
 J = ROOT / "rust/crates/campfire/src/jobs/huddle.rs"
 G = ROOT / "rust/crates/db/src/models/huddle_grant.rs"
 I = ROOT / "rust/crates/campfire/src/controllers/internal_huddle.rs"
+E = ROOT / "rust/crates/db/src/models/huddle_effects.rs"
+B = ROOT / "rust/crates/campfire/src/channels/huddle_effects.rs"
 
 
 def replace_once(source, before, after):
@@ -37,6 +40,10 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("presence-before-commit", E, lambda s: replace_once(s, "tx.emit_after_commit", "tx.emit_now"), "campfire", "huddle_presence_reaches_real_sockets_and_rolled_back_revocation_stays_silent"),
+    ("presence-worker-bypassed", J, lambda s: replace_body(s, "async fn presence(", "Ok(Outcome::Done)"), "campfire", "huddle_presence_reaches_real_sockets_and_rolled_back_revocation_stays_silent"),
+    ("presence-sink-bypassed", B, lambda s: replace_body(s, "pub(crate) fn presence(", "Ok(())"), "campfire", "huddle_presence_reaches_real_sockets_and_rolled_back_revocation_stays_silent"),
+    ("presence-recovery-disabled", J, lambda s: replace_body(s, "pub(crate) async fn recover_unregistered(", "Ok(0)"), "campfire", "huddle_presence_recovers_only_the_previous_unknown_class_failures"),
     ("gateway-secret-bypassed", I, lambda s: replace_body(s, "fn authenticate(", 'c.set_header("cache-control", "no-store"); Some(c.app().config.huddle.clone())'), "campfire", "huddle_gateway_missing_and_wrong_secret_fail_closed"),
     ("revoked-grant-authorized", G, lambda s: replace_body(s, "pub fn authorized(", "Ok(true)"), "campfire", "huddle_gateway_revoked_and_removed_member_grants_fail_closed"),
     ("removed-member-authorized", G, lambda s: replace_body(s, "pub fn authorized(", "Ok(!self.revoked())"), "campfire", "huddle_gateway_removed_member_without_callbacks_is_revoked"),
@@ -54,8 +61,13 @@ mutations = [
     ("cleanup-worker-bypassed", J, lambda s: replace_body(s, "async fn cleanup(", "Ok(Outcome::Done)"), "campfire", "huddle::tests::cleanup_background_queue_and_http_enqueue_rollback"),
 ]
 
+if len(sys.argv) > 1:
+    selected = set(sys.argv[1:])
+    assert selected <= {mutation[0] for mutation in mutations}, selected
+    mutations = [mutation for mutation in mutations if mutation[0] in selected]
+
 environment = dict(os.environ, TMPDIR=str(ROOT / ".scratch"), CARGO_TARGET_DIR=str(ROOT / "rust/target"),
-                   CABLE_TEST_PORT_RANGE="52300-52349", MAIL_TEST_PORT_RANGE="52350-52399")
+                   CI="1", CABLE_TEST_PORT_RANGE="52300-52349", MAIL_TEST_PORT_RANGE="52350-52399")
 for name, path, mutate, package, test in mutations:
     original = path.read_text()
     try:

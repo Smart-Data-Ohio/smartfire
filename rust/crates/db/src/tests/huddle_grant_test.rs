@@ -49,6 +49,24 @@ fn revoked(db: &TestDb, id: i64) -> bool {
 }
 
 #[test]
+fn huddle_revocation_and_leave_emit_presence_only_after_commit() {
+    let db = TestDb::new();
+    let (grant, _, _) = setup(&db);
+    db.sink.take();
+    let sink = db.sink.clone();
+    db.write(move |tx| {
+        let mut grant = HuddleGrant::find_by_id(tx.conn(), grant)?.unwrap();
+        grant.record_seen(tx)?;
+        grant.mark_out_of_call(tx, None)?;
+        assert!(sink.events().is_empty(), "broadcast escaped before commit");
+        Ok(())
+    });
+    assert!(db.sink.take().iter().any(|event| matches!(event, crate::Event::Broadcast(request) if request.kind == "HuddleGrant#broadcast_voice_presence")), "leave did not emit committed presence");
+    db.write(move |tx| HuddleGrant::find_by_id(tx.conn(), grant)?.unwrap().revoke(tx, false, &config()));
+    assert!(db.sink.take().iter().any(|event| matches!(event, crate::Event::Broadcast(request) if request.kind == "HuddleGrant#broadcast_voice_presence")), "revocation did not emit committed presence");
+}
+
+#[test]
 fn huddle_membership_removal_revokes_before_deleting() {
     let db = TestDb::new();
     let (grant, membership, _) = setup(&db);
