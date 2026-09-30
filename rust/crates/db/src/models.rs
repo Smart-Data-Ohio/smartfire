@@ -9,6 +9,7 @@ pub mod boost;
 pub mod channel_thread;
 pub mod direct_room;
 pub mod first_run;
+pub mod huddle_cleanup;
 pub mod forwarder;
 pub mod membership;
 pub mod keyword_alert;

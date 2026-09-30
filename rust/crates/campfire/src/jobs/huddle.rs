@@ -1,0 +1,89 @@
+//! The cleanup step of `Huddle::Reconciler` and `Huddle::CleanupJob`.
+//! Invitation resolution and stale-stream reconciliation remain WS13's next slice.
+use campfire_db::Database;
+use campfire_db::models::huddle_cleanup::{CleanupJob, HuddleCleanup, Operation};
+use campfire_jobs::{Execution, JobKind, JobResult, Outcome, RetryPolicy};
+use serde::{Deserialize, Serialize};
+
+use super::Registry;
+use crate::app::App;
+use crate::huddle::{Config, RoomService};
+
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct Cleanup(CleanupJob);
+impl campfire_db::Job for Cleanup {
+    const CLASS: &'static str = "Huddle::CleanupJob";
+}
+impl JobKind for Cleanup {
+    // The cleanup row carries its own schedule. Queue retries would bypass it.
+    fn retry_policy() -> RetryPolicy {
+        RetryPolicy::application_job().attempts(1)
+    }
+}
+
+pub(super) fn register(registry: &mut Registry) {
+    registry.register(cleanup);
+}
+
+async fn cleanup(app: App, job: Cleanup, _: Execution) -> JobResult {
+    perform(
+        &app.db,
+        RoomService::new(Config::from_env()),
+        job.0.cleanup_id,
+        true,
+    )
+    .await?;
+    Ok(Outcome::Done)
+}
+
+/// Commit the claim before contacting LiveKit, preserving the retry if the process dies.
+/// A LiveKit failure leaves the database backoff intact and consumes the queue delivery.
+pub(crate) async fn perform(
+    db: &Database,
+    service: RoomService,
+    id: i64,
+    from_queue: bool,
+) -> anyhow::Result<bool> {
+    let configured = service.admin_configured();
+    let Some(row) = db
+        .write(move |tx| HuddleCleanup::claim(tx, id, from_queue, configured))
+        .await?
+    else {
+        return Ok(false);
+    };
+    let now = db.env().now().as_second();
+    let result = match row.operation {
+        Operation::RemoveParticipant => {
+            service
+                .remove_participant(&row.room_name, row.identity.as_deref().unwrap_or(""), now)
+                .await
+        }
+        Operation::DeleteRoom => service.delete_room(&row.room_name, now).await,
+    };
+    if let Err(error) = result {
+        tracing::warn!(id, attempt = row.attempts, %error, "Huddle cleanup failed");
+        return Ok(false);
+    }
+    db.write(move |tx| HuddleCleanup::complete(tx, id)).await?;
+    Ok(true)
+}
+
+pub(crate) async fn reconcile(db: &Database, service: RoomService) -> anyhow::Result<usize> {
+    if !service.admin_configured() {
+        return Ok(0);
+    }
+    let now = db.env().now();
+    let ids = db
+        .read(move |conn| HuddleCleanup::due_ids(conn, now, 100))
+        .await?;
+    let mut completed = 0;
+    for id in ids {
+        match perform(db, service.clone(), id, false).await {
+            Ok(true) => completed += 1,
+            Ok(false) => {}
+            Err(error) => tracing::error!(id, %error, "Unexpected huddle cleanup failure"),
+        }
+    }
+    Ok(completed)
+}
