@@ -171,3 +171,30 @@ async fn thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_
         client.assert_silent().await;
     }
 }
+
+#[tokio::test]
+async fn thread_lifecycle_publishes_only_rails_delete_indicator_frames() {
+    use crate::controllers::channel_threads::write_tests::{oracle, seed, prepare, request};
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let hub = boot_with_test_clock(clock.clone()).await.unwrap();
+    hub.app.db().write(seed).await.unwrap();
+    let mut david = hub.app.david();
+    let mut creator = hub.app.sign_in(crate::controllers::presenters::test_support::JASON).await;
+    for row in oracle()["rows"].as_array().unwrap() {
+        let name = row["name"].as_str().unwrap().to_owned();
+        hub.app.db().write(move |tx| prepare(tx, &name)).await.unwrap();
+        clock.set(row["time"].as_str().unwrap().parse().unwrap());
+        let (mut client, streams) = subscriber(&hub, None).await;
+        let browser = if row["viewer"] == 0 { &mut david } else { &mut creator };
+        let response = browser.write(request(row)).await;
+        assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{}: {}", row["name"], response.text());
+        for expected in row["frames"].as_array().unwrap().iter().filter(|frame| streams.iter().any(|stream| frame["stream"] == *stream)) {
+            let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
+            if actual["message"] != expected["payload"] {
+                crate::controllers::presenters::test_support::rails_mismatch(actual["message"].as_str().unwrap(), expected["payload"].as_str().unwrap(), row["name"].as_str().unwrap());
+            }
+            assert_eq!(campfire_cable::turbo::session_bound(actual["message"].as_str().unwrap()), None);
+        }
+        client.assert_silent().await;
+    }
+}

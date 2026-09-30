@@ -3,6 +3,10 @@
 mod tests;
 #[cfg(test)]
 mod page_tests;
+mod writes;
+pub use writes::{create, destroy, new, update};
+#[cfg(test)]
+pub(crate) mod write_tests;
 
 use askama::Template;
 use campfire_db::{ChannelThread, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, Timestamp};
@@ -73,6 +77,10 @@ pub async fn show(c: &mut Ctx) -> Result {
         }).await?;
         return render_json(c, StatusCode::OK, &payload);
     }
+    render_standalone(c, thread, records, StatusCode::OK).await
+}
+
+async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {
     let name = thread.name.clone();
     let (parent, items, count, status) = messages::present(c, move |p| {
         let parent = thread.parent_message_id.map(|id| Message::find(p.conn, id)).transpose()?.as_ref().map(|message| p.message_item(message)).transpose()?;
@@ -80,7 +88,7 @@ pub async fn show(c: &mut Ctx) -> Result {
     }).await?;
     // Work/board/PR sections are integration seams with WS12/WS15. The ordinary standalone
     // thread uses the same stable collection entry point as the room's message list.
-    page::titled_content(c, StatusCode::OK, &name, |ctx| campfire_views::channel_threads::Show { ctx,
+    page::titled_content(c, response_status, &name, |ctx| campfire_views::channel_threads::Show { ctx,
         name: &name, status, count, parent: parent.as_ref(), messages: &items }.render()).await
 }
 

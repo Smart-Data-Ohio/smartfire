@@ -417,6 +417,30 @@ impl ChannelThread {
         self.save(tx, changed)
     }
 
+    /// The ordinary thread metadata update with Rails' pending tag set. WS12's board
+    /// auto-assignment/row callbacks remain at its existing seam; this caller handles channels.
+    pub fn update_metadata(&mut self, tx: &mut Tx<'_>, name: Option<&str>, minutes: Option<i64>, tags: Option<&[String]>) -> Result<()> {
+        let mut changed = self.clone();
+        if let Some(name) = name { changed.name = name.into(); }
+        if let Some(minutes) = minutes { changed.auto_archive_after_minutes = minutes; }
+        let names = tags.map(normalize_tag_names);
+        let room = Room::find(tx.conn(), self.room_id)?;
+        changed.validate(tx.conn(), &room, names.as_deref())?.into_result()?;
+        // Remove obsolete tags before save's stored-tag validation, then add only missing
+        // names. A metadata no-op or unchanged tag retains its existing row/timestamp.
+        if let Some(names) = &names {
+            for tag in self.tags(tx.conn())? {
+                if !names.contains(&tag.name) { tag.destroy(tx)?; }
+            }
+        }
+        self.save(tx, changed)?;
+        if let Some(names) = names {
+            let existing = self.tag_names(tx.conn())?;
+            for name in names { if !existing.contains(&name) { ThreadTag::create(tx, self.id, &name)?; } }
+        }
+        Ok(())
+    }
+
     // Lifecycle
 
     /// `status`: locked, else closed (explicitly, or stale), else active. Reads report a stale

@@ -395,7 +395,7 @@ fn invalid_drive_file_ids() -> Error {
 }
 
 /// Active Record string/text column assignment (verified by the Rails model probes).
-fn string_column(value: &Param) -> Option<String> {
+pub(crate) fn string_column(value: &Param) -> Option<String> {
     match value {
         Param::Null => None,
         Param::Bool(true) => Some("t".into()),

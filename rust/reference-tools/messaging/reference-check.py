@@ -32,6 +32,7 @@ FILES = [
     "app/models/message/pagination.rb",
     "app/models/message/broadcasts.rb",
     "app/models/channel_thread.rb",
+    "app/models/thread_tag.rb",
     "app/models/agent.rb",
     "app/models/agent_grant.rb",
     "app/models/link_embed.rb",
