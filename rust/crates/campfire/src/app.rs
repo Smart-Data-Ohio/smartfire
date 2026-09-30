@@ -394,5 +394,8 @@ mod security_tests;
 
 #[cfg(test)]
 mod sudo_tests;
+
+#[cfg(test)]
+mod two_factor_tests;
 #[cfg(test)]
 mod tests;

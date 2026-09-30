@@ -49,6 +49,7 @@ pub mod rooms;
 pub mod searches;
 pub mod sessions;
 pub mod sudos;
+pub mod two_factor;
 pub mod unfurl_links;
 pub mod users;
 pub mod welcome;
@@ -144,6 +145,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
+        "two_factor/setups#show" => arc(two_factor::setup_show),
+        "two_factor/setups#create" => arc(two_factor::setup_create),
         "sudos#new" => arc(sudos::new),
         "sudos#create" => arc(sudos::create),
         "sudos#google" => arc(sudos::google),

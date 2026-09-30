@@ -11,6 +11,7 @@ pub mod shared;
 pub mod time;
 pub mod sessions;
 pub mod sudos;
+pub mod two_factor;
 pub mod first_runs;
 pub mod users;
 pub mod accounts;
