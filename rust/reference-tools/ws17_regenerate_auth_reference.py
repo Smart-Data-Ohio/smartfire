@@ -52,3 +52,18 @@ paths += [capture / "partials/first_paint_controller_preloads.html"]
 for source in paths:
     shutil.copyfile(source, target / source.relative_to(capture))
 print(f"Approved layout goldens: {len(paths)} complete foundation cases; reference 2e20b24c")
+# Export the compiled-byte, importmap, CSS and static-response cases with the original
+# Propshaft/Rack exporter. Gem vendor trees are unchanged and remain on the pin.
+assets = scratch / "status-layout-assets-capture"
+assets.mkdir(exist_ok=True)
+subprocess.run([
+    "docker", "run", "--rm", "--name", "ws17-approved-assets-export",
+    "--user", f"{os.getuid()}:{os.getgid()}",
+    "-e", "RAILS_ENV=production", "-e", "SECRET_KEY_BASE_DUMMY=1", "-e", "DISABLE_SSL=1",
+    "-e", "ASSETS_DIR=/work/assets", "-e", "REFERENCE_SHA=2e20b24c",
+    "-v", f"{assets}:/work/assets",
+    "-v", f"{root}/rust/crates/assets/script/export_reference.rb:/work/export_reference.rb:ro",
+    image, "bin/rails", "runner", "/work/export_reference.rb",
+], cwd=root, check=True)
+for source in (assets / "tests/reference").iterdir():
+    shutil.copyfile(source, root / "rust/crates/assets/tests/reference" / source.name)
