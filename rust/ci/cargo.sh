@@ -4,8 +4,12 @@ set -euo pipefail
 # CI-only linker/profile settings: ordinary developer builds never require mold or Docker.
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 : "${RUNNER_TEMP:?Set RUNNER_TEMP to a disk-backed scratch directory}"
+# Runner file-command channels (including GITHUB_ENV) live under RUNNER_TEMP. Build scripts
+# must only see their own scratch directory, never those channels or the parent directory.
+scratch="$RUNNER_TEMP/rust-scratch"
+mkdir -p -- "$scratch"
 docker run --rm --user "$(id -u):$(id -g)" \
-  --volume "$repo:/src" --volume "$RUNNER_TEMP:/ci-tmp" --workdir /src/rust \
+  --volume "$repo:/src" --volume "$scratch:/ci-tmp" --workdir /src/rust \
   --env HOME=/ci-tmp --env TMPDIR=/ci-tmp \
   --env CARGO_HOME="${CARGO_HOME:-/src/rust/.cargo-home}" \
   --env CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/src/rust/target}" \
