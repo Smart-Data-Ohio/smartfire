@@ -9,7 +9,7 @@ pub(super) const SECRET: &str = "ws11api-fixture-credential";
 pub(super) const AGENT: i64 = 773018776;
 
 pub(super) async fn setup() -> TestApp {
-    let app = TestApp::boot()
+    let app = TestApp::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new("2026-03-02T16:00:00Z".parse().unwrap())))
         .await
         .expect("WS11-api tests require the pinned default seed");
     app.db().write(|tx| {

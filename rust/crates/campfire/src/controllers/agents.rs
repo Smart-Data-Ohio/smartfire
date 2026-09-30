@@ -5,6 +5,7 @@ use campfire_kit::{Ctx, Param, Result, StatusCode, format, halt};
 use serde_json::{Value, json};
 
 use super::presenters::page::db_error;
+pub mod mcp;
 use crate::app::AppCtx;
 use crate::concerns::{self, agent_api};
 

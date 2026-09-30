@@ -175,6 +175,10 @@ fn router(app: &App, kit: Kit) -> Router {
         // routes, which reads its own body after its rate limit.
         .route("/csp_reports", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
         .route("/csp_reports.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
+        // MCP owns JSON-RPC parse errors and must charge the coarse bucket before
+        // parsing non-JSON bodies. Keep the kit's upload bound before its action.
+        .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
+        .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));

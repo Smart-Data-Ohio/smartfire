@@ -1,0 +1,3960 @@
+{
+  "reference_pin": "d7c7de92",
+  "versions": [
+    "2026-07-28",
+    "2025-11-25",
+    "2025-06-18",
+    "2025-03-26"
+  ],
+  "server_name": "smartfire",
+  "server_version": "1.0.0",
+  "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.",
+  "tools": [
+    {
+      "name": "list_rooms",
+      "description": "List the agent's rooms that carry at least one granted capability (legacy agents: every member room), with kind flags (board, direct).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "throttle": null
+    },
+    {
+      "name": "read_messages",
+      "description": "Read one conversation: a room's root messages (room_id) or a thread's messages (thread_id). Pass exactly one. Supports before/after message-id cursors and limit (default 50, max 100). Returns messages oldest-first with paging flags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Room to read root messages from."
+          },
+          "thread_id": {
+            "type": "integer",
+            "description": "Thread to read messages from."
+          },
+          "before": {
+            "type": "integer",
+            "description": "Return messages before this message id."
+          },
+          "after": {
+            "type": "integer",
+            "description": "Return messages after this message id."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max messages (default 50, max 100)."
+          }
+        }
+      },
+      "throttle": null
+    },
+    {
+      "name": "post_message",
+      "description": "Post a message to a room, or a reply inside a thread (thread_id). One of body or markdown_source is required; reply_to_message_id targets a message in the same conversation. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Room to post in."
+          },
+          "thread_id": {
+            "type": "integer",
+            "description": "Thread to reply inside."
+          },
+          "body": {
+            "type": "string",
+            "description": "Plain-text body."
+          },
+          "markdown_source": {
+            "type": "string",
+            "description": "Markdown body (preferred)."
+          },
+          "reply_to_message_id": {
+            "type": "integer",
+            "description": "Message to reply to."
+          },
+          "reply_notify_author": {
+            "type": "boolean",
+            "description": "Notify the reply target's author."
+          },
+          "client_message_id": {
+            "type": "string",
+            "description": "Idempotency key: a retry returns the original message."
+          },
+          "drive_file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Drive file ids to attach."
+          }
+        },
+        "required": [
+          "room_id"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/messages",
+        "create"
+      ]
+    },
+    {
+      "name": "react",
+      "description": "React to a message with an emoji or :shortcode:. Idempotent: repeating the same content returns the existing reaction. Requires react.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "description": "Message to react to."
+          },
+          "content": {
+            "type": "string",
+            "description": "Emoji or :shortcode:."
+          }
+        },
+        "required": [
+          "message_id",
+          "content"
+        ]
+      },
+      "throttle": null
+    },
+    {
+      "name": "poll_events",
+      "description": "Poll the agent's event ledger (mentions, replies, DMs, approvals, work assignments). Pass since (default 0) and limit (default 50, max 100); the response carries next_since for the next poll. Requires read_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "since": {
+            "type": "integer",
+            "description": "Return events after this event id."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max events (default 50, max 100)."
+          }
+        }
+      },
+      "throttle": [
+        120,
+        "agents/events",
+        "index"
+      ]
+    },
+    {
+      "name": "ack_events",
+      "description": "Acknowledge event rows by id (idempotent, max 100 ids per call). Returns a per-id outcome or error. Requires read_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "event_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Event ids to acknowledge."
+          }
+        },
+        "required": [
+          "event_ids"
+        ]
+      },
+      "throttle": [
+        120,
+        "agents/events",
+        "ack"
+      ]
+    },
+    {
+      "name": "list_board_posts",
+      "description": "List a board's posts as work payloads, newest activity first. status is one work status or open/done/all (default open); owner is a user id, me, or agents; tag filters by tag. Requires read_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Board room id."
+          },
+          "status": {
+            "type": "string",
+            "description": "planned, in_progress, blocked, done, open, or all."
+          },
+          "owner": {
+            "type": "string",
+            "description": "A user id, me, or agents."
+          },
+          "tag": {
+            "type": "string",
+            "description": "A single tag."
+          }
+        },
+        "required": [
+          "room_id"
+        ]
+      },
+      "throttle": null
+    },
+    {
+      "name": "create_board_post",
+      "description": "Create a board post: title (required), body (Markdown for the first message), tags, work_status, run_url (https), owner_id (defaults to the agent). Requires post_messages and manage_threads.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Board room id."
+          },
+          "title": {
+            "type": "string",
+            "description": "Post title (required)."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown for the first message."
+          },
+          "tags": {
+            "description": "Array or comma-separated string.",
+            "type": [
+              "array",
+              "string"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "work_status": {
+            "type": "string",
+            "description": "planned, in_progress, blocked, done (default in_progress)."
+          },
+          "run_url": {
+            "type": "string",
+            "description": "https run link."
+          },
+          "owner_id": {
+            "type": "integer",
+            "description": "Eligible owner (defaults to the agent)."
+          }
+        },
+        "required": [
+          "room_id",
+          "title"
+        ]
+      },
+      "throttle": [
+        30,
+        "agents/posts",
+        "create"
+      ]
+    },
+    {
+      "name": "update_board_post",
+      "description": "Update a board post the agent owns: work_status, note (recorded in history), tags (replaces the set; blank clears), run_url (blank clears). Each field updates only when given. Requires manage_threads.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "post_id": {
+            "type": "integer",
+            "description": "Board post (work thread) id."
+          },
+          "work_status": {
+            "type": "string",
+            "description": "planned, in_progress, blocked, done."
+          },
+          "note": {
+            "type": "string",
+            "description": "Plain-text progress note."
+          },
+          "tags": {
+            "description": "Array or comma-separated string.",
+            "type": [
+              "array",
+              "string"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "run_url": {
+            "type": "string",
+            "description": "https run link."
+          }
+        },
+        "required": [
+          "post_id"
+        ]
+      },
+      "throttle": null
+    },
+    {
+      "name": "set_result",
+      "description": "Replace the pinned result of a board post the agent owns. markdown is required (blank clears). Requires manage_threads.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "post_id": {
+            "type": "integer",
+            "description": "Board post (work thread) id."
+          },
+          "markdown": {
+            "type": "string",
+            "description": "Result markdown (blank clears)."
+          }
+        },
+        "required": [
+          "post_id",
+          "markdown"
+        ]
+      },
+      "throttle": null
+    },
+    {
+      "name": "list_work",
+      "description": "List the work threads the agent owns, newest first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "throttle": null
+    },
+    {
+      "name": "update_work",
+      "description": "Update a work thread the agent owns: work_status, note, tags, run_url. Same rules as update_board_post. Requires manage_threads.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "work_id": {
+            "type": "integer",
+            "description": "Work thread id."
+          },
+          "work_status": {
+            "type": "string",
+            "description": "planned, in_progress, blocked, done."
+          },
+          "note": {
+            "type": "string",
+            "description": "Plain-text progress note."
+          },
+          "tags": {
+            "description": "Array or comma-separated string.",
+            "type": [
+              "array",
+              "string"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "run_url": {
+            "type": "string",
+            "description": "https run link."
+          }
+        },
+        "required": [
+          "work_id"
+        ]
+      },
+      "throttle": null
+    },
+    {
+      "name": "request_approval",
+      "description": "Ask a human for authority before an external action: action (lowercase word), summary, optional room_id, payload, external_id (idempotency key; a repeat returns the existing request), expires_at or expires_in seconds (5 minutes to 7 days, default 24 hours). Requires external_action.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Action name, e.g. deploy."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Plain-text summary for the decider."
+          },
+          "room_id": {
+            "type": "integer",
+            "description": "Room the action concerns."
+          },
+          "payload": {
+            "description": "Opaque JSON (max 4 KB)."
+          },
+          "external_id": {
+            "type": "string",
+            "description": "Idempotency key."
+          },
+          "expires_at": {
+            "type": "string",
+            "description": "ISO8601 expiry."
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Expiry in seconds."
+          }
+        },
+        "required": [
+          "action",
+          "summary"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/approvals",
+        "create"
+      ]
+    },
+    {
+      "name": "get_approval",
+      "description": "Read one of the agent's approval requests with its effective status and decision. Requires external_action.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "approval_id": {
+            "type": "integer",
+            "description": "Approval request id."
+          }
+        },
+        "required": [
+          "approval_id"
+        ]
+      },
+      "throttle": [
+        120,
+        "agents/approvals",
+        "show"
+      ]
+    },
+    {
+      "name": "get_context",
+      "description": "Load conversation context for a triggering message (message_id) or a thread outright: the message, its thread summary and root message, the last N messages ending at the trigger (limit, default 30, max 100) with agent/human authors, and the room. Requires read_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "description": "Triggering message id."
+          },
+          "thread_id": {
+            "type": "integer",
+            "description": "Thread id (or the thread the message must be in)."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max context messages (default 30, max 100)."
+          }
+        }
+      },
+      "throttle": [
+        120,
+        "agents/contexts",
+        "show"
+      ]
+    },
+    {
+      "name": "open_dm",
+      "description": "Open (or reuse) the 1:1 DM with a human and post the agent's message. Requires post_messages, plus the agent's owner, prior contact, or the dm_anyone capability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "description": "Human user id."
+          },
+          "body": {
+            "type": "string",
+            "description": "Plain-text body."
+          },
+          "markdown_source": {
+            "type": "string",
+            "description": "Markdown body (preferred)."
+          },
+          "client_message_id": {
+            "type": "string",
+            "description": "Idempotency key."
+          },
+          "drive_file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Drive file ids to attach."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/dms",
+        "create"
+      ]
+    },
+    {
+      "name": "list_fizzy_boards",
+      "description": "List the boards the agent owner's Fizzy account can access. Requires the workspace-wide fizzy capability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id (defaults to the owner's linked account)."
+          }
+        }
+      },
+      "throttle": [
+        120,
+        "agents/fizzy/boards",
+        "index"
+      ]
+    },
+    {
+      "name": "get_fizzy_board",
+      "description": "Show one Fizzy board with its columns, so a column id can be resolved before requesting a move. Requires the workspace-wide fizzy capability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "board_id": {
+            "type": "string",
+            "description": "Fizzy board id."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id (defaults to the owner's linked account)."
+          }
+        },
+        "required": [
+          "board_id"
+        ]
+      },
+      "throttle": [
+        120,
+        "agents/fizzy/boards",
+        "show"
+      ]
+    },
+    {
+      "name": "search_fizzy_cards",
+      "description": "Full-text search of Fizzy cards through the agent owner's Fizzy account. Requires the workspace-wide fizzy capability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Search query."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id (defaults to the owner's linked account)."
+          }
+        },
+        "required": [
+          "q"
+        ]
+      },
+      "throttle": [
+        120,
+        "agents/fizzy/cards",
+        "search"
+      ]
+    },
+    {
+      "name": "get_fizzy_card",
+      "description": "Show one Fizzy card, including its steps. Requires the workspace-wide fizzy capability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id."
+          },
+          "number": {
+            "type": "integer",
+            "description": "Card number."
+          }
+        },
+        "required": [
+          "account_id",
+          "number"
+        ]
+      },
+      "throttle": [
+        120,
+        "agents/fizzy/cards",
+        "show"
+      ]
+    },
+    {
+      "name": "create_fizzy_card",
+      "description": "Ask a human to approve creating a Fizzy card in a board. Returns the approval's id, status, and expiry; the card is created only when approved. A repeated external_id returns the existing request. Requires external_action.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "board_id": {
+            "type": "string",
+            "description": "Fizzy board id."
+          },
+          "title": {
+            "type": "string",
+            "description": "Card title."
+          },
+          "description": {
+            "type": "string",
+            "description": "Card description."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id (defaults to the owner's linked account)."
+          },
+          "external_id": {
+            "type": "string",
+            "description": "Idempotency key."
+          }
+        },
+        "required": [
+          "board_id",
+          "title"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/fizzy/card_actions",
+        "create"
+      ]
+    },
+    {
+      "name": "comment_on_fizzy_card",
+      "description": "Ask a human to approve commenting on a Fizzy card. Returns the approval's id, status, and expiry; the comment is posted only when approved. A repeated external_id returns the existing request. Requires external_action.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "Card number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment body."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id (defaults to the owner's linked account)."
+          },
+          "external_id": {
+            "type": "string",
+            "description": "Idempotency key."
+          }
+        },
+        "required": [
+          "number",
+          "body"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/fizzy/card_actions",
+        "create"
+      ]
+    },
+    {
+      "name": "move_fizzy_card",
+      "description": "Ask a human to approve moving a Fizzy card to another column. Returns the approval's id, status, and expiry; the card moves only when approved. A repeated external_id returns the existing request. Requires external_action.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "Card number."
+          },
+          "column_id": {
+            "type": "string",
+            "description": "Destination column id."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id (defaults to the owner's linked account)."
+          },
+          "external_id": {
+            "type": "string",
+            "description": "Idempotency key."
+          }
+        },
+        "required": [
+          "number",
+          "column_id"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/fizzy/card_actions",
+        "create"
+      ]
+    },
+    {
+      "name": "close_fizzy_card",
+      "description": "Ask a human to approve closing a Fizzy card. Returns the approval's id, status, and expiry; the card closes only when approved. A repeated external_id returns the existing request. Requires external_action.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "Card number."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id (defaults to the owner's linked account)."
+          },
+          "external_id": {
+            "type": "string",
+            "description": "Idempotency key."
+          }
+        },
+        "required": [
+          "number"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/fizzy/card_actions",
+        "create"
+      ]
+    },
+    {
+      "name": "reopen_fizzy_card",
+      "description": "Ask a human to approve reopening a Fizzy card. Returns the approval's id, status, and expiry; the card reopens only when approved. A repeated external_id returns the existing request. Requires external_action.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "Card number."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Fizzy account id (defaults to the owner's linked account)."
+          },
+          "external_id": {
+            "type": "string",
+            "description": "Idempotency key."
+          }
+        },
+        "required": [
+          "number"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/fizzy/card_actions",
+        "create"
+      ]
+    },
+    {
+      "name": "pin_message",
+      "description": "Pin a message in its room, posting the pin note as the agent. Idempotent: pinning an already-pinned message succeeds without duplicating. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "description": "Message to pin."
+          }
+        },
+        "required": [
+          "message_id"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/pins",
+        "create"
+      ]
+    },
+    {
+      "name": "unpin_message",
+      "description": "Unpin a message. Unpinning a message that is not pinned still succeeds. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "description": "Message to unpin."
+          }
+        },
+        "required": [
+          "message_id"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/pins",
+        "destroy"
+      ]
+    },
+    {
+      "name": "register_slash_command",
+      "description": "Register a custom slash command for a room (name without the leading slash, lowercase). Invoking it delivers a slash_command event to this agent with the raw arguments. Re-registering the agent's own name updates its description. Pass takes_arguments false when the command takes no arguments so the composer runs it immediately when picked. Names are unique per room. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Room to register the command in."
+          },
+          "name": {
+            "type": "string",
+            "description": "Command name without the leading slash."
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description shown in the command picker."
+          },
+          "takes_arguments": {
+            "type": "boolean",
+            "description": "False when the command takes no arguments, so picking it runs immediately (default true)."
+          }
+        },
+        "required": [
+          "room_id",
+          "name"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/slash_commands",
+        "create"
+      ]
+    },
+    {
+      "name": "unregister_slash_command",
+      "description": "Unregister one of the agent's own custom slash commands in a room. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Room the command is registered in."
+          },
+          "name": {
+            "type": "string",
+            "description": "Command name without the leading slash."
+          }
+        },
+        "required": [
+          "room_id",
+          "name"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/slash_commands",
+        "destroy"
+      ]
+    },
+    {
+      "name": "create_poll",
+      "description": "Post a message carrying a poll: question plus 2-10 options, single or multiple choice, optionally anonymous and with an ISO8601 close time. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Room to post the poll in."
+          },
+          "question": {
+            "type": "string",
+            "description": "Poll question (the message text)."
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "2-10 option labels."
+          },
+          "multiple": {
+            "type": "boolean",
+            "description": "Allow voting for several options."
+          },
+          "anonymous": {
+            "type": "boolean",
+            "description": "Show counts without voter names."
+          },
+          "closes_at": {
+            "type": "string",
+            "description": "ISO8601 close time."
+          }
+        },
+        "required": [
+          "room_id",
+          "question",
+          "options"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/polls",
+        "create"
+      ]
+    },
+    {
+      "name": "get_poll",
+      "description": "Read a poll with live counts (voter names unless anonymous). Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Room the poll was posted in."
+          },
+          "poll_id": {
+            "type": "integer",
+            "description": "Poll id."
+          }
+        },
+        "required": [
+          "room_id",
+          "poll_id"
+        ]
+      },
+      "throttle": [
+        120,
+        "agents/polls",
+        "show"
+      ]
+    },
+    {
+      "name": "handoff_work",
+      "description": "Hand a work thread the agent owns to another agent with a context package: summary (required), links (up to 10 URLs), open_questions (up to 10). Ownership transfers and the receiver gets a work_handed_off event. Requires manage_threads.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "work_id": {
+            "type": "integer",
+            "description": "Work thread id."
+          },
+          "receiver_agent_id": {
+            "type": "integer",
+            "description": "Receiving agent id."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Handoff summary (required)."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Context links (up to 10)."
+          },
+          "open_questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Open questions (up to 10)."
+          }
+        },
+        "required": [
+          "work_id",
+          "receiver_agent_id",
+          "summary"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/work",
+        "handoff"
+      ]
+    },
+    {
+      "name": "start_stream",
+      "description": "Start a streaming message in a room, or a reply inside a thread (thread_id). markdown_source may start blank and fill in with append_stream; reply_to_message_id targets a message in the same conversation. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room_id": {
+            "type": "integer",
+            "description": "Room to stream in."
+          },
+          "thread_id": {
+            "type": "integer",
+            "description": "Thread to reply inside."
+          },
+          "markdown_source": {
+            "type": "string",
+            "description": "Initial Markdown body (may be blank)."
+          },
+          "reply_to_message_id": {
+            "type": "integer",
+            "description": "Message to reply to."
+          },
+          "reply_notify_author": {
+            "type": "boolean",
+            "description": "Notify the reply target's author."
+          },
+          "client_message_id": {
+            "type": "string",
+            "description": "Idempotency key: a retry returns the original message."
+          }
+        },
+        "required": [
+          "room_id"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/streaming_messages",
+        "create"
+      ]
+    },
+    {
+      "name": "append_stream",
+      "description": "Append text to one of the agent's streaming messages (append), or replace its whole body (markdown_source). Pass exactly one. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "description": "Streaming message id."
+          },
+          "append": {
+            "type": "string",
+            "description": "Markdown text to append."
+          },
+          "markdown_source": {
+            "type": "string",
+            "description": "Replacement Markdown body."
+          }
+        },
+        "required": [
+          "message_id"
+        ]
+      },
+      "throttle": [
+        240,
+        "agents/streaming_messages",
+        "update"
+      ]
+    },
+    {
+      "name": "finalize_stream",
+      "description": "End one of the agent's streaming messages, firing every deferred side effect exactly once. Idempotent. Requires post_messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "description": "Streaming message id."
+          }
+        },
+        "required": [
+          "message_id"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/streaming_messages",
+        "finalize"
+      ]
+    },
+    {
+      "name": "set_presence",
+      "description": "Set the agent's working presence ('Thinking…', 'Running tests…'), shown next to its name in the room member list. Blank clears; omitted leaves it alone. Expires after 5 minutes unless refreshed, and clears when a stream finalizes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Presence text, max 140 characters (blank clears)."
+          }
+        }
+      },
+      "throttle": null
+    },
+    {
+      "name": "add_step",
+      "description": "Attach a structured step to one of the agent's messages (message_id) or to a work thread it owns (thread_id): name, status (pending, running, done, failed), input/output summaries, duration in milliseconds. Message steps need post_messages, thread steps need manage_threads.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "description": "The agent's own message id."
+          },
+          "thread_id": {
+            "type": "integer",
+            "description": "Owned work thread id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Step name (required)."
+          },
+          "status": {
+            "type": "string",
+            "description": "pending, running, done, failed (default running)."
+          },
+          "input_summary": {
+            "type": "string",
+            "description": "Short input summary."
+          },
+          "output_summary": {
+            "type": "string",
+            "description": "Short output summary."
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "Duration in milliseconds."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/steps",
+        "create"
+      ]
+    },
+    {
+      "name": "update_step",
+      "description": "Update one of the agent's steps: name, status, summaries, duration. Each field updates only when given. Same grants as add_step.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "step_id": {
+            "type": "integer",
+            "description": "Step id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Step name."
+          },
+          "status": {
+            "type": "string",
+            "description": "pending, running, done, failed."
+          },
+          "input_summary": {
+            "type": "string",
+            "description": "Short input summary."
+          },
+          "output_summary": {
+            "type": "string",
+            "description": "Short output summary."
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "Duration in milliseconds."
+          }
+        },
+        "required": [
+          "step_id"
+        ]
+      },
+      "throttle": [
+        60,
+        "agents/steps",
+        "update"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "name": "initialize_2026-07-28",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2026-07-28\"}}",
+      "headers": {
+        "Mcp-Method": "initialize"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "protocolVersion": "2026-07-28",
+          "capabilities": {
+            "tools": {
+              "listChanged": false
+            }
+          },
+          "serverInfo": {
+            "name": "smartfire",
+            "version": "1.0.0"
+          },
+          "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "ping_2026-07-28",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "ping"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "resultType": "complete"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "initialize_2025-11-25",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\"}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {
+            "tools": {
+              "listChanged": false
+            }
+          },
+          "serverInfo": {
+            "name": "smartfire",
+            "version": "1.0.0"
+          },
+          "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "ping_2025-11-25",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "MCP-Protocol-Version": "2025-11-25"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {}
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "initialize_2025-06-18",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\"}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "protocolVersion": "2025-06-18",
+          "capabilities": {
+            "tools": {
+              "listChanged": false
+            }
+          },
+          "serverInfo": {
+            "name": "smartfire",
+            "version": "1.0.0"
+          },
+          "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "ping_2025-06-18",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "MCP-Protocol-Version": "2025-06-18"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {}
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "initialize_2025-03-26",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-03-26\"}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "protocolVersion": "2025-03-26",
+          "capabilities": {
+            "tools": {
+              "listChanged": false
+            }
+          },
+          "serverInfo": {
+            "name": "smartfire",
+            "version": "1.0.0"
+          },
+          "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "ping_2025-03-26",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "MCP-Protocol-Version": "2025-03-26"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {}
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "discover_modern",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"server/discover\",\"params\":{}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "server/discover"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "supportedVersions": [
+            "2026-07-28",
+            "2025-11-25",
+            "2025-06-18",
+            "2025-03-26"
+          ],
+          "capabilities": {
+            "tools": {}
+          },
+          "_meta": {
+            "io.modelcontextprotocol/serverInfo": {
+              "name": "smartfire",
+              "version": "1.0.0"
+            }
+          },
+          "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.",
+          "resultType": "complete"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "discover_legacy",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"server/discover\",\"params\":{}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "supportedVersions": [
+            "2026-07-28",
+            "2025-11-25",
+            "2025-06-18",
+            "2025-03-26"
+          ],
+          "capabilities": {
+            "tools": {}
+          },
+          "_meta": {
+            "io.modelcontextprotocol/serverInfo": {
+              "name": "smartfire",
+              "version": "1.0.0"
+            }
+          },
+          "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tools_list",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/list\",\"params\":{}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "tools": [
+            {
+              "name": "list_rooms",
+              "description": "List the agent's rooms that carry at least one granted capability (legacy agents: every member room), with kind flags (board, direct).",
+              "inputSchema": {
+                "type": "object",
+                "properties": {}
+              }
+            },
+            {
+              "name": "read_messages",
+              "description": "Read one conversation: a room's root messages (room_id) or a thread's messages (thread_id). Pass exactly one. Supports before/after message-id cursors and limit (default 50, max 100). Returns messages oldest-first with paging flags.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Room to read root messages from."
+                  },
+                  "thread_id": {
+                    "type": "integer",
+                    "description": "Thread to read messages from."
+                  },
+                  "before": {
+                    "type": "integer",
+                    "description": "Return messages before this message id."
+                  },
+                  "after": {
+                    "type": "integer",
+                    "description": "Return messages after this message id."
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "description": "Max messages (default 50, max 100)."
+                  }
+                }
+              }
+            },
+            {
+              "name": "post_message",
+              "description": "Post a message to a room, or a reply inside a thread (thread_id). One of body or markdown_source is required; reply_to_message_id targets a message in the same conversation. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Room to post in."
+                  },
+                  "thread_id": {
+                    "type": "integer",
+                    "description": "Thread to reply inside."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Plain-text body."
+                  },
+                  "markdown_source": {
+                    "type": "string",
+                    "description": "Markdown body (preferred)."
+                  },
+                  "reply_to_message_id": {
+                    "type": "integer",
+                    "description": "Message to reply to."
+                  },
+                  "reply_notify_author": {
+                    "type": "boolean",
+                    "description": "Notify the reply target's author."
+                  },
+                  "client_message_id": {
+                    "type": "string",
+                    "description": "Idempotency key: a retry returns the original message."
+                  },
+                  "drive_file_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Drive file ids to attach."
+                  }
+                },
+                "required": [
+                  "room_id"
+                ]
+              }
+            },
+            {
+              "name": "react",
+              "description": "React to a message with an emoji or :shortcode:. Idempotent: repeating the same content returns the existing reaction. Requires react.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "integer",
+                    "description": "Message to react to."
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Emoji or :shortcode:."
+                  }
+                },
+                "required": [
+                  "message_id",
+                  "content"
+                ]
+              }
+            },
+            {
+              "name": "poll_events",
+              "description": "Poll the agent's event ledger (mentions, replies, DMs, approvals, work assignments). Pass since (default 0) and limit (default 50, max 100); the response carries next_since for the next poll. Requires read_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "since": {
+                    "type": "integer",
+                    "description": "Return events after this event id."
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "description": "Max events (default 50, max 100)."
+                  }
+                }
+              }
+            },
+            {
+              "name": "ack_events",
+              "description": "Acknowledge event rows by id (idempotent, max 100 ids per call). Returns a per-id outcome or error. Requires read_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "event_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Event ids to acknowledge."
+                  }
+                },
+                "required": [
+                  "event_ids"
+                ]
+              }
+            },
+            {
+              "name": "list_board_posts",
+              "description": "List a board's posts as work payloads, newest activity first. status is one work status or open/done/all (default open); owner is a user id, me, or agents; tag filters by tag. Requires read_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Board room id."
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "planned, in_progress, blocked, done, open, or all."
+                  },
+                  "owner": {
+                    "type": "string",
+                    "description": "A user id, me, or agents."
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "A single tag."
+                  }
+                },
+                "required": [
+                  "room_id"
+                ]
+              }
+            },
+            {
+              "name": "create_board_post",
+              "description": "Create a board post: title (required), body (Markdown for the first message), tags, work_status, run_url (https), owner_id (defaults to the agent). Requires post_messages and manage_threads.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Board room id."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Post title (required)."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Markdown for the first message."
+                  },
+                  "tags": {
+                    "description": "Array or comma-separated string.",
+                    "type": [
+                      "array",
+                      "string"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "work_status": {
+                    "type": "string",
+                    "description": "planned, in_progress, blocked, done (default in_progress)."
+                  },
+                  "run_url": {
+                    "type": "string",
+                    "description": "https run link."
+                  },
+                  "owner_id": {
+                    "type": "integer",
+                    "description": "Eligible owner (defaults to the agent)."
+                  }
+                },
+                "required": [
+                  "room_id",
+                  "title"
+                ]
+              }
+            },
+            {
+              "name": "update_board_post",
+              "description": "Update a board post the agent owns: work_status, note (recorded in history), tags (replaces the set; blank clears), run_url (blank clears). Each field updates only when given. Requires manage_threads.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "post_id": {
+                    "type": "integer",
+                    "description": "Board post (work thread) id."
+                  },
+                  "work_status": {
+                    "type": "string",
+                    "description": "planned, in_progress, blocked, done."
+                  },
+                  "note": {
+                    "type": "string",
+                    "description": "Plain-text progress note."
+                  },
+                  "tags": {
+                    "description": "Array or comma-separated string.",
+                    "type": [
+                      "array",
+                      "string"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "run_url": {
+                    "type": "string",
+                    "description": "https run link."
+                  }
+                },
+                "required": [
+                  "post_id"
+                ]
+              }
+            },
+            {
+              "name": "set_result",
+              "description": "Replace the pinned result of a board post the agent owns. markdown is required (blank clears). Requires manage_threads.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "post_id": {
+                    "type": "integer",
+                    "description": "Board post (work thread) id."
+                  },
+                  "markdown": {
+                    "type": "string",
+                    "description": "Result markdown (blank clears)."
+                  }
+                },
+                "required": [
+                  "post_id",
+                  "markdown"
+                ]
+              }
+            },
+            {
+              "name": "list_work",
+              "description": "List the work threads the agent owns, newest first.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {}
+              }
+            },
+            {
+              "name": "update_work",
+              "description": "Update a work thread the agent owns: work_status, note, tags, run_url. Same rules as update_board_post. Requires manage_threads.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "work_id": {
+                    "type": "integer",
+                    "description": "Work thread id."
+                  },
+                  "work_status": {
+                    "type": "string",
+                    "description": "planned, in_progress, blocked, done."
+                  },
+                  "note": {
+                    "type": "string",
+                    "description": "Plain-text progress note."
+                  },
+                  "tags": {
+                    "description": "Array or comma-separated string.",
+                    "type": [
+                      "array",
+                      "string"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "run_url": {
+                    "type": "string",
+                    "description": "https run link."
+                  }
+                },
+                "required": [
+                  "work_id"
+                ]
+              }
+            },
+            {
+              "name": "request_approval",
+              "description": "Ask a human for authority before an external action: action (lowercase word), summary, optional room_id, payload, external_id (idempotency key; a repeat returns the existing request), expires_at or expires_in seconds (5 minutes to 7 days, default 24 hours). Requires external_action.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "Action name, e.g. deploy."
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "Plain-text summary for the decider."
+                  },
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Room the action concerns."
+                  },
+                  "payload": {
+                    "description": "Opaque JSON (max 4 KB)."
+                  },
+                  "external_id": {
+                    "type": "string",
+                    "description": "Idempotency key."
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "description": "ISO8601 expiry."
+                  },
+                  "expires_in": {
+                    "type": "integer",
+                    "description": "Expiry in seconds."
+                  }
+                },
+                "required": [
+                  "action",
+                  "summary"
+                ]
+              }
+            },
+            {
+              "name": "get_approval",
+              "description": "Read one of the agent's approval requests with its effective status and decision. Requires external_action.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "approval_id": {
+                    "type": "integer",
+                    "description": "Approval request id."
+                  }
+                },
+                "required": [
+                  "approval_id"
+                ]
+              }
+            },
+            {
+              "name": "get_context",
+              "description": "Load conversation context for a triggering message (message_id) or a thread outright: the message, its thread summary and root message, the last N messages ending at the trigger (limit, default 30, max 100) with agent/human authors, and the room. Requires read_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "integer",
+                    "description": "Triggering message id."
+                  },
+                  "thread_id": {
+                    "type": "integer",
+                    "description": "Thread id (or the thread the message must be in)."
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "description": "Max context messages (default 30, max 100)."
+                  }
+                }
+              }
+            },
+            {
+              "name": "open_dm",
+              "description": "Open (or reuse) the 1:1 DM with a human and post the agent's message. Requires post_messages, plus the agent's owner, prior contact, or the dm_anyone capability.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer",
+                    "description": "Human user id."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Plain-text body."
+                  },
+                  "markdown_source": {
+                    "type": "string",
+                    "description": "Markdown body (preferred)."
+                  },
+                  "client_message_id": {
+                    "type": "string",
+                    "description": "Idempotency key."
+                  },
+                  "drive_file_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Drive file ids to attach."
+                  }
+                },
+                "required": [
+                  "user_id"
+                ]
+              }
+            },
+            {
+              "name": "list_fizzy_boards",
+              "description": "List the boards the agent owner's Fizzy account can access. Requires the workspace-wide fizzy capability.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id (defaults to the owner's linked account)."
+                  }
+                }
+              }
+            },
+            {
+              "name": "get_fizzy_board",
+              "description": "Show one Fizzy board with its columns, so a column id can be resolved before requesting a move. Requires the workspace-wide fizzy capability.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "board_id": {
+                    "type": "string",
+                    "description": "Fizzy board id."
+                  },
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id (defaults to the owner's linked account)."
+                  }
+                },
+                "required": [
+                  "board_id"
+                ]
+              }
+            },
+            {
+              "name": "search_fizzy_cards",
+              "description": "Full-text search of Fizzy cards through the agent owner's Fizzy account. Requires the workspace-wide fizzy capability.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "q": {
+                    "type": "string",
+                    "description": "Search query."
+                  },
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id (defaults to the owner's linked account)."
+                  }
+                },
+                "required": [
+                  "q"
+                ]
+              }
+            },
+            {
+              "name": "get_fizzy_card",
+              "description": "Show one Fizzy card, including its steps. Requires the workspace-wide fizzy capability.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id."
+                  },
+                  "number": {
+                    "type": "integer",
+                    "description": "Card number."
+                  }
+                },
+                "required": [
+                  "account_id",
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "create_fizzy_card",
+              "description": "Ask a human to approve creating a Fizzy card in a board. Returns the approval's id, status, and expiry; the card is created only when approved. A repeated external_id returns the existing request. Requires external_action.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "board_id": {
+                    "type": "string",
+                    "description": "Fizzy board id."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Card title."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Card description."
+                  },
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id (defaults to the owner's linked account)."
+                  },
+                  "external_id": {
+                    "type": "string",
+                    "description": "Idempotency key."
+                  }
+                },
+                "required": [
+                  "board_id",
+                  "title"
+                ]
+              }
+            },
+            {
+              "name": "comment_on_fizzy_card",
+              "description": "Ask a human to approve commenting on a Fizzy card. Returns the approval's id, status, and expiry; the comment is posted only when approved. A repeated external_id returns the existing request. Requires external_action.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "number": {
+                    "type": "integer",
+                    "description": "Card number."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Comment body."
+                  },
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id (defaults to the owner's linked account)."
+                  },
+                  "external_id": {
+                    "type": "string",
+                    "description": "Idempotency key."
+                  }
+                },
+                "required": [
+                  "number",
+                  "body"
+                ]
+              }
+            },
+            {
+              "name": "move_fizzy_card",
+              "description": "Ask a human to approve moving a Fizzy card to another column. Returns the approval's id, status, and expiry; the card moves only when approved. A repeated external_id returns the existing request. Requires external_action.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "number": {
+                    "type": "integer",
+                    "description": "Card number."
+                  },
+                  "column_id": {
+                    "type": "string",
+                    "description": "Destination column id."
+                  },
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id (defaults to the owner's linked account)."
+                  },
+                  "external_id": {
+                    "type": "string",
+                    "description": "Idempotency key."
+                  }
+                },
+                "required": [
+                  "number",
+                  "column_id"
+                ]
+              }
+            },
+            {
+              "name": "close_fizzy_card",
+              "description": "Ask a human to approve closing a Fizzy card. Returns the approval's id, status, and expiry; the card closes only when approved. A repeated external_id returns the existing request. Requires external_action.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "number": {
+                    "type": "integer",
+                    "description": "Card number."
+                  },
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id (defaults to the owner's linked account)."
+                  },
+                  "external_id": {
+                    "type": "string",
+                    "description": "Idempotency key."
+                  }
+                },
+                "required": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "reopen_fizzy_card",
+              "description": "Ask a human to approve reopening a Fizzy card. Returns the approval's id, status, and expiry; the card reopens only when approved. A repeated external_id returns the existing request. Requires external_action.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "number": {
+                    "type": "integer",
+                    "description": "Card number."
+                  },
+                  "account_id": {
+                    "type": "string",
+                    "description": "Fizzy account id (defaults to the owner's linked account)."
+                  },
+                  "external_id": {
+                    "type": "string",
+                    "description": "Idempotency key."
+                  }
+                },
+                "required": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "pin_message",
+              "description": "Pin a message in its room, posting the pin note as the agent. Idempotent: pinning an already-pinned message succeeds without duplicating. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "integer",
+                    "description": "Message to pin."
+                  }
+                },
+                "required": [
+                  "message_id"
+                ]
+              }
+            },
+            {
+              "name": "unpin_message",
+              "description": "Unpin a message. Unpinning a message that is not pinned still succeeds. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "integer",
+                    "description": "Message to unpin."
+                  }
+                },
+                "required": [
+                  "message_id"
+                ]
+              }
+            },
+            {
+              "name": "register_slash_command",
+              "description": "Register a custom slash command for a room (name without the leading slash, lowercase). Invoking it delivers a slash_command event to this agent with the raw arguments. Re-registering the agent's own name updates its description. Pass takes_arguments false when the command takes no arguments so the composer runs it immediately when picked. Names are unique per room. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Room to register the command in."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Command name without the leading slash."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Short description shown in the command picker."
+                  },
+                  "takes_arguments": {
+                    "type": "boolean",
+                    "description": "False when the command takes no arguments, so picking it runs immediately (default true)."
+                  }
+                },
+                "required": [
+                  "room_id",
+                  "name"
+                ]
+              }
+            },
+            {
+              "name": "unregister_slash_command",
+              "description": "Unregister one of the agent's own custom slash commands in a room. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Room the command is registered in."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Command name without the leading slash."
+                  }
+                },
+                "required": [
+                  "room_id",
+                  "name"
+                ]
+              }
+            },
+            {
+              "name": "create_poll",
+              "description": "Post a message carrying a poll: question plus 2-10 options, single or multiple choice, optionally anonymous and with an ISO8601 close time. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Room to post the poll in."
+                  },
+                  "question": {
+                    "type": "string",
+                    "description": "Poll question (the message text)."
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "2-10 option labels."
+                  },
+                  "multiple": {
+                    "type": "boolean",
+                    "description": "Allow voting for several options."
+                  },
+                  "anonymous": {
+                    "type": "boolean",
+                    "description": "Show counts without voter names."
+                  },
+                  "closes_at": {
+                    "type": "string",
+                    "description": "ISO8601 close time."
+                  }
+                },
+                "required": [
+                  "room_id",
+                  "question",
+                  "options"
+                ]
+              }
+            },
+            {
+              "name": "get_poll",
+              "description": "Read a poll with live counts (voter names unless anonymous). Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Room the poll was posted in."
+                  },
+                  "poll_id": {
+                    "type": "integer",
+                    "description": "Poll id."
+                  }
+                },
+                "required": [
+                  "room_id",
+                  "poll_id"
+                ]
+              }
+            },
+            {
+              "name": "handoff_work",
+              "description": "Hand a work thread the agent owns to another agent with a context package: summary (required), links (up to 10 URLs), open_questions (up to 10). Ownership transfers and the receiver gets a work_handed_off event. Requires manage_threads.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "work_id": {
+                    "type": "integer",
+                    "description": "Work thread id."
+                  },
+                  "receiver_agent_id": {
+                    "type": "integer",
+                    "description": "Receiving agent id."
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "Handoff summary (required)."
+                  },
+                  "links": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Context links (up to 10)."
+                  },
+                  "open_questions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Open questions (up to 10)."
+                  }
+                },
+                "required": [
+                  "work_id",
+                  "receiver_agent_id",
+                  "summary"
+                ]
+              }
+            },
+            {
+              "name": "start_stream",
+              "description": "Start a streaming message in a room, or a reply inside a thread (thread_id). markdown_source may start blank and fill in with append_stream; reply_to_message_id targets a message in the same conversation. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "room_id": {
+                    "type": "integer",
+                    "description": "Room to stream in."
+                  },
+                  "thread_id": {
+                    "type": "integer",
+                    "description": "Thread to reply inside."
+                  },
+                  "markdown_source": {
+                    "type": "string",
+                    "description": "Initial Markdown body (may be blank)."
+                  },
+                  "reply_to_message_id": {
+                    "type": "integer",
+                    "description": "Message to reply to."
+                  },
+                  "reply_notify_author": {
+                    "type": "boolean",
+                    "description": "Notify the reply target's author."
+                  },
+                  "client_message_id": {
+                    "type": "string",
+                    "description": "Idempotency key: a retry returns the original message."
+                  }
+                },
+                "required": [
+                  "room_id"
+                ]
+              }
+            },
+            {
+              "name": "append_stream",
+              "description": "Append text to one of the agent's streaming messages (append), or replace its whole body (markdown_source). Pass exactly one. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "integer",
+                    "description": "Streaming message id."
+                  },
+                  "append": {
+                    "type": "string",
+                    "description": "Markdown text to append."
+                  },
+                  "markdown_source": {
+                    "type": "string",
+                    "description": "Replacement Markdown body."
+                  }
+                },
+                "required": [
+                  "message_id"
+                ]
+              }
+            },
+            {
+              "name": "finalize_stream",
+              "description": "End one of the agent's streaming messages, firing every deferred side effect exactly once. Idempotent. Requires post_messages.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "integer",
+                    "description": "Streaming message id."
+                  }
+                },
+                "required": [
+                  "message_id"
+                ]
+              }
+            },
+            {
+              "name": "set_presence",
+              "description": "Set the agent's working presence ('Thinking…', 'Running tests…'), shown next to its name in the room member list. Blank clears; omitted leaves it alone. Expires after 5 minutes unless refreshed, and clears when a stream finalizes.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Presence text, max 140 characters (blank clears)."
+                  }
+                }
+              }
+            },
+            {
+              "name": "add_step",
+              "description": "Attach a structured step to one of the agent's messages (message_id) or to a work thread it owns (thread_id): name, status (pending, running, done, failed), input/output summaries, duration in milliseconds. Message steps need post_messages, thread steps need manage_threads.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "integer",
+                    "description": "The agent's own message id."
+                  },
+                  "thread_id": {
+                    "type": "integer",
+                    "description": "Owned work thread id."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Step name (required)."
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "pending, running, done, failed (default running)."
+                  },
+                  "input_summary": {
+                    "type": "string",
+                    "description": "Short input summary."
+                  },
+                  "output_summary": {
+                    "type": "string",
+                    "description": "Short output summary."
+                  },
+                  "duration_ms": {
+                    "type": "integer",
+                    "description": "Duration in milliseconds."
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            },
+            {
+              "name": "update_step",
+              "description": "Update one of the agent's steps: name, status, summaries, duration. Each field updates only when given. Same grants as add_step.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "step_id": {
+                    "type": "integer",
+                    "description": "Step id."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Step name."
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "pending, running, done, failed."
+                  },
+                  "input_summary": {
+                    "type": "string",
+                    "description": "Short input summary."
+                  },
+                  "output_summary": {
+                    "type": "string",
+                    "description": "Short output summary."
+                  },
+                  "duration_ms": {
+                    "type": "integer",
+                    "description": "Duration in milliseconds."
+                  }
+                },
+                "required": [
+                  "step_id"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "get_405",
+      "method": "get",
+      "body": "{}",
+      "headers": {},
+      "status": 405,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32600,
+          "message": "Only POST is supported on the MCP endpoint"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "delete_405",
+      "method": "delete",
+      "body": "{}",
+      "headers": {},
+      "status": 405,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32600,
+          "message": "Only POST is supported on the MCP endpoint"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "parse_error",
+      "method": "post",
+      "body": "{",
+      "headers": {},
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32700,
+          "message": "Parse error"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "text_parse_error",
+      "method": "post",
+      "body": "{",
+      "headers": {
+        "Content-Type": "text/plain"
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32700,
+          "message": "Parse error"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "batch",
+      "method": "post",
+      "body": "[]",
+      "headers": {},
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32600,
+          "message": "Invalid request"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "null",
+      "method": "post",
+      "body": "null",
+      "headers": {},
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32600,
+          "message": "Invalid request"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "missing_jsonrpc",
+      "method": "post",
+      "body": "{\"id\":7,\"method\":\"ping\"}",
+      "headers": {},
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32600,
+          "message": "Invalid request"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "wrong_method_type",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":1}",
+      "headers": {},
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32600,
+          "message": "Invalid request"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "notification",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
+      "headers": {
+        "MCP-Protocol-Version": "wrong"
+      },
+      "status": 202,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "identified_notification",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"notifications/initialized\",\"params\":{}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {}
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "unknown_method",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"unknown\",\"params\":{}}",
+      "headers": {},
+      "status": 404,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32601,
+          "message": "Method not found: unknown"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "unknown_tool",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"unknown\"}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Unknown tool: \"unknown\""
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "bad_arguments",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":[]}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "arguments must be an object"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "unsupported",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "MCP-Protocol-Version": "2099-01-01"
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32022,
+          "message": "Unsupported protocol version",
+          "data": {
+            "supported": [
+              "2026-07-28",
+              "2025-11-25",
+              "2025-06-18",
+              "2025-03-26"
+            ],
+            "requested": "2099-01-01"
+          }
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "unsupported_meta_type",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":5}}}",
+      "headers": {},
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32022,
+          "message": "Unsupported protocol version",
+          "data": {
+            "supported": [
+              "2026-07-28",
+              "2025-11-25",
+              "2025-06-18",
+              "2025-03-26"
+            ],
+            "requested": 5
+          }
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "version_mismatch",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2025-03-26\"}}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28"
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32020,
+          "message": "Header mismatch: MCP-Protocol-Version header value \"2026-07-28\" does not match body value \"2025-03-26\""
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "missing_method_header",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28"
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32020,
+          "message": "Header mismatch: Mcp-Method header is required"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "method_mismatch",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/list"
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32020,
+          "message": "Header mismatch: Mcp-Method header value \"tools/list\" does not match body value \"ping\""
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "missing_name",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\"}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call"
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32020,
+          "message": "Header mismatch: Mcp-Name header is required"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "name_mismatch",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\"}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "ack_events"
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32020,
+          "message": "Header mismatch: Mcp-Name header value \"ack_events\" does not match body value \"poll_events\""
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "base64_name",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\"}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "=?base64?cG9sbF9ldmVudHM=?="
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"events\":[],\"next_since\":0}"
+            }
+          ],
+          "structuredContent": {
+            "events": [],
+            "next_since": 0
+          },
+          "isError": false,
+          "resultType": "complete"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "bad_base64",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\"}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "=?base64?!!!!?="
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32020,
+          "message": "Header mismatch: Mcp-Name header value is malformed"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "bad_utf8_base64",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\"}}",
+      "headers": {
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "=?base64?/w==?="
+      },
+      "status": 400,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32020,
+          "message": "Header mismatch: Mcp-Name header value is malformed"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "origin_denied",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "Origin": "https://attacker.invalid"
+      },
+      "status": 403,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32600,
+          "message": "Invalid origin"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "origin_allowed",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "Origin": "https://CAMPFIRE.test:9443"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {}
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "origin_malformed",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "Origin": ":invalid"
+      },
+      "status": 403,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32600,
+          "message": "Invalid origin"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "origin_encoded_host",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "Origin": "https://%63ampfire.test"
+      },
+      "status": 403,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "error": {
+          "code": -32600,
+          "message": "Invalid origin"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "poll_empty",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{\"since\":0,\"limit\":1}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"events\":[],\"next_since\":0}"
+            }
+          ],
+          "structuredContent": {
+            "events": [],
+            "next_since": 0
+          },
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "ack_empty",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"ack_events\",\"arguments\":{\"event_ids\":[]}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "event_ids must be a non-empty array"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "ack_too_many",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"ack_events\",\"arguments\":{\"event_ids\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "event_ids must contain at most 100 ids"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "ack_missing",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"ack_events\",\"arguments\":{\"event_ids\":[0]}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"results\":[{\"id\":0,\"error\":\"Event not found\"}]}"
+            }
+          ],
+          "structuredContent": {
+            "results": [
+              {
+                "id": 0,
+                "error": "Event not found"
+              }
+            ]
+          },
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "internal_error",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{\"since\":{\"odd\":\"shape\"}}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32603,
+          "message": "Internal error"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_list_rooms",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"list_rooms\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "[{\"id\":340026324,\"name\":null,\"type\":\"direct\",\"board\":false,\"direct\":true},{\"id\":486777696,\"name\":\"All Talk\",\"type\":\"closed\",\"board\":false,\"direct\":false},{\"id\":699448327,\"name\":\"Archive\",\"type\":\"open\",\"board\":false,\"direct\":false},{\"id\":699448332,\"name\":\"Release board\",\"type\":\"board\",\"board\":true,\"direct\":false}]"
+            }
+          ],
+          "structuredContent": [
+            {
+              "id": 340026324,
+              "name": null,
+              "type": "direct",
+              "board": false,
+              "direct": true
+            },
+            {
+              "id": 486777696,
+              "name": "All Talk",
+              "type": "closed",
+              "board": false,
+              "direct": false
+            },
+            {
+              "id": 699448327,
+              "name": "Archive",
+              "type": "open",
+              "board": false,
+              "direct": false
+            },
+            {
+              "id": 699448332,
+              "name": "Release board",
+              "type": "board",
+              "board": true,
+              "direct": false
+            }
+          ],
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_read_messages",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"read_messages\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "room_id or thread_id is required"
+            }
+          ],
+          "structuredContent": {
+            "error": "room_id or thread_id is required",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_post_message",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"post_message\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: room_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_react",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: message_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_poll_events",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"events\":[],\"next_since\":0}"
+            }
+          ],
+          "structuredContent": {
+            "events": [],
+            "next_since": 0
+          },
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_ack_events",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"ack_events\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "event_ids must be a non-empty array"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_list_board_posts",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"list_board_posts\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: room_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_create_board_post",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"create_board_post\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: room_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_update_board_post",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"update_board_post\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: post_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_set_result",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"set_result\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: post_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_list_work",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"list_work\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "[{\"id\":6,\"room_id\":699448332,\"board_id\":699448332,\"board_name\":\"Release board\",\"title\":\"Blocked work\",\"work_status\":\"blocked\",\"owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"agent\":true},\"tags\":[\"release\",\"rust\"],\"result\":null,\"result_updated_at\":null,\"run_url\":null,\"url\":\"/rooms/699448332?thread=6\",\"updated_at\":\"2026-03-02T15:12:00.000Z\",\"links\":[]}]"
+            }
+          ],
+          "structuredContent": [
+            {
+              "id": 6,
+              "room_id": 699448332,
+              "board_id": 699448332,
+              "board_name": "Release board",
+              "title": "Blocked work",
+              "work_status": "blocked",
+              "owner": {
+                "id": 394959859,
+                "name": "Bender Bot",
+                "agent": true
+              },
+              "tags": [
+                "release",
+                "rust"
+              ],
+              "result": null,
+              "result_updated_at": null,
+              "run_url": null,
+              "url": "/rooms/699448332?thread=6",
+              "updated_at": "2026-03-02T15:12:00.000Z",
+              "links": []
+            }
+          ],
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_update_work",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"update_work\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: work_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_request_approval",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks external_action capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks external_action capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_get_approval",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_approval\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: approval_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_get_context",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "message_id or thread_id is required"
+            }
+          ],
+          "structuredContent": {
+            "error": "message_id or thread_id is required",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_open_dm",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"open_dm\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: user_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_list_fizzy_boards",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks fizzy capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks fizzy capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_get_fizzy_board",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_board\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: board_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_search_fizzy_cards",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: q"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_get_fizzy_card",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_card\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: account_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_create_fizzy_card",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: board_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_comment_on_fizzy_card",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"comment_on_fizzy_card\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: number"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_move_fizzy_card",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"move_fizzy_card\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: number"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_close_fizzy_card",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"close_fizzy_card\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: number"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_reopen_fizzy_card",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"reopen_fizzy_card\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: number"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_pin_message",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"pin_message\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: message_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_unpin_message",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"unpin_message\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: message_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_register_slash_command",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"register_slash_command\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: room_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_unregister_slash_command",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"unregister_slash_command\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: room_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_create_poll",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: room_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_get_poll",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: room_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_handoff_work",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"handoff_work\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: work_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_start_stream",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"start_stream\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: room_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_append_stream",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"append_stream\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: message_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_finalize_stream",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"finalize_stream\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: message_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_set_presence",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"set_presence\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"working_presence\":null}"
+            }
+          ],
+          "structuredContent": {
+            "working_presence": null
+          },
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_add_step",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"add_step\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: name"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "tool_empty_update_step",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"update_step\",\"arguments\":{}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: step_id"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    }
+  ]
+}

@@ -55,6 +55,8 @@ pub mod welcome;
 
 #[cfg(test)]
 mod agent_http_tests;
+#[cfg(test)]
+mod agent_mcp_tests;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -190,6 +192,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
         "agents/events#index" => arc(agents::events),
+        "agents/mcp#create" => arc(agents::mcp::create),
+        "agents/mcp#method_not_allowed" => arc(agents::mcp::method_not_allowed),
         "agents/events#ack" => arc(agents::ack),
         "agents/steps#create" => arc(agents::create_step),
         "agents/steps#update" => arc(agents::update_step),
@@ -528,6 +532,8 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "agents/events#index", "agents/events#ack", "agents/steps#create", "agents/steps#update",
+        "agents/slash_commands#create", "agents/slash_commands#destroy", "agents/mcp#create", "agents/mcp#method_not_allowed",
         "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",
         "sessions/transfers#update", "sessions#new", "sessions#create", "sessions#destroy",
         "content_security_policy_reports#create", "accounts/users#index", "accounts/users#update",
