@@ -70,8 +70,8 @@ class HuddleIssuanceOracle
     @users[1].update_columns(status: options[:viewer_status]) if options[:viewer_status]
     @users[1].update_columns(inbox_preferences: { "huddle_invitations" => false }) if options[:inbox] == false
     room.memberships.where(user_id: [@users[1].id, @users[2].id]).delete_all if options[:no_humans]
-    session = Session.create!(id: 7001, user: options[:wrong_session] ? @users[1] : @users[0], user_agent: "ws13-issuance")
-    old_session = Session.create!(id: 7002, user: options[:different_starter] ? @users[2] : @users[0], user_agent: "ws13-old")
+    session = Session.create!(id: 7001, token: "ws13-issuance-session-7001", user: options[:wrong_session] ? @users[1] : @users[0], user_agent: "ws13-issuance")
+    old_session = Session.create!(id: 7002, token: "ws13-issuance-session-7002", user: options[:different_starter] ? @users[2] : @users[0], user_agent: "ws13-old")
     if options[:reuse] || options.key?(:item_age) || options.key?(:sibling_age)
       starter = options[:different_starter] ? @users[2] : @users[0]
       source = HuddleGrant.create!(id: 17, identity: "ws13-old-participant", room_name: "ws13-old-room", user: starter, room: room, membership: room.memberships.find_by!(user: starter), session: options[:reuse] ? session : old_session, last_issued_at: Time.current - options.fetch(:previous_issue_age, 1000), created_at: Time.current - options.fetch(:sibling_age, 1000), revoked_at: options[:sibling_revoked] ? Time.current : nil, stage_role: member.stage_role)
@@ -86,7 +86,7 @@ class HuddleIssuanceOracle
       end
     end
     if options.key?(:seen_age) || options[:incoming]
-      joined = HuddleGrant.create!(id: 50, identity: "ws13-viewer-grant", room_name: "ws13-viewer-room", user: @users[1], room: room, membership: viewer, session: Session.create!(id: 7003, user: @users[1]), last_seen_at: options.key?(:seen_age) ? Time.current - options[:seen_age] : nil, revoked_at: options[:viewer_revoked] ? Time.current : nil, created_at: Time.current - 1000)
+      joined = HuddleGrant.create!(id: 50, identity: "ws13-viewer-grant", room_name: "ws13-viewer-room", user: @users[1], room: room, membership: viewer, session: Session.create!(id: 7003, token: "ws13-issuance-session-7003", user: @users[1]), last_seen_at: options.key?(:seen_age) ? Time.current - options[:seen_age] : nil, revoked_at: options[:viewer_revoked] ? Time.current : nil, created_at: Time.current - 1000)
       if options[:incoming]
         item = ActivityItem.create!(id: 32, user: @users[0], source: joined, event_type: options[:incoming], created_at: Time.current - 1000)
         item.update_columns(read_at: Time.current - 80) if options[:read]

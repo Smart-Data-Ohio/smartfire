@@ -22,6 +22,9 @@ I = ROOT / "rust/crates/campfire/src/controllers/internal_huddle.rs"
 E = ROOT / "rust/crates/db/src/models/huddle_effects.rs"
 B = ROOT / "rust/crates/campfire/src/channels/huddle_effects.rs"
 N = ROOT / "rust/crates/db/src/models/huddle_notices.rs"
+V = ROOT / "rust/crates/db/src/models/huddle_invitations.rs"
+T = ROOT / "rust/crates/db/src/models/huddle_stream_liveness.rs"
+M = ROOT / "rust/crates/db/src/models/membership.rs"
 
 
 def replace_once(source, before, after):
@@ -41,6 +44,22 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("issuance-callback-bypassed", V, lambda s: replace_body(s,"pub(crate) fn after_issued(","Ok(())"), "campfire_db", "issuance_invitations_match_forty_nine_rails_scenarios"),
+    ("issuance-banned-caller", G, lambda s: replace_once(s,"JOIN users u ON u.id=s.user_id AND u.status=0 AND u.role!=2","JOIN users u ON u.id=s.user_id AND u.role!=2"),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
+    ("issuance-bot-caller", G, lambda s: replace_once(s,"JOIN users u ON u.id=s.user_id AND u.status=0 AND u.role!=2","JOIN users u ON u.id=s.user_id AND u.status=0"),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
+    ("issuance-off-hidden-recipient", V, lambda s: replace_once(s,"AND (m.involvement IS NULL OR m.involvement NOT IN ('nothing','invisible'))",""),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
+    ("issuance-inbox-suppression-bypassed", V, lambda s: replace_once(s,"if !huddle_notices::invitations_enabled","if false && !huddle_notices::invitations_enabled"),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
+    ("issuance-reused-grant-dedupe-bypassed", V, lambda s: replace_once(s,"previous_issue.is_some_and(|at|at>=dedup)","previous_issue.is_some_and(|_|false)"),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
+    ("issuance-owned-priority-bypassed", V, lambda s: replace_once(s,"if let Some(item) = owned {","if let Some(item) = owned.filter(|_|false) {"),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
+    ("issuance-sound-policy-ignored", V, lambda s: replace_once(s,"Bool(!sound_allowed)","Bool(false)"),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
+    ("resolver-wait-shortened", V, lambda s: s.replace("SignedDuration::from_secs(45)","SignedDuration::from_secs(44)"),"campfire_db","overdue_invitations_match_twenty_nine_rails_scenarios"),
+    ("resolver-revoked-join-evidence-ignored", V, lambda s: replace_once(s,"WHERE room_id=? AND user_id=? AND (last_issued_at>=? OR last_seen_at>?)","WHERE room_id=? AND user_id=? AND revoked_at IS NULL AND (last_issued_at>=? OR last_seen_at>?)"),"campfire_db","overdue_invitations_match_twenty_nine_rails_scenarios"),
+    ("stale-exact-thirty-kept", T, lambda s: replace_once(s,"last_seen_at>?","last_seen_at>=?"),"campfire_db","stale_stream_state_matches_sixteen_rails_scenarios"),
+    ("stale-other-presenter-kept", T, lambda s: replace_once(s,"AND membership_id=? AND revoked_at","AND ? IS NOT NULL AND revoked_at"),"campfire_db","stale_stream_state_matches_sixteen_rails_scenarios"),
+    ("reconciler-admin-gate-skips-invitations", J, lambda s: replace_body(s,"pub(crate) async fn reconcile(","if !service.admin_configured() { return Ok(0); } resolve_invitations(db).await?; Ok(0)"),"campfire","huddle_in_process_loop_resolves_invitations_without_livekit_admin_configuration"),
+    ("reconciler-stale-pass-bypassed", J, lambda s: replace_body(s,"async fn end_stale_streams(","Ok(())"),"campfire","huddle_reconciler_ends_a_quiet_presenter_without_admin_configuration"),
+    ("hand-speaker-permission-bypassed", M, lambda s: replace_once(s,"self.validate_call_attributes(tx.conn(),self.stage_role,Some(tx.now()),self.server_muted_at)?;",""),"campfire_db","hand_mutations_and_role_clearing_match_seventeen_rails_scenarios"),
+    ("hand-repeat-idempotence-bypassed", M, lambda s: replace_once(s,"if self.hand_raised_at.is_some() { return Ok(false); }",""),"campfire_db","hand_mutations_and_role_clearing_match_seventeen_rails_scenarios"),
     ("push-connection-scope-bypassed", N, lambda s: replace_once(s, "AND (m.connected_at IS NULL OR m.connected_at<?)", "AND (? IS NOT NULL)"), "campfire_db", "huddle_push_scopes_and_throttle_match_thirty_six_rails_scenarios"),
     ("push-throttle-shortened", N, lambda s: replace_once(s, "pub const JOIN_PUSH_THROTTLE_WINDOW: i64 = 600;", "pub const JOIN_PUSH_THROTTLE_WINDOW: i64 = 1;"), "campfire_db", "huddle_push_scopes_and_throttle_match_thirty_six_rails_scenarios"),
     ("push-policy-bypassed", N, lambda s: replace_once(s, "if !policy_allowed {", "if false && !policy_allowed {"), "campfire_db", "huddle_push_scopes_and_throttle_match_thirty_six_rails_scenarios"),

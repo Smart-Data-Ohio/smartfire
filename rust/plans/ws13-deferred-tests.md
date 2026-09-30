@@ -1,59 +1,59 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains 548 original test declarations in 33 files for traceability; some now have core coverage as described below. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. System tests below are deferred until LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. Twelve declarations now have complete assertion coverage: nine resolver declarations and three Stage hand declarations. The other 536 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. System tests below are deferred until LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server.
 
 ## Continued slice coverage (after merging WS19b)
 
 The following have verified core coverage, while the original declarations remain individually listed below. Owners remain WS13 unless the original entry identifies WS17 transport or Notifications::Policy.
 
 - `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Running every protocol shape through HTTP and completing presence/notice assertions remain open.
-- `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations and stream callbacks remain open; committed presence and leave/call-ended notices now have the coverage below.
+- `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations now have 49 exact Rails issuance scenarios; stream callbacks remain open; committed presence and leave/call-ended notices now have the coverage below.
 - `huddle_gateway_node.mjs`: all 16 existing gateway tests run through real Rust endpoints. Ordinary responses are not fabricated; denial injections revoke SQLite rows. Only the original explicit outage/stall/malformed-response injections remain at the proxy. The test-only Rust launcher is ignored by default because it needs Node and the pinned ws package; it was explicitly run successfully in this slice.
 
 The presence slice adds 50 exact pinned Rails participant renders (sidebar/header across five room kinds) and a real seeded app/queue/WebSocket proof of first-seen fan-out and silent rollback. The notice slice adds exact pinned Rails join/leave/call-ended payload sequences, real grant revoke/leave callbacks, registered join/push-invitation workers, retained unknown-handler replay, and a WS17 payload seam. Its push-scope corpus exercises 36 actual Rails invitation/join cases, subscription selection and the conditional throttle; the policy decisions are Rails inputs, so this does not port Notifications::Policy or prove transport delivery. Current raw pass counts and exact corpus sizes are in ws13-wave4-report.md.
 
-The complete reconciler order, stream creation/staleness, host-departure succession, hands and moderation policies, post-issuance invitation/dedup/resolution, WS17 policy/transport delivery, public controllers and the other huddle HTML are still open. Real LiveKit system declarations retain the LIVEKIT_SYSTEM_TESTS=1 reason.
+The process task now runs invitations, stale presenter state and cleanups in Rails order with per-row commits and isolated failures. Issuance/dedup/suppression and overdue resolution are implemented; hand mutations and role clearing are implemented. Stream creation/end render callbacks, host-departure succession, hand controller throttling, moderation policies, WS17 policy/transport delivery, public controllers and the other 18 huddle views remain open. The stale stream corpus certifies persisted state only, not the deferred Stream broadcasts. Real LiveKit system declarations retain the LIVEKIT_SYSTEM_TESTS=1 reason.
 
-## Remaining declaration counts by Rails file
+## Rails declaration coverage by file
 
-These counts retain declarations whose complete assertions have not been certified against Rust. They include partially covered declarations; they are not counts of failing Rust tests. No complete original Rails declaration was closed by the new lower-level corpora alone. The new executable Rust tests and reference-case pass counts are reported separately, to avoid counting a vector as a ported Rails test.
+These are original declaration counts, not Rust test counts or individual vector counts. A declaration is closed only when all of its original assertions are covered. Each title remains below, including those now passed. Raw executable pass counts are in ws13-wave4-report.md.
 
-| Rails file | Declarations retained (partial or deferred) |
-| --- | ---: |
-| `test/controllers/internal/huddle_controller_test.rb` | 29 |
-| `test/controllers/rooms/call_moderation_controller_test.rb` | 19 |
-| `test/controllers/rooms/huddles_controller_test.rb` | 36 |
-| `test/controllers/rooms/stage/hands_controller_test.rb` | 15 |
-| `test/controllers/rooms/stage/roles_controller_test.rb` | 20 |
-| `test/controllers/rooms/stage/streams_controller_test.rb` | 38 |
-| `test/controllers/rooms/stage_view_test.rb` | 16 |
-| `test/controllers/rooms/stages_controller_test.rb` | 24 |
-| `test/controllers/rooms/voices_controller_test.rb` | 18 |
-| `test/controllers/users/huddle_presence_controller_test.rb` | 6 |
-| `test/integration/huddle_presence_test.rb` | 5 |
-| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 |
-| `test/jobs/huddle/join_notice_job_test.rb` | 4 |
-| `test/jobs/huddle/push_invitation_job_test.rb` | 4 |
-| `test/models/huddle/invitation_resolver_test.rb` | 9 |
-| `test/models/huddle/join_notifier_test.rb` | 33 |
-| `test/models/huddle/join_pusher_test.rb` | 13 |
-| `test/models/huddle/ring_policy_test.rb` | 8 |
-| `test/models/huddle_grant_test.rb` | 33 |
-| `test/models/huddle_invitation_test.rb` | 38 |
-| `test/models/huddle_revocation_test.rb` | 9 |
-| `test/models/rooms/stage_test.rb` | 27 |
-| `test/models/rooms/voice_test.rb` | 5 |
-| `test/models/stream_test.rb` | 27 |
-| `test/services/huddle/reconciler_test.rb` | 4 |
-| `test/system/huddle_audio_test.rb` | 8 |
-| `test/system/huddle_invitations_test.rb` | 10 |
-| `test/system/huddle_join_notices_test.rb` | 16 |
-| `test/system/huddle_presence_test.rb` | 6 |
-| `test/system/huddle_roster_test.rb` | 8 |
-| `test/system/huddles_test.rb` | 31 |
-| `test/system/stage_test.rb` | 15 |
-| `test/system/voice_channels_test.rb` | 12 |
-| **Total** | **548** |
+| Rails file | Original | Assertions covered (passed) | Partial/deferred |
+| --- | ---: | ---: | ---: |
+| `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
+| `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 0 | 19 |
+| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
+| `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 0 | 15 |
+| `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 0 | 20 |
+| `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 0 | 38 |
+| `test/controllers/rooms/stage_view_test.rb` | 16 | 0 | 16 |
+| `test/controllers/rooms/stages_controller_test.rb` | 24 | 0 | 24 |
+| `test/controllers/rooms/voices_controller_test.rb` | 18 | 0 | 18 |
+| `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 0 | 6 |
+| `test/integration/huddle_presence_test.rb` | 5 | 0 | 5 |
+| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
+| `test/jobs/huddle/join_notice_job_test.rb` | 4 | 0 | 4 |
+| `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
+| `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
+| `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
+| `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
+| `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
+| `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
+| `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
+| `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
+| `test/models/rooms/stage_test.rb` | 27 | 3 | 24 |
+| `test/models/rooms/voice_test.rb` | 5 | 0 | 5 |
+| `test/models/stream_test.rb` | 27 | 0 | 27 |
+| `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
+| `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
+| `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
+| `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
+| `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
+| `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
+| `test/system/huddles_test.rb` | 31 | 0 | 31 |
+| `test/system/stage_test.rb` | 15 | 0 | 15 |
+| `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
+| **Total** | **548** | **12** | **536** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -363,17 +363,17 @@ Owner: WS13 with WS17 for transport/policy integration. Deferred.
 
 ## test/models/huddle/invitation_resolver_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Passed: all nine declarations, mapped to the 29-case Rails resolver corpus and `overdue_invitations_match_twenty_nine_rails_scenarios_and_are_idempotent`. Complete row snapshots cover state, unread/read/handled stamps and item counts; group and per-user cases cover both recipients; a second pass proves idempotence.
 
-- an unanswered invitation becomes a missed call and stays unread
-- unanswered group invitations each become missed calls
-- a recipient who was issued a grant since the start has their invitation handled
-- a recipient seen in the call has their invitation handled
-- the starter leaving before the wait elapses is a missed call
-- an invitation within the wait is left alone
-- an already-handled invitation is left alone
-- resolving twice keeps a single missed item
-- resolution can be scoped to one user
+- **Passed:** an unanswered invitation becomes a missed call and stays unread
+- **Passed:** unanswered group invitations each become missed calls
+- **Passed:** a recipient who was issued a grant since the start has their invitation handled
+- **Passed:** a recipient seen in the call has their invitation handled
+- **Passed:** the starter leaving before the wait elapses is a missed call
+- **Passed:** an invitation within the wait is left alone
+- **Passed:** an already-handled invitation is left alone
+- **Passed:** resolving twice keeps a single missed item
+- **Passed:** resolution can be scoped to one user
 
 ## test/models/huddle/join_notifier_test.rb
 
@@ -541,7 +541,7 @@ Owner: WS13. Deferred.
 
 ## test/models/rooms/stage_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: three hand declarations passed against the 17-case Rails hand corpus (`hand_mutations_and_role_clearing_match_seventeen_rails_scenarios`); the other 24 remain open.
 
 - type predicate
 - stage rooms are listed without directs but outside the voice scope
@@ -553,9 +553,9 @@ Owner: WS13. Deferred.
 - a host demotion checks for another host after locking the room in its transaction
 - a host can step down once another host exists
 - non-stage rooms leave the stage columns nil
-- only listeners can raise a hand, and any promotion clears it
-- raising twice keeps the first timestamp
-- lowering a hand that was never raised succeeds
+- **Passed:** only listeners can raise a hand, and any promotion clears it
+- **Passed:** raising twice keeps the first timestamp
+- **Passed:** lowering a hand that was never raised succeeds
 - stage members can reach the room's messages like any channel
 - deactivating a user removes their stage memberships
 - deactivating the sole host ends the live session and promotes an administrator member
