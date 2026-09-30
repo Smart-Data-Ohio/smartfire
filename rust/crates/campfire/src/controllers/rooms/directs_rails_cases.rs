@@ -1,11 +1,48 @@
-//! Individually executed ports of directs_controller_test.rb. Two message-owned cases
-//! (system-note rendering and immutable note edit/delete) remain explicitly deferred.
+//! Individually executed ports of every directs_controller_test.rb declaration.
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::{CachedStatements, Message, NewUser, Room, RoomType, User};
 const JZ: i64 = 773523953;
 const DIRECT_DAVID_KEVIN: i64 = 699448325;
 const DESIGNERS: i64 = 654632876;
+
+#[tokio::test]
+async fn a_member_can_rename_the_group_and_everyone_sees_the_compact_system_note() {
+    let app = setup().await;
+    let id = group(&app, &[DAVID, JASON, KEVIN], DAVID).await;
+    let reply = app.david().write(Req::new(Method::PATCH, &format!("/rooms/directs/{id}")).form(&[("room[name]", "Weekend Plans")])).await;
+    assert_eq!(reply.status, StatusCode::FOUND);
+    let note = app.db().read(move |conn| Ok(Message::for_room(conn, id)?.into_iter().filter(|m| m.system_note).max_by_key(|m| m.id).unwrap())).await.unwrap();
+    let reply = app.sign_in(JASON).await.get(&campfire_routes::room(id)).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let content = campfire_richtext::Content::wrap(&reply.text()).unwrap();
+    let dom = &content.dom;
+    let note_id = format!("message_{}", note.client_message_id);
+    let row = dom.descendants(content.root).into_iter().find(|&n| dom.attr(n, "id") == Some(note_id.as_str())).unwrap();
+    assert_eq!(dom.attr(row, "role"), Some("note"));
+    assert!(dom.attr(row, "class").unwrap().split_whitespace().any(|c| c == "message--system-note"));
+    for (class, text) in [("message__system-note-author", "David"), ("message__system-note-text", "renamed the group to Weekend Plans")] {
+        let node = dom.descendants(row).into_iter().find(|&n| dom.attr(n, "class").is_some_and(|s| s.split_whitespace().any(|c| c == class))).unwrap();
+        assert_eq!(dom.text_content(node).trim(), text);
+    }
+}
+
+#[tokio::test]
+async fn group_dm_notes_cannot_be_edited_or_deleted() {
+    let app = setup().await;
+    let id = group(&app, &[DAVID, JASON, KEVIN], DAVID).await;
+    app.db().write(move |tx| Room::find(tx.conn(), id)?.rename_direct(tx, "Weekend Plans", DAVID)).await.unwrap();
+    let note = app.db().read(move |conn| Ok(Message::for_room(conn, id)?.into_iter().filter(|m| m.system_note).max_by_key(|m| m.id).unwrap())).await.unwrap();
+    let note_id = note.id;
+    let body_before = app.db().read(move |conn| Message::find(conn, note_id)?.body_html(conn)).await.unwrap();
+    let count_before = app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?)).await.unwrap();
+    let reply = app.david().write(Req::new(Method::PATCH, &format!("/rooms/{id}/messages/{note_id}.json")).form(&[("message[markdown_source]", "Edited")])).await;
+    assert_eq!(reply.status, StatusCode::FORBIDDEN);
+    let reply = app.david().write(Req::new(Method::DELETE, &format!("/rooms/{id}/messages/{note_id}.turbo_stream"))).await;
+    assert_eq!(reply.status, StatusCode::FORBIDDEN);
+    assert_eq!(app.db().read(move |conn| Message::find(conn, note_id)?.body_html(conn)).await.unwrap(), body_before);
+    assert_eq!(app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?)).await.unwrap(), count_before);
+}
 async fn setup() -> TestApp {
     TestApp::boot_frozen().await.expect("seed required")
 }

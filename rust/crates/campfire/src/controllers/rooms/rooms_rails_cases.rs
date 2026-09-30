@@ -3,8 +3,57 @@
 use super::directs_rails_cases::{group, ids, note, pending_destroy};
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
-use campfire_db::{CachedStatements, Membership, Room, RoomType};
+use campfire_db::{CachedStatements, Membership, Message, NewMessage, Room, RoomType};
 const JZ: i64 = 773523953;
+
+#[tokio::test]
+async fn show_renders_the_unread_divider_above_the_first_unread_message_on_the_page() {
+    let app = setup().await;
+    let room = 654632876;
+    app.db().write(move |tx| {
+        let first = Message::create(tx, NewMessage { room_id: room, creator_id: KEVIN, body: Some("First new".into()), client_message_id: Some("show-divider-first".into()), ..Default::default() })?;
+        Message::create(tx, NewMessage { room_id: room, creator_id: KEVIN, body: Some("Second new".into()), client_message_id: Some("show-divider-second".into()), ..Default::default() })?;
+        Membership::find_by_room_and_user(tx.conn(), room, DAVID)?.unwrap().mark_unread_before(tx, &first)
+    }).await.unwrap();
+    let reply = app.david().get(&campfire_routes::room(room)).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let html = reply.text();
+    let content = campfire_richtext::Content::wrap(&html).unwrap();
+    let dom = &content.dom;
+    let divider = dom.descendants(content.root).into_iter().find(|&n| dom.attr(n, "id") == Some("unread-divider")).unwrap();
+    assert!(dom.text_content(divider).to_lowercase().contains("new messages"));
+    assert!(html.find("unread-divider").unwrap() < html.find("First new").unwrap());
+    let button = dom.descendants(content.root).into_iter().find(|&n| dom.attr(n, "id") == Some("jump-to-unread")).unwrap();
+    assert_eq!(dom.name(button), "button");
+    assert!(dom.text_content(button).to_lowercase().contains("jump to unread"));
+}
+
+#[tokio::test]
+async fn show_keeps_the_last_page_when_the_first_unread_fell_off_it_and_links_the_pill_to_it() {
+    let app = setup().await;
+    let room = 654632876;
+    let first = app.db().write(move |tx| {
+        let first = Message::create(tx, NewMessage { room_id: room, creator_id: KEVIN, body: Some("First unread off page".into()), client_message_id: Some("show-offpage-first".into()), ..Default::default() })?;
+        for index in 0..=40 {
+            Message::create(tx, NewMessage { room_id: room, creator_id: KEVIN, body: Some(format!("Later {index}")), client_message_id: Some(format!("show-offpage-{index}")), ..Default::default() })?;
+        }
+        Membership::find_by_room_and_user(tx.conn(), room, DAVID)?.unwrap().mark_unread_before(tx, &first)?;
+        Ok(first.id)
+    }).await.unwrap();
+    let reply = app.david().get(&campfire_routes::room(room)).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let html = reply.text();
+    assert!(!html.contains("First unread off page"));
+    assert!(!html.contains("id=\"unread-divider\""));
+    for index in 1..=40 { assert!(html.contains(&format!("id=\"message_show-offpage-{index}\"")), "last-page root {index} missing"); }
+    assert!(!html.contains("id=\"message_show-offpage-0\""));
+    let content = campfire_richtext::Content::wrap(&html).unwrap();
+    let dom = &content.dom;
+    let link = dom.descendants(content.root).into_iter().find(|&n| dom.attr(n, "id") == Some("jump-to-unread")).unwrap();
+    assert_eq!(dom.name(link), "a");
+    assert_eq!(dom.attr(link, "href"), Some(format!("/rooms/{room}?message_id={first}").as_str()));
+    assert!(dom.text_content(link).to_lowercase().contains("jump to unread"));
+}
 async fn setup() -> TestApp {
     TestApp::boot_frozen().await.expect("seed required")
 }

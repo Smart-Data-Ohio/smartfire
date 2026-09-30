@@ -105,16 +105,13 @@ if args.test_log:
           "destroy can't reach a closed room the member didn't create":'destroy_cant_reach_a_closed_room_the_member_didnt_create',
           "destroy can't reach an open room the member didn't create":'destroy_cant_reach_an_open_room_the_member_didnt_create',
           "destroy can't reach a room the member isn't in at all":'destroy_cant_reach_a_room_the_member_isnt_in_at_all'},
-         {'a member can rename the group and everyone sees the compact system note':'WS8bm message-list rendering; HTTP rename/domain covered separately',
-          'group DM notes cannot be edited or deleted':'WS8bm message edit/delete authorization'}),
+         {}),
         ('test/controllers/rooms_controller_test.rb','rooms_rails_cases',
          {"index redirects to the user's last room":'index_redirects_to_the_users_last_room','show':'show_case'},
          {'show renders collapsed work-thread guidance in the new-thread panel':'WS8bm thread-panel rendering',
           'show renders a link preview written by hand without its off-scheme image and link':'WS8bm message renderer and WS15e embed provider',
           'show renders a link preview written by hand without its image pointed at this Smartfire':'WS8bm message renderer and WS15e embed provider',
           'show renders an unfurled link preview':'WS8bm message renderer and WS15e embed provider',
-          'show renders the unread divider above the first unread message on the page':'WS8bm list seam; WS8br divider facts are covered separately',
-          'show keeps the last page when the first unread fell off it and links the pill to it':'WS8bm full list integration; WS8br page/divider facts covered separately',
           'destroy succeeds when the queue is down and the sweep recovers the room':'Lead decision 2 requires atomic queue rollback; native fault-injection coverage is separate'}),
         ('test/controllers/rooms/opens_controller_test.rb','opens_rails_cases',
          {'new':'new_case','create':'create_case','update':'update_case',
@@ -123,10 +120,32 @@ if args.test_log:
         ('test/controllers/rooms/closeds_controller_test.rb','closeds_rails_cases',
          {'new':'new_case','create':'create_case',
           "a direct room can't be converted to closed and have its participants revised":'a_direct_room_cant_be_converted_to_closed_and_have_its_participants_revised'},{}),
+        ('test/controllers/rooms/members_controller_test.rb','members_rails_cases',{},{}),
+        ('test/controllers/rooms/refreshes_controller_test.rb','refreshes_rails_cases',{},{}),
+        ('test/controllers/users/sidebars_controller_test.rb','sidebars_rails_cases',{'show':'show_case'},
+         {name:'WS13 huddle grant/presence integration and full-request query instrumentation' for name in [
+          'channel row shows the live huddle stack with names and count',
+          'board row shows the live huddle stack with names and count',
+          'direct row shows the live huddle stack when the peer is in the call',
+          'quiet rows keep an empty stack target with no visible presence',
+          'direct row re-renders when a participant joins',
+          'group direct rooms render member names and a huddle stack',
+          'no channel or DM stacks without huddle configuration',
+          'sidebar query count does not grow with quiet channels, DMs, boards, and stages',
+          'sidebar query count does not grow with group DMs, named or not']}),
+        ('test/controllers/rooms/involvements_controller_test.rb','involvements_rails_cases',{'show':'show_case'},{}),
+        ('test/controllers/rooms/reads_controller_test.rb','reads_rails_cases',{},{}),
+        ('test/controllers/rooms/favorites_controller_test.rb','favorites_rails_cases',{},{}),
+        ('test/controllers/room_categories_controller_test.rb','room_categories_rails_cases',{},{}),
+        ('test/controllers/rooms/categories_controller_test.rb','categories_rails_cases',{},{}),
+        ('test/controllers/switchers_controller_test.rb','switchers_rails_cases',{},
+         {'show costs a constant number of queries as rooms, people and threads grow':'Full-request query instrumentation; existing pure read-model budget tests do not claim this HTTP case'}),
     ]
+    extras={'members_rails_cases':{'member_reads_deny_bot_credentials','complete_member_json_matches_rails_for_each_viewer_and_room'},
+            'refreshes_rails_cases':{'pin_only_refresh_matches_rails_bytes_and_request_token_ownership'}}
     for path,module,renamed,deferred in groups:
         file=next(row for row in result if row['file']==path)
-        passed=set(re.findall(r'^test controllers::rooms::'+module+r'::(\w+) \.\.\. ok$',receipts,re.M))
+        passed=set(re.findall(r'^test controllers::rooms::'+module+r'::(\w+) \.\.\. ok(?: <[0-9.]+s>)?$',receipts,re.M))
         for case in file['declared_cases']:
             if case['name'] in deferred:
                 case.update(rust_result='deferred',deferred_to=deferred[case['name']])
@@ -135,8 +154,8 @@ if args.test_log:
             assert selector in passed,f'missing Rust pass receipt: {module}::{selector}'
             case.update(rust_test=f'controllers::rooms::{module}::{selector}',rust_result='passed')
         expected=len(file['declared_cases'])-len(deferred)
-        assert len(passed)==expected, f'unmapped Rust case receipt: {module}'
-        file.update(rust_cases_run=expected,rust_pass_count=expected,rust_cases_deferred=len(deferred),status=f'{expected} source-declared cases individually executed in Rust; {len(deferred)} deferred')
+        assert len(passed)==expected+len(extras.get(module,set())) and extras.get(module,set()) <= passed, f'unmapped Rust case receipt: {module}'
+        file.update(rust_cases_run=expected,rust_pass_count=expected,rust_cases_deferred=len(deferred),rust_extra_tests=sorted(extras.get(module,set())),status=f'{expected} source-declared cases individually executed in Rust; {len(deferred)} deferred')
         print(f"Rails case port receipts: {path}: {expected} Rust cases passed, {len(deferred)} deferred; Rails reference executions recorded separately")
     output['note']='Source declarations and named Rust ports are distinct from Rails Minitest executions. Supplied raw cargo receipts prove only the individually mapped Rust cases; remaining cases have explicit owners.'
 if args.rails_log:
