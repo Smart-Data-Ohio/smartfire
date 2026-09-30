@@ -2,7 +2,7 @@
 use campfire_db::{Connection, additive, migrations, schema};
 use std::path::Path;
 
-const USAGE: &str = "usage: campfire db-check DATABASE | db-migrate DATABASE MIGRATIONS_DIR | verify-additive-sqlite-migration BEFORE AFTER";
+const USAGE: &str = "usage: campfire db-check [--immutable] DATABASE | db-migrate DATABASE MIGRATIONS_DIR | verify-additive-sqlite-migration BEFORE AFTER";
 
 pub fn run(args: &[String]) -> Option<i32> {
     if !matches!(
@@ -30,7 +30,8 @@ pub fn run(args: &[String]) -> Option<i32> {
 fn execute(args: &[String]) -> Result<String, (i32, String)> {
     let fail = |error: anyhow::Error| (2, format!("ERROR: {error}"));
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
-        ["db-check", database] => check(Path::new(database)).map_err(fail),
+        ["db-check", database] => check(Path::new(database), false).map_err(fail),
+        ["db-check", "--immutable", database] => check(Path::new(database), true).map_err(fail),
         ["db-migrate", database, directory] => migrate(Path::new(database), Path::new(directory)).map_err(fail),
         ["verify-additive-sqlite-migration", before, after] => additive::verify(Path::new(before), Path::new(after))
             .map_err(|error| {
@@ -45,8 +46,27 @@ fn execute(args: &[String]) -> Result<String, (i32, String)> {
     }
 }
 
-fn check(database: &Path) -> anyhow::Result<String> {
-    let conn = additive::readonly(database)?;
+fn check(database: &Path, immutable: bool) -> anyhow::Result<String> {
+    let conn = if immutable {
+        // This mode is only for a quiescent, standalone backup, never a live WAL database.
+        let database = std::fs::canonicalize(database)?;
+        let mut wal = database.as_os_str().to_os_string();
+        wal.push("-wal");
+        anyhow::ensure!(
+            !std::fs::metadata(Path::new(&wal)).is_ok_and(|metadata| metadata.len() > 0),
+            "immutable snapshot must have no nonempty WAL sidecar"
+        );
+        let encoded = percent_encoding::percent_encode(
+            database.as_os_str().as_encoded_bytes(),
+            percent_encoding::NON_ALPHANUMERIC,
+        );
+        Connection::open_with_flags(
+            format!("file:{encoded}?immutable=1"),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_URI,
+        )?
+    } else {
+        additive::readonly(database)?
+    };
     let integrity: String = conn.query_row("PRAGMA quick_check", [], |r| r.get(0))?;
     anyhow::ensure!(integrity == "ok", "database integrity check failed");
     let mismatch = schema::schema_mismatch(&conn)?;
@@ -107,16 +127,35 @@ mod tests {
         schema::prepare(&mut conn, "production", &campfire_db::SystemClock).unwrap();
         drop(conn);
         let before = std::fs::read(&database).unwrap();
-        assert!(check(&database).unwrap().contains("read-only"));
+        assert!(check(&database, false).unwrap().contains("read-only"));
         assert_eq!(std::fs::read(&database).unwrap(), before);
         Connection::open(&database)
             .unwrap()
             .execute("INSERT INTO schema_migrations VALUES ('29990101000000')", [])
             .unwrap();
-        assert!(check(&database).unwrap_err().to_string().contains("unknown migrations"));
+        assert!(
+            check(&database, false)
+                .unwrap_err()
+                .to_string()
+                .contains("unknown migrations")
+        );
         let missing = dir.path().join("missing.sqlite3");
-        assert!(check(&missing).is_err());
+        assert!(check(&missing, false).is_err());
         assert!(!missing.exists());
+    }
+
+    #[test]
+    fn immutable_check_reads_standalone_snapshots_and_refuses_a_wal() {
+        let dir = tempfile::tempdir().unwrap();
+        let database = dir.path().join("snapshot #?.sqlite3");
+        let mut conn = Connection::open(&database).unwrap();
+        schema::prepare(&mut conn, "production", &campfire_db::SystemClock).unwrap();
+        drop(conn);
+        assert!(check(&database, true).unwrap().contains("read-only"));
+        let mut wal = database.as_os_str().to_os_string();
+        wal.push("-wal");
+        std::fs::write(Path::new(&wal), "must not be ignored").unwrap();
+        assert!(check(&database, true).unwrap_err().to_string().contains("WAL sidecar"));
     }
 
     #[test]

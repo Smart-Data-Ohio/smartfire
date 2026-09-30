@@ -39,13 +39,15 @@ if name == "docker":
             sys.exit(0)
         fmt = args[args.index("--format") + 1]
         if '"net.smartdata.campfire.runtime"' in fmt:
-            print(os.environ.get("RUNTIME", ""))
+            print(os.environ.get("PREVIOUS_RUNTIME", "") if "2" * 64 in args[2] else os.environ.get("RUNTIME", ""))
         else:
             sys.exit("unhandled image inspect " + fmt)
     elif args[0] == "top":
         print("PID COMMAND")
         print("100 " + os.environ.get("PROCESSES", "puma resque-pool"))
     elif args[0] == "run":
+        if os.environ.get("ROLLBACK_STATUS") and "2" * 64 in " ".join(args):
+            sys.exit(int(os.environ["ROLLBACK_STATUS"]))
         if os.environ.get("RUN_STATUS"):
             sys.exit(int(os.environ["RUN_STATUS"]))
         print("MATCH: 88 preexisting tables preserved")
@@ -91,7 +93,7 @@ def run_decision(source, decision, **overrides):
         env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}",
                "IMAGE_REF": CANDIDATE, "RELEASE_LABEL": "fixture", "STATE_ROOT": str(work),
                "TRACE": str(trace), **overrides}
-        shell = 'source "$1"; require_label; "$2"'
+        shell = 'source "$1"; require_label; if [ "${SELECT_RUNTIME:-0}" = 1 ]; then CANDIDATE_RUNTIME="$(image_runtime "$IMAGE_REF")"; fi; "$2"'
         result = subprocess.run(["bash", "-c", shell, "harness", str(source_file), decision],
                                 env=env, text=True, capture_output=True)
         commands = trace.read_text() if trace.exists() else ""
@@ -119,6 +121,43 @@ class ReleaseDecisionsTest(unittest.TestCase):
         result, _ = run_decision(SCRIPT.read_text(), "phase_cutover", PROCESSES="unrelated")
         self.assertEqual(result.returncode, 20)
         self.assertIn("read-only check(s) failed", result.stderr)
+
+    def test_rust_rehearsal_is_readonly_and_checks_previous_rails_boot(self):
+        result, trace = run_decision(SCRIPT.read_text(), "rehearse_migration", SELECT_RUNTIME="1", RUNTIME="rust")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        runs = [args for args in trace if args[:2] == ["docker", "run"]]
+        self.assertEqual(len(runs), 2)
+        self.assertIn("<scratch>/campfire-fixture/rehearsal:/rails/storage:ro", runs[0])
+        self.assertIn("db-check", runs[0])
+        for args in runs:
+            self.assertIn("768m", args)
+            self.assertIn("none", args)
+        self.assertIn(PREVIOUS, runs[1])
+        self.assertIn("bin/start-app", runs[1][-1])
+        self.assertIn("http://127.0.0.1:3000/up", runs[1][-1])
+        self.assertNotIn("bin/rails db:migrate", json.dumps(runs))
+
+    def test_rust_cutover_checks_the_single_server_process(self):
+        result, trace = run_decision(SCRIPT.read_text(), "phase_cutover", SELECT_RUNTIME="1", RUNTIME="rust", PROCESSES="/usr/local/bin/campfire server")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Rust server present", result.stdout)
+        self.assertNotIn("resque-pool", result.stdout)
+        self.assertIn(["docker", "top", "once-app-fixture", "-eo", "pid,args"], trace)
+
+    def test_unknown_runtime_label_is_refused(self):
+        result, _ = run_decision(SCRIPT.read_text(), "phase_cutover", SELECT_RUNTIME="1", RUNTIME="unknown")
+        self.assertEqual(result.returncode, 1)
+
+    def test_unlabelled_image_selects_rails(self):
+        result, _ = run_decision(SCRIPT.read_text(), "phase_cutover", SELECT_RUNTIME="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("puma web server present", result.stdout)
+
+    def test_rust_schema_failure_and_rails_rollback_failure_refuse_cutover(self):
+        for failure in [{"RUN_STATUS": "7"}, {"ROLLBACK_STATUS": "8"}]:
+            result, _ = run_decision(SCRIPT.read_text(), "rehearse_migration", SELECT_RUNTIME="1", RUNTIME="rust", **failure)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("refusing to cut over", result.stderr)
 
 
 if __name__ == "__main__":

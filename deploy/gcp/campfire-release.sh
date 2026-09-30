@@ -111,6 +111,7 @@ LOCK_FILE="${LOCK_FILE:-/var/lock/campfire-release.lock}"
 EXIT_UNHEALTHY=10
 EXIT_CHECKS_FAILED=20
 EXIT_ROLLBACK_REFUSED=30
+CANDIDATE_RUNTIME=rails
 
 log()  { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 warn() { printf '[%s] WARNING: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
@@ -240,6 +241,18 @@ volume_mountpoint() {
 image_git_revision() {
   docker image inspect "$1" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
     | sed -n 's/^GIT_REVISION=//p' | head -n1
+}
+
+# Image metadata is the authority. Existing, unlabelled Rails images retain their path.
+image_runtime() {
+  local runtime
+  runtime="$(docker image inspect "$1" --format '{{index .Config.Labels "net.smartdata.campfire.runtime"}}')" \
+    || die "could not inspect runtime label on $1"
+  case "$runtime" in
+    rust) printf rust ;;
+    rails|''|'<no value>') printf rails ;;
+    *) die "unknown Campfire runtime label '$runtime' on $1" ;;
+  esac
 }
 
 # --------------------------------------------------------------- state I/O ---
@@ -619,10 +632,14 @@ phase_prepare_host() {
     /*) : ;;
     *) die "SWAP_PATH must be an absolute path, got '$SWAP_PATH'" ;;
   esac
+  # Both validation predicates must pass; this is deliberately a boolean guard.
+  # shellcheck disable=SC2015
   [[ "$SWAP_SIZE_MB" =~ ^[0-9]+$ ]] && [ "$SWAP_SIZE_MB" -gt 0 ] \
     || die "SWAP_SIZE_MB must be a positive integer, got '$SWAP_SIZE_MB'"
+  # shellcheck disable=SC2015
   [[ "$SWAPPINESS" =~ ^[0-9]+$ ]] && [ "$SWAPPINESS" -le 100 ] \
     || die "SWAPPINESS must be an integer between 0 and 100, got '$SWAPPINESS'"
+  # shellcheck disable=SC2015
   [[ "$MIN_FREE_AFTER_SWAP_MB" =~ ^[0-9]+$ ]] && [ "$MIN_FREE_AFTER_SWAP_MB" -gt 0 ] \
     || die "MIN_FREE_AFTER_SWAP_MB must be a positive integer, got '$MIN_FREE_AFTER_SWAP_MB'"
 
@@ -1175,6 +1192,11 @@ rehearse_migration() {
     warn "freeze: the recorded rehearsal was run against ${rehearsed_image:-an unrecorded image}, not $IMAGE_REF; rehearsing again"
   fi
 
+  if [ "$CANDIDATE_RUNTIME" = rust ]; then
+    rehearse_rust
+    return
+  fi
+
   log "freeze: rehearsing the migration on a copy with the candidate image"
   rm -rf "$SCRATCH_DIR"
   install -d -o 1000 -g 1000 -m 0700 "$SCRATCH_DIR" "$SCRATCH_DIR/backups" "$SCRATCH_DIR/db" "$SCRATCH_DIR/files"
@@ -1223,6 +1245,65 @@ rehearse_migration() {
     | write_state rehearsal-result.json
 
   log "migration rehearsal PASSED: ${preserved:-unknown}; ${additive:-unknown}"
+}
+
+# Rails owns the schema until cutover. Rust only opens the copied deployed schema read-only.
+# Before declaring success, boot the previous Rails image on a separate copy of that same
+# database, with Redis unreachable, and require /up. Neither run mounts live storage.
+rehearse_rust() {
+  local previous_image status=0 prefix="${CAMPFIRE_RUST_REHEARSAL_PREFIX:-campfire-rehearsal}"
+  previous_image="$(read_json_field "$(state_path preflight-result.json)" '.current_image')"
+  [ "$(image_runtime "$previous_image")" = rails ] || die "pre-cutover Rust rehearsal requires a previous Rails image"
+  rm -rf "$SCRATCH_DIR"
+  install -d -o 1000 -g 1000 -m 0700 "$SCRATCH_DIR" "$SCRATCH_DIR/db" "$SCRATCH_DIR/rollback" "$SCRATCH_DIR/rollback/db"
+  install -m 0600 -o 1000 -g 1000 "$(state_path before.sqlite3)" "$SCRATCH_DIR/db/production.sqlite3"
+  REHEARSAL_CONTAINER="$prefix-$RELEASE_LABEL"
+  docker rm -f "$REHEARSAL_CONTAINER" >/dev/null 2>&1 || true
+  docker run --rm --name "$REHEARSAL_CONTAINER" --network none --memory 768m \
+    -v "$SCRATCH_DIR:/rails/storage:ro" "$IMAGE_REF" \
+    campfire db-check --immutable /rails/storage/db/production.sqlite3 \
+    > "$(state_path migration-verification.txt)" 2>&1 || status=$?
+  REHEARSAL_CONTAINER=""
+  chmod 0600 "$(state_path migration-verification.txt)"
+  if [ "$status" -eq 0 ]; then
+    install -m 0600 "${SCRATCH_DIR}/db/production.sqlite3" "$(state_path after.sqlite3)"
+    install -m 0600 -o 1000 -g 1000 "${SCRATCH_DIR}/db/production.sqlite3" "$SCRATCH_DIR/rollback/db/production.sqlite3"
+    REHEARSAL_CONTAINER="$prefix-rollback-$RELEASE_LABEL"
+    docker rm -f "$REHEARSAL_CONTAINER" >/dev/null 2>&1 || true
+    docker run --rm --name "$REHEARSAL_CONTAINER" --network none --memory 768m \
+      -v "$SCRATCH_DIR/rollback:/rails/storage" \
+      -e SECRET_KEY_BASE_DUMMY=1 -e DISABLE_SSL=1 -e SKIP_TELEMETRY=1 \
+      -e WEB_CONCURRENCY=0 -e RAILS_MAX_THREADS=2 -e JOB_CONCURRENCY=1 \
+      -e REDIS_URL=redis://127.0.0.1:1 \
+      "$previous_image" bash -c '
+        set -euo pipefail
+        bin/start-app > /rails/storage/rollback-boot.log 2>&1 &
+        server=$!
+        trap '\''kill "$server" 2>/dev/null || true; wait "$server" 2>/dev/null || true'\'' EXIT
+        for attempt in $(seq 1 60); do
+          kill -0 "$server" || { tail -n 5 /rails/storage/rollback-boot.log; exit 1; }
+          if curl --fail --silent --output /dev/null --max-time 2 http://127.0.0.1:3000/up; then
+            echo "ROLLBACK: previous Rails image /up -> 200"
+            exit 0
+          fi
+          sleep 1
+        done
+        tail -n 5 /rails/storage/rollback-boot.log
+        exit 1
+      ' >> "$(state_path migration-verification.txt)" 2>&1 || status=$?
+    REHEARSAL_CONTAINER=""
+  fi
+  if [ "$status" -ne 0 ]; then
+    jq -n --argjson status "$status" --arg image "$IMAGE_REF" \
+      '{verified:false, exit_status:$status, image:$image, runtime:"rust", preserved:null, additive:null}' \
+      | write_state rehearsal-result.json
+    tail -n 5 "$(state_path migration-verification.txt)" >&2 || true
+    die "refusing to cut over: Rust read-only schema or Rails rollback rehearsal failed"
+  fi
+  jq -n --arg image "$IMAGE_REF" \
+    '{verified:true, exit_status:0, image:$image, runtime:"rust", preserved:"database read-only; migration set accepted", additive:"0 tables, 0 columns", rails_rollback_healthy:true}' \
+    | write_state rehearsal-result.json
+  log "Rust rehearsal PASSED: schema accepted read-only; previous Rails image /up -> 200"
 }
 
 # ------------------------------------------------------------------ cutover --
@@ -1343,14 +1424,18 @@ phase_cutover() {
 
   local processes
   processes="$(container_processes "$container")"
-  require_process "$processes" "puma" "puma web server" || failures=$((failures + 1))
-  require_process "$processes" "resque-pool" "resque-pool workers" || failures=$((failures + 1))
-  local livekit_keys
-  livekit_keys="$(jq -r '.envKeys | map(select(startswith("LIVEKIT_"))) | length' "$(state_path before-settings.json)")"
-  if [ "$livekit_keys" -gt 0 ]; then
-    require_process "$processes" "huddle-reconcile" "huddle reconciler" || failures=$((failures + 1))
+  if [ "$CANDIDATE_RUNTIME" = rust ]; then
+    require_process "$processes" "/usr/local/bin/campfire server" "Rust server" || failures=$((failures + 1))
   else
-    log "process check: no LIVEKIT_* environment keys, huddle reconciler is not expected"
+    require_process "$processes" "puma" "puma web server" || failures=$((failures + 1))
+    require_process "$processes" "resque-pool" "resque-pool workers" || failures=$((failures + 1))
+    local livekit_keys
+    livekit_keys="$(jq -r '.envKeys | map(select(startswith("LIVEKIT_"))) | length' "$(state_path before-settings.json)")"
+    if [ "$livekit_keys" -gt 0 ]; then
+      require_process "$processes" "huddle-reconcile" "huddle reconciler" || failures=$((failures + 1))
+    else
+      log "process check: no LIVEKIT_* environment keys, huddle reconciler is not expected"
+    fi
   fi
 
   # Mode 2 forces a post-health check failure. The application is healthy and may
@@ -1727,6 +1812,12 @@ main() {
   exec 9>"$LOCK_FILE"
   flock -w 600 9 || die "another campfire release holds $LOCK_FILE"
 
+  case "${1:-}" in
+    freeze|cutover)
+      require_image
+      CANDIDATE_RUNTIME="$(image_runtime "$IMAGE_REF")"
+      ;;
+  esac
   run_phase "$@"
 }
 

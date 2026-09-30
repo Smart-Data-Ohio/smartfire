@@ -26,6 +26,12 @@ on:
         description: Source revision to deploy (full or short sha)
         type: string
         required: true
+      runtime:
+        description: Image runtime (Rails remains the default until cutover)
+        type: choice
+        required: false
+        default: rails
+        options: [rails, rust]
       image_digest:
         description: Optional sha256:... digest that must match the resolved image
         type: string
@@ -99,6 +105,7 @@ jobs:
           INPUT_SKIP_SNAPSHOT: ${{ inputs.skip_snapshot }}
           INPUT_RESUME: ${{ inputs.resume }}
           INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          INPUT_RUNTIME: ${{ inputs.runtime }}
           RUN_ID: ${{ github.run_id }}
           SIMULATE_FAILURE_VAR: ${{ vars.CAMPFIRE_RELEASE_SIMULATE_FAILURE }}
         run: |
@@ -168,10 +175,16 @@ jobs:
             esac
           fi
 
+          image_tag="git-${sha}"
+          case "${INPUT_RUNTIME:-rails}" in
+            rails) : ;;
+            rust) image_tag="rust-git-${sha}" ;;
+            *) echo "::error::runtime must be rails or rust"; exit 1 ;;
+          esac
           {
             echo "sha=${sha}"
             echo "short_sha=${short}"
-            echo "tag=git-${sha}"
+            echo "tag=${image_tag}"
             echo "label=${label}"
             echo "snapshot=${snapshot}"
             echo "dry_run=${dry_run}"
@@ -264,6 +277,29 @@ jobs:
             url="none"
           fi
           echo "run_url=${url}" >> "$GITHUB_OUTPUT"
+
+      - name: Require the Rust checks for a Rust release
+        if: inputs.runtime == 'rust'
+        timeout-minutes: 5
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ steps.plan.outputs.sha }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          url="$(gh api --method GET "repos/${REPO}/actions/workflows/rust.yml/runs" \
+            -f head_sha="$SHA" -f status=completed \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")] | first | .html_url // ""')"
+          if [ -n "$url" ]; then
+            echo "Rust checks passed for ${SHA}: ${url}"
+          elif [ "$ENVIRONMENT" = production ]; then
+            echo "::error::no successful Rust workflow run for ${SHA}"
+            exit 1
+          else
+            echo "::warning::no successful Rust workflow run for ${SHA}; this is validation"
+          fi
 
       - name: Authenticate to Google Cloud
         id: auth

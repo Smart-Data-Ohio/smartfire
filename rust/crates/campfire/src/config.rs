@@ -108,7 +108,8 @@ impl Config {
         };
         let environment = present("RAILS_ENV").unwrap_or_else(|| "production".into());
 
-        let storage_root = present("CAMPFIRE_STORAGE_PATH").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("storage"));
+        let storage_root = present("CAMPFIRE_STORAGE_PATH").or_else(|| present("CAMPFIRE_STORAGE"))
+            .map(PathBuf::from).unwrap_or_else(|| PathBuf::from("storage"));
         let mut storage = StoragePaths::new(storage_root, &environment);
         if let Some(database) = present("CAMPFIRE_DATABASE_PATH") {
             storage.database = database.into();
@@ -196,6 +197,21 @@ mod tests {
         assert_eq!(config.storage.files, PathBuf::from("storage/files"));
         assert_eq!(config.storage.backup_file(), PathBuf::from("storage/backups/production.sqlite3"));
         assert_eq!(config.fragment_cache_bytes, 32 * 1024 * 1024);
+    }
+
+    #[test]
+    fn storage_alias_and_explicit_paths_have_one_precedence() {
+        let alias = config(&[("SECRET_KEY_BASE", "fixture"), ("CAMPFIRE_STORAGE", "/custom")]).unwrap();
+        assert_eq!(alias.storage.database, PathBuf::from("/custom/db/production.sqlite3"));
+        assert_eq!(alias.storage.backup_file(), PathBuf::from("/custom/backups/production.sqlite3"));
+        let explicit = config(&[
+            ("SECRET_KEY_BASE", "fixture"), ("CAMPFIRE_STORAGE", "/ignored"), ("CAMPFIRE_STORAGE_PATH", "/root"),
+            ("CAMPFIRE_DATABASE_PATH", "/db/renamed.sqlite3"), ("CAMPFIRE_FILES_PATH", "/files"),
+            ("CAMPFIRE_BACKUPS_PATH", "/snapshots"),
+        ]).unwrap();
+        assert_eq!(explicit.storage.database, PathBuf::from("/db/renamed.sqlite3"));
+        assert_eq!(explicit.storage.files, PathBuf::from("/files"));
+        assert_eq!(explicit.storage.backup_file(), PathBuf::from("/snapshots/renamed.sqlite3"));
     }
 
     #[test]

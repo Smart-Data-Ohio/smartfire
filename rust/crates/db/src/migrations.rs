@@ -81,6 +81,9 @@ pub fn apply_pending(conn: &mut Connection, migrations: &[Migration]) -> Result<
 
 fn check_schema(conn: &Connection, catalog: &BTreeSet<&str>) -> Result<(), Error> {
     let mut mismatch = crate::schema::schema_mismatch(conn)?;
+    // A new build's schema manifest includes its pending versions. The explicit runner may
+    // supply those definitions; ordinary server boot still insists on the exact complete set.
+    mismatch.missing.retain(|version| !catalog.contains(version.as_str()));
     mismatch.unknown.retain(|version| !catalog.contains(version.as_str()));
     if mismatch.missing.is_empty() && mismatch.unknown.is_empty() {
         Ok(())
@@ -201,6 +204,27 @@ mod tests {
             .unwrap(),
             ["9", "10"]
         );
+    }
+
+    #[test]
+    fn applies_a_pending_version_already_in_the_new_builds_schema_manifest() {
+        let mut conn = prepared();
+        let version = schema::migration_versions().next().unwrap();
+        conn.execute("DELETE FROM schema_migrations WHERE version=?", [version])
+            .unwrap();
+        assert!(
+            apply_pending(&mut conn, &[]).is_err(),
+            "missing versions still require migration definitions"
+        );
+        assert_eq!(
+            apply_pending(
+                &mut conn,
+                &[migration(version, "CREATE TABLE ws18_pending(id INTEGER);")]
+            )
+            .unwrap(),
+            [version]
+        );
+        assert!(schema::schema_mismatch(&conn).unwrap().missing.is_empty());
     }
 
     #[test]
