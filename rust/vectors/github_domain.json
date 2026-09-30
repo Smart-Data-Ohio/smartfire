@@ -1,0 +1,1291 @@
+{
+  "display": [
+    {
+      "attributes": {},
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": "Smart-Data-Ohio/Smartfire"
+            }
+          }
+        }
+      },
+      "display": "Smart-Data-Ohio/Smartfire"
+    },
+    {
+      "attributes": {
+        "html_url": "https://github.com/Smart-Data-Ohio/Smartfire/pull/5"
+      },
+      "display": "Smart-Data-Ohio/Smartfire"
+    },
+    {
+      "attributes": {
+        "html_url": "https://evil.test/github.com/A/B trailing"
+      },
+      "display": "A/B"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": null
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": {}
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": []
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": true
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": 3
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": "bad"
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": "A/B"
+            }
+          }
+        }
+      },
+      "display": "A/B"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": "A/B\n"
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": "A /B"
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": "A/B/C"
+            }
+          }
+        }
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": "A /B"
+            }
+          }
+        }
+      },
+      "display": "A /B"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": {
+              "full_name": "A /B"
+            }
+          }
+        }
+      },
+      "display": "A /B"
+    },
+    {
+      "attributes": {
+        "payload": null
+      },
+      "display": "stored/names"
+    },
+    {
+      "attributes": {
+        "payload": []
+      },
+      "error": "TypeError"
+    },
+    {
+      "attributes": {
+        "payload": 3
+      },
+      "error": "NoMethodError"
+    },
+    {
+      "attributes": {
+        "payload": "bad"
+      },
+      "error": "NoMethodError"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": []
+        }
+      },
+      "error": "TypeError"
+    },
+    {
+      "attributes": {
+        "payload": {
+          "base": {
+            "repo": true
+          }
+        }
+      },
+      "error": "TypeError"
+    }
+  ],
+  "files": [
+    {
+      "storage": null,
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "",
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "  ",
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "oops",
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "[]",
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "null",
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "false",
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "3",
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "{}",
+      "summary": {
+        "files": [],
+        "total_count": 0
+      }
+    },
+    {
+      "storage": "{\"files\":[{\"filename\":\"a\"}],\"total_count\":0}",
+      "summary": {
+        "files": [
+          {
+            "filename": "a"
+          }
+        ],
+        "total_count": 1
+      }
+    },
+    {
+      "storage": "{\"files\":null,\"total_count\":\" 2tail\"}",
+      "summary": {
+        "files": [],
+        "total_count": 2
+      }
+    },
+    {
+      "storage": "{\"files\":false,\"total_count\":\" 2tail\"}",
+      "summary": {
+        "files": [
+          false
+        ],
+        "total_count": 2
+      }
+    },
+    {
+      "storage": "{\"files\":true,\"total_count\":\" 2tail\"}",
+      "summary": {
+        "files": [
+          true
+        ],
+        "total_count": 2
+      }
+    },
+    {
+      "storage": "{\"files\":3,\"total_count\":\" 2tail\"}",
+      "summary": {
+        "files": [
+          3
+        ],
+        "total_count": 2
+      }
+    },
+    {
+      "storage": "{\"files\":\"single\",\"total_count\":\" 2tail\"}",
+      "summary": {
+        "files": [
+          "single"
+        ],
+        "total_count": 2
+      }
+    },
+    {
+      "storage": "{\"files\":{\"a\":1,\"b\":2},\"total_count\":\" 2tail\"}",
+      "summary": {
+        "files": [
+          [
+            "a",
+            1
+          ],
+          [
+            "b",
+            2
+          ]
+        ],
+        "total_count": 2
+      }
+    },
+    {
+      "storage": "{\"files\":[1,2],\"total_count\":\" 2tail\"}",
+      "summary": {
+        "files": [
+          1,
+          2
+        ],
+        "total_count": 2
+      }
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":null}",
+      "summary": {
+        "files": [
+          1,
+          2,
+          3
+        ],
+        "total_count": 3
+      }
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":false}",
+      "error": "NoMethodError"
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":true}",
+      "error": "NoMethodError"
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":[]}",
+      "error": "NoMethodError"
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":{}}",
+      "error": "NoMethodError"
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":-3}",
+      "summary": {
+        "files": [
+          1,
+          2,
+          3
+        ],
+        "total_count": 3
+      }
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":1}",
+      "summary": {
+        "files": [
+          1,
+          2,
+          3
+        ],
+        "total_count": 3
+      }
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":2.9}",
+      "summary": {
+        "files": [
+          1,
+          2,
+          3
+        ],
+        "total_count": 3
+      }
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":\"wat\"}",
+      "summary": {
+        "files": [
+          1,
+          2,
+          3
+        ],
+        "total_count": 3
+      }
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":\"12tail\"}",
+      "summary": {
+        "files": [
+          1,
+          2,
+          3
+        ],
+        "total_count": 12
+      }
+    },
+    {
+      "storage": "{\"files\":[1,2,3],\"total_count\":\"-3\"}",
+      "summary": {
+        "files": [
+          1,
+          2,
+          3
+        ],
+        "total_count": 3
+      }
+    }
+  ],
+  "updates": [
+    {
+      "attributes": {},
+      "ok": true,
+      "errors": {},
+      "updated_at": "2026-01-01 12:00:00.000000",
+      "broadcasts": 1
+    },
+    {
+      "attributes": {
+        "title": null
+      },
+      "ok": true,
+      "errors": {},
+      "updated_at": "2026-01-01 12:00:00.000000",
+      "broadcasts": 1
+    },
+    {
+      "attributes": {
+        "title": "Title"
+      },
+      "ok": true,
+      "errors": {},
+      "updated_at": "2026-01-01 12:01:00.000000",
+      "broadcasts": 1
+    },
+    {
+      "attributes": {
+        "private": false
+      },
+      "ok": true,
+      "errors": {},
+      "updated_at": "2026-01-01 12:01:00.000000",
+      "broadcasts": 1
+    },
+    {
+      "attributes": {
+        "owner": "MiXeD"
+      },
+      "ok": true,
+      "errors": {},
+      "updated_at": "2026-01-01 12:01:00.000000",
+      "broadcasts": 1
+    },
+    {
+      "attributes": {
+        "repo": " "
+      },
+      "ok": false,
+      "errors": {
+        "repo": [
+          "can't be blank"
+        ]
+      },
+      "updated_at": "2026-01-01 12:00:00.000000",
+      "broadcasts": 0
+    },
+    {
+      "attributes": {
+        "number": 0
+      },
+      "ok": false,
+      "errors": {
+        "number": [
+          "must be greater than 0"
+        ]
+      },
+      "updated_at": "2026-01-01 12:00:00.000000",
+      "broadcasts": 0
+    },
+    {
+      "attributes": {
+        "owner": ""
+      },
+      "ok": false,
+      "errors": {
+        "owner": [
+          "can't be blank"
+        ]
+      },
+      "updated_at": "2026-01-01 12:00:00.000000",
+      "broadcasts": 0
+    }
+  ],
+  "subscriptions": [
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": " Rails ",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": " Rails ",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": ".",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": ".",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "owner": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": ".",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": ".",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "repo": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "..",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "..",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "owner": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "..",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": "..",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "repo": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "...",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "...",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "...",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "...",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "has space",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "has space",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "owner": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "has space",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": "has space",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "repo": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails/hack",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails/hack",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "owner": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails/hack",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails/hack",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "repo": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "owner": [
+          "can't be blank",
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": "",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "repo": [
+          "can't be blank",
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": " Rails ",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": " rails ",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "owner": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": " Rails ",
+        "events": []
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": " rails ",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {
+        "repo": [
+          "is invalid"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "my-org",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "my-org",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "my-org",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "my-org",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": null
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": null
+      },
+      "create": false,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": null,
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed",
+          "must include at least one event"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": []
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": []
+      },
+      "create": false,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [],
+      "errors": {
+        "events": [
+          "must include at least one event"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": false
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": false
+      },
+      "create": false,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": false,
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed",
+          "must include at least one event"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": {}
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": {}
+      },
+      "create": false,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": {},
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed",
+          "must include at least one event"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": ""
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "merged",
+        "review_requested",
+        "checks_failed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": ""
+      },
+      "create": false,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": "",
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed",
+          "must include at least one event"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "closed"
+        ]
+      },
+      "create": true,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "closed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "closed"
+        ]
+      },
+      "create": false,
+      "valid": true,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "closed"
+      ],
+      "errors": {}
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "push"
+        ]
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "push"
+      ],
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "push"
+        ]
+      },
+      "create": false,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        "opened",
+        "push"
+      ],
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          1
+        ]
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        1
+      ],
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          1
+        ]
+      },
+      "create": false,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": [
+        1
+      ],
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": "opened"
+      },
+      "create": true,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": "opened",
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed"
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "owner": "rails",
+        "repo": "rails",
+        "events": "opened"
+      },
+      "create": false,
+      "valid": false,
+      "owner": "rails",
+      "repo": "rails",
+      "events": "opened",
+      "errors": {
+        "events": [
+          "must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed"
+        ]
+      }
+    }
+  ]
+}

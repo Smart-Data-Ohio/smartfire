@@ -8,14 +8,33 @@ root = Path(__file__).resolve().parents[2]
 repo = root.parent
 names = {
     'test/models/github/pull_request_url_test.rb': ['github_url_extraction_and_non_code_html_match_pinned_rails'] * 10,
-    'test/models/github/pull_request_test.rb': [None] * 9 + [
+    'test/helpers/github_pull_requests_helper_test.rb': ['github_pr_and_thread_stamps_invalidate_message_fragments_without_touching_message'] + [None] * 19,
+    'test/models/github/pull_request_thread_test.rb': [
+        'github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails',
+    ] * 9 + ['github_pr_agent_payload_security_hides_private_and_unknown_details_without_owner_access'] * 2,
+    'test/models/github/repository_subscription_test.rb': ['github_subscriptions_validation_and_bot_membership_callbacks_match_rails'] * 10,
+    'test/models/github/notification_test.rb': ['github_notification_claims_validate_and_share_one_concurrent_winner_per_subscription'] * 3,
+    'test/models/github/pull_request_test.rb': [
+        'github_pr_identity_display_files_and_save_callbacks_match_rails',
+        'github_pr_identity_display_files_and_save_callbacks_match_rails',
+        'github_pr_identity_display_files_and_save_callbacks_match_rails',
+        'github_pr_identity_display_files_and_save_callbacks_match_rails',
+        'github_pr_case_collapse_repoints_links_and_mappings_without_destroying_threads',
+        'github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet',
+        'github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet',
+        'github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet',
+        None,
+    ] + [
         'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
         'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
         'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
         'github_message_reference_security_ignores_code_and_caps_before_case_normalization',
         'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
         'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
-    ] + [None] * 2,
+     ] + [
+        'github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements',
+        'github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements',
+    ],
     'test/jobs/github/deliver_subscription_event_job_test.rb': [
         'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
     ] * 2 + ['github_notifier_security_redacts_per_subscription_and_neutralizes_mentions'] + [
@@ -137,7 +156,7 @@ paths = sorted(p for p in subprocess.check_output(['git', '-C', str(repo), 'ls-t
 rows = []
 file_counts = []
 covered = 0
-rust_tests = (root / 'crates/campfire/src/integrations/github/references/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/agent_actions/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/notifier/tests.rs').read_text()
+rust_tests = (root / 'crates/campfire/src/integrations/github/pull_requests/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/references/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/agent_actions/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/notifier/tests.rs').read_text()
 for path in paths:
     content = subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True)
     tests = re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', content, re.M)
@@ -160,7 +179,7 @@ for path in paths:
     rows.append('')
 count = sum(len(re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True), re.M)) for path in paths)
 summary = f'{count} Rails cases in {len(paths)} files: {covered} mapped to Rust assertions; {count-covered} explicitly deferred.'
-header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. PR card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.\n\n'
+header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. Room-page/controller/system parity, remaining helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.\n\n'
 groups = '| Rails file | Cases passing grouped assertions | Deferred |\n|---|---:|---:|\n' + '\n'.join(f'| `{path}` | {passed}/{total} | {total-passed} |' for path,total,passed in sorted(file_counts,key=lambda entry:entry[1]-entry[2],reverse=True)) + '\n\n'
 (root / 'plans/ws15g-rails-tests.md').write_text((header + groups + '\n'.join(rows)).rstrip() + '\n')
 print('GitHub Rails inventory: ' + summary)

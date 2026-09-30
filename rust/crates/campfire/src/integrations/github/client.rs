@@ -543,7 +543,7 @@ pub(super) fn present(value: Option<&Value>) -> bool {
 pub(super) fn ruby_strip(s: &str) -> &str {
     s.trim_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c', '\0'])
 }
-pub(super) fn ruby_to_i(s: &str) -> i64 {
+pub(crate) fn ruby_to_i(s: &str) -> i64 {
     let s = s.trim_start_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c']);
     let (negative, s) = match s.as_bytes().first() {
         Some(b'-') => (true, &s[1..]),
@@ -563,7 +563,7 @@ pub(super) fn ruby_to_i(s: &str) -> i64 {
     }
     if negative { -value } else { value }
 }
-pub(super) fn ruby_string(value: &Value) -> String {
+pub(crate) fn ruby_string(value: &Value) -> String {
     match value {
         Value::Null => String::new(),
         Value::String(s) => s.clone(),

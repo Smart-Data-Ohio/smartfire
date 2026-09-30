@@ -9,10 +9,13 @@ pub mod fetcher;
 pub mod jobs;
 pub mod notifier;
 pub mod references;
+pub mod pull_requests;
+pub mod subscriptions;
+pub mod threads;
 pub mod oauth;
 pub mod webhooks;
 
-fn blank(value: &str) -> bool {
+pub(crate) fn blank(value: &str) -> bool {
     value.chars().all(char::is_whitespace)
 }
 

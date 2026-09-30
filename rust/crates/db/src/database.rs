@@ -131,6 +131,15 @@ impl<'c> Tx<'c> {
         }
     }
 
+    /// Active Record registers one commit callback per record in a transaction.
+    /// Used for identical, session-independent broadcast descriptions, never jobs.
+    pub fn broadcast_after_commit_once<B: crate::Broadcast>(&mut self, broadcast: &B) {
+        let event = Event::broadcast(broadcast);
+        if !self.after_commit.iter().any(|pending| matches!(pending, AfterCommit::Event(existing) if existing == &event)) {
+            self.emit_after_commit(event);
+        }
+    }
+
     /// [`EventSink::persist`]. A failure fails the write (the transaction rolls back when `f`
     /// returns); after commit it's logged, and the event dropped.
     fn persist(&mut self, event: &Event) -> bool {

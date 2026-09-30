@@ -1,13 +1,13 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 176 mapped to Rust assertions; 250 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 211 mapped to Rust assertions; 215 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. PR card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. Room-page/controller/system parity, remaining helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 | Rails file | Cases passing grouped assertions | Deferred |
 |---|---:|---:|
 | `test/controllers/agents/github/pull_request_actions_controller_test.rb` | 0/21 | 21 |
-| `test/helpers/github_pull_requests_helper_test.rb` | 0/20 | 20 |
+| `test/helpers/github_pull_requests_helper_test.rb` | 1/20 | 19 |
 | `test/controllers/rooms/github_subscriptions_controller_test.rb` | 0/17 | 17 |
 | `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
 | `test/controllers/github/pull_request_review_requests_controller_test.rb` | 0/15 | 15 |
@@ -15,10 +15,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/controllers/github/app_connections_controller_test.rb` | 0/13 | 13 |
 | `test/controllers/github/connections_controller_test.rb` | 0/13 | 13 |
 | `test/controllers/github/pull_request_comments_controller_test.rb` | 0/11 | 11 |
-| `test/models/github/pull_request_test.rb` | 6/17 | 11 |
-| `test/models/github/pull_request_thread_test.rb` | 0/11 | 11 |
 | `test/controllers/accounts/bots/github_connections_controller_test.rb` | 0/10 | 10 |
-| `test/models/github/repository_subscription_test.rb` | 0/10 | 10 |
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
 | `test/controllers/github/pull_request_reviews_controller_test.rb` | 0/9 | 9 |
 | `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
@@ -28,14 +25,17 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/models/github/review_logins_test.rb` | 0/5 | 5 |
 | `test/controllers/github/webhooks_controller_test.rb` | 18/21 | 3 |
 | `test/jobs/github/deliver_subscription_event_job_test.rb` | 34/37 | 3 |
-| `test/models/github/notification_test.rb` | 0/3 | 3 |
 | `test/system/github_pr_write_actions_test.rb` | 0/3 | 3 |
 | `test/jobs/github/fetch_pull_request_job_test.rb` | 20/22 | 2 |
 | `test/jobs/github/perform_agent_action_job_test.rb` | 34/36 | 2 |
+| `test/models/github/pull_request_test.rb` | 16/17 | 1 |
 | `test/models/github/write_client_test.rb` | 12/13 | 1 |
 | `test/models/github/agent_pull_request_action_test.rb` | 11/11 | 0 |
 | `test/models/github/app_test.rb` | 11/11 | 0 |
+| `test/models/github/notification_test.rb` | 3/3 | 0 |
+| `test/models/github/pull_request_thread_test.rb` | 11/11 | 0 |
 | `test/models/github/pull_request_url_test.rb` | 10/10 | 0 |
+| `test/models/github/repository_subscription_test.rb` | 10/10 | 0 |
 | `test/models/github_connected_account_test.rb` | 20/20 | 0 |
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
@@ -273,7 +273,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| cache key changes when a referenced pull request is updated | Deferred; WS15g continuation | — |
+| cache key changes when a referenced pull request is updated | Mapped to grouped Rust assertions; WS15g | `github_pr_and_thread_stamps_invalidate_message_fragments_without_touching_message` |
 | cache key for a message without pull requests is just the message | Deferred; WS15g continuation | — |
 | cache key changes when a thread reply is posted | Deferred; WS15g continuation | — |
 | cache key changes when an older thread reply is deleted | Deferred; WS15g continuation | — |
@@ -486,22 +486,22 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| claim! wins once per subscription and dedupe key | Deferred; WS15g continuation | — |
-| claim! is scoped to the subscription | Deferred; WS15g continuation | — |
-| claim! survives a duplicate insert race | Deferred; WS15g continuation | — |
+| claim! wins once per subscription and dedupe key | Mapped to grouped Rust assertions; WS15g | `github_notification_claims_validate_and_share_one_concurrent_winner_per_subscription` |
+| claim! is scoped to the subscription | Mapped to grouped Rust assertions; WS15g | `github_notification_claims_validate_and_share_one_concurrent_winner_per_subscription` |
+| claim! survives a duplicate insert race | Mapped to grouped Rust assertions; WS15g | `github_notification_claims_validate_and_share_one_concurrent_winner_per_subscription` |
 
 ## `test/models/github/pull_request_test.rb` (17 tests)
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| for_reference upserts by owner, repo, and number | Deferred; WS15g continuation | — |
-| repository names are stored downcased so links in any case share one row | Deferred; WS15g continuation | — |
-| display_full_name keeps the fetched repository name case | Deferred; WS15g continuation | — |
-| display_full_name falls back to the stored names | Deferred; WS15g continuation | — |
-| collapse_case_duplicates! merges case variants onto the lowest id and repoints links and threads | Deferred; WS15g continuation | — |
-| stale? is true until fetched and after ten minutes | Deferred; WS15g continuation | — |
-| claim_fetch_request! grants one fetch per PR per ten minutes | Deferred; WS15g continuation | — |
-| claiming a fetch request does not broadcast a card update | Deferred; WS15g continuation | — |
+| for_reference upserts by owner, repo, and number | Mapped to grouped Rust assertions; WS15g | `github_pr_identity_display_files_and_save_callbacks_match_rails` |
+| repository names are stored downcased so links in any case share one row | Mapped to grouped Rust assertions; WS15g | `github_pr_identity_display_files_and_save_callbacks_match_rails` |
+| display_full_name keeps the fetched repository name case | Mapped to grouped Rust assertions; WS15g | `github_pr_identity_display_files_and_save_callbacks_match_rails` |
+| display_full_name falls back to the stored names | Mapped to grouped Rust assertions; WS15g | `github_pr_identity_display_files_and_save_callbacks_match_rails` |
+| collapse_case_duplicates! merges case variants onto the lowest id and repoints links and threads | Mapped to grouped Rust assertions; WS15g | `github_pr_case_collapse_repoints_links_and_mappings_without_destroying_threads` |
+| stale? is true until fetched and after ten minutes | Mapped to grouped Rust assertions; WS15g | `github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet` |
+| claim_fetch_request! grants one fetch per PR per ten minutes | Mapped to grouped Rust assertions; WS15g | `github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet` |
+| claiming a fetch request does not broadcast a card update | Mapped to grouped Rust assertions; WS15g | `github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet` |
 | with_rendering_details preloads referenced PRs | Deferred; WS15g continuation | — |
 | creating a message with a PR URL references the PR and enqueues a fetch | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
 | duplicate URLs in one message create a single reference | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
@@ -509,24 +509,24 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | URLs in code spans and fenced blocks create no references | Mapped to grouped Rust assertions; WS15g | `github_message_reference_security_ignores_code_and_caps_before_case_normalization` |
 | editing a message to add a PR URL adds the reference | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
 | editing a message to remove a PR URL drops the reference | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
-| updating a record broadcasts a card replace to each referencing room once | Deferred; WS15g continuation | — |
-| card broadcasts carry the title for a public pull request and only a frame for a private one | Deferred; WS15g continuation | — |
+| updating a record broadcasts a card replace to each referencing room once | Mapped to grouped Rust assertions; WS15g | `github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements` |
+| card broadcasts carry the title for a public pull request and only a frame for a private one | Mapped to grouped Rust assertions; WS15g | `github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements` |
 
 ## `test/models/github/pull_request_thread_test.rb` (11 tests)
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| one thread per PR per room, and a thread discusses at most one PR | Deferred; WS15g continuation | — |
-| the same PR can be discussed in different rooms | Deferred; WS15g continuation | — |
-| create_or_reuse! creates the mapping once | Deferred; WS15g continuation | — |
-| create_or_reuse! reuses the winner when a concurrent insert loses | Deferred; WS15g continuation | — |
-| create_or_reuse! reuses the winner when the validation runs after the winner commits | Deferred; WS15g continuation | — |
-| create_or_reuse! reraises validation errors other than the PR-per-room uniqueness | Deferred; WS15g continuation | — |
-| create_or_reuse! reraises when the PR uniqueness failure is not the only error | Deferred; WS15g continuation | — |
-| the unique index rejects a duplicate mapping without validations | Deferred; WS15g continuation | — |
-| destroying the thread destroys the mapping | Deferred; WS15g continuation | — |
-| payload_for_message carries the PR object in a PR thread | Deferred; WS15g continuation | — |
-| payload_for_message is null in other threads and room messages | Deferred; WS15g continuation | — |
+| one thread per PR per room, and a thread discusses at most one PR | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| the same PR can be discussed in different rooms | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| create_or_reuse! creates the mapping once | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| create_or_reuse! reuses the winner when a concurrent insert loses | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| create_or_reuse! reuses the winner when the validation runs after the winner commits | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| create_or_reuse! reraises validation errors other than the PR-per-room uniqueness | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| create_or_reuse! reraises when the PR uniqueness failure is not the only error | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| the unique index rejects a duplicate mapping without validations | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| destroying the thread destroys the mapping | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
+| payload_for_message carries the PR object in a PR thread | Mapped to grouped Rust assertions; WS15g | `github_pr_agent_payload_security_hides_private_and_unknown_details_without_owner_access` |
+| payload_for_message is null in other threads and room messages | Mapped to grouped Rust assertions; WS15g | `github_pr_agent_payload_security_hides_private_and_unknown_details_without_owner_access` |
 
 ## `test/models/github/pull_request_url_test.rb` (10 tests)
 
@@ -547,16 +547,16 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| new subscriptions default to the standard event selection | Deferred; WS15g continuation | — |
-| event keys are validated against the known set | Deferred; WS15g continuation | — |
-| owner and repo are stripped and downcased | Deferred; WS15g continuation | — |
-| owner and repo follow pull request url character rules | Deferred; WS15g continuation | — |
-| one subscription per room and repository, case-insensitively | Deferred; WS15g continuation | — |
-| clearing every event on an existing subscription is rejected | Deferred; WS15g continuation | — |
-| direct rooms cannot be subscribed | Deferred; WS15g continuation | — |
-| subscribing adds the github bot to the room | Deferred; WS15g continuation | — |
-| the github bot joins only subscribed rooms | Deferred; WS15g continuation | — |
-| destroying the last subscription removes the bot from the room | Deferred; WS15g continuation | — |
+| new subscriptions default to the standard event selection | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| event keys are validated against the known set | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| owner and repo are stripped and downcased | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| owner and repo follow pull request url character rules | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| one subscription per room and repository, case-insensitively | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| clearing every event on an existing subscription is rejected | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| direct rooms cannot be subscribed | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| subscribing adds the github bot to the room | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| the github bot joins only subscribed rooms | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
+| destroying the last subscription removes the bot from the room | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
 
 ## `test/models/github/review_logins_test.rb` (5 tests)
 

@@ -45,26 +45,7 @@ pub async fn fetch(db: &Database, client: &ReadClient, id: i64) -> campfire_db::
         }
     };
     db.write(move |tx| {
-        let mut attributes = attributes;
-        attributes.push(("updated_at", SqlValue::Text(tx.now().to_db())));
-        let assignments = attributes
-            .iter()
-            .map(|(column, _)| format!("{column} = ?"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let id_value = SqlValue::Integer(id);
-        let values = attributes
-            .iter()
-            .map(|(_, value)| value)
-            .chain(std::iter::once(&id_value));
-        if tx.conn().execute(
-            &format!("UPDATE github_pull_requests SET {assignments} WHERE id = ?"),
-            rusqlite::params_from_iter(values),
-        )? == 0
-        {
-            return Err(campfire_db::Error::RecordNotFound("Github::PullRequest"));
-        }
-        Ok(())
+        super::pull_requests::update(tx, id, &attributes).map(|_| ())
     })
     .await
 }

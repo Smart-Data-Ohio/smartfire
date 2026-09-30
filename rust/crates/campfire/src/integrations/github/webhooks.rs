@@ -263,6 +263,7 @@ pub(super) fn integer_for_query(value: &Value) -> Option<i64> {
 }
 fn store_privacy(tx: &mut Tx<'_>, id: i64, value: &Value) -> campfire_db::Result<()> {
     let private = super::boolean(value);
-    tx.conn().execute("UPDATE github_pull_requests SET private = ?, updated_at = ? WHERE id = ? AND private IS NOT ?", params![private, tx.now(), id, private])?;
+    let changed:bool=tx.conn().query_row("SELECT private IS NOT ? FROM github_pull_requests WHERE id=?",params![private,id],|r|r.get(0))?;
+    if changed {super::pull_requests::update(tx,id,&[("private",private.map_or(rusqlite::types::Value::Null,|v|rusqlite::types::Value::Integer(i64::from(v))))])?;}
     Ok(())
 }

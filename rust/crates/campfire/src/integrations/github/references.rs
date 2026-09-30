@@ -57,13 +57,7 @@ pub fn sync(tx: &mut Tx<'_>, message: &Message, enqueue_fetches: bool) -> campfi
             .ok_or_else(|| {
                 campfire_db::Error::Other("Number must be greater than 0 and fit SQLite".into())
             })?;
-        tx.conn().execute("INSERT INTO github_pull_requests (owner,repo,number,created_at,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(owner,repo,number) DO NOTHING",params![owner,repo,number,now,now])?;
-        let id = tx.conn().query_row(
-            "SELECT id FROM github_pull_requests WHERE owner=? AND repo=? AND number=?",
-            params![owner, repo, number],
-            |r| r.get::<_, i64>(0),
-        )?;
-        prs.push(id);
+        prs.push(super::pull_requests::PullRequest::for_reference(tx, &owner, &repo, number)?.id);
     }
     let mut stmt = tx.conn().prepare(
         "SELECT id,github_pull_request_id FROM github_pull_request_references WHERE message_id=?",
@@ -95,4 +89,4 @@ pub fn sync(tx: &mut Tx<'_>, message: &Message, enqueue_fetches: bool) -> campfi
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

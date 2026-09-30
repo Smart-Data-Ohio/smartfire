@@ -69,7 +69,7 @@ pub async fn deliver(db: &Database, event: String, payload: Value) -> campfire_d
             );
             let id = subscription.id;
             // Rails commits each claim independently, even if a later claim or post fails.
-            if let Some(id) = db.write(move |tx| claim(tx, id, &key)).await? {
+            if let Some(id) = db.write(move |tx| super::subscriptions::claim_notification(tx, id, &key)).await? {
                 claims.push((
                     subscription.clone(),
                     id,
@@ -99,12 +99,6 @@ pub async fn deliver(db: &Database, event: String, payload: Value) -> campfire_d
         }).await?;
     }
     Ok(())
-}
-fn claim(tx: &Tx<'_>, subscription: i64, key: &str) -> campfire_db::Result<Option<i64>> {
-    if blank(key) {
-        return Ok(None);
-    }
-    Ok(tx.conn().query_row("INSERT INTO github_notifications (subscription_id,dedupe_key,created_at,updated_at) VALUES (?,?,?,?) ON CONFLICT(subscription_id,dedupe_key) DO NOTHING RETURNING id",params![subscription,key,tx.now(),tx.now()],|r|r.get(0)).optional()?)
 }
 pub(super) fn bot_user(tx: &mut Tx<'_>) -> campfire_db::Result<i64> {
     if let Some(id) = tx

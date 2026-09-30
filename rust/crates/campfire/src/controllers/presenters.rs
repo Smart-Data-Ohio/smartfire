@@ -3,6 +3,7 @@
 //! partials) computed up front.
 
 pub mod accounts;
+pub mod github;
 pub mod attachments;
 pub mod page;
 pub mod pagination;
@@ -118,6 +119,7 @@ pub fn user_json(secrets: &Secrets, base_url: &str, user: &User) -> UserJson {
 /// Everything a page of messages needs, with the rows it looks up along the way remembered
 /// (Rails preloads them with `with_creator`, `with_boosts` and friends).
 pub struct Presenter<'a> {
+    app: &'a AppState,
     pub conn: &'a Connection,
     pub secrets: &'a Secrets,
     pub storage: &'a Storage,
@@ -133,6 +135,7 @@ pub struct Presenter<'a> {
 impl<'a> Presenter<'a> {
     pub fn new(conn: &'a Connection, app: &'a AppState, request_host: Option<String>) -> Self {
         Self {
+            app,
             conn,
             secrets: &app.secrets,
             storage: &app.storage,
@@ -216,7 +219,8 @@ impl<'a> Presenter<'a> {
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff(), base)) {
+        let stamp = github::cache_stamp(self.conn, message)?;
+        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment_with_cards(message.id, message.updated_at.jiff(), base, &stamp)) {
             Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
             None => MessageItem::View(Box::new(self.message(message)?)),
         })
@@ -260,7 +264,11 @@ impl<'a> Presenter<'a> {
             content: self.content(message, &plain_text)?,
             boosts: self.boosts(message)?,
             details: self.message_details(message)?,
-            components: Default::default(),
+            components: campfire_views::messages::MessageComponents {
+                github_cards_html: Some(github::message_cards(self.conn, self.app, message)?),
+                github_cards_stamp: github::cache_stamp(self.conn, message)?,
+                ..Default::default()
+            },
         })
     }
 
