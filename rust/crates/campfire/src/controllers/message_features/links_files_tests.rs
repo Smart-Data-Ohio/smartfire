@@ -272,10 +272,36 @@ async fn files_sections_match_pinned_rails_exact_bytes() {
 
 #[tokio::test]
 async fn rendering_costs_the_same_queries_for_4_files_as_for_16() {
+    use axum::{body::Body, http::Request};
     use std::sync::{
         Arc, Barrier,
         atomic::{AtomicUsize, Ordering},
     };
+    use tower::ServiceExt;
+
+    async fn request(router: &axum::Router) -> Reply {
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/rooms/{FILE_ROOM}/files"))
+                    .header("host", "campfire.test")
+                    .header("accept", "text/html,application/xhtml+xml")
+                    .header("cookie", david_cookie())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        Reply {
+            status: response.status(),
+            headers: response.headers().clone(),
+            body: axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap()
+                .to_vec(),
+        }
+    }
     // Trace executions on every reader, including cached statements and the complete HTTP layout.
     extern "C" fn trace(
         mask: u32,
@@ -300,19 +326,27 @@ async fn rendering_costs_the_same_queries_for_4_files_as_for_16() {
         0
     }
     let app = app().await;
+    let db = app.db().clone();
+    let router = app.booted.router.clone();
+    let n = app.booted.app.config.db_readers;
+    // Only the measured HTTP requests may use these readers. The real runner otherwise
+    // contributes periodic/queue SELECTs at arbitrary points in either measurement.
+    app.booted
+        .jobs
+        .shutdown(std::time::Duration::from_secs(5))
+        .await;
     let rows = fixture()["rows"].clone();
-    app.db().write(|tx| {
+    db.write(|tx| {
         tx.conn().execute("DELETE FROM active_storage_attachments WHERE record_type='Message' AND record_id IN (SELECT id FROM messages WHERE room_id=?) AND id NOT IN (SELECT id FROM active_storage_attachments WHERE record_type='Message' AND record_id IN (SELECT id FROM messages WHERE room_id=?) ORDER BY id LIMIT 2)",(FILE_ROOM,FILE_ROOM))?;
         tx.conn().execute("DELETE FROM drive_attachments WHERE message_id IN (SELECT id FROM messages WHERE room_id=?) AND id NOT IN (SELECT id FROM drive_attachments WHERE message_id IN (SELECT id FROM messages WHERE room_id=?) ORDER BY id LIMIT 2)",(FILE_ROOM,FILE_ROOM))?; Ok(())
     }).await.unwrap();
-    count(&files(&app, "").await);
+    count(&request(&router).await);
     let counter = Arc::new(AtomicUsize::new(0));
-    let n = app.booted.app.config.db_readers;
     let barrier = Arc::new(Barrier::new(n));
     let pointers = futures_util::future::join_all((0..n).map(|_| {
         let counter = counter.clone();
         let barrier = barrier.clone();
-        app.db().read(move |conn| {
+        db.read(move |conn| {
             let pointer = Arc::into_raw(counter) as usize;
             unsafe {
                 assert_eq!(
@@ -334,42 +368,41 @@ async fn rendering_costs_the_same_queries_for_4_files_as_for_16() {
     .map(Result::unwrap)
     .collect::<Vec<_>>();
     counter.store(0, Ordering::SeqCst);
-    assert_eq!(count(&files(&app, "").await), 2);
+    assert_eq!(count(&request(&router).await), 2);
     let few = counter.load(Ordering::SeqCst);
-    app.db()
-        .write(move |tx| {
-            for table in ["active_storage_attachments", "drive_attachments"] {
-                for row in &rows[table].as_array().unwrap()[2..8] {
-                    let row = row.as_object().unwrap();
-                    let columns = row
-                        .keys()
-                        .map(|k| format!("\"{k}\""))
-                        .collect::<Vec<_>>()
-                        .join(",");
-                    let placeholders = vec!["?"; row.len()].join(",");
-                    let values = row.values().map(|v| match v {
-                        Value::Null => rusqlite::types::Value::Null,
-                        Value::Number(n) => rusqlite::types::Value::Integer(n.as_i64().unwrap()),
-                        Value::String(s) => rusqlite::types::Value::Text(s.clone()),
-                        _ => panic!("fixture {v}"),
-                    });
-                    tx.conn().execute(
-                        &format!("INSERT INTO {table} ({columns}) VALUES ({placeholders})"),
-                        rusqlite::params_from_iter(values),
-                    )?;
-                }
+    db.write(move |tx| {
+        for table in ["active_storage_attachments", "drive_attachments"] {
+            for row in &rows[table].as_array().unwrap()[2..8] {
+                let row = row.as_object().unwrap();
+                let columns = row
+                    .keys()
+                    .map(|k| format!("\"{k}\""))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let placeholders = vec!["?"; row.len()].join(",");
+                let values = row.values().map(|v| match v {
+                    Value::Null => rusqlite::types::Value::Null,
+                    Value::Number(n) => rusqlite::types::Value::Integer(n.as_i64().unwrap()),
+                    Value::String(s) => rusqlite::types::Value::Text(s.clone()),
+                    _ => panic!("fixture {v}"),
+                });
+                tx.conn().execute(
+                    &format!("INSERT INTO {table} ({columns}) VALUES ({placeholders})"),
+                    rusqlite::params_from_iter(values),
+                )?;
             }
-            Ok(())
-        })
-        .await
-        .unwrap();
+        }
+        Ok(())
+    })
+    .await
+    .unwrap();
     counter.store(0, Ordering::SeqCst);
-    assert_eq!(count(&files(&app, "").await), 8);
+    assert_eq!(count(&request(&router).await), 8);
     let many = counter.load(Ordering::SeqCst);
     let barrier = Arc::new(Barrier::new(n));
     for result in futures_util::future::join_all((0..n).map(|_| {
         let barrier = barrier.clone();
-        app.db().read(move |conn| {
+        db.read(move |conn| {
             unsafe {
                 rusqlite::ffi::sqlite3_trace_v2(conn.handle(), 0, None, std::ptr::null_mut());
             }

@@ -1,3 +1,4 @@
+# Run with --time 2026-03-02T16:00:00Z --freeze: insert_all timestamps use SQLite's clock.
 require 'json'
 require 'active_support/testing/time_helpers'
 include ActiveSupport::Testing::TimeHelpers
