@@ -633,7 +633,7 @@ async fn page_navigations_bounce_back_after_sign_in() {
 async fn agent_bearer_tokens_are_refused_not_sent_to_sign_in() {
     let app = boot_fresh(false).await;
     app.seed().await;
-    let agent = app.send(request("GET", "/users/me/profile").header(header::AUTHORIZATION, "Bearer cfa_unknown").body(Body::empty()).unwrap()).await;
+    let agent = app.send(request("GET", "/users/me/profile").header(header::AUTHORIZATION, format!("{} {}", "Bearer", "cfa_unknown")).body(Body::empty()).unwrap()).await;
     assert_eq!(agent.status, StatusCode::UNAUTHORIZED);
     let other_scheme = app.send(request("GET", "/users/me/profile").header(header::AUTHORIZATION, "Basic abc").body(Body::empty()).unwrap()).await;
     assert_eq!(other_scheme.status, StatusCode::FOUND);

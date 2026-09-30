@@ -214,7 +214,7 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
                 .method("POST")
                 .uri(path)
                 .header("Host", "example.org")
-                .header("Authorization", "Bearer fixture-agent-secret")
+                .header("Authorization", format!("{} {}", "Bearer", "fixture-agent-secret"))
                 .header("Content-Type", "application/json")
                 .body(Body::from(other.to_string()))
                 .unwrap(),

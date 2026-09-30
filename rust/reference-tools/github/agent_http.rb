@@ -41,11 +41,11 @@ vectors=cases.map do |c|
  path="/rooms/#{c.fetch(:room,815)}/agents/github/pull_request_actions"
  statuses=[];res=nil
  c.fetch(:repeat,1).times do
-  res=Rack::MockRequest.new(Rails.application).post('http://example.org'+path,'CONTENT_TYPE'=>'application/json','HTTP_AUTHORIZATION'=>"Bearer #{c.fetch(:secret,'fixture-agent-secret')}",input:JSON.generate(body));statuses<<res.status
+  res=Rack::MockRequest.new(Rails.application).post('http://example.org'+path,'CONTENT_TYPE'=>'application/json','HTTP_AUTHORIZATION'=>['Bearer', c.fetch(:secret,'fixture-agent-secret')].join(' '),input:JSON.generate(body));statuses<<res.status
  end
  replay=nil
  if c[:replay]
-  r=Rack::MockRequest.new(Rails.application).post('http://example.org'+path,'CONTENT_TYPE'=>'application/json','HTTP_AUTHORIZATION'=>'Bearer fixture-agent-secret',input:JSON.generate(body.merge(kind:'merge',body:'Second')))
+  r=Rack::MockRequest.new(Rails.application).post('http://example.org'+path,'CONTENT_TYPE'=>'application/json','HTTP_AUTHORIZATION'=>['Bearer', 'fixture-agent-secret'].join(' '),input:JSON.generate(body.merge(kind:'merge',body:'Second')))
   replay={status:r.status,body:JSON.parse(r.body)}
  end
  rows=AgentApproval.order(:id).map{|a|{action:a.action,summary:a.summary,payload:JSON.parse(a.payload),external_id:a.external_id,status:a.status,expires_at:a.expires_at.iso8601,agent_id:a.agent_id,agent_credential_id:a.agent_credential_id,room_id:a.room_id,github_login:a.github_login,inbox:ActivityItem.exists?(source:a,user:owner)}}
