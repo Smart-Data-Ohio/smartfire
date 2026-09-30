@@ -313,3 +313,22 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
         .unwrap();
     assert_eq!(response.status().as_u16(), 403);
 }
+
+#[tokio::test]
+async fn github_agent_request_revalidation_preserves_authentication_usage_stamps() {
+    let fresh = fixture(&json!({})).await;
+    fresh.app.db.write(|tx| {
+        // Simulate the common authentication before-action earlier in a slow request.
+        let original=tx.now().ago(jiff::SignedDuration::from_mins(2));
+        tx.conn().execute("UPDATE agent_credentials SET last_used_at=?,last_used_ip='203.0.113.7' WHERE id=882",[original])?;
+        tx.conn().execute("UPDATE agents SET last_seen_at=? WHERE id=881",[original])?;
+        let account=Account::for_user(tx.conn(),813)?.unwrap();
+        let reply=crate::integrations::github::approval_requests::create(tx,crate::integrations::github::approval_requests::Request {user_id:813,room_id:815,pr_id:Some(816),secret:"fixture-agent-secret".into(),account,submitted:json!({"kind":"comment","body":"hi"})})?;
+        assert_eq!(reply.status,202);
+        let credential=AgentCredential::find(tx.conn(),882)?.unwrap();
+        assert_eq!(credential.last_used_ip.as_deref(),Some("203.0.113.7"));
+        assert_eq!(credential.last_used_at,Some(original));
+        let stamp:Option<campfire_db::Timestamp>=tx.conn().query_row("SELECT last_seen_at FROM agents WHERE id=881",[],|r|r.get(0))?;
+        assert_eq!(stamp,Some(original));Ok(())
+    }).await.unwrap();
+}

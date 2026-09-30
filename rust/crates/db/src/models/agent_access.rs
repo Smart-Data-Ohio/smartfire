@@ -5,7 +5,7 @@ use jiff::SignedDuration;
 use rusqlite::params;
 
 use crate::sql::{CachedStatements, exists, query_one};
-use crate::{Connection, Result, Tx, User};
+use crate::{Connection, Result, Timestamp, Tx, User};
 
 pub const CAPABILITIES: [&str; 7] = [
     "read_messages",
@@ -113,19 +113,10 @@ pub fn authenticate_identity(
     else {
         return Ok(None);
     };
-    let agent_id = credential.agent_id;
-    let identity = query_one(
-        tx.conn(),
-        "SELECT user_id FROM agents WHERE id=? AND suspended_at IS NULL",
-        [agent_id],
-        |r| r.get::<_, i64>(0),
-    )?;
-    let Some(user_id) = identity else {
+    let Some(identity) = identity_for_credential(tx.conn(), &credential)? else {
         return Ok(None);
     };
-    let Some(user) = User::find_by_id(tx.conn(), user_id)?.filter(User::is_active) else {
-        return Ok(None);
-    };
+    let agent_id = identity.agent_id;
     credential.record_use(tx, Some(ip))?;
     let now = tx.now();
     let cutoff = now.ago(SignedDuration::from_mins(1));
@@ -133,6 +124,40 @@ pub fn authenticate_identity(
         "UPDATE agents SET last_seen_at=? WHERE id=? AND (last_seen_at IS NULL OR last_seen_at<=?)",
         params![now, agent_id, cutoff],
     )?;
+    Ok(Some(identity))
+}
+
+/// Recheck a credential's current policy inside a later write without recording another
+/// authentication. The request's original activity timestamps and IP belong to its before-action.
+pub fn verify_identity(
+    conn: &Connection,
+    secret: &str,
+    now: Timestamp,
+) -> Result<Option<AuthenticatedAgent>> {
+    let Some(credential) =
+        super::agent_credential::AgentCredential::authenticate(conn, secret, now)?
+    else {
+        return Ok(None);
+    };
+    identity_for_credential(conn, &credential)
+}
+fn identity_for_credential(
+    conn: &Connection,
+    credential: &super::agent_credential::AgentCredential,
+) -> Result<Option<AuthenticatedAgent>> {
+    let agent_id = credential.agent_id;
+    let identity = query_one(
+        conn,
+        "SELECT user_id FROM agents WHERE id=? AND suspended_at IS NULL",
+        [agent_id],
+        |r| r.get::<_, i64>(0),
+    )?;
+    let Some(user_id) = identity else {
+        return Ok(None);
+    };
+    let Some(user) = User::find_by_id(conn, user_id)?.filter(User::is_active) else {
+        return Ok(None);
+    };
     Ok(Some(AuthenticatedAgent {
         user,
         agent_id,
