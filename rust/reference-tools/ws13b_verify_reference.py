@@ -16,6 +16,8 @@ PATHS = [
     "test/models/huddle_invitation_test.rb", "test/models/huddle/join_notifier_test.rb",
     "app/models/stream.rb", "app/models/message.rb", "app/models/message/searchable.rb",
     "test/models/stream_test.rb", "test/models/rooms/stage_test.rb", "test/models/rooms/voice_test.rb",
+    "app/models/notifications/policy.rb", "app/models/huddle/ring_policy.rb",
+    "test/models/huddle/join_pusher_test.rb", "test/models/huddle/ring_policy_test.rb",
 ]
 image = os.environ.get("PARITY_IMAGE", "ws13-reference:d7c7de92")
 raw = subprocess.check_output(["docker", "run", "--rm", "--name", "ws13b-source-check", "--network", "none", "--entrypoint", "sha256sum", image, *[f"/rails/{path}" for path in PATHS]], text=True, cwd=ROOT)

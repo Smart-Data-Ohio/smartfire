@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 208 declarations now have complete assertion coverage mapped below. The other 340 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 216 declarations now have complete assertion coverage mapped below. The other 332 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -18,7 +18,7 @@ Passed titles are backed jointly by those differential tests, the real HTTP/Cabl
 
 ## WS13b domain slices
 
-WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation and thirty-two complete join-notifier declarations, plus eleven stage, six stream and three voice declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. The single-row membership creation path now reproduces pinned Rails listener defaults, association errors and commit behavior; WS17 seam signatures remain unchanged. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
+WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation and thirty-two complete join-notifier declarations, plus eleven stage, six stream, three voice and eight join-pusher declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. The single-row membership creation path now reproduces pinned Rails listener defaults, association errors and commit behavior; WS17 seam signatures remain unchanged. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
 
 ## Rails declaration coverage by file
 
@@ -43,7 +43,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
 | `test/system/stage_test.rb` | 15 | 0 | 15 |
-| `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
+| `test/models/huddle/join_pusher_test.rb` | 13 | 8 | 5 |
 | `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
 | `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
 | `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
@@ -59,7 +59,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **208** | **340** |
+| **Total** | **548** | **216** | **332** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -421,25 +421,25 @@ Owner: WS13b. Partial: 32/33 complete declarations covered by `huddle_notifier_s
 
 ## test/models/huddle/join_pusher_test.rb
 
-Owner: WS13b with WS17 for transport/policy integration. Deferred.
+Owner: WS13b with WS17 for transport/policy integration. Partial: 8/13 complete assertions at the unchanged `prepare_push` seam. Thirteen Rails sequences cover payload/subscriptions, repeated pushes, timestamp preservation, connection and inbox gates, hidden/off/muted scopes and empty-subscription claims. Five DND/starred/quiet-hours/meeting/OOO declarations retain the WS17 policy decision: their huddle-side outcomes pass with pinned policy inputs. Hidden/off/muted scopes are also exercised with policy allowed, so those complete assertions do not depend on the input decision.
 
-- pushes the join to the recipient's subscriptions and stamps the throttle
-- a second push inside ten minutes is throttled
-- a push ten minutes later goes out again
+- **Passed:** pushes the join to the recipient's subscriptions and stamps the throttle
+- **Passed:** a second push inside ten minutes is throttled
+- **Passed:** a push ten minutes later goes out again
 - a DND recipient gets no push and burns no throttle window
 - a starred joiner still pushes through DND
 - a recipient in quiet hours gets no push
 - a recipient quiet in a meeting gets no push
 - an out-of-office recipient gets no push unless they keep notifications on
-- a connected recipient gets no push and burns no throttle window
-- a switched-off or hidden room gets no push
-- a muted room gets no push and burns no throttle window
-- a recipient with huddle invitations switched off gets no push and burns no throttle window
-- a recipient with no subscriptions burns no throttle window
+- **Passed:** a connected recipient gets no push and burns no throttle window
+- **Passed:** a switched-off or hidden room gets no push
+- **Passed:** a muted room gets no push and burns no throttle window
+- **Passed:** a recipient with huddle invitations switched off gets no push and burns no throttle window
+- **Passed:** a recipient with no subscriptions burns no throttle window
 
 ## test/models/huddle/ring_policy_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b with WS17 for Notifications::Policy. All eight remain partial: invitation traces verify `publish_ring` payload behavior with explicit sound decisions, while this branch has no WS17 policy implementation. DND/allow-list/meeting/OOO and the RingPolicy override-to-policy adapter remain open. No seam signature changed and main has not been merged.
 
 - an invitation rings a member who is not in do-not-disturb
 - do-not-disturb silences the ring
