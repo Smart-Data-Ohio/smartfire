@@ -9,7 +9,7 @@ use base64::Engine;
 use serde_json::Value;
 
 use super::*;
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, gzip_bomb, network, trickling_server};
+use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, gzip_bomb, network, trickling_server_with_ready};
 
 fn route(spec: &Value) -> Route {
     let s = |key: &str| spec[key].as_str().unwrap_or_default().to_string();
@@ -121,22 +121,104 @@ async fn stops_reading_a_gzip_bomb_at_the_limit() {
     encoder.write_all(page.as_bytes()).unwrap();
     let page = encoder.finish().unwrap();
     let gzipped = |path: &str, zeros: Vec<u8>| {
-        Route::new("GET", "*", path, 200).header("Content-Type", "text/html").header("Content-Encoding", "gzip").body([page.clone(), zeros].concat())
+        Route::new("GET", "*", path, 200)
+            .header("Content-Type", "text/html")
+            .header("Content-Encoding", "gzip")
+            .body([page.clone(), zeros].concat())
     };
-    let server = FakeServer::start(vec![gzipped("/", gzip_bomb(1024)), gzipped("/small", gzip_bomb(2))]).await;
+    let large = gzipped("/", gzip_bomb(1024));
+    assert!(
+        large.body.len() < fetch::MAX_BODY_SIZE,
+        "the compressed body must fit, so rejection tests the inflated size"
+    );
+    let server = FakeServer::start(vec![large, gzipped("/small", gzip_bomb(2))]).await;
     let net = network_to(server.addr);
 
-    assert!(matches!(unfurl(&net, "http://www.example.com/small").await, Ok(Unfurl::Json(_))));
-    let started = crate::test_support::cpu_time();
-    assert_eq!(unfurl(&net, "http://www.example.com/").await, Ok(Unfurl::NoContent));
-    assert!((crate::test_support::cpu_time() - started) < std::time::Duration::from_secs(2), "{:?} CPU", crate::test_support::cpu_time() - started);
+    assert!(matches!(
+        crate::test_support::wait(
+            "unfurling the small gzip page",
+            unfurl(&net, "http://www.example.com/small")
+        )
+        .await,
+        Ok(Unfurl::Json(_))
+    ));
+    // This fixture is 200 HTML with a compressed length below the limit. Only the inflated
+    // size can produce Ok(None); a stalled body produces a transport error instead.
+    let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
+    let fetched = crate::test_support::wait(
+        "rejecting the inflated gzip size",
+        fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()),
+    )
+    .await;
+    assert!(
+        matches!(fetched, Ok(None)),
+        "expected inflated-size rejection, got {fetched:?}"
+    );
+    assert_eq!(
+        crate::test_support::wait(
+            "unfurling the oversized gzip page",
+            unfurl(&net, "http://www.example.com/")
+        )
+        .await,
+        Ok(Unfurl::NoContent)
+    );
 }
 
 /// A server that keeps sending a byte at a time never trips a read timeout, but the unfurl as a
 /// whole gives up.
-#[tokio::test]
-async fn gives_up_on_a_trickling_page() {
-    let server = trickling_server("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n").await;
-    let deadline = std::time::Duration::from_millis(500);
-    assert_eq!(crate::test_support::wait("the trickling page fetch deadline", unfurl_within(&network_to(server), "http://www.example.com/", deadline)).await, Ok(Unfurl::NoContent));
+#[test]
+fn gives_up_on_a_trickling_page() {
+    use futures_util::FutureExt;
+    use std::time::Duration;
+
+    // The watchdog uses wall time on a different thread; paused Tokio time cannot hide a hang.
+    let (finished, result) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let outcome = std::panic::catch_unwind(|| {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .start_paused(true)
+                .build()
+                .unwrap();
+            runtime.block_on(async {
+                // Prevent Tokio's idle-time auto-advance while waiting for real TCP readiness.
+                let keep_time_paused = tokio::spawn(async {
+                    loop {
+                        tokio::task::yield_now().await;
+                    }
+                });
+                let (server, ready) = trickling_server_with_ready("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n").await;
+                let net = network_to(server);
+                let started = tokio::time::Instant::now();
+                let deadline = Duration::from_millis(500);
+                let unfurling = unfurl_within(&net, "http://www.example.com/", deadline);
+                tokio::pin!(unfurling);
+                tokio::select! {
+                    biased;
+                    outcome = &mut unfurling => panic!("trickling fetch finished before its deadline: {outcome:?}"),
+                    ready = ready => ready.expect("trickling server must send its first response byte"),
+                }
+                assert_eq!(started.elapsed(), Duration::ZERO, "clock advanced during TCP setup");
+
+                tokio::time::advance(deadline - Duration::from_millis(1)).await;
+                tokio::time::sleep_until(started + deadline - Duration::from_millis(1)).await;
+                assert!(unfurling.as_mut().now_or_never().is_none(), "trickling fetch finished before 500 ms");
+                tokio::time::advance(Duration::from_millis(1)).await;
+                tokio::time::sleep_until(started + deadline).await;
+                assert_eq!(unfurling.as_mut().now_or_never(), Some(Ok(Unfurl::NoContent)), "trickling fetch must expire at its 500 ms deadline");
+                assert_eq!(started.elapsed(), deadline);
+                keep_time_paused.abort();
+            });
+        });
+        let _ = finished.send(outcome);
+    });
+    let outcome = result
+        .recv_timeout(crate::test_support::WAIT)
+        .expect("trickling deadline test exceeded its 30 s wall-clock watchdog");
+    worker
+        .join()
+        .expect("deadline worker panicked outside its test");
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
+    }
 }

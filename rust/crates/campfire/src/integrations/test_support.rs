@@ -265,20 +265,34 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
 /// A server that answers every request with `head` and then a byte of body every 50 ms, until
 /// the client hangs up.
 pub async fn trickling_server(head: &'static str) -> SocketAddr {
+    trickling_server_with_ready(head).await.0
+}
+
+/// Also acknowledges the first response byte, so a paused-time test can wait for real I/O
+/// before advancing its clock.
+pub async fn trickling_server_with_ready(
+    head: &'static str,
+) -> (SocketAddr, tokio::sync::oneshot::Receiver<()>) {
     let listener = crate::test_support::bind_listener().await;
     let addr = listener.local_addr().unwrap();
+    let (ready, received) = tokio::sync::oneshot::channel();
     tokio::spawn(async move {
+        let mut ready = Some(ready);
         while let Ok((mut stream, _)) = listener.accept().await {
+            let mut ready = ready.take();
             tokio::spawn(async move {
                 let _ = stream.read(&mut [0; 4096]).await;
                 let _ = stream.write_all(head.as_bytes()).await;
                 while stream.write_all(b" ").await.is_ok() {
+                    if let Some(ready) = ready.take() {
+                        let _ = ready.send(());
+                    }
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                 }
             });
         }
     });
-    addr
+    (addr, received)
 }
 
 /// A gzip bomb:`megabytes` gzip members of a megabyte of zeros each, about 1 KB apiece.

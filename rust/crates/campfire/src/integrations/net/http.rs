@@ -427,12 +427,17 @@ mod tests {
     /// A gigabyte packed into a megabyte stops inflating just past the limit, in one chunk.
     #[test]
     fn stops_inflating_a_gzip_bomb_at_the_limit() {
+        let body = gzip_bomb(1024);
         let mut inflater = Inflater::new();
         let started = crate::test_support::cpu_time();
-        assert_eq!(inflater.inflate(&gzip_bomb(1024), LIMIT).unwrap(), None);
+        assert_eq!(inflater.inflate(&body, LIMIT).unwrap(), None);
         // Inflating the whole gigabyte would take minutes; stopping at the limit takes about a
         // second in an unoptimized build on a CI runner.
-        assert!((crate::test_support::cpu_time() - started) < Duration::from_secs(10), "{:?}", (crate::test_support::cpu_time() - started));
+        let elapsed = crate::test_support::cpu_time() - started;
+        assert!(
+            elapsed < Duration::from_secs(2),
+            "inflating to the size limit used {elapsed:?} CPU"
+        );
         let inflated = inflater.decoder.as_mut().unwrap().output().len();
         assert!(inflated <= LIMIT + 64 * 1024, "{inflated}");
     }
