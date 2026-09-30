@@ -99,6 +99,18 @@ impl Boost {
         })
     }
 
+    /// `Messages::BoostsController#create` under the message lock. The HTTP/icon adapter
+    /// supplies the canonical content and reaction predicate; every old duplicate from this
+    /// booster is removed in the same transaction before the next toggle can create one row.
+    pub fn toggle_reaction(tx: &mut Tx<'_>, message_id: i64, booster_id: i64, content: &str, reaction: bool) -> Result<()> {
+        Message::find(tx.conn(), message_id)?;
+        let existing = if reaction {Self::for_message(tx.conn(), message_id)?.into_iter()
+            .filter(|boost| boost.booster_id == booster_id && boost.content == content).collect::<Vec<_>>()} else {Vec::new()};
+        if existing.is_empty() {Self::create(tx, message_id, booster_id, content)?;}
+        else {for boost in existing {boost.destroy(tx)?;}}
+        Ok(())
+    }
+
     /// `destroy!`: touches the message (and so the room).
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.delete_row(tx)?;

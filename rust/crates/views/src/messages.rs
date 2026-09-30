@@ -825,6 +825,14 @@ pub struct BoostsPartial<'a> {
     pub message: &'a MessageView,
 }
 
+/// The complete replacement fragment used by the modern reaction toggle and delete actions.
+#[derive(Template)]
+#[template(path = "messages/boosts/_reactions.html")]
+pub struct ReactionsPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
 /// `messages/boosts/index`.
 #[derive(Template)]
 #[template(path = "messages/boosts/index.html")]

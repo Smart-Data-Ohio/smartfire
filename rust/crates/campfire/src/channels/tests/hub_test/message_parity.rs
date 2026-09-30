@@ -11,6 +11,32 @@ use crate::controllers::presenters::test_support::{ALL_TALK, DAVID, Req, SEED_NO
 fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../../vectors/messaging/broadcasts.json")).unwrap() }
 
 #[tokio::test]
+async fn modern_reaction_replacements_match_rails_bytes_through_ws7() {
+    use crate::controllers::messages::boosts_tests;
+    let hub = boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    let id = boosts_tests::fixture(&hub.app).await;
+    let (mut client, streams) = subscriber(&hub, None).await;
+    let mut checked = 0;
+    for row in boosts_tests::oracle()["rows"].as_array().unwrap() {
+        if row["name"] == "duplicate_toggle" {boosts_tests::duplicates(&hub.app,id).await;}
+        let response = hub.app.david().write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(), row["path"].as_str().unwrap())
+            .header("content-type", "application/json").header("accept", "application/json").body(row["input"].to_string())).await;
+        assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{}", response.text());
+        for frame in row["frames"].as_array().unwrap() {
+            assert!(streams.contains(&frame["stream"].as_str().unwrap().to_string()));
+            let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
+            let html = actual["message"].as_str().unwrap();
+            if html != frame["payload"].as_str().unwrap() {crate::controllers::presenters::test_support::rails_mismatch(html, frame["payload"].as_str().unwrap(), row["name"].as_str().unwrap());}
+            assert_eq!(campfire_cable::turbo::session_bound(html), None);
+            assert!(!campfire_views::helpers::request_forgery::has_token_slots(html));
+            checked += 1;
+        }
+        client.assert_silent().await;
+    }
+    assert_eq!(checked, 20);
+}
+
+#[tokio::test]
 async fn positive_forward_message_and_unread_frames_match_rails_for_every_recipient() {
     use crate::controllers::{message_forwards_tests::{install_success_fixture, success_oracle}, presenters::test_support::{BENDER, DIRECT_DAVID_JASON, JASON, KEVIN, QUIET_CORNER}};
     use campfire_kit::Crypto;

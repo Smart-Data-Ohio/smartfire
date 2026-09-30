@@ -29,6 +29,18 @@ pub fn shortcode_name(content: &str) -> Option<&str> {
         .then(|| &content[1..content.len() - 1])
 }
 
+/// Boost.resolve_content: Ruby String#strip, then emoji resolution or canonical brand name.
+/// The existing icon source preserves workspace-icon precedence over emoji aliases.
+pub fn resolve_content(content: &str, source: &dyn IconSource) -> String {
+    let content = content.trim_matches(['\0', ' ', '\t', '\n', '\r', '\u{b}', '\u{c}']);
+    let Some(name) = shortcode_name(content) else {return content.to_string()};
+    match source.resolve_avatar_icon(name) {
+        Some(AvatarIcon::Emoji {character, ..}) => character,
+        Some(AvatarIcon::Image {brand: true, ..}) => REGISTRY.shortcodes.get(name).and_then(|row| row.icon_alt.clone()).unwrap_or_else(|| content.to_string()),
+        _ => content.to_string(),
+    }
+}
+
 pub fn reaction_title(content: &str) -> String {
     REACTIONS
         .iter()

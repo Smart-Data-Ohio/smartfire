@@ -4,6 +4,8 @@
 //! delivering webhooks and the broadcasts.
 
 pub mod boosts;
+#[cfg(test)]
+pub(crate) mod boosts_tests;
 pub mod by_bots;
 pub(crate) mod payload;
 mod freshness;
