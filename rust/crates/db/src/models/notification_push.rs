@@ -219,7 +219,7 @@ impl BoardNudgeSource {
             room.name.unwrap_or_default(),
             format!("{prefix}: {} sitting in {label}", name.unwrap_or_default()),
             format!("/rooms/{}?thread={}", self.room_id, self.thread_id),
-            None,
+            Some(format!("board-nudge-{}", self.thread_id)),
         ))
     }
 }

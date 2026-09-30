@@ -41,8 +41,8 @@ travel_to(Time.utc(2026,3,2,16)) do
   pool=Object.new
   pool.define_singleton_method(:queue) do |payload,subs|
    subs=subs.order(:id).to_a
-   encoded=subs.map { |sub|WebPush::Notification.new(**payload.reverse_merge(tag:nil),badge:sub.user.memberships.unread.count,endpoint:nil,endpoint_ip_resolver:nil,p256dh_key:nil,auth_key:nil).send(:encoded_message) }
-   deliveries << {payload:payload.reverse_merge(tag:nil),subscriptions:subs.map(&:id),users:subs.map(&:user_id),encoded:}
+   encoded=subs.map { |sub|WebPush::Notification.new(**payload,badge:sub.user.memberships.unread.count,endpoint:nil,endpoint_ip_resolver:nil,p256dh_key:nil,auth_key:nil).send(:encoded_message) }
+   deliveries << {payload:payload,subscriptions:subs.map(&:id),users:subs.map(&:user_id),encoded:}
   end
   old=Rails.configuration.x.web_push_pool;Rails.configuration.x.web_push_pool=pool
   recipient.reload;user.reload
@@ -87,4 +87,4 @@ travel_to(Time.utc(2026,3,2,16)) do
  ["nothing","invisible","muted",nil].each { |mode|run.call("invitation_mode_#{mode||'null'}","invitation",["UPDATE memberships SET involvement=#{conn.quote(mode)} WHERE room_id=#{direct.id} AND user_id=#{recipient.id};"]) }
  run.call("invitation_connected","invitation",["UPDATE memberships SET connected_at=#{conn.quote(Time.current)} WHERE room_id=#{direct.id} AND user_id=#{recipient.id};"])
 end
-puts JSON.generate(reference:"d7c7de92",now:"2026-03-02T16:00:00Z",rows:)
+puts JSON.generate(reference:"d7c7de92",board_reference:"a6f10a25",now:"2026-03-02T16:00:00Z",rows:)

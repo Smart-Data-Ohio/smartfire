@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Verify owned Rails source in the reference image against the fixed Git pin."""
+"""Verify source against the fixed pin and the explicitly adopted #162 board blob."""
 import hashlib
 from pathlib import Path
 import subprocess
+import sys
 
 root = Path(__file__).resolve().parents[2]
 pin = "d7c7de92"
-image = "triage-reference-d7c7de92:latest"
+assert sys.argv[1:] in ([], ["--board-tag"])
+board_tag = bool(sys.argv[1:])
+image = "ws17-reference-board-a6f10a25:latest" if board_tag else "triage-reference-d7c7de92:latest"
 files = [
     "app/views/users/show.html.erb", "app/views/rooms/show/_ooo_notices.html.erb", "app/controllers/rooms_controller.rb",
     "config/initializers/web_push.rb", "config/initializers/vapid.rb",
@@ -43,6 +46,10 @@ checks = subprocess.check_output([
 ], text=True).splitlines()
 assert len(checks) == len(files)
 for path, check in zip(files, checks, strict=True):
-    source = subprocess.check_output(["git", "show", f"{pin}:{path}"], cwd=root)
+    source_pin = "a6f10a25" if board_tag and path == "app/models/board_automations/nudge_pusher.rb" else pin
+    source = subprocess.check_output(["git", "show", f"{source_pin}:{path}"], cwd=root)
     assert hashlib.sha256(source).hexdigest() == check.split()[0], f"reference drift: {path}"
-print(f"pinned Rails source verified: {len(files)} files match {pin}")
+if board_tag:
+    print(f"Rails source verified: {len(files)-1} files match {pin}; 1 board pusher matches a6f10a25")
+else:
+    print(f"pinned Rails source verified: {len(files)} files match {pin}")
