@@ -21,6 +21,7 @@ pub mod autocompletable;
 pub mod rooms;
 pub mod messages;
 pub mod message_providers;
+pub mod events;
 pub mod searches;
 pub mod pins;
 pub mod saved_items;

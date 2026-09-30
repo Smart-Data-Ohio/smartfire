@@ -40,6 +40,9 @@ def check(name, relative, old, new, test):
         source.write_text(original)
 
 
+check("event-meet-scheme", "rust/crates/campfire/src/controllers/presenters/provider_cards.rs",
+      "meet_link,", "meet_link: card.meet_link.clone(),",
+      "controllers::message_features::provider_tests::populated_event_cards_match_actual_rails_without_viewer_attendance_state")
 check("provider-private-content", "rust/crates/campfire/src/controllers/presenters/provider_cards.rs",
       "if card.private != Some(false)", "if false",
       "controllers::message_features::provider_tests::shared_provider_cards_expose_no_private_content_or_session_values")

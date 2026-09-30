@@ -100,3 +100,39 @@ pub(super) fn embeds(data: &RenderingRecords, message: &Message) -> Vec<EmbedEnt
             }).collect()
     }
 }
+
+pub(super) fn events(
+    data: &RenderingRecords,
+    message: &Message,
+) -> Vec<campfire_views::events::CardView> {
+    data.event_cards
+        .get(&message.id)
+        .into_iter()
+        .flatten()
+        .map(|card| {
+            let meet_link = card
+                .meet_link
+                .as_deref()
+                .filter(|url| {
+                    url.parse::<axum::http::Uri>().ok().is_some_and(|uri| {
+                        uri.scheme_str() == Some("https")
+                            && uri.host().is_some_and(|host| !host.is_empty())
+                    })
+                })
+                .map(str::to_owned);
+            campfire_views::events::CardView {
+                id: card.id,
+                room_id: card.room_id,
+                title: card.title.clone(),
+                organizer_name: card.organizer.clone(),
+                starts_at: card.starts_at.jiff(),
+                ends_at: card.ends_at.map(|t| t.jiff()),
+                time_zone: card.time_zone.clone(),
+                series: card.series,
+                cancelled: card.cancelled,
+                venue_name: card.venue.clone(),
+                meet_link,
+            }
+        })
+        .collect()
+}

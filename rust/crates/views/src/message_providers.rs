@@ -1,4 +1,6 @@
 //! Shared public provider cards. Private provider payloads stay at their per-viewer endpoints.
+pub mod events;
+
 use crate::{ViewContext, helpers as h};
 use askama::Template;
 use jiff::Timestamp;

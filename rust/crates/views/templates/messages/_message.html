@@ -23,7 +23,7 @@
           {% include "messages/_drive_attachments.html" %}
           {{ crate::message_providers::github_cards(ctx, message) }}
           {{ crate::messages::cards(message, "twitter_cards", "x-post-cards", 2, &message.components.twitter_cards) }}
-          {{ crate::messages::event_cards(message) }}
+          {{ crate::message_providers::events::cards(ctx, message) }}
           {{ crate::message_links::cards(ctx, message) }}
           {{ crate::messages::cards(message, "fizzy_cards", "fizzy-cards", 0, &message.components.fizzy_cards) }}
           {{ crate::message_providers::embed_cards(ctx, message, true) }}

@@ -137,3 +137,45 @@ async fn warm_public_card_fragments_refresh_without_touching_the_message() {
             .contains("https://page.example.test/post#my-fragment")
     );
 }
+
+fn event_oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/event_cards.json"
+    ))
+    .unwrap()
+}
+#[tokio::test]
+async fn populated_event_cards_match_actual_rails_without_viewer_attendance_state() {
+    let app = app_rows(event_oracle()["rows"].clone()).await;
+    let runtime = app.booted.app.clone();
+    app.db()
+        .read(move |conn| {
+            for case in event_oracle()["cases"].as_array().unwrap() {
+                let message = Message::find(conn, case["message_id"].as_i64().unwrap())?;
+                let p = Presenter::new(conn, &runtime, None)
+                    .preload_search(std::slice::from_ref(&message))?;
+                let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+                let observed = count.clone();
+                conn.flush_prepared_statement_cache();
+                conn.authorizer(Some(move |ctx: rusqlite::hooks::AuthContext<'_>| {
+                    if matches!(ctx.action, rusqlite::hooks::AuthAction::Select) {
+                        observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    }
+                    rusqlite::hooks::Authorization::Allow
+                }));
+                let view = p.message(&message)?;
+                let html =
+                    page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| {
+                        campfire_views::message_providers::events::cards(ctx, &view).0
+                    });
+                conn.authorizer(
+                    None::<fn(rusqlite::hooks::AuthContext<'_>) -> rusqlite::hooks::Authorization>,
+                );
+                assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 0);
+                assert_eq!(html, case["html"].as_str().unwrap(), "{}", case["label"]);
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+}

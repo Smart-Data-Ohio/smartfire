@@ -14,7 +14,7 @@ pub(super) async fn app_rows(rows: Value) -> TestApp {
     let app = TestApp::boot_with_test_clock(std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(SEED_NOW.parse().unwrap())))
         .await.expect("WS8bm2 requires default seed");
     app.db().write(move |tx| {
-        for table in ["channel_threads", "github_pull_requests", "fizzy_cards", "messages", "action_text_rich_texts", "message_references", "polls", "poll_options", "message_pins", "github_pull_request_references", "fizzy_card_references", "github_pull_request_threads", "link_embeds", "link_embed_references"] {
+        for table in ["rooms", "events", "channel_threads", "github_pull_requests", "fizzy_cards", "messages", "action_text_rich_texts", "message_references", "polls", "poll_options", "message_pins", "github_pull_request_references", "fizzy_card_references", "github_pull_request_threads", "link_embeds", "link_embed_references", "event_references"] {
             for row in rows[table].as_array().into_iter().flatten() {
                 let row = row.as_object().unwrap();
                 let columns = row.keys().map(|k| format!("\"{k}\"")).collect::<Vec<_>>().join(",");

@@ -137,6 +137,7 @@ pub struct MessageComponents {
     pub cache_key: Option<String>,
     pub provider_github: Option<Vec<crate::message_providers::GithubEntry>>,
     pub provider_embeds: Option<Vec<crate::message_providers::EmbedEntry>>,
+    pub provider_events: Option<Vec<crate::events::CardView>>,
     pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub twitter_cards: Vec<String>,
