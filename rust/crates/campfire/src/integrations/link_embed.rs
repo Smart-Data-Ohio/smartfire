@@ -56,3 +56,6 @@ mod tests {
 #[cfg(test)]
 #[path = "link_embed/rails_reference_tests.rs"]
 mod rails_reference_tests;
+#[cfg(test)]
+#[path = "link_embed/rails_fetcher_tests.rs"]
+mod rails_fetcher_tests;
