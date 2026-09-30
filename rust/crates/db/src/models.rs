@@ -90,8 +90,8 @@ pub mod room_delete;
 pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
 
-pub use agent_credential::{AgentCredential, NewCredential};
-pub use agent_grant::{AgentGrant, NewGrant};
+pub use agent_credential::{AgentCredential, CredentialChanges, NewCredential};
+pub use agent_grant::{AgentGrant, GrantChanges, NewGrant};
 pub use agent_approval::{AgentApproval, NewApproval};
 pub use agent::{Agent,AgentChanges,AgentKind,NewAgent};
 pub use agent_slash_command::{AgentSlashCommand,NewAgentSlashCommand};

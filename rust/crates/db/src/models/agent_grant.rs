@@ -23,6 +23,14 @@ pub struct NewGrant {
     pub granted_by_id: i64,
     pub revoked_at: Option<Timestamp>,
 }
+#[derive(Default, Debug, Clone)]
+pub struct GrantChanges {
+    pub agent_id: Option<i64>,
+    pub room_id: Option<Option<i64>>,
+    pub capability: Option<String>,
+    pub granted_by_id: Option<i64>,
+    pub revoked_at: Option<Option<Timestamp>>,
+}
 impl AgentGrant {
     fn from_row(r: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
@@ -88,6 +96,52 @@ impl AgentGrant {
         Self::validate(tx.conn(), &a, None)?.into_result()?;
         let id=tx.conn().query_row("INSERT INTO agent_grants(agent_id,room_id,capability,granted_by_id,revoked_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.room_id,a.capability,a.granted_by_id,a.revoked_at,tx.now(),tx.now()],|r|r.get(0))?;
         Ok(Self::find(tx.conn(), id)?.expect("inserted grant"))
+    }
+    pub fn update(&mut self, tx: &Tx<'_>, changes: GrantChanges) -> Result<()> {
+        let mut candidate =
+            Self::find(tx.conn(), self.id)?.ok_or(crate::Error::RecordNotFound("AgentGrant"))?;
+        macro_rules! assign {($($field:ident),*)=>{$(if let Some(value)=changes.$field {candidate.$field=value;})*};}
+        assign!(agent_id, room_id, capability, granted_by_id, revoked_at);
+        Self::validate(
+            tx.conn(),
+            &NewGrant {
+                agent_id: candidate.agent_id,
+                room_id: candidate.room_id,
+                capability: candidate.capability.clone(),
+                granted_by_id: candidate.granted_by_id,
+                revoked_at: candidate.revoked_at,
+            },
+            Some(self.id),
+        )?
+        .into_result()?;
+        let before = Self::find(tx.conn(), self.id)?.expect("loaded row");
+        let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql + '_>)> = vec![];
+        macro_rules! changed {($($field:ident),*)=>{$(if candidate.$field!=before.$field {sets.push((stringify!($field),Box::new(&candidate.$field)));})*};}
+        changed!(agent_id, room_id, capability, granted_by_id, revoked_at);
+        if !sets.is_empty() {
+            sets.push(("updated_at", Box::new(tx.now())));
+            let columns = sets
+                .iter()
+                .map(|(field, _)| format!("{field}=?"))
+                .collect::<Vec<_>>()
+                .join(",");
+            let mut values: Vec<&dyn rusqlite::ToSql> =
+                sets.iter().map(|(_, value)| value.as_ref()).collect();
+            values.push(&self.id);
+            tx.conn().execute(
+                &format!("UPDATE agent_grants SET {columns} WHERE id=?"),
+                values.as_slice(),
+            )?;
+            candidate.updated_at = tx.now();
+        }
+        drop(sets);
+        *self = candidate;
+        Ok(())
+    }
+    pub fn destroy(&self, tx: &Tx<'_>) -> Result<()> {
+        tx.conn()
+            .execute("DELETE FROM agent_grants WHERE id=?", [self.id])?;
+        Ok(())
     }
     pub fn revoke(&mut self, tx: &Tx<'_>) -> Result<()> {
         if self.revoked_at.is_some() {

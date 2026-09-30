@@ -6,6 +6,7 @@ import subprocess
 
 root = Path(__file__).resolve().parents[3]
 files = [
+    'db/migrate/20260916000000_create_agents.rb',
     'app/models/user/bot.rb', 'app/models/agent.rb', 'app/models/agent_credential.rb', 'app/models/agent_grant.rb',
     'app/controllers/concerns/authentication.rb', 'app/controllers/concerns/agent_authorization.rb',
     'app/controllers/accounts/bots/keys_controller.rb', 'app/controllers/messages/by_bots_controller.rb',
