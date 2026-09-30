@@ -38,3 +38,25 @@ pub async fn manifest(c: &mut Ctx) -> Result {
     let body = manifest.render().map_err(Error::internal)?;
     Ok(c.render_as(StatusCode::OK, "application/json; charset=utf-8", body))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::controllers::presenters::test_support::{TestApp, seed_clock};
+
+    #[tokio::test]
+    async fn pwa_http_bodies_match_rails_before_and_after_first_run() {
+        for (seed, vectors) in [
+            ("default", include_str!("../../../../vectors/users_pwa_default.json")),
+            ("first_run", include_str!("../../../../vectors/users_pwa_first_run.json")),
+        ] {
+            let Some(app) = TestApp::boot_seed_with_env(seed, seed_clock(), &[]).await else { return };
+            let vectors: serde_json::Value = serde_json::from_str(vectors).unwrap();
+            for vector in vectors["responses"].as_array().unwrap() {
+                let response = app.anonymous().get(vector["path"].as_str().unwrap()).await;
+                assert_eq!(response.status.as_u16(), vector["status"].as_u64().unwrap() as u16);
+                assert_eq!(response.content_type(), vector["content_type"].as_str());
+                assert_eq!(response.text(), vector["body"].as_str().unwrap(), "{seed} {}", vector["path"]);
+            }
+        }
+    }
+}

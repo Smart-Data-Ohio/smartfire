@@ -43,6 +43,7 @@ pub mod csp_reports;
 pub mod first_runs;
 pub mod messages;
 pub mod presenters;
+pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
 pub mod rooms;
@@ -137,6 +138,9 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "public_pages#about" => arc(public_pages::about),
+        "public_pages#privacy" => arc(public_pages::privacy),
+        "public_pages#terms" => arc(public_pages::terms),
         "welcome#show" => arc(welcome::show),
         "first_runs#show" => arc(first_runs::show),
         "first_runs#create" => arc(first_runs::create),

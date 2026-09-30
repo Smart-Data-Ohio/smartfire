@@ -128,7 +128,11 @@ impl TestApp {
     }
 
     async fn boot_using_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
-        let seed = seed_dir("default")?;
+        Self::boot_seed_with_env("default", clock, &[]).await
+    }
+
+    pub async fn boot_seed_with_env(name: &str, clock: campfire_kit::SharedClock, vars: &[(&str, &str)]) -> Option<TestApp> {
+        let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
         std::fs::copy(seed.join("db/production.sqlite3"), dir.path().join("db/production.sqlite3")).unwrap();
@@ -140,7 +144,7 @@ impl TestApp {
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
             "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
-            _ => None,
+            _ => vars.iter().find(|(key, _)| *key == name).map(|(_, value)| value.to_string()),
         })
         .unwrap();
         Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap(), _dir: dir })

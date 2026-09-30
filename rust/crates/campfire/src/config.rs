@@ -57,6 +57,7 @@ pub struct Config {
     pub livekit_url: Option<String>,
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
     pub admin_session_idle_timeout: jiff::SignedDuration,
+    pub public_policy: crate::public_policy::PublicPolicy,
 }
 
 #[derive(Debug, Clone)]
@@ -151,6 +152,7 @@ impl Config {
                 .saturating_mul(1 << 20),
             livekit_url: get("LIVEKIT_URL"),
             admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),
+            public_policy: crate::public_policy::PublicPolicy::from_lookup(&get),
         })
     }
 }

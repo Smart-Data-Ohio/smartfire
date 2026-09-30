@@ -611,15 +611,16 @@ impl User {
     /// `name.scan(/\b\w/).join`. Ruby's `\w` is ASCII-only, but `\b` treats any Unicode
     /// letter or digit as a word character, so "Émile" contributes nothing.
     pub fn initials(&self) -> String {
+        static WORD: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+            regex::Regex::new(r"\A[\p{Alphabetic}\p{Mark}\p{Number}\p{Connector_Punctuation}\p{Join_Control}]\z").unwrap()
+        });
         let mut initials = String::new();
-        let mut previous: Option<char> = None;
+        let mut previous_word = false;
         for c in self.name.chars() {
-            let ascii_word = c.is_ascii_alphanumeric() || c == '_';
-            let boundary = previous.is_none_or(|p| !(p.is_alphanumeric() || p == '_'));
-            if ascii_word && boundary {
+            if (c.is_ascii_alphanumeric() || c == '_') && !previous_word {
                 initials.push(c);
             }
-            previous = Some(c);
+            previous_word = WORD.is_match(c.encode_utf8(&mut [0; 4]));
         }
         initials
     }
