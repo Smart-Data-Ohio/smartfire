@@ -39,6 +39,9 @@ use crate::active_storage;
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
 pub mod channel_threads;
+mod message_forwards;
+#[cfg(test)]
+mod message_forwards_tests;
 pub mod channel_thread_messages;
 pub mod autocompletable;
 pub mod csp_reports;
@@ -197,6 +200,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "channel_threads#join" => arc(channel_threads::join),
         "channel_threads#leave" => arc(channel_threads::leave),
         "channel_threads#read" => arc(channel_threads::read),
+        "message_forwards#create" => arc(message_forwards::create),
+        "message_forwards#destinations" => arc(message_forwards::destinations),
+        "message_forward_sources#forward_source" => arc(message_forwards::forward_source),
         "channel_thread_messages#index" => arc(channel_thread_messages::index),
         "channel_thread_messages#show" => arc(channel_thread_messages::show),
         "channel_thread_messages#actions" => arc(channel_thread_messages::actions),

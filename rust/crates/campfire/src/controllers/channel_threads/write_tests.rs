@@ -131,3 +131,19 @@ async fn thread_creator_cannot_moderate_or_delete_even_when_joined() {
     let thread = app.db().read(move |conn| ChannelThread::find(conn, id)).await.unwrap();
     assert!(thread.locked_at.is_none());
 }
+
+#[tokio::test]
+async fn initial_thread_upload_is_processed_and_downloadable() {
+    let app = TestApp::boot().await.unwrap();
+    let response = app.david().write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/threads.json"))
+        .multipart(&[("thread[name]", "Uploaded thread"), ("message[client_message_id]", "thread-upload")],
+            ("message[attachment]", "thread.txt", "text/plain", b"Thread upload\n"))).await;
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    let (thread, blob) = app.db().read(|conn| {
+        let message = Message::find_duplicate(conn, ALL_TALK, DAVID, "thread-upload")?.unwrap();
+        Ok((message.thread_id.unwrap(), campfire_storage::Blob::attached(conn, "Message", message.id, "attachment").map_err(crate::controllers::presenters::storage_error)?.unwrap()))
+    }).await.unwrap();
+    assert!(blob.is_analyzed());
+    assert_eq!(app.booted.app.storage.service.download(&blob.key).unwrap(), b"Thread upload\n");
+    assert_eq!(response.json()["thread"]["id"], thread);
+}

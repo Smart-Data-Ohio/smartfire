@@ -1,0 +1,130 @@
+use axum::http::{Method, StatusCode};
+use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
+use crate::controllers::presenters::test_support::*;
+
+#[tokio::test]
+async fn forward_endpoints_scope_sources_and_reject_bots_and_forgery_first() {
+    let app = TestApp::boot().await.unwrap();
+    let (root, child, thread) = app.db().write(|tx| {
+        let root = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("Forward source".into()), ..Default::default()})?;
+        let thread = ChannelThread::create(tx, NewChannelThread {room_id: ALL_TALK, creator_id: JASON, name: Some("Forward thread".into()), ..Default::default()})?;
+        let child = Message::create(tx, NewMessage {room_id: ALL_TALK, thread_id: Some(thread.id), creator_id: JASON, markdown_source: Some("Child".into()), ..Default::default()})?;
+        Ok((root.id, child.id, thread.id))
+    }).await.unwrap();
+    let mut browser = app.david();
+    for path in [format!("/rooms/{QUIET_CORNER}/messages/{root}/forwards/destinations.json"), format!("/rooms/{ALL_TALK}/messages/{child}/forwards/destinations.json"), format!("/rooms/{ALL_TALK}/threads/{thread}/messages/{root}/forwards/destinations.json")] {
+        assert_eq!(browser.get(&path).await.status, StatusCode::NOT_FOUND);
+    }
+    let path = format!("/rooms/{ALL_TALK}/messages/{root}/forwards.json");
+    assert_eq!(browser.send(Req::new(Method::POST, &path).header("origin", "https://forged.test")).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(app.anonymous().get(&format!("/rooms/{ALL_TALK}/messages/{root}/forwards/destinations.json?bot_key={BENDER_KEY}")).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(app.sign_in(KEVIN).await.write(Req::new(Method::POST, &path)).await.status, StatusCode::NOT_FOUND);
+}
+
+use std::sync::Arc;
+use serde_json::{Value, json};
+use campfire_db::{Room, RoomType, ThreadMembership};
+use campfire_kit::clock::FrozenClock;
+fn oracle() -> Value {serde_json::from_str(include_str!("../../../../vectors/messaging/forwards.json")).unwrap()}
+
+async fn fixture() -> TestApp {
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    app.db().write(|tx| {
+        let source = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("**Snapshot**".into()), client_message_id: Some("forward-source".into()), drive_file_ids: vec!["abcdefghij".into()], ..Default::default()})?;
+        let open = ChannelThread::create(tx, NewChannelThread {room_id: ALL_TALK, creator_id: DAVID, name: Some("Forward open".into()), ..Default::default()})?;
+        let mut locked = ChannelThread::create(tx, NewChannelThread {room_id: ALL_TALK, creator_id: DAVID, name: Some("Forward locked".into()), ..Default::default()})?;
+        locked.lock_conversation(tx)?;
+        let stale = ChannelThread::create(tx, NewChannelThread {room_id: ALL_TALK, creator_id: DAVID, name: Some("Forward stale".into()), ..Default::default()})?;
+        tx.conn().execute("UPDATE channel_threads SET last_activity_at = ?, auto_archive_after_minutes = 60 WHERE id = ?", (tx.now().since(jiff::SignedDuration::from_hours(-2)), stale.id))?;
+        let child = Message::create(tx, NewMessage {room_id: ALL_TALK, thread_id: Some(open.id), creator_id: DAVID, markdown_source: Some("Nested source".into()), client_message_id: Some("forward-child".into()), ..Default::default()})?;
+        let board = Room::create_for(tx, RoomType::Board, Some("Forward board"), DAVID, &[DAVID])?;
+        let copy = Message::create(tx, NewMessage {room_id: QUIET_CORNER, creator_id: DAVID, body: source.body_html(tx.conn())?, forwarded_from_message_id: Some(source.id), forwarded_at: Some(tx.now()), forwarded_markdown: true, client_message_id: Some("forward-copy".into()), ..Default::default()})?;
+        let nested_copy = Message::create(tx, NewMessage {room_id: ALL_TALK, thread_id: Some(open.id), creator_id: DAVID, body: child.body_html(tx.conn())?, forwarded_from_message_id: Some(child.id), forwarded_at: Some(tx.now()), forwarded_markdown: true, client_message_id: Some("forward-nested-copy".into()), ..Default::default()})?;
+        tx.conn().execute("UPDATE channel_threads SET closed_at = NULL, last_activity_at = ? WHERE id = ?", (tx.now().since(jiff::SignedDuration::from_hours(-2)), stale.id))?;
+        for (key, id) in [("source_id",source.id),("thread_id",open.id),("locked_id",locked.id),("stale_id",stale.id),("child_id",child.id),("board_id",board.id),("copy_id",copy.id),("nested_copy_id",nested_copy.id)] {assert_eq!(oracle()[key],id);}
+        Ok(())
+    }).await.unwrap();
+    app
+}
+#[tokio::test]
+async fn pickers_refusals_and_private_source_urls_match_rails_bytes() {
+    let app = fixture().await;
+    let mut browser = app.david();
+    for row in oracle()["rows"].as_array().unwrap() {
+        if row["name"] == "source_inaccessible" {app.db().write(|tx| {tx.conn().execute("DELETE FROM memberships WHERE room_id = ? AND user_id = ?", (ALL_TALK,DAVID))?;Ok(())}).await.unwrap();}
+        let response = browser.write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(), row["path"].as_str().unwrap())
+            .header("content-type","application/json").body(row["input"].to_string())).await;
+        let name = row["name"].as_str().unwrap();
+        assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{name}: {}",response.text());
+        assert_eq!(response.header("cache-control"),row["cache_control"].as_str(),"{name}");
+        assert_eq!(response.content_type(),row["content_type"].as_str(),"{name}");
+        if response.text()!=row["body"].as_str().unwrap() {rails_mismatch(&response.text(),row["body"].as_str().unwrap(),name);}
+        let count=app.db().read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM messages",[],|row|row.get::<_,i64>(0))?)).await.unwrap();
+        assert_eq!(row["message_count"],count);
+    }
+    let id = oracle()["stale_id"].as_i64().unwrap();
+    assert!(app.db().read(move|conn|ChannelThread::find(conn,id)).await.unwrap().closed_at.is_none());
+}
+
+#[tokio::test]
+async fn forward_snapshots_drive_ids_and_thread_membership_survive_source_edit_and_deletion() {
+    let app = fixture().await;
+    let source = oracle()["source_id"].as_i64().unwrap();
+    let thread = oracle()["stale_id"].as_i64().unwrap();
+    let response = app.david().write(Req::new(Method::POST,&format!("/messages/{source}/forwards.json"))
+        .header("content-type","application/json").body(json!({"forward":{"note":"Note <&>","destinations":[{"room_id":QUIET_CORNER},{"room_id":ALL_TALK,"thread_id":thread}]}}).to_string())).await;
+    assert_eq!(response.status,StatusCode::CREATED,"{}",response.text());
+    assert_eq!(response.header("cache-control"),Some("no-store"));
+    let ids=response.json()["forwards"].as_array().unwrap().iter().map(|row|row["message"]["id"].as_i64().unwrap()).collect::<Vec<_>>();
+    assert_eq!(ids.len(),2);
+    app.db().write(move|tx|{let mut message=Message::find(tx.conn(),source)?;message.edit(tx,campfire_db::MessageChanges{markdown_source:Some("Changed".into()),..Default::default()})?;message.destroy(tx)}).await.unwrap();
+    app.db().read(move|conn| {
+        let first=Message::find(conn,ids[0])?;
+        let second=Message::find(conn,ids[1])?;
+        assert_ne!(first.client_message_id,second.client_message_id);
+        assert!(first.client_message_id.parse::<uuid::Uuid>().is_ok());
+        for message in [first,second] {
+            assert_eq!(message.body_html(conn)?.as_deref(),Some("<p><strong>Snapshot</strong></p>"));
+            assert_eq!(message.forward_note.as_deref(),Some("Note <&>"));
+            assert!(message.forwarded_markdown);
+            assert_eq!(message.forwarded_from_message_id,None);
+            assert_eq!(message.drive_file_ids(conn)?,vec!["abcdefghij"]);
+        }
+        let thread=ChannelThread::find(conn,thread)?;
+        assert!(thread.closed_at.is_none());
+        assert!(ThreadMembership::find_by_thread_and_user(conn,thread.id,DAVID)?.is_some());
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn forwarded_attachment_is_a_private_copy_and_failed_enqueue_removes_all_copies() {
+    let app = fixture().await;
+    let uploaded=app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages.turbo_stream"))
+        .multipart(&[("message[client_message_id]","copy-upload")],("message[attachment]","forward.txt","text/plain",b"Private copy\n"))).await;
+    assert_eq!(uploaded.status,StatusCode::OK,"{}",uploaded.text());
+    let id=app.db().read(|conn|Ok(Message::find_duplicate(conn,ALL_TALK,DAVID,"copy-upload")?.unwrap().id)).await.unwrap();
+    let path=format!("/messages/{id}/forwards.json");
+    let response=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json")
+        .body(json!({"destinations":[{"room_id":QUIET_CORNER}]}).to_string())).await;
+    assert_eq!(response.status,StatusCode::CREATED,"{}",response.text());
+    let copy=response.json()["forwards"][0]["message"]["id"].as_i64().unwrap();
+    let (original,copied)=app.db().read(move|conn|Ok((Message::find(conn,id)?.attachment(conn)?.unwrap().1,Message::find(conn,copy)?.attachment(conn)?.unwrap().1))).await.unwrap();
+    assert_ne!(original.id,copied.id);
+    assert_ne!(original.key,copied.key);
+    assert_eq!(original.checksum,copied.checksum);
+    assert_eq!(app.booted.app.storage.service.download(&copied.key).unwrap(),b"Private copy\n");
+    let files_before=storage_keys(&app);
+    let before=app.db().read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM messages",[],|row|row.get::<_,i64>(0))?)).await.unwrap();
+    app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws8bm_forward_reject_job BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT,'WS8bm copy rollback'); END;")?;Ok(())}).await.unwrap();
+    let rejected=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json")
+        .body(json!({"destinations":[{"room_id":QUIET_CORNER},{"room_id":ALL_TALK}]}).to_string())).await;
+    assert_eq!(rejected.status,StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(storage_keys(&app),files_before);
+    let after=app.db().read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM messages",[],|row|row.get::<_,i64>(0))?)).await.unwrap();
+    assert_eq!(after,before);
+}
+fn storage_keys(app:&TestApp)->Vec<String> {
+    fn visit(path:&std::path::Path,keys:&mut Vec<String>){for entry in std::fs::read_dir(path).unwrap(){let entry=entry.unwrap();if entry.file_type().unwrap().is_dir(){visit(&entry.path(),keys)}else{keys.push(entry.path().to_string_lossy().into_owned())}}}
+    let mut keys=Vec::new();visit(app.booted.app.storage.service.root(),&mut keys);keys.sort();keys
+}

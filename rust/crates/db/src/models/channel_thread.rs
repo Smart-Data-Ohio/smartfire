@@ -195,6 +195,13 @@ impl ChannelThread {
         )
     }
 
+    /// Preload the forward picker's threads in one query, retaining each room's ordering.
+    pub fn for_rooms(conn: &Connection, room_ids: &[i64]) -> Result<Vec<Self>> {
+        if room_ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn, &format!("SELECT * FROM channel_threads WHERE room_id IN ({}) ORDER BY last_activity_at DESC, id DESC", placeholders(room_ids.len())),
+            rusqlite::params_from_iter(room_ids), Self::from_row)
+    }
+
     /// `room.channel_threads.active.ordered`: neither closed nor locked (stale ones included:
     /// `status` reads them as closed).
     pub fn active_for_room(conn: &Connection, room_id: i64) -> Result<Vec<Self>> {
@@ -453,6 +460,13 @@ impl ChannelThread {
         } else {
             ThreadStatus::Active
         })
+    }
+
+    /// Same lifecycle read with the already-preloaded parent room (destination pickers).
+    pub fn status_in_room(&self, room: &Room, now: Timestamp) -> ThreadStatus {
+        if self.locked_at.is_some() { ThreadStatus::Locked }
+        else if self.closed_at.is_some() || (!room.board() && self.auto_archive_at() <= now) { ThreadStatus::Closed }
+        else { ThreadStatus::Active }
     }
 
     /// `auto_archive_at`

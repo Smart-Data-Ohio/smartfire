@@ -23,6 +23,7 @@ commands = [
     ("metadata", ["mise", "exec", "rust@1.98.1", "--", "cargo", "metadata", "--locked", "--manifest-path", "rust/Cargo.toml", "--format-version", "1"]),
     ("seeds", ["bash", "rust/parity/bin/seed", "build", "default", "first_run"]),
     ("app", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j4", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"]),
+    ("db", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j4", "--manifest-path", "rust/Cargo.toml", "-p", "campfire_db"]),
     ("views", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j4", "--manifest-path", "rust/Cargo.toml", "-p", "campfire_views", "--test", "core"]),
     ("clippy", ["mise", "exec", "rust@1.98.1", "--", "cargo", "clippy", "--locked", "-j4", "--manifest-path", "rust/Cargo.toml", "--workspace", "--all-targets", "--", "-D", "warnings"]),
 ]
@@ -34,4 +35,4 @@ for name, command in commands:
         if line.startswith(("seed:", "test result:", "    Finished")):
             print(line, flush=True)
     assert result.returncode == 0, f"{name} failed; inspect {clone / '.scratch' / (name + '.log')}"
-print("WS8bm fresh-check: committed inputs only; generated default/first_run seeds; app/views/clippy passed", flush=True)
+print("WS8bm fresh-check: committed inputs only; generated default/first_run seeds; app/db/views/clippy passed", flush=True)
