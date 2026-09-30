@@ -1,4 +1,4 @@
-//! Durable job arguments. Handlers belong to the fetcher and notifier domain slices.
+//! GitHub durable jobs, with Rails' class-specific retry policies.
 use campfire_db::Job;
 use campfire_jobs::{JobKind, RetryPolicy};
 use serde::{Deserialize, Serialize};
@@ -26,3 +26,18 @@ impl Job for DeliverSubscriptionEventJob {
     const CLASS: &'static str = "Github::DeliverSubscriptionEventJob";
 }
 impl JobKind for DeliverSubscriptionEventJob {}
+
+pub fn register(registry: &mut crate::jobs::Registry) {
+    registry.register(fetch_pull_request);
+}
+
+async fn fetch_pull_request(
+    app: crate::app::App,
+    job: FetchPullRequestJob,
+    _: campfire_jobs::Execution,
+) -> campfire_jobs::JobResult {
+    super::fetcher::fetch(&app.db, &app.github_read, job.pull_request_id)
+        .await
+        .map_err(crate::jobs::discard_missing)?;
+    Ok(campfire_jobs::Outcome::Done)
+}

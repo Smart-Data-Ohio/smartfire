@@ -7,6 +7,11 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 repo = root.parent
 names = {
+    'test/jobs/github/fetch_pull_request_job_test.rb': [
+        'github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails',
+    ] * 13 + [
+        'github_fetch_transport_failure_persists_error_without_changing_card_or_files',
+    ] + ['github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails'] * 6 + [None] * 2,
     'test/jobs/github/perform_agent_action_job_test.rb': [None] * 30 + [
         'github_claim_persisted_outcomes_and_audits_match_pinned_rails',
         'github_claim_sweep_and_late_finish_keep_the_first_outcome_and_enqueue_once',
@@ -90,7 +95,7 @@ names = {
 paths = sorted(p for p in subprocess.check_output(['git', '-C', str(repo), 'ls-tree', '-r', '--name-only', 'd7c7de92', 'test'], text=True).splitlines() if 'github' in p and p.endswith('_test.rb'))
 rows = []
 covered = 0
-rust_tests = (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text()
+rust_tests = (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text()
 for path in paths:
     content = subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True)
     tests = re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', content, re.M)
@@ -110,6 +115,6 @@ for path in paths:
     rows.append('')
 count = sum(len(re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True), re.M)) for path in paths)
 summary = f'{count} Rails cases in {len(paths)} files: {covered} mapped to Rust assertions; {count-covered} explicitly deferred.'
-header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue and the shared stuck-claim sweep with runtime periodic registration are covered. Job handlers, card broadcasts and view/system parity, other HTTP controllers, PR persistence/fetch, notifications/subscriptions and agent write actions remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.\n\n'
+header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier/agent write job handlers, card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write actions remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.\n\n'
 (root / 'plans/ws15g-rails-tests.md').write_text((header + '\n'.join(rows)).rstrip() + '\n')
 print('GitHub Rails inventory: ' + summary)

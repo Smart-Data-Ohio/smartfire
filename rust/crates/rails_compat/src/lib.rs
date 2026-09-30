@@ -32,6 +32,7 @@ mod uri;
 pub use key_generator::KeyGenerator;
 pub use message_verifier::MessageVerifier;
 pub use message_encryptor::MessageEncryptor;
+pub use json::encode as json_encode;
 
 /// Everything derived from `secret_key_base`, built once at boot and shared.
 pub struct Secrets {

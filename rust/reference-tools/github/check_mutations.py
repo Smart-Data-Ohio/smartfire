@@ -23,6 +23,10 @@ mutations = [
     ("webhook-dedupe", "webhooks.rs", "if inserted == 0 {\n        return Ok(false);", "if inserted == 0 {\n        return Ok(true);", "webhook_concurrent_duplicates_claim_and_enqueue_once", 1),
     ("claim-first-winner", "../action_claims.rs", '''"json_extract(agent_events.metadata, '$.status') = 'running'"''', '"1"', "github_claim_sweep_and_late_finish", 1),
     ("claim-cutoff", "../action_claims.rs", "created_at < ?", "created_at <= ?", "github_claim_sweep_fails_only_overdue", 1),
+    ("fetch-retries", "jobs.rs", "RetryPolicy::no_retries()", "RetryPolicy::application_job()", "github_fetch_declares_one_attempt", 1),
+    ("fetch-review-tie", "fetcher.rs", "if at > existing.1", "if at >= existing.1", "github_fetch_persisted_fields", 1),
+    ("fetch-json-rescue", "fetcher.rs", "error.kind == ErrorKind::Fetch", "true", "github_fetch_persisted_fields", 1),
+    ("fetch-file-cap", "fetcher.rs", ".take(100)", ".take(usize::MAX)", "github_fetch_persisted_fields", 1),
 ]
 for name, filename, before, after, test_filter, expected_failures in mutations:
     path = base / filename

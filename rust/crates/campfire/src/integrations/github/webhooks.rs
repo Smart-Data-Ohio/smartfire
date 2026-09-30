@@ -262,19 +262,7 @@ fn integer_for_query(value: &Value) -> Option<i64> {
     }
 }
 fn store_privacy(tx: &mut Tx<'_>, id: i64, value: &Value) -> campfire_db::Result<()> {
-    // ActiveModel::Type::Boolean: nil/empty string stay nil, the exact false values cast false.
-    let private = match value {
-        Value::Null => None,
-        Value::String(value) if value.is_empty() => None,
-        Value::Bool(false) => Some(false),
-        Value::Number(number) if number.as_f64() == Some(0.0) => Some(false),
-        Value::String(value)
-            if ["0", "f", "F", "false", "FALSE", "off", "OFF"].contains(&value.as_str()) =>
-        {
-            Some(false)
-        }
-        _ => Some(true),
-    };
+    let private = super::boolean(value);
     tx.conn().execute("UPDATE github_pull_requests SET private = ?, updated_at = ? WHERE id = ? AND private IS NOT ?", params![private, tx.now(), id, private])?;
     Ok(())
 }

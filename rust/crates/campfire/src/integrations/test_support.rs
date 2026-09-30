@@ -140,6 +140,11 @@ impl Received {
 pub struct FakeServer {
     pub addr: SocketAddr,
     pub received: Arc<Mutex<Vec<Received>>>,
+    listener_task: tokio::task::JoinHandle<()>,
+}
+
+impl Drop for FakeServer {
+    fn drop(&mut self) { self.listener_task.abort(); }
 }
 
 impl FakeServer {
@@ -172,7 +177,7 @@ impl FakeServer {
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
         let log = received.clone();
-        tokio::spawn(async move {
+        let listener_task = tokio::spawn(async move {
             loop {
                 let Ok((stream, _)) = listener.accept().await else { break };
                 let (routes, log, tls) = (routes.clone(), log.clone(), tls.clone());
@@ -190,7 +195,7 @@ impl FakeServer {
                 });
             }
         });
-        Self { addr, received }
+        Self { addr, received, listener_task }
     }
 
     pub fn received(&self) -> Vec<Received> {

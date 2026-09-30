@@ -22,6 +22,7 @@ use crate::jobs::{PushMessageJob, Registry, WebhookJob, discard_missing};
 pub fn register_jobs(registry: &mut Registry) {
     registry.register(push_message);
     registry.register(deliver_webhook);
+    super::github::jobs::register(registry);
 }
 
 /// `Room::PushMessageJob#perform(room, message)`: `Room::MessagePusher.new(room:, message:).push`,

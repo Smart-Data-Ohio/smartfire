@@ -99,7 +99,7 @@ fn vectors() -> Value {
     serde_json::from_str(include_str!("../../../../../vectors/github.json")).unwrap()
 }
 
-async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
+pub(super) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
     let rcgen::CertifiedKey { cert, signing_key } =
         rcgen::generate_simple_self_signed(vec!["github.com".into(), "api.github.com".into()])
@@ -118,7 +118,12 @@ async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     .unwrap();
     let mut listener = None;
     for port in 51500..=51549 {
-        if let Ok(bound) = tokio::net::TcpListener::bind(("127.0.0.1", port)).await {
+        let socket = tokio::net::TcpSocket::new_v4().unwrap();
+        socket.set_reuseaddr(true).unwrap();
+        if let Ok(bound) = socket
+            .bind(std::net::SocketAddr::from(([127, 0, 0, 1], port)))
+            .and_then(|()| socket.listen(128))
+        {
             listener = Some(bound);
             break;
         }

@@ -1,8 +1,8 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 65 mapped to Rust assertions; 361 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 85 mapped to Rust assertions; 341 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue and the shared stuck-claim sweep with runtime periodic registration are covered. Job handlers, card broadcasts and view/system parity, other HTTP controllers, PR persistence/fetch, notifications/subscriptions and agent write actions remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier/agent write job handlers, card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write actions remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
 
@@ -352,26 +352,26 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| success stores card fields, clears errors, and stamps fetched_at | Deferred; WS15g continuation | — |
-| fetch stores the repository privacy from base.repo.private | Deferred; WS15g continuation | — |
-| fetch stores a public repository as not private | Deferred; WS15g continuation | — |
-| fetch leaves privacy unknown when the payload omits base.repo.private | Deferred; WS15g continuation | — |
-| merged, closed, and draft states map to card states | Deferred; WS15g continuation | — |
-| changes requested wins over approvals | Deferred; WS15g continuation | — |
-| failing check runs map to failing | Deferred; WS15g continuation | — |
-| no check runs and no statuses leaves check_status blank | Deferred; WS15g continuation | — |
-| pending combined status with real statuses maps to pending | Deferred; WS15g continuation | — |
-| a draft with approvals shows its review decision | Deferred; WS15g continuation | — |
-| a draft with no reviews shows review required | Deferred; WS15g continuation | — |
-| 404 leaves a fetch_error and stamps fetched_at without raising | Deferred; WS15g continuation | — |
-| rate limiting leaves a fetch_error without raising | Deferred; WS15g continuation | — |
-| network errors leave a fetch_error without raising | Deferred; WS15g continuation | — |
-| sends the workspace token when configured and omits it otherwise | Deferred; WS15g continuation | — |
-| a later success clears an earlier fetch_error | Deferred; WS15g continuation | — |
-| changed files are fetched only for PRs with a thread mapping | Deferred; WS15g continuation | — |
-| mapped PRs store the files summary without diff bodies | Deferred; WS15g continuation | — |
-| the files summary caps at 100 files with the PR total | Deferred; WS15g continuation | — |
-| a failed files fetch keeps the previous summary and sets fetch_error | Deferred; WS15g continuation | — |
+| success stores card fields, clears errors, and stamps fetched_at | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| fetch stores the repository privacy from base.repo.private | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| fetch stores a public repository as not private | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| fetch leaves privacy unknown when the payload omits base.repo.private | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| merged, closed, and draft states map to card states | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| changes requested wins over approvals | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| failing check runs map to failing | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| no check runs and no statuses leaves check_status blank | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| pending combined status with real statuses maps to pending | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| a draft with approvals shows its review decision | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| a draft with no reviews shows review required | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| 404 leaves a fetch_error and stamps fetched_at without raising | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| rate limiting leaves a fetch_error without raising | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| network errors leave a fetch_error without raising | Mapped to grouped Rust assertions; WS15g | `github_fetch_transport_failure_persists_error_without_changing_card_or_files` |
+| sends the workspace token when configured and omits it otherwise | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| a later success clears an earlier fetch_error | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| changed files are fetched only for PRs with a thread mapping | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| mapped PRs store the files summary without diff bodies | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| the files summary caps at 100 files with the PR total | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
+| a failed files fetch keeps the previous summary and sets fetch_error | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
 | card updates broadcast the thread header to mapped thread streams | Deferred; WS15g continuation | — |
 | card updates broadcast nothing without referencing messages or mappings | Deferred; WS15g continuation | — |
 
