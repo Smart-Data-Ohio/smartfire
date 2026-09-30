@@ -285,6 +285,41 @@ pub fn parse(text: &str, zone_name: &str, now: Timestamp) -> Option<Timestamp> {
         fallback(text, &zone, now)
     }
 }
+/// Builder inputs use Time.zone.parse, separately from slash-relative phrases.
+/// Ruby's invalid calendar exception differs from an unrecognized string.
+pub fn parse_calendar(
+    text: &str,
+    zone: &TimeZone,
+    now: Timestamp,
+) -> crate::Result<Option<Timestamp>> {
+    let text = strip(text);
+    let invalid_date = re(r"(?P<year>[0-9]{4})[-/](?P<month>[0-9]{1,2})[-/](?P<day>[0-9]{1,2})")
+        .captures(text)
+        .is_some_and(|c| {
+            let month = c["month"].parse::<i8>().unwrap();
+            let day = c["day"].parse::<i8>().unwrap();
+            !(1..=12).contains(&month) || !(1..=31).contains(&day)
+        });
+    let invalid_clock =
+        re(r"(?i)(?:\b|T)(?P<hour>[0-9]{1,2}):(?P<minute>[0-9]{2})(?::(?P<second>[0-9]{2}))?")
+            .captures(text)
+            .is_some_and(|c| {
+                let hour = c["hour"].parse::<i8>().unwrap();
+                let minute = c["minute"].parse::<i8>().unwrap();
+                let second = c
+                    .name("second")
+                    .map(|s| s.as_str().parse::<i8>().unwrap())
+                    .unwrap_or(0);
+                hour > 24
+                    || minute > 59
+                    || second > 60
+                    || hour == 24 && (minute != 0 || second != 0)
+            });
+    if invalid_date || invalid_clock {
+        return Err(crate::Error::Other("invalid date".into()));
+    }
+    Ok(fallback(text, zone, now))
+}
 pub fn split_leading_time(
     text: &str,
     zone_name: &str,
@@ -330,6 +365,35 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
     let text = strip(text);
     if text.is_empty() {
         return None;
+    }
+    if let Some(c) = re(r"\b(?P<date>[0-9]{8})(?P<clock>[0-9]{6})?\b").captures(text) {
+        let date = &c["date"];
+        let date = normalized_date(
+            date[..4].parse().ok()?,
+            date[4..6].parse().ok()?,
+            date[6..].parse().ok()?,
+        )?;
+        let (hour, minute, second) = if let Some(clock) = c.name("clock") {
+            let clock = clock.as_str();
+            (
+                clock[..2].parse::<i8>().ok()?,
+                clock[2..4].parse::<i8>().ok()?,
+                clock[4..].parse::<i8>().ok()?,
+            )
+        } else {
+            (0, 0, 0)
+        };
+        if hour > 24 || minute > 59 || second > 60 || hour == 24 && (minute != 0 || second != 0) {
+            return None;
+        }
+        let dt = date
+            .at(0, 0, 0, 0)
+            .checked_add(
+                Span::new()
+                    .seconds(i64::from(hour) * 3600 + i64::from(minute) * 60 + i64::from(second)),
+            )
+            .ok()?;
+        return resolve(dt, zone, None);
     }
     // Date._parse removes the clock and its zone before finding calendar parts.
     // Otherwise e.g. "17:00 MART" becomes an invalid "00 March" date.
@@ -385,10 +449,7 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
                 r"(?i)\b(?P<month>{names})[ -]+(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?\b(?:[, -]+(?P<year>[0-9]{{4}}))?"
             )),
         ];
-        if let Some(c) = month_year.captures(&date_text) {
-            date = normalized_date(c["year"].parse().ok()?, month(&c["month"])?, 1)?;
-            found = true;
-        } else if let Some(c) = patterns.iter().find_map(|p| p.captures(&date_text)) {
+        if let Some(c) = patterns.iter().find_map(|p| p.captures(&date_text)) {
             date = normalized_date(
                 c.name("year")
                     .map(|y| y.as_str().parse::<i16>())
@@ -398,6 +459,9 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
                 month(&c["month"])?,
                 c["day"].parse().ok()?,
             )?;
+            found = true;
+        } else if let Some(c) = month_year.captures(&date_text) {
+            date = normalized_date(c["year"].parse().ok()?, month(&c["month"])?, 1)?;
             found = true;
         }
     }

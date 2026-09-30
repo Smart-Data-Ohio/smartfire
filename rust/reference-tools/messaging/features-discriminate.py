@@ -54,6 +54,17 @@ check("cache-pin-validator", "rust/crates/campfire/src/controllers/messages.rs",
       'let etag = format!("{records}/{}/{pins}/{}",',
       'let etag = format!("{records}/{}/{}",',
       "controllers::message_features::root_cache_tests::message_page_conditional_get_tracks_related_stamps_and_unpin_without_last_modified")
+check("panel-room-gate", "rust/crates/campfire/src/controllers/rooms.rs",
+      "Room::find_for_user(conn, user_id, id)", "Room::find_by_id(conn, id)",
+      "controllers::message_features::panel_tests::inaccessible_rooms_never_mount_pin_panels_or_load_pin_rows")
+check("panel-sti-targets", "rust/crates/views/src/rooms.rs",
+      "self.show.pin_param_key.as_deref().unwrap_or(self.show.room.kind.param_key())",
+      "self.show.room.kind.param_key()",
+      "controllers::message_features::panel_tests::pin_header_targets_preserve_voice_stage_and_board_sti_identity")
+check("date-builder-calendar", "rust/crates/campfire/src/controllers/message_features.rs",
+      "parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))",
+      'parse_calendar("", zone.tz(), Timestamp::from_jiff(now))',
+      "controllers::message_features::date_tests::builder_calendar_inputs_match_actual_rails_including_exception_and_nil_results")
 
 check("membership", "rust/crates/campfire/src/controllers/message_features.rs",
       "let (_, room) = concerns::set_room(c).await?;",

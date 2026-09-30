@@ -111,40 +111,15 @@ pub(crate) async fn user_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
     Ok(campfire_views::time::Zone::for_user(name.as_deref()))
 }
 
-/// ISO/date/datetime-local inputs used by the builders and a time-only value. Rails'
-/// `Time.zone.parse` chooses DST at folds and advances hourly through gaps.
-/// Its broader Date._parse grammar remains an explicit parity follow-up.
+/// WS8bm2 builder calendar parser; slash-relative expressions use a separate entry
+/// point. Unrecognized input and Ruby's invalid-calendar exception stay distinct.
 pub(crate) fn parse_time(
     raw: &str,
     zone: &campfire_views::time::Zone,
     now: jiff::Timestamp,
 ) -> Result<Option<Timestamp>> {
-    let raw = raw.trim_matches([' ', '\t', '\r', '\n', '\x0b', '\x0c', '\0']);
-    if raw.is_empty() {
-        return Ok(None);
-    }
-    if let Ok(time) = raw.parse::<jiff::Timestamp>() {
-        return Ok(Some(Timestamp::from_jiff(time)));
-    }
-    let civil = raw
-        .parse::<jiff::civil::DateTime>()
-        .ok()
-        .or_else(|| {
-            raw.parse::<jiff::civil::Date>()
-                .ok()
-                .map(|date| date.at(0, 0, 0, 0))
-        })
-        .or_else(|| {
-            raw.parse::<jiff::civil::Time>()
-                .ok()
-                .map(|time| now.to_zoned(zone.tz().clone()).date().to_datetime(time))
-        });
-    civil
-        .map(|time| {
-            campfire_db::slash_commands::time_parser::local_datetime(time, zone.tz())
-                .ok_or_else(|| Error::internal(anyhow::anyhow!("invalid date")))
-        })
-        .transpose()
+    campfire_db::slash_commands::time_parser::parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))
+        .map_err(db_error)
 }
 
 pub(crate) fn poll_view(
@@ -204,3 +179,5 @@ mod quote_integration_tests;
 mod root_cache_tests;
 #[cfg(test)]
 mod panel_tests;
+#[cfg(test)]
+mod date_tests;
