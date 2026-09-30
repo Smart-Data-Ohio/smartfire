@@ -23,6 +23,11 @@ use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext};
 use crate::app::AppCtx;
 use crate::concerns;
 
+/// Profiles renders the same unsaved Current.user attributes as its failed forms.
+/// This request-only view snapshot never changes the authenticated principal or database.
+#[derive(Clone)]
+pub(crate) struct RenderedSettings(pub campfire_db::UserStatusSettings);
+
 /// Everything the layout needs, loaded before rendering.
 #[derive(Debug, Clone)]
 pub struct Layout {
@@ -50,7 +55,7 @@ impl Layout {
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
         let app_now = app.db.env().now();
-        let (account, has_logo, preferences) = app
+        let (account, has_logo, mut preferences) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
@@ -76,6 +81,13 @@ impl Layout {
         };
 
         let time_zone = Zone::for_user(preferences.time_zone.as_deref());
+        // SetTimeZone wraps the Rails action before attributes are assigned; its request
+        // zone remains the persisted zone while metadata reads the submitted user values.
+        if let Some(RenderedSettings(settings)) = c.current::<RenderedSettings>()
+            && Some(settings.user.id) == user_id
+        {
+            apply_settings_preferences(&mut preferences, settings, app_now);
+        }
         let current_user = user.as_ref().map(|user| CurrentUser {
             preferences,
             ..current_user(&secrets, user)
@@ -233,6 +245,19 @@ fn user_preferences(
         },
     )?;
     let settings = campfire_db::UserStatusSettings::find(conn, user_id)?;
+    apply_settings_preferences(&mut preferences, &settings, now);
+    Ok(preferences)
+}
+
+fn apply_settings_preferences(
+    preferences: &mut UserPreferences,
+    settings: &campfire_db::UserStatusSettings,
+    now: campfire_db::Timestamp,
+) {
+    preferences.theme = Some(settings.theme.clone());
+    preferences.text_size = Some(settings.text_size.clone());
+    preferences.time_zone = settings.time_zone.clone();
+    preferences.time_zone_explicit = settings.time_zone_explicit;
     let mut sounds = campfire_views::layouts::NotificationSounds {
         muted: settings.manual_dnd_active(now) || settings.presence_setting == "dnd",
         quiet_hours: settings
@@ -269,7 +294,6 @@ fn user_preferences(
         }
     }
     preferences.notification_sounds = sounds;
-    Ok(preferences)
 }
 
 /// `Current.account` for the layout: its name, `fresh_account_logo_path` and whether a logo is

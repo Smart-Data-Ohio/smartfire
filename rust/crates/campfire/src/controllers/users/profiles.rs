@@ -44,6 +44,7 @@ async fn render_profile(
     current_password_error: Option<&'static str>,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
+    c.set_current(presenters::view_context::RenderedSettings(settings.clone()));
     let user = settings.user.clone();
     if settings_error && !errors.is_empty() && user.role != campfire_db::Role::Bot {
         // At the pin, both settings controllers render profiles/show without setting
@@ -171,9 +172,6 @@ pub async fn update(c: &mut Ctx) -> Result {
     if let Some(zone) = present("time_zone") {
         settings.time_zone = Some(zone);
     }
-    if time_zone_submitted {
-        settings.time_zone_explicit = true;
-    }
     // Rails checks the raw request before strong parameters discard non-scalars.
     let email_changing = c
         .params
@@ -213,6 +211,9 @@ pub async fn update(c: &mut Ctx) -> Result {
             )
             .await;
         }
+    }
+    if time_zone_submitted {
+        settings.time_zone_explicit = true;
     }
     let audit = crate::controllers::two_factor::audit_context(c)?;
     let changes = UserChanges {

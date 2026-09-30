@@ -196,6 +196,8 @@ async fn ws17_profile_auth_rejection_keeps_submitted_appearance_without_saving_i
         .await;
     assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
     let html = response.text();
+    assert!(html.contains("<html data-theme=\"dark\" data-text-size=\"large\""));
+    assert!(html.contains("<meta name=\"current-user-time-zone\" content=\"America/New_York\">"));
     assert!(html.contains("Current password is required to change your email address."));
     assert!(html.contains("value=\"Unsaved name\""));
     assert!(
@@ -289,5 +291,99 @@ async fn ws17_profile_auth_audit_failure_rolls_back_the_earlier_appearance_save(
             .await
             .unwrap(),
         audits_before
+    );
+}
+
+#[tokio::test]
+async fn ws17_rejected_profile_layout_metadata_matches_loaded_unsaved_rails_values() {
+    let app = TestApp::boot().await.expect("parity seed");
+    app.db().write(|tx| {
+        tx.conn().execute("UPDATE users SET theme='system',text_size='default',time_zone=NULL,time_zone_explicit=0,dnd_enabled=0,quiet_hours_enabled=0,meeting_status_enabled=0,ooo_calendar_enabled=0,ooo_until=NULL WHERE id=?",[DAVID])?;
+        Ok(())
+    }).await.unwrap();
+    let before = appearance(&app).await;
+    let vectors: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../views/tests/golden/ws17-profile-ui.json"
+    )))
+    .unwrap();
+    let mut browser = app.david();
+    for row in vectors["rows"].as_array().unwrap() {
+        let theme = row["data"]["theme"].as_str().unwrap();
+        let size = row["data"]["text_size"].as_str().unwrap();
+        let mut fields = vec![
+            ("user[email_address]", "ws17-metadata@example.test"),
+            ("user[theme]", theme),
+            ("user[text_size]", size),
+        ];
+        if let Some(zone) = row["data"]["time_zone"].as_str() {
+            fields.push(("user[time_zone]", zone));
+        }
+        let response = browser
+            .write(Req::new(Method::PATCH, PATH).form(&fields))
+            .await;
+        assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
+        let html = response.text();
+        for (name, fragment) in row["metadata"].as_object().unwrap() {
+            let fragment = fragment.as_str().unwrap();
+            assert!(
+                html.contains(fragment),
+                "{theme}/{size} {name}: expected {fragment:?}"
+            );
+        }
+        assert_eq!(appearance(&app).await, before);
+    }
+}
+
+#[tokio::test]
+async fn ws17_invalid_notification_form_layout_keeps_unsaved_sound_gate() {
+    let app = TestApp::boot().await.expect("parity seed");
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE two_factor_credentials SET confirmed_at=NULL WHERE user_id=?",
+                [DAVID],
+            )?;
+            tx.conn().execute(
+                "UPDATE users SET dnd_enabled=0,quiet_hours_enabled=0 WHERE id=?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut browser = app.david();
+    let response = browser
+        .write(
+            Req::new(Method::PATCH, "/users/me/notification_settings").form(&[
+                ("user[dnd_enabled]", "1"),
+                ("user[quiet_hours_enabled]", "1"),
+                ("user[quiet_hours_start]", ""),
+                ("user[quiet_hours_end]", ""),
+            ]),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let vectors: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../views/tests/golden/ws17-profile-ui.json"
+    )))
+    .unwrap();
+    assert!(
+        response
+            .text()
+            .contains(vectors["notification_error_sounds"].as_str().unwrap())
+    );
+    assert!(!response.text().contains("name=\"quiet-hours\""));
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(conn.query_row(
+                "SELECT dnd_enabled FROM users WHERE id=?",
+                [DAVID],
+                |r| r.get::<_, bool>(0)
+            )?))
+            .await
+            .unwrap(),
+        false
     );
 }
