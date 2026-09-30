@@ -5,6 +5,7 @@ use serde_json::Value;
 
 mod review;
 mod bots_ui;
+mod bot_access_ui;
 mod agents_ui;
 
 fn fixture(path: &str) -> String {

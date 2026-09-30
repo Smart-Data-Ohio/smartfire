@@ -182,6 +182,52 @@ impl FormWith {
         self.builder().input_field("number", method, value, options)
     }
 
+    pub fn datetime_local_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
+        self.builder().input_field(
+            "datetime-local",
+            method,
+            None,
+            options.attr_opt("value", value),
+        )
+    }
+
+    pub fn submit(&self, value: &str, options: Attrs) -> Html {
+        legacy_tag(
+            "input",
+            attrs()
+                .type_("submit")
+                .name("commit")
+                .value(value)
+                .merge(options)
+                .data("disable_with", value),
+        )
+    }
+
+    pub fn select(
+        &self,
+        method: &str,
+        choices: &[(String, String)],
+        prompt: &str,
+        selected: Option<&str>,
+        mut options: Attrs,
+    ) -> Html {
+        let builder = self.builder();
+        builder.add_default_name_and_id(method, &mut options);
+        let mut contents = Vec::new();
+        if selected.is_none_or(str::is_empty) {
+            contents.push(content_tag("option", attrs().value(""), &escape(prompt)).0);
+        }
+        for (label, value) in choices {
+            let mut attributes = attrs();
+            if selected == Some(value) {
+                attributes = attributes.attr("selected", "selected");
+            }
+            attributes = attributes.value(value);
+            contents.push(content_tag("option", attributes, &escape(label)).0);
+        }
+        builder.wrap_error(method, content_tag("select", options, &contents.join("\n")))
+    }
+
     pub fn email_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
         self.builder().input_field("email", method, value, options)
     }
@@ -197,7 +243,10 @@ impl FormWith {
         let builder = self.builder();
         let mut options = options;
         options.fetch_or_set("for", Some(builder.tag_id(method).into()));
-        builder.wrap_error(method, super::tag::content_tag_text("label", &options, text))
+        builder.wrap_error(
+            method,
+            super::tag::content_tag_text("label", &options, text),
+        )
     }
 
     pub fn url_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -260,7 +309,9 @@ impl FormBuilder {
     fn wrap_error(&self, method: &str, field: Html) -> Html {
         if self.error_fields.iter().any(|name| name == method) {
             content_tag("div", attrs().class("field_with_errors"), &field.0)
-        } else { field }
+        } else {
+            field
+        }
     }
 
     /// `Tags::Base#tag_name`; a model-less `form_with` names fields after the method alone.
@@ -307,7 +358,11 @@ impl FormBuilder {
         }
         self.add_default_name_and_id(method, &mut options);
         let field = legacy_tag("input", &options);
-        if field_type == "hidden" { field } else { self.wrap_error(method, field) }
+        if field_type == "hidden" {
+            field
+        } else {
+            self.wrap_error(method, field)
+        }
     }
 
     /// `Tags::TextArea#render`: the value is the element's content, after a newline.

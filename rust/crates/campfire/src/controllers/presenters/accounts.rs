@@ -7,6 +7,7 @@
 
 #[cfg(test)]
 mod tests;
+pub mod bot_access;
 
 use campfire_db::{Account, CachedStatements, Connection, Membership, PushSubscription, Room, RoomType, User};
 use campfire_kit::Ctx;

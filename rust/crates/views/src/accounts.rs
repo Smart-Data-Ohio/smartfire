@@ -7,6 +7,8 @@ use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 use crate::users::UserSummary;
 
+pub mod bot_access;
+
 /// `User.administrator.first`, shown by `accounts/_help_contact`.
 #[derive(Clone, Debug)]
 pub struct HelpContact {

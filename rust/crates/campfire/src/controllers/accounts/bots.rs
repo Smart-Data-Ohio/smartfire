@@ -1,5 +1,7 @@
 //! `Accounts::BotsController` (reference/app/controllers/accounts/bots_controller.rb).
 
+pub mod credentials;
+pub mod grants;
 pub mod keys;
 
 use campfire_db::models::audit_log::{self, AuditLog, Context, NewAuditLog, Target};
@@ -429,4 +431,77 @@ fn bot_params(c: &Ctx) -> Result<ParamMap> {
 fn redirect_to_bots(c: &mut Ctx) -> Result {
     let location = c.url_for(&campfire_routes::account_bots());
     c.redirect_to(&location)
+}
+
+/// Rails converts a legacy bot only after the caller has authorized this management visit.
+pub(super) async fn ensure_agent(c: &Ctx, bot: &User) -> Result<Agent> {
+    let (bot, owner_id, context) = (
+        bot.clone(),
+        concerns::require_current_user(c)?.id,
+        audit_context(c)?,
+    );
+    c.app()
+        .db
+        .write(move |tx| {
+            if let Some(agent) = Agent::for_user(tx.conn(), bot.id)? {
+                return Ok(agent);
+            }
+            let agent = Agent::create(
+                tx,
+                NewAgent {
+                    user_id: bot.id,
+                    owner_id: Some(owner_id),
+                    kind: AgentKind::Workspace,
+                    ..Default::default()
+                },
+            )?;
+            AuditLog::record(
+                tx,
+                NewAuditLog {
+                    action: "agent.create".into(),
+                    target: Some(audit_target(&bot, Some(&agent))),
+                    changes: Some(json!({"name":bot.name,"kind":"workspace"})),
+                    ..Default::default()
+                },
+                &context,
+            )?;
+            Ok(agent)
+        })
+        .await
+        .map_err(Error::internal)
+}
+pub(super) fn parse_datetime(
+    param: Option<&Param>,
+    zone: &campfire_views::time::Zone,
+) -> Option<campfire_db::Timestamp> {
+    let value = param?.to_s()?;
+    if let Ok(at) = value.parse::<jiff::Timestamp>() {
+        return Some(campfire_db::Timestamp::from_jiff(at));
+    }
+    value
+        .parse::<jiff::civil::DateTime>()
+        .ok()?
+        .to_zoned(zone.tz().clone())
+        .ok()
+        .map(|t| campfire_db::Timestamp::from_jiff(t.timestamp()))
+}
+pub(super) fn error_sentence(errors: &campfire_db::Errors) -> String {
+    campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")
+}
+
+pub(super) async fn viewer_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
+    let id = concerns::require_current_user(c)?.id;
+    let name = c
+        .app()
+        .db
+        .read(move |conn| {
+            Ok(
+                conn.query_row("SELECT time_zone FROM users WHERE id=?", [id], |r| {
+                    r.get::<_, Option<String>>(0)
+                })?,
+            )
+        })
+        .await
+        .map_err(Error::internal)?;
+    Ok(campfire_views::time::Zone::for_user(name.as_deref()))
 }

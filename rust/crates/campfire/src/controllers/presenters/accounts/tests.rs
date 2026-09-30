@@ -22,6 +22,8 @@ const CHROME: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKi
 
 #[path = "tests/bot_mutations.rs"]
 mod bot_mutations;
+#[path = "tests/bot_access.rs"]
+mod bot_access;
 
 struct Test {
     booted: Booted,
