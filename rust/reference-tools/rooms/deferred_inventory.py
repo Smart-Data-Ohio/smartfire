@@ -105,7 +105,7 @@ if args.test_log:
         assert selector in passed, f'missing Rust pass receipt: {selector}'
         case.update(rust_test=f'controllers::rooms::inbound_rails_cases::{selector}',rust_result='passed')
     file.update(rust_cases_run=len(file['declared_cases']),rust_pass_count=len(file['declared_cases']),status='all eight source-declared cases ported to individually executed Rust tests')
-    print(f"Rails case port receipts: {file['file']}: {file['rust_pass_count']} Rust cases passed, 0 deferred; 0 Rails Minitest executions")
+    print(f"Rails case port receipts: {file['file']}: {file['rust_pass_count']} Rust cases passed, 0 deferred; Rails reference executions recorded separately")
     output['note']='Source declarations are not dynamically expanded Rails tests. The inbound-email file has one individually executed Rust test per declaration, with receipts from the supplied raw cargo log; remaining full-file case mappings are deferred. No Rails Minitest execution claimed.'
 if args.rails_log:
     text=args.rails_log.read_text()

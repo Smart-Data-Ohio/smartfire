@@ -33,8 +33,9 @@ association existence and persisted star flags; it does not implement their poli
 - The reader connection, app state, request host and `cache_base_url` from the verified
   request origin; `app.fragment_cache` scopes message presentation.
 - Root room `Message` records selected by `room_shell::find_messages(conn, room.id,
-  message_id)`: 40 last-page rows, or WS8a's around page when the anchor is a root in the
-  same room. Foreign/missing/thread anchors fall back to the last page.
+  message_id)`: up to 40 last-page rows, or up to 40 before + anchor + 40 after
+  (81 rows) when the anchor is a root in the same room. Foreign/missing/thread anchors
+  fall back to the last page.
 - `divider.message_id: Option<i64>` and `divider.count: i64`, derived from the current
   user's membership and its `last_read_message_id`/`unread_at` cursors. Out-of-page
   dividers give a jump URL; in-page count above five enables scroll. These facts do not
@@ -63,8 +64,10 @@ from the current fallback. `rooms::room_message_list(ctx, show)` returns supplie
 verbatim, or the authorized zero-byte empty-room placeholder. Current HTTP still uses
 `ShellComponents::default()`: this is not full native list/composer acceptance.
 
-The composer consumes `room`, `user` and request `ViewContext` through the existing
-`rooms/show/_composer` include; the owner has not supplied a completed controller-level
+The current composer fallback is passed `room = &show.room` and request `ViewContext`
+through `rooms/show/_composer`; it has no explicit `user` local. The current viewer is
+in the context; `ShowView.user` is supplied separately to the client message template.
+The owner has not supplied a completed controller-level
 composer factory. The inspected WS8bm report explicitly defers composer parity. The
 lead must reconcile this factory and its request tokens, plus WS13 huddle/voice facts,
 WS17 OOO notices and WS8bm2 poll/pin mounting. Complete region goldens lending Rails
