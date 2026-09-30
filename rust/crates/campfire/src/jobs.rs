@@ -42,6 +42,7 @@ use crate::app::{App, AppState, Cable};
 use crate::config::Config;
 
 pub mod periodic;
+mod messaging;
 
 /// The app's job classes and their handlers, which get the [`App`].
 pub type Registry = campfire_jobs::Registry<App>;
@@ -146,6 +147,8 @@ pub fn registry() -> Registry {
     let mut registry = Registry::new();
     registry.register(remove_banned_content);
     registry.register(purge_blob);
+    registry.register(quote_cards_refresh);
+    messaging::register(&mut registry);
     // Room::PushMessageJob and Bot::WebhookJob
     crate::integrations::register_jobs(&mut registry);
     crate::mail::register(&mut registry);
@@ -352,6 +355,31 @@ async fn purge_blob(app: App, job: PurgeJob, _: Execution) -> JobResult {
     crate::active_storage::purge(&app, job.blob_id).await?;
     Ok(Outcome::Done)
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+struct QuoteCardsRefresh(campfire_db::models::message_reference::QuoteCardsRefreshJob);
+impl Job for QuoteCardsRefresh {
+    const CLASS: &'static str =
+        <campfire_db::models::message_reference::QuoteCardsRefreshJob as Job>::CLASS;
+}
+impl JobKind for QuoteCardsRefresh {}
+async fn quote_cards_refresh(app: App, job: QuoteCardsRefresh, _: Execution) -> JobResult {
+    app.db
+        .write(move |tx| {
+            campfire_db::models::message_reference::refresh_quote_cards(
+                tx,
+                job.0.source_message_id,
+                campfire_db::models::message_reference::REFRESH_MAXIMUM,
+                campfire_db::models::message_reference::REFRESH_BATCH,
+            )
+        })
+        .await?;
+    Ok(Outcome::Done)
+}
+
+#[cfg(test)]
+use crate::channels::sink::template_free_broadcast;
 
 #[cfg(test)]
 mod tests;

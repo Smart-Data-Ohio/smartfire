@@ -1394,65 +1394,47 @@ async fn markdown_api_rejects_blank_and_overlong_sources() {
 }
 
 #[tokio::test]
-async fn committed_attachment_survives_an_after_commit_callback_failure() {
+async fn index_failure_rolls_back_mail_post_and_staged_attachment() {
     let h = Harness::new().await;
     let id = inbound::accept(
-        &h.db,
-        h.storage.clone(),
+        &h.db, h.storage.clone(),
         attachment_mail(&h, "notes.txt", "text/plain", "ZmlsZS1ieXRlcw=="),
-    )
-    .await
-    .unwrap()
-    .unwrap();
-    h.db.write(|tx| {
+    ).await.unwrap().unwrap();
+    async fn counts(h: &Harness) -> Vec<i64> {
+        h.db.read(|conn| ["messages", "active_storage_blobs", "active_storage_attachments"]
+            .map(|table| conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0)))
+            .into_iter().collect::<std::result::Result<Vec<_>, _>>().map_err(Into::into))
+            .await.unwrap()
+    }
+    fn files(root: &std::path::Path) -> Vec<std::path::PathBuf> {
+        let mut paths = Vec::new();
+        for entry in std::fs::read_dir(root).unwrap() {
+            let entry = entry.unwrap();
+            if entry.file_type().unwrap().is_dir() { paths.extend(files(&entry.path())); }
+            else { paths.push(entry.path()); }
+        }
+        paths.sort();
+        paths
+    }
+    let before = counts(&h).await;
+    let before_files = files(h.storage.service.root());
+    let index_sql = h.db.write(|tx| {
+        let sql = tx.conn().query_row("SELECT sql FROM sqlite_master WHERE name='message_search_index'", [], |row| row.get::<_, String>(0))?;
         tx.conn().execute_batch("DROP TABLE message_search_index")?;
-        Ok(())
-    })
-    .await
-    .unwrap();
-    assert!(
-        inbound::route(
-            &h.db,
-            h.storage.clone(),
-            h.config.clone(),
-            h.throttle.clone(),
-            Some(Arc::new(render)),
-            id
-        )
-        .await
-        .is_err()
-    );
-    let blob=h.db.read(|c| {
-        let id=c.query_row("SELECT id FROM messages WHERE markdown_source IS NOT NULL ORDER BY id DESC LIMIT 1",[],|r|r.get::<_,i64>(0))?;
-        campfire_db::Attachment::find_for(c,"Message",id,"attachment")?.unwrap().blob(c)
+        Ok(sql)
     }).await.unwrap();
-    assert_eq!(
-        std::fs::read(h.storage.service.path_for(&blob.key)).unwrap(),
-        b"file-bytes"
-    );
-    assert_eq!(
-        h.db.read(move |c| Ok(c.query_row(
-            "SELECT status FROM action_mailbox_inbound_emails WHERE id = ?",
-            [id],
-            |r| r.get::<_, i64>(0)
-        )?))
-        .await
-        .unwrap(),
-        Status::Delivered as i64
-    );
-    assert_eq!(
-        inbound::route(
-            &h.db,
-            h.storage.clone(),
-            h.config.clone(),
-            h.throttle.clone(),
-            Some(Arc::new(render)),
-            id
-        )
-        .await
-        .unwrap(),
-        Routed::AlreadyRouted
-    );
+    assert!(inbound::route(&h.db, h.storage.clone(), h.config.clone(), h.throttle.clone(), Some(Arc::new(render)), id).await.is_err());
+    assert_eq!(counts(&h).await, before, "message and blob/attachment writes roll back together");
+    assert_eq!(files(h.storage.service.root()), before_files, "only the accepted raw email file survives");
+    assert_eq!(h.db.read(move |conn| Ok(conn.query_row(
+        "SELECT status FROM action_mailbox_inbound_emails WHERE id=?", [id], |row| row.get::<_, i64>(0)
+    )?)).await.unwrap(), Status::Failed as i64);
+    h.db.write(move |tx| { tx.conn().execute_batch(&index_sql)?; Ok(()) }).await.unwrap();
+    let routed = inbound::route(&h.db, h.storage.clone(), h.config.clone(), h.throttle.clone(), Some(Arc::new(render)), id).await.unwrap();
+    let message = h.message(routed).await;
+    let blob = h.db.read(move |conn| campfire_db::Attachment::find_for(conn, "Message", message.id, "attachment")?.unwrap().blob(conn)).await.unwrap();
+    assert_eq!(std::fs::read(h.storage.service.path_for(&blob.key)).unwrap(), b"file-bytes");
+    assert_eq!(inbound::route(&h.db, h.storage.clone(), h.config.clone(), h.throttle.clone(), Some(Arc::new(render)), id).await.unwrap(), Routed::AlreadyRouted);
 }
 
 #[tokio::test]

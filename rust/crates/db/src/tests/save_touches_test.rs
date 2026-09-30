@@ -14,10 +14,10 @@ use serde::Deserialize;
 
 use super::*;
 use crate::models::active_storage::Blob;
-use crate::{Boost, Message, NewMessage, Room, RoomType, Timestamp};
+use crate::{Boost, Message, MessageChanges, MessagePin, NewMessage, NewSavedItem, Room, RoomType, SavedItem, Timestamp};
 
 const RUBY: &str = include_str!("message_save_touches.json");
-const ACTIONS: [&str; 8] = [
+const ACTIONS: [&str; 16] = [
     "attach_nil",
     "attach_blob",
     "body_same",
@@ -26,6 +26,14 @@ const ACTIONS: [&str; 8] = [
     "boost_create",
     "boost_destroy",
     "destroy",
+    "markdown_new",
+    "embeds_suppress",
+    "forward_note",
+    "drive_add",
+    "pin",
+    "unpin",
+    "save_item",
+    "schedule",
 ];
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -66,6 +74,24 @@ fn act(tx: &mut Tx<'_>, message_id: i64, action: &str) -> Result<()> {
         "boost_create" => Boost::create(tx, message_id, id("jason"), "hi").map(|_| ()),
         "boost_destroy" => message.boosts(tx.conn())?[0].destroy(tx),
         "destroy" => message.destroy(tx),
+        "markdown_new" => message.update(tx, MessageChanges { markdown_source: Some("rewritten".into()), ..Default::default() }),
+        "embeds_suppress" => message.update(tx, MessageChanges { embeds_suppressed: Some(true), ..Default::default() }),
+        "forward_note" => message.update(tx, MessageChanges { forward_note: Some(Some("note".into())), ..Default::default() }),
+        "drive_add" => {
+            let ids = vec!["1AbcDefGhIjKlMnOpQrSt".to_string()];
+            message.update(tx, MessageChanges { drive_file_ids: Some(ids), ..Default::default() })
+        }
+        "pin" => MessagePin::pin(tx, &message, id("jason"))?.map(drop).map_err(|e| crate::Error::Other(e.0)),
+        "unpin" => MessagePin::find_by_message(tx.conn(), message.id)?.expect("pinned in setup").unpin(tx),
+        "save_item" => {
+            let remind_at = Some(tx.now().since(jiff::SignedDuration::from_hours(1)));
+            SavedItem::create(tx, NewSavedItem { user_id: id("jason"), message_id: message.id, remind_at, status: None }).map(drop)
+        }
+        "schedule" => crate::ScheduledMessage::create(tx, crate::NewScheduledMessage {
+            user_id: id("jason"), room_id: message.room_id, thread_id: None,
+            reply_to_message_id: Some(message.id), markdown_source: "Later".into(),
+            send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
+        }).map(drop),
         other => unreachable!("{other}"),
     }
 }
@@ -95,6 +121,9 @@ fn run_case(t: &TestDb, t0: Timestamp, streaming: bool, attached: bool, action: 
         )?;
         if action == "boost_destroy" {
             Boost::create(tx, message.id, id("jason"), "yo")?;
+        }
+        if action == "unpin" {
+            MessagePin::pin(tx, &message, id("jason"))?.map_err(|e| crate::Error::Other(e.0))?;
         }
         Ok((room.id, message.id))
     });
@@ -128,7 +157,7 @@ fn message_saves_touch_what_rails_touches() {
             }
         }
     }
-    assert_eq!(rust.len(), 32);
+    assert_eq!(rust.len(), 64);
     let differing: Vec<_> = ruby
         .iter()
         .filter(|(name, outcome)| rust.get(*name) != Some(outcome))

@@ -177,6 +177,12 @@ async fn a_rails_issued_session_cookie_authenticates() {
     let vectors = vectors();
     let router = whoami_router(&test.booted.app);
     let session = &vectors.sessions[0];
+    // WS19's seed starts fresh. Arrange the stale-session resume this test exercises.
+    let session_id = session.session_id;
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![tx.now().ago(jiff::SignedDuration::from_hours(2)), session_id])?;
+        Ok(())
+    }).await.unwrap();
 
     let signed_in = send(&router, get_with_cookie("/whoami", &session.cookie_header)).await;
     assert_eq!(signed_in.status, StatusCode::OK);
@@ -310,11 +316,15 @@ async fn cable_handshake_with_a_rails_session_cookie() {
         first.into_text().unwrap().to_string()
     };
 
-    // A Rails-issued cookie authenticates HTTP, but cable also requires a completed second
-    // factor. The reference seed's session predates verification; keep that rejection covered.
+    // WS19's seed is verified. Explicitly arrange an unverified session, then complete its
+    // second factor to cover rejection and acceptance with the same Rails-issued cookie.
+    let session_id = vectors.sessions[0].session_id;
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE sessions SET two_factor_verified_at = NULL WHERE id = ?", [session_id])?;
+        Ok(())
+    }).await.unwrap();
     let cookie = vectors.sessions[0].cookie_header.clone();
     assert_eq!(connect(Some(cookie.clone())).await, r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#);
-    let session_id = vectors.sessions[0].session_id;
     test.booted.app.db.write(move |tx| {
         tx.conn().execute("UPDATE sessions SET two_factor_verified_at = ? WHERE id = ?", rusqlite::params![tx.now(), session_id])?;
         Ok(())

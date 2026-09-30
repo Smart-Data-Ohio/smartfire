@@ -93,6 +93,14 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
     let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env());
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
+    // Mail's preflight and Message::create use the same room-aware, fallible renderer.
+    mail.install_renderer(Arc::new({
+        let rich_text = rich_text.clone();
+        move |conn: &campfire_db::Connection, room: &campfire_db::Room, source: &str| {
+            campfire_db::RichText::render_markdown(&*rich_text, conn, source, room.id)
+                .map_err(campfire_db::Error::Other)
+        }
+    }));
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
 
     // config/puma.rb: `Membership.disconnect_all` when the server boots.
@@ -255,7 +263,7 @@ impl campfire_db::Clock for DbClock {
 
 // --- Commands --------------------------------------------------------------------------------------
 
-const USAGE: &str = "usage: campfire [server|backup]";
+const USAGE: &str = "usage: campfire [server|backup|db-check [--immutable] DATABASE|db-migrate DATABASE MIGRATIONS_DIR|verify-additive-sqlite-migration BEFORE AFTER]";
 
 /// The binary's entry point.
 ///
@@ -264,9 +272,10 @@ const USAGE: &str = "usage: campfire [server|backup]";
 /// - `campfire backup`: the ONCE `pre-backup` hook (`script/admin/prepare-backup`): snapshot the
 ///   live database into `storage/backups/` with SQLite's online backup API.
 ///
-/// The ONCE `post-restore` hook stays the reference's shell script (`hooks/post-restore`): copy
+/// The ONCE `post-restore` hook (`ops/post-restore`) follows the reference: copy
 /// `storage/backups/<env>.sqlite3` over `storage/db/<env>.sqlite3` and delete its `-wal` and
-/// `-shm` files; the next boot's `db:prepare` picks it up.
+/// `-shm` files; the next boot checks the schema. Rust leaves Redis persistence for the lead's
+/// explicit cutover step and supports the app's storage overrides.
 pub fn run() -> anyhow::Result<()> {
     let command = std::env::args().nth(1);
     if matches!(command.as_deref(), Some("-h" | "--help")) {

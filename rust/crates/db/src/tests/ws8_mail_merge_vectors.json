@@ -1,0 +1,97 @@
+{
+  "validation": [
+    {
+      "name": "normal",
+      "unit": "# hi",
+      "count": 1,
+      "errors": [],
+      "metadata": {
+        "action": true,
+        "embeds_suppressed": true,
+        "reply_notify_author": false
+      }
+    },
+    {
+      "name": "blank",
+      "unit": " \n\t",
+      "count": 1,
+      "errors": [
+        [
+          "markdown_source",
+          "can't be blank"
+        ]
+      ],
+      "metadata": {
+        "action": true,
+        "embeds_suppressed": true,
+        "reply_notify_author": false
+      }
+    },
+    {
+      "name": "streaming_blank",
+      "unit": " \n\t",
+      "count": 1,
+      "streaming": true,
+      "errors": [],
+      "metadata": {
+        "action": true,
+        "embeds_suppressed": true,
+        "reply_notify_author": false
+      }
+    },
+    {
+      "name": "drive_blank",
+      "unit": " \n\t",
+      "count": 1,
+      "drive_file_ids": [
+        "ws8-mail-file"
+      ],
+      "errors": [],
+      "metadata": {
+        "action": true,
+        "embeds_suppressed": true,
+        "reply_notify_author": false
+      }
+    },
+    {
+      "name": "boundary",
+      "unit": "é",
+      "count": 50000,
+      "errors": [],
+      "metadata": {
+        "action": true,
+        "embeds_suppressed": true,
+        "reply_notify_author": false
+      }
+    },
+    {
+      "name": "overlong",
+      "unit": "é",
+      "count": 50001,
+      "errors": [
+        [
+          "markdown_source",
+          "is too long (maximum is 50000 characters)"
+        ]
+      ],
+      "metadata": {
+        "action": true,
+        "embeds_suppressed": true,
+        "reply_notify_author": false
+      }
+    }
+  ],
+  "token_errors": [
+    [
+      "name",
+      "is too long (maximum is 100 characters)"
+    ]
+  ],
+  "mail": {
+    "raw": "Message-ID: <ws8-mail-merge@example.com>\r\nFrom: outside@example.com\r\nTo: room-ws8-mail-merge-token@mail.test\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n# hi\r\n",
+    "source": "From outside@example.com\n\n# hi",
+    "body": "<p>From <a href=\"mailto:outside@example.com\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">outside@example.com</a></p>\n<h1>hi</h1>",
+    "plain": "From outside@example.com\n\nhi",
+    "creator_name": "Email"
+  }
+}

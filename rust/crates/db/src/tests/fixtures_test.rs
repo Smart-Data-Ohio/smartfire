@@ -306,18 +306,26 @@ fn export_database_for_rails() {
                     ..Default::default()
                 },
             )?;
-            let thread_id = super::message_test::create_thread(tx, rust_room.id, rusty.id)?;
-            Message::create(
+            let mut thread = crate::ChannelThread::create(
                 tx,
-                crate::NewMessage {
+                crate::NewChannelThread {
                     room_id: rust_room.id,
                     creator_id: rusty.id,
-                    client_message_id: Some("rust-reply".into()),
-                    body: Some("in the thread".into()),
-                    thread_id: Some(thread_id),
+                    name: Some("Thread".into()),
                     ..Default::default()
                 },
             )?;
+            thread.post_message(
+                tx,
+                rusty.id,
+                crate::NewMessage {
+                    client_message_id: Some("rust-reply".into()),
+                    body: Some("in the thread".into()),
+                    ..Default::default()
+                },
+            )?;
+            crate::ThreadMembership::join(tx, thread.id, id("david"))?
+                .update_involvement(tx, crate::ThreadInvolvement::Everything)?;
 
             let mut bot = User::create_bot(tx, "Rust Bot", None)?;
             bot.reset_bot_key(tx)
@@ -334,13 +342,19 @@ fn export_database_for_rails() {
             [],
             |r| r.get(0),
         )?;
-        // No Rust path creates threads yet (WS8): the post is set up directly, tracked as a board
-        // post must be (`work_status_required_in_boards`).
-        let post = super::message_test::create_thread(tx, board_id, rusty.id)?;
-        tx.conn().execute(
-            r#"UPDATE "channel_threads" SET "work_status" = 'planned', "work_status_changed_at" = ? WHERE "id" = ?"#,
-            rusqlite::params![tx.now(), post],
-        )?;
+        // Tracked, as a board post must be (`work_status_required_in_boards`), and tagged.
+        let post = crate::ChannelThread::create(
+            tx,
+            crate::NewChannelThread {
+                room_id: board_id,
+                creator_id: rusty.id,
+                name: Some("Thread".into()),
+                work_status: Some("planned".into()),
+                tag_names: Some(vec!["Rust-Tag".into(), "ui".into()]),
+                ..Default::default()
+            },
+        )?
+        .id;
         for (client_message_id, thread_id, system_note) in
             [("rust-board-note", None, true), ("rust-board-post", Some(post), false)]
         {
@@ -382,27 +396,177 @@ fn export_database_for_rails() {
     db.write_blocking(move |tx| stream.update_body(tx, "thinking harder"))
         .unwrap();
 
-    // Destroying a message leaves a tombstone on its replies. (No Rust path writes a reply link
-    // yet, so the link is set directly.)
+    // Destroying a message leaves a tombstone on its replies.
     db.write_blocking(|tx| {
-        let [doomed, reply] = ["rust-doomed", "rust-reply-to-doomed"].map(|client_message_id| {
-            Message::create(
-                tx,
-                crate::NewMessage {
-                    room_id: id("designers"),
-                    creator_id: id("david"),
-                    client_message_id: Some(client_message_id.into()),
-                    body: Some(client_message_id.into()),
-                    ..Default::default()
-                },
-            )
-        });
-        let (doomed, reply) = (doomed?, reply?);
-        tx.conn().execute(
-            r#"UPDATE "messages" SET "reply_to_message_id" = ? WHERE "id" = ?"#,
-            rusqlite::params![doomed.id, reply.id],
+        let doomed = Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("david"),
+                client_message_id: Some("rust-doomed".into()),
+                body: Some("rust-doomed".into()),
+                ..Default::default()
+            },
+        )?;
+        Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("david"),
+                client_message_id: Some("rust-reply-to-doomed".into()),
+                body: Some("rust-reply-to-doomed".into()),
+                reply_to_message_id: Some(doomed.id),
+                ..Default::default()
+            },
         )?;
         doomed.destroy(tx)
+    })
+    .unwrap();
+
+    // An edit (Markdown, Drive set, embeds), a quiet reply to it, and two forwards of it.
+    db.write_blocking(|tx| {
+        let mut edited = Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("david"),
+                client_message_id: Some("rust-edited".into()),
+                markdown_source: Some("before".into()),
+                drive_file_ids: vec!["1AbcDefGhIjKlMnOpQrSt".into()],
+                ..Default::default()
+            },
+        )?;
+        edited.edit(
+            tx,
+            crate::MessageChanges {
+                markdown_source: Some("after".into()),
+                drive_file_ids: Some(vec!["2BcdEfgHiJkLmNoPqRsTu".into()]),
+                ..Default::default()
+            },
+        )?;
+        edited.suppress_embeds(tx)?;
+        Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("jason"),
+                client_message_id: Some("rust-quiet-reply".into()),
+                markdown_source: Some("quiet".into()),
+                reply_to_message_id: Some(edited.id),
+                reply_notify_author: Some(false),
+                ..Default::default()
+            },
+        )?;
+        struct NoAttachments;
+        impl crate::models::forwarder::BlobCopier for NoAttachments {
+            fn copy(&self, _: &mut Tx<'_>, _: &crate::Blob) -> Result<crate::Blob> {
+                unreachable!("the source has no attachment")
+            }
+            fn discard(&self, _: &[crate::Blob]) {}
+        }
+        use crate::models::forwarder::{Destination, forward};
+        let destinations = [Destination::room(id("watercooler")), Destination::room(id("designers"))];
+        forward(tx, &edited, &destinations, Some("@[Jason] look"), id("david"), &NoAttachments)?
+            .map_err(|refusal| crate::Error::Other(refusal.to_string()))?;
+        Ok(())
+    })
+    .unwrap();
+
+    // Room deletion marking and its cleanup claim remain readable and valid to Rails.
+    db.write_blocking(|tx| {
+        let room=crate::Room::create_for(tx,crate::RoomType::Closed,Some("Rust deleted room"),id("david"),&[id("david")])?;
+        crate::models::room_delete::begin_destroy(tx,&room,&crate::models::room_delete::HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:true})
+    }).unwrap();
+
+    // A multiple-choice poll with votes, closed; and an open one closing later.
+    db.write_blocking(|tx| {
+        let question = Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("watercooler"),
+                creator_id: id("david"),
+                client_message_id: Some("rust-poll".into()),
+                markdown_source: Some("Lunch?".into()),
+                ..Default::default()
+            },
+        )?;
+        let mut poll = crate::Poll::create_for_message(
+            tx,
+            &question,
+            crate::NewPoll { labels: vec!["Tacos".into(), "Pizza".into()], multiple: true, ..Default::default() },
+        )?;
+        let options: Vec<i64> = poll.options(tx.conn())?.iter().map(|o| o.id).collect();
+        poll.cast_vote(tx, id("david"), &options)?;
+        poll.cast_vote(tx, id("jason"), &options[..1])?;
+        let now = tx.now();
+        poll.close(tx, now)?;
+        let later = Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("watercooler"),
+                creator_id: id("jason"),
+                client_message_id: Some("rust-poll-later".into()),
+                markdown_source: Some("Dinner?".into()),
+                ..Default::default()
+            },
+        )?;
+        crate::Poll::create_for_message(
+            tx,
+            &later,
+            crate::NewPoll {
+                labels: vec!["Soup".into(), "Salad".into()],
+                anonymous: true,
+                closes_at: Some(now.since(jiff::SignedDuration::from_hours(1))),
+                ..Default::default()
+            },
+        )?;
+        Ok(())
+    })
+    .unwrap();
+
+    // Pins: the fixture message "first" pinned (with its note); "second" pinned and unpinned.
+    // Saved items: David's reminder on "first", fired; Jason's "second", done, reminding later.
+    db.write_blocking(|tx| {
+        let first = Message::find(tx.conn(), id("first"))?;
+        crate::MessagePin::pin(tx, &first, id("david"))?.map_err(|e| crate::Error::Other(e.0))?;
+        let second = Message::find(tx.conn(), id("second"))?;
+        crate::MessagePin::pin(tx, &second, id("jason"))?.map_err(|e| crate::Error::Other(e.0))?.unpin(tx)?;
+
+        let now = tx.now();
+        let hour = jiff::SignedDuration::from_hours(1);
+        let reminded = crate::SavedItem::save_for(tx, id("david"), id("first"), Some(now.since(hour)))?;
+        crate::SavedItem::dispatch_reminder(tx, reminded.id, now.since(hour * 2))?;
+        let mut done = crate::SavedItem::save_for(tx, id("jason"), id("second"), Some(now.since(hour)))?;
+        done.update(tx, crate::SavedItemChanges { status: Some("done".into()), ..Default::default() })?;
+        crate::KeywordAlert::create(tx, id("david"), "  Deploy   freeze  ")?;
+        let category = crate::RoomCategory::create(tx, id("david"), "Team", 1, true)?;
+        let mut membership = Membership::find_by_room_and_user(tx.conn(), id("designers"), id("david"))?.unwrap();
+        membership.update_category(tx, Some(category.id))?;
+        membership.favorite(tx)?;
+
+        let attrs = crate::NewScheduledMessage {
+            user_id: id("david"), room_id: id("designers"), thread_id: None,
+            reply_to_message_id: Some(id("first")), markdown_source: "Scheduled hello".into(),
+            send_at: now.since(hour),
+        };
+        let sent = crate::ScheduledMessage::create(tx, attrs.clone())?;
+        crate::ScheduledMessage::dispatch(tx, sent.id, now, true)?;
+        let pending = crate::ScheduledMessage::create(tx, crate::NewScheduledMessage { markdown_source: "Pending hello".into(), ..attrs.clone() })?;
+        let mut dropped = crate::ScheduledMessage::create(tx, crate::NewScheduledMessage { markdown_source: "Dropped hello".into(), ..attrs })?;
+        dropped.drop(tx, Some("its thread was deleted"), now)?;
+        assert!(pending.pending());
+        crate::models::audit_log::AuditLog::record(tx, crate::models::audit_log::NewAuditLog {
+            action: "room.membership.change".into(), actor: Some(crate::models::audit_log::Actor::from(&crate::User::find(tx.conn(),id("david"))?)),
+            target: Some(crate::models::audit_log::Target::from(&crate::Room::find(tx.conn(),id("designers"))?)),
+            changes: Some(serde_json::json!({"members": {"before": [], "after": [id("david")]}, "token": "test secret"})), ..Default::default()
+        }, &crate::models::audit_log::Context::default())?;
+        let mut group = Room::create_for(tx, RoomType::Direct, None, id("david"), &[id("david"),id("jason"),id("kevin")])?;
+        group.rename_direct(tx, "Rust Group", id("david"))?;
+        group.add_direct_members(tx, &[id("jz")], id("david"))?;
+        group.leave_direct(tx, id("kevin"))?;
+        Message::create(tx, crate::NewMessage { room_id:id("designers"),creator_id:id("david"),client_message_id:Some("rust-quote".into()),
+            body:Some(format!("<a href='/rooms/999/@{}'>quoted</a>", first.id)),..Default::default() })?;
+        Ok(())
     })
     .unwrap();
 }

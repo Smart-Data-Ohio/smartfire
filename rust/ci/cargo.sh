@@ -11,6 +11,7 @@ mkdir -p -- "$scratch"
 docker run --rm --name "${RUST_CI_CONTAINER_PREFIX:-campfire-ci}-cargo-$$" --user "$(id -u):$(id -g)" \
   --volume "$repo:/src" --volume "$scratch:/ci-tmp" --workdir /src/rust \
   --env HOME=/ci-tmp --env TMPDIR=/ci-tmp \
+  --env CI \
   --env CARGO_HOME="${CARGO_HOME:-/src/rust/.cargo-home}" \
   --env CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/src/rust/target}" \
   --env CARGO_TERM_COLOR=always --env CARGO_INCREMENTAL=0 \

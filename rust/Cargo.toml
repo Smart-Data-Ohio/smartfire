@@ -56,6 +56,7 @@ uuid         = { version = "1", features = ["v4"] }
 percent-encoding = "2"
 url          = "2"
 regex        = "1"
+caseless     = "0.2.2"
 unicode-segmentation = "=1.13.3"
 async-trait  = "0.1"
 libc         = "0.2"

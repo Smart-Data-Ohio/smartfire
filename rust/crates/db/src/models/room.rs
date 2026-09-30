@@ -15,7 +15,7 @@ use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::{SQLITE_NOW, Timestamp};
 
 /// The STI `type` column: `app/models/rooms/{open,closed,direct,voice,stage,board}.rb`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum RoomType {
     Open,
     Closed,
@@ -140,6 +140,7 @@ impl Room {
         })
     }
 
+    /// Unscoped association/maintenance lookup, like Room.find. Access checks use find_for_user.
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
         Self::find_by_id(conn, id)?.or_not_found("Room")
     }
@@ -154,14 +155,14 @@ impl Room {
     }
 
     pub fn all(conn: &Connection) -> Result<Vec<Self>> {
-        query_all(conn, r#"SELECT * FROM "rooms""#, [], Self::from_row)
+        query_all(conn, r#"SELECT * FROM "rooms" WHERE "deleted_at" IS NULL"#, [], Self::from_row)
     }
 
     /// `Room.opens` / `closeds` / `directs` / `voices` / `boards` (and `where(type:)` for stages)
     pub fn of_type(conn: &Connection, room_type: RoomType) -> Result<Vec<Self>> {
         query_all(
             conn,
-            r#"SELECT * FROM "rooms" WHERE "rooms"."type" = ?"#,
+            r#"SELECT * FROM "rooms" WHERE "rooms"."deleted_at" IS NULL AND "rooms"."type" = ?"#,
             [room_type],
             Self::from_row,
         )
@@ -170,7 +171,7 @@ impl Room {
     pub fn count_of_type(conn: &Connection, room_type: RoomType) -> Result<i64> {
         sql::count(
             conn,
-            r#"SELECT COUNT(*) FROM "rooms" WHERE "rooms"."type" = ?"#,
+            r#"SELECT COUNT(*) FROM "rooms" WHERE "rooms"."deleted_at" IS NULL AND "rooms"."type" = ?"#,
             [room_type],
         )
     }
@@ -179,7 +180,7 @@ impl Room {
     pub fn original(conn: &Connection) -> Result<Option<Self>> {
         query_one(
             conn,
-            r#"SELECT * FROM "rooms" ORDER BY "rooms"."created_at" ASC LIMIT 1"#,
+            r#"SELECT * FROM "rooms" WHERE "rooms"."deleted_at" IS NULL ORDER BY "rooms"."created_at" ASC LIMIT 1"#,
             [],
             Self::from_row,
         )
@@ -251,6 +252,7 @@ impl Room {
         creator_id: i64,
         direct_member_key: Option<&str>,
     ) -> Result<Self> {
+        if room_type == RoomType::Direct { crate::models::direct_room::validate_name(name)?; }
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
             r#"INSERT INTO "rooms" ("created_at", "creator_id", "direct_member_key", "name", "type", "updated_at") VALUES (?, ?, ?, ?, ?, ?) RETURNING "id""#,
@@ -437,6 +439,7 @@ impl Room {
             errors.add("type", "can't be changed for a direct room");
             return errors.into_result();
         }
+        if self.direct() { crate::models::direct_room::validate_name(name.as_ref().unwrap_or(&self.name).as_deref())?; }
         if name.is_none() && room_type.is_none() {
             return Ok(());
         }
@@ -469,20 +472,14 @@ impl Room {
         Ok(())
     }
 
-    /// `room.destroy`: memberships are deleted without callbacks, messages are destroyed. Upstream's
-    /// shape: our rooms are soft-deleted first (`begin_destroy!`) and destroyed in batches by
-    /// `Room::DestroyJob`, which clears many more dependents; neither is ported yet.
+    /// Room#destroy with its dependent callbacks; asynchronous deletion uses room_delete::perform.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        tx.conn().execute_cached(
-            r#"DELETE FROM "memberships" WHERE "memberships"."room_id" = ?"#,
-            [self.id],
-        )?;
-        for message in Message::for_room(tx.conn(), self.id)? {
-            message.destroy(tx)?;
-        }
-        tx.conn()
-            .execute_cached(r#"DELETE FROM "rooms" WHERE "rooms"."id" = ?"#, [self.id])?;
-        Ok(())
+        crate::models::room_delete::destroy(tx, self)
+    }
+
+    /// Immediately revoke access and atomically request asynchronous destruction.
+    pub fn begin_destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        crate::models::room_delete::begin_destroy(tx, self, &crate::models::room_delete::HuddleConfig::from_env())
     }
 
     // Memberships
@@ -566,7 +563,7 @@ impl Room {
         )
     }
 
-    /// `room.receive(message)`, from the message's `after_create_commit`: marks members
+    /// `room.receive(message)`, in the message's transaction: marks members
     /// unread. A system note doesn't. Its `push_later` is [`Room::push_later`], called in the
     /// message's transaction.
     pub(crate) fn receive(tx: &mut Tx<'_>, room_id: i64, message: &Message) -> Result<()> {
@@ -636,6 +633,10 @@ impl Room {
 
     /// app/models/room.rb: token rotation is independent of whether inbound email is configured.
     pub fn regenerate_inbound_email_token(&mut self, tx: &Tx<'_>) -> Result<String> {
+        // `update!` validates the existing direct name too; rotation changes neither type nor icon.
+        if self.direct() {
+            crate::models::direct_room::validate_name(self.name.as_deref())?;
+        }
         loop {
             let token = hex::encode(rand::random::<[u8; 16]>());
             match tx.conn().execute_cached(

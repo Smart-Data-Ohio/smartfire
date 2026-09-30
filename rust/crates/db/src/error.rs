@@ -64,7 +64,13 @@ impl Errors {
     pub fn full_messages(&self) -> Vec<String> {
         self.0
             .iter()
-            .map(|(attribute, message)| format!("{} {message}", humanize(attribute)))
+            .map(|(attribute, message)| {
+                if *attribute == "base" {
+                    message.clone()
+                } else {
+                    format!("{} {message}", humanize(attribute))
+                }
+            })
             .collect()
     }
 
@@ -84,7 +90,7 @@ impl fmt::Display for Errors {
 }
 
 fn humanize(attribute: &str) -> String {
-    let words = attribute.trim_end_matches("_id").replace('_', " ");
+    let words = attribute.trim_end_matches("_id").replace(['_', '.'], " ");
     let mut chars = words.chars();
     match chars.next() {
         Some(first) => first.to_uppercase().chain(chars).collect(),
