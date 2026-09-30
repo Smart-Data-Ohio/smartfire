@@ -259,16 +259,38 @@ pub(crate) fn redirect_to_room(c: &mut Ctx, room_id: i64) -> Result {
 
 /// `params.require(:room).permit(:name)`: `Some(name)` when the name was submitted.
 pub(crate) fn room_name_param(c: &Ctx) -> Result<Option<Option<String>>> {
+    room_string_param(c, "name")
+}
+
+pub(super) fn room_icon_param(c: &Ctx) -> Result<Option<Option<String>>> {
+    room_string_param(c, "icon_name")
+}
+
+fn room_string_param(c: &Ctx, attribute: &str) -> Result<Option<Option<String>>> {
     let room = c.params.require("room")?;
-    let permitted = room.permit(&campfire_kit::permit_keys(&["name"]));
+    let permitted = room.permit(&campfire_kit::permit_keys(&[attribute]));
     // ActiveModel::Type::String uses "t"/"f" for booleans; nil remains nil, and a
     // collection rejected by permit is absent (so updates leave the old value alone).
-    Ok(permitted.get("name").map(|name| match name {
+    Ok(permitted.get(attribute).map(|name| match name {
         campfire_kit::Param::Null => None,
         campfire_kit::Param::Bool(true) => Some("t".into()),
         campfire_kit::Param::Bool(false) => Some("f".into()),
         value => value.to_s(),
     }))
+}
+
+/// Room form facts, including an attempted invalid value rather than reloading the
+/// persisted record. Icon preview data comes through the existing presenter resolver.
+pub(super) async fn form_room(
+    c: &Ctx, id: Option<i64>, name: Option<String>, icon_name: Option<String>, errors: campfire_db::Errors,
+) -> Result<campfire_views::rooms::FormRoom> {
+    let icon_name = Room::normalize_icon_name(icon_name.as_deref());
+    let lookup_name = icon_name.clone();
+    let icon = c.app().db.read(move |conn| Ok(super::presenters::accounts::resolve_room_icon(conn, lookup_name.as_deref()))).await.map_err(db_error)?;
+    Ok(campfire_views::rooms::FormRoom {
+        id, name, icon_name, icon, errors: errors.full_messages(),
+        error_attributes: errors.0.iter().map(|(attribute,_)| (*attribute).to_string()).collect(),
+    })
 }
 
 /// `params.fetch(:user_ids, [])` as ids `User.where(id:)` can match.
@@ -411,3 +433,6 @@ mod coercions_tests;
 
 #[cfg(test)]
 mod direct_selection_tests;
+
+#[cfg(test)]
+mod icons_tests;

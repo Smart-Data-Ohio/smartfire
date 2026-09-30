@@ -196,6 +196,14 @@ pub struct RefreshShow<'a> {
 pub struct FormRoom {
     pub id: Option<i64>,
     pub name: Option<String>,
+    #[serde(default)]
+    pub icon_name: Option<String>,
+    #[serde(default)]
+    pub icon: Option<h::AvatarIcon>,
+    #[serde(default)]
+    pub errors: Vec<String>,
+    #[serde(default)]
+    pub error_attributes: Vec<String>,
 }
 
 /// `rooms/opens/{new,edit}`.
@@ -361,6 +369,14 @@ pub struct FormLayout<'a> {
     pub can_administer: bool,
     pub kind: RoomKind,
     pub content: String,
+}
+
+impl FormLayout<'_> {
+    fn errors(&self)->String { h::to_sentence(&self.room.errors, " and ") }
+    fn icon_field(&self)->h::Html {
+        let form=h::form_with(self.room.action(self.kind)).model(self.kind.param_key()).field_errors(self.room.error_attributes.clone());
+        h::raw(crate::shared::IconField { ctx:self.ctx,form:&form,scope:"room",icon_name:self.room.icon_name.as_deref(),icon:self.room.icon.as_ref() }.render().expect("room icon field renders"))
+    }
 }
 
 /// Block helpers for the room templates: A's shared ones plus `rooms/layouts/_form`.

@@ -39,6 +39,7 @@ pub struct FormWith {
     /// `html:`, merged after the options Rails slices out (`id`, `class`, `data`).
     html: Attrs,
     authenticity_token: bool,
+    field_errors: Vec<String>,
     multipart: Rc<Cell<bool>>,
 }
 
@@ -52,11 +53,23 @@ pub fn form_with(url: impl std::fmt::Display) -> FormWith {
         data: attrs(),
         html: attrs(),
         authenticity_token: true,
+        field_errors: Vec::new(),
         multipart: Rc::new(Cell::new(false)),
     }
 }
 
 impl FormWith {
+    /// WS8br seam: the default Rails field_error_proc for fields bound to a record
+    /// with validation errors. Existing owner forms keep their default empty list.
+    pub fn field_errors(mut self, attributes: Vec<String>) -> Self {
+        self.field_errors = attributes;
+        self
+    }
+    fn with_field_error(&self, method: &str, field: Html) -> Html {
+        if self.field_errors.iter().any(|attribute| attribute == method) {
+            super::tag::content_tag("div", attrs().class("field_with_errors"), &field.0)
+        } else { field }
+    }
     /// Rails PR #148 uses `authenticity_token: false` in shared message fragments.
     pub fn authenticity_token(mut self, include: bool) -> Self {
         self.authenticity_token = include;
@@ -166,7 +179,7 @@ impl FormWith {
     }
 
     pub fn text_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
-        self.builder().input_field("text", method, value, options)
+        self.with_field_error(method, self.builder().input_field("text", method, value, options))
     }
 
     pub fn email_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -184,7 +197,7 @@ impl FormWith {
         let builder = self.builder();
         let mut options = options;
         options.fetch_or_set("for", Some(builder.tag_id(method).into()));
-        super::tag::content_tag_text("label", &options, text)
+        self.with_field_error(method, super::tag::content_tag_text("label", &options, text))
     }
 
     pub fn url_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {

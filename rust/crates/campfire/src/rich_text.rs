@@ -81,6 +81,13 @@ fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     Ok(icons)
 }
 
+/// WS8br seam: reuse WS5's data resolver for Room#icon_name_must_resolve, on the
+/// caller's transaction connection; this does not render or alter rich-text fragments.
+pub(crate) fn room_icon_resolves(conn: &Connection, name: &str) -> campfire_db::Result<bool> {
+    use campfire_richtext::markdown::IconResolver;
+    Ok(icons(conn).map_err(campfire_db::Error::Other)?.find(name).is_some())
+}
+
 impl RichText for AppRichText {
     fn render_markdown(
         &self,
