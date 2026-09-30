@@ -8,6 +8,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[3]
 FILES = [
     "app/controllers/messages_controller.rb",
+    "app/controllers/messages/boosts_controller.rb",
     "app/controllers/channel_threads_controller.rb",
     "app/views/channel_threads/index.html.erb",
     "app/views/channel_threads/show.html.erb",
@@ -39,6 +40,9 @@ FILES = [
     "app/helpers/github/pull_requests_helper.rb",
     "app/helpers/message_links_helper.rb",
     "app/models/message.rb",
+    "app/models/boost.rb",
+    "app/models/rooms/direct.rb",
+    "app/helpers/boosts_helper.rb",
     "app/models/message/markdown.rb",
     "app/models/message/legacy_markdown.rb",
     "app/models/message/pagination.rb",
@@ -55,6 +59,9 @@ FILES = [
     "app/views/messages/show.html.erb",
     "app/views/messages/index.html.erb",
     "app/views/messages/destroy.turbo_stream.erb",
+    "app/views/messages/create.turbo_stream.erb",
+    "app/views/messages/boosts/_reactions.html.erb",
+    "app/views/layouts/application.html.erb",
     "app/views/messages/_system_note.html.erb",
     "app/views/messages/_context.html.erb",
     "app/views/agent_steps/_steps.html.erb",
