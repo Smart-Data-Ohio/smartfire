@@ -193,6 +193,16 @@ mod tests {
             .unwrap()
     }
     #[tokio::test]
+    async fn ws17_review_sigma_keywords_deduplicate_through_http() {
+        let app = boot().await;
+        let mut browser = app.david();
+        let reply = browser.write(Req::new(Method::PATCH, PATH)
+            .form(&[("user[keyword_alerts]", "οσ\nΟΣ")])).await;
+        assert_eq!(reply.status, StatusCode::FOUND);
+        assert_eq!(phrases(&app).await, ["οσ"]);
+    }
+
+    #[tokio::test]
     async fn ws17_enables_dnd_with_quiet_hours_and_keywords() {
         let app = boot().await;
         let mut browser = app.david();

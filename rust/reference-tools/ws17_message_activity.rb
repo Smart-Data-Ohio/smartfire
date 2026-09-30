@@ -11,6 +11,12 @@ rows=[]
 travel_to(Time.utc(2026,3,2,16)) do
  scenarios=[
   {name:"keyword",body:"Shipping the DEPLOY now"},
+  {name:"unicode_street",phrase:"straße",body:"STRASSE"},
+  {name:"unicode_ligature",phrase:"office",body:"oﬃce"},
+  {name:"unicode_sigma",phrase:"οσ",body:"ΟΣ"},
+  {name:"unicode_dotted_i",phrase:"İ",body:"i̇"},
+  {name:"unicode_combining_unequal",phrase:"é",body:"é"},
+  {name:"unicode_turkish_unequal",phrase:"I",body:"ı"},
   {name:"boundary",body:"Redeploying the service"},
   {name:"self",self:true},
   {name:"inactive",inactive:true},
@@ -40,7 +46,7 @@ travel_to(Time.utc(2026,3,2,16)) do
   member.involvement=row[:involvement]=="missing" ? "mentions" : row.fetch(:involvement,"mentions");member.save!
   recipient.update_columns(status:1) if row[:inactive]
   recipient.update_columns(role:2) if row[:bot]
-  KeywordAlert.create!(user:recipient,phrase:"deploy")
+  KeywordAlert.create!(user:recipient,phrase:row.fetch(:phrase,"deploy"))
   thread=nil
   if row[:thread_involvement]
    thread=ChannelThread.create!(room:,creator:author,name:"WS17 #{i}")
@@ -56,7 +62,7 @@ travel_to(Time.utc(2026,3,2,16)) do
   item=ActivityItem.find_by(user:recipient,source:message)
   # Candidates expose the scoped membership load used by the named ceiling assertions.
   recorder=ActivityItems::Recorder.new(message)
-  rows << row.merge(body:,event_type:item&.event_type,candidate_ids:recorder.send(:room_memberships).keys.sort)
+  rows << row.merge(body:,event_type:item&.event_type,candidate_ids:recorder.send(:room_memberships).keys)
  end
 end
 puts JSON.generate(reference:"d7c7de92",rows:)

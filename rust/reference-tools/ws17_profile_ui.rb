@@ -12,7 +12,7 @@ env = {http_host: "campfire.test", https: false, "rack.session" => {},
  "action_dispatch.request.flash_hash" => ActionDispatch::Flash::FlashHash.new}
 user = User.find_by!(email_address: "david@37signals.com")
 choices = ApplicationController.helpers.profile_time_zone_choices
-names = JSON.parse(File.read("/rails/rust/crates/db/src/tests/ws17_settings_zones.json"))["names"] rescue (ActiveSupport::TimeZone::MAPPING.keys + TZInfo::Timezone.all_identifiers).uniq
+names = (ActiveSupport::TimeZone::MAPPING.keys + TZInfo::Timezone.all_identifiers).uniq
 choice_zones = ActiveSupport::TimeZone.all.uniq { |zone| zone.tzinfo.identifier }.map do |zone|
   changes = zone.tzinfo.transitions_up_to(Time.utc(2101)).map { |tr| [tr.at.to_i,tr.offset.base_utc_offset] }.uniq { |row| row[0] }
   {name:zone.name,id:zone.tzinfo.identifier,initial:zone.tzinfo.period_for_utc(Time.utc(1800)).base_utc_offset,changes:}
@@ -40,7 +40,14 @@ travel_to(Time.utc(2026,3,2,16)) do
   subscriptions=[]
   [nil,"Mozilla/5.0","Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36", "<unknown & browser>"].each_with_index do |agent,index|
     sub=user.push_subscriptions.new(endpoint: "https://fcm.googleapis.com/fcm/send/#{index}?x=<a>&y=b",p256dh_key:"123",auth_key:"456",user_agent:agent)
-    sub.save!(validate:false)
+    # DNS is a fixture dependency, not a bypass of the real model validations.
+    resolver = RestrictedHTTP::PrivateNetworkGuard.method(:resolve)
+    RestrictedHTTP::PrivateNetworkGuard.singleton_class.define_method(:resolve) { |_| "142.250.185.206" }
+    begin
+      sub.save!
+    ensure
+      RestrictedHTTP::PrivateNetworkGuard.singleton_class.define_method(:resolve, resolver)
+    end
     parsed=UserAgent.parse(agent)
     subscriptions << {id:sub.id,endpoint:sub.endpoint,user_agent:agent,browser:parsed.browser.to_s,version:parsed.version.to_s,platform:parsed.platform.to_s}
   end

@@ -709,12 +709,9 @@ impl User {
     /// Rails `email_change_requested?`: strip, then Unicode `casecmp?`. The submitted
     /// value is still saved verbatim; only the security check uses this comparison.
     pub fn email_change_requested(&self, submitted: &str) -> bool {
-        use caseless::Caseless;
         use campfire_richtext::ruby::strip;
-        !strip(submitted).chars().default_case_fold().eq(
-            strip(self.email_address.as_deref().unwrap_or(""))
-                .chars()
-                .default_case_fold(),
+        rails_compat::unicode::fold(strip(submitted)) != rails_compat::unicode::fold(
+            strip(self.email_address.as_deref().unwrap_or("")),
         )
     }
 

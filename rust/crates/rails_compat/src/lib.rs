@@ -22,6 +22,8 @@ pub mod verifiers;
 pub mod webhook;
 pub mod jwt;
 pub mod totp;
+pub mod unicode;
+pub mod keyword_regex;
 
 mod encoding;
 mod json;

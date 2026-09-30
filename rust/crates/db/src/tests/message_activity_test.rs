@@ -44,7 +44,7 @@ fn ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates() 
             let status=if row["inactive"].as_bool()==Some(true) {1} else {0};let role=if row["bot"].as_bool()==Some(true) {2} else {0};
             tx.conn().execute("UPDATE users SET status=?,role=?,dnd_enabled=?,quiet_hours_enabled=?,quiet_hours_start_minute=900,quiet_hours_end_minute=1020,time_zone='UTC',ooo_until=? WHERE id=?",rusqlite::params![status,role,row["attrs"]["dnd_enabled"].as_bool().unwrap_or(false),row["attrs"]["quiet_hours_enabled"].as_bool().unwrap_or(false),row["attrs"]["ooo_until"].as_str(),recipient])?;
             tx.conn().execute("UPDATE memberships SET involvement=? WHERE room_id=? AND user_id=?",rusqlite::params![if row["involvement"].as_str()==Some("missing") {Some("mentions")} else if row.get("involvement").is_some() {row["involvement"].as_str()} else {Some("mentions")},room,recipient])?;
-            KeywordAlert::create(tx,recipient,"deploy")?;
+            KeywordAlert::create(tx,recipient,row["phrase"].as_str().unwrap_or("deploy"))?;
             let thread=if let Some(involvement)=row["thread_involvement"].as_str() {
                 let thread=crate::ChannelThread::create(tx,crate::NewChannelThread {room_id:room,creator_id:author,name:Some("Activity thread".into()),..Default::default()})?;
                 crate::ThreadMembership::join(tx,thread.id,author)?;

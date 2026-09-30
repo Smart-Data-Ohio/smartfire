@@ -37,7 +37,7 @@ files = [
     "app/views/pwa/service_worker.js", "public/offline.html",
     "app/controllers/users/statuses_controller.rb", "app/controllers/users/dnd_allowances_controller.rb",
     "app/controllers/users/notification_settings_controller.rb", "app/models/dnd_allowed_user.rb",
-    "app/models/keyword_alert.rb", "app/views/users/profiles/_status.html.erb",
+    "app/models/keyword_alert.rb", "app/models/notifications/keyword_matcher.rb", "app/views/users/profiles/_status.html.erb",
     "app/views/users/profiles/_notifications.html.erb",
     "app/views/users/statuses/_badge.html.erb", "app/views/rooms/show/_ooo_notice_line.html.erb",
     "app/helpers/users/presence_helper.rb", "app/views/users/profiles/_two_factor.html.erb",

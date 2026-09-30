@@ -81,7 +81,7 @@ pub fn candidates(
     }
     let mut values = vec![message.room_id];
     values.extend(&ids);
-    let rooms: HashMap<i64, Option<Involvement>> = query_all(
+    let room_rows: Vec<(i64, Option<Involvement>)> = query_all(
         conn,
         &format!(
             "SELECT user_id,involvement FROM memberships WHERE room_id=? AND user_id IN ({})",
@@ -89,9 +89,8 @@ pub fn candidates(
         ),
         rusqlite::params_from_iter(values),
         |r| Ok((r.get(0)?, r.get(1)?)),
-    )?
-    .into_iter()
-    .collect();
+    )?;
+    let rooms: HashMap<_, _> = room_rows.iter().copied().collect();
     let settings = UserStatusSettings::for_ids(conn, &ids)?;
     if message.thread_id.is_some() && !text.chars().all(char::is_whitespace) {
         let eligible: Vec<_> = threads
@@ -148,8 +147,7 @@ pub fn candidates(
             });
         }
     }
-    let mut room_member_ids: Vec<_> = rooms.into_keys().collect();
-    room_member_ids.sort_unstable();
+    let room_member_ids = room_rows.into_iter().map(|row| row.0).collect();
     Ok(MessageCandidates {
         recipients,
         room_member_ids,

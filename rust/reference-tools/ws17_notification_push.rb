@@ -40,7 +40,7 @@ travel_to(Time.utc(2026,3,2,16)) do
   deliveries=[]
   pool=Object.new
   pool.define_singleton_method(:queue) do |payload,subs|
-   subs=subs.order(:id).to_a
+   subs=subs.to_a
    encoded=subs.map { |sub|WebPush::Notification.new(**payload,badge:sub.user.memberships.unread.count,endpoint:nil,endpoint_ip_resolver:nil,p256dh_key:nil,auth_key:nil).send(:encoded_message) }
    deliveries << {payload:payload,subscriptions:subs.map(&:id),users:subs.map(&:user_id),encoded:}
   end

@@ -135,7 +135,7 @@ impl PushSubscription {
     pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
         if user_ids.is_empty() { return Ok(Vec::new()); }
         query_all(conn,
-            &format!("SELECT * FROM push_subscriptions WHERE user_id IN ({}) ORDER BY id",placeholders(user_ids.len())),
+            &format!("SELECT * FROM push_subscriptions WHERE user_id IN ({})",placeholders(user_ids.len())),
             rusqlite::params_from_iter(user_ids),Self::from_row)
     }
     pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {

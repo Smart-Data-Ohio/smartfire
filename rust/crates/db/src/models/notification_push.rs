@@ -224,15 +224,32 @@ impl BoardNudgeSource {
     }
 }
 fn humanize(value: &str) -> String {
-    let value = value
-        .trim_end_matches("_id")
-        .replace('_', " ")
-        .to_lowercase();
-    let mut chars = value.chars();
-    match chars.next() {
-        Some(first) => first.to_uppercase().chain(chars).collect(),
-        None => String::new(),
+    // ActiveSupport::Inflector.humanize and config/initializers/inflections.rb.
+    let spaces = value.replace('_', " ");
+    let mut text = spaces.trim_start_matches(['\0', ' ', '\t', '\n', '\r', '\x0b', '\x0c']);
+    if value.ends_with("_id") { text = text.strip_suffix(" id").unwrap_or(text); }
+    let mut result = String::new();
+    let mut run = String::new();
+    let append = |result: &mut String, run: &mut String| {
+        let lowered = rails_compat::unicode::downcase(run);
+        result.push_str(match lowered.as_str() { "http" => "HTTP", "oauth" => "OAuth", _ => &lowered });
+        run.clear();
+    };
+    for c in text.chars() {
+        if rails_compat::unicode::alphabetic(c) || c.is_ascii_digit() {
+            run.push(c);
+        } else {
+            append(&mut result, &mut run);
+            result.push(c);
+        }
     }
+    append(&mut result, &mut run);
+    if let Some(c) = result.chars().next().filter(|c| rails_compat::unicode::alphabetic(*c)) {
+        let mut bytes = [0; 4];
+        let first = rails_compat::unicode::upcase(c.encode_utf8(&mut bytes));
+        result.replace_range(..c.len_utf8(), &first);
+    }
+    result
 }
 pub fn board_nudge_push(
     conn: &Connection,

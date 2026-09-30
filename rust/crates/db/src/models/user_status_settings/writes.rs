@@ -50,7 +50,7 @@ pub fn replace_keyword_alerts(tx: &mut Tx<'_>, user_id: i64, lines: &[String]) -
     {
         if !phrases
             .iter()
-            .any(|s: &String| s.to_lowercase() == phrase.to_lowercase())
+            .any(|s: &String| rails_compat::unicode::downcase(s) == rails_compat::unicode::downcase(&phrase))
         {
             phrases.push(phrase);
         }
