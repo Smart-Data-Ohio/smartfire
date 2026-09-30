@@ -40,21 +40,24 @@ travel_to(Time.utc(2026,3,2,16)) do
   deliveries=[]
   pool=Object.new
   pool.define_singleton_method(:queue) do |payload,subs|
-   subs=subs.order(:id).to_a
-   encoded=subs.map { |sub|WebPush::Notification.new(**payload.reverse_merge(tag:nil),badge:sub.user.memberships.unread.count,endpoint:nil,endpoint_ip_resolver:nil,p256dh_key:nil,auth_key:nil).send(:encoded_message) }
-   deliveries << {payload:payload.reverse_merge(tag:nil),subscriptions:subs.map(&:id),users:subs.map(&:user_id),encoded:}
+   subs=subs.to_a
+   encoded=subs.map { |sub|WebPush::Notification.new(**payload,badge:sub.user.memberships.unread.count,endpoint:nil,endpoint_ip_resolver:nil,p256dh_key:nil,auth_key:nil).send(:encoded_message) }
+   deliveries << {payload:payload,subscriptions:subs.map(&:id),users:subs.map(&:user_id),encoded:}
   end
   old=Rails.configuration.x.web_push_pool;Rails.configuration.x.web_push_pool=pool
-  recipient.reload;user.reload
-  case kind
-  when "event";Event::ReminderPusher.new(event:event.reload).push
-  when "board";BoardAutomations::NudgePusher.new(nudge:nudge.reload).push
-  when "join";Huddle::JoinPusher.new(grant:grant.reload,recipient:recipient.reload,room_membership:direct.memberships.find_by(user:recipient)).push
-  when "invitation"
-   item=ActivityItem.new(user:recipient,source:grant,event_type:"huddle_started")
-   Huddle::InvitationPusher.new(activity_item:item).push
+  begin
+   recipient.reload;user.reload
+   case kind
+   when "event";Event::ReminderPusher.new(event:event.reload).push
+   when "board";BoardAutomations::NudgePusher.new(nudge:nudge.reload).push
+   when "join";Huddle::JoinPusher.new(grant:grant.reload,recipient:recipient.reload,room_membership:direct.memberships.find_by(user:recipient)).push
+   when "invitation"
+    item=ActivityItem.new(user:recipient,source:grant,event_type:"huddle_started")
+    Huddle::InvitationPusher.new(activity_item:item).push
+   end
+  ensure
+   Rails.configuration.x.web_push_pool=old
   end
-  Rails.configuration.x.web_push_pool=old
   throttle=direct.memberships.find_by(user:recipient)&.last_huddle_join_push_at
   rows << {name:,kind:,setup_sql:setup.join("\n"),event_id:event.id,nudge_id:nudge.id,room_id:direct.id,recipient_id:recipient.id,sender_id:user.id,deliveries:,throttle:throttle&.iso8601(6)}
  end
@@ -87,4 +90,4 @@ travel_to(Time.utc(2026,3,2,16)) do
  ["nothing","invisible","muted",nil].each { |mode|run.call("invitation_mode_#{mode||'null'}","invitation",["UPDATE memberships SET involvement=#{conn.quote(mode)} WHERE room_id=#{direct.id} AND user_id=#{recipient.id};"]) }
  run.call("invitation_connected","invitation",["UPDATE memberships SET connected_at=#{conn.quote(Time.current)} WHERE room_id=#{direct.id} AND user_id=#{recipient.id};"])
 end
-puts JSON.generate(reference:"d7c7de92",now:"2026-03-02T16:00:00Z",rows:)
+puts JSON.generate(reference:"d7c7de92",board_reference:"a6f10a25",now:"2026-03-02T16:00:00Z",rows:)

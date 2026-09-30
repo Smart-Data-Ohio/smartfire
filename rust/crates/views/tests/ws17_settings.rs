@@ -1,6 +1,9 @@
 use askama::Template;
 use campfire_views::{AccountSummary, Platform, ViewContext, helpers as h, layouts, users};
 
+#[path = "../../../test-support/asset_goldens.rs"]
+mod asset_goldens;
+
 struct Tokens;
 impl h::request_forgery::AuthenticityTokens for Tokens {
     fn global(&self) -> String {
@@ -15,7 +18,7 @@ impl h::request_forgery::AuthenticityTokens for Tokens {
 fn ws17_owned_settings_html_matches_complete_rails_partials() {
     let golden: serde_json::Value =
         serde_json::from_str(include_str!("golden/ws17-settings.json")).unwrap();
-    let asset = |_: &str| golden["check_asset"].as_str().unwrap().into();
+    let asset = |name: &str| campfire_assets::asset_path(name);
     let signer = |_: &[&str]| String::new();
     let ctx = ViewContext {
         current_user: None,
@@ -74,8 +77,8 @@ fn ws17_owned_settings_html_matches_complete_rails_partials() {
             },
         ) {
             let expected = row["html"][name].as_str().unwrap();
-            if actual != expected {
-                let state = row["name"].as_str().unwrap();
+            let state = row["name"].as_str().unwrap();
+            if !asset_goldens::compare(&format!("{state}/{name}"), &actual, expected) {
                 let byte = actual
                     .bytes()
                     .zip(expected.bytes())
@@ -136,7 +139,7 @@ fn ws17_badge_and_ooo_notice_html_match_complete_rails_partials() {
 fn ws17_appearance_and_subscriptions_match_complete_rails_html() {
     let golden: serde_json::Value =
         serde_json::from_str(include_str!("golden/ws17-profile-ui.json")).unwrap();
-    let asset = |name: &str| golden["assets"][name].as_str().unwrap().into();
+    let asset = |name: &str| campfire_assets::asset_path(name);
     let signer = |_: &[&str]| String::new();
     let ctx = ViewContext {
         current_user: None,
@@ -196,7 +199,14 @@ fn ws17_appearance_and_subscriptions_match_complete_rails_html() {
                     )
                     .unwrap();
                 }
-                assert_eq!(actual, row["html"].as_str().unwrap(), "{}", d);
+                assert!(
+                    asset_goldens::compare(
+                        "ws17_appearance",
+                        &actual,
+                        row["html"].as_str().unwrap()
+                    ),
+                    "{d}"
+                );
             }
             let subscriptions = golden["subscriptions"]
                 .as_array()
@@ -223,7 +233,11 @@ fn ws17_appearance_and_subscriptions_match_complete_rails_html() {
                 )
                 .unwrap();
             }
-            assert_eq!(actual, golden["subscription_content"].as_str().unwrap());
+            assert!(asset_goldens::compare(
+                "ws17_subscriptions",
+                &actual,
+                golden["subscription_content"].as_str().unwrap()
+            ));
         },
     );
 }

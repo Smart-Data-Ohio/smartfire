@@ -1105,8 +1105,8 @@ pub fn truncate(text: &str, limit: usize, omission: &str) -> String {
 pub fn normalize_tag_names(names: &[String]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for name in names {
-        let name = name.trim().to_lowercase();
-        if !name.is_empty() && !out.contains(&name) {
+        let name = rails_compat::unicode::downcase(campfire_richtext::ruby::strip(name));
+        if !campfire_richtext::ruby::is_blank(&name) && !out.contains(&name) {
             out.push(name);
         }
     }

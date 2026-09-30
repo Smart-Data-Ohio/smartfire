@@ -198,3 +198,24 @@ fn ws17_subscription_user_agent_matches_rails_display() {
         assert_eq!(actual.platform, row["platform"].as_str().unwrap());
     }
 }
+
+#[tokio::test]
+async fn ws17_review_malformed_endpoints_reject_new_and_existing_http_writes() {
+    let app = app("142.250.123.45").await;
+    let mut browser = app.david();
+    for endpoint in ["https://fcm.googleapis.com/%zz", "https://fcm.googleapis.com/{invalid}", "https://fcm.googleapis.com/é"] {
+        let before = count(&app).await;
+        assert_eq!(browser.write(registration(endpoint)).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(count(&app).await, before);
+        let endpoint = endpoint.to_owned();
+        // A row from an old client must be revalidated before its touch, too.
+        let stored = app.db().write(move |tx| {
+            let id: i64 = tx.conn().query_row("INSERT INTO push_subscriptions(user_id,endpoint,p256dh_key,auth_key,created_at,updated_at) VALUES (?,?, '123','456',?,?) RETURNING id", rusqlite::params![DAVID, endpoint, tx.now(), tx.now()], |row| row.get(0))?;
+            campfire_db::PushSubscription::find(tx.conn(), id)
+        }).await.unwrap();
+        assert_eq!(browser.write(registration(stored.endpoint.as_deref().unwrap())).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+        let id = stored.id;
+        let after = app.db().read(move |c| campfire_db::PushSubscription::find(c, id)).await.unwrap();
+        assert_eq!(after, stored, "rejected legacy registration must not touch the row");
+    }
+}

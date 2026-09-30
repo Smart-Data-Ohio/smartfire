@@ -10,4 +10,4 @@ with (scratch/'profile-ui-generated.json').open('w') as out,(scratch/'profile-ui
 v=json.loads((scratch/'profile-ui-generated.json').read_text()); assert v['reference']=='d7c7de92'
 (root/'rust/crates/views/tests/golden/ws17-profile-ui.json').write_text(json.dumps(v,ensure_ascii=False)+'\n')
 (root/'rust/crates/views/src/users/profile_zones.json').write_text(json.dumps({k:v[k] for k in ['choices','choice_zones','mapping']},ensure_ascii=False)+'\n')
-print(f"Rails profile UI: {len(v['rows'])} complete appearance forms; 1 complete subscription content; {len(v['choices'])} zone choices")
+print(f"Rails profile UI: {len(v['rows'])} complete appearance forms; {len(v['rows'])} raw metadata snapshots; 1 complete subscription content; {len(v['choices'])} zone choices")

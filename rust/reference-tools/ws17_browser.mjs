@@ -61,7 +61,13 @@ try {
  await run(file,'button icons follow the manual theme, not the OS',async p=>{
   for(const [theme,os,nav,submit] of [['light','dark','none','invert(1)'],['dark','light','invert(1)','none']]) {
    sql('UPDATE users SET theme=? WHERE id=?',[theme,DAVID]);await p.emulateMedia({colorScheme:os});await visit(p,'/users/me/profile');assert.equal(await p.locator('html').getAttribute('data-theme'),theme);
-   assert.equal(await p.locator('#nav > .flex-item-justify-start a.btn img').evaluate(e=>getComputedStyle(e).filter),nav);assert.equal(await p.locator('form').filter({has:p.locator('#user_theme_dark')}).locator('.btn--reversed img').evaluate(e=>getComputedStyle(e).filter),submit);
+   // Media emulation can finish before the next style recalculation. Keep exact
+   // computed-filter assertions after bounded observation of the final CSS state.
+   const navIcon=p.locator('#nav > .flex-item-justify-start a.btn img');
+   const submitIcon=p.locator('form').filter({has:p.locator('#user_theme_dark')}).locator('.btn--reversed img');
+   await until(async()=>await navIcon.evaluate(e=>getComputedStyle(e).filter)===nav);
+   await until(async()=>await submitIcon.evaluate(e=>getComputedStyle(e).filter)===submit);
+   assert.equal(await navIcon.evaluate(e=>getComputedStyle(e).filter),nav);assert.equal(await submitIcon.evaluate(e=>getComputedStyle(e).filter),submit);
   }
  });
  await run(file,'the status form works at phone width',async p=>{await p.setViewportSize({width:390,height:844});await visit(p,'/users/me/profile');for(const id of ['user_presence_setting','user_custom_status_text','user_theme_system'])assert.equal(await p.locator('#'+id).isVisible(),true);});
