@@ -425,7 +425,7 @@ fn display_name(
         }
     }
 }
-fn invitations_enabled(conn: &Connection, user: i64) -> Result<bool> {
+pub(crate) fn invitations_enabled(conn: &Connection, user: i64) -> Result<bool> {
     let raw: Option<String> = conn
         .query_row_cached(
             "SELECT inbox_preferences FROM users WHERE id=?",

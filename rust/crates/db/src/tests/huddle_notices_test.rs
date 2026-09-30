@@ -5,7 +5,7 @@ use crate::{CachedStatements, Timestamp, Tx};
 use rusqlite::{params, types::Value as SqlValue};
 use serde_json::{Value, json};
 
-fn insert(tx: &Tx<'_>, table: &str, row: &Value) -> crate::Result<()> {
+pub(crate) fn insert(tx: &Tx<'_>, table: &str, row: &Value) -> crate::Result<()> {
     let row = row.as_object().unwrap();
     let columns = row
         .keys()
@@ -36,7 +36,7 @@ fn insert(tx: &Tx<'_>, table: &str, row: &Value) -> crate::Result<()> {
     Ok(())
 }
 
-fn load(tx: &Tx<'_>, input: &Value) -> crate::Result<()> {
+pub(crate) fn load(tx: &Tx<'_>, input: &Value) -> crate::Result<()> {
     tx.conn().execute_batch("DELETE FROM huddle_cleanups; DELETE FROM activity_items WHERE source_type='HuddleGrant'; DELETE FROM huddle_grants;")?;
     let mut room = input["room"].clone();
     room["creator_id"] = json!(crate::fixtures::identify("david"));

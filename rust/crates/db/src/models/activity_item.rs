@@ -124,15 +124,25 @@ impl ActivityItem {
 
     /// `broadcast_activity_change`: to active humans only, on `ActivityChannel`'s stream, after
     /// commit. (Huddle items' invitation payload is WS13's.)
-    fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {
+    pub(crate) fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {
         let human = User::find_by_id(tx.conn(), user_id)?.is_some_and(|user| user.is_active() && !user.is_bot());
         if human {
+            if crate::models::huddle_invitations::enqueue_item_ring(tx, id)? {
+                return Ok(());
+            }
             tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
                 stream: format!("user_{user_id}_activity"),
                 payload: serde_json::json!({ "activityItemId": id }),
             }));
         }
         Ok(())
+    }
+
+    /// `mark_handled!`: preserve an existing read timestamp when accepting a late invite.
+    pub fn mark_handled(&self, tx: &mut Tx<'_>) -> Result<Self> {
+        tx.conn().execute_cached("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),tx.now(),self.id])?;
+        Self::broadcast_change(tx,self.user_id,self.id)?;
+        Self::find(tx.conn(),self.id)
     }
 
     /// `has_many :activity_items, as: :source, dependent: :destroy`

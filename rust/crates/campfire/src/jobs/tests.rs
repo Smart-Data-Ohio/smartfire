@@ -58,7 +58,10 @@ async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
     let grant = app.db.write(|tx| {
         let session = campfire_db::Session::start(tx, DAVID, None, None)?;
         let membership = campfire_db::Membership::find_by_room_and_user(tx.conn(), DIRECT_DAVID_JASON, DAVID)?.unwrap();
-        let mut grant = HuddleGrant::issue(tx, session.id, membership.id, membership.room_id, &campfire_db::models::room_delete::HuddleConfig { api_secret: Some("ws13-fixture-value".into()), admin_configured: false })?;
+        // Set up a quiet grant directly: issuance now rings the recipient, which correctly
+        // suppresses the join notice tested here. The actual sighting and workers run below.
+        let id = tx.conn().query_row("INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,last_issued_at,created_at,updated_at) VALUES('ws13-worker-grant','ws13-worker-room',?,?,?,?,?,?,?) RETURNING id",rusqlite::params![session.id,DAVID,membership.id,membership.room_id,tx.now(),tx.now(),tx.now()],|r|r.get::<_,i64>(0))?;
+        let mut grant = HuddleGrant::find_by_id(tx.conn(),id)?.unwrap();
         grant.record_seen(tx)?;
         Ok(grant)
     }).await.unwrap();
@@ -80,6 +83,52 @@ async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
     // WS17 supplies Notifications::HuddlePushJob's handler; these retained intents authorize
     // no delivery until that handler applies the policy, membership and subscription gates.
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+}
+
+#[tokio::test]
+async fn huddle_issuance_rings_and_pushes_once_and_suppresses_the_join_notice() {
+    use crate::controllers::presenters::test_support::{TestApp,DAVID,JASON,DIRECT_DAVID_JASON};
+    use campfire_db::models::{huddle_grant::HuddleGrant,huddle_invitations::RingRequest,huddle_notices::PushRequest};
+    let Some(test)=TestApp::boot().await else { return; };
+    let app=test.booted.app.clone();
+    let grant=app.db.write(|tx| {
+        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
+        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
+        let mut grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})?;
+        grant.record_seen(tx)?;
+        Ok(grant)
+    }).await.unwrap();
+    let rows=wait_for(&app,"issuance invitation and ring requests",|rows| rows.iter().any(|j|j.class==PushRequest::CLASS && j.arguments["kind"]=="huddle") && rows.iter().any(|j|j.class==RingRequest::CLASS) && rows.iter().all(|j|j.class!="Huddle::JoinNoticeJob")).await;
+    assert_eq!(rows.iter().filter(|j|j.class==RingRequest::CLASS).count(),1);
+    let ring=rows.iter().find(|j|j.class==RingRequest::CLASS).unwrap();
+    assert_eq!(ring.arguments["recipient_id"],JASON);
+    assert_eq!(ring.arguments["sender_id"],DAVID);
+    assert_eq!(ring.arguments["invitation"]["roomId"],DIRECT_DAVID_JASON);
+    assert!(ring.arguments["invitation"].get("silent").is_none(),"a ring request invented a WS17 policy decision");
+    assert!(!rows.iter().any(|j|j.class==PushRequest::CLASS && j.arguments["kind"]=="huddle_join"));
+    app.db.write(move |tx|HuddleGrant::issue(tx,grant.session_id,grant.membership_id,grant.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false}).map(drop)).await.unwrap();
+    assert_eq!(jobs(&app).iter().filter(|j|j.class==RingRequest::CLASS).count(),1,"a reuse inside the dedupe window rang again");
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+}
+
+#[tokio::test]
+async fn huddle_issuance_enqueue_failure_rolls_back_the_grant_and_invitation() {
+    use crate::controllers::presenters::test_support::{TestApp,DAVID,DIRECT_DAVID_JASON};
+    use campfire_db::models::huddle_grant::HuddleGrant;
+    let Some(test)=TestApp::boot().await else {return;};
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    let app=test.booted.app;
+    let (session,member)=app.db.write(|tx| {
+        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
+        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
+        tx.conn().execute_batch("CREATE TRIGGER ws13_reject_ring BEFORE INSERT ON background_jobs WHEN NEW.job_class='Notifications::HuddleRingJob' BEGIN SELECT RAISE(ABORT,'ws13 reject ring intent'); END")?;
+        Ok((session.id,member.id))
+    }).await.unwrap();
+    let failed=app.db.write(move |tx|HuddleGrant::issue(tx,session,member,DIRECT_DAVID_JASON,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})).await;
+    assert!(failed.is_err());
+    assert_eq!(app.db.read(move |conn|Ok(conn.query_row("SELECT COUNT(*) FROM huddle_grants WHERE session_id=?",[session],|r|r.get::<_,i64>(0))?)).await.unwrap(),0);
+    assert_eq!(app.db.read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='HuddleGrant'",[],|r|r.get::<_,i64>(0))?)).await.unwrap(),0);
+    assert!(!jobs(&app).iter().any(|j|j.class=="Notifications::HuddleRingJob" || j.class=="Huddle::PushInvitationJob"));
 }
 
 #[tokio::test]

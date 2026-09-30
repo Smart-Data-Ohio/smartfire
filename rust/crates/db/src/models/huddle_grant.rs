@@ -1,6 +1,5 @@
 //! Authorization and liveness from `app/models/huddle_grant.rb`.
-//! Presence and leave/call-ended effects are described after commit; post-issuance
-//! invitation fan-out and stream render effects remain subsequent WS13 slices.
+//! Presence, invitations and leave/call-ended effects are described after commit.
 use jiff::SignedDuration;
 use rusqlite::{OptionalExtension, Row, params};
 use serde::{Deserialize, Serialize};
@@ -114,8 +113,8 @@ impl HuddleGrant {
         }
         errors.into_result()
     }
-    /// Re-read all coordinates under SQLite's immediate write transaction. Presence is
-    /// published after commit; invitation clearing and ringing remain a separate lifecycle seam.
+    /// Re-read all coordinates under SQLite's immediate write transaction. Invitation
+    /// writes and their durable policy requests commit atomically with issuance.
     pub fn issue(
         tx: &mut Tx<'_>,
         session_id: i64,
@@ -133,10 +132,10 @@ impl HuddleGrant {
             {
                 continue;
             }
-            if let Ok(grant) = &result {
-                crate::models::huddle_effects::broadcast_presence(tx, grant.room_id);
-            }
-            return result;
+            let (grant, previous_issue) = result?;
+            crate::models::huddle_invitations::after_issued(tx, &grant, previous_issue)?;
+            crate::models::huddle_effects::broadcast_presence(tx, grant.room_id);
+            return Ok(grant);
         }
         unreachable!()
     }
@@ -147,7 +146,7 @@ impl HuddleGrant {
         membership_id: i64,
         expected_room_id: i64,
         config: &HuddleConfig,
-    ) -> Result<Self> {
+    ) -> Result<(Self, Option<Timestamp>)> {
         let candidate: Option<(i64, i64, Option<String>, bool)> = tx.conn().query_row_cached(
             "SELECT u.id,r.id,CASE WHEN r.type='Rooms::Stage' THEN m.stage_role END,m.server_muted_at IS NOT NULL FROM sessions s JOIN users u ON u.id=s.user_id AND u.status=0 AND u.role!=2 JOIN memberships m ON m.id=? AND m.room_id=? AND m.user_id=u.id JOIN rooms r ON r.id=m.room_id AND r.deleted_at IS NULL WHERE s.id=?",
             params![membership_id, expected_room_id, session_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
@@ -179,7 +178,7 @@ impl HuddleGrant {
                     "UPDATE huddle_grants SET last_issued_at=?,updated_at=? WHERE id=?",
                     params![now, now, grant.id],
                 )?;
-                return Ok(Self::find_by_id(tx.conn(), grant.id)?.unwrap());
+                return Ok((Self::find_by_id(tx.conn(), grant.id)?.unwrap(), grant.last_issued_at));
             }
             grant.revoke(tx, true, config)?;
         }
@@ -195,7 +194,7 @@ impl HuddleGrant {
         let room_name = rails_compat::jwt::livekit::room_name(secret, room_id);
         let now = tx.now();
         let id = tx.conn().query_row_cached("INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,stage_role,server_muted,last_issued_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING id", params![identity, room_name, session_id, user_id, membership_id, room_id, stage_role, server_muted, now, now, now], |r| r.get(0))?;
-        Ok(Self::find_by_id(tx.conn(), id)?.unwrap())
+        Ok((Self::find_by_id(tx.conn(), id)?.unwrap(), None))
     }
     pub fn authorized(&self, conn: &Connection) -> Result<bool> {
         if self.revoked() {
