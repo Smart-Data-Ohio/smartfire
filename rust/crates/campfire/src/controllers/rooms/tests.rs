@@ -148,7 +148,7 @@ async fn direct_rooms_are_found_or_created() {
     assert_eq!(david.get(&format!("/rooms/directs/{room_id}/edit")).await.status, StatusCode::OK);
     let destroyed = david.write(Req::new(Method::DELETE, &format!("/rooms/directs/{room_id}"))).await;
     assert_eq!(destroyed.location(), Some("http://campfire.test/"));
-    assert!(app.db().read(move |conn| Room::find_by_id(conn, room_id)).await.unwrap().is_none());
+    assert!(app.db().read(move |conn| Ok(Room::find(conn, room_id)?.deleted_at.is_some())).await.unwrap());
 }
 
 #[tokio::test]
@@ -194,7 +194,7 @@ async fn rooms_are_destroyed_by_administrators() {
     let mut david = app.david();
     let reply = david.write(Req::new(Method::DELETE, &format!("/rooms/{QUIET_CORNER}"))).await;
     assert_eq!(reply.location(), Some("http://campfire.test/"));
-    assert!(app.db().read(|conn| Room::find_by_id(conn, QUIET_CORNER)).await.unwrap().is_none());
+    assert!(app.db().read(|conn| Ok(Room::find(conn, QUIET_CORNER)?.deleted_at.is_some())).await.unwrap());
 }
 
 #[tokio::test]

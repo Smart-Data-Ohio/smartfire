@@ -73,7 +73,11 @@ pub async fn edit(c: &mut Ctx) -> Result {
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::Directs).await?;
-    // ensure_can_administer: every member of a direct room can.
+    let id = room.id;
+    let group = c.app().db.read(move |conn| Room::find(conn, id)?.direct_group_capable(conn)).await.map_err(db_error)?;
+    if group && !require_current_user(c)?.is_administrator() {
+        return campfire_kit::halt(crate::concerns::head(StatusCode::FORBIDDEN));
+    }
     destroy_room(c, room).await
 }
 

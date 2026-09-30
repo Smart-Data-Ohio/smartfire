@@ -1,0 +1,8 @@
+{
+  "app/controllers/rooms_controller.rb": "53c7fd8b0619e478425d492f1be3abbc11affafa1b992dea09f8cd0b413c94eb",
+  "app/controllers/rooms/directs_controller.rb": "46f1d745798c0a9003915c3a6c0b265d9f5079cad43812816b940a7decdcc460",
+  "app/controllers/rooms/opens_controller.rb": "932e1cc5ab97663253f5355cd2944f69779804a549d2ec14c62806c7f2717d0c",
+  "app/controllers/rooms/closeds_controller.rb": "de11cf1268a4f84cb9d7d6b4dc972b4d6e27708404034ed4b6f133ec263973da",
+  "app/controllers/concerns/room_scoped.rb": "ee631c4688da167272e7866816533d239aedba124daeb063b088b31c60cc3e9d",
+  "app/models/user/role.rb": "dd05545b867867cea94da618fde2424b3fadac87e0749af45017ef3de3957f41"
+}

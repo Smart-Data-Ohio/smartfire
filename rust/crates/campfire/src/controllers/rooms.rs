@@ -37,7 +37,7 @@ impl Scope {
     fn includes(self, room: &Room) -> bool {
         match self {
             Scope::All => true,
-            Scope::WithoutDirects => room.room_type != RoomType::Direct,
+            Scope::WithoutDirects => matches!(room.room_type, RoomType::Open | RoomType::Closed),
             Scope::Directs => room.room_type == RoomType::Direct,
         }
     }
@@ -70,7 +70,7 @@ pub async fn show(c: &mut Ctx) -> Result {
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
-    ensure_can_administer(c, &room)?;
+    ensure_can_delete(c, &room).await?;
     destroy_room(c, room).await
 }
 
@@ -82,11 +82,21 @@ pub async fn destroy_without_room(c: &mut Ctx) -> Result {
 }
 
 pub(crate) async fn destroy_room(c: &mut Ctx, room: Room) -> Result {
+    let context = audit_context(c)?;
     let destroyed = room.clone();
-    c.app().db.write(move |tx| destroyed.destroy(tx)).await.map_err(db_error)?;
-    // broadcast_remove_to :rooms, target: [ @room, :list ]
+    c.app().db.write(move |tx| {
+        destroyed.begin_destroy(tx)?;
+        record_room_audit(tx, &destroyed, "room.destroy", serde_json::json!({"name": destroyed.name}), &context)
+    }).await.map_err(db_error)?;
     c.app().broadcasts.room_remove(&room);
-    redirect_to_root(c)
+    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
+        f if *f == campfire_kit::format::JSON => c.json(StatusCode::OK, &serde_json::json!({"deleted": true, "room_id": room.id})),
+        _ => {
+            let root = c.url_for(&campfire_routes::root());
+            let notice = room.name.as_deref().filter(|name| !campfire_richtext::ruby::is_blank(name)).map(|name| format!("Deleted #{name}"));
+            c.redirect_to_with(&root, Redirect { notice, ..Redirect::default() })
+        }
+    }
 }
 
 // --- Shared before-actions ----------------------------------------------------------------------
@@ -119,6 +129,33 @@ pub fn ensure_can_administer(c: &mut Ctx, room: &Room) -> Result<()> {
     Ok(())
 }
 
+/// `User#can_delete_room?`: shared group history may only be deleted by an administrator.
+pub(crate) async fn ensure_can_delete(c: &mut Ctx, room: &Room) -> Result<()> {
+    let id = room.id;
+    let group = c.app().db.read(move |conn| Room::find(conn, id)?.direct_group_capable(conn)).await.map_err(db_error)?;
+    if group {
+        if !require_current_user(c)?.is_administrator() { return halt(concerns::head(StatusCode::FORBIDDEN)); }
+        Ok(())
+    } else {
+        ensure_can_administer(c, room)
+    }
+}
+
+pub(crate) fn audit_context(c: &Ctx) -> Result<campfire_db::models::audit_log::Context> {
+    Ok(campfire_db::models::audit_log::Context {
+        actor: Some(require_current_user(c)?.into()),
+        ip_address: Some(c.request.remote_ip()?.to_string()),
+        user_agent: c.request.user_agent().map(str::to_string),
+    })
+}
+
+pub(crate) fn record_room_audit(tx: &campfire_db::Tx<'_>, room: &Room, action: &str, changes: serde_json::Value, context: &campfire_db::models::audit_log::Context) -> campfire_db::Result<()> {
+    campfire_db::models::audit_log::AuditLog::record(tx, campfire_db::models::audit_log::NewAuditLog {
+        action: action.into(), target: Some(room.into()), changes: Some(changes), ..Default::default()
+    }, context)?;
+    Ok(())
+}
+
 /// `ensure_permission_to_create_rooms`
 pub async fn ensure_permission_to_create_rooms(c: &mut Ctx) -> Result<()> {
     let administrator = require_current_user(c)?.is_administrator();
@@ -131,11 +168,6 @@ pub async fn ensure_permission_to_create_rooms(c: &mut Ctx) -> Result<()> {
 }
 
 // --- Helpers ------------------------------------------------------------------------------------
-
-pub(crate) fn redirect_to_root(c: &mut Ctx) -> Result {
-    let root = c.url_for(&campfire_routes::root());
-    c.redirect_to(&root)
-}
 
 pub(crate) fn redirect_to_room(c: &mut Ctx, room_id: i64) -> Result {
     let url = c.url_for(&campfire_routes::room(room_id));
@@ -224,3 +256,6 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod parity_tests;

@@ -709,6 +709,7 @@ pub async fn set_room(c: &mut Ctx) -> Result<(Membership, Room)> {
         .read(move |conn| {
             let Some(membership) = Membership::find_by_room_and_user(conn, room_id, user_id)? else { return Ok(None) };
             let room = membership.room(conn)?;
+            if room.deleted_at.is_some() { return Ok(None); }
             Ok(Some((membership, room)))
         })
         .await

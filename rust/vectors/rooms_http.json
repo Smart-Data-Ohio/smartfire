@@ -1,0 +1,54 @@
+{
+  "reference": "d7c7de92",
+  "cases": {
+    "group_delete_base": {
+      "status": 403
+    },
+    "group_delete_direct": {
+      "status": 403
+    },
+    "Rooms::Voice_opens": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Voice_closeds": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Stage_opens": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Stage_closeds": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Board_opens": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "Rooms::Board_closeds": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    },
+    "deleted_involvement": {
+      "status": 404,
+      "json": {
+        "status": 404,
+        "error": "Not Found"
+      }
+    },
+    "destroy_json": {
+      "status": 200,
+      "json": {
+        "deleted": true,
+        "room_id": 486777696
+      }
+    },
+    "destroy_rows": {
+      "deleted": true,
+      "memberships": 0,
+      "audit_action": "room.destroy"
+    }
+  }
+}
