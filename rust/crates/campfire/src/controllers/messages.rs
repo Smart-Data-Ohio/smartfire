@@ -14,6 +14,8 @@ mod root_tests;
 mod paging_tests;
 #[cfg(test)]
 mod collection_tests;
+#[cfg(test)]
+mod room_list_tests;
 
 use askama::Template;
 use campfire_db::{Job as _, Message, NewMessage, Role, Room, Status, Timeline};

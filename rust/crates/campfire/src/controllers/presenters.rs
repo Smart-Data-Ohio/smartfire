@@ -8,6 +8,7 @@ pub mod page;
 pub mod pagination;
 pub mod rich_text;
 mod message_cache;
+mod room_list;
 pub mod view_context;
 #[cfg(test)]
 pub mod test_support;

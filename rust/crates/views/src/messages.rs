@@ -687,6 +687,32 @@ pub struct Index<'a> {
     pub messages: &'a [MessageItem],
 }
 
+/// The list slot in rooms/show, including its exact indentation. The divider is per viewer
+/// and deliberately sits outside every cached message fragment.
+#[derive(Template)]
+#[template(path = "messages/room_index.html")]
+pub struct RoomIndex<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub messages: &'a [MessageItem],
+    pub unread_index: Option<usize>,
+    pub unread_count: i64,
+}
+
+impl RoomIndex<'_> {
+    fn portion(&self, start: usize, end: usize) -> h::Html {
+        h::raw(self.messages[start..end].iter().map(|message| cached_message_item(self.ctx, message).to_string()).collect::<String>())
+    }
+    fn divider(&self) -> h::Html {
+        h::raw(UnreadDivider { unread_count: self.unread_count }.render().expect("unread divider renders"))
+    }
+}
+
+#[derive(Template)]
+#[template(path = "messages/_unread_divider.html")]
+pub struct UnreadDivider {
+    pub unread_count: i64,
+}
+
 /// `messages/show`: the message partial, inside the application layout.
 #[derive(Template)]
 #[template(path = "messages/show.html")]
