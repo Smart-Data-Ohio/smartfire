@@ -21,13 +21,18 @@ pub struct Location<'n> {
     url: Option<String>,
     parsed_url: Option<Uri>,
     resolved_ip: Option<Option<IpAddr>>,
+    options: fetch::FetchOptions,
 }
 
 impl<'n> Location<'n> {
     /// `Location.new(url)`: `parsed_url` is `URI.parse(url) rescue nil`.
     pub fn new(net: &'n Network, url: Option<&str>) -> Self {
+        Self::new_with_options(net, url, fetch::FetchOptions::default())
+    }
+
+    pub fn new_with_options(net: &'n Network, url: Option<&str>, options: fetch::FetchOptions) -> Self {
         let parsed_url = url.and_then(|url| uri::parse(url).ok());
-        Self { net, url: url.map(str::to_string), parsed_url, resolved_ip: None }
+        Self { net, url: url.map(str::to_string), parsed_url, resolved_ip: None, options }
     }
 
     /// `valid?`: both validations run, so the host is resolved even for a non-http URL.
@@ -60,7 +65,12 @@ impl<'n> Location<'n> {
         }
         let url = self.parsed_url.clone()?;
         let ip = self.resolved_ip().await?;
-        match fetch::fetch_document(self.net, &url, ip).await {
+        let fetched = if self.options.deadline.is_none() && self.options.max_redirects == fetch::MAX_REDIRECTS {
+            fetch::fetch_document(self.net, &url, ip).await
+        } else {
+            fetch::fetch_document_with(self.net, &url, ip, self.options).await
+        };
+        match fetched {
             Ok(html) => html,
             Err(error) => {
                 tracing::warn!("Failed to fetch {} at {ip} ({error})", url.to_s());
@@ -76,7 +86,12 @@ impl<'n> Location<'n> {
         }
         let url = self.parsed_url.clone()?;
         let ip = self.resolved_ip().await?;
-        match fetch::fetch_content_type(self.net, &url, ip).await {
+        let fetched = if self.options.deadline.is_none() && self.options.max_redirects == fetch::MAX_REDIRECTS {
+            fetch::fetch_content_type(self.net, &url, ip).await
+        } else {
+            fetch::fetch_content_type_with(self.net, &url, ip, self.options).await
+        };
+        match fetched {
             Ok(content_type) => content_type,
             Err(error) => {
                 tracing::warn!("Failed to fetch {} at {ip} ({error})", url.to_s());

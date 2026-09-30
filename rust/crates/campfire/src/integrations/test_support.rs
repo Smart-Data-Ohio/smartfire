@@ -140,11 +140,12 @@ impl Received {
 pub struct FakeServer {
     pub addr: SocketAddr,
     pub received: Arc<Mutex<Vec<Received>>>,
+    listener_task: tokio::task::JoinHandle<()>,
 }
 
 impl FakeServer {
     pub async fn start(routes: Vec<Route>) -> Self {
-        Self::start_with(routes, None).await
+        Self::start_with(routes, None, false).await
     }
 
     pub async fn start_tls(routes: Vec<Route>) -> Self {
@@ -159,18 +160,24 @@ impl FakeServer {
             .with_no_client_auth()
             .with_single_cert(certs, key)
             .unwrap();
-        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config)))).await
+        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), false).await
     }
 
-    async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>) -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    pub async fn start_ws15e(routes: Vec<Route>) -> Self {
+        Self::start_with(routes, None, true).await
+    }
+
+    async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, ws15e: bool) -> Self {
+        let listener = if ws15e { ws15e_listener().await } else { TcpListener::bind("127.0.0.1:0").await.unwrap() };
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
         let log = received.clone();
-        tokio::spawn(async move {
+        let listener_task = tokio::spawn(async move {
             loop {
-                let Ok((stream, _)) = listener.accept().await else { break };
+                let Ok((stream, _)) = listener.accept().await else {
+                    break;
+                };
                 let (routes, log, tls) = (routes.clone(), log.clone(), tls.clone());
                 tokio::spawn(async move {
                     match tls {
@@ -186,12 +193,31 @@ impl FakeServer {
                 });
             }
         });
-        Self { addr, received }
+        Self { addr, received, listener_task }
     }
 
     pub fn received(&self) -> Vec<Received> {
         self.received.lock().unwrap().clone()
     }
+}
+
+impl Drop for FakeServer {
+    fn drop(&mut self) {
+        self.listener_task.abort();
+    }
+}
+
+pub async fn ws15e_listener() -> TcpListener {
+    for port in 51550..=51594 {
+        if let Ok(listener) = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
+            return listener;
+        }
+    }
+    panic!("WS15e test ports are all in use");
+}
+
+pub async fn ws15e_trickling_server(head: &'static str) -> SocketAddr {
+    trickling_server_with(ws15e_listener().await, head).await
 }
 
 async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], log: &Mutex<Vec<Received>>) -> io::Result<()> {
@@ -219,10 +245,7 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
     log.lock().unwrap().push(Received { method: method.clone(), target: target.clone(), headers, body });
 
     let not_found = Route::new(&method, &host, &target, 404).header("Content-Type", "text/plain").body("not found");
-    let route = routes
-        .iter()
-        .find(|r| r.method == method && (r.host == host || r.host == "*") && r.path == target)
-        .unwrap_or(&not_found);
+    let route = routes.iter().find(|r| r.method == method && (r.host == host || r.host == "*") && r.path == target).unwrap_or(&not_found);
     tokio::time::sleep(route.delay).await;
     let mut body = route.body.clone();
     if route.gzip {
@@ -266,6 +289,10 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
 /// the client hangs up.
 pub async fn trickling_server(head: &'static str) -> SocketAddr {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    trickling_server_with(listener, head).await
+}
+
+async fn trickling_server_with(listener: TcpListener, head: &'static str) -> SocketAddr {
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
         while let Ok((mut stream, _)) = listener.accept().await {

@@ -10,9 +10,9 @@
 
 mod document;
 mod entities;
-mod fetch;
+pub mod fetch;
 mod html;
-mod location;
+pub mod location;
 mod metadata;
 
 use std::sync::{Arc, LazyLock};
