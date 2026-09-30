@@ -304,6 +304,100 @@
       ]
     },
     {
+      "rails_file": "test/jobs/agent/delivery_job_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_delivery_cases_test.rs",
+      "cases": [
+        {
+          "rails": "mentioning an agent enqueues delivery and performing marks it delivered",
+          "rust": "ws11_delivery_case_mentioning_an_agent_enqueues_delivery_and_performing_marks_it_delivered"
+        },
+        {
+          "rails": "delivery without a webhook still marks the row delivered",
+          "rust": "ws11_delivery_case_delivery_without_a_webhook_still_marks_the_row_delivered"
+        },
+        {
+          "rails": "revoked at perform time writes a suppression row",
+          "rust": "ws11_delivery_case_revoked_at_perform_time_writes_a_suppression_row"
+        },
+        {
+          "rails": "membership removed before delivery writes a suppression row",
+          "rust": "ws11_delivery_case_membership_removed_before_delivery_writes_a_suppression_row"
+        },
+        {
+          "rails": "a delivery claimed inside a rolled-back transaction enqueues no webhook",
+          "rust": "ws11_delivery_case_a_delivery_claimed_inside_a_rolled_back_transaction_enqueues_no_webhook"
+        },
+        {
+          "rails": "room soft-deleted before delivery suppresses without a new suppression row",
+          "rust": "ws11_delivery_case_room_soft_deleted_before_delivery_suppresses_without_a_new_suppression_row"
+        },
+        {
+          "rails": "message deleted before delivery suppresses without crashing or posting",
+          "rust": "ws11_delivery_case_message_deleted_before_delivery_suppresses_without_crashing_or_posting"
+        },
+        {
+          "rails": "rate limit drops the 21st delivery with a suppression row and no job",
+          "rust": "ws11_delivery_case_rate_limit_drops_the_21st_delivery_with_a_suppression_row_and_no_job"
+        },
+        {
+          "rails": "rate limit is per agent per room",
+          "rust": "ws11_delivery_case_rate_limit_is_per_agent_per_room"
+        },
+        {
+          "rails": "reply to an agent's message creates a reply event",
+          "rust": "ws11_delivery_case_reply_to_an_agent_s_message_creates_a_reply_event"
+        },
+        {
+          "rails": "a message that both mentions and replies records a single reply event",
+          "rust": "ws11_delivery_case_a_message_that_both_mentions_and_replies_records_a_single_reply_event"
+        },
+        {
+          "rails": "direct room messages create direct_message events",
+          "rust": "ws11_delivery_case_direct_room_messages_create_direct_message_events"
+        },
+        {
+          "rails": "agent posting writes a posted row",
+          "rust": "ws11_delivery_case_agent_posting_writes_a_posted_row"
+        },
+        {
+          "rails": "agent never receives its own messages",
+          "rust": "ws11_delivery_case_agent_never_receives_its_own_messages"
+        },
+        {
+          "rails": "bot without an agent row receives no events",
+          "rust": "ws11_delivery_case_bot_without_an_agent_row_receives_no_events"
+        },
+        {
+          "rails": "hop limit suppresses a chain that reaches hop 3",
+          "rust": "ws11_delivery_case_hop_limit_suppresses_a_chain_that_reaches_hop_3"
+        },
+        {
+          "rails": "replying to an old low-hop message does not reset the chain",
+          "rust": "ws11_delivery_case_replying_to_an_old_low_hop_message_does_not_reset_the_chain"
+        },
+        {
+          "rails": "suppression rows are never hop triggers",
+          "rust": "ws11_delivery_case_suppression_rows_are_never_hop_triggers"
+        },
+        {
+          "rails": "pending rows are hop triggers",
+          "rust": "ws11_delivery_case_pending_rows_are_hop_triggers"
+        },
+        {
+          "rails": "deliveries older than five minutes are not hop triggers",
+          "rust": "ws11_delivery_case_deliveries_older_than_five_minutes_are_not_hop_triggers"
+        },
+        {
+          "rails": "bridging rooms carries the hop chain instead of resetting it",
+          "rust": "ws11_delivery_case_bridging_rooms_carries_the_hop_chain_instead_of_resetting_it"
+        },
+        {
+          "rails": "an agent's own posts are not hop triggers",
+          "rust": "ws11_delivery_case_an_agent_s_own_posts_are_not_hop_triggers"
+        }
+      ]
+    },
+    {
       "rails_file": "test/lib/restricted_http/private_network_guard_test.rb",
       "rust_file": "rust/crates/campfire/src/integrations/net/guard_case_tests.rs",
       "cases": [
