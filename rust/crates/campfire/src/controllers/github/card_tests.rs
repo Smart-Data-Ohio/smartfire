@@ -240,11 +240,36 @@ async fn review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure() 
         let jobs:i64=fresh.app.db.read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get(0))?)).await.unwrap();
         assert_eq!(jobs,1,"stale rendered PR must enqueue once as Rails does");
     }
-    // A separate uncached message renders even if the durable queue cannot accept a fetch.
+    // An uncached version of the message renders even if the durable queue cannot accept a fetch.
 
     fresh.app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL; UPDATE messages SET updated_at='2026-01-01 12:01:00' WHERE id=818; CREATE TRIGGER reject_render_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;Ok(())}).await.unwrap();
     let response=fresh.router.clone().oneshot(Request::builder().uri("/rooms/815").header("Host","example.org").header("Cookie",&fresh.cookie).body(Body::empty()).unwrap()).await.unwrap();
     assert_eq!(response.status(),axum::http::StatusCode::OK);
-    fresh.app.db.read(|conn|{let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;assert!(claim.is_none());Ok(())}).await.unwrap();
+    let html=String::from_utf8(axum::body::to_bytes(response.into_body(),1024*1024).await.unwrap().to_vec()).unwrap();
+    assert!(html.contains("Secret title"));
+    fresh.app.db.read(|conn|{let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;assert!(claim.is_none());assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
+    assert!(fresh.server.received().is_empty());
+}
+
+#[tokio::test(flavor="multi_thread",worker_threads=4)]
+async fn review_refreshes_use_real_message_broadcast_and_refresh_callers() {
+    let fresh=Fresh::new(&json!({"private":false})).await;
+    fresh.app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetched_at=NULL,fetch_requested_at=NULL")?;Ok(())}).await.unwrap();
+    let requests=futures_util::future::join_all((0..12).map(|i| {
+        let f=&fresh;
+        async move {
+            let path=if i%2==0 {"/rooms/815/messages/818"} else {"/rooms/815/refresh"};
+            let accept=if i%2==0 {"text/html"} else {"text/vnd.turbo-stream.html"};
+            let response=f.router.clone().oneshot(Request::builder().uri(path).header("Host","example.org").header("Accept",accept).header("Cookie",&f.cookie).body(Body::empty()).unwrap()).await.unwrap();
+            assert_eq!(response.status().as_u16(),200,"{path}");
+            let bytes=axum::body::to_bytes(response.into_body(),1024*1024).await.unwrap();assert!(String::from_utf8_lossy(&bytes).contains("Secret title"),"{path}");
+        }
+    }));requests.await;
+    fresh.app.db.read(|conn|{assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
+    // The real HTTP update renders through broadcast_replace even with unchanged reference text.
+    fresh.app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL")?;Ok(())}).await.unwrap();
+    let (status,_,_)=super::test_support::request(&fresh,"PATCH","/rooms/815/messages/818",json!({"message":{"embeds_suppressed":true}}),json!({})).await;
+    assert_eq!(status,302);
+    fresh.app.db.read(|conn|{assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
     assert!(fresh.server.received().is_empty());
 }

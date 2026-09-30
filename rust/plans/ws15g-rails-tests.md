@@ -1,12 +1,12 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 338 mapped to Rust assertions; 88 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 340 mapped to Rust assertions; 86 explicitly deferred.
 
-These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; profile/bot view cases remain deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Remaining room-page/controller/system parity, helper cache cases, remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; profile/bot view cases remain deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Remaining room-page/controller/system parity and helper cache cases remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 | Rails file | Cases passing grouped assertions | Deferred |
 |---|---:|---:|
-| `test/helpers/github_pull_requests_helper_test.rb` | 1/20 | 19 |
+| `test/helpers/github_pull_requests_helper_test.rb` | 3/20 | 17 |
 | `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
 | `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
@@ -291,8 +291,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | cache key changes when a referenced X post is fetched | Deferred; WS15g continuation | — |
 | cache key changes when a referenced link embed is fetched | Deferred; WS15g continuation | — |
 | cache key changes when a referenced event is updated | Deferred; WS15g continuation | — |
-| pr cards still render when the queue is down | Deferred; WS15g continuation | — |
-| a failed pr enqueue releases its fetch claim | Deferred; WS15g continuation | — |
+| pr cards still render when the queue is down | Mapped to grouped Rust assertions; WS15g | `review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure` |
+| a failed pr enqueue releases its fetch claim | Mapped to grouped Rust assertions; WS15g | `review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure` |
 
 ## `test/integration/github_pr_cards_test.rb` (16 tests)
 

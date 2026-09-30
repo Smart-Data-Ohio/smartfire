@@ -242,6 +242,24 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
         .unwrap();
     let (_, _, created) = post(&fresh, path, other, "fixture-agent-secret").await;
     let approval_id = created["id"].as_i64().unwrap();
+    fresh.app.db.write(|tx| {tx.conn().execute_batch("CREATE TRIGGER reject_approval_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::PerformAgentActionJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;Ok(())}).await.unwrap();
+    let rejected = fresh
+        .app
+        .db
+        .write(move |tx| {
+            let mut approval = AgentApproval::find(tx.conn(), approval_id)?.unwrap();
+            let by = User::find(tx.conn(), 811)?;
+            approval.decide_authorized(tx, "approved", &by, None)?;
+            Ok(())
+        })
+        .await;
+    assert!(rejected.is_err());
+    fresh.app.db.write(move|tx| {
+        assert_eq!(AgentApproval::find(tx.conn(),approval_id)?.unwrap().status,"pending");
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",[approval_id],|r|r.get::<_,i64>(0))?,0);
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::PerformAgentActionJob'",[],|r|r.get::<_,i64>(0))?,0);
+        tx.conn().execute_batch("DROP TRIGGER reject_approval_job")?;Ok(())
+    }).await.unwrap();
     fresh.app.db.write(move|tx|{let mut approval=AgentApproval::find(tx.conn(),approval_id)?.unwrap();let by=User::find(tx.conn(),811)?;assert!(approval.decide_authorized(tx,"approved",&by,None)?.eq(&campfire_db::models::agent_approval::ApprovalDecision::Applied));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::PerformAgentActionJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
     let registry = crate::jobs::registry();
     let config = crate::jobs::runner_config(&fresh.app.config);
