@@ -31,3 +31,5 @@ pub use time::{Clock, SystemClock, TestClock, Timestamp};
 
 #[cfg(test)]
 mod tests;
+
+pub mod slash_commands;

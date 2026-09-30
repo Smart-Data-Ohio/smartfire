@@ -132,3 +132,5 @@ pub const BENDER_TOKEN_DIGEST: &str = "eca7c1486ccaf098cc637f7f8e48cad465ac9f14a
 pub fn id(label: &str) -> i64 {
     identify(label)
 }
+
+mod slash_commands_test;
