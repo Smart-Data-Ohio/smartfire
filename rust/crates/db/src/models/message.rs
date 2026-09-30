@@ -839,6 +839,9 @@ impl Message {
         if let Some(attachment) =
             Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
         {
+            if Some(attachment.blob_id) == blob_id {
+                return Ok(());
+            }
             attachment.delete(tx)?;
             tx.emit_after_commit(Event::PurgeBlob {
                 blob_id: attachment.blob_id,
