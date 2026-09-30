@@ -1,0 +1,21 @@
+{
+  "reference": "d7c7de92",
+  "max_retries": 1,
+  "cases": [
+    {
+      "method": "GET",
+      "requests": 2,
+      "value": {}
+    },
+    {
+      "method": "DELETE",
+      "requests": 2,
+      "value": true
+    },
+    {
+      "method": "POST",
+      "requests": 1,
+      "error": "Could not reach Fizzy (Eof Error)"
+    }
+  ]
+}

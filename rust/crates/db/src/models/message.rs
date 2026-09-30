@@ -462,7 +462,7 @@ impl Message {
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
             crate::models::message_reference::sync(tx, &message)?;
-            message.sync_integration_references(tx, true)?;
+            message.sync_external_references(tx, true)?;
             message.push_later_in_conversation(tx);
         }
         if message.thread_id.is_some() {
@@ -474,6 +474,17 @@ impl Message {
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)
+    }
+
+    /// Network-card owners plug into the real create/edit callbacks through the app sink.
+    /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
+    /// must not warm previews. Import callers pass false to retain DB references without fetches.
+    pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
+        for sync in tx.env().message_reference_syncs.clone() {
+            sync(tx, self, enqueue)?;
+        }
+        let sink = tx.env().sink.clone();
+        sink.sync_message_references(tx, self, enqueue)
     }
 
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
@@ -654,7 +665,9 @@ impl Message {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
             }
         }
-        self.touch(tx)
+        self.touch(tx)?;
+        if !self.streaming { self.sync_external_references(tx, true)?; }
+        Ok(())
     }
 
     /// The edit endpoints' save (`MessagesController#update`,
@@ -799,20 +812,15 @@ impl Message {
             self.update_in_index(tx)?;
             if references_changed {
                 crate::models::message_reference::sync(tx, self)?;
-                self.sync_integration_references(tx, true)?;
+                self.sync_external_references(tx, true)?;
             }
         }
         Ok(())
     }
 
-    /// Reference portion of Rails' `sync_all_references`, also called by normal saves.
-    /// Active stream finalization calls this after its winning claim; quiet finalization
-    /// skips it. Importers pass false to keep only the database reference rows.
+    /// Compatibility entry point for import callers; both owners use the real save hook.
     pub fn sync_integration_references(&self, tx: &mut Tx<'_>, enqueue_fetches: bool) -> Result<()> {
-        for sync in tx.env().message_reference_syncs.clone() {
-            sync(tx, self, enqueue_fetches)?;
-        }
-        Ok(())
+        self.sync_external_references(tx, enqueue_fetches)
     }
 
     /// `drive_attachments.map(&:file_id)`, in id order.

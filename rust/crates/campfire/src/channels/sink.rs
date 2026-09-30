@@ -38,6 +38,33 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
+        crate::integrations::link_embed::store::CardUpdate::KIND => decode::<crate::integrations::link_embed::store::CardUpdate>(request)
+            .and_then(|event| {
+                let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+                crate::controllers::presenters::link_embeds::broadcast_updates(app, event.embed_id)
+            }),
+        crate::integrations::fizzy::cards::CardUpdate::KIND => decode::<crate::integrations::fizzy::cards::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            crate::controllers::presenters::fizzy_cards::broadcast_updates(app, event.card_id)
+        }),
+        crate::integrations::twitter::post::CardUpdate::KIND => decode::<crate::integrations::twitter::post::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            crate::controllers::presenters::twitter_cards::broadcast_updates(app, event.post_id)
+        }),
+        campfire_db::models::user::lifecycle::QuietStreamFinal::KIND => decode::<campfire_db::models::user::lifecycle::QuietStreamFinal>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            let copy = app.clone();
+            app.db.read_blocking(move |conn| {
+                let message = campfire_db::Message::find(conn, event.message_id)?;
+                let room = campfire_db::Room::find(conn, message.room_id)?;
+                let view = crate::controllers::presenters::Presenter::new(conn, &copy, None).message(&message)?;
+                let html = crate::controllers::presenters::page::render_detached(&copy, None, |ctx| campfire_views::messages::message(ctx, &view));
+                copy.broadcasts.turbo(&super::broadcasts::Stream::conversation(&room, &message), Action::Replace,
+                    &super::broadcasts::message_dom_id(&message, None), Some(&html), false);
+                Ok(())
+            })?;
+            Ok(())
+        }),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
         crate::integrations::github::notifier::MessageCreated::KIND => decode(request).and_then(|broadcast| {
             let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;

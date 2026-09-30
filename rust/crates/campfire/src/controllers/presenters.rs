@@ -5,12 +5,15 @@
 pub mod accounts;
 pub mod github;
 pub mod attachments;
+pub mod link_embeds;
+pub mod fizzy_cards;
+pub mod twitter_cards;
 pub mod page;
 pub mod pagination;
 pub mod rich_text;
-pub mod view_context;
 #[cfg(test)]
 pub mod test_support;
+pub mod view_context;
 
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
@@ -19,13 +22,13 @@ use std::sync::LazyLock;
 use campfire_db::{Boost, Connection, Membership, Message, RichText, Room, RoomType, User};
 use campfire_richtext::Presentation;
 use campfire_storage::{Storage, Variation};
+use campfire_views::fragment_cache;
 use campfire_views::messages::json::{BoostJson, BoostMessageJson, IdJson, MessageBodyJson, MessageJson, UserJson};
+use campfire_views::messages::support::RubyNumber;
 use campfire_views::messages::support::json_time;
 use campfire_views::messages::{
     AttachmentPreview, AttachmentView, BoostView, MessageContent, MessageItem, MessageView, RoomKind, SoundImage, SoundView, UserView,
 };
-use campfire_views::messages::support::RubyNumber;
-use campfire_views::fragment_cache;
 use campfire_views::rooms::{RoomView, room_display_name};
 use rails_compat::Secrets;
 use regex::Regex;
@@ -131,6 +134,10 @@ pub struct Presenter<'a> {
     github_refreshes: RefCell<BTreeSet<i64>>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
+    link_fetches: RefCell<std::collections::BTreeSet<i64>>,
+    twitter_fetches: RefCell<std::collections::BTreeSet<i64>>,
+    twitter_posts: RefCell<HashMap<i64, Vec<crate::integrations::twitter::post::Post>>>,
+    twitter_existence: RefCell<HashMap<String, bool>>,
 }
 
 impl<'a> Presenter<'a> {
@@ -147,6 +154,10 @@ impl<'a> Presenter<'a> {
             github_refreshes: RefCell::default(),
             users: RefCell::default(),
             room_names: RefCell::default(),
+            link_fetches: RefCell::default(),
+            twitter_fetches: RefCell::default(),
+            twitter_posts: RefCell::default(),
+            twitter_existence: RefCell::default(),
         }
     }
 
@@ -157,7 +168,30 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn resolver(&self) -> DbResolver<'_> {
-        DbResolver { conn: self.conn, secrets: self.secrets, now: self.now }
+        DbResolver::with_twitter_cache(self.conn, self.secrets, self.now, &self.twitter_existence)
+    }
+
+    /// A read records stale cards; its caller claims/enqueues them on the writer after rendering.
+    pub fn request_link_fetch(&self, embed: &crate::integrations::link_embed::Embed) {
+        if embed.needs_fetch(campfire_db::Timestamp::from_jiff(self.now)) {
+            self.link_fetches.borrow_mut().insert(embed.id);
+        }
+    }
+
+    pub fn pending_link_fetches(&self) -> Vec<i64> {
+        self.link_fetches.borrow().iter().copied().collect()
+    }
+
+    pub fn pending_twitter_fetches(&self) -> Vec<i64> { self.twitter_fetches.borrow().iter().copied().collect() }
+    pub fn twitter_posts(&self, message: &Message) -> Result<Vec<crate::integrations::twitter::post::Post>> {
+        if let Some(posts) = self.twitter_posts.borrow().get(&message.id) { return Ok(posts.clone()); }
+        let mut posts = crate::integrations::twitter::post::Post::for_message(self.conn, message.id)?;
+        crate::integrations::twitter::post::Post::order_cards(&mut posts);
+        self.twitter_posts.borrow_mut().insert(message.id, posts.clone());
+        Ok(posts)
+    }
+    pub fn request_twitter_fetch(&self, post: &crate::integrations::twitter::post::Post) {
+        if post.fetch_pending() { self.twitter_fetches.borrow_mut().insert(post.id); }
     }
 
     pub fn user(&self, id: i64) -> Result<User> {
@@ -215,6 +249,12 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn plain_text_body(&self, message: &Message) -> Result<String> {
+        if message.markdown_source.is_some() || message.forwarded_markdown {
+            let body = message.body_html(self.conn)?.unwrap_or_default();
+            let resolver = self.resolver();
+            return campfire_richtext::markdown::plain_text(&body, &resolver.render_context(self.request_host.clone()), &resolver)
+                .map_err(|error| campfire_db::Error::Other(error.to_string()));
+        }
         message.plain_text_body(self.conn, self.rich_text)
     }
 
@@ -222,6 +262,10 @@ impl<'a> Presenter<'a> {
     /// (`cache [ message, "presentation-v3" ]` wraps the whole partial, so Rails evaluates none of
     /// it on a hit), else its view.
     pub fn messages(&self, messages: &[Message]) -> Result<Vec<MessageItem>> {
+        let ids = messages.iter().map(|m| m.id).collect::<Vec<_>>();
+        let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
+        for posts in posts.values_mut() { crate::integrations::twitter::post::Post::order_cards(posts); }
+        self.twitter_posts.borrow_mut().extend(posts);
         messages.iter().map(|message| self.message_item(message)).collect()
     }
 
@@ -280,7 +324,7 @@ impl<'a> Presenter<'a> {
             components: campfire_views::messages::MessageComponents {
                 github_cards_html: Some(github_cards_html),
                 github_cards_stamp: github::cache_stamp(self.conn, message)?,
-                ..Default::default()
+                ..link_embeds::components(self, message)?
             },
         })
     }
@@ -374,6 +418,11 @@ impl<'a> Presenter<'a> {
                 }),
                 text: sound.text.map(str::to_string),
             }));
+        }
+        if message.markdown_source.is_some() || message.forwarded_markdown {
+            return Ok(MessageContent::Text {
+                html: campfire_richtext::markdown::presentation(&body, &ctx, &resolver, None).unwrap_or_default(),
+            });
         }
         Ok(match campfire_richtext::present_message(&body, &ctx) {
             Presentation::Html(html) => MessageContent::Text { html },

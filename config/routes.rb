@@ -98,7 +98,7 @@ Rails.application.routes.draw do
           delete :revoke_others, on: :collection
         end
         resource :tour, only: :update
-        resource :status, only: :update, controller: "statuses"
+        resource :status, only: %i[ edit update ], controller: "statuses"
         resource :notification_settings, only: :update
         resource :time_zone, only: :update, controller: "time_zones"
         resources :push_subscriptions do

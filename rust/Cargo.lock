@@ -598,6 +598,7 @@ version = "0.1.0"
 dependencies = [
  "askama",
  "campfire_assets",
+ "campfire_richtext",
  "campfire_routes",
  "campfire_storage",
  "jiff",

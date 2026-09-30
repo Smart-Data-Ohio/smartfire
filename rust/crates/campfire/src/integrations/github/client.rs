@@ -49,6 +49,8 @@ impl Error {
         let class = match error {
             HttpError::OpenTimeout => "Open Timeout",
             HttpError::ReadTimeout => "Read Timeout",
+            HttpError::WriteTimeout => "Write Timeout",
+            HttpError::ConnectionClosed => "Eof Error",
             HttpError::Unresolvable(_) => "Socket Error",
             HttpError::Tls(_) => "Ssl Error",
             HttpError::Io(ref e) if e.kind() == std::io::ErrorKind::ConnectionRefused => {
@@ -71,6 +73,7 @@ impl Error {
 #[derive(Clone)]
 struct Http {
     network: Network,
+    write_timeout: Duration,
 }
 impl Http {
     async fn request(
@@ -97,6 +100,7 @@ impl Http {
             &Timeouts {
                 open: TIMEOUT,
                 read: TIMEOUT,
+                write: self.write_timeout,
             },
         )
         .await
@@ -140,7 +144,10 @@ impl AppClient {
         Self {
             client_id: client_id.filter(|s| !blank(s)),
             client_secret: client_secret.filter(|s| !blank(s)),
-            http: Http { network },
+            http: Http {
+                network,
+                write_timeout: TIMEOUT,
+            },
         }
     }
     pub fn configured(&self) -> bool {
@@ -276,7 +283,10 @@ impl WriteClient {
     pub fn with_network(token: String, network: Network) -> Self {
         Self {
             token,
-            http: Http { network },
+            http: Http {
+                network,
+                write_timeout: http::NET_HTTP_DEFAULT_TIMEOUT,
+            },
         }
     }
     pub async fn get_user(&self) -> Result<Value, Error> {
@@ -454,7 +464,10 @@ impl ReadClient {
     pub fn with_network(token: Option<String>, network: Network) -> Self {
         Self {
             token: token.filter(|s| !blank(s)),
-            http: Http { network },
+            http: Http {
+                network,
+                write_timeout: http::NET_HTTP_DEFAULT_TIMEOUT,
+            },
         }
     }
     pub async fn pull_request(&self, pr: &PullRequestKey) -> Result<Value, Error> {
@@ -586,5 +599,35 @@ fn ruby_inspect(value: &Value) -> String {
         Value::Null => "nil".into(),
         Value::String(s) => json!(s).to_string(),
         _ => ruby_string(value),
+    }
+}
+
+#[cfg(test)]
+mod transport_merge_tests {
+    use super::*;
+
+    #[test]
+    fn ws15e_github_transport_defaults_and_errors_match_rails() {
+        let vectors: Value = serde_json::from_str(include_str!("../../../../../vectors/ws15e_github_transport.json")).unwrap();
+        let app = AppClient::new(Some("fixture-client".into()), Some("fixture-secret".into()));
+        let write = WriteClient::new("fixture-member".into());
+        let read = ReadClient::new(None);
+        for case in vectors["timeouts"].as_array().unwrap() {
+            let actual = match case["name"].as_str().unwrap() {
+                "oauth" | "revoke" => app.http.write_timeout,
+                "write" => write.http.write_timeout,
+                "read" => read.http.write_timeout,
+                other => panic!("unexpected Rails transport case {other}"),
+            };
+            assert_eq!(actual.as_secs(), case["write_timeout"].as_u64().unwrap(), "{case}");
+        }
+        for case in vectors["errors"].as_array().unwrap() {
+            let error = match case["class"].as_str().unwrap() {
+                "Net::WriteTimeout" => HttpError::WriteTimeout,
+                "EOFError" => HttpError::ConnectionClosed,
+                other => panic!("unexpected Rails transport error {other}"),
+            };
+            assert_eq!(Error::transport(error).message, case["message"].as_str().unwrap(), "{case}");
+        }
     }
 }

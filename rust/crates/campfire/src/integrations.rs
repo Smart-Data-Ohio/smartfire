@@ -13,6 +13,9 @@
 //! plans/rust-conversion.md, "HTTP clients: three distinct policies"). Oracles for the tests
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
+pub mod fizzy;
+pub mod twitter;
+pub mod image_proxy;
 mod jobs;
 pub mod action_claims;
 // Account, fetcher and notifier consumers remain staged (WS15g continuation).
@@ -20,6 +23,9 @@ pub mod action_claims;
 pub mod github;
 pub mod health;
 mod agent_jobs;
+pub mod link_embed;
+#[allow(dead_code)]
+pub mod linkedin;
 pub mod net;
 pub mod opengraph;
 pub mod search;
@@ -30,3 +36,11 @@ pub mod webhook;
 pub(crate) mod test_support;
 
 pub use jobs::{register_jobs, web_push_pool};
+
+
+/// SQL-only reference callbacks invoked from WS8's message transaction.
+pub fn sync_message_references(tx: &mut campfire_db::Tx<'_>, message: &campfire_db::Message, enqueue: bool, crypto: Option<&rails_compat::ar_encryption::ArEncryption>) -> campfire_db::Result<()> {
+    link_embed::sync_message(tx, message, enqueue)?;
+    fizzy::cards::sync_message(tx, message, enqueue, crypto)?;
+    twitter::references::sync_message(tx, message, enqueue)
+}

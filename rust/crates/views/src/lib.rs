@@ -6,6 +6,11 @@
 pub mod fragment_cache;
 pub mod helpers;
 pub mod layouts;
+pub mod link_embeds;
+pub mod twitter;
+pub mod linkedin_cards;
+pub mod fizzy_cards;
+pub mod fizzy_message_cards;
 pub mod public_pages;
 pub mod shared;
 pub mod time;
@@ -162,3 +167,6 @@ pub struct Platform {
     /// `ApplicationPlatform#operating_system` ("macOS", "Windows", "iPhone", ...).
     pub operating_system: String,
 }
+
+#[cfg(test)]
+mod card_html_audit;

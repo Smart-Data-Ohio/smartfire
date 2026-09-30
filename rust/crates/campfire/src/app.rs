@@ -511,3 +511,7 @@ mod round_four_security_tests;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "../../../test-support/asset_goldens.rs"]
+pub(crate) mod asset_goldens;

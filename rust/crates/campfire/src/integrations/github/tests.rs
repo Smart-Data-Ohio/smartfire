@@ -117,7 +117,17 @@ pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     .with_single_cert(vec![cert], key)
     .unwrap();
     let mut listener = None;
-    for port in 51500..=51549 {
+    // Allow workers merging this fixture to stay within their reserved port range.
+    let (first_port, last_port) = std::env::var("GITHUB_TEST_PORT_RANGE")
+        .map(|range| {
+            let (first, last) = range.split_once('-').expect("GITHUB_TEST_PORT_RANGE must be FIRST-LAST");
+            let first: u16 = first.parse().expect("invalid first GitHub test port");
+            let last: u16 = last.parse().expect("invalid last GitHub test port");
+            assert!(first > 0 && first <= last, "invalid GitHub test port range");
+            (first, last)
+        })
+        .unwrap_or((51500, 51549));
+    for port in first_port..=last_port {
         let socket = tokio::net::TcpSocket::new_v4().unwrap();
         socket.set_reuseaddr(true).unwrap();
         if let Ok(bound) = socket
@@ -131,7 +141,7 @@ pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     let server = FakeServer::on_listener(
         routes,
         Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))),
-        listener.expect("ws15g port range exhausted"),
+        listener.expect("GitHub test port range exhausted"),
     )
     .await;
     let ip: IpAddr = "93.184.216.34".parse().unwrap();

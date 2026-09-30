@@ -164,16 +164,34 @@ pub struct FakeServer {
     listener_task: tokio::task::JoinHandle<()>,
 }
 
-impl Drop for FakeServer {
-    fn drop(&mut self) { self.listener_task.abort(); }
-}
-
 impl FakeServer {
     pub async fn start(routes: Vec<Route>) -> Self {
-        Self::start_with(routes, None).await
+        Self::start_with(routes, None, false).await
     }
 
     pub async fn start_tls(routes: Vec<Route>) -> Self {
+        Self::start_tls_on(routes, false).await
+    }
+
+    pub async fn start_tls_ws15e(routes: Vec<Route>) -> Self {
+        Self::start_tls_on(routes, true).await
+    }
+
+    /// Verify real TLS hostnames for integrations outside the static fixture's SAN list.
+    pub async fn start_named_tls_ws15e(routes: Vec<Route>, names: Vec<String>) -> (Self, rustls::RootCertStore) {
+        use rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
+        let rcgen::CertifiedKey { cert, signing_key } = rcgen::generate_simple_self_signed(names).unwrap();
+        let der = cert.der().clone();
+        let mut roots = rustls::RootCertStore::empty();
+        roots.add(der.clone()).unwrap();
+        let config = rustls::ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+            .with_safe_default_protocol_versions().unwrap().with_no_client_auth()
+            .with_single_cert(vec![der], PrivateKeyDer::from(PrivatePkcs8KeyDer::from(signing_key.serialize_der()))).unwrap();
+        let server = Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), true).await;
+        (server, roots)
+    }
+
+    async fn start_tls_on(routes: Vec<Route>, ws15e: bool) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};
         let certs = vec![CertificateDer::from_pem_slice(include_bytes!("testdata/tls/server.pem")).unwrap()];
@@ -185,11 +203,15 @@ impl FakeServer {
             .with_no_client_auth()
             .with_single_cert(certs, key)
             .unwrap();
-        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config)))).await
+        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), ws15e).await
     }
 
-    async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>) -> Self {
-        let listener = bind_test_listener().await;
+    pub async fn start_ws15e(routes: Vec<Route>) -> Self {
+        Self::start_with(routes, None, true).await
+    }
+
+    async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, ws15e: bool) -> Self {
+        let listener = if ws15e { ws15e_listener().await } else { bind_test_listener().await };
         Self::on_listener(routes, tls, listener).await
     }
 
@@ -201,7 +223,9 @@ impl FakeServer {
         let log = received.clone();
         let listener_task = tokio::spawn(async move {
             loop {
-                let Ok((stream, _)) = listener.accept().await else { break };
+                let Ok((stream, _)) = listener.accept().await else {
+                    break;
+                };
                 let (routes, log, tls) = (routes.clone(), log.clone(), tls.clone());
                 tokio::spawn(async move {
                     match tls {
@@ -223,6 +247,26 @@ impl FakeServer {
     pub fn received(&self) -> Vec<Received> {
         self.received.lock().unwrap().clone()
     }
+}
+
+impl Drop for FakeServer {
+    fn drop(&mut self) {
+        self.listener_task.abort();
+    }
+}
+
+pub async fn ws15e_listener() -> TcpListener {
+    if std::env::var_os("INTEGRATION_TEST_PORT_RANGE").is_some() { return bind_test_listener().await; }
+    for port in 51550..=51594 {
+        if let Ok(listener) = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
+            return listener;
+        }
+    }
+    panic!("WS15e test ports are all in use");
+}
+
+pub async fn ws15e_trickling_server(head: &'static str) -> SocketAddr {
+    trickling_server_with(ws15e_listener().await, head).await
 }
 
 async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], log: &Mutex<Vec<Received>>) -> io::Result<()> {
@@ -250,10 +294,7 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
     log.lock().unwrap().push(Received { method: method.clone(), target: target.clone(), headers, body });
 
     let not_found = Route::new(&method, &host, &target, 404).header("Content-Type", "text/plain").body("not found");
-    let route = routes
-        .iter()
-        .find(|r| r.method == method && (r.host == host || r.host == "*") && r.path == target)
-        .unwrap_or(&not_found);
+    let route = routes.iter().find(|r| r.method == method && (r.host == host || r.host == "*") && r.path == target).unwrap_or(&not_found);
     tokio::time::sleep(route.delay).await;
     let mut body = route.body.clone();
     if route.gzip {
@@ -297,6 +338,10 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
 /// the client hangs up.
 pub async fn trickling_server(head: &'static str) -> SocketAddr {
     let listener = bind_test_listener().await;
+    trickling_server_with(listener, head).await
+}
+
+async fn trickling_server_with(listener: TcpListener, head: &'static str) -> SocketAddr {
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
         while let Ok((mut stream, _)) = listener.accept().await {
