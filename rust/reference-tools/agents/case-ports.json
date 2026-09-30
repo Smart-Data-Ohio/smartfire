@@ -1104,6 +1104,56 @@
           "rust": "ws11_step_case_parent_deletion_cascades"
         }
       ]
+    },
+    {
+      "rails_file": "test/jobs/agent/delivery_job_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/delivery_path_cases.rs",
+      "cases": [
+        {
+          "rails": "delivery posts the webhook with the additive agent key",
+          "rust": "ws11_delivery_path_additive_agent_key"
+        },
+        {
+          "rails": "performing the same event twice posts the webhook only once",
+          "rust": "ws11_delivery_path_same_event_posts_once"
+        },
+        {
+          "rails": "a job that loses the delivery race exits without posting",
+          "rust": "ws11_delivery_path_lost_delivery_claim_posts_nothing"
+        },
+        {
+          "rails": "a job that loses the suppression race writes no duplicate row",
+          "rust": "ws11_delivery_path_lost_suppression_claim_inserts_nothing"
+        },
+        {
+          "rails": "agent and legacy bot ping-pong escalates until the agent side suppresses",
+          "rust": "ws11_delivery_path_agent_legacy_ping_pong_stops_at_three"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/jobs/agent/delivery_concurrency_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/delivery_path_cases.rs",
+      "cases": [
+        {
+          "rails": "concurrent mentions cannot exceed the rate limit",
+          "rust": "ws11_delivery_path_concurrent_mentions_obey_rate_limit"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/message/bot_webhook_fanout_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_delivery_cases_test.rs",
+      "cases": [
+        {
+          "rails": "delivers a normal message mentioning a legacy bot",
+          "rust": "ws11_fanout_case_normal_message_mentions_legacy_bot"
+        },
+        {
+          "rails": "skips system notes mentioning a legacy bot",
+          "rust": "ws11_fanout_case_system_note_mentions_legacy_bot"
+        }
+      ]
     }
   ],
   "boundary_deferred": {

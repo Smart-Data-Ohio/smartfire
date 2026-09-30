@@ -1,5 +1,5 @@
 //! Named domain comparisons from pinned test/jobs/agent/delivery_job_test.rb.
-//! Six HTTP/race probes and the WS12 self-assigned-work producer remain deferred.
+//! HTTP/race probes are in the app's delivery_path_cases; WS12 work remains separate.
 use super::*;
 use crate::models::agent_delivery::{
     self as delivery, AgentEvent, DeliveryJob, EventWebhookJob, NewEvent,
@@ -16,6 +16,35 @@ fn setup() -> TestDb {
     });
     t.sink.take();
     t
+}
+
+#[test]
+fn ws11_fanout_case_normal_message_mentions_legacy_bot() {
+    let t=setup();
+    let mid=t.write(|tx| {
+        let bot=User::create_bot(tx,"Legacy Note",Some("https://example.test/legacy-note"))?;
+        Room::find(tx.conn(),id("watercooler"))?.grant_to(tx,&[bot.id])?;
+        Ok(post(tx,id("david"),id("watercooler"),"Hey @[Legacy Note]",None)?.id)
+    });
+    t.sink.take();
+    t.write(move|tx|crate::models::bot_webhook_fanout::deliver(tx,&Message::find(tx.conn(),mid)?));
+    let events=t.events();
+    let jobs:Vec<_>=events.iter().filter_map(|e|if let Event::DeliverWebhook {message_id,..}=e {Some(*message_id)} else {None}).collect();
+    assert_eq!(jobs.len(),1);
+    assert_eq!(jobs[0],mid);
+}
+
+#[test]
+fn ws11_fanout_case_system_note_mentions_legacy_bot() {
+    let t=setup();
+    let mid=t.write(|tx| {
+        let bot=User::create_bot(tx,"Legacy Note",Some("https://example.test/legacy-note"))?;
+        Room::find(tx.conn(),id("watercooler"))?.grant_to(tx,&[bot.id])?;
+        Ok(Message::create(tx,NewMessage {room_id:id("watercooler"),creator_id:id("david"),markdown_source:Some("Hey @[Legacy Note]".into()),system_note:true,..Default::default()})?.id)
+    });
+    t.sink.take();
+    t.write(move|tx|crate::models::bot_webhook_fanout::deliver(tx,&Message::find(tx.conn(),mid)?));
+    assert!(t.events().iter().all(|e|!matches!(e,Event::DeliverWebhook{..})));
 }
 fn post(
     tx: &mut Tx<'_>,

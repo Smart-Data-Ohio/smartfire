@@ -65,12 +65,7 @@
       "rails_file": "test/jobs/agent/delivery_job_test.rb",
       "owner": "WS11 domain",
       "remaining_named_case_ports": [
-        "delivery posts the webhook with the additive agent key",
-        "performing the same event twice posts the webhook only once",
-        "a job that loses the delivery race exits without posting",
-        "a job that loses the suppression race writes no duplicate row",
         "rate check and insert run inside the agent lock",
-        "agent and legacy bot ping-pong escalates until the agent side suppresses",
         "self-assigned work does not raise the agent's own hop count"
       ]
     },
@@ -229,21 +224,6 @@
         "re-keys the digest from the plaintext, then clears it",
         "a key reset between the read and the write wins over the stale plaintext",
         "repeat runs are no-ops"
-      ]
-    },
-    {
-      "rails_file": "test/models/message/bot_webhook_fanout_test.rb",
-      "owner": "WS11; WS16 import suppression integration",
-      "remaining_named_case_ports": [
-        "delivers a normal message mentioning a legacy bot",
-        "skips system notes mentioning a legacy bot"
-      ]
-    },
-    {
-      "rails_file": "test/jobs/agent/delivery_concurrency_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "concurrent mentions cannot exceed the rate limit"
       ]
     }
   ]
