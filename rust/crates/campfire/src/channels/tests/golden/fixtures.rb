@@ -15,17 +15,23 @@ room = Rooms::Open.find_by(name: "Channels") || Rooms::Open.create_for({ name: "
 closed = Rooms::Closed.find_by(name: "Channels Private") || Rooms::Closed.create_for({ name: "Channels Private", creator: c }, users: [ c ])
 message = room.messages.find_by(client_message_id: "channels-golden-1") ||
   room.messages.create!(body: "Hello", creator: b, client_message_id: "channels-golden-1")
+thread = room.channel_threads.create!(name: "Golden thread", creator: a)
+bot = User.create!(name: "Golden Bot", role: :bot, bot_token_digest: User.digest_bot_token("test-only-golden-token"))
+room.memberships.grant_to(bot)
 
-cookie = ->(user) do
+cookie = ->(user, verified = true) do
   session = user.sessions.start!(user_agent: "golden", ip_address: "8.8.8.8")
+  # Our app rejects cable connections from people whose session hasn't completed the second
+  # factor (ApplicationCable::Connection, TwoFactorEnforcement).
+  session.mark_two_factor_verified! if verified
   request = ActionDispatch::Request.new(Rails.application.env_config.merge("HTTP_HOST" => "127.0.0.1", "rack.input" => StringIO.new))
   request.cookie_jar.signed[:session_token] = session.token
   "session_token=#{CGI.escape(request.cookie_jar[:session_token])}"
 end
-cookies = { "A" => cookie.(a), "B" => cookie.(b) }
+cookies = { "A" => cookie.(a), "B" => cookie.(b), "BOT" => cookie.(bot, false), "PENDING" => cookie.(a, false) }
 
 rows = ->(sql) { ActiveRecord::Base.connection.select_all(sql).to_a }
-user_ids = [ a, b, c ].map(&:id).join(",")
+user_ids = [ a, b, c, bot ].map(&:id).join(",")
 
 puts JSON.generate(
   cookies: cookies,
@@ -35,9 +41,14 @@ puts JSON.generate(
     "ROOM_ID" => room.id.to_s,
     "CLOSED_ID" => closed.id.to_s,
     "MESSAGE_ID" => message.id.to_s,
+    "THREAD_ID" => thread.id.to_s,
     "ROOMS_SIGNED" => Turbo::StreamsChannel.signed_stream_name(:rooms),
     "A_ROOMS_SIGNED" => Turbo::StreamsChannel.signed_stream_name([ a, :rooms ]),
     "ROOM_MESSAGES_SIGNED" => Turbo::StreamsChannel.signed_stream_name([ room, :messages ]),
+    "ROOM_THREADS_SIGNED" => Turbo::StreamsChannel.signed_stream_name([ room, :threads ]),
+    "THREAD_MESSAGES_SIGNED" => Turbo::StreamsChannel.signed_stream_name([ thread, :messages ]),
+    "A_STATUS_SIGNED" => Turbo::StreamsChannel.signed_stream_name([ a, :status ]),
+    "A_OOO_SIGNED" => Turbo::StreamsChannel.signed_stream_name([ a, :ooo_notice ]),
     "CLOSED_MESSAGES_SIGNED" => Turbo::StreamsChannel.signed_stream_name([ closed, :messages ])
   },
   rows: {
@@ -45,6 +56,7 @@ puts JSON.generate(
     "rooms" => rows.("SELECT * FROM rooms"),
     "memberships" => rows.("SELECT * FROM memberships"),
     "sessions" => rows.("SELECT * FROM sessions WHERE user_id IN (#{user_ids})"),
-    "messages" => rows.("SELECT * FROM messages WHERE id = #{message.id}")
+    "messages" => rows.("SELECT * FROM messages WHERE id = #{message.id}"),
+    "channel_threads" => rows.("SELECT * FROM channel_threads WHERE id = #{thread.id}")
   }
 )

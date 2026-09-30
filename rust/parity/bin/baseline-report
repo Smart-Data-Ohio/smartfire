@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+# Aggregate complete lean capture reports into an auditable per-area porting backlog.
+require "json"
+require "yaml"
+require "optparse"
+require "fileutils"
+
+root = File.expand_path("../..", __dir__)
+options = { inventory: File.join(root, "parity/screens.yml"), revision: "unspecified", complete: false }
+OptionParser.new do |o|
+  o.banner = "baseline-report [--complete] --revision SHA --output FILE REPORT.json..."
+  o.on("--inventory FILE") { |v| options[:inventory] = v }
+  o.on("--revision SHA") { |v| options[:revision] = v }
+  o.on("--output FILE") { |v| options[:output] = v }
+  o.on("--complete") { options[:complete] = true }
+end.parse!
+abort "at least one report.json is required" if ARGV.empty?
+inventory = YAML.load_file(options[:inventory])
+states = inventory.is_a?(Array) ? inventory : inventory.fetch("states")
+by_id = states.to_h { |state| [state.fetch("id"), state] }
+reports = ARGV.map { |file| [File.expand_path(file), JSON.parse(File.read(file))] }
+rows = reports.flat_map { |_, report| report.fetch("results") }
+unknown = rows.map { |row| row.fetch("state") }.uniq - by_id.keys
+abort "unknown states: #{unknown.join(', ')}" unless unknown.empty?
+duplicates = rows.group_by { |row| [row.fetch("state"), row.fetch("cell")] }.select { |_, cells| cells.size > 1 }
+abort "duplicate cells: #{duplicates.keys.inspect}" unless duplicates.empty?
+missing = by_id.keys - rows.map { |row| row.fetch("state") }.uniq
+abort "missing states: #{missing.join(', ')}" if options[:complete] && missing.any?
+abort "baseline must have no approved differences" if rows.any? { |row| row.fetch("status") == "allowed" }
+
+def cause(row)
+  return "Compared layers differ" if row["status"] == "fail"
+  return "Passed" if row["status"] == "pass"
+  error = row.fetch("error", "")
+  return "Reference capture error" if error.match?(/(?:^|\n)(?:reference|expected|run-\d\/expected):/)
+  return "Candidate rejects seeded session" if error.include?("unexpected redirect") && error.include?("/session/new")
+  return "Candidate route returns 404" if error.include?("got 404")
+  return "Candidate lacks required interaction response" if error.include?("missing interaction response")
+  return "Candidate readiness or interaction error" if error.match?(/not ready|not visible|Timeout|controller|subscription/)
+  "Candidate HTTP/capture error"
+end
+
+counts = rows.group_by { |row| row.fetch("status") }.transform_values(&:size)
+lines = ["# WS19 Rust baseline", "", "Candidate revision: `#{options[:revision]}`. Rails reference: the same checkout's root app.",
+  "", "#{rows.size} cells across #{rows.map { |r| r['state'] }.uniq.size} states: #{counts.fetch('pass', 0)} passed, #{counts.fetch('fail', 0)} compared failures, #{counts.fetch('error', 0)} capture errors. #{rows.count { |r| r['flaky'] }} flaky cells.",
+  "", "An authentication redirect blocks evaluation of that feature's UI. A 404 proves a missing candidate route; it does not independently enumerate all rendering defects. Reference capture errors are separated below and must be repaired before judging Rust.",
+  "", "| Area | States | Cells | Pass | Compared failure | Error | Main blockers |", "|---|---:|---:|---:|---:|---:|---|"]
+rows.group_by { |row| by_id.fetch(row.fetch("state"))["area"] || row.fetch("state").split('/').first }.sort.each do |area, cells|
+  status = cells.group_by { |row| row.fetch("status") }.transform_values(&:size)
+  causes = cells.reject { |row| row['status'] == 'pass' }.group_by { |row| cause(row) }.sort_by { |_, rs| -rs.size }.map { |reason, rs| "#{reason} (#{rs.size})" }.join("; ")
+  lines << "| #{area} | #{cells.map { |r| r['state'] }.uniq.size} | #{cells.size} | #{status.fetch('pass', 0)} | #{status.fetch('fail', 0)} | #{status.fetch('error', 0)} | #{causes.empty? ? 'None' : causes} |"
+end
+lines += ["", "## Capture sources and measured times", ""]
+reports.each do |file, report|
+  info = report.fetch("info")
+  lines << "- [#{File.basename(File.dirname(file))}](#{file}): #{(info.fetch('durationMs') / 1000.0).round(1)}s; #{info.fetch('expected')} versus #{info.fetch('actual')}."
+end
+lines << ""
+lines << "Sum of capture wall times: #{(reports.sum { |_, r| r.fetch('info').fetch('durationMs') } / 1000.0).round(1)}s. Container boot/teardown is additional; end-to-end timings are in ws19-report.md."
+lines += ["", "## State-level backlog", "", "| State | Result | Failed cells | Evidence |", "|---|---|---:|---|"]
+rows.group_by { |row| row.fetch("state") }.sort.each do |state, cells|
+  bad = cells.reject { |row| row['status'] == 'pass' }
+  next if bad.empty?
+  example = bad.find { |row| row['error'] } || bad.first
+  evidence = example['error']&.lines&.first&.strip || example.fetch('layers').reject { |l| l['equal'] }.map { |l| l['layer'] }.join(', ')
+  evidence = evidence.to_s.gsub('|', '\\|').gsub(/\s+/, ' ')
+  lines << "| #{state} | #{bad.map { |r| cause(r) }.uniq.join('; ')} | #{bad.size}/#{cells.size} | #{evidence} |"
+end
+lines += ["", "## Remaining scope", "", "This is the configured lean inventory, not the nightly width/browser matrix or a behavior/security test suite. OAuth providers, RTC media, remote Picker SDK, notification delivery, periodic execution, destructive operations and unenumerated validation branches remain separate extensions; see rust/parity/SCREENS.md."]
+output = lines.join("\n") + "\n"
+if options[:output]
+  FileUtils.mkdir_p(File.dirname(options[:output]))
+  File.write(options[:output], output)
+else
+  print output
+end
+puts "baseline: #{rows.size} cells, #{counts.fetch('pass', 0)} pass, #{counts.fetch('fail', 0)} fail, #{counts.fetch('error', 0)} error; #{missing.size} inventory states absent" if options[:output]

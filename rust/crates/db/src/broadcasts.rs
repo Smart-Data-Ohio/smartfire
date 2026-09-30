@@ -12,8 +12,9 @@
 //! `client_message_id` (`message_<uuid>`).
 
 use crate::models::{Message, Room, RoomType};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Broadcast {
     /// `broadcast_<action>_to(*streamables, target:, partial:, locals:, attributes:)`
     Turbo(TurboStream),
@@ -23,7 +24,7 @@ pub enum Broadcast {
 }
 
 /// One `<turbo-stream>` frame.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TurboStream {
     pub streamables: Vec<Streamable>,
     pub action: TurboAction,
@@ -35,7 +36,7 @@ pub struct TurboStream {
     pub maintain_scroll: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TurboAction {
     Append,
     Prepend,
@@ -45,7 +46,7 @@ pub enum TurboAction {
 }
 
 /// One part of a stream name.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Streamable {
     /// A room, by its STI class (`gid://campfire/Rooms::Open/1`).
     Room { id: i64, room_type: RoomType },
@@ -54,24 +55,33 @@ pub enum Streamable {
     /// `gid://campfire/User/1`
     User(i64),
     /// A symbol or string: `:messages`, `:rooms`.
-    Name(&'static str),
+    Name(String),
 }
 
 impl Streamable {
-    /// The GlobalID param (or the name) Turbo joins into the stream name.
+    /// The encoded GlobalID param (or symbol) Turbo joins into its actual stream name.
     pub fn to_param(&self) -> String {
+        let description = self.descriptor_name();
+        match self {
+            Streamable::Name(_) => description,
+            _ => rails_compat::global_id::GlobalId::parse(&description).expect("record GlobalID").to_param(),
+        }
+    }
+
+    /// The record identity/symbol captured as arguments by the Rails callback oracle.
+    pub fn descriptor_name(&self) -> String {
         match self {
             Streamable::Room { id, room_type } => format!("gid://campfire/{}/{id}", room_type.class_name()),
             Streamable::Thread(id) => format!("gid://campfire/ChannelThread/{id}"),
             Streamable::User(id) => format!("gid://campfire/User/{id}"),
-            Streamable::Name(name) => (*name).to_string(),
+            Streamable::Name(name) => name.clone(),
         }
     }
 }
 
 /// The partial a frame renders, with the records it's rendered for. Each names its ERB partial;
 /// the sink loads the records it needs and renders it (`ApplicationController.render`).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Partial {
     /// `messages/_message` with `message:` (an append of a new message).
     Message { message_id: i64 },
@@ -125,12 +135,12 @@ pub fn message_dom_id(message: &Message, prefix: Option<&str>) -> String {
 
 /// `[room, :messages]`
 pub fn room_messages(room: &Room) -> Vec<Streamable> {
-    vec![Streamable::Room { id: room.id, room_type: room.room_type }, Streamable::Name("messages")]
+    vec![Streamable::Room { id: room.id, room_type: room.room_type }, Streamable::Name("messages".into())]
 }
 
 /// `[thread, :messages]`
 pub fn thread_messages(thread_id: i64) -> Vec<Streamable> {
-    vec![Streamable::Thread(thread_id), Streamable::Name("messages")]
+    vec![Streamable::Thread(thread_id), Streamable::Name("messages".into())]
 }
 
 /// `[message.conversation, :messages]` (`message_stream_target`): the message's thread, else
@@ -183,9 +193,9 @@ mod tests {
 
     #[test]
     fn stream_names_join_gid_params_and_symbols() {
-        let broadcast = Broadcast::remove(vec![Streamable::Room { id: 7, room_type: RoomType::Open }, Streamable::Name("messages")], "x".into());
-        assert_eq!(broadcast.stream_name(), "gid://campfire/Rooms::Open/7:messages");
-        assert_eq!(Broadcast::remove(thread_messages(3), "x".into()).stream_name(), "gid://campfire/ChannelThread/3:messages");
+        let broadcast = Broadcast::remove(vec![Streamable::Room { id: 7, room_type: RoomType::Open }, Streamable::Name("messages".into())], "x".into());
+        assert_eq!(broadcast.stream_name(), format!("{}:messages", rails_compat::global_id::GlobalId::new("Rooms::Open", 7).to_param()));
+        assert_eq!(Broadcast::remove(thread_messages(3), "x".into()).stream_name(), format!("{}:messages", rails_compat::global_id::GlobalId::new("ChannelThread", 3).to_param()));
     }
 
     #[test]
@@ -193,4 +203,8 @@ mod tests {
         assert_eq!(room_param_key(RoomType::Direct), "rooms_direct");
         assert_eq!(dom_id("message", "abc", Some("thread_indicator")), "thread_indicator_message_abc");
     }
+}
+
+impl crate::events::Broadcast for Broadcast {
+    const KIND: &'static str = "Messaging#broadcast";
 }

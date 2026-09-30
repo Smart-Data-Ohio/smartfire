@@ -5,8 +5,10 @@
 use crate::embedded;
 use std::borrow::Cow;
 
-/// The last `config.public_file_server.headers` assignment in production.rb wins.
-const CACHE_CONTROL: &str = "public, max-age=2592000";
+/// `config.public_file_server.headers` in production.rb: `"public, max-age=#{1.minute.to_i},
+/// stale-while-revalidate=#{5.minutes.to_i}"`, so 404.html and friends stay correctable. (The
+/// app marks digest-stamped assets immutable on top of this.)
+const CACHE_CONTROL: &str = "public, max-age=60, stale-while-revalidate=300";
 
 /// Rack::Files::MULTIPART_BOUNDARY
 const MULTIPART_BOUNDARY: &str = "AaB03x";
@@ -27,8 +29,8 @@ pub type Body = Cow<'static, [u8]>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StaticResponse {
     pub status: u16,
-    /// In the order Rack builds them. Names are as Rack spells them ("Cache-Control" comes
-    /// from the app's config); HTTP/1.1 and HTTP/2 treat them case-insensitively.
+    /// In the order Rack builds them. Names are as Rack spells them (lowercase; "cache-control"
+    /// comes from the app's config); HTTP/1.1 and HTTP/2 treat them case-insensitively.
     pub headers: Vec<(&'static str, String)>,
     /// Empty for HEAD requests.
     pub body: Body,
@@ -114,7 +116,7 @@ fn serve_file(
     let mut headers: Vec<(&'static str, String)> = vec![
         ("last-modified", last_modified.to_string()),
         ("content-type", String::new()), // replaced by the content headers below
-        ("Cache-Control", CACHE_CONTROL.to_string()),
+        ("cache-control", CACHE_CONTROL.to_string()),
     ];
     let mut status = 200;
     let mut body: Body = Body::Borrowed(file);
@@ -357,6 +359,7 @@ fn mime_type(extname: &[u8]) -> Option<&'static str> {
         ".svg" => "image/svg+xml",
         ".ttf" => "font/ttf",
         ".txt" => "text/plain",
+        ".wasm" => "application/wasm",
         ".wav" => "audio/x-wav",
         ".webm" => "video/webm",
         ".webp" => "image/webp",

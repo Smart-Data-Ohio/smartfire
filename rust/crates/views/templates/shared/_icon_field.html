@@ -1,0 +1,14 @@
+{#- app/views/shared/_icon_field.html.erb -#}
+<div data-controller="icon-field" data-icon-field-url-value="{{ h::routes::autocompletable_icons() }}">
+  {{ form.label("icon_name", "Icon", h::attrs().class("txt-small").attr("for", self.field_id())) }}
+
+  <div class="flex align-center gap">
+    <span class="icon-field__preview flex-item-no-shrink" data-icon-field-target="preview">{{ h::icon_avatar_tag(ctx, icon.as_ref().copied(), 32, h::attrs()) }}</span>
+
+    {{ form.text_field("icon_name", None, h::attrs().name(self.field_name()).id(self.field_id()).attr_opt("value", self.field_value().as_deref()).class("input flex-item-grow").placeholder(":shortcode:").autocomplete("off").attr("autocorrect", "off").attr("autocapitalize", "off").attr("spellcheck", false).data("icon_field_target", "input").data("action", "input->icon-field#preview input->markdown-autocomplete#search focus->markdown-autocomplete#focus blur->markdown-autocomplete#blur").data("controller", "markdown-autocomplete").data("markdown_autocomplete_icons_url_value", h::routes::autocompletable_icons())) }}
+
+    <button type="button" class="btn flex-item-no-shrink" data-action="icon-field#clear">Remove</button>
+  </div>
+
+  <p class="txt-small">Type : to search the icon set. Leave blank for the default.</p>
+</div>{{ "\n" }}

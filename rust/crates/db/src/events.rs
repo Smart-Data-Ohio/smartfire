@@ -43,9 +43,13 @@ pub enum Event {
     /// `SomeJob.perform_later(*arguments)` for a job a domain module defines (see [`Job`]).
     Job(JobRequest),
 
-    /// A Turbo Stream or Action Cable broadcast a model makes, described for the app's sink to
-    /// render and deliver (see [`crate::broadcasts`]).
-    Broadcast(crate::broadcasts::Broadcast),
+    /// A broadcast a model makes from a callback (`broadcast_*_to`, `Turbo::StreamsChannel.
+    /// broadcast_*`, `ActionCable.server.broadcast`): the model describes it as a [`Broadcast`] in
+    /// its own module, and the app's cable sink finds the handler by [`Broadcast::KIND`] and
+    /// sends it, in emit order, from the thread that committed (as Rails renders and publishes
+    /// in the committing thread). Emit it with `tx.emit_after_commit` for `after_*_commit`
+    /// callbacks. Open like [`Event::Job`], so domains don't edit a central list.
+    Broadcast(BroadcastRequest),
 }
 
 /// A job's arguments, serializable like Active Job's. Implemented by each domain's job type.
@@ -87,7 +91,37 @@ impl JobRequest {
     }
 }
 
+/// What a model broadcasts: the arguments the app's handler for [`Broadcast::KIND`] needs to
+/// name the stream and render the content. Implemented by each domain's broadcast type.
+pub trait Broadcast: Serialize + DeserializeOwned {
+    /// The Rails method that broadcasts (`"Membership#broadcast_room_removal_to_user"`): what the
+    /// handler is registered under, and what the logs say.
+    const KIND: &'static str;
+}
+
+/// A [`Broadcast`] ready to send: its kind and its serialized arguments.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BroadcastRequest {
+    pub kind: &'static str,
+    pub arguments: serde_json::Value,
+}
+
+impl BroadcastRequest {
+    /// The arguments as `B`, or `None` if this is another kind's broadcast.
+    pub fn decode<B: Broadcast>(&self) -> Option<serde_json::Result<B>> {
+        (self.kind == B::KIND).then(|| serde_json::from_value(self.arguments.clone()))
+    }
+}
+
 impl Event {
+    /// A model's broadcast (see [`Event::Broadcast`]).
+    pub fn broadcast<B: Broadcast>(arguments: &B) -> Self {
+        Event::Broadcast(BroadcastRequest {
+            kind: B::KIND,
+            arguments: serde_json::to_value(arguments).expect("broadcast arguments serialize to JSON"),
+        })
+    }
+
     /// `J.perform_later(arguments)`
     pub fn job<J: Job>(arguments: &J) -> Self {
         Event::Job(JobRequest::new(arguments))
@@ -106,10 +140,10 @@ impl Event {
         }
     }
 
-    /// The broadcast, if this is one.
-    pub fn as_broadcast(&self) -> Option<&crate::broadcasts::Broadcast> {
+    /// The WS8 messaging description, if this is its broadcast kind.
+    pub fn as_broadcast(&self) -> Option<crate::broadcasts::Broadcast> {
         match self {
-            Event::Broadcast(broadcast) => Some(broadcast),
+            Event::Broadcast(request) => request.decode::<crate::broadcasts::Broadcast>().and_then(|value| value.ok()),
             _ => None,
         }
     }

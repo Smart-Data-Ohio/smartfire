@@ -1,10 +1,10 @@
 {#- turbo-rails' app/views/layouts/turbo_rails/frame.html.erb, the layout for Turbo-Frame requests. -#}
 <html>
   <head>
+    {{ h::csrf_meta_tags() }}
     {{ head }}
   </head>
   <body>
     {{ content }}
   </body>
-</html>
-
+</html>{{ "\n" -}}

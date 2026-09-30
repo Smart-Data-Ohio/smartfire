@@ -1,0 +1,22 @@
+[profile.ci]
+fail-fast = false
+retries = 0
+
+[profile.ci.junit]
+path = "junit.xml"
+# Count #[ignore] tests, without counting tests excluded by the database/workspace filters.
+report-skipped = "ignored"
+
+[test-groups]
+acme = { max-threads = 1 }
+
+[[profile.default.overrides]]
+# These tests use Pebble's fixed validation ports 5001/5002 when PEBBLE_MINICA is set.
+filter = 'package(campfire_kit) & binary(front) & test(acme_)'
+test-group = "acme"
+
+[[profile.ci.overrides]]
+# These hardening tests assert elapsed CPU time. Unlike libtest's sequential test binaries,
+# nextest could run them alongside the large corpus suites and exceed their unchanged bounds.
+filter = 'package(campfire_richtext) & binary(hardening) & (test(deeply_nested_content_attachments_render_quickly) | test(many_bare_domains_autolink_in_linear_time))'
+threads-required = "num-cpus"

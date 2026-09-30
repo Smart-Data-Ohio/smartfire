@@ -79,7 +79,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     let partials = render_shared_room(c, &room).await?;
-    c.app().broadcasts.open_room_update(&room, &partials);
+    c.app().broadcasts.open_room_update(&room, &partials, None);
     redirect_to_room(c, room.id)
 }
 

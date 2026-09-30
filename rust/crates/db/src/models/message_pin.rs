@@ -107,7 +107,7 @@ impl MessagePin {
         let pin = Self::create(tx, message, message.room_id, pinner_id)?;
         if let Some(note) = pin.post_pin_note(tx, message)? {
             let room = Room::find(tx.conn(), note.room_id)?;
-            tx.emit_after_commit(Event::Broadcast(Broadcast::append(
+            tx.emit_after_commit(Event::broadcast(&Broadcast::append(
                 room_messages(&room),
                 room_dom_id(&room, Some("messages")),
                 Partial::Message { message_id: note.id },
@@ -185,7 +185,7 @@ impl MessagePin {
             (room_dom_id(&room, Some("pins_count")), Partial::PinsCount { room_id: room.id }),
             (room_dom_id(&room, Some("pins_list")), Partial::PinsList { room_id: room.id }),
         ] {
-            tx.emit_after_commit(Event::Broadcast(Broadcast::replace_keeping_scroll(streamables.clone(), target, partial)));
+            tx.emit_after_commit(Event::broadcast(&Broadcast::replace_keeping_scroll(streamables.clone(), target, partial)));
         }
         let (room_id, message_id) = (self.room_id, self.message_id);
         tx.after_commit(move |tx| Self::stamp_room_pins_changed(tx, room_id, message_id));

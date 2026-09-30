@@ -127,7 +127,7 @@ impl ActivityItem {
     fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {
         let human = User::find_by_id(tx.conn(), user_id)?.is_some_and(|user| user.is_active() && !user.is_bot());
         if human {
-            tx.emit_after_commit(Event::Broadcast(Broadcast::Cable {
+            tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
                 stream: format!("user_{user_id}_activity"),
                 payload: serde_json::json!({ "activityItemId": id }),
             }));

@@ -17,7 +17,7 @@
     </div>
 
 {% if user.bot() %}      <div class="pad-double--inline push--inline push--block-start">
-{% if user.active() %}          {{ h::button_to_direct_room_with(ctx, user.id) }}
+{% if user.active() %}          {{ h::button_to_direct_room_with(ctx, user.id, &user.name) }}
 {% else %}          <div>{{ user.name }} is no longer on this account</div>
 {% endif %}      </div>
 {% else %}{% if !user.deactivated() %}        <div class="flex flex-column gap" style="--row-gap: calc(var(--block-space) / 3)">

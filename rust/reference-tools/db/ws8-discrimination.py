@@ -170,7 +170,8 @@ check("runtime-markdown", {APP / "rich_text.rs": lambda s: bodies(s, [
     "runtime_canonicalization_matches_rails", "runtime_markdown_plain_text_matches_rails",
 ], "campfire")
 check("runtime-jobs-broadcasts", {
-    APP / "jobs.rs": lambda s: replace_body(s.replace("    registry.register(quote_cards_refresh);", ""), "fn template_free_broadcast(", "None"),
+    APP / "jobs.rs": lambda s: s.replace("    registry.register(quote_cards_refresh);", ""),
+    APP / "channels/sink.rs": lambda s: replace_body(s, "fn template_free_broadcast(", "None"),
     APP / "jobs/periodic.rs": lambda s: replace_body(s, "pub fn periodic(", 'Periodic::new("Periodic")'),
 }, "ws8_", ["ws8_periodic_tasks_match_rails_names_and_intervals",
     "ws8_quote_refresh_jobs_execute_in_the_real_app_runner", "ws8_template_free_broadcast_payloads_match_rails"], "campfire")

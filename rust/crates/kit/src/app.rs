@@ -7,7 +7,9 @@ use std::time::Duration;
 use axum::http::{HeaderName, HeaderValue};
 
 use crate::clock::SharedClock;
+use crate::csp::ContentSecurityPolicy;
 use crate::crypto::SharedCrypto;
+use crate::rate_limit::RateLimitStore;
 use crate::exceptions::ErrorPages;
 use crate::request::ProxyConfig;
 use crate::session::SessionConfig;
@@ -24,6 +26,8 @@ pub struct KitConfig {
     pub forgery_protection_origin_check: bool,
     /// `action_dispatch.default_headers` (`load_defaults 7.1`).
     pub default_headers: Vec<(HeaderName, HeaderValue)>,
+    /// `config.content_security_policy`, with its nonce generator; `None` sends no policy.
+    pub content_security_policy: Option<Arc<ContentSecurityPolicy>>,
     /// `public/404.html`, `422.html`, `500.html`, ... (`ActionDispatch::PublicExceptions`).
     pub error_pages: ErrorPages,
     /// Largest request body accepted; `None` is unlimited, like Puma.
@@ -41,6 +45,7 @@ impl Default for KitConfig {
             session: SessionConfig::default(),
             forgery_protection_origin_check: true,
             default_headers: rails_default_headers(),
+            content_security_policy: None,
             error_pages: ErrorPages::default(),
             max_body_bytes: None,
             request_timeout: None,
@@ -49,15 +54,20 @@ impl Default for KitConfig {
 }
 
 impl KitConfig {
-    /// Campfire's production settings: `assume_ssl` and `force_ssl` unless `DISABLE_SSL` is set
-    /// (`reference/config/environments/production.rb`).
+    /// Campfire's production settings: `assume_ssl` and `force_ssl` unless `DISABLE_SSL` is set,
+    /// and HSTS for a year (`ssl_options = { hsts: { expires: 1.year, subdomains: true } }`, where
+    /// `1.year` is 365.2425 days) (`reference/config/environments/production.rb`).
     pub fn production(disable_ssl: bool) -> Self {
         let mut config = Self::default();
         config.proxy.assume_ssl = !disable_ssl;
         config.force_ssl = !disable_ssl;
+        config.hsts = format!("max-age={HSTS_ONE_YEAR}; includeSubDomains");
         config
     }
 }
+
+/// `1.year.to_i`: ActiveSupport's year is 365.2425 days.
+pub const HSTS_ONE_YEAR: u64 = 31_556_952;
 
 pub fn rails_default_headers() -> Vec<(HeaderName, HeaderValue)> {
     [
@@ -83,6 +93,8 @@ pub(crate) struct KitInner {
     pub crypto: SharedCrypto,
     pub clock: SharedClock,
     pub state: Arc<dyn Any + Send + Sync>,
+    /// The counters `rate_limit` keeps (Rails' cache store).
+    pub rate_limits: RateLimitStore,
 }
 
 impl std::fmt::Debug for Kit {
@@ -95,7 +107,7 @@ impl Kit {
     /// `state` is the application's own state (database handles etc.), reachable from actions
     /// with [`crate::Ctx::state`].
     pub fn new<S: Send + Sync + 'static>(config: KitConfig, crypto: SharedCrypto, clock: SharedClock, state: S) -> Self {
-        Self { inner: Arc::new(KitInner { config, crypto, clock, state: Arc::new(state) }) }
+        Self { inner: Arc::new(KitInner { config, crypto, clock, state: Arc::new(state), rate_limits: RateLimitStore::new() }) }
     }
 
     pub fn config(&self) -> &KitConfig {
@@ -108,6 +120,11 @@ impl Kit {
 
     pub fn clock(&self) -> &SharedClock {
         &self.inner.clock
+    }
+
+    /// The app's `rate_limit` counters.
+    pub fn rate_limits(&self) -> &RateLimitStore {
+        &self.inner.rate_limits
     }
 
     pub(crate) fn error_pages(&self) -> &ErrorPages {

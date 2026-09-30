@@ -28,6 +28,22 @@ pub fn button_to(content: impl Display, _: &dyn Values, url: impl Display, optio
     Ok(forms::button_to(&url.to_string(), options.borrow().clone(), &content.to_string()))
 }
 
+/// `button_to(url, options.merge(form: form_options)) do ... end`.
+pub fn button_to_form(
+    content: impl Display,
+    _: &dyn Values,
+    url: impl Display,
+    options: impl std::borrow::Borrow<Attrs>,
+    form_options: impl std::borrow::Borrow<Attrs>,
+) -> Result {
+    Ok(forms::button_to_form(&url.to_string(), options.borrow().clone(), form_options.borrow().clone(), &content.to_string()))
+}
+
+/// `tag.<name>(options) do ... end`, e.g. `{% filter tag("button", h::attrs().type_("button")) %}`.
+pub fn tag(content: impl Display, _: &dyn Values, name: impl Display, options: impl std::borrow::Borrow<Attrs>) -> Result {
+    Ok(tag::content_tag(&tag::dasherize(&name.to_string()), options.borrow(), &content.to_string()))
+}
+
 /// `form.button(options) do ... end`.
 pub fn button(content: impl Display, _: &dyn Values, options: impl std::borrow::Borrow<Attrs>) -> Result {
     Ok(forms::button_tag(options.borrow().clone(), &content.to_string()))

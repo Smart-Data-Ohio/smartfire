@@ -30,6 +30,7 @@ pub mod thread_membership;
 pub mod thread_tag;
 pub mod user;
 pub mod webhook;
+pub mod workspace_presence_lease;
 
 pub use account::{Account, AccountSettings};
 pub use active_storage::{Attachment, Blob};
@@ -38,7 +39,7 @@ pub use ban::Ban;
 pub use boost::Boost;
 pub use channel_thread::{ChannelThread, NewChannelThread, ThreadPush, ThreadPushCandidate, ThreadStatus};
 pub use first_run::FirstRun;
-pub use membership::{Involvement, Membership, StageRole};
+pub use membership::{Involvement, Membership, RoomRemovalBroadcast, StageRole};
 pub use keyword_alert::KeywordAlert;
 pub use message_pin::MessagePin;
 pub use message::{ContentType, Message, MessageChanges, NewMessage, Timeline};
@@ -60,3 +61,4 @@ pub use webhook::Webhook;
 pub mod room_delete;
 
 pub mod retention;
+pub use workspace_presence_lease::WorkspacePresenceLease;

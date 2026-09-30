@@ -1,7 +1,51 @@
-# Known, owned exceptions (format: capture/allowlist.ts). Deliberate divergences from the Rails
-# app belong in README "Known differences"; list one here only when no mask can express it.
-
-- state: pwa/manifest
-  layers: [server]
-  reason: The manifest is JSON-escaped, not HTML-escaped, so the small logo's URL reads `&v=` where Rails wrote `&amp;v=` (README, "The web app manifest is valid JSON")
-  owner: views
+# No approved divergences from Smartfire. Self-parity always ignores this file.
+# Inherited normalization cases (not divergence grants):
+# - Form/CSRF meta: random token values only; fields/destinations/attributes remain.
+# - CSP script/style/meta nonces: fresh per response; element structure remains.
+# - Signed IDs/SGIDs/streams: retain record/purpose/payload; ignore signature bytes.
+#   Frozen-clock expiries retain exact offsets. Golden vectors cover cookie/signature bytes.
+# - _campfire_session/session_token values only: random encryption IVs/session identifiers;
+#   empty/deletion values and every attribute (Path, Domain, SameSite, Secure, HttpOnly,
+#   Expires and Max-Age, including values) remain. Other cookie values never normalize.
+#   Pending 2FA and verified-session behaviors are separately exercised, never merged.
+#   Set-Cookie fields and attributes retain transmitted order: later duplicate cookie writes
+#   or attributes change the stored value/scope. Neither sequence is sorted or deduplicated.
+# - Attachment object URLs: browser UUID; file bytes and surrounding DOM remain.
+# - Asset filenames: Propshaft digest in DOM; network request digest remains checked.
+#   Actual digest-named response bytes are independently SHA-256 hashed in full.
+# - QR URLs: decode destination; join/transfer URL meaning remains visible.
+# - ISO/epoch times: exact offset from fixed seed time, not arbitrary timestamp removal.
+# - Header fields: all application/security values and cookie attributes are compared in
+#   pages and fragments. Only connection/content-length/keep-alive/server/server-timing/
+#   transfer-encoding/x-runtime are omitted: hop framing, implementation identity or timing;
+#   payload hashes still compare application bytes. Content-Encoding remains significant.
+# - Date header: valid RFC1123 dates become response-date; server/proxy clocks differ.
+#   Presence/multiplicity/malformed dates remain; Expires/Last-Modified are not removed.
+# - X-Request-Id and X-CSRF-Token: only nonempty values normalize, as per-request identifiers
+#   and anti-forgery entropy. Header presence and empty values remain significant.
+# - CSP / CSP-Report-Only: only quoted nonce bytes normalize; every directive/source remains.
+# - Set-Cookie Expires: exact seconds from the seed clock; preserve lifetime, not remove it.
+# - Cache-Control/Vary: directive-name whitespace/case/order canonicalized; Cache-Control
+#   values (including quoted extension values and embedded commas) remain exact.
+# - Location: the existing typed signed-ID/time/blob normalizer; destination meaning retained.
+# - X-Cache: only literal hit/miss normalize: Rack::Cache instrumentation varies with request
+#   interleaving. Presence/unknown values, cache policy, validators and body bytes remain.
+# - HTML weak ETag: ONLY Rack SHA-256 truncated validators proven to hash the actual response
+#   body become its normalized-body digest: fresh CSRF/nonces otherwise change validators.
+#   Incorrect validators, strong ETags, non-HTML validators and header presence still differ.
+# - Header arrays: rejoin comma fields split by WebKit, never join Set-Cookie. This restores
+#   the HTTP field value (not a mask); attributes retain their actual values.
+# - Duplicate network requests: latest per method+URL; browser preload/cache ordering.
+# - Disk blob keys/disposition: opaque storage key; signed blob ID/media hash remain.
+# - Cable: subscription/outcome and broadcast sets; omit heartbeat/duplicate delivery order.
+#   Mutation states record broadcasts; presence-sensitive UI runs on fresh isolated servers.
+# - Firefox browser history: fresh process per capture; contexts otherwise retain :visited
+#   colours from other cells. Real visited styling remains enabled; no colour mask is applied.
+# - Animated WebP/GIF pixels: freeze to the first frame; actual original asset bytes (all
+#   frames) are independently hashed before transformation. No asset byte normalization.
+# - Offscreen lazy image requests: deterministically fetch declared sources at step boundaries;
+#   no DOM/pixel/header/body mask. channels/timeline and realtime/thread_reply declare a bottom
+#   scroll after card/image or panel reflow to remove WebKit scroll-anchor ambiguity, with all
+#   visible pixels still compared. Deep-link/unread-divider states keep their initial positions.
+# No state-specific values/pixels or asset/PWA bodies are hidden to force agreement.
+[]

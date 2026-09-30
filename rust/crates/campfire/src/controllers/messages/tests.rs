@@ -187,7 +187,9 @@ async fn a_forged_host_stays_out_of_the_caches() {
     assert_eq!(david.send(forged(&room)).await.status, StatusCode::OK);
     let honest = app.david().get(&room).await;
     assert_eq!(honest.status, StatusCode::OK);
-    assert!(honest.text().contains("data-copy-to-clipboard-url-value=\"/rooms/"));
+    assert!(honest.text().contains("data-message-url=\"http://campfire.test/rooms/"), "current message REST URLs are present");
+    assert!(honest.text().contains("data-actions-url=\"http://campfire.test/rooms/"), "current menu endpoints are present");
+    assert!(honest.text().contains("class=\"message__permalink\" href=\"http://campfire.test/rooms/"), "current room permalinks are present");
     assert!(!honest.text().contains("evil.example"));
 }
 

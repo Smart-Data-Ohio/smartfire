@@ -172,7 +172,7 @@ impl Room {
                 ..Default::default()
             },
         )?;
-        tx.emit_after_commit(Event::Broadcast(Broadcast::append(
+        tx.emit_after_commit(Event::broadcast(&Broadcast::append(
             room_messages(self),
             room_dom_id(self, Some("messages")),
             Partial::Message {
@@ -186,7 +186,7 @@ impl Room {
         for membership in self.memberships(tx.conn())? {
             let stream = vec![
                 Streamable::User(membership.user_id),
-                Streamable::Name("rooms"),
+                Streamable::Name("rooms".into()),
             ];
             let new = newcomers.contains(&membership.user_id);
             let mut event = Broadcast::replace(
@@ -208,8 +208,8 @@ impl Room {
             if new && let Broadcast::Turbo(ref mut frame) = event {
                 frame.action = TurboAction::Prepend;
             }
-            tx.emit_after_commit(Event::Broadcast(event));
-            tx.emit_after_commit(Event::Broadcast(Broadcast::replace(
+            tx.emit_after_commit(Event::broadcast(&event));
+            tx.emit_after_commit(Event::broadcast(&Broadcast::replace(
                 stream,
                 room_dom_id(self, Some("header")),
                 Partial::RoomHeader {

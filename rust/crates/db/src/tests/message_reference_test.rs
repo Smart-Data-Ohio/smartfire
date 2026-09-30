@@ -172,8 +172,8 @@ fn source_edits_enqueue_and_refresh_capped_cards_in_conversation() {
     assert!(
         events[from..]
             .iter()
-            .any(|e| e.as_broadcast().and_then(|b| b.target())
-                == Some(format!("message_link_cards_message_{}", a.client_message_id).as_str()))
+            .any(|e| e.as_broadcast().is_some_and(|b| b.target()
+                == Some(format!("message_link_cards_message_{}", a.client_message_id).as_str())))
     );
     assert_eq!(t.write(|tx| refs::refresh_quote_cards(tx, -1, 200, 100)), 0);
 }

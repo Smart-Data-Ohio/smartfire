@@ -34,8 +34,8 @@ fn pin_count(t: &TestDb) -> i64 {
 
 /// The broadcasts to `[designers, :messages]` since event `from`.
 fn room_broadcasts(t: &TestDb, from: usize) -> Vec<Broadcast> {
-    let stream = format!("gid://campfire/Rooms::Closed/{}:messages", id("designers"));
-    t.events()[from..].iter().filter_map(|e| e.as_broadcast()).filter(|b| b.stream_name() == stream).cloned().collect()
+    let stream = format!("{}:messages", rails_compat::global_id::GlobalId::new("Rooms::Closed", id("designers")).to_param());
+    t.events()[from..].iter().filter_map(|e| e.as_broadcast()).filter(|b| b.stream_name() == stream).collect()
 }
 
 fn newest_root(t: &TestDb, room: &str) -> Message {

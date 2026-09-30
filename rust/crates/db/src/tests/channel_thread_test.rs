@@ -210,8 +210,8 @@ fn a_posted_reply_broadcasts_the_parents_indicator_with_the_new_count() {
     let from = c.t.events().len();
     post_reply(&c.t, c.thread.id, "jz", "First");
     assert_eq!(indicators(&c.t, from), vec![(indicator_target(&c.parent), 1)]);
-    let broadcast = c.t.events()[from..].iter().find_map(|e| e.as_broadcast().filter(|b| b.target().is_some()).cloned()).unwrap();
-    assert_eq!(broadcast.stream_name(), format!("gid://campfire/Rooms::Closed/{}:messages", id("designers")));
+    let broadcast = c.t.events()[from..].iter().find_map(|e| e.as_broadcast().filter(|b| b.target().is_some())).unwrap();
+    assert_eq!(broadcast.stream_name(), format!("{}:messages", rails_compat::global_id::GlobalId::new("Rooms::Closed", id("designers")).to_param()));
 }
 
 #[test]

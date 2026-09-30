@@ -201,7 +201,7 @@ fn re_firing_a_reminder_refreshes_its_own_inbox_item_in_place() {
     assert_eq!(second.event_type, "message_reminder");
     assert!(second.unread());
     // `broadcast_updated`: read_at changed, so the inbox hears of it.
-    let activity = t.events()[from..].iter().filter_map(|e| e.as_broadcast()).cloned().collect::<Vec<_>>();
+    let activity = t.events()[from..].iter().filter_map(|e| e.as_broadcast()).collect::<Vec<_>>();
     assert_eq!(
         activity,
         vec![Broadcast::Cable { stream: format!("user_{}_activity", id("david")), payload: serde_json::json!({ "activityItemId": first.id }) }]

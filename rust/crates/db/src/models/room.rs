@@ -15,7 +15,7 @@ use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::{SQLITE_NOW, Timestamp};
 
 /// The STI `type` column: `app/models/rooms/{open,closed,direct,voice,stage,board}.rb`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum RoomType {
     Open,
     Closed,

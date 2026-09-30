@@ -258,7 +258,7 @@ impl Poll {
     fn broadcast_card_replace(&self, tx: &mut Tx<'_>) -> Result<()> {
         let message = Message::find(tx.conn(), self.message_id)?;
         let streamables = conversation_messages(tx.conn(), &message)?;
-        tx.emit_after_commit(Event::Broadcast(Broadcast::replace_keeping_scroll(
+        tx.emit_after_commit(Event::broadcast(&Broadcast::replace_keeping_scroll(
             streamables,
             dom_id("poll", self.id, Some("card")),
             Partial::Poll { poll_id: self.id },

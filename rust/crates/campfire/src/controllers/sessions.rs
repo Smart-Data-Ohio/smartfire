@@ -2,13 +2,10 @@
 
 pub mod transfers;
 
-use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
-
 use campfire_db::PushSubscription;
-use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
+use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, format, halt};
 use campfire_views::sessions;
-use jiff::{SignedDuration, Timestamp};
+use jiff::SignedDuration;
 
 use super::presenters;
 use crate::app::AppCtx;
@@ -25,6 +22,11 @@ const REJECTION: &str = "Too many requests or unauthorized.";
 pub async fn new(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
     ensure_user_exists(c).await?;
+    // Our Rails app: background polls redirected to sign in keep their JSON Accept header, and
+    // get a 401 (`format.json { head :unauthorized }`) rather than UnknownFormat's 406.
+    if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
+        return Ok(c.head(StatusCode::UNAUTHORIZED));
+    }
     render_new(c, StatusCode::OK).await
 }
 
@@ -93,26 +95,16 @@ async fn remove_push_subscription(c: &mut Ctx) -> Result<()> {
 
 // --- Rate limiting ---------------------------------------------------------------------------------
 
-/// The Rails cache entries `rate_limit` counts in: `"rate-limit:sessions:#{request.remote_ip}"`,
-/// incremented with `expires_in: within`, which (like Redis' `EXPIRE ... NX`) only sets the
-/// expiry when the counter starts. One process holds them all, like one Redis would.
-static RATE_LIMITS: LazyLock<Mutex<HashMap<String, (u64, Timestamp)>>> = LazyLock::new(Default::default);
+/// `rate_limit to: 10, within: 3.minutes, only: :create, with: -> { render_rejection :too_many_requests }`
+pub fn rate_limit_rule() -> RateLimit {
+    RateLimit::new("sessions", RATE_LIMIT_TO, RATE_LIMIT_WITHIN)
+}
 
-/// `rate_limiting(to:, within:, by: -> { request.remote_ip }, with: -> { render_rejection :too_many_requests })`
 async fn rate_limit(c: &mut Ctx) -> Result<()> {
-    let key = format!("rate-limit:sessions:{}", c.request.remote_ip()?);
-    if increment(&key, c.now()) > RATE_LIMIT_TO {
+    if c.rate_limited(&rate_limit_rule(), None)? {
         return halt(render_rejection(c, StatusCode::TOO_MANY_REQUESTS).await?);
     }
     Ok(())
-}
-
-fn increment(key: &str, now: Timestamp) -> u64 {
-    let mut limits = RATE_LIMITS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-    limits.retain(|_, (_, expires_at)| *expires_at > now);
-    let entry = limits.entry(key.to_string()).or_insert((0, now + RATE_LIMIT_WITHIN));
-    entry.0 += 1;
-    entry.0
 }
 
 #[cfg(test)]
@@ -120,13 +112,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn counts_within_a_fixed_window() {
-        let start: Timestamp = "2024-06-01T12:00:00Z".parse().unwrap();
-        let key = "rate-limit:sessions:test-window";
-        for expected in 1..=11 {
-            assert_eq!(increment(key, start + SignedDuration::from_secs(expected as i64)), expected);
-        }
-        // The window started at the first hit and doesn't slide.
-        assert_eq!(increment(key, start + SignedDuration::from_secs(181)), 1);
+    fn keys_like_the_reference() {
+        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/kit_security.json")).unwrap();
+        assert_eq!(rate_limit_rule().cache_key("10.3.0.1"), vectors["rate_limit"]["cache_key"].as_str().unwrap());
     }
 }

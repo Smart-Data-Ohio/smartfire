@@ -55,6 +55,17 @@ pub async fn serve_with(
     acme: Option<AcmeOptions>,
     shutdown: impl Future<Output = ()> + Send + 'static,
 ) -> std::io::Result<()> {
+    serve_with_ready(config, app, acme, || {}, shutdown).await
+}
+
+/// `serve_with`, notifying the caller only after every configured listener has bound.
+pub async fn serve_with_ready(
+    config: FrontConfig,
+    app: Router,
+    acme: Option<AcmeOptions>,
+    ready: impl FnOnce() + Send,
+    shutdown: impl Future<Output = ()> + Send + 'static,
+) -> std::io::Result<()> {
     let shutdown_state = Shutdown::when(shutdown);
 
     let options = Options {
@@ -89,6 +100,7 @@ pub async fn serve_with(
         let protocol = if config.h2c_enabled { Protocol::Auto } else { Protocol::Http1 };
         servers.push(tokio::spawn(serve_plain(http, front, protocol, options, shutdown_state.clone())));
     }
+    ready();
     for server in servers {
         let _ = server.await;
     }
@@ -117,8 +129,8 @@ fn limited_app_service(app: Router, max_request_body: u64) -> Service {
     Arc::new(move |request, conn| {
         let app = app.clone();
         Box::pin(async move {
-            match handler::within_limit(request, max_request_body).await {
-                Ok(request) => app(request, conn).await,
+            match handler::within_limit(request, max_request_body) {
+                Ok((request, limit)) => limit.checked(app(request, conn).await),
                 Err(()) => handler::too_large(),
             }
         })

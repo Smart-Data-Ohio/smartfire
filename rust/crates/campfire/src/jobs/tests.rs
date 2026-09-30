@@ -196,28 +196,40 @@ async fn a_job_that_cant_be_enqueued_fails_the_write_that_asks_for_it() {
     assert_eq!(take_jobs(&app).await, ["RemoveBannedContentJob"]);
 }
 
-/// A browser on the booted app's router: a cookie jar, Chrome, same-origin requests.
+/// A browser on the booted app's router: a cookie jar, Chrome, and Rails' CSRF tokens.
 struct Browser {
     router: axum::Router,
     cookies: std::collections::BTreeMap<String, String>,
+    secrets: Arc<rails_compat::Secrets>,
 }
 
 impl Browser {
-    fn new(router: &axum::Router) -> Self {
-        Self { router: router.clone(), cookies: Default::default() }
+    fn new(router: &axum::Router, secrets: Arc<rails_compat::Secrets>) -> Self {
+        Self { router: router.clone(), cookies: Default::default(), secrets }
+    }
+
+    async fn get(&mut self, path: &str) -> (axum::http::StatusCode, String) {
+        self.send(axum::http::Request::get(path).header("accept", "text/html"), String::new()).await
     }
 
     async fn post(&mut self, path: &str, accept: &str, fields: &[(&str, &str)]) -> (axum::http::StatusCode, String) {
-        use tower::ServiceExt as _;
         let body = fields.iter().map(|(k, v)| format!("{}={}", campfire_views::helpers::url::cgi_escape(k), campfire_views::helpers::url::cgi_escape(v))).collect::<Vec<_>>().join("&");
-        let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
+        let session = self.cookies.get(campfire_kit::session::SESSION_KEY).expect("a page established the browser's session");
+        let token = crate::controllers::presenters::test_support::masked_session_token(&self.secrets, session).expect("the page gave the session a CSRF token");
         let request = axum::http::Request::post(path)
+            .header(campfire_kit::csrf::HEADER, token)
+            .header("accept", accept)
+            .header("content-type", "application/x-www-form-urlencoded");
+        self.send(request, body).await
+    }
+
+    async fn send(&mut self, request: axum::http::request::Builder, body: String) -> (axum::http::StatusCode, String) {
+        use tower::ServiceExt as _;
+        let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
+        let request = request
             .header("host", "campfire.test")
             .header("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
-            .header("sec-fetch-site", "same-origin")
-            .header("accept", accept)
             .header("cookie", cookie)
-            .header("content-type", "application/x-www-form-urlencoded")
             .body(axum::body::Body::from(body))
             .unwrap();
         let response = self.router.clone().oneshot(request).await.unwrap();
@@ -254,7 +266,9 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
         .await
         .unwrap();
     take_jobs(&app).await;
-    let mut browser = Browser::new(&router);
+    let mut browser = Browser::new(&router, app.secrets.clone());
+    let (status, body) = browser.get("/session/new").await;
+    assert_eq!(status, axum::http::StatusCode::OK, "sign-in page: {body}");
     let (status, body) = browser.post("/session", "text/html", &[("email_address", "person@example.com"), ("password", "secret123456")]).await;
     assert_eq!(status, axum::http::StatusCode::FOUND, "signed in: {body}");
     let path = format!("/rooms/{room}/messages");
@@ -733,7 +747,7 @@ fn ws8_template_free_broadcast_payloads_match_rails() {
     for row in golden["broadcasts"].as_array().unwrap() {
         if row["kind"] != "remove" { continue; }
         let event = Broadcast::remove(
-            vec![Streamable::User(1), Streamable::Name("rooms")],
+            vec![Streamable::User(row["user_id"].as_i64().unwrap()), Streamable::Name("rooms".into())],
             row["target"].as_str().unwrap().into(),
         );
         assert_eq!(
@@ -768,9 +782,9 @@ fn ws8_thread_unread_broadcasts_match_real_rails_callbacks() {
         })?;
         Ok(())
     }).unwrap();
-    let actual: Vec<_> = sink.events().iter().filter_map(|event| match event {
-        Event::Broadcast(event @ campfire_db::broadcasts::Broadcast::Cable { stream, .. }) if stream.ends_with("_unread_threads") => {
-            let (stream, payload) = template_free_broadcast(event).unwrap();
+    let actual: Vec<_> = sink.events().iter().filter_map(|event| match event.as_broadcast()? {
+        event @ campfire_db::broadcasts::Broadcast::Cable { .. } if event.stream_name().ends_with("_unread_threads") => {
+            let (stream, payload) = template_free_broadcast(&event).unwrap();
             Some(serde_json::json!({"kind":"cable", "stream":stream, "payload":payload}))
         }
         _ => None,

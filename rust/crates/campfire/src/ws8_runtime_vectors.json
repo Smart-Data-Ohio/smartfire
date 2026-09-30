@@ -84,9 +84,10 @@
   "broadcasts": [
     {
       "kind": "remove",
-      "stream": "gid://campfire/User/1:rooms",
-      "target": "list_rooms_direct_4",
-      "payload": "<turbo-stream action=\"remove\" target=\"list_rooms_direct_4\"></turbo-stream>"
+      "user_id": 127326141,
+      "target": "list_rooms_closed_654632876",
+      "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+      "payload": "<turbo-stream action=\"remove\" target=\"list_rooms_closed_654632876\"></turbo-stream>"
     },
     {
       "kind": "cable",

@@ -1,10 +1,10 @@
 {
   "tokens": {
-    "CLOSED_ROOM_ID": "699448331",
-    "ROOMS_SIGNED": "InJvb21zIg==--60a2ff565fb2226042c779b5711156db1d1cc48f89e6f59c94e4bf1da3f0945c",
-    "ROOM_ID": "699448330",
-    "ROOM_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--380c9b288ee92e798a4af7165a43e54bda7c597219a27b815e3278cf183d4d88",
-    "USER_ID": "773523958",
+    "CLOSED_ROOM_ID": "4",
+    "ROOMS_SIGNED": "InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439",
+    "ROOM_ID": "3",
+    "ROOM_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk13Om1lc3NhZ2VzIg==--bf49ff91665b3e1f7003986c953f8bd8f4380091f41cabddf18c200ab655f010",
+    "USER_ID": "5",
     "USER_NAME": "Cable Tester"
   },
   "sessions": {
@@ -29,13 +29,13 @@
       {
         "step": "subscribe member room",
         "frames": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":3}\",\"type\":\"confirm_subscription\"}"
         ]
       },
       {
         "step": "subscribe non-member room",
         "frames": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448331}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":4}\",\"type\":\"reject_subscription\"}"
         ]
       },
       {
@@ -51,7 +51,7 @@
       {
         "step": "subscribe turbo rooms",
         "frames": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"InJvb21zIg==--60a2ff565fb2226042c779b5711156db1d1cc48f89e6f59c94e4bf1da3f0945c\\\"}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439\\\"}\",\"type\":\"confirm_subscription\"}"
         ]
       },
       {
@@ -69,19 +69,19 @@
       {
         "step": "subscribe turbo guarded room messages",
         "frames": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--380c9b288ee92e798a4af7165a43e54bda7c597219a27b815e3278cf183d4d88\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk13Om1lc3NhZ2VzIg==--bf49ff91665b3e1f7003986c953f8bd8f4380091f41cabddf18c200ab655f010\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       },
       {
         "step": "subscribe typing",
         "frames": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":3}\",\"type\":\"confirm_subscription\"}"
         ]
       },
       {
         "step": "perform typing start",
         "frames": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523958,\"name\":\"Cable Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":3}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":5,\"name\":\"Cable Tester\"}}}"
         ]
       },
       {
@@ -142,7 +142,7 @@
       {
         "step": "subscribe member room",
         "frames": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":3}\",\"type\":\"confirm_subscription\"}"
         ]
       },
       {

@@ -4,8 +4,11 @@ use jiff::SignedDuration;
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
 
+use serde::{Deserialize, Serialize};
+
 use crate::database::Tx;
 use crate::error::{OptionalExt, Result};
+use crate::events::{Broadcast, Event};
 use crate::models::{Room, User};
 use crate::sql::{self, CachedStatements, query_all, query_one};
 use crate::time::Timestamp;
@@ -371,11 +374,13 @@ impl Membership {
         self.unread_at.is_some()
     }
 
-    /// `destroy`: after commit the user's sockets reconnect, so their subscriptions to this
-    /// room are dropped, and a direct room recomputes its member key
-    /// (`after_destroy_commit :refresh_direct_member_key`). Not yet ported, for the workstreams
-    /// that own them: the huddle, agent and stream revocations (`before_destroy`), the last stage
-    /// host's successor, the sidebar removal broadcast and calendar syncs.
+    /// `destroy`: after commit the room leaves the member's sidebar
+    /// (`broadcast_room_removal_to_user`), then the user's sockets reconnect, so their
+    /// subscriptions to this room are dropped, and a direct room recomputes its member key
+    /// (`after_destroy_commit :refresh_direct_member_key`), in the order the callbacks are
+    /// declared. Not yet ported, for the workstreams that own them: the huddle, agent and stream
+    /// revocations (`before_destroy`), the last stage host's successor and
+    /// calendar syncs.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         tx.conn().execute_cached(
             r#"DELETE FROM "memberships" WHERE "memberships"."id" = ?"#,
@@ -383,10 +388,10 @@ impl Membership {
         )?;
         let (user_id, room_id) = (self.user_id, self.room_id);
         tx.after_commit(move |tx| {
-            if let Some(room) = Room::find_by_id(tx.conn(),room_id)? {
-                tx.emit_after_commit(crate::Event::Broadcast(crate::broadcasts::Broadcast::remove(
-                    vec![crate::broadcasts::Streamable::User(user_id),crate::broadcasts::Streamable::Name("rooms")],
-                    crate::broadcasts::room_dom_id(&room,Some("list")))));
+            // `dom_id(room, :list)` raises for a room that's gone, which the callback rescues.
+            if let Some(room) = Room::find_by_id(tx.conn(), room_id)? {
+                let broadcast = RoomRemovalBroadcast { user_id, room_id, room_class: room.room_type.class_name().to_string() };
+                tx.emit_after_commit(Event::broadcast(&broadcast));
             }
             User::find(tx.conn(), user_id)?.reset_remote_connections(tx);
             // `remove_thread_membership` (WS8)
@@ -537,4 +542,19 @@ pub(crate) fn latest_root_message_id(conn: &Connection, room_id: i64) -> Result<
         [room_id],
         |r| r.get(0),
     )
+}
+
+/// `Membership#broadcast_room_removal_to_user` (`after_destroy_commit`): the room leaves the
+/// former member's sidebar, `broadcast_remove_to user, :rooms, target: [ room, :list ]`, preceded
+/// by `[ room, :header_voice_participants ]` when huddles are configured.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RoomRemovalBroadcast {
+    pub user_id: i64,
+    pub room_id: i64,
+    /// The room's STI class (`Rooms::Open`), which its `dom_id` names.
+    pub room_class: String,
+}
+
+impl Broadcast for RoomRemovalBroadcast {
+    const KIND: &'static str = "Membership#broadcast_room_removal_to_user";
 }

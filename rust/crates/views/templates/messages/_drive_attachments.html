@@ -1,0 +1,3 @@
+  <div id="{{ message.dom_id("drive_attachments") }}" class="drive-attachments" data-controller="drive-link">
+{% for url in message.details.drive_urls %}      {{ crate::messages::drive_attachment(url) }}{% endfor %}  </div>
+{# Keep the final newline emitted by this Rails partial. #}

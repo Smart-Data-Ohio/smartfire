@@ -1,0 +1,16 @@
+<form action="/golden" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="patch" /><input type="hidden" name="authenticity_token" value="patch:/golden" />
+  <div data-controller="icon-field" data-icon-field-url-value="/autocompletable/icons">
+  <label class="txt-small" for="room_icon_name">Icon</label>
+
+  <div class="flex align-center gap">
+    <span class="icon-field__preview flex-item-no-shrink" data-icon-field-target="preview"></span>
+
+    <input name="room[icon_name]" id="room_icon_name" value=":no_such_icon:" class="input flex-item-grow" placeholder=":shortcode:" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-icon-field-target="input" data-action="input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur" data-controller="markdown-autocomplete" data-markdown-autocomplete-icons-url-value="/autocompletable/icons" type="text" />
+
+    <button type="button" class="btn flex-item-no-shrink" data-action="icon-field#clear">Remove</button>
+  </div>
+
+  <p class="txt-small">Type : to search the icon set. Leave blank for the default.</p>
+</div>
+
+</form>

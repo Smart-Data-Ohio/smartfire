@@ -24,11 +24,11 @@
 # ({target} is the target's name: `expected`/`actual` unless --expected-name/--actual-name say
 # otherwise, so name the reference `reference` or `expected`.)
 #
-# `compare` does all of that: a reference on REF (default 4111) and a candidate on CAND (default
-# 4112), both with their clocks frozen at the seed's instant (as self-parity runs its servers:
+# `compare` does all of that: a reference on REF (default 49001) and a candidate on CAND (default
+# 49002), both with their clocks frozen at the seed's instant (as self-parity runs its servers:
 # anything a server derives from its clock, such as transfer link expiries and their QR codes, is
 # then the same on both), parity/bin/compare between them (reference = expected, candidate =
-# actual) with that reset hook and --isolated N (default 3) slots, then everything torn down.
+# actual) with that reset hook and --isolated N (default 2) slots, then everything torn down.
 # OPTIONS pass through to parity/bin/compare (--only, --engines, --viewports, --schemes,
 # --breakpoints, --out (absolute: it resolves inside parity/), --workers, ...).
 #
@@ -45,8 +45,10 @@ REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 PARITY=$ROOT/parity
 SEEDS=${PARITY_SEED_DIR:-$PARITY/.seed}
 INSTANCES=$SEEDS/.candidates
-APP_IMAGE=${PARITY_CANDIDATE_APP_IMAGE:-campfire-rust:app}
-IMAGE=${PARITY_CANDIDATE_IMAGE:-campfire-candidate}
+NAMESPACE=${PARITY_NAMESPACE:-campfire}
+APP_IMAGE=${PARITY_CANDIDATE_APP_IMAGE:-$NAMESPACE-rust:app}
+IMAGE=${PARITY_CANDIDATE_IMAGE:-$NAMESPACE-candidate}
+NETWORK=${PARITY_NETWORK:-$NAMESPACE-parity-internal}
 ENV_FILE=$PARITY/.env.reference
 DEFAULT_PORT=3200
 OWNER=${PARITY_OWNER:-${CLAUDE_CODE_SESSION_ID:-$(id -un)}}
@@ -91,7 +93,7 @@ copy_seed_into() {
   cp -a --reflink=auto "$SEEDS/$seed/storage/." "$dir/storage/"
 }
 
-container() { echo "campfire-candidate-$1"; }
+container() { echo "$NAMESPACE-candidate-$1"; }
 instance_dir() { echo "$INSTANCES/$1"; }
 alive() { [ "$(docker inspect -f '{{.State.Running}}' "$(container "$1")" 2>/dev/null)" = "true" ]; }
 
@@ -113,16 +115,30 @@ env_args() {
   if [ -n "$FREEZE" ] && [ -n "$TIME" ]; then
     printf '%s\n' -e "CAMPFIRE_FROZEN_TIME=$(date -u -d "$TIME" '+%Y-%m-%dT%H:%M:%SZ')"
   fi
+  if [ -n "$SEED" ] && [ -f "$SEEDS/$SEED/labels.json" ]; then
+    local seed_env
+    while IFS= read -r seed_env; do
+      [ -z "$seed_env" ] || printf '%s\n' -e "$seed_env"
+    done < <(python3 -c 'import json,sys; l=json.load(open(sys.argv[1])); print("\n".join(k.removeprefix("reference_env.")+"="+str(v) for k,v in l.items() if k.startswith("reference_env.")))' "$SEEDS/$SEED/labels.json")
+  fi
   local e; for e in "${EXTRA_ENV[@]+"${EXTRA_ENV[@]}"}"; do printf '%s\n' -e "$e"; done
 }
 
 up() {
   local port=$1 seed=$2 dir; dir=$(instance_dir "$port")
-  docker rm -f "$(container "$port")" >/dev/null 2>&1 || true
+  down "$port"
   rm -rf "$dir"; copy_seed_into "$seed" "$dir"
-  local args=(); mapfile -t args < <(env_args)
+  local args=(); mapfile -t args < <(SEED=$seed env_args)
   # Labelled parity.candidate.port (not parity.port) so `reference down --all` leaves it alone.
-  docker run -d --name "$(container "$port")" \
+  if ! docker network inspect "$NETWORK" >/dev/null 2>&1; then
+    # A sibling reference/candidate may create the same fresh namespace after our inspect.
+    # Accept that race only when re-inspection proves the network now exists; still verify it
+    # is internal below. A genuine Docker failure remains fatal.
+    docker network create --internal --label parity.owner="$OWNER" "$NETWORK" >/dev/null 2>&1 ||
+      docker network inspect "$NETWORK" >/dev/null 2>&1 || die "cannot create network $NETWORK"
+  fi
+  [ "$(docker network inspect -f '{{.Internal}}' "$NETWORK")" = true ] || die "network $NETWORK must be internal"
+  docker run -d --network "$NETWORK" --name "$(container "$port")" \
     --label parity.seed="$seed" --label parity.candidate.port="$port" --label parity.owner="$OWNER" \
     --cpus "${PARITY_CPUS:-2}" \
     --user "$(id -u):$(id -g)" \
@@ -130,10 +146,19 @@ up() {
     "${args[@]}" \
     -v "$dir/db:/rails/storage/db" -v "$dir/storage:/rails/storage/files" \
     "$IMAGE" >/dev/null
+  local ip; ip=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$NETWORK\").IPAddress}}" "$(container "$port")")
+  python3 "$PARITY/bin/forward-port" "$port" "$ip" >"$dir/forward.log" 2>&1 &
+  echo $! >"$dir/forward.pid"
   wait_until_up "$port"
 }
 
 down() {
+  local pidfile pid
+  pidfile="$(instance_dir "$1")/forward.pid"
+  if [ -f "$pidfile" ]; then
+    pid=$(cat "$pidfile")
+    if [ -r "/proc/$pid/cmdline" ] && tr '\0' ' ' <"/proc/$pid/cmdline" | grep -Fq "$PARITY/bin/forward-port $1 "; then kill "$pid" 2>/dev/null || true; fi
+  fi
   docker rm -f "$(container "$1")" >/dev/null 2>&1 || true
   rm -rf "$(instance_dir "$1")"
 }
@@ -167,7 +192,7 @@ reset() {
   local port=${PORT:?reset needs --port} seed=${SEED:-default}
   local time=${TIME:-$(seed_clock "$seed")} app=${APP:-}
   if [ -z "$app" ]; then
-    if docker inspect "campfire-reference-$port" >/dev/null 2>&1; then app=reference; else app=candidate; fi
+    if docker inspect "$NAMESPACE-reference-$port" >/dev/null 2>&1; then app=reference; else app=candidate; fi
   fi
   case "$app" in
     reference|expected)
@@ -179,7 +204,7 @@ reset() {
 }
 
 compare() {
-  local ports=4111,4112 isolated=3 rest=() seed=${SEED:-default} time=${TIME:-}
+  local ports=49001,49002 isolated=2 rest=() seed=${SEED:-default} time=${TIME:-}
   while [ $# -gt 0 ]; do
     case "$1" in
       --ports) ports=$2; shift 2 ;;
@@ -189,12 +214,14 @@ compare() {
   done
   [ -n "$time" ] || time=$(seed_clock "$seed")
   local ref_port cand_port; IFS=, read -r ref_port cand_port <<<"$ports"
-  # Mutating states run on isolated slots k = 1..N at P + 1000 * k (parity/capture/run.ts).
+  # Mutating states run on isolated slots k = 1..N at P + 100 * k (parity/capture/run.ts).
   COMPARE_REF_PORTS=("$ref_port") COMPARE_CAND_PORTS=("$cand_port")
   local k; for k in $(seq 1 "$isolated"); do
-    COMPARE_REF_PORTS+=($((ref_port + 1000 * k))); COMPARE_CAND_PORTS+=($((cand_port + 1000 * k)))
+    COMPARE_REF_PORTS+=($((ref_port + 100 * k))); COMPARE_CAND_PORTS+=($((cand_port + 100 * k)))
   done
-  trap compare_teardown EXIT INT TERM
+  trap compare_teardown EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   log "reference :$ref_port vs candidate :$cand_port (seed $seed, clock frozen at $time)"
   "$PARITY/bin/reference" up --seed "$seed" --port "$ref_port" --time "$time" --freeze >/dev/null &
   local ref_pid=$!
@@ -203,7 +230,7 @@ compare() {
   local status=0
   "$PARITY/bin/compare" --seed "$seed" --time "$time" \
     --expected "http://127.0.0.1:$ref_port" --actual "http://127.0.0.1:$cand_port" \
-    --expected-name reference --actual-name candidate --isolated "$isolated" \
+    --expected-name reference --actual-name candidate --isolated "$isolated" --isolated-port-offset 100 \
     --reset-host "'$PARITY/bin/candidate' reset --app {target} --port {port} --seed '$seed' --time '$time'" \
     "${rest[@]+"${rest[@]}"}" &
   # In the background so an interrupt runs compare_teardown at once (which stops it first).

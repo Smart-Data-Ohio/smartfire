@@ -327,7 +327,7 @@ impl ScheduledMessage {
             Some(thread) => dom_id("channel_thread", thread, Some("messages")),
             None => room_dom_id(&room, Some("messages")),
         };
-        tx.emit_after_commit(Event::Broadcast(Broadcast::append(
+        tx.emit_after_commit(Event::broadcast(&Broadcast::append(
             conversation_messages(tx.conn(), &message)?,
             target,
             Partial::Message {
@@ -344,7 +344,7 @@ impl ScheduledMessage {
                 if member.involvement != Some(crate::Involvement::Muted)
                     || mentioned_ids.contains(&member.user_id)
                 {
-                    tx.emit_after_commit(Event::Broadcast(Broadcast::Cable {
+                    tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
                         stream: format!("user_{}_unread_rooms", member.user_id),
                         payload: serde_json::json!({ "roomId": message.room_id }),
                     }));

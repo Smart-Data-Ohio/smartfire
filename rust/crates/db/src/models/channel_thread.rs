@@ -591,7 +591,7 @@ impl ChannelThread {
         }
         let mut seen = HashSet::new();
         for user_id in unread_user_ids.into_iter().filter(|id| seen.insert(*id)) {
-            tx.emit_after_commit(Event::Broadcast(Broadcast::Cable {
+            tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
                 stream: format!("user_{user_id}_unread_threads"),
                 payload: serde_json::json!({ "threadId": thread.id, "roomId": thread.room_id }),
             }));
@@ -633,7 +633,7 @@ impl ChannelThread {
             return Ok(());
         };
         let room = Room::find(tx.conn(), parent.room_id)?;
-        tx.emit_after_commit(Event::Broadcast(thread_indicator_broadcast(&room, &parent, reply_count)));
+        tx.emit_after_commit(Event::broadcast(&thread_indicator_broadcast(&room, &parent, reply_count)));
         Ok(())
     }
 

@@ -158,10 +158,11 @@ fn callback_rows(events: &[Event]) -> (Value, Value) {
             Event::PushMessage { .. } => jobs.push("Room::PushMessageJob".into()),
             Event::DeliverWebhook { .. } => jobs.push("Bot::WebhookJob".into()),
             Event::Job(job) => jobs.push(job.class.into()),
-            Event::Broadcast(Broadcast::Cable { stream, payload }) => {
+            Event::Broadcast(_) => match event.as_broadcast() {
+            Some(Broadcast::Cable { stream, payload }) => {
                 broadcasts.push(json!({"method":"cable","stream":stream,"payload":payload}))
             }
-            Event::Broadcast(Broadcast::Turbo(s)) => {
+            Some(Broadcast::Turbo(s)) => {
                 let partial = match &s.partial {
                     Some(Partial::Message { .. }) => Some("messages/message"),
                     Some(Partial::UserStatus { .. }) => Some("users/statuses/badge"),
@@ -174,8 +175,10 @@ fn callback_rows(events: &[Event]) -> (Value, Value) {
                     TurboAction::Replace => "broadcast_replace_to",
                     _ => "other",
                 };
-                broadcasts.push(json!({"method":method,"streams":s.streamables.iter().map(|s|s.to_param()).collect::<Vec<_>>(),"target":s.target,"partial":partial}));
+                broadcasts.push(json!({"method":method,"streams":s.streamables.iter().map(|s|s.descriptor_name()).collect::<Vec<_>>(),"target":s.target,"partial":partial}));
             }
+                _ => {}
+            },
             _ => {}
         }
     }

@@ -50,4 +50,4 @@ export function breakpointViewport(width: number): Viewport {
 export const TIMEZONE = "UTC"
 export const LOCALE = "en-US"
 
-export const DEFAULT_TIMEOUT_MS = 30_000
+export const DEFAULT_TIMEOUT_MS = 8_000

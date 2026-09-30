@@ -36,6 +36,7 @@ struct Vectors {
 
 #[derive(serde::Deserialize)]
 struct SessionVector {
+    session_id: i64,
     user_name: String,
     cookie_header: String,
 }
@@ -79,7 +80,7 @@ async fn boot_seeded() -> Option<Test> {
         _ => None,
     })
     .unwrap();
-    Some(Test { booted: boot(config).await.unwrap(), _dir: dir })
+    Some(Test { booted: boot_with_clock(config, crate::controllers::presenters::test_support::seed_clock()).await.unwrap(), _dir: dir })
 }
 
 fn copy_dir(from: &Path, to: &Path) {
@@ -146,10 +147,13 @@ async fn public_files_are_served_before_routing() {
     let css = campfire_assets::stylesheet_path(campfire_assets::all_stylesheet_paths()[0]);
     let reply = send(&test.booted.router, get(&css)).await;
     assert_eq!(reply.status, StatusCode::OK, "{css}");
-    assert_eq!(reply.header("cache-control"), Some("public, max-age=2592000"));
+    // Our Rails marks fingerprinted assets immutable (RailsExt::ImmutableAssetHeaders) and serves
+    // other public files briefly cached (config.public_file_server.headers); vectors/kit_security.json.
+    assert_eq!(reply.header("cache-control"), Some("public, immutable, max-age=31556952"));
 
     let robots = send(&test.booted.router, get("/robots.txt")).await;
     assert_eq!(robots.status, StatusCode::OK);
+    assert_eq!(robots.header("cache-control"), Some("public, max-age=60, stale-while-revalidate=300"));
 }
 
 #[tokio::test]
@@ -227,8 +231,8 @@ async fn the_application_chain_blocks_banned_ips_forgeries_and_old_browsers() {
     assert_eq!(banned.status, StatusCode::TOO_MANY_REQUESTS);
     assert_eq!(banned.header("content-type"), Some("text/html"));
 
-    // A post another site's page makes: the browser says so in `Sec-Fetch-Site`.
-    let forged = send(&router, post(("sec-fetch-site", "cross-site"))).await;
+    // A post another site's page makes: it can't read the session's authenticity token.
+    let forged = send(&router, post(("x-csrf-token", "forged"))).await;
     assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY);
 
     let outdated = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36";
@@ -295,7 +299,7 @@ async fn cable_handshake_with_a_rails_session_cookie() {
 
     let Some(test) = boot_seeded().await else { return };
     let vectors = vectors();
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = crate::channels::tests::support::bind_listener().await;
     let address = listener.local_addr().unwrap();
     let router = test.booted.router.clone();
     let service = campfire_kit::front::app_service(router);
@@ -314,7 +318,16 @@ async fn cable_handshake_with_a_rails_session_cookie() {
         first.into_text().unwrap().to_string()
     };
 
-    assert_eq!(connect(Some(vectors.sessions[0].cookie_header.clone())).await, r#"{"type":"welcome"}"#);
+    // A Rails-issued cookie authenticates HTTP, but cable also requires a completed second
+    // factor. The reference seed's session predates verification; keep that rejection covered.
+    let cookie = vectors.sessions[0].cookie_header.clone();
+    assert_eq!(connect(Some(cookie.clone())).await, r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#);
+    let session_id = vectors.sessions[0].session_id;
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE sessions SET two_factor_verified_at = ? WHERE id = ?", rusqlite::params![tx.now(), session_id])?;
+        Ok(())
+    }).await.unwrap();
+    assert_eq!(connect(Some(cookie)).await, r#"{"type":"welcome"}"#);
     assert_eq!(connect(None).await, r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#);
 }
 
@@ -409,14 +422,24 @@ async fn concurrent_message_posts_all_complete() {
 
     let page = send(&router, get_with_cookie(&format!("/rooms/{room_id}"), &session.cookie_header)).await;
     assert_eq!(page.status, StatusCode::OK);
-    let cookie = session.cookie_header.clone();
+    // The page gave the session an authenticity token; the posts carry it as Turbo does.
+    let session_cookie = page
+        .headers
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok()?.split(';').next()?.strip_prefix("_campfire_session="))
+        .next()
+        .expect("the page sets the session cookie")
+        .to_string();
+    let token = crate::controllers::presenters::test_support::masked_session_token(&test.booted.app.secrets, &session_cookie).unwrap();
+    let cookie = format!("{}; _campfire_session={session_cookie}", session.cookie_header);
 
     let posts = (0..32).map(|n| {
         let router = router.clone();
         let request = Request::post(format!("/rooms/{room_id}/messages"))
             .header(header::HOST, "campfire.test")
             .header(header::COOKIE, &cookie)
-            .header("sec-fetch-site", "same-origin")
+            .header("x-csrf-token", &token)
             .header(header::ACCEPT, "text/vnd.turbo-stream.html, text/html, application/xhtml+xml")
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .body(Body::from(format!("message%5Bbody%5D=%3Cp%3EHello+{n}%3C%2Fp%3E&message%5Bclient_message_id%5D=concurrent-{n}")))

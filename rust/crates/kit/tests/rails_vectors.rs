@@ -1,21 +1,42 @@
-//! Old-browser-tab continuity: a session cookie and a signed cookie issued by the reference Rails
-//! app (`vectors/rails_compat.json`) are accepted by the kit with real `RailsCrypto`, and what the
-//! kit writes back decodes to the same session. Forgery protection is by `Sec-Fetch-Site` rather
-//! than Rails' tokens, so a tab opened before an upgrade keeps working without one.
+//! Old-browser-tab continuity across the switch, both ways, with real `RailsCrypto`:
+//!
+//! - A page the reference Rails app rendered (`vectors/kit_security.json`, `sign_in`) posts its
+//!   session cookie and CSRF tokens here, and the kit accepts and rejects exactly the posts Rails
+//!   did; what it writes back decodes to the same session in Rails' format.
+//! - A page the kit rendered writes its session cookie and tokens to
+//!   `target/kit_security_rust_output.json`, which `reference-tools/kit/security_verify_rust.rb`
+//!   posts to the reference app (a tab opened on the port that submits after a rollback).
+//!
+//! A signed cookie Rails wrote (`vectors/rails_compat.json`) is read as well.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, header};
-use campfire_kit::{Ctx, FrozenClock, Kit, KitConfig, RailsCrypto, Result, StatusCode, action};
+use campfire_kit::crypto::SharedCrypto;
+use campfire_kit::{Crypto, Ctx, FrozenClock, Kit, KitConfig, RailsCrypto, Result, StatusCode, action};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
-fn vectors() -> Value {
+fn security_vectors() -> Value {
+    serde_json::from_str(include_str!("../../../vectors/kit_security.json")).unwrap()
+}
+
+fn rails_compat_vectors() -> Value {
     serde_json::from_str(include_str!("../../../vectors/rails_compat.json")).unwrap()
 }
 
+/// `sessions#new`: the tokens the sign-in page renders (`csrf_meta_tags` and the form to
+/// `session_url`).
+async fn new_session(c: &mut Ctx) -> Result {
+    let tokens = c.authenticity_tokens();
+    let body = json!({ "meta": tokens.global(), "form": tokens.for_form("http://campfire.test/session", "post") });
+    c.json(StatusCode::OK, &body)
+}
+
+/// `sessions#create` after the forgery check: echoes the session it sees, then changes it.
 async fn create_session(c: &mut Ctx) -> Result {
     c.verify_authenticity_token()?;
     let session = c.session();
@@ -29,80 +50,192 @@ async fn whoami(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &json!({ "token": token }))
 }
 
-fn app(vectors: &Value) -> (Router, Arc<rails_compat::Secrets>) {
-    let secrets = Arc::new(rails_compat::Secrets::new(vectors["secret_key_base"].as_str().unwrap()));
+fn app_with(crypto: SharedCrypto, vectors: &Value) -> Router {
     let now = vectors["now"].as_str().unwrap().parse().unwrap();
-    let kit = Kit::new(KitConfig::default(), Arc::new(RailsCrypto::new(secrets.clone())), Arc::new(FrozenClock::new(now)), ());
-    let router = Router::new().route("/session", action_post()).route("/whoami", campfire_kit::get(whoami));
-    (campfire_kit::app(router, kit), secrets)
+    let kit = Kit::new(KitConfig::default(), crypto, Arc::new(FrozenClock::new(now)), ());
+    let router = Router::new()
+        .route("/session/new", campfire_kit::get(new_session))
+        .route("/session", axum::routing::post(action(create_session)))
+        .route("/whoami", campfire_kit::get(whoami));
+    campfire_kit::app(router, kit)
 }
 
-fn action_post() -> axum::routing::MethodRouter<Kit> {
-    axum::routing::post(action(create_session))
+/// The kit with our Rails app's cookie crypto.
+fn app(vectors: &Value) -> (Router, Arc<RailsCrypto>) {
+    let secrets = rails_compat::Secrets::new(vectors["secret_key_base"].as_str().unwrap());
+    let crypto = Arc::new(RailsCrypto::new(Arc::new(secrets)));
+    (app_with(crypto.clone(), vectors), crypto)
 }
 
-async fn post_session(app: &Router, cookie: &str, site: &str, token: Option<&str>, origin: Option<&str>) -> axum::response::Response {
-    let mut request =
-        Request::post("/session").header(header::HOST, "localhost:3000").header(header::COOKIE, cookie).header("sec-fetch-site", site);
-    if let Some(origin) = origin {
+struct Post<'a> {
+    cookie: Option<String>,
+    token: Option<&'a str>,
+    header: Option<&'a str>,
+    origin: Option<&'a str>,
+}
+
+async fn post_session(app: &Router, post: Post<'_>) -> axum::response::Response {
+    let mut request = Request::post("/session")
+        .header(header::HOST, "campfire.test")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
+    if let Some(cookie) = post.cookie {
+        request = request.header(header::COOKIE, cookie);
+    }
+    if let Some(header) = post.header {
+        request = request.header("x-csrf-token", header);
+    }
+    if let Some(origin) = post.origin {
         request = request.header(header::ORIGIN, origin);
     }
-    let body = match token {
-        Some(token) => {
-            request = request.header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
-            format!("authenticity_token={}", campfire_kit::cookies::escape(token))
-        }
-        None => String::new(),
-    };
+    let mut body = "email_address=david%40example.com&password=wrong".to_string();
+    if let Some(token) = post.token {
+        body.push_str(&format!("&authenticity_token={}", campfire_kit::cookies::escape(token)));
+    }
     app.clone().oneshot(request.body(Body::from(body)).unwrap()).await.unwrap()
 }
 
+fn session_cookie(raw: &str) -> String {
+    format!("_campfire_session={}", campfire_kit::cookies::escape(raw))
+}
+
+fn set_cookies(response: &axum::response::Response) -> Vec<String> {
+    response.headers().get_all(header::SET_COOKIE).iter().map(|v| v.to_str().unwrap().to_string()).collect()
+}
+
+async fn json_body(response: axum::response::Response) -> Value {
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    serde_json::from_slice(&body).unwrap()
+}
+
 #[tokio::test]
-async fn rails_sessions_carry_over() {
-    let vectors = vectors();
-    let session = &vectors["session"];
-    let (app, secrets) = app(&vectors);
-    let cookie = format!("_campfire_session={}", campfire_kit::cookies::escape(session["session_cookie_raw"].as_str().unwrap()));
-    let form_token = session["session_form_token"].as_str().unwrap();
+async fn rails_issued_tokens_are_accepted_and_rejected_as_rails_did() {
+    let vectors = security_vectors();
+    let sign_in = &vectors["sign_in"];
+    let (app, _) = app(&vectors);
+    let posts = sign_in["posts"].as_array().unwrap();
+    assert!(posts.len() >= 18);
 
-    // A form from a page Rails rendered still posts its token; it's ignored, not required.
-    let from_old_tab = post_session(&app, &cookie, "same-origin", Some(form_token), None).await;
-    assert_eq!(from_old_tab.status(), StatusCode::OK);
-    let set_cookie = from_old_tab.headers().get(header::SET_COOKIE).unwrap().to_str().unwrap().to_string();
-    let body = axum::body::to_bytes(from_old_tab.into_body(), usize::MAX).await.unwrap();
-    let body: Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(body["id"], session["session"]["session_id"]);
-    assert_eq!(body["csrf"], session["session"]["_csrf_token"], "Rails' token stays in the session, unused");
+    for case in posts {
+        let label = case["case"].as_str().unwrap();
+        let cookie = match (case["cookies"].as_array().unwrap().is_empty(), label) {
+            (true, _) => None,
+            (false, "form token with the other session's cookie") => Some(session_cookie(sign_in["other_session_cookie_raw"].as_str().unwrap())),
+            (false, _) => Some(session_cookie(sign_in["session_cookie_raw"].as_str().unwrap())),
+        };
+        let post = Post { cookie, token: case["token"].as_str(), header: case["header"].as_str(), origin: case["origin"].as_str() };
+        let response = post_session(&app, post).await;
+        // Rails answers an accepted post with sessions#create's 401 (wrong password), and a
+        // rejected one with 422 and no cookies (the exception skips the session commit).
+        match case["status"].as_u64().unwrap() {
+            401 => {
+                assert_eq!(response.status(), StatusCode::OK, "{label}: accepted");
+                let body = json_body(response).await;
+                assert_eq!(body["id"], sign_in["session"]["session_id"], "{label}");
+                assert_eq!(body["csrf"], sign_in["session"]["_csrf_token"], "{label}: Rails' token stays the session's");
+            }
+            422 => {
+                assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY, "{label}: rejected");
+                assert!(set_cookies(&response).is_empty(), "{label}: no cookies on a rejected post");
+            }
+            other => panic!("{label}: unexpected Rails status {other}"),
+        }
+    }
+}
 
-    // What we write back after a change is the same session plus the change, in Rails' format.
+#[tokio::test]
+async fn rails_sessions_carry_over_in_rails_format() {
+    let vectors = security_vectors();
+    let sign_in = &vectors["sign_in"];
+    let (app, crypto) = app(&vectors);
+    let cookie = session_cookie(sign_in["session_cookie_raw"].as_str().unwrap());
+    let form_token = sign_in["session_form_token"].as_str().unwrap();
+
+    let response = post_session(&app, Post { cookie: Some(cookie), token: Some(form_token), header: None, origin: None }).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let set_cookie = set_cookies(&response).into_iter().next().unwrap();
+
+    // What we write back after a change is the same session (and CSRF token) plus the change.
     let raw = set_cookie.strip_prefix("_campfire_session=").unwrap().split(';').next().unwrap();
     let raw = rails_compat::cookies::unescape(raw);
     let now = vectors["now"].as_str().unwrap().parse().unwrap();
-    let decoded = rails_compat::cookies::decrypt(&secrets, "_campfire_session", &raw, now).unwrap();
-    let mut expected = session["session"].clone();
+    let decoded = crypto.decrypt_cookie("_campfire_session", &raw, now).unwrap();
+    let mut expected = sign_in["session"].clone();
     expected["return_to_after_authenticating"] = "/rooms/1".into();
     assert_eq!(decoded, expected);
     assert!(set_cookie.ends_with("; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax"));
+}
 
-    assert_eq!(post_session(&app, &cookie, "same-origin", None, None).await.status(), StatusCode::OK);
+fn workspace_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
 
-    // A valid Rails token doesn't make a cross-site request acceptable.
-    let cross_site = post_session(&app, &cookie, "cross-site", Some(form_token), None).await;
-    assert_eq!(cross_site.status(), StatusCode::UNPROCESSABLE_ENTITY);
+/// A page rendered here, for a new visitor and for a visitor with Rails' session, then a post of
+/// each token back here. The same tokens and cookies go to the reference app to verify.
+#[tokio::test]
+async fn kit_issued_tokens_verify_here_and_are_written_for_rails() {
+    let vectors = security_vectors();
+    let sign_in = &vectors["sign_in"];
+    let (app, crypto) = app(&vectors);
+    let now = vectors["now"].as_str().unwrap().parse().unwrap();
 
-    let cross_origin = post_session(&app, &cookie, "same-origin", None, Some("https://evil.example")).await;
-    assert_eq!(cross_origin.status().as_u16(), session["post_with_cross_origin_status"].as_u64().unwrap() as u16);
+    let page = |cookie: Option<String>| {
+        let app = app.clone();
+        async move {
+            let mut request = Request::get("/session/new").header(header::HOST, "campfire.test");
+            if let Some(cookie) = cookie {
+                request = request.header(header::COOKIE, cookie);
+            }
+            let response = app.oneshot(request.body(Body::empty()).unwrap()).await.unwrap();
+            let cookies = set_cookies(&response);
+            (cookies, json_body(response).await)
+        }
+    };
+
+    // A new visitor: rendering tokens starts a session holding the token.
+    let (cookies, fresh) = page(None).await;
+    assert_eq!(cookies.len(), 1, "the page's tokens need a session: {cookies:?}");
+    let fresh_raw = rails_compat::cookies::unescape(cookies[0].strip_prefix("_campfire_session=").unwrap().split(';').next().unwrap());
+    let fresh_session = crypto.decrypt_cookie("_campfire_session", &fresh_raw, now).unwrap();
+    assert_eq!(fresh_session["_csrf_token"].as_str().unwrap().len(), 43);
+    assert_eq!(fresh_session["session_id"].as_str().unwrap().len(), 32);
+
+    // A visitor with Rails' session: the page reuses its token and needs no new cookie.
+    let rails_cookie = session_cookie(sign_in["session_cookie_raw"].as_str().unwrap());
+    let (cookies, carried) = page(Some(rails_cookie.clone())).await;
+    assert!(cookies.is_empty(), "an unchanged session isn't rewritten: {cookies:?}");
+
+    for (cookie, tokens) in [(session_cookie(&fresh_raw), &fresh), (rails_cookie.clone(), &carried)] {
+        for token in [tokens["meta"].as_str().unwrap(), tokens["form"].as_str().unwrap()] {
+            let ok = post_session(&app, Post { cookie: Some(cookie.clone()), token: Some(token), header: None, origin: None }).await;
+            assert_eq!(ok.status(), StatusCode::OK);
+            let as_header = post_session(&app, Post { cookie: Some(cookie.clone()), token: None, header: Some(token), origin: None }).await;
+            assert_eq!(as_header.status(), StatusCode::OK);
+        }
+    }
+    // Each session's tokens only work with that session.
+    let crossed = Post { cookie: Some(rails_cookie), token: fresh["form"].as_str(), header: None, origin: None };
+    assert_eq!(post_session(&app, crossed).await.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+    let output = json!({
+        "now": vectors["now"],
+        "fresh": { "session_cookie_raw": fresh_raw, "session": fresh_session, "meta": fresh["meta"], "form": fresh["form"] },
+        "rails_session": { "session_cookie_raw": sign_in["session_cookie_raw"], "meta": carried["meta"], "form": carried["form"] },
+    });
+    let path = workspace_root().join("target/kit_security_rust_output.json");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, serde_json::to_string_pretty(&output).unwrap() + "\n").unwrap();
 }
 
 #[tokio::test]
 async fn rails_signed_session_token_cookie_is_read() {
-    let vectors = vectors();
+    let vectors = rails_compat_vectors();
     let session = &vectors["session"];
-    let (app, _) = app(&vectors);
+    // Stock Campfire's cookie (SHA256 keys), which `RailsCrypto` reads.
+    let secrets = Arc::new(rails_compat::Secrets::new(vectors["secret_key_base"].as_str().unwrap()));
+    let app = app_with(Arc::new(RailsCrypto::new(secrets)), &vectors);
     let cookie = format!("session_token={}", campfire_kit::cookies::escape(session["session_token_raw"].as_str().unwrap()));
     let request = Request::get("/whoami").header(header::COOKIE, cookie).body(Body::empty()).unwrap();
     let response = app.oneshot(request).await.unwrap();
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
-    let body: Value = serde_json::from_slice(&body).unwrap();
+    let body = json_body(response).await;
     assert_eq!(body["token"], session["session_token_value"]);
 }

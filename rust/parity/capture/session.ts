@@ -37,6 +37,12 @@ export class SessionCache {
   // Keyed by the real server: every target shares one browser-facing origin.
   get(browser: Browser, target: Target, proxy: BrowserContextOptions["proxy"], user: string, labels: Labels): Promise<StorageState> {
     const key = `${target.url} ${user}`
+    const browserCookies = label(labels, "browser_cookies", user)
+    if (browserCookies) return Promise.resolve({ cookies: Object.entries(browserCookies).map(([name, value]) => ({ name, value: String(value), domain: new URL(target.origin).hostname, path: "/", expires: -1, httpOnly: true, secure: false, sameSite: "Lax" as const })), origins: [] })
+    const seeded = label(labels, "session_cookies", user)
+    if (seeded) {
+      return Promise.resolve({ cookies: [{ name: "session_token", value: String(seeded), domain: new URL(target.origin).hostname, path: "/", expires: -1, httpOnly: true, secure: false, sameSite: "Lax" }], origins: [] })
+    }
     if (!this.states.has(key)) {
       const promise = signIn(browser, target.origin, proxy, credentialsFor(user, labels))
       // Retry a failed sign-in in later cells, except when rate limited: retrying only spends

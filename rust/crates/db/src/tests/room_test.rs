@@ -27,11 +27,15 @@ fn revoke_membership_from_user() {
     t.write(move |tx| watercooler.revoke_from(tx, &[id("david")]));
     assert!(!member_ids(&t, id("watercooler")).contains(&id("david")));
     assert_eq!(
-        t.events().into_iter().filter(|event|matches!(event, Event::DisconnectUser{..})).collect::<Vec<_>>(),
-        vec![Event::DisconnectUser {
-            user_id: id("david"),
-            reconnect: true
-        }]
+        t.events(),
+        vec![
+            Event::broadcast(&crate::RoomRemovalBroadcast {
+                user_id: id("david"),
+                room_id: id("watercooler"),
+                room_class: "Rooms::Closed".into(),
+            }),
+            Event::DisconnectUser { user_id: id("david"), reconnect: true },
+        ]
     );
 }
 

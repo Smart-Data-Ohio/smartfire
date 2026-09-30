@@ -462,7 +462,7 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
     } else {
         broadcasts::room_dom_id(&room, Some("messages"))
     };
-    tx.emit_after_commit(Event::Broadcast(Broadcast::append(
+    tx.emit_after_commit(Event::broadcast(&Broadcast::append(
         broadcasts::conversation_messages(tx.conn(), &message)?,
         target,
         Partial::Message {
@@ -479,7 +479,7 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
             if member.involvement != Some(crate::Involvement::Muted)
                 || mentioned.contains(&member.user_id)
             {
-                tx.emit_after_commit(Event::Broadcast(Broadcast::Cable {
+                tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
                     stream: format!("user_{}_unreads", member.user_id),
                     payload: json!({"roomId":room.id}),
                 }));
@@ -677,8 +677,8 @@ fn broadcast_ooo(tx: &mut Tx<'_>, user: i64) -> Result<()> {
             Partial::OooNotice { user_id: user },
         ),
     ] {
-        tx.emit_after_commit(Event::Broadcast(Broadcast::Turbo(TurboStream {
-            streamables: vec![Streamable::User(user), Streamable::Name(name)],
+        tx.emit_after_commit(Event::broadcast(&Broadcast::Turbo(TurboStream {
+            streamables: vec![Streamable::User(user), Streamable::Name(name.into())],
             action: TurboAction::Update,
             target,
             partial: Some(partial),

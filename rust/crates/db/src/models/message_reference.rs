@@ -182,7 +182,7 @@ pub fn incoming_ids(conn: &Connection, source: i64) -> Result<Vec<i64>> {
     )
 }
 pub fn broadcast_cards(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
-    tx.emit_after_commit(Event::Broadcast(Broadcast::replace_keeping_scroll(
+    tx.emit_after_commit(Event::broadcast(&Broadcast::replace_keeping_scroll(
         conversation_messages(tx.conn(), message)?,
         message_dom_id(message, Some("message_link_cards")),
         Partial::QuoteCards {

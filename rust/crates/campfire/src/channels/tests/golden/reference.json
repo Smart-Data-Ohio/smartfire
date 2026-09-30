@@ -1,966 +1,414 @@
 {
   "fixtures": {
     "cookies": {
-      "A": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkluVk9ia3hUTWpsaFpVRlJNV3RCVVRacGFXSkNVbmhuWlNJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--b18ce4513b01b7291d4c0798c3b554ca9005e6ba",
-      "B": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltRnFTbTFRU2paR2FuQTRlbUpqVEhZMmJUZEtZMDFSZVNJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--2d7312de24389e4c9417a938b6a07187b8287606"
+      "A": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrdDVRbXBYZUhKeU5HRm5hVXBJWm10MGFUZFpkSGgwYnlJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--477706186a3cc94cbf736522a39f7ab53c9173ce",
+      "B": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltVmxaMGhEYW1GelNFSm5jbmc0TkVaSVNrMDFjR0ZFY1NJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--7c15cce51c8c57b9ce16e34b755206fdaf6ebfe4",
+      "BOT": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqaFhRbmxJWW1sWVkybGFjbWc1V1hwbldWRldPV0kxYWlJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--762719e6aa3c846d4387ab12ec6f975f1c478cd6",
+      "PENDING": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrWlRjMFo0YUhsdFZHdElaV1Y0VWpSMmJUZFdWelJOWlNJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--f47b0e0c80b1fc72a36a776a932b220a4a0d7d6f"
     },
     "tokens": {
-      "A_ID": "773523959",
-      "A_ROOMS_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNOek0xTWpNNU5Uazpyb29tcyI=--b04ae70e174c5788e66ab6de8abaffe17d5a24d3bef07287cf027a438c44a568",
-      "B_ID": "773523960",
-      "CLOSED_ID": "699448331",
-      "CLOSED_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPa05zYjNObFpDODJPVGswTkRnek16RTptZXNzYWdlcyI=--3aba2a6466c4468ba51417ed9ba33338a41f35974f34e7c8cabf79c676d115fe",
-      "MESSAGE_ID": "933434638",
-      "ROOMS_SIGNED": "InJvb21zIg==--60a2ff565fb2226042c779b5711156db1d1cc48f89e6f59c94e4bf1da3f0945c",
-      "ROOM_ID": "699448330",
-      "ROOM_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--380c9b288ee92e798a4af7165a43e54bda7c597219a27b815e3278cf183d4d88"
+      "A_ID": "1",
+      "A_OOO_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6b29vX25vdGljZSI=--086125f7e15e88b34c10278ec052a0789c530490962af4d9896f4ce6c33b42d0",
+      "A_ROOMS_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6cm9vbXMi--5332e05561936c318a1fd4120aadb81d0ca03962a0bf4111dbb6e242065bb410",
+      "A_STATUS_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6c3RhdHVzIg==--fa3fb4ef3175b6e64a67893f8c1ef4614a6f8d36f8f9af7acc1026badaa396af",
+      "B_ID": "2",
+      "CLOSED_ID": "2",
+      "CLOSED_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPa05zYjNObFpDOHk6bWVzc2FnZXMi--021c3ea0cbb6d3e185cb6a5b9446e6c1061598e11f1293ec6035530155efc740",
+      "MESSAGE_ID": "1",
+      "ROOMS_SIGNED": "InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439",
+      "ROOM_ID": "1",
+      "ROOM_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c",
+      "ROOM_THREADS_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROnRocmVhZHMi--2daf5775325ee4db5f316bc021310e4a1d8ac7a9d87cb77f0462a1777ae96087",
+      "THREAD_ID": "1",
+      "THREAD_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDOHg6bWVzc2FnZXMi--e66e7fdea645efe22a74155e7791813546c0640c043a24b2f8cc9012e3f1bc83"
     },
     "rows": {
+      "channel_threads": [
+        {
+          "id": 1,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "created_at": "2026-09-30 00:20:07.831530",
+          "creator_id": 1,
+          "last_activity_at": "2026-09-30 00:20:07.828217",
+          "locked_at": null,
+          "messages_count": 0,
+          "name": "Golden thread",
+          "parent_message_id": null,
+          "result_markdown": null,
+          "result_updated_at": null,
+          "result_updated_by_id": null,
+          "room_id": 1,
+          "run_url": null,
+          "updated_at": "2026-09-30 00:20:07.831530",
+          "work_owner_id": null,
+          "work_status": null,
+          "work_status_changed_at": null
+        }
+      ],
       "memberships": [
         {
-          "id": 142918545,
+          "id": 1,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:16:00",
-          "involvement": "everything",
-          "room_id": 699448325,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:16:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 146174848,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:00:00",
+          "created_at": "2026-09-30 00:20:07.681",
+          "favorite_position": null,
+          "hand_raised_at": null,
           "involvement": "mentions",
-          "room_id": 654632876,
-          "unread_at": null,
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 127326141
+          "last_huddle_join_push_at": null,
+          "last_read_message_id": null,
+          "room_category_id": null,
+          "room_id": 1,
+          "server_muted_at": null,
+          "stage_role": null,
+          "unread_at": "2026-09-30 00:20:07.730957",
+          "updated_at": "2026-09-30 00:20:07.770915",
+          "user_id": 1
         },
         {
-          "id": 181790929,
+          "id": 2,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:04:00",
-          "involvement": "everything",
-          "room_id": 104393281,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:04:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 198590975,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:14:00",
-          "involvement": "everything",
-          "room_id": 186869642,
-          "unread_at": null,
-          "updated_at": "2026-03-02 11:02:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 211379269,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:09:00",
-          "involvement": "nothing",
-          "room_id": 201306877,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:09:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 239841951,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:12:00",
-          "involvement": "everything",
-          "room_id": 201306877,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:12:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 449028908,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:13:00",
-          "involvement": "everything",
-          "room_id": 186869642,
-          "unread_at": null,
-          "updated_at": "2026-03-02 11:03:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 505016279,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:07:00",
-          "involvement": "everything",
-          "room_id": 486777696,
-          "unread_at": null,
-          "updated_at": "2026-03-02 15:40:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 515358788,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:05:00",
-          "involvement": "everything",
-          "room_id": 104393281,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:05:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 658335620,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:03:00",
+          "created_at": "2026-09-30 00:20:07.681",
+          "favorite_position": null,
+          "hand_raised_at": null,
           "involvement": "mentions",
-          "room_id": 654632876,
-          "unread_at": "2026-03-01 13:00:00",
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 690221570,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:10:00",
-          "involvement": "everything",
-          "room_id": 201306877,
+          "last_huddle_join_push_at": null,
+          "last_read_message_id": 1,
+          "room_category_id": null,
+          "room_id": 1,
+          "server_muted_at": null,
+          "stage_role": null,
           "unread_at": null,
-          "updated_at": "2026-01-04 16:10:00",
-          "user_id": 149087659
+          "updated_at": "2026-09-30 00:20:07.772950",
+          "user_id": 2
         },
         {
-          "id": 741303990,
+          "id": 5,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:02:00",
-          "involvement": "everything",
-          "room_id": 654632876,
-          "unread_at": null,
-          "updated_at": "2026-03-01 12:50:00",
-          "user_id": 773523953
-        },
-        {
-          "id": 765383822,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:17:00",
-          "involvement": "everything",
-          "room_id": 340026324,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:17:00",
-          "user_id": 394959859
-        },
-        {
-          "id": 774341722,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:06:00",
-          "involvement": "everything",
-          "room_id": 486777696,
-          "unread_at": "2026-03-02 15:40:00",
-          "updated_at": "2026-03-02 15:40:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 812357801,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:18:00",
-          "involvement": "everything",
-          "room_id": 340026324,
-          "unread_at": null,
-          "updated_at": "2026-03-02 12:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 897066373,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:01:00",
-          "involvement": "everything",
-          "room_id": 654632876,
-          "unread_at": null,
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 944797859,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:15:00",
-          "involvement": "nothing",
-          "room_id": 699448325,
-          "unread_at": "2026-03-02 14:00:00",
-          "updated_at": "2026-03-02 14:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 963867642,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:08:00",
+          "created_at": "2026-09-30 00:20:07.683",
+          "favorite_position": null,
+          "hand_raised_at": null,
           "involvement": "mentions",
-          "room_id": 486777696,
+          "last_huddle_join_push_at": null,
+          "last_read_message_id": null,
+          "room_category_id": null,
+          "room_id": 1,
+          "server_muted_at": null,
+          "stage_role": null,
+          "unread_at": "2026-09-30 00:20:07.730957",
+          "updated_at": "2026-09-30 00:20:07.770915",
+          "user_id": 3
+        },
+        {
+          "id": 6,
+          "connected_at": null,
+          "connections": 0,
+          "created_at": "2026-09-30 00:20:07.688",
+          "favorite_position": null,
+          "hand_raised_at": null,
+          "involvement": "mentions",
+          "last_huddle_join_push_at": null,
+          "last_read_message_id": null,
+          "room_category_id": null,
+          "room_id": 2,
+          "server_muted_at": null,
+          "stage_role": null,
           "unread_at": null,
-          "updated_at": "2026-02-28 22:00:00",
-          "user_id": 394959859
+          "updated_at": "2026-09-30 00:20:07.688",
+          "user_id": 3
         },
         {
-          "id": 1021579652,
+          "id": 10,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:11:00",
-          "involvement": "everything",
-          "room_id": 201306877,
+          "created_at": "2026-09-30 00:20:07.838",
+          "favorite_position": null,
+          "hand_raised_at": null,
+          "involvement": "mentions",
+          "last_huddle_join_push_at": null,
+          "last_read_message_id": null,
+          "room_category_id": null,
+          "room_id": 1,
+          "server_muted_at": null,
+          "stage_role": null,
           "unread_at": null,
-          "updated_at": "2026-01-04 16:11:00",
-          "user_id": 773523953
-        },
-        {
-          "id": 1021579655,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-22 16:00:00",
-          "involvement": "mentions",
-          "room_id": 104393281,
-          "unread_at": null,
-          "updated_at": "2026-01-22 16:00:00",
-          "user_id": 773523955
-        },
-        {
-          "id": 1021579656,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-22 16:00:00",
-          "involvement": "mentions",
-          "room_id": 201306877,
-          "unread_at": null,
-          "updated_at": "2026-01-22 16:00:00",
-          "user_id": 773523955
-        },
-        {
-          "id": 1021579657,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-23 16:00:00",
-          "involvement": "mentions",
-          "room_id": 104393281,
-          "unread_at": null,
-          "updated_at": "2026-01-23 16:00:00",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579658,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-23 16:00:00",
-          "involvement": "mentions",
-          "room_id": 201306877,
-          "unread_at": null,
-          "updated_at": "2026-01-23 16:00:00",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579661,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-26 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448326,
-          "unread_at": null,
-          "updated_at": "2026-01-26 16:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 1021579662,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-26 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448326,
-          "unread_at": null,
-          "updated_at": "2026-01-26 16:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579663,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "involvement": "invisible",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579664,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 1021579665,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 394959859
-        },
-        {
-          "id": 1021579666,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 1021579667,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 773523953
-        },
-        {
-          "id": 1021579669,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 773523955
-        },
-        {
-          "id": 1021579670,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579681,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-28 16:00:00",
-          "involvement": "mentions",
-          "room_id": 699448328,
-          "unread_at": null,
-          "updated_at": "2026-01-28 16:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579682,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-29 16:00:00",
-          "involvement": "everything",
-          "room_id": 699448329,
-          "unread_at": "2026-03-02 13:00:00",
-          "updated_at": "2026-03-02 13:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579683,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-29 16:00:00",
-          "involvement": "everything",
-          "room_id": 699448329,
-          "unread_at": null,
-          "updated_at": "2026-03-02 13:00:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 1021579684,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-29 16:00:00",
-          "involvement": "everything",
-          "room_id": 699448329,
-          "unread_at": null,
-          "updated_at": "2026-01-29 16:00:00",
-          "user_id": 773523953
-        },
-        {
-          "id": 1021579685,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-29 16:00:00",
-          "involvement": "everything",
-          "room_id": 699448329,
-          "unread_at": null,
-          "updated_at": "2026-03-02 13:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 1021579687,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-30 16:00:00",
-          "involvement": "mentions",
-          "room_id": 654632876,
-          "unread_at": null,
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579688,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-30 16:01:00",
-          "involvement": "mentions",
-          "room_id": 654632876,
-          "unread_at": null,
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 773523955
-        },
-        {
-          "id": 1021579692,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.591",
-          "involvement": "mentions",
-          "room_id": 104393281,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.591",
-          "user_id": 773523959
-        },
-        {
-          "id": 1021579693,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.591",
-          "involvement": "mentions",
-          "room_id": 201306877,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.591",
-          "user_id": 773523959
-        },
-        {
-          "id": 1021579694,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.591",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.591",
-          "user_id": 773523959
-        },
-        {
-          "id": 1021579695,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.730",
-          "involvement": "mentions",
-          "room_id": 104393281,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.730",
-          "user_id": 773523960
-        },
-        {
-          "id": 1021579696,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.730",
-          "involvement": "mentions",
-          "room_id": 201306877,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.730",
-          "user_id": 773523960
-        },
-        {
-          "id": 1021579697,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.730",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.730",
-          "user_id": 773523960
-        },
-        {
-          "id": 1021579698,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.868",
-          "involvement": "mentions",
-          "room_id": 104393281,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.868",
-          "user_id": 773523961
-        },
-        {
-          "id": 1021579699,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.868",
-          "involvement": "mentions",
-          "room_id": 201306877,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.868",
-          "user_id": 773523961
-        },
-        {
-          "id": 1021579700,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.868",
-          "involvement": "mentions",
-          "room_id": 699448327,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.868",
-          "user_id": 773523961
-        },
-        {
-          "id": 1021579701,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.876",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 773523959
-        },
-        {
-          "id": 1021579702,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.876",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.876",
-          "user_id": 773523960
-        },
-        {
-          "id": 1021579703,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.882",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579704,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.882",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 149087659
-        },
-        {
-          "id": 1021579705,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.882",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 394959859
-        },
-        {
-          "id": 1021579706,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.882",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 712064548
-        },
-        {
-          "id": 1021579707,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.882",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 773523953
-        },
-        {
-          "id": 1021579708,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.882",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579709,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.882",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 773523958
-        },
-        {
-          "id": 1021579712,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.882",
-          "involvement": "mentions",
-          "room_id": 699448330,
-          "unread_at": "2026-09-26 13:09:15.920972",
-          "updated_at": "2026-09-26 13:09:15.934477",
-          "user_id": 773523961
-        },
-        {
-          "id": 1021579713,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-26 13:09:15.885",
-          "involvement": "mentions",
-          "room_id": 699448331,
-          "unread_at": null,
-          "updated_at": "2026-09-26 13:09:15.885",
-          "user_id": 773523961
+          "updated_at": "2026-09-30 00:20:07.838",
+          "user_id": 4
         }
       ],
       "messages": [
         {
-          "id": 933434638,
+          "id": 1,
+          "action": 0,
+          "board_post_opener": 0,
           "client_message_id": "channels-golden-1",
-          "created_at": "2026-09-26 13:09:15.920972",
-          "creator_id": 773523960,
-          "room_id": 699448330,
-          "updated_at": "2026-09-26 13:09:15.927704"
+          "created_at": "2026-09-30 00:20:07.730957",
+          "creator_id": 2,
+          "edited_at": null,
+          "embeds_suppressed": 0,
+          "forward_note": null,
+          "forwarded_at": null,
+          "forwarded_from_message_id": null,
+          "forwarded_markdown": 0,
+          "markdown_source": null,
+          "reply_notify_author": 1,
+          "reply_target_deleted_at": null,
+          "reply_to_message_id": null,
+          "room_id": 1,
+          "stream_broadcast_at": null,
+          "streaming": 0,
+          "streaming_updated_at": null,
+          "system_note": 0,
+          "thread_id": null,
+          "updated_at": "2026-09-30 00:20:07.734740"
         }
       ],
       "rooms": [
         {
-          "id": 104393281,
-          "created_at": "2026-01-03 16:00:00",
-          "creator_id": 127326141,
-          "name": "All Pets",
-          "type": "Rooms::Open",
-          "updated_at": "2026-01-03 16:00:00"
-        },
-        {
-          "id": 186869642,
-          "created_at": "2026-01-03 20:00:00",
-          "creator_id": 127326141,
-          "name": null,
-          "type": "Rooms::Direct",
-          "updated_at": "2026-03-02 11:03:00"
-        },
-        {
-          "id": 201306877,
-          "created_at": "2026-01-03 17:00:00",
-          "creator_id": 127326141,
-          "name": "HQ",
-          "type": "Rooms::Open",
-          "updated_at": "2026-01-03 17:00:00"
-        },
-        {
-          "id": 340026324,
-          "created_at": "2026-01-03 22:00:00",
-          "creator_id": 712064548,
-          "name": null,
-          "type": "Rooms::Direct",
-          "updated_at": "2026-03-02 12:00:00"
-        },
-        {
-          "id": 486777696,
-          "created_at": "2026-01-03 18:00:00",
-          "creator_id": 127326141,
-          "name": "All Talk",
-          "type": "Rooms::Closed",
-          "updated_at": "2026-03-02 15:55:00"
-        },
-        {
-          "id": 654632876,
-          "created_at": "2026-01-03 19:00:00",
-          "creator_id": 127326141,
-          "name": "Designers",
-          "type": "Rooms::Closed",
-          "updated_at": "2026-03-02 15:53:00"
-        },
-        {
-          "id": 699448325,
-          "created_at": "2026-01-03 21:00:00",
-          "creator_id": 127326141,
-          "name": null,
-          "type": "Rooms::Direct",
-          "updated_at": "2026-03-02 14:00:00"
-        },
-        {
-          "id": 699448326,
-          "created_at": "2026-01-26 16:00:00",
-          "creator_id": 712064548,
-          "name": "Quiet Corner",
-          "type": "Rooms::Closed",
-          "updated_at": "2026-01-26 16:00:00"
-        },
-        {
-          "id": 699448327,
-          "created_at": "2026-01-27 16:00:00",
-          "creator_id": 127326141,
-          "name": "Archive",
-          "type": "Rooms::Open",
-          "updated_at": "2026-01-27 16:00:00"
-        },
-        {
-          "id": 699448328,
-          "created_at": "2026-01-28 16:00:00",
-          "creator_id": 127326141,
-          "name": "Broken",
-          "type": "Rooms::Closed",
-          "updated_at": "2026-03-02 10:00:00"
-        },
-        {
-          "id": 699448329,
-          "created_at": "2026-01-29 16:00:00",
-          "creator_id": 127326141,
-          "name": null,
-          "type": "Rooms::Direct",
-          "updated_at": "2026-03-02 13:00:00"
-        },
-        {
-          "id": 699448330,
-          "created_at": "2026-09-26 13:09:15.873453",
-          "creator_id": 773523959,
+          "id": 1,
+          "created_at": "2026-09-30 00:20:07.677396",
+          "creator_id": 1,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
           "name": "Channels",
+          "pins_changed_at": null,
           "type": "Rooms::Open",
-          "updated_at": "2026-09-26 13:09:15.931629"
+          "updated_at": "2026-09-30 00:20:07.740478"
         },
         {
-          "id": 699448331,
-          "created_at": "2026-09-26 13:09:15.884750",
-          "creator_id": 773523961,
+          "id": 2,
+          "created_at": "2026-09-30 00:20:07.686331",
+          "creator_id": 3,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
           "name": "Channels Private",
+          "pins_changed_at": null,
           "type": "Rooms::Closed",
-          "updated_at": "2026-09-26 13:09:15.884750"
+          "updated_at": "2026-09-30 00:20:07.686331"
         }
       ],
       "sessions": [
         {
-          "id": 481019662,
-          "created_at": "2026-09-26 13:09:15.946703",
+          "id": 1,
+          "created_at": "2026-09-30 00:20:07.845640",
+          "device_id": null,
           "ip_address": "8.8.8.8",
-          "last_active_at": "2026-09-26 13:09:15.946752",
-          "token": "uNnLS29aeAQ1kAQ6iibBRxge",
-          "updated_at": "2026-09-26 13:09:15.946703",
+          "last_active_at": "2026-09-30 00:20:07.845671",
+          "token": "KyBjWxrr4agiJHfkti7Ytxto",
+          "two_factor_verified_at": "2026-09-30 00:20:07.846483",
+          "updated_at": "2026-09-30 00:20:07.847418",
           "user_agent": "golden",
-          "user_id": 773523959
+          "user_id": 1
         },
         {
-          "id": 481019663,
-          "created_at": "2026-09-26 13:09:15.953022",
+          "id": 4,
+          "created_at": "2026-09-30 00:20:07.853419",
+          "device_id": null,
           "ip_address": "8.8.8.8",
-          "last_active_at": "2026-09-26 13:09:15.953043",
-          "token": "ajJmPJ6Fjp8zbcLv6m7JcMQy",
-          "updated_at": "2026-09-26 13:09:15.953022",
+          "last_active_at": "2026-09-30 00:20:07.853426",
+          "token": "FSsFxhymTkHeexR4vm7VW4Me",
+          "two_factor_verified_at": null,
+          "updated_at": "2026-09-30 00:20:07.853419",
           "user_agent": "golden",
-          "user_id": 773523960
+          "user_id": 1
+        },
+        {
+          "id": 2,
+          "created_at": "2026-09-30 00:20:07.851074",
+          "device_id": null,
+          "ip_address": "8.8.8.8",
+          "last_active_at": "2026-09-30 00:20:07.851082",
+          "token": "eegHCjasHBgrx84FHJM5paDq",
+          "two_factor_verified_at": "2026-09-30 00:20:07.851357",
+          "updated_at": "2026-09-30 00:20:07.851593",
+          "user_agent": "golden",
+          "user_id": 2
+        },
+        {
+          "id": 3,
+          "created_at": "2026-09-30 00:20:07.852450",
+          "device_id": null,
+          "ip_address": "8.8.8.8",
+          "last_active_at": "2026-09-30 00:20:07.852456",
+          "token": "8WByHbiXciZrh9YzgYQV9b5j",
+          "two_factor_verified_at": null,
+          "updated_at": "2026-09-30 00:20:07.852450",
+          "user_agent": "golden",
+          "user_id": 4
         }
       ],
       "users": [
         {
-          "id": 127326141,
+          "id": 1,
           "bio": null,
           "bot_token": null,
-          "created_at": "2026-01-02 16:00:00",
-          "email_address": "david@37signals.com",
-          "name": "David",
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "role": 1,
-          "status": 0,
-          "updated_at": "2026-01-02 16:00:00"
-        },
-        {
-          "id": 149087659,
-          "bio": null,
-          "bot_token": null,
-          "created_at": "2026-01-02 17:00:00",
-          "email_address": "jason@37signals.com",
-          "name": "Jason",
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "role": 1,
-          "status": 0,
-          "updated_at": "2026-01-25 16:00:00"
-        },
-        {
-          "id": 394959859,
-          "bio": null,
-          "bot_token": "BenderBot123",
-          "created_at": "2026-01-02 20:00:00",
-          "email_address": null,
-          "name": "Bender Bot",
-          "password_digest": null,
-          "role": 2,
-          "status": 0,
-          "updated_at": "2026-01-02 20:00:00"
-        },
-        {
-          "id": 712064548,
-          "bio": "Programmer",
-          "bot_token": null,
-          "created_at": "2026-01-02 19:00:00",
-          "email_address": "kevin@37signals.com",
-          "name": "Kevin",
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "role": 0,
-          "status": 0,
-          "updated_at": "2026-01-02 19:00:00"
-        },
-        {
-          "id": 773523953,
-          "bio": "Designer",
-          "bot_token": null,
-          "created_at": "2026-01-02 18:00:00",
-          "email_address": "jz@37signals.com",
-          "name": "JZ",
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "role": 0,
-          "status": 0,
-          "updated_at": "2026-01-02 18:00:00"
-        },
-        {
-          "id": 773523954,
-          "bio": "Support",
-          "bot_token": null,
-          "created_at": "2026-01-21 16:00:00",
-          "email_address": "rita-deactivated-00000000-0000-4000-8000-000000000000@37signals.com",
-          "name": "Rita Lopez",
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "role": 0,
-          "status": 1,
-          "updated_at": "2026-01-31 16:00:00"
-        },
-        {
-          "id": 773523955,
-          "bio": null,
-          "bot_token": null,
-          "created_at": "2026-01-22 16:00:00",
-          "email_address": "mallory@example.com",
-          "name": "Mallory Banned",
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "role": 0,
-          "status": 2,
-          "updated_at": "2026-02-02 16:00:00"
-        },
-        {
-          "id": 773523956,
-          "bio": null,
-          "bot_token": "DeployBot456",
-          "created_at": "2026-01-23 16:00:00",
-          "email_address": null,
-          "name": "Deploy Bot",
-          "password_digest": null,
-          "role": 2,
-          "status": 0,
-          "updated_at": "2026-01-25 16:01:00"
-        },
-        {
-          "id": 773523957,
-          "bio": null,
-          "bot_token": "OldBot789abc",
-          "created_at": "2026-01-24 16:00:00",
-          "email_address": null,
-          "name": "Old Bot",
-          "password_digest": null,
-          "role": 2,
-          "status": 1,
-          "updated_at": "2026-02-01 16:00:00"
-        },
-        {
-          "id": 773523958,
-          "bio": null,
-          "bot_token": null,
-          "created_at": "2026-02-03 16:00:00",
-          "email_address": "lou@37signals.com",
-          "name": "Lonely Lou",
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "role": 0,
-          "status": 0,
-          "updated_at": "2026-02-03 16:00:00"
-        },
-        {
-          "id": 773523959,
-          "bio": null,
-          "bot_token": null,
-          "created_at": "2026-09-26 13:09:15.583487",
+          "bot_token_digest": null,
+          "created_at": "2026-09-30 00:20:07.337414",
+          "custom_status_emoji": null,
+          "custom_status_expires_at": null,
+          "custom_status_text": null,
+          "dnd_enabled": 0,
+          "dnd_until": null,
           "email_address": "channels-a@example.com",
+          "email_self_changed_at": null,
+          "github_login": null,
+          "google_email_link_allowed": 0,
+          "icon_name": null,
+          "inbox_preferences": "{}",
+          "meeting_dnd_enabled": 0,
+          "meeting_status_enabled": 0,
           "name": "Channel Tester",
-          "password_digest": "$2a$12$4lwJXRXqkvg5owTwpuj.tesr4yopZsB2JO7chWeIUJ/JvWNmJNamS",
+          "ooo_broadcast": null,
+          "ooo_calendar_enabled": 0,
+          "ooo_note": null,
+          "ooo_notify_enabled": 0,
+          "ooo_until": null,
+          "password_digest": "$2a$12$JdNb1.cQW8V3YkomM3.g5ewMMH7OAIlt2YFLEseQju94/G4EsgqMe",
+          "presence_setting": "auto",
+          "push_to_talk_key": null,
+          "quiet_hours_enabled": 0,
+          "quiet_hours_end_minute": null,
+          "quiet_hours_start_minute": null,
           "role": 0,
           "status": 0,
-          "updated_at": "2026-09-26 13:09:15.583487"
+          "text_size": "default",
+          "theme": "system",
+          "time_zone": null,
+          "time_zone_explicit": 0,
+          "tour_completed_at": null,
+          "updated_at": "2026-09-30 00:20:07.337414",
+          "voice_mode": null
         },
         {
-          "id": 773523960,
+          "id": 2,
           "bio": null,
           "bot_token": null,
-          "created_at": "2026-09-26 13:09:15.728254",
+          "bot_token_digest": null,
+          "created_at": "2026-09-30 00:20:07.502741",
+          "custom_status_emoji": null,
+          "custom_status_expires_at": null,
+          "custom_status_text": null,
+          "dnd_enabled": 0,
+          "dnd_until": null,
           "email_address": "channels-b@example.com",
+          "email_self_changed_at": null,
+          "github_login": null,
+          "google_email_link_allowed": 0,
+          "icon_name": null,
+          "inbox_preferences": "{}",
+          "meeting_dnd_enabled": 0,
+          "meeting_status_enabled": 0,
           "name": "Channel Peer",
-          "password_digest": "$2a$12$hsn2bAJANEJcVg2qtgkAA.MR6wzikrEhqbe/98kD6IS7hDwFQLOZK",
+          "ooo_broadcast": null,
+          "ooo_calendar_enabled": 0,
+          "ooo_note": null,
+          "ooo_notify_enabled": 0,
+          "ooo_until": null,
+          "password_digest": "$2a$12$RoAAQtffd8vpBptEIhT4FeYojcXkCDEy9JBn.Y2/hPzPsFUrTdGU2",
+          "presence_setting": "auto",
+          "push_to_talk_key": null,
+          "quiet_hours_enabled": 0,
+          "quiet_hours_end_minute": null,
+          "quiet_hours_start_minute": null,
           "role": 0,
           "status": 0,
-          "updated_at": "2026-09-26 13:09:15.728254"
+          "text_size": "default",
+          "theme": "system",
+          "time_zone": null,
+          "time_zone_explicit": 0,
+          "tour_completed_at": null,
+          "updated_at": "2026-09-30 00:20:07.502741",
+          "voice_mode": null
         },
         {
-          "id": 773523961,
+          "id": 3,
           "bio": null,
           "bot_token": null,
-          "created_at": "2026-09-26 13:09:15.866168",
+          "bot_token_digest": null,
+          "created_at": "2026-09-30 00:20:07.663203",
+          "custom_status_emoji": null,
+          "custom_status_expires_at": null,
+          "custom_status_text": null,
+          "dnd_enabled": 0,
+          "dnd_until": null,
           "email_address": "channels-c@example.com",
+          "email_self_changed_at": null,
+          "github_login": null,
+          "google_email_link_allowed": 0,
+          "icon_name": null,
+          "inbox_preferences": "{}",
+          "meeting_dnd_enabled": 0,
+          "meeting_status_enabled": 0,
           "name": "Channel Outsider",
-          "password_digest": "$2a$12$IelewWBpROn0.Tf1gcfqY.DUfOBmNzIAAGCNBL7eHoirFUNsUNxy6",
+          "ooo_broadcast": null,
+          "ooo_calendar_enabled": 0,
+          "ooo_note": null,
+          "ooo_notify_enabled": 0,
+          "ooo_until": null,
+          "password_digest": "$2a$12$1O0TYXMCQot0WgEOWbCgZuUSTVrsaNXKRFvwjEjWQh70HjTfuXWaO",
+          "presence_setting": "auto",
+          "push_to_talk_key": null,
+          "quiet_hours_enabled": 0,
+          "quiet_hours_end_minute": null,
+          "quiet_hours_start_minute": null,
           "role": 0,
           "status": 0,
-          "updated_at": "2026-09-26 13:09:15.866168"
+          "text_size": "default",
+          "theme": "system",
+          "time_zone": null,
+          "time_zone_explicit": 0,
+          "tour_completed_at": null,
+          "updated_at": "2026-09-30 00:20:07.663203",
+          "voice_mode": null
+        },
+        {
+          "id": 4,
+          "bio": null,
+          "bot_token": null,
+          "bot_token_digest": "9aeca5562cf750e7a4b54c04404c0172bac7ad457de13f8669988b05d3386170",
+          "created_at": "2026-09-30 00:20:07.836582",
+          "custom_status_emoji": null,
+          "custom_status_expires_at": null,
+          "custom_status_text": null,
+          "dnd_enabled": 0,
+          "dnd_until": null,
+          "email_address": null,
+          "email_self_changed_at": null,
+          "github_login": null,
+          "google_email_link_allowed": 0,
+          "icon_name": null,
+          "inbox_preferences": "{}",
+          "meeting_dnd_enabled": 0,
+          "meeting_status_enabled": 0,
+          "name": "Golden Bot",
+          "ooo_broadcast": null,
+          "ooo_calendar_enabled": 0,
+          "ooo_note": null,
+          "ooo_notify_enabled": 0,
+          "ooo_until": null,
+          "password_digest": null,
+          "presence_setting": "auto",
+          "push_to_talk_key": null,
+          "quiet_hours_enabled": 0,
+          "quiet_hours_end_minute": null,
+          "quiet_hours_start_minute": null,
+          "role": 2,
+          "status": 0,
+          "text_size": "default",
+          "theme": "system",
+          "time_zone": null,
+          "time_zone_explicit": 0,
+          "tour_completed_at": null,
+          "updated_at": "2026-09-30 00:20:07.836582",
+          "voice_mode": null
         }
       ]
     }
@@ -990,6 +438,95 @@
           "close Some((1000, \"\"))"
         ]
       }
+    },
+    {
+      "step": "connect two-factor pending",
+      "frames": {
+        "P": [
+          "{\"type\":\"disconnect\",\"reason\":\"unauthorized\",\"reconnect\":false}",
+          "close Some((1000, \"\"))"
+        ]
+      }
+    },
+    {
+      "step": "connect bot without two-factor",
+      "frames": {
+        "BOT": [
+          "{\"type\":\"welcome\"}"
+        ]
+      }
+    },
+    {
+      "step": "bot activity rejected",
+      "frames": {
+        "BOT": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ActivityChannel\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "bot huddle notices rejected",
+      "frames": {
+        "BOT": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"HuddleNoticeChannel\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "bot agents rejected",
+      "frames": {
+        "BOT": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"AgentsChannel\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A activity",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ActivityChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A huddle notices",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"HuddleNoticeChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A agents",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"AgentsChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A unread threads",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadThreadsChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A workspace presence",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"WorkspacePresenceChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A workspace heartbeat",
+      "frames": {}
+    },
+    {
+      "step": "A workspace unsubscribe",
+      "frames": {}
     },
     {
       "step": "A heartbeat",
@@ -1027,8 +564,8 @@
       "step": "A presence",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}",
-          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":699448330}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":1}}"
         ]
       }
     },
@@ -1036,7 +573,7 @@
       "step": "A presence in a room A isn't in",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":699448331}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":2}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1052,8 +589,8 @@
       "step": "A presence with a numeric string room",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":\\\"699448330\\\"}\",\"type\":\"confirm_subscription\"}",
-          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":699448330}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":\\\"1\\\"}\",\"type\":\"confirm_subscription\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":1}}"
         ]
       }
     },
@@ -1061,7 +598,7 @@
       "step": "A room",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -1069,7 +606,7 @@
       "step": "A room A isn't in",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448331}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":2}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1085,7 +622,7 @@
       "step": "A typing",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -1093,7 +630,45 @@
       "step": "B typing",
       "frames": {
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A thread typing",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "B thread typing",
+      "frames": {
+        "B": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A starts thread typing",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
+        ],
+        "B": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
+        ]
+      }
+    },
+    {
+      "step": "B stops thread typing",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
+        ],
+        "B": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
         ]
       }
     },
@@ -1101,10 +676,10 @@
       "step": "A starts typing",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523959,\"name\":\"Channel Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
         ],
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523959,\"name\":\"Channel Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
         ]
       }
     },
@@ -1112,10 +687,10 @@
       "step": "B stops typing",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":773523960,\"name\":\"Channel Peer\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
         ],
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":773523960,\"name\":\"Channel Peer\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
         ]
       }
     },
@@ -1127,7 +702,70 @@
       "step": "A room messages",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--380c9b288ee92e798a4af7165a43e54bda7c597219a27b815e3278cf183d4d88\\\"}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A thread messages",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDOHg6bWVzc2FnZXMi--e66e7fdea645efe22a74155e7791813546c0640c043a24b2f8cc9012e3f1bc83\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A room threads",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROnRocmVhZHMi--2daf5775325ee4db5f316bc021310e4a1d8ac7a9d87cb77f0462a1777ae96087\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A stock thread messages rejected",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDOHg6bWVzc2FnZXMi--e66e7fdea645efe22a74155e7791813546c0640c043a24b2f8cc9012e3f1bc83\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A stock room threads rejected",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROnRocmVhZHMi--2daf5775325ee4db5f316bc021310e4a1d8ac7a9d87cb77f0462a1777ae96087\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A turbo status",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6c3RhdHVzIg==--fa3fb4ef3175b6e64a67893f8c1ef4614a6f8d36f8f9af7acc1026badaa396af\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A turbo ooo notice",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6b29vX25vdGljZSI=--086125f7e15e88b34c10278ec052a0789c530490962af4d9896f4ce6c33b42d0\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "new channel and signature-only broadcasts",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ActivityChannel\\\"}\",\"message\":{\"activityItemId\":42}}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"HuddleNoticeChannel\\\"}\",\"message\":{\"huddleJoinNotice\":{\"eventType\":\"huddle_ended\",\"roomId\":1}}}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadThreadsChannel\\\"}\",\"message\":{\"threadId\":1,\"roomId\":1}}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"AgentsChannel\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"replace\\\" target=\\\"status_badge_agent_1\\\"\\u003e\\u003ctemplate\\u003e\\u003cspan\\u003eready\\u003c/span\\u003e\\u003c/template\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6c3RhdHVzIg==--fa3fb4ef3175b6e64a67893f8c1ef4614a6f8d36f8f9af7acc1026badaa396af\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"update\\\" target=\\\"status_badge_user_1\\\"\\u003e\\u003ctemplate\\u003e\\u003cspan\\u003eonline\\u003c/span\\u003e\\u003c/template\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6b29vX25vdGljZSI=--086125f7e15e88b34c10278ec052a0789c530490962af4d9896f4ce6c33b42d0\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"update\\\" target=\\\"ooo_notice_user_1\\\"\\u003e\\u003ctemplate\\u003e\\u003cspan\\u003eaway\\u003c/span\\u003e\\u003c/template\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDOHg6bWVzc2FnZXMi--e66e7fdea645efe22a74155e7791813546c0640c043a24b2f8cc9012e3f1bc83\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"message_golden\\\"\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROnRocmVhZHMi--2daf5775325ee4db5f316bc021310e4a1d8ac7a9d87cb77f0462a1777ae96087\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"channel_thread_golden\\\"\\u003e\\u003c/turbo-stream\\u003e\"}"
         ]
       }
     },
@@ -1135,7 +773,7 @@
       "step": "A room messages for a room A isn't in",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPa05zYjNObFpDODJPVGswTkRnek16RTptZXNzYWdlcyI=--3aba2a6466c4468ba51417ed9ba33338a41f35974f34e7c8cabf79c676d115fe\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPa05zYjNObFpDOHk6bWVzc2FnZXMi--021c3ea0cbb6d3e185cb6a5b9446e6c1061598e11f1293ec6035530155efc740\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1159,7 +797,7 @@
       "step": "A room messages with the rooms name",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"InJvb21zIg==--60a2ff565fb2226042c779b5711156db1d1cc48f89e6f59c94e4bf1da3f0945c\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1167,7 +805,7 @@
       "step": "A turbo rooms",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"InJvb21zIg==--60a2ff565fb2226042c779b5711156db1d1cc48f89e6f59c94e4bf1da3f0945c\\\"}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439\\\"}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -1175,7 +813,7 @@
       "step": "A turbo own rooms",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNOek0xTWpNNU5Uazpyb29tcyI=--b04ae70e174c5788e66ab6de8abaffe17d5a24d3bef07287cf027a438c44a568\\\"}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6cm9vbXMi--5332e05561936c318a1fd4120aadb81d0ca03962a0bf4111dbb6e242065bb410\\\"}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -1183,7 +821,7 @@
       "step": "A turbo guarded room messages",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--380c9b288ee92e798a4af7165a43e54bda7c597219a27b815e3278cf183d4d88\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1199,7 +837,7 @@
       "step": "A presence present",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":699448330}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":1}}"
         ]
       }
     },
@@ -1215,8 +853,8 @@
       "step": "unread fanout",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":699448330}}",
-          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":699448330}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":1}}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":1}}"
         ]
       }
     },
@@ -1224,7 +862,7 @@
       "step": "message removed",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--380c9b288ee92e798a4af7165a43e54bda7c597219a27b815e3278cf183d4d88\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"message_channels-golden-1\\\"\\u003e\\u003c/turbo-stream\\u003e\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"message_channels-golden-1\\\"\\u003e\\u003c/turbo-stream\\u003e\"}"
         ]
       }
     },
@@ -1232,7 +870,7 @@
       "step": "B presence",
       "frames": {
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -1240,10 +878,10 @@
       "step": "A typing again",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523959,\"name\":\"Channel Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
         ],
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523959,\"name\":\"Channel Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
         ]
       }
     },
@@ -1251,6 +889,7 @@
       "step": "revoke A",
       "frames": {
         "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6cm9vbXMi--5332e05561936c318a1fd4120aadb81d0ca03962a0bf4111dbb6e242065bb410\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"list_rooms_open_1\\\"\\u003e\\u003c/turbo-stream\\u003e\"}",
           "{\"type\":\"disconnect\",\"reason\":\"remote\",\"reconnect\":true}",
           "close Some((1000, \"\"))"
         ]
@@ -1268,7 +907,7 @@
       "step": "A2 presence",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":1}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1276,7 +915,7 @@
       "step": "A2 room",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":1}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1284,7 +923,7 @@
       "step": "A2 typing",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1292,7 +931,7 @@
       "step": "A2 room messages",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--380c9b288ee92e798a4af7165a43e54bda7c597219a27b815e3278cf183d4d88\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1300,7 +939,7 @@
       "step": "A2 turbo guarded room messages",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--380c9b288ee92e798a4af7165a43e54bda7c597219a27b815e3278cf183d4d88\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1308,7 +947,7 @@
       "step": "A2 turbo rooms",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"InJvb21zIg==--60a2ff565fb2226042c779b5711156db1d1cc48f89e6f59c94e4bf1da3f0945c\\\"}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439\\\"}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -1324,7 +963,7 @@
       "step": "B typing after A left",
       "frames": {
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523960,\"name\":\"Channel Peer\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
         ]
       }
     },

@@ -28,7 +28,19 @@ ensure
 end
 unread = captured.select { |event| event[:stream] == UnreadThreadsChannel.stream_name_for(recipient.id) }
 raise "expected one real unread-thread callback" unless unread.one?
-broadcasts=[{kind:"remove",stream:"gid://campfire/User/1:rooms",target:"list_rooms_direct_4",payload:ApplicationController.helpers.turbo_stream_action_tag(:remove,target:"list_rooms_direct_4")},*unread]
+# The real membership callback supplies both the encoded stream and the removal frame.
+removed_member = Membership.find_by!(room: room, user: user)
+removal_frames = []
+server.define_singleton_method(:broadcast) { |stream, payload, **| removal_frames << {stream: stream, payload: payload} }
+begin
+  removed_member.destroy!
+ensure
+  server.define_singleton_method(:broadcast, original_broadcast)
+end
+remove = removal_frames.find { |frame| frame[:payload].is_a?(String) && frame[:payload].include?('action="remove"') && frame[:payload].include?('target="list_') }
+raise "missing real membership removal" unless remove
+broadcasts=[{kind:"remove", user_id: user.id, target: ActionView::RecordIdentifier.dom_id(room, :list), **remove},*unread]
+room.memberships.grant_to(user) # Restore room access for the scheduled/edit/forward checks below.
 thread_broadcast = {room_id: room.id, creator_id: user.id, recipient_id: recipient.id, name: thread.name, source: reply_source}
 flow_source = "**Scheduled** @[David] and :gpt:"
 flow_edit = "## Edited\n\n- [x] ready @[Jason]"

@@ -179,13 +179,13 @@ fn close_due_stamps_and_broadcasts_due_polls_once() {
     assert_eq!(due.closed_at, Some(t.now()));
     assert_eq!(t.write(move |tx| Poll::close_due(tx, now)), Vec::<i64>::new(), "once");
 
-    let cards: Vec<_> = t.events()[from..].iter().filter_map(|e| e.as_broadcast().cloned()).collect();
+    let cards: Vec<_> = t.events()[from..].iter().filter_map(|e| e.as_broadcast()).collect();
     assert_eq!(cards.len(), 1);
     let Broadcast::Turbo(card) = &cards[0] else { panic!() };
     assert_eq!(card.target, format!("card_poll_{}", due_poll.id));
     assert_eq!(card.partial, Some(Partial::Poll { poll_id: due_poll.id }));
     assert!(card.maintain_scroll);
-    assert_eq!(cards[0].stream_name(), format!("gid://campfire/Rooms::Closed/{}:messages", id("watercooler")));
+    assert_eq!(cards[0].stream_name(), format!("{}:messages", rails_compat::global_id::GlobalId::new("Rooms::Closed", id("watercooler")).to_param()));
 }
 
 #[test]
@@ -257,8 +257,8 @@ fn a_thread_polls_card_broadcasts_to_the_thread() {
     let from = t.events().len();
     let first = options(&t, &poll)[0].id;
     vote(&t, &poll, "jason", vec![first]).unwrap();
-    let card = t.events()[from..].iter().find_map(|e| e.as_broadcast().cloned()).unwrap();
-    assert_eq!(card.stream_name(), format!("gid://campfire/ChannelThread/{thread_id}:messages"));
+    let card = t.events()[from..].iter().find_map(|e| e.as_broadcast()).unwrap();
+    assert_eq!(card.stream_name(), format!("{}:messages", rails_compat::global_id::GlobalId::new("ChannelThread", thread_id).to_param()));
 }
 
 #[test]

@@ -12,9 +12,11 @@ use sha2::{Digest, Sha256};
 use crate::app::Kit;
 use crate::clock::{self, SharedClock};
 use crate::cookies::CookieJar;
+use crate::csrf::{self, AuthenticityTokens, RealToken};
 use crate::deflater::splice::PageParts;
 use crate::format::{self, Format, InvalidMimeType, NegotiationInput};
 use crate::params::{Param, ParamMap};
+use crate::rate_limit::RateLimit;
 use crate::request::Request;
 use crate::response::{self, Body, CacheControl, ExpiresIn, Response, SendBody, SendOptions};
 use crate::session::{Flash, Session};
@@ -38,9 +40,19 @@ pub struct Ctx {
     kit: Kit,
     extensions: Extensions,
     marked_for_same_origin_verification: bool,
+    /// `request.env["action_controller.csrf_token"]`: the session's CSRF token once read (or
+    /// generated), stored into the session when the request commits.
+    csrf_token: Option<String>,
+    /// `request.content_security_policy_nonce`, memoized for the request.
+    csp_nonce: Option<String>,
+    /// A CSRF token or CSP nonce went into the body, which is then unique to this request.
+    session_bound_body: bool,
     formats: Option<std::result::Result<Vec<Format>, InvalidMimeType>>,
     rendered_format: Option<Format>,
     live: bool,
+    /// The body of an [`crate::unparsed_action`], until [`Ctx::read_body`] reads it. (A `Mutex`
+    /// only because a body isn't `Sync`.)
+    unread_body: std::sync::Mutex<Option<axum::body::Body>>,
 }
 
 /// Options for `redirect_to`.
@@ -98,10 +110,40 @@ impl Ctx {
             kit,
             extensions: Extensions::new(),
             marked_for_same_origin_verification: false,
+            csrf_token: None,
+            csp_nonce: None,
+            session_bound_body: false,
             formats: None,
             rendered_format: None,
             live: false,
+            unread_body: std::sync::Mutex::new(None),
         }
+    }
+
+    pub(crate) fn leave_body_unread(&mut self, body: axum::body::Body) {
+        *self.unread_body.get_mut().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(body);
+    }
+
+    /// `request.body.read(limit)`: at most the first `limit` bytes of the body. An
+    /// [`crate::unparsed_action`]'s body has already been validated and spooled before the
+    /// action ran: those bytes are kept and the rest is read and dropped. Any other action's
+    /// comes from `raw_post`.
+    pub async fn read_body(&mut self, limit: usize) -> bytes::Bytes {
+        use http_body_util::BodyExt;
+
+        let unread = self.unread_body.get_mut().unwrap_or_else(|poisoned| poisoned.into_inner()).take();
+        let Some(mut body) = unread else {
+            let raw = self.request.raw_post();
+            return raw.slice(..raw.len().min(limit));
+        };
+        let mut read = bytes::BytesMut::new();
+        while let Some(Ok(frame)) = body.frame().await {
+            if let Ok(data) = frame.into_data() {
+                let wanted = limit.saturating_sub(read.len()).min(data.len());
+                read.extend_from_slice(&data[..wanted]);
+            }
+        }
+        read.freeze()
     }
 
     pub fn kit(&self) -> &Kit {
@@ -177,10 +219,12 @@ impl Ctx {
         self.session.load(&self.cookies)
     }
 
-    /// `reset_session`: new session id, no data, no flash.
+    /// `reset_session`: new session id, no data, no flash, and a new CSRF token when one is next
+    /// needed (`reset_csrf_token`).
     pub fn reset_session(&mut self) {
         self.session.reset();
         self.flash = None;
+        self.csrf_token = None;
     }
 
     /// `flash`, loaded from the session on first use.
@@ -194,43 +238,147 @@ impl Ctx {
 
     // --- Forgery protection ---------------------------------------------------------------------
 
-    /// The `verify_authenticity_token` before-action, by `Sec-Fetch-Site` rather than tokens (Rails
-    /// main's `protect_from_forgery using: :header_only`): pages carry no per-request token, so they
-    /// render the same until what they show changes. Browsers send the header on every request to a
-    /// secure origin; without it (an old browser, or plain HTTP where browsers don't send it) a
-    /// write is only allowed when neither the request nor the app uses SSL, where the
-    /// `SameSite=Lax` session cookie and the `Origin` check are the protection.
+    /// The `verify_authenticity_token` before-action (`protect_from_forgery with: :exception`):
+    /// GET and HEAD pass; anything else needs an acceptable `Origin` and a valid token in the
+    /// `authenticity_token` param or the `X-CSRF-Token` header (see [`crate::csrf`]).
     pub fn verify_authenticity_token(&mut self) -> Result<()> {
         self.marked_for_same_origin_verification = self.request.is_get();
         if self.request.is_get() || self.request.is_head() {
             return Ok(());
         }
-        if !self.valid_request_origin()? {
-            let message = format!(
+        let valid_origin = self.valid_request_origin()?;
+        if valid_origin && self.any_authenticity_token_valid() {
+            return Ok(());
+        }
+        let message = if valid_origin {
+            "Can't verify CSRF token authenticity.".to_string()
+        } else {
+            format!(
                 "HTTP Origin header ({}) didn't match request.base_url ({})",
                 self.request.origin().unwrap_or(""),
                 self.request.base_url()
-            );
-            return Err(Error::InvalidAuthenticityToken(message));
-        }
-        match self.request.header("sec-fetch-site") {
-            Some("same-origin" | "same-site") => Ok(()),
-            None if !self.request.is_ssl() && !self.kit.config().force_ssl => Ok(()),
-            Some("cross-site") => {
-                Err(Error::InvalidAuthenticityToken("Sec-Fetch-Site header (cross-site) indicates a cross-site request".into()))
-            }
-            other => Err(Error::InvalidAuthenticityToken(format!("Sec-Fetch-Site header is missing or invalid ({other:?})"))),
-        }
+            )
+        };
+        tracing::warn!("{message}");
+        Err(Error::InvalidAuthenticityToken(message))
     }
 
     fn valid_request_origin(&self) -> Result<bool> {
         if !self.kit.config().forgery_protection_origin_check {
             return Ok(true);
         }
-        match self.request.origin() {
-            Some("null") => Err(Error::InvalidAuthenticityToken("The browser returned a 'null' origin".into())),
-            Some(origin) => Ok(origin == self.request.base_url()),
-            None => Ok(true),
+        csrf::valid_request_origin(self.request.origin(), &self.request.base_url())
+            .map_err(|_| Error::InvalidAuthenticityToken("The browser returned a 'null' origin".into()))
+    }
+
+    /// `any_authenticity_token_valid?` over `[params[:authenticity_token], request.x_csrf_token]`.
+    fn any_authenticity_token_valid(&mut self) -> bool {
+        let candidates: Vec<String> = [self.params.str(csrf::PARAM), self.request.header(csrf::HEADER)]
+            .into_iter()
+            .flatten()
+            .filter(|token| !token.is_empty())
+            .map(str::to_string)
+            .collect();
+        if candidates.is_empty() {
+            return false;
+        }
+        let real = self.real_csrf_token();
+        let (path, method) = (self.request.path().to_string(), self.request.method.as_str().to_string());
+        candidates.iter().any(|token| real.is_valid(token, &path, &method))
+    }
+
+    /// `real_csrf_token`: the session's token, or a new one (kept for this request and stored
+    /// into the session when it commits).
+    fn real_csrf_token(&mut self) -> RealToken {
+        if self.csrf_token.is_none() {
+            let stored = self.session().get_str(csrf::SESSION_KEY).map(str::to_string);
+            self.csrf_token = Some(stored.unwrap_or_else(csrf::generate));
+        }
+        match self.csrf_token.as_deref().and_then(RealToken::decode) {
+            Some(token) => token,
+            // Not base64, which only a session written by something else could hold (Rails
+            // raises): start over with a new token.
+            None => {
+                let token = csrf::generate();
+                self.csrf_token = Some(token.clone());
+                RealToken::decode(&token).expect("generated tokens are base64")
+            }
+        }
+    }
+
+    /// `form_authenticity_token`: the masked global token. Reading it also makes sure the session
+    /// holds the token when the request commits (what `start_new_session_for` relies on).
+    pub fn form_authenticity_token(&mut self) -> String {
+        self.real_csrf_token().masked(None)
+    }
+
+    /// `form_authenticity_token(form_options: { action:, method: })`: a per-form token.
+    pub fn form_authenticity_token_for(&mut self, action: &str, method: &str) -> String {
+        self.authenticity_tokens().for_form(action, method)
+    }
+
+    /// The tokens a page's views embed (`csrf_meta_tags`, forms and `button_to`), bound to this
+    /// request's session and path. The session gets the token when the request commits, and the
+    /// response body is marked as unique to this request.
+    pub fn authenticity_tokens(&mut self) -> AuthenticityTokens {
+        self.session_bound_body = true;
+        let real = self.real_csrf_token();
+        AuthenticityTokens::new(real, self.request.path())
+    }
+
+    // --- Rate limiting ---------------------------------------------------------------------------
+
+    /// `rate_limit to:, within:, by:, with:` as a before-action: counts this request under `by`
+    /// (`request.remote_ip` when `None`) and says whether it's over the limit, for the caller to
+    /// run its `with:`.
+    pub fn rate_limited(&mut self, limit: &RateLimit, by: Option<&str>) -> Result<bool> {
+        let by = match by {
+            Some(by) => by.to_string(),
+            None => self.request.remote_ip()?.to_string(),
+        };
+        let now = self.now();
+        Ok(limit.exceeded(self.kit.rate_limits(), &by, now))
+    }
+
+    /// `rate_limit` with the default `with:` (`raise ActionController::TooManyRequests`, a 429).
+    pub fn rate_limit(&mut self, limit: &RateLimit) -> Result<()> {
+        if self.rate_limited(limit, None)? { Err(Error::Status(StatusCode::TOO_MANY_REQUESTS)) } else { Ok(()) }
+    }
+
+    // --- Content Security Policy -----------------------------------------------------------------
+
+    /// `content_security_policy_nonce` for a view (`csp_meta_tag`, `javascript_importmap_tags`):
+    /// `None` without a policy nonce generator.
+    pub fn content_security_policy_nonce(&mut self) -> Option<String> {
+        let nonce = self.csp_nonce();
+        self.session_bound_body |= nonce.is_some();
+        nonce
+    }
+
+    /// `request.content_security_policy_nonce`: generated from the session id Rails would see at
+    /// this point (`request.session.id`), then kept for the rest of the request.
+    fn csp_nonce(&mut self) -> Option<String> {
+        if self.csp_nonce.is_none() {
+            let policy = self.kit.config().content_security_policy.clone()?;
+            let session_id = self.session.public_id(&self.cookies);
+            self.csp_nonce = policy.generate_nonce(session_id.as_deref());
+        }
+        self.csp_nonce.clone()
+    }
+
+    /// `ActionDispatch::ContentSecurityPolicy::Middleware`: the policy header on a controller
+    /// response, except a 304 or one that already carries a policy.
+    fn apply_content_security_policy(&mut self, response: &mut Response) {
+        let Some(policy) = self.kit.config().content_security_policy.clone() else { return };
+        let present = ["content-security-policy", "content-security-policy-report-only"]
+            .iter()
+            .any(|name| response.headers.contains_key(*name));
+        if response.status == StatusCode::NOT_MODIFIED || present {
+            return;
+        }
+        let nonce = self.csp_nonce();
+        if let Ok(value) = HeaderValue::from_str(&policy.build(nonce.as_deref())) {
+            response.headers.insert(HeaderName::from_static(policy.header_name()), value);
         }
     }
 
@@ -555,9 +703,7 @@ impl Ctx {
         if let Err(error) = self.verify_same_origin_request(&response) {
             return self.error_response(error);
         }
-        if let Err(error) = self.commit(&mut response) {
-            return self.error_response(error);
-        }
+        self.commit_flash();
 
         self.apply_cache_headers(&mut response);
         for (name, value) in self.default_headers() {
@@ -570,8 +716,14 @@ impl Ctx {
         {
             response.headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(response::HTML_UTF8));
         }
-        rack_etag(&mut response, !self.live);
+        rack_etag(&mut response, !self.live, self.session_bound_body);
         self.conditional_get(&mut response);
+        // The CSP middleware runs inside the session middleware: the nonce sees the session as
+        // the action (and the flash commit) left it, before the CSRF token is stored.
+        self.apply_content_security_policy(&mut response);
+        if let Err(error) = self.commit_session(&mut response) {
+            return self.error_response(error);
+        }
         response
     }
 
@@ -587,8 +739,8 @@ impl Ctx {
         Ok(())
     }
 
-    /// `commit_flash`, `commit_session`, then the cookie jar's `write`.
-    fn commit(&mut self, response: &mut Response) -> Result<()> {
+    /// `commit_flash`, which the controller runs as it finishes.
+    fn commit_flash(&mut self) {
         if let Some(flash) = self.flash.take() {
             let has_flash_key = self.session().contains_key("flash");
             if !flash.is_empty() || has_flash_key {
@@ -602,6 +754,13 @@ impl Ctx {
         }
         if self.session.is_loaded() && self.session.contains_key("flash") && self.session.get("flash").is_none() {
             self.session.remove("flash");
+        }
+    }
+
+    /// `commit_csrf_token` and `commit_session`, then the cookie jar's `write`.
+    fn commit_session(&mut self, response: &mut Response) -> Result<()> {
+        if let Some(token) = self.csrf_token.clone() {
+            self.session().insert(csrf::SESSION_KEY, token);
         }
         let now = self.now();
         self.session.commit(&mut self.cookies, now)?;
@@ -672,7 +831,10 @@ fn is_fresh(request: &Request, etag: Option<&str>, last_modified: Option<&str>) 
 /// without validators, and a default `Cache-Control`. A Live response's body is a
 /// `Live::Buffer`, which doesn't respond to `to_ary`, so it's never digested: whatever such a
 /// controller renders goes out with `no-cache` and no ETag.
-fn rack_etag(response: &mut Response, digestible: bool) {
+///
+/// A body holding a CSRF token or CSP nonce (`session_bound`) is unique to its request, so it isn't
+/// kept as one stored gzip piece: the store would fill with pages no other request renders.
+fn rack_etag(response: &mut Response, digestible: bool, session_bound: bool) {
     let mut digested = false;
     let skip = !digestible || response.headers.contains_key(header::ETAG) || response.headers.contains_key(header::LAST_MODIFIED);
     let digests = matches!(response.status.as_u16(), 200 | 201) && !skip;
@@ -681,7 +843,8 @@ fn rack_etag(response: &mut Response, digestible: bool) {
         // text part, so the SHA-256 it already needs also keys its stored gzip piece: a page that
         // renders the same (the sidebar, say) compresses once instead of on every request.
         let parts = if response.cached_fragments.is_empty() { None } else { PageParts::new(bytes, &response.cached_fragments) };
-        response.page_parts = parts.or_else(|| if digests { PageParts::whole(bytes) } else { None }).map(std::sync::Arc::new);
+        let whole = digests && !session_bound;
+        response.page_parts = parts.or_else(|| if whole { PageParts::whole(bytes) } else { None }).map(std::sync::Arc::new);
     }
     if digests
         && let Body::Bytes(bytes) = &response.body
