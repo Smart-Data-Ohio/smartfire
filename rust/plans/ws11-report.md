@@ -1,55 +1,56 @@
-# WS11 report — PARTIAL, webhook foundation and bot posting slice
+# WS11 report — PARTIAL: main merge, Agent delivery and access foundation
 
-Branch `rust/ws11-agents`, worktree `.claude/worktrees/rust-ws11`, base `bb6c5d78`, Rails reference `d7c7de92`. Earlier accepted slice: `bf9da994`, `f8cf0aff`, `7521d051`. This continuation pushed `1eed472e73a3b67edffd713b44ec3d42138409a9` (guarded/signed webhooks and shared legacy fanout) and `bc6a7f16ecec8c91e20b3509eb6bd7c98b775c11` (posting budgets/idempotency), followed by correctness/proof commit `a9233a0f4254a9496021450250062192cf85f7dc`. No PR, deployment, main merge, Rails-source change or parity-mask change.
+Branch `rust/ws11-agents`; worktree `.claude/worktrees/rust-ws11`; original base `bb6c5d78`; reference Rails `d7c7de92`. This report replaces the earlier webhook-only status. Last implementation tip: `67ab17338729a2347148307ae8c2a3514a8dc7f1`; the verification/report commit follows it. No PR or deployment.
 
-**WS11 acceptance remains incomplete.** Slice 2 is partial: the legacy path and transport/secrets foundation are implemented; the Agent ledger delivery jobs and five-attempt backoff are not. Agent-backed bots are excluded from legacy fanout as Rails requires, but their replacement event delivery pipeline has not yet been installed. Resume there before the domain, REST, MCP and HTML slices. This is not a cutover claim.
+**WS11 acceptance is still incomplete.** The message delivery pipeline, retry/recovery policy, webhook payload builders and selected bot gaps are shipped. Grant/credential records and event selection/acknowledgment are shipped as domain foundations. The full Agent domain, REST, MCP and management pages remain unfinished. Green Rust tests do not imply full Rails parity.
+
+## Pushed coherent slices
+
+- `ffd7b42c1719a2405bcaa3d80784babe7bf34cd1`: merge commit for authorized `origin/main` at `21a7332f2d3c324f0862cdf448baf17a84395aa0` (WS19b). `af007e9a81fdec45a600f49e0330433886bef609` retains its CI seed gate while enabling `manages_bots`. Incoming cable close/drain behavior is retained. `manages_bots` has no ignore and passes in the final seeded suite.
+- `caf989843aaed9853e214342dd04d024fc4352b2`: atomic message event ledger and durable delivery jobs, attempt claims, five-attempt backoff, recovery and real HTTP/concurrency tests.
+- `2cd6f5906366407ba7be593541309c3584efbd23`: webhook payload dispatch for approval, slash, GitHub/Fizzy completion, work assignment/unassignment/handoff and message PR/Drive cases.
+- `94c5b4df4501b5da069c62746e6ba57fe618f37f`: raw bot edits, shortcode normalization and selected non-string client-id coercion/replay.
+- `4804f47e9e9450cb8c8c785c6505fc30fc2eef19`: typed grants/credentials, digest-only creation and atomic membership/user-status grant revocation.
+- `67ab17338729a2347148307ae8c2a3514a8dc7f1`: fresh capability checks, readable event selection before pagination and idempotent acknowledgment that preserves webhook claims.
+
+The previously accepted auth/reply-token/key-reset/scrub, legacy signed webhooks/fanout and posting-budget/idempotency foundations remain in place and run in the final suite.
 
 ## What changed, by file
 
-The earlier bot authorization slice remains: create-only expiring reply tokens; root-only counts; system-note edit/delete restrictions; SHA-256 credential authentication with expiry/revocation/suspension/activity checks and one-minute usage stamps; fresh capability/grant reads including revoked-row fallback denial; reveal-once key reset with existing sudo/admin gate and atomic audit; scheduled plaintext scrub; digest-only bot seeds; enabled `manages_bots`; Rails bot vectors and cable recordings. Full Agent CRUD and full User-save validators/callbacks were not implemented by that slice.
-
-Changes in this continuation:
-
-- `rust/crates/campfire/src/integrations/webhook.rs`: guarded resolution and pinned HTTP/TLS connection; Rails headers, exact-body HMAC and clock sampling after resolution; seven-second open/read timeouts; legacy timeout root replies versus Agent timeout propagation; only 2xx response bodies become replies. Removed inherited hard total-deadline and body-size limits that Rails does not impose. Preserved MIME lookup and 200 text-versus-other-2xx attachment behavior. Error wrappers expose timed I/O sources to the existing durable queue's transient classifier. Tests cover real HTTP requests, all guard vectors, DNS rebinding, signatures, non-2xx suppression, timeout distinction and timing order.
-- `rust/crates/campfire/src/integrations/net/guard.rs`: additive `resolve_webhook` matching the actual pinned Surfguard `910be917fd0ab782c5ea939698d44f26694a501d`, including numeric inet_aton forms, mapped/compatible IPv6, embedded IPv4, DNS private filtering and IPv4 preference. Existing unfurl/push policy is untouched; see WS5 seam below.
-- `rust/crates/db/src/models/webhook.rs`: encrypted signing-secret column reads, lazy ensure and reset using 32 random bytes encoded as lower hex and AR-encrypted with US-ASCII metadata. A cached present secret returns immediately; a blank instance reloads the whole row inside the writer transaction and adopts the first generator's value. Existing legacy deliveries remain unsigned until a secret is generated by an explicit ensure/reset caller, matching Rails. Payloads append signed reply URLs only for bots without an Agent row; an additive Agent payload builder accepts its PR-domain seam and reads ordered Drive attachments.
-- `rust/crates/db/src/models/agent_access.rs`: minimal transaction-held Agent webhook-secret ensure reader/generator. It does not implement Agent save validations/callbacks.
-- `rust/crates/campfire/src/app.rs`: constructs/caches the shared `ArEncryption` from the existing application secrets for model reads/writes.
-- `rust/crates/db/src/models/bot_webhook_fanout.rs`, `models.rs`, `tests/bot_webhook_fanout_test.rs`, `tests.rs`: shared legacy fanout policy, active legacy-bot recipients, creator/Agent exclusions, note/thread/stream skips, three-hop gate, recent authorized Agent trigger reads and legacy reply/recent-room trigger inference. Rails' `where.not(id:, creator_id:)` conjunction and highest-source-hop ordering are preserved.
-- `rust/crates/campfire/src/controllers/messages.rs`, `rust/crates/db/src/slash_commands.rs`, `models/scheduled_message.rs`: replace duplicated legacy fanout with the shared service in the normal message, slash-command and scheduled-message posting paths. Durable legacy jobs are enqueued with the message writes, including the existing held/release mechanism for controller broadcasts. Existing WS8 queue rollback tests still run.
-- `rust/crates/campfire/src/integrations/jobs.rs`: decrypt the stored webhook secret, construct a signed 15-minute legacy reply path without exposing a bot key, sign the delivery, and create synchronous root/thread/board replies through shared WS8 message/thread writers. Attachments use the existing storage/processing path; locked-thread legacy errors propagate. The actual legacy job policy test proves transient timed I/O versus permanent connection/URL failures and its inherited five-attempt polynomial schedule. The Agent event runner remains absent.
-- `rust/crates/db/src/models/agent_posting.rs`, `models.rs`, `tests/agent_posting_test.rs`, `tests.rs`: domain posting preflight/outcomes, replay before budget, forced Agent creator, persisted-row usage for message/board/external caps, local-day boundaries and exact Rails 429 JSON. Notice creation and owner/admin inbox refresh happen once per Agent/cap/day and roll back with the writer transaction. Board/external cap readers are tested but their production Agent API callers remain deferred.
-- `rust/crates/campfire/src/controllers/messages/by_bots.rs`, `controllers/messages.rs`: Agent-backed bot-key create runs replay/budget preflight before attachment validation/staging, then repeats it in the actual save transaction. Replay returns the original message Location without another broadcast/job; denial commits one notice. Legacy raw bodies still ignore client ids. The pinned bot-key endpoint includes `retry_after` in JSON and has no `Retry-After` header. Generic Agent REST header policy is still deferred.
-- `rust/crates/campfire/src/controllers/messages/tests.rs`: HTTP budget overflow, notice read-state preservation, string-id replay before budget, malformed-attachment ordering, legacy raw-body behavior, Agent fanout exclusion, exact payload bytes and secret interoperability/rotation tests.
-- `rust/crates/campfire/src/integrations/test_support.rs`: optionally constrain fake HTTP listeners to the worker's port range; unmapped fake dialer addresses fail locally rather than reaching real services. Production networking is unchanged.
-- `rust/reference-tools/agents/{webhook_contract.rb,posting_budget_contract.rb,read_rust_webhook_secrets.rb}` and `rust/vectors/{agents_webhook_contract.json,agents_posting_budget_contract.json}`: pinned Rails guard/signature/basic-message payload/encrypted-secret/budget/time-zone vectors and an actual Rails model reader for Rust-written secret columns.
-- `rust/crates/campfire/src/integrations/testdata/oracle/webhook.rb`, `testdata/webhook_expected.json`: re-record the original response/MIME oracle from our fork. The local socket substitution applies only to `webhook.example`; literal-host guard failures still use the actual Rails guard. Recorded timestamp/header and non-2xx outcomes replace inherited upstream behavior.
-- `rust/reference-tools/agents/check-reference.py`, `compare-contracts.py`: verify 23 referenced Rails/gem-lock source files against the pinned image and compare fresh Rails contract outputs.
-- `rust/reference-tools/agents/verify-webhook-mutations.py`: compiled regression probes for guard/pinning/signing/body/version/status/timeouts/transient sources/fanout/hops/encryption/replies/budgets/replay/notices/board counts/time zones/timing/attachment order; restores files in `finally`.
+- `rust/crates/db/src/models/agent_delivery.rs`: AgentEvent reads/create validations, hop mirror, posted/recipient ledger rows, rate/hop suppression, delivery outcome CAS, independent webhook attempt CAS, settle/retry state and stranded/exhausted recovery. `message.rs` installs its enqueue in WS8a's create transaction, including threaded and synchronous replies. `bot_webhook_fanout.rs` shares live hop/chain reads with legacy fanout.
+- `rust/crates/campfire/src/integrations/agent_jobs.rs`, `integrations.rs`: actual `Agent::DeliveryJob` and `Agent::EventWebhookJob` registration; HTTP preparation outside the writer lock; pinned guarded transport and exact response/Retry-After classification. Only successful message POSTs create synchronous replies; reply-save errors are suppressed after the successful POST. Missing payloads/guard failures settle permanently; retryable responses and transport errors use ledger backoff. `integrations/jobs.rs` shares reply writing helpers; `integrations/webhook.rs` exposes response headers without changing the existing seven-second open/read policy.
+- `rust/crates/campfire/src/jobs/periodic.rs`: 30-second stranded-webhook sweep; each candidate's durable enqueue is its own writer transaction and failure does not prevent later recovery. `jobs/tests.rs` explicitly checks this task while preserving WS8's scheduler inventory assertions. No durable queue schema/storage redesign.
+- `rust/crates/db/src/models/agent_payloads.rs`: exact webhook JSON builders for every deliverable kind, shared read-only work fields, ordered links and nonempty Drive/PR fields. Owner/repository-keyed private access is an injected decision. Production currently supplies an empty access set because WS15g's live lookup has not landed at this base. Authorized private PR details therefore remain incomplete in production; the seam is explicitly tested, including denial for a different owner.
+- `rust/crates/campfire/src/integrations/agent_payload_tests.rs`: 16 pinned Rails byte payloads, four unavailable-payload errors, private-owner isolation and an actual non-message HTTP 2xx body ignored without a reply.
+- `rust/crates/db/src/models/agent_posting/client_ids.rs`, `agent_posting.rs`: separate stored-string versus lookup coercion, array IN lookup/flattening, blank/hash/error behavior and Ruby string/float inspection for the 26 recorded inputs. Both preflight and final writer checks use the same lookup, preserving replay before budgets/attachment validation. This is selected coercion coverage, not a claim about every arbitrary Ruby/JSON value.
+- `rust/crates/db/src/models/message.rs`, `campfire/src/controllers/messages.rs`, `messages/by_bots.rs`: raw bot edits clear stale Markdown and use WS8's edit callbacks/stamp. `db/src/rich_text.rs`, `models/boost.rs`, `campfire/src/rich_text.rs`: shared boost-content resolution via the existing icon catalog; eight Rails normalization/status cases. Complete reaction HTML/broadcast presentation remains a WS8b-r/WS11 seam.
+- `rust/crates/db/src/models/agent_credential.rs`, `agent_grant.rs`, `agent_access.rs`: typed records/create validations/revoke, reveal-once 32-byte hex secrets stored only as SHA-256 digest plus digest-derived display id, conditional one-minute use stamps, credential/Agent request identity seam, fresh room/workspace/anywhere capability checks and revoked-row denial of legacy fallback. Full Agent CRUD/administration is not included.
+- `rust/crates/db/src/models/membership.rs`, `user.rs`: room grants revoke before membership deletion and all Agent grants revoke on a changed inactive user status, in the same transaction. Room destruction/owner/Agent suspension/hard-destroy callbacks remain incomplete.
+- `rust/crates/db/src/models/agent_event_access.rs`: readable ordered pages (default 50/max 100) filter before limit without duplicate rows from overlapping grants. The selection intentionally matches Rails' raw scope; later payload drops must still advance the future poll cursor. Ack applies the actual Rails message-membership versus non-message-anywhere gate, excludes null/suppressed/ledger-only/other-Agent rows and preserves webhook status/attempts. Presenter payload assembly, dropped-page cursor and production REST/MCP callers remain absent.
+- `rust/crates/db/src/tests/{agent_delivery_test,agent_access_model_test,agent_event_access_test}.rs`, `campfire/src/controllers/messages/tests.rs`: real writer concurrency, durable enqueue failure/rollback, grant callback rollback, live auth/expiry/stamps, bot HTTP vectors and access/ack matrix; model/module registries expose the new domain types.
+- `rust/reference-tools/agents/{delivery_contract,event_payload_contract,bot_gaps_contract,grant_credential_contract,event_access_contract}.rb`, matching `rust/vectors/agents_*_contract.json`: actual pinned Rails jobs/models/services/controllers. Payload oracle stubs only the network and the explicit pending WS15g repository-decision seam. It does not supply a fake Agent delivery implementation.
+- `rust/reference-tools/agents/{verify-delivery-mutations,verify-payload-mutations,verify-event-access-mutations}.py`: compiled regression discrimination, restoration in `finally`. `verify-contracts.py` re-records all eight contracts and compares deterministic fields. `check-reference.py` checks 36 pinned files; merged main's only permitted checkout drift is #159's rubyzip 3.0.2 → 3.7.0 lock entry. The oracle still uses the actual pinned lock/image. `rust/Cargo.toml`, `Cargo.lock`, `crates/campfire/Cargo.toml` add the locked `httpdate` dependency for Retry-After dates.
 - `rust/plans/ws11-report.md`: tracked mirror of the requested external report.
 
-## Design and limitations
+## Design and correctness limits
 
-The posting and legacy fanout policies live in the DB domain and know nothing about HTML. Controllers stage/render/broadcast; model writes and their durable legacy job requests share the single writer transaction. The queue itself, cryptography, signing verifiers, rich-text/attachment processing and thread writers are reused rather than duplicated.
+The DB domain has no HTML dependency. Ledger changes and durable enqueues are atomic with message writes, while DNS/HTTP happen outside the writer lock. Polling acknowledgment and owed webhook delivery are independent. Retrying 408/429/5xx uses Retry-After (seconds/date, clamped to one hour) or attempt^4 + 2 seconds, and fails after the fifth claimed attempt. Permanent failures revert the speculative attempt increment as Rails does. Recovery preserves future retries, resumes older pending rows, marks abandoned exhausted rows after seven minutes and continues after an isolated queue failure.
 
-The default legacy `ApplicationJob` retry policy remains five attempts, polynomial delays with 0.15 jitter, transient timeout/SQLite busy errors only. Open/read timeouts are swallowed into the legacy root timeout reply, as Rails does. Exposing timed I/O error sources fixes their inherited failure classification. This does **not** implement the Agent delivery jobs, Agent response classification/Retry-After, ledger claims, recovery or Agent synchronous-reply-error suppression. The shared HTTP client's exact write-timeout/backpressure/error taxonomy remains an inherited transport seam to verify; the seven-second open/read behavior has explicit tests.
+16 byte payload samples cover every kind, null/compact behavior, live/deleted work snapshots, handoff, nonempty links/Drive, public/private PR and the injected owner-readable private case. This is builder parity, not a claim that the unimplemented approvals/work/slash/action domain callbacks create all those rows in production. Poll payloads differ from webhook payloads and still need their own complete builder/cursor implementation. Imported-message Agent skip state also awaits the WS16 seam.
 
-AR interoperability is real in both directions: the Rust test decrypts the ciphertext returned by our Rails `Webhook.ensure_signing_secret!`; the Rails reader then injects the actual Rust-generated ciphertext into both Webhook and Agent columns and reads/ensures them through the model APIs. This verifies format/keys/US-ASCII without treating two Rust encrypt/decrypt calls as interoperability. Tests use private seed copies only.
-
-The normal string `client_message_id` contract is implemented. Full Rails coercion of non-string ids (false/true/arrays/hashes) is not yet ported or claimed. Explicit `markdown_source: nil` clearing, the complete Agents::Posting validation JSON and Agent ledger callbacks remain outstanding. The preflight and final atomic check intentionally both run: malformed input must observe replay/budget precedence, while concurrent creates must not exceed a cap.
-
-The committed Agent payload vector has no PR and no Drive attachment. Nonempty PR/Drive payloads and approval/work/slash/GitHub/Fizzy event payloads are not claimed complete. The builder's PR argument is a seam for WS15g, and the actual Agent delivery caller is still required.
+Exact HTTP write/backpressure timing and Rust-versus-Ruby transport exception/error text remain unverified. Open/read timeouts, private-network denial, one resolution with a pinned connection, HMAC bytes and real status/retry behavior are tested. Private PR live access needs WS15g. Full User-save validators and reaction rendering remain cross-owner seams. No parity mask or test ignore was added; the WS11 ignore was removed.
 
 ## Current commands and raw evidence
 
-Every command cited here was rerun in this continuation. Cargo uses Rust 1.98.1, `-j 4`, this worktree's target/scratch directories and WS11 ports. Logs are under `.scratch/`. The final tests/clippy below are after restoring all deliberate mutations.
+Every command below was executed afresh in this continuation. Logs are this worktree's `.scratch/`; Rust is 1.98.1, `-j4`, own target/scratch and ports 52200–52299. All final green runs occurred after restoring deliberate mutations. The seeded app tests ran with `CI=1`, so missing seeds fail instead of silently skipping.
 
-Seed rebuild and source checks, run from the worktree root:
+From the worktree root:
 
 ```sh
-PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE=triage-reference-d7c7de92 rust/parity/bin/seed build
-python3 rust/reference-tools/agents/check-reference.py
-python3 rust/reference-tools/agents/check-seeds.py
+PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE=triage-reference-d7c7de92 rust/parity/bin/seed build >.scratch/seeds-delivery-final.log 2>&1
+python3 rust/reference-tools/agents/check-reference.py >.scratch/reference-check-delivery-final.log 2>&1
+python3 rust/reference-tools/agents/check-seeds.py >.scratch/seed-check-delivery-final.log 2>&1
+python3 rust/reference-tools/agents/verify-contracts.py >.scratch/contracts-delivery-final.log 2>&1
 ```
 
 Raw output:
@@ -73,139 +74,110 @@ seed: building smartfire
 seed: smartfire -> parity/.seed/smartfire (6.1M)
 seed: building unread
 seed: unread -> parity/.seed/unread (6.1M)
-WS11 reference sources: 23 matched; 0 mismatched (d7c7de92)
+WS11 reference sources: 36 pinned files matched; 0 image mismatches (d7c7de92)
+WS11 checkout drift: Gemfile.lock rubyzip 3.0.2 -> 3.7.0 from merged main; oracle stays pinned
 WS11 seeds: 9 built; 0 plaintext tokens; every labeled bot key matches its digest
-```
-
-Pinned Rails vectors, run from the worktree root:
-
-```sh
-PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE=triage-reference-d7c7de92 rust/parity/bin/reference runner --seed default rust/reference-tools/agents/bot_contract.rb > .scratch/bot-contract-followup-final.json 2> .scratch/bot-contract-followup-final.log
-cmp .scratch/bot-contract-followup-final.json rust/vectors/agents_bot_contract.json
-PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE=triage-reference-d7c7de92 rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/agents/posting_budget_contract.rb > .scratch/posting-budget-contract-final.json 2> .scratch/posting-budget-contract-final.log
-cmp .scratch/posting-budget-contract-final.json rust/vectors/agents_posting_budget_contract.json
-PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE=triage-reference-d7c7de92 rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/agents/webhook_contract.rb > .scratch/webhook-contract-final.json 2> .scratch/webhook-contract-final.log
-```
-
-All exit 0; both `cmp` calls have no output. The reusable comparison was also rerun:
-
-```sh
-python3 rust/reference-tools/agents/compare-contracts.py > .scratch/contract-compare-followup-final.log 2>&1
-```
-
-```text
 WS11 bot/posting Rails oracles: 2 byte-identical contract files
 WS11 webhook Rails oracle: 62 numeric hosts; 3 DNS cases; 4 signatures; 3 payloads matched; randomized AR secret regenerated
+WS11 delivery/payload/bot-gaps/grant-credential/event-access Rails oracles: 5 byte-identical contract files
 ```
 
-Webhook output has 62 numeric hosts, 3 DNS cases, 4 HMAC bodies and 3 byte-identical basic-message payloads. Those deterministic fields were compared with the committed JSON; only the regenerated random encrypted secret differs, with its US-ASCII encoding and repeat ensure verified. Posting output includes 201 replay before malformed attachment, 429 overflow before malformed attachment, one notice/inbox item, exact JSON/no Retry-After header and five reset cases including both fall-fold instants.
+The contract runner invokes our pinned reference runner on private default-seed copies for all eight Ruby scripts. Five new contracts and the original bot/posting contracts are byte-identical; only the webhook's deliberately random encrypted secret is compared by its deterministic invariants. The Rust tests also decrypt the committed actual Rails ciphertext sample.
 
-Rust-to-Rails encrypted-column proof, run from the root after the fresh Rust test export (private copy of default seed db/storage, export copied to its db directory):
+Security/correctness failure-first snapshots from this continuation (historical pre-fix runs, not compile failures): non-message payload not dispatched; raw edit left stale Markdown; boost/client coercion mismatched; membership/user status did not revoke grants. The revocation run had two genuine failed assertions after fixture setup was corrected. Initial mention/body setup runs are excluded; the fresh delivery probes below use corrected fixtures. No setup or compiler failure is counted.
+
+```text
+agent-payload-red.log: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 337 filtered out; finished in 0.35s
+bot-markdown-red.log: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.65s
+bot-gaps-red.log: test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 333 filtered out; finished in 1.12s
+agent-access-model-red.log: test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 413 filtered out; finished in 0.17s
+```
+
+Fresh compiled regression probes (all source files restored, followed by green tests):
 
 ```sh
-PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE=triage-reference-d7c7de92 rust/parity/bin/reference runner --storage "$PWD/.scratch/ws11-ar-reader-followup-final" -e WS11_RUST_SECRETS_PATH=/rails/storage/db/ws11-rust-secrets.json rust/reference-tools/agents/read_rust_webhook_secrets.rb > .scratch/webhook-ar-reader-followup-final.log 2>&1
+python3 rust/reference-tools/agents/verify-delivery-mutations.py >.scratch/delivery-mutations-final.log 2>&1
+python3 rust/reference-tools/agents/verify-payload-mutations.py >.scratch/payload-mutations-final.log 2>&1
+python3 rust/reference-tools/agents/verify-event-access-mutations.py >.scratch/event-access-mutations-final.log 2>&1
 ```
 
 ```text
-WS11 AR interoperability: Rails read 2 Rust-written model columns; US-ASCII preserved; 0 secrets regenerated
+ledger-hook: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.11s
+queue-atomicity: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.73s
+rate-cap: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.14s
+revocation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.10s
+attempt-claim: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.37s
+five-attempt-cap: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.11s
+future-retry: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.11s
+recovery-isolation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.35s
+WS11 delivery discrimination: 8 compiled regressions detected; sources restored
+private-title: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.35s
+owner-access: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.35s
+deleted-snapshot: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.36s
+compact-false: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.35s
+WS11 payload discrimination: 4 compiled regressions detected; sources restored
+selection-owner: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.11s
+selection-revocation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.10s
+selection-membership: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.08s
+ack-owner: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.10s
+ack-membership: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.09s
+ack-webhook-isolation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.10s
+WS11 event access discrimination: 6 compiled regressions detected; sources restored
 ```
 
-Failure-first evidence: the initial private-network, pinned/timestamp and error-body tests failed before the transport fixes; Agent-backed fanout failed before exclusion; the two budget/replay HTTP tests failed before the posting policy; attachment precedence, post-resolution clock sampling and cached-present secret behavior failed before their follow-ups. The transient-source regression failed before adding its error source. Raw original failing summaries (historical red runs):
-
-```text
-webhook-security-red.log: test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 311 filtered out; finished in 0.01s
-webhook-fanout-red.log: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 314 filtered out; finished in 0.37s
-budget-security-red.log: test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 320 filtered out; finished in 0.67s
-posting-order-red.log: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 324 filtered out; finished in 0.66s
-webhook-clock-red.log: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 325 filtered out; finished in 1.10s
-webhook-cached-secret-red.log: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 325 filtered out; finished in 0.35s
-webhook-retry-red.log: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.00s
-```
-
-The cached-secret test failed inside the DB writer assertion, which surfaced as WriterGone to the caller; the wrong cached-present return value was the original inner failure. No compile error is counted as a security failure. Existing slice-1 auth failure-first evidence remains in that slice's logs; its tests ran again in the final suite.
+Final focused and entire workspace checks:
 
 ```sh
-python3 rust/reference-tools/agents/verify-webhook-mutations.py > .scratch/webhook-mutations-final.log 2>&1
-```
-
-Raw compiled regression summaries:
-
-```text
-private-guard: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.00s
-dns-pinning: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.00s
-signature: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.00s
-signature-body: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.01s
-pinned-surfguard-version: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.00s
-2xx-only: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.00s
-agent-timeout: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 7.00s
-legacy-transient-source: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.00s
-agent-fanout-exclusion: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.35s
-hop-limit: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 408 filtered out; finished in 0.07s
-secret-stale-read: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.36s
-secret-encoding: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.34s
-sync-reply-link: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.41s
-sync-reply-thread: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.37s
-posting-budget: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.83s
-posting-replay: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.63s
-notice-once: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.67s
-board-opener-budget: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 408 filtered out; finished in 0.08s
-budget-time-zone: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 408 filtered out; finished in 0.07s
-timestamp-after-dns: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 1.10s
-posting-before-attachment: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 326 filtered out; finished in 0.64s
-WS11 webhook/posting discrimination: 21 compiled regressions detected; sources restored
-```
-
-Final workspace and focused tests, run from `rust/`:
-
-```sh
-TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" CABLE_TEST_PORT_RANGE=52200-52249 MAIL_TEST_PORT_RANGE=52200-52249 INTEGRATION_TEST_PORT_RANGE=52250-52299 WS11_SECRET_EXPORT="$PWD/../.scratch/ws11-rust-secrets.json" mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire -p campfire_db ws11 -- --test-threads=4 --nocapture > ../.scratch/ws11-followup-final.log 2>&1
-TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" CABLE_TEST_PORT_RANGE=52200-52249 MAIL_TEST_PORT_RANGE=52200-52249 INTEGRATION_TEST_PORT_RANGE=52250-52299 WS11_SECRET_EXPORT="$PWD/../.scratch/ws11-rust-secrets.json" mise exec rust@1.98.1 -- cargo test --locked -j 4 --workspace --exclude html5ever -- --test-threads=4 --nocapture > ../.scratch/workspace-followup-final.log 2>&1
+CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE=52200-52249 MAIL_TEST_PORT_RANGE=52200-52249 INTEGRATION_TEST_PORT_RANGE=52250-52299 WS11_SECRET_EXPORT="$PWD/.scratch/ws11-rust-secrets-final.json" mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire -p campfire_db ws11 -- --test-threads=4 --nocapture >.scratch/ws11-delivery-final.log 2>&1
+CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE=52200-52249 MAIL_TEST_PORT_RANGE=52200-52249 INTEGRATION_TEST_PORT_RANGE=52250-52299 WS11_SECRET_EXPORT="$PWD/.scratch/ws11-rust-secrets-final.json" mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml --workspace --exclude html5ever -- --test-threads=4 --nocapture >.scratch/workspace-delivery-final.log 2>&1
+python3 rust/reference-tools/agents/summarize-tests.py .scratch/workspace-delivery-final.log
 ```
 
 Focused raw summaries:
 
 ```text
-test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 302 filtered out; finished in 8.50s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 402 filtered out; finished in 0.30s
+test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 306 filtered out; finished in 11.64s
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 402 filtered out; finished in 0.87s
 ```
 
 Full workspace raw summaries, in emitted order:
 
 ```text
-test result: ok. 325 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 38.15s
+test result: ok. 339 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 41.71s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.22s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
-test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.05s
-test result: ok. 406 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 48.13s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.18s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.98s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
+test result: ok. 418 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 56.95s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.43s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
 test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.01s
 test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.18s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.18s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.33s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.69s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.23s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
-test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.87s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.55s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.32s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.30s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.94s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.78s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.92s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.52s
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 73 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.44s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.83s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 73 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.05s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -217,38 +189,62 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+WS11 workspace totals: 1372 passed; 0 failed; 9 ignored; 46 result summaries
+WS11 missing-seed skips: 0
 ```
 
-Run from the root:
-
-```sh
-python3 rust/reference-tools/agents/summarize-tests.py .scratch/workspace-followup-final.log
-```
+The nine ignored results are inherited reference-recording/export/measurement tests and doctests. Both ignored app tests are the existing live-reference recorder and job measurement; `manages_bots` runs. No missing-seed test was skipped. Raw app line:
 
 ```text
-WS11 workspace totals: 1343 passed; 0 failed; 9 ignored; 45 result summaries
-WS11 missing-seed skips: 0
 test controllers::presenters::accounts::tests::manages_bots ... ok
 ```
 
-Ran versus skipped: the app ran 325 tests; its two explicit ignores are the cable recorder and optional latency measurement. The workspace's nine explicit ignores additionally include the standalone cable recorder, three DB fixture/scenario/export jobs, one mail export and two illustrative kit doctests. Zero missing-seed skips. These ignores are not counted as runs; the two cable goldens were recorded successfully in the accepted earlier slice, not re-recorded in this continuation. No new ignore or parity mask was added. `manages_bots` is enabled and passed. WS19b's proposed ignore has not entered this branch: no lead announcement to merge main has arrived; remove it and rerun when that coordinated merge occurs.
-
-Clippy and lockfile verification, run from `rust/`:
+Rust-to-Rails encryption proof: a fresh private copy of default seed DB/storage was staged at `.scratch/ws11-ar-reader-delivery-final`, with this focused run's actual export copied into `db/ws11-rust-secrets.json`; no shared seed was modified. Then:
 
 ```sh
-TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" CABLE_TEST_PORT_RANGE=52200-52249 MAIL_TEST_PORT_RANGE=52200-52249 INTEGRATION_TEST_PORT_RANGE=52250-52299 mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --workspace --all-targets -- -D warnings > ../.scratch/clippy-followup-final.log 2>&1
-mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 >/dev/null
+PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE=triage-reference-d7c7de92 rust/parity/bin/reference runner --storage "$PWD/.scratch/ws11-ar-reader-delivery-final" -e WS11_RUST_SECRETS_PATH=/rails/storage/db/ws11-rust-secrets.json rust/reference-tools/agents/read_rust_webhook_secrets.rb >.scratch/webhook-ar-reader-delivery-final.log 2>&1
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.77s
+WS11 AR interoperability: Rails read 2 Rust-written model columns; US-ASCII preserved; 0 secrets regenerated
 ```
 
-Both exit 0; Cargo.lock is unchanged. `git diff --check` was rerun and exits 0 with no output.
+Strict clippy from the worktree root:
+
+```sh
+CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy --locked -j4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings >.scratch/clippy-delivery-final.log 2>&1
+```
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 15.89s
+```
+
+Locked metadata from `rust/`:
+
+```sh
+mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 >/dev/null
+```
+
+Exit 0, no output. Workspace dependency duplicate check from root (strict TOML parsing rejects duplicate keys):
+
+```sh
+python3 - <<'PYKEYS'
+import tomllib
+from pathlib import Path
+manifest=tomllib.loads(Path('rust/Cargo.toml').read_text())
+print(f"WS11 workspace dependency keys: {len(manifest['workspace']['dependencies'])} parsed; 0 duplicates")
+PYKEYS
+```
+
+```text
+WS11 workspace dependency keys: 76 parsed; 0 duplicates
+```
+
+`git diff --check` exited 0, no output. The lockfile is valid and the `httpdate` addition is intentional.
 
 ## Rails test file accounting
 
-Partial means selected contracts only, not the entire file. Every other listed file is deferred to its named owner. There is no `test/services/agents/` test tree in this checkout; the relevant service contracts are exercised in model/controller/job files. Fixtures and test helpers are not counted as test files. The following inventory includes agent integration/system cases as well as the requested model/controller/job cases.
+Partial means selected contracts only, not an entire Rails file or complete end-to-end parity. Every deferred file remains with the named owner. No `test/services/agents/` test tree exists at this pin; its service contracts live in the listed model/controller/job tests. Fixtures/helpers are not counted. This retains the full earlier inventory and updates this continuation's coverage.
 
 | Rails test file | Coverage / remaining owner |
 |---|---|
@@ -273,7 +269,7 @@ Partial means selected contracts only, not the entire file. Every other listed f
 | `test/controllers/agents/directory_controller_test.rb` | Deferred: WS11. |
 | `test/controllers/agents/dms_controller_test.rb` | Deferred: WS11. |
 | `test/controllers/agents/drive_attachments_delivery_test.rb` | Deferred: WS11. |
-| `test/controllers/agents/events_controller_test.rb` | Deferred: WS11. |
+| `test/controllers/agents/events_controller_test.rb` | Partial underlying domain selection/ack only: own-row access, filtering before limits and ack policy from Rails vectors. REST endpoint, JSON poll payloads, dropped-page cursor/header/envelope and ledger HTML: WS11. |
 | `test/controllers/agents/fizzy/action_delivery_test.rb` | Deferred: WS11. |
 | `test/controllers/agents/fizzy/boards_controller_test.rb` | Deferred: WS11. |
 | `test/controllers/agents/fizzy/card_actions_controller_test.rb` | Deferred: WS11. |
@@ -299,61 +295,50 @@ Partial means selected contracts only, not the entire file. Every other listed f
 | `test/controllers/agents_controller_test.rb` | Deferred: WS11. |
 | `test/controllers/audit_log/agents_audit_test.rb` | Deferred: WS11. |
 | `test/controllers/concerns/agent_authentication_test.rb` | Partial: valid token denied on human endpoints, revoked/expired credential and use throttle; agent me API and remaining identity cases still WS11. |
-| `test/controllers/messages/boosts/by_bots_controller_test.rb` | Partial: reply-token denial and react gate; content resolution/422 error JSON/reaction rendering still WS11 with WS8b-r seam. |
-| `test/controllers/messages/by_bots_controller_test.rb` | Partial: reply denials, system-note guard, root count, message budgets, string client-id replay before budgets/attachment validation, legacy raw-body semantics and legacy fanout. Explicit Markdown clearing, malformed non-string ids, remaining validation JSON and agent ledger callbacks still WS11. |
+| `test/controllers/messages/boosts/by_bots_controller_test.rb` | Partial: reply-token/react gates plus eight exact Rails normalization/status cases, including emoji/brand aliases, unknown shortcode and blank/NBSP. Full reaction HTML/broadcast rendering and remaining validation cases: WS11 with WS8b-r. |
+| `test/controllers/messages/by_bots_controller_test.rb` | Partial: auth/permissions, reply tokens, notes, root counts, budgets/notices, replay before validation/budget, legacy raw bodies, raw edit Markdown clearing through WS8 edit callbacks, 26 non-string/array/hash/float/escape id cases and atomic ledger enqueue failure. Remaining full validation JSON, attachment/update combinations, arbitrary coercion edge cases and complete lifecycle: WS11. |
 | `test/integration/agent_boards_test.rb` | Deferred: WS11. |
-| `test/jobs/agent/delivery_concurrency_test.rb` | Deferred: WS11. |
-| `test/jobs/agent/delivery_job_test.rb` | Deferred: WS11. |
-| `test/jobs/agent/event_webhook_job_test.rb` | Deferred: WS11. |
+| `test/jobs/agent/delivery_concurrency_test.rb` | Partial: concurrent message rate cap, durable enqueue rollback, outcome and attempt CAS, duplicate queued HTTP job sends one POST. Full Rails file/end-to-end interleavings: WS11. |
+| `test/jobs/agent/delivery_job_test.rb` | Partial: message availability/access/grant/hop/rate claims, suppressed rows, acknowledgment still owes a POST, actual registration and durable queue. Remaining complete lifecycle matrix: WS11. |
+| `test/jobs/agent/event_webhook_job_test.rb` | Partial: all payload kind builders, real HTTP claims, 2xx/permanent/retryable statuses, eight Retry-After cases, five-attempt exhaustion, locked sync-reply error suppression, private-address denial and non-message response ignoring. Remaining complete Rails file and exact transport error/write-backpressure taxonomy: WS11; live private-repository decision: WS15g seam. |
 | `test/jobs/fizzy/perform_agent_action_job_test.rb` | Deferred: WS15e domain; WS11 owns its agent-facing caller/delivery integration. |
 | `test/jobs/github/perform_agent_action_job_test.rb` | Deferred: WS15g domain; WS11 owns its agent-facing caller/delivery integration. |
 | `test/lib/restricted_http/private_network_guard_test.rb` | Partial: 62 numeric and 3 DNS vectors, actual HTTP transport, private-address denial, one resolution and pinned connection. Shared unfurl/push guard pin discrepancy belongs to WS5; additional transport edge cases WS11. |
-| `test/models/agent/delivery_recovery_test.rb` | Deferred: WS11. |
+| `test/models/agent/delivery_recovery_test.rb` | Partial: two-minute grace, future Retry-After preservation, seven-minute exhausted recovery, snapshot attempt CAS and continuation after one durable enqueue failure. Full Rails file/lifecycle: WS11. |
 | `test/models/agent_approval_test.rb` | Deferred: WS11. |
 | `test/models/agent_backfill_test.rb` | Deferred: WS11. |
 | `test/models/agent_budgets_test.rb` | Partial: message/board/external usage readers, local days including both DST folds, exact budget JSON, notices/inbox idempotence, inactive-owner/admin fallback and transaction rollback. Board/external production callers, admin edits and remaining cases WS11. |
-| `test/models/agent_credential_test.rb` | Partial read/auth/use contract only; create validation, generated secret, revoke admin API and remaining cases WS11. |
-| `test/models/agent_event_test.rb` | Deferred: WS11. |
-| `test/models/agent_grant_test.rb` | Partial read checks only; grant validation, creation, revocation lifecycle and callback cases WS11. |
+| `test/models/agent_credential_test.rb` | Partial: typed create validations/error hashes, digest uniqueness, generated 64-hex reveal-once secret/digest display id, expiry/revocation/auth and conditional one-minute usage stamps. Generic updates/destroy and admin credential endpoints: WS11. |
+| `test/models/agent_event_test.rb` | Partial: create/type/outcome/hop model, message ledger, ordered readable SQL pages, suppression exclusion, scoped/workspace/legacy/revoked access, ack idempotence/isolation and pagination clamp. Full polling presenter/cursor and Agent cascade destroy: WS11. |
+| `test/models/agent_grant_test.rb` | Partial: typed create validation/error hashes, seven capabilities, active duplicate/regrant, optional-room predicate (zero versus missing nonzero), workspace-only dm_anyone, idempotent revoke and bulk revocation. Generic updates/admin grants and all lifecycle hooks: WS11. |
 | `test/models/agent_kill_switch_test.rb` | Deferred: WS11. |
-| `test/models/agent_revocation_test.rb` | Deferred: WS11. |
+| `test/models/agent_revocation_test.rb` | Partial: membership removal and inactive-user status revoke grants in the triggering transaction, rollback preserved. Room destruction, Agent suspension, owner deactivation, hard removal and finalization remain WS11. |
 | `test/models/agent_slash_command_test.rb` | Deferred: WS11. |
 | `test/models/agent_step_test.rb` | Deferred: WS11. |
 | `test/models/agent_test.rb` | Partial: active/grant/last-seen reads and row-locked encrypted webhook-secret generation. Agent CRUD validators/callbacks, status/presence, admin budget updates and directory still WS11. |
 | `test/models/agent_working_presence_test.rb` | Deferred: WS11. |
-| `test/models/agents/work_payload_test.rb` | Deferred: WS11 with WS12 work-thread seam. |
+| `test/models/agents/work_payload_test.rb` | Partial: exact webhook work fields/timestamps/tags/links, public/private PR fields, live and deleted snapshot/handoff samples. Poll payloads and full Rails file: WS11 with WS12 and live WS15g owner-access seam. |
 | `test/models/channel_thread_agent_assignment_test.rb` | Deferred: WS11 with WS12 work-thread seam. |
 | `test/models/fizzy/agent_card_action_test.rb` | Deferred: WS15e domain; WS11 owns its agent-facing caller/delivery integration. |
 | `test/models/github/agent_pull_request_action_test.rb` | Deferred: WS15g domain; WS11 owns its agent-facing caller/delivery integration. |
-| `test/models/message/bot_webhook_fanout_test.rb` | Partial: direct/mention recipients, sender/Agent exclusions, note/thread/stream skips, hop sources and limits, shared controller/slash/scheduled path. Full Agent delivery integration and lifecycle matrix WS11. |
+| `test/models/message/bot_webhook_fanout_test.rb` | Partial: shared legacy fanout, recipient ordering, note/thread/stream skips and hop/chain inference; Agent ledger now installed in Message create, including replies. Imported-message skip and full lifecycle matrix: WS11 with WS16. |
 | `test/models/message_streaming_test.rb` | Deferred: WS11. |
 | `test/models/user/bot_test.rb` | Partial: inherited digest/reset checks plus HTTP reply scope; remaining lifecycle/update cases WS11. |
-| `test/models/webhook_agent_key_test.rb` | Partial: legacy signed reply URL versus plain Agent room path, no bot-key exposure, additive Agent message payload with empty PR/Drive fields. Remaining payload combinations WS11 with WS15g/WS17 seams. |
-| `test/models/webhook_test.rb` | Partial: guarded/signed transport, timestamp after DNS, actual reply oracle, non-2xx suppression, legacy/Agent timeout distinction, encrypted secret rotation/cached-present/fresh-blank behavior, synchronous text/attachment root/thread/board replies and locking. Agent reply-error suppression, event runners and complete payload/lifecycle matrix WS11. |
+| `test/models/webhook_agent_key_test.rb` | Partial: no exposed bot key in Agent payloads, legacy reply URL, exact message PR/Drive samples and owner-keyed repository-access decision injection. Live private-repository lookup still needs WS15g; full Rails file: WS11. |
+| `test/models/webhook_test.rb` | Partial: signed/pinned/guarded transport and encryption retained; Agent jobs now handle response classification/backoff, sync-reply error suppression and every payload kind. Complete transport taxonomy/write behavior and lifecycle: WS11. |
 | `test/services/bots/clear_plaintext_tokens_test.rb` | Partial: inherited healing/idempotence plus actual scheduler registration; direct heal/reset-race case still WS11. |
 | `test/system/agent_approvals_test.rb` | Deferred: WS11. |
 | `test/system/agent_streaming_test.rb` | Deferred: WS11. |
 | `test/system/agent_work_assignment_test.rb` | Deferred: WS11. |
 | `test/system/agents_test.rb` | Deferred: WS11. |
 
-## Cross-workstream touches and open seams
 
-- WS5: the inherited general network guard cites Surfguard `59e278c`, while the pinned Rails image/Gemfile.lock actually loads `910be917fd0ab782c5ea939698d44f26694a501d`. Their classifications differ, including Azure and newer IPv6 reservations. Webhooks use an isolated policy matching the actual pin; unfurl/push behavior was not changed. WS5 should re-record those consumers against the actual gem before reconciling the shared policy. The fake HTTP listener/dialer changes are test-only.
-- WS8a/WS8b: shared legacy fanout replaces three duplicated posting paths and uses existing message/thread writes and durable events. The Agent event/delivery posting chain is still missing. Explicit Markdown-source clearing, reaction content/422 JSON/full broadcasts, hard-user removal, thread-work/finalization and streaming callbacks remain seams.
-- WS3: reuse the durable queue and held/release enqueue pattern; no queue storage implementation changes. Agent ledger claims/backoff/recovery still WS11.
-- WS9: existing sudo cookie gate is reused; its actual confirmation/replay UI is not at this branch base. Full bot-write User validators remain a core-model seam with WS2.
-- WS12: board/work Agent API callers and finalization hooks remain WS11 callers of its domain seams. Generic budget readers exist but are not wired to those future callers.
-- WS15g/WS15e/WS17: nonempty PR/Drive and action-result payloads must consume their domains; no action/client implementations were copied here.
-- WS6/WS7: full bot/Agent HTML byte parity and directory/presence broadcasts remain WS11; prior cable goldens and key template retained.
-- WS19b: when the lead announces main moved, merge with a merge commit, remove its WS11 `manages_bots` ignore if present, run locked metadata and full checks. No unsolicited merge/rebase occurred.
-- Pinned bot-key endpoints deny a valid Bearer Agent credential with 403 because they do not opt into `allow_agent_access`; they also omit the Retry-After header on budget errors. Preserve these actual Rails outcomes despite broader inventory prose.
+## Cross-workstream seams and exact restart point
 
-## Precise remainder and restart point
-
-1. **Finish slice 2:** Agent::Delivery/EventWebhookJob/DeliveryJob production registration and message-chain integration; atomic event/outcome/durable enqueue; recipient membership/grants, hop/rate suppression and posted rows; five-attempt ledger CAS claims/backoff, Retry-After/status classification, permanent failure, stale/exhausted claim recovery and concurrency/rollback tests; Agent successful-POST synchronous-reply-error suppression. Add every approval/work/handoff/slash/GitHub/Fizzy/nonempty PR/Drive payload vector. Verify remaining inherited HTTP write/backpressure/error distinctions.
-2. **Bot API parity gaps:** full Agents::Posting validation JSON and lifecycle callbacks, non-string client-id coercion/blank behavior, explicit Markdown-source clearing for updates/attachment-only writes, reaction resolution/422 JSON/full rendering/broadcasts, complete User-save validator integration and reset member/error/HTML cases. Message budget and normal string-id replay are implemented; board/external cap enforcement still needs its callers.
-3. **Slice 3 domain:** Agent/Credential/Grant CRUD validations and lifecycle callbacks; event polling cursors/acks; approvals and admin-only GitHub/Fizzy decisions; steps; slash registration/invocation; DMs/context; per-credential minute limits; presence TTL/status broadcasts; suspension/kill switch; streaming/trailing jobs; hard-user removal and reference/thread-work finalization/recovery. Current.agent/credential request identity still needs to be stored; auth currently returns the authenticated user.
-4. **Slice 4 REST:** every Agent endpoint, exact JSON statuses/Retry-After and common domain callers, including board/work and thin GitHub/Fizzy integrations.
-5. **Slice 5 MCP:** stateless Streamable HTTP, all four versions, mirrored/base64 headers, Origin/error codes, rate limits and all 38 tools sharing REST domain services; request/response vectors for every tool/error. No MCP implementation is shipped here.
-6. **Slice 6 HTML:** bot creation/Agent creation/credentials/grants/webhook-secret reset/connections/kill switch; directory/approval/events pages; exhaustive byte/pixel comparisons, including the existing reveal-once key page. No exhaustive HTML acceptance claim.
-7. **Acceptance:** all deferred Rails files above remain with their named owner; MCP/rate/lifecycle security failures-first, durable concurrency/recovery and full end-to-end Rails file parity remain. WS11 is partial despite green Rust tests.
+1. **Finish delivery integration/bot gaps:** install approval/work/handoff/slash/GitHub/Fizzy event-producing callbacks through their domains; WS15g live owner repository access (production payload caller currently denies private detail by default); WS16 imported-message skip; exact transport/write/error behavior; full posting validation JSON, every attachment/update/coercion edge and reaction presentation/broadcasts. WS3 queue is reused without a storage redesign. WS8a message chain is installed; WS8b-r still owns its rendering domain.
+2. **Finish the Agent domain:** full Agent CRUD/save validation, grant/credential update/destroy/admin lifecycle; full EventPolling payload/cache/cursor behavior (especially pages whose selected payloads all drop); approvals including admin-only GitHub/Fizzy decisions; steps; slash registration/invocation through WS8 dispatcher; DMs/context; board/external budget production callers and edits/notices; WS4 per-credential counters; working presence TTL/status/broadcasts; suspension/kill switch, quiet streaming/trailing broadcasts, hard user removal, room destruction and reference/work finalization/recovery. Typed auth identity exists but still needs Agent/credential request-state installation in the future endpoints.
+3. **REST:** every Agent endpoint and exact 401/403/404/422/429, headers/Retry-After and thin shared domain calls. Current selection/ack are foundations, not installed endpoints. WS12 board/work seams and WS15g/WS15e action seams must be called, not duplicated.
+4. **MCP:** entire stateless Streamable HTTP server, four versions, mirrored/base64 headers, Origin/error codes, per-credential rate limits and all 38 shared-domain tools; every tool/error Rails vector. MCP security failure-first work remains undone.
+5. **HTML:** admin bot/Agent creation/edit/credentials/grants/secrets/connections/kill switch, directory, approvals and ledger pages; exhaustive byte comparison and presence/directory broadcasts beyond WS7. Existing key-reset coverage and passing `manages_bots` do not certify these pages. WS9 sudo UI/full User-save validators and WS6/WS7 render/cable seams remain.
+6. **Reference/network note:** general unfurl/push guard remains WS5's inherited Surfguard-policy seam; this branch's webhook policy follows the actual pinned `910be917fd0ab782c5ea939698d44f26694a501d`. Merged #159 rubyzip lock drift is permitted only as the exact one-entry checkout difference; all 36 image sources remain pinned.
+7. **Acceptance:** complete each deferred/partial Rails file with its named owner and rerun scoped failure-first/differential/full seeded checks. This report is a coherent pushed partial checkpoint, not a cutover claim.
