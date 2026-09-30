@@ -1,12 +1,12 @@
 # syntax = docker/dockerfile:1
 #
-# The parity reference image: the unmodified reference app image (built from reference/Dockerfile as
+# The parity reference image: the unmodified reference app image (built from the root Dockerfile as
 # campfire-reference:app) plus what the harness needs around it. App code is untouched; the only
 # additions to its config are two initializers (below).
 #
 #   * libfaketime, so the server clock can start at a chosen instant (FAKETIME, see entrypoint)
 #   * sqlite3 and procps, for inspecting seeds, state dumps and processes
-#   * a one-worker resque-pool.yml (the reference sizes it at half the CPU count, per instance)
+#   * a default/slack_import resque-pool.yml (the reference sizes it at half the CPU count, per instance)
 #   * config/initializers/parity_action_cable.rb: Action Cable handles each connection's commands
 #     in order (worker_pool_size = 1), as the Rust cable server does; see that file
 #   * config/initializers/parity_migration_timestamps.rb: migrations dated after the frozen seed
@@ -48,6 +48,7 @@ COPY --from=fixtures --chown=1000:1000 . /rails/test/fixtures
 COPY --chmod=755 entrypoint /usr/local/bin/parity-entrypoint
 COPY --chmod=755 redis-server /usr/local/bin/redis-server
 COPY --chown=1000:1000 resque-pool.yml /rails/config/resque-pool.yml
+COPY --chown=1000:1000 Procfile /rails/Procfile
 COPY --chown=1000:1000 parity_action_cable.rb /rails/config/initializers/parity_action_cable.rb
 COPY --chown=1000:1000 parity_migration_timestamps.rb /rails/config/initializers/parity_migration_timestamps.rb
 

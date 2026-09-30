@@ -35,7 +35,7 @@ ensure_host_modules() {
 
 docker_image() {
   local hash; hash=$(cat "$PARITY/Dockerfile.playwright" "$PARITY/package-lock.json" | sha256sum | cut -c1-12)
-  local image=campfire-parity-playwright:$hash
+  local image=${PARITY_NAMESPACE:-campfire}-parity-playwright:$hash
   if ! docker image inspect "$image" >/dev/null 2>&1; then
     echo "parity: building $image" >&2
     docker build -q -f "$PARITY/Dockerfile.playwright" -t "$image" "$PARITY" >&2
@@ -51,22 +51,32 @@ run_in_image() {
   # network is every docker run/rm. Its proxies reach the servers through capture/forward.ts,
   # which runs on the host network, over a Unix socket in NET_DIR. That's under TMPDIR rather than
   # the checkout, which may be too deep for a socket path (108 bytes), and is mounted into both.
-  local net_dir; net_dir=$(mktemp -d "${TMPDIR:-/tmp}/parity-net.XXXXXX")
+  local scratch=${PARITY_SCRATCH:-/home/riels/.cache/rust-port/ws19}
+  mkdir -p "$scratch"
+  local net_dir; net_dir=$(mktemp -d "$scratch/net.XXXXXX")
   NET_DIRS+=("$net_dir")
+  local receipt=""
+  case "$1" in
+    capture|compare|recompare)
+      ensure_host_modules
+      receipt=$net_dir/validated-seed.json
+      (cd "$PARITY" && node capture/cli.ts validate --receipt "$receipt" "${@:2}") || return 1
+      ;;
+  esac
   local socket=$net_dir/upstream.sock
   case "$runtime" in
     docker)
       local image; image=$(docker_image)
       # Named, so parity_cleanup can stop them if the run is interrupted.
-      local name=parity-capture-$$-$RANDOM
+      local name=${PARITY_NAMESPACE:-campfire}-parity-capture-$$-$RANDOM
       CAPTURE_CONTAINERS+=("$name" "$name-forward")
       docker run -d --rm --init --name "$name-forward" --network host -u "$(id -u):$(id -g)" \
         -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" -v "$net_dir:$net_dir" \
         --tmpfs "$PARITY/node_modules" -w "$PARITY" "$image" node capture/forward.ts "$socket" >/dev/null
       wait_for_socket "$socket"
       docker run --rm --init --name "$name" --network none --ipc host \
-        -u "$(id -u):$(id -g)" -e HOME=/tmp -e TZ=UTC -e CI="${CI:-}" -e PARITY_WORKERS="${PARITY_WORKERS:-}" \
-        -e PARITY_UPSTREAM_SOCKET="$socket" -e CAMPFIRE_REFERENCE="$REFERENCE_ROOT" \
+        -u "$(id -u):$(id -g)" -e HOME="$net_dir" -e TMPDIR="$net_dir" -e NODE_OPTIONS="${NODE_OPTIONS:-}" -e TZ=UTC -e CI="${CI:-}" -e PARITY_WORKERS="${PARITY_WORKERS:-}" \
+        -e PARITY_SEED_VALIDATION_FILE="$receipt" -e PARITY_UPSTREAM_SOCKET="$socket" -e CAMPFIRE_REFERENCE="$REFERENCE_ROOT" \
         -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" -v "$net_dir:$net_dir" \
         --tmpfs "$PARITY/node_modules" -w "$PARITY" "$image" node capture/cli.ts "$@" &
       local status=0
@@ -89,9 +99,9 @@ run_in_image() {
         --ro-bind /etc/resolv.conf /etc/resolv.conf --unshare-user --unshare-pid --unshare-ipc
         --die-with-parent --clearenv
         --setenv PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-        --setenv HOME /tmp --setenv TZ UTC --setenv LANG C.UTF-8
+        --setenv HOME "$net_dir" --setenv TMPDIR "$net_dir" --setenv NODE_OPTIONS "${NODE_OPTIONS:-}" --setenv TZ UTC --setenv LANG C.UTF-8
         --setenv PLAYWRIGHT_BROWSERS_PATH /ms-playwright --setenv CI "${CI:-}" --setenv PARITY_WORKERS "${PARITY_WORKERS:-}"
-        --setenv CAMPFIRE_REFERENCE "$REFERENCE_ROOT"
+        --setenv PARITY_SEED_VALIDATION_FILE "$receipt" --setenv CAMPFIRE_REFERENCE "$REFERENCE_ROOT"
         --chdir "$PARITY")
       "${bw[@]}" --share-net node capture/forward.ts "$socket" &
       local forward=$!
@@ -105,7 +115,7 @@ run_in_image() {
     host)
       echo "parity: WARNING running on the host; captures are not canonical" >&2
       ensure_host_modules
-      (cd "$PARITY" && node capture/cli.ts "$@")
+      (cd "$PARITY" && PARITY_SEED_VALIDATION_FILE="$receipt" node capture/cli.ts "$@")
       ;;
     *) die "unknown PARITY_CAPTURE_RUNTIME=$runtime" ;;
   esac
@@ -124,6 +134,7 @@ wait_for_socket() {
 start_reset_loop() {
   local reset_cmd=$1
   RESET_CTRL=$(mktemp -d "$PARITY/out/.control.XXXXXX")
+  date +%s >"$RESET_CTRL/heartbeat"
   (
     serve() {
       local id=$1 port target url cmd status
@@ -134,6 +145,7 @@ start_reset_loop() {
       rm -f "$RESET_CTRL/work.$id"
     }
     while [ -d "$RESET_CTRL" ]; do
+      date +%s >"$RESET_CTRL/.heartbeat" && mv "$RESET_CTRL/.heartbeat" "$RESET_CTRL/heartbeat" || break
       for req in "$RESET_CTRL"/req.*; do
         [ -e "$req" ] || continue
         id=${req##*/req.}

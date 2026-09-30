@@ -25,7 +25,7 @@ test("a token for another record still differs", () => {
   assert.notEqual(a, b)
 })
 
-test("normalizes attributes, whitespace and timestamps, and drops csrf tags", () => {
+test("normalizes attributes, whitespace and timestamps, and preserves csrf tags", () => {
   const html = `<!DOCTYPE html><html><head><meta name="csrf-token" content="abc"></head><body>
     <div  id="x"   class="b a" data-message-timestamp="1772463600000">  hello
       world </div><time datetime="2026-03-02T15:00:00Z"></time><pre>  keep\n me</pre></body></html>`
@@ -33,6 +33,7 @@ test("normalizes attributes, whitespace and timestamps, and drops csrf tags", ()
     "<!DOCTYPE html>",
     "<html>",
     "  <head>",
+    `    <meta content="«csrf-token»" name="csrf-token">`,
     "  </head>",
     "  <body>",
     `    <div class="b a" data-message-timestamp="«epochms-3600s»" id="x">`,
@@ -54,11 +55,11 @@ test("decodes consecutive tokens in one URL", () => {
   assert.equal(maskText(url, { seedTime }), `/rails/active_storage/representations/redirect/«signed_id:blob_id:5»/«signed_id:variation:{"format":"jpg","resize_to_limit":[1200,800]}»/moon.jpg`)
 })
 
-test("compares a message's copy link by its path", () => {
+test("compares a message's exact copy-link attribute and destination", () => {
   const button = (attr: string) => `<button title="Copy link" data-controller="copy-to-clipboard" ${attr}></button>`
   const rails = normalizeDocument(button(`data-copy-to-clipboard-content-value="http://reference.test:3000/rooms/1/@2"`))
   const port = normalizeDocument(button(`data-copy-to-clipboard-url-value="/rooms/1/@2"`))
-  assert.equal(rails, port)
+  assert.notEqual(rails, port)
   assert.match(port, /data-copy-to-clipboard-url-value="\/rooms\/1\/@2"/)
   const invite = normalizeDocument(`<button title="Copy" data-copy-to-clipboard-content-value="http://a.test/join/x"></button>`)
   assert.match(invite, /content-value="http:\/\/a.test\/join\/x"/)
