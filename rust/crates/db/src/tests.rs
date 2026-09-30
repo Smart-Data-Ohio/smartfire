@@ -14,6 +14,7 @@ mod agent_bot_cases_test;
 mod agent_dispatcher_cases_test;
 mod agent_slash_command_test;
 mod agent_step_test;
+mod agent_step_cases_test;
 mod agent_working_presence_test;
 mod agent_work_events_test;
 mod agent_context_test;

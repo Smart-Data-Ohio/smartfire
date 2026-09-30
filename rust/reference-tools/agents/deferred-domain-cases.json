@@ -147,22 +147,6 @@
       ]
     },
     {
-      "rails_file": "test/models/agent_step_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "attaches to the agent's own message",
-        "attaches to a work thread the agent owns",
-        "requires exactly one parent",
-        "rejects another author's message",
-        "rejects threads the agent does not own",
-        "rejects non-work threads",
-        "caps the count per parent",
-        "caps field sizes",
-        "positions follow creation order",
-        "steps die with their message and thread"
-      ]
-    },
-    {
       "rails_file": "test/models/webhook_agent_key_test.rb",
       "owner": "WS11; WS8 presenter; WS15g live private repository access",
       "remaining_named_case_ports": [

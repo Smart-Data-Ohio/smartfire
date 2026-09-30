@@ -1058,6 +1058,52 @@
           "rust": "ws11_event_case_agent_exposes_own_ledger"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent_step_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_step_cases_test.rs",
+      "cases": [
+        {
+          "rails": "attaches to the agent's own message",
+          "rust": "ws11_step_case_attaches_to_own_message"
+        },
+        {
+          "rails": "attaches to a work thread the agent owns",
+          "rust": "ws11_step_case_attaches_to_owned_work"
+        },
+        {
+          "rails": "requires exactly one parent",
+          "rust": "ws11_step_case_exactly_one_parent"
+        },
+        {
+          "rails": "rejects another author's message",
+          "rust": "ws11_step_case_rejects_foreign_message"
+        },
+        {
+          "rails": "rejects threads the agent does not own",
+          "rust": "ws11_step_case_rejects_unowned_thread"
+        },
+        {
+          "rails": "rejects non-work threads",
+          "rust": "ws11_step_case_rejects_nonwork_thread"
+        },
+        {
+          "rails": "caps the count per parent",
+          "rust": "ws11_step_case_count_capped_per_parent"
+        },
+        {
+          "rails": "caps field sizes",
+          "rust": "ws11_step_case_field_sizes_capped"
+        },
+        {
+          "rails": "positions follow creation order",
+          "rust": "ws11_step_case_positions_follow_creation"
+        },
+        {
+          "rails": "steps die with their message and thread",
+          "rust": "ws11_step_case_parent_deletion_cascades"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
