@@ -8,6 +8,7 @@
 //! record step then saves rows inside a transaction and is quick. The `&Connection` methods that
 //! do both at once are for tests and tools.
 
+use std::io::Read as _;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -68,6 +69,20 @@ impl Drop for Staged {
 impl Storage {
     pub fn new(service: DiskService, verifier: Arc<dyn Verifier>) -> Self {
         Self { service, verifier }
+    }
+
+    /// `Blob#identify_without_saving`, called by signed-ID assignment before validation.
+    /// Rails reads at most 4 KB from the service, and saves these changes with the attachment.
+    pub fn identify_blob(&self, mut blob: Blob) -> Result<Blob> {
+        if !blob.is_identified() {
+            let mut head = Vec::new();
+            if blob.byte_size > 0 {
+                std::fs::File::open(self.path_for(&blob))?.take(4096).read_to_end(&mut head)?;
+            }
+            blob.content_type = Some(crate::marcel::identify(&head, Some(blob.filename.raw()), blob.content_type.as_deref()));
+            blob.metadata.set("identified", Json::Bool(true));
+        }
+        Ok(blob)
     }
 
     // --- File work: no connection, blocking -------------------------------------------------------

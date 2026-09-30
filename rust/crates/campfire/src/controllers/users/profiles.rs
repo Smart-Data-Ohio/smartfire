@@ -180,7 +180,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let avatar = avatar.stage(c.app()).await?;
     let mut error_user = user.clone();
     assign_error_attributes(&mut error_user, &params);
-    let pending = c
+    let result = c
         .app()
         .db
         .write(move |tx| {
@@ -195,15 +195,14 @@ pub async fn update(c: &mut Ctx) -> Result {
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
         .await;
-    let pending = match pending {
-        Ok(pending) => pending,
+    match result {
+        Ok(()) => {},
         Err(campfire_db::Error::RecordInvalid(_)) => {
             c.set_current(concerns::CurrentUser(error_user.clone()));
             return render_show(c, StatusCode::UNPROCESSABLE_ENTITY, error_user, None).await;
         }
         Err(error) => return Err(Error::internal(error)),
-    };
-    attachments::analyze_later(c.app(), pending);
+    }
 
     let location = c.url_for(&campfire_routes::user_profile());
     c.redirect_to_with(

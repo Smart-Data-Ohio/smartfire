@@ -137,7 +137,15 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        let seed = seed_dir("default")?;
+        Self::boot_seed_with_clock_and_env("default", clock, extra).await
+    }
+
+    pub async fn boot_seed(name: &str) -> Option<TestApp> {
+        Self::boot_seed_with_clock_and_env(name, seed_clock(), &[]).await
+    }
+
+    async fn boot_seed_with_clock_and_env(name: &str, clock: campfire_kit::SharedClock, extra: &[(&str, &str)]) -> Option<TestApp> {
+        let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
         std::fs::copy(
