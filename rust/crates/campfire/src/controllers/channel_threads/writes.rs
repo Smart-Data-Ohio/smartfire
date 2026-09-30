@@ -81,7 +81,8 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             if value.is_null() || value.as_str() == Some("") { None }
             else { Some(!matches!(value.to_s().as_deref(), Some("false" | "FALSE" | "f" | "F" | "0" | "off" | "OFF"))) }
         });
-        let (thread, blob) = c.app().db.write(move |tx| {
+        let storage = c.app().storage.clone();
+        let thread = c.app().db.write(move |tx| {
             let room = Room::find(tx.conn(), room_id)?;
             if room.deleted_at.is_some() || Membership::find_by_room_and_user(tx.conn(), room_id, creator)?.is_none() {
                 return Err(campfire_db::Error::RecordNotFound("Membership"));
@@ -89,19 +90,17 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             let mut thread = ChannelThread::create(tx, NewChannelThread { room_id, creator_id: creator, parent_message_id: parent_id,
                 name, auto_archive_after_minutes: minutes, ..Default::default() })?;
             ThreadMembership::join(tx, thread.id, creator)?;
-            let mut saved_blob = None;
             if !initial.is_empty() {
                 if notify == Some(None) { return Err(campfire_db::Error::Other("reply_notify_author violates NOT NULL".into())); }
                 let blob = staged.map(|staged| messages::save_staged(tx, staged)).transpose()?;
-                thread.post_message(tx, creator, NewMessage { body, markdown_source: markdown,
+                let message = thread.post_message(tx, creator, NewMessage { body, markdown_source: markdown,
                     client_message_id: initial.get("client_message_id").and_then(messages::string_column),
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id), reply_to_message_id: reply, reply_notify_author: notify.flatten(),
                     forward_note: initial.get("forward_note").and_then(messages::string_column), ..Default::default() })?;
-                saved_blob = blob;
+                crate::messaging::process_message_attachment(tx, storage, &message)?;
             }
-            Ok((thread, saved_blob))
+            Ok(thread)
         }).await.map_err(db_error)?;
-        if let Some(blob) = blob { messages::process_attachment(c.app(), blob).await?; }
         thread
     };
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::HTML {

@@ -82,3 +82,11 @@ impl ForwarderCopier {
         Ok(())
     }
 }
+
+/// Thread posts process media inside their lifecycle/message transaction (Rails
+/// `ChannelThread#post_message!`). Reuse forwards' staged preview/variant guards;
+/// a media or deferred-job failure discards all newly generated files and rows.
+pub(crate) fn process_message_attachment(tx: &mut Tx<'_>, storage: Arc<Storage>, message: &campfire_db::Message) -> Result<()> {
+    use campfire_db::models::forwarder::BlobCopier as _;
+    ForwarderCopier::new(storage).process(tx, message)
+}

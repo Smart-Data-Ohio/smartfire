@@ -8,6 +8,8 @@ pub mod boosts;
 pub(crate) mod boosts_tests;
 #[cfg(test)]
 mod upload_tests;
+#[cfg(test)]
+mod review_tests;
 pub mod by_bots;
 pub(crate) mod payload;
 mod freshness;
@@ -490,7 +492,8 @@ pub(crate) fn paging_anchor(conn: &campfire_db::Connection, timeline: Timeline, 
 
 /// `@room.messages.create_with_attachment!(attributes)`: the message (with its uploaded blob, in
 /// one transaction), then `process_attachment`. The upload's file is copied into storage and the
-/// body canonicalized before the transaction, so the writer only inserts rows.
+/// body canonicalized before the transaction. Root media processing follows the commit;
+/// thread media processing stays inside `post_message!`'s transaction, as in Rails.
 /// `@room.messages.create!` and, in its transaction, `deliver_webhooks_to_bots`: the webhook
 /// jobs are held until the caller has broadcast the message ([`release_webhooks`]).
 pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<Message> {
@@ -510,6 +513,7 @@ pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<cam
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
     };
+    let storage = c.app().storage.clone();
     let (message, blob) = c
         .app()
         .db
@@ -527,8 +531,11 @@ pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<cam
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                     ..Default::default()
                 };
-            let message = if let Some(mut thread) = thread { thread.post_message(tx, creator_id, attributes)? }
-                else {
+            let message = if let Some(mut thread) = thread {
+                    let message = thread.post_message(tx, creator_id, attributes)?;
+                    crate::messaging::process_message_attachment(tx, storage, &message)?;
+                    return Ok((message, None));
+                } else {
                     let message = Message::create(tx, attributes)?;
                     deliver_webhooks_to_bots(tx, &room, &message)?;
                     message
