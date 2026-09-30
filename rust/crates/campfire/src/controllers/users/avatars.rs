@@ -13,6 +13,10 @@ use crate::concerns::{self, Before};
 use crate::controllers::presenters::attachments::{self, Record};
 use crate::controllers::presenters::{self, cache_key_with_version};
 
+#[cfg(test)]
+#[path = "avatar_image_tests.rs"]
+mod avatar_image_tests;
+
 /// `ActionView::Digestor.digest(name: "users/avatars/show", ...)`: the SHA256 (truncated) of
 /// `show.svg.erb`'s source plus "-" (it renders nothing else). `EtagWithTemplateDigest` adds it
 /// whenever the template can be found for the request's formats.

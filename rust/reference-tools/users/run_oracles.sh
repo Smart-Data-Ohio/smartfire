@@ -15,6 +15,7 @@ run() {
 }
 run public default vectors/users_public.json public
 run avatars default vectors/users_avatars.json avatars
+run avatar_images default vectors/users_avatar_images.json avatar-images
 run preferences default vectors/users_preferences.json preferences
 run people default vectors/users_people.json people
 run profiles default vectors/users_profile_settings.json profiles
@@ -37,7 +38,7 @@ run pwa first_run vectors/users_pwa_first_run.json pwa-first-run
 run zones first_run crates/db/src/slash_commands/rails_zone_identifiers.json zones
 run zones first_run crates/db/src/slash_commands/rails_named_zones.json named-zones named
 if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then
-  echo 'WS8br2 oracle generation: 23 fresh unnormalized files written'
+  echo 'WS8br2 oracle generation: 24 fresh unnormalized files written'
 else
-  echo 'WS8br2 oracle verification: all 23 fresh files match byte for byte; no masks or normalization'
+  echo 'WS8br2 oracle verification: all 24 fresh files match byte for byte; no masks or normalization'
 fi

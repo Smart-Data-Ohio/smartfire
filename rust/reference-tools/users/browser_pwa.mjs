@@ -11,8 +11,8 @@ const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] }
 let passed = 0
 async function scenario(name, run) {
   const context = await browser.newContext()
-  // Request interception bypasses the service-worker cache path in headless Chromium. These
-  // scenarios use only the private seeded app and its same-origin stylesheet/API endpoints.
+  // Leave worker requests unintercepted to exercise Chromium's normal cache/fetch path.
+  // These scenarios use only the private seeded app and its same-origin endpoints.
   await context.addCookies([
     { name: "session_token", value: labels["session_cookies.david"], url: base },
     { name: "enable_service_worker", value: "1", url: base }

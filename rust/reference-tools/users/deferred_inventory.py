@@ -42,6 +42,7 @@ covered_before = {
 }
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
+    "controllers/users/avatars_controller_test.rb": covered_before["controllers/users/avatars_controller_test.rb"] | {"show image", "show initials when image cannot be resized"},
     "controllers/public_pages_controller_test.rb": {"sign-in page links the public pages without OAuth"},
     "system/timezone_detection_test.rb": {"the browser does not report its zone without a CSRF token", "the browser reports its detected zone once"},
     "system/audit_log_test.rb": {"admin browses filters and exports the audit log", "audit log stays usable at phone width"},

@@ -11,6 +11,8 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("avatar-webp-size", "crates/campfire/src/controllers/users/avatars.rs", 'Variation::resize_to_limit(512, 512, Some("webp"))', 'Variation::resize_to_limit(256, 256, Some("webp"))', "uploaded_avatar_image_uses_rails_bytes_headers_and_freshness"),
+    ("avatar-bmp-fallback", "crates/campfire/src/controllers/users/avatars.rs", "else if user.is_bot() {", "else if !user.is_bot() {", "unresizable_avatar_falls_back_to_rails_initials_bytes_and_headers"),
     ("sign-in-public-link", "crates/views/templates/sessions/new.html", 'h::link_to_text("Privacy Policy", &h::routes::privacy()', 'h::link_to_text("Privacy Policy", &h::routes::about()', "unconfigured_sign_in_links_all_public_pages_in_new_tabs"),
     ("ban-setup-cleanup", "crates/db/src/models/user.rs", 'r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,\n            [self.id],\n        )?;\n        tx.emit_after_commit(Event::RemoveBannedContent', 'r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ? AND id < 0"#,\n            [self.id],\n        )?;\n        tx.emit_after_commit(Event::RemoveBannedContent', "banning_a_user_removes_pending_two_factor_setup_and_sessions"),
     ("ban-job-enqueue", "crates/db/src/models/user.rs", 'tx.emit_after_commit(Event::RemoveBannedContent { user_id: self.id });', '// deliberate dropped ban enqueue', "ban_http_enqueue_is_atomic_and_writes_one_durable_remove_job"),
