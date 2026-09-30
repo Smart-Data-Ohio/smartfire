@@ -2,6 +2,9 @@
 
 pub mod account;
 pub mod agent_access;
+pub mod agent_approval;
+pub mod agent_approvals;
+pub mod agent_service;
 pub mod agent_credential;
 pub mod agent_grant;
 pub mod agent_delivery;
@@ -74,3 +77,4 @@ pub use workspace_presence_lease::WorkspacePresenceLease;
 
 pub use agent_credential::{AgentCredential, NewCredential};
 pub use agent_grant::{AgentGrant, NewGrant};
+pub use agent_approval::{AgentApproval, NewApproval};

@@ -181,6 +181,28 @@ fn has_webhook(tx: &Tx<'_>, agent_id: i64) -> Result<bool> {
         [agent_id],
     )
 }
+
+/// Non-message callbacks commit their delivered ledger row and optional webhook
+/// job with the originating write. Webhook completion never changes polling state.
+pub fn record_delivered(tx: &mut Tx<'_>, mut attributes: NewEvent) -> Result<AgentEvent> {
+    attributes.outcome=Some("delivered".into());
+    let event=create_delivered(tx,attributes)?;
+    enqueue_delivered_webhook(tx,&event);
+    Ok(event)
+}
+
+pub fn create_delivered(tx: &Tx<'_>, mut attributes: NewEvent) -> Result<AgentEvent> {
+    attributes.outcome=Some("delivered".into());
+    let event=AgentEvent::create(tx,attributes)?;
+    if has_webhook(tx,event.agent_id)? {
+        tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",params![tx.now(),event.id])?;
+    }
+    Ok(AgentEvent::find(tx.conn(),event.id)?.expect("inserted event"))
+}
+
+pub fn enqueue_delivered_webhook(tx: &mut Tx<'_>,event:&AgentEvent) {
+    if event.webhook_status=="pending" {tx.emit_after_commit(Event::job(&EventWebhookJob {event_id:event.id,attempt:Some(event.webhook_attempts)}));}
+}
 fn rate_limited(tx: &Tx<'_>, agent_id: i64, room_id: i64, exclude: Option<i64>) -> Result<bool> {
     let n:i64=tx.conn().query_row_cached("SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND room_id=? AND event_type IN ('mention','direct_message','reply') AND outcome IN ('pending','delivered','acknowledged') AND created_at>=? AND (? IS NULL OR id!=?)",
         params![agent_id,room_id,tx.now().ago(SignedDuration::from_mins(1)),exclude,exclude],|r|r.get(0))?;
