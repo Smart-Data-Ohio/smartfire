@@ -62,7 +62,8 @@ try {
             h['set-cookie'] = [name.endsWith('session_path') ? '_campfire_session=random; Path=/; SameSite=Lax; Max-Age=3600' : 'oracle=expected; Path=/; SameSite=Lax; Max-Age=3600; Expires=Mon, 02 Mar 2026 17:00:00 GMT']
             if (name.endsWith('cookie_order')) h['set-cookie'] = ['oracle=one; Path=/; SameSite=Lax', 'oracle=two; Path=/; SameSite=Lax']
             if (name.endsWith('duplicate_path')) h['set-cookie'] = ['oracle=expected; Path=/restricted; Path=/']
-            if (actual) mutationByName.get(name.replace(/^(page|fragment)_/, ''))?.(h)
+            const mutate = mutationByName.get(name.replace(/^(page|fragment)_/, ''))
+            if (actual && typeof mutate === 'function') mutate(h)
           }
           if (actual && name === 'asset_body' && /\.css(?:\?|$)/.test(req.url!)) body = Buffer.concat([body, Buffer.from('\nhtml { --oracle-sentinel: wrong; }')])
           res.writeHead(response.statusCode!, h); res.end(body)
