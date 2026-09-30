@@ -570,7 +570,7 @@ async fn test_database_with_clock(clock: Arc<campfire_db::TestClock>) -> TestDb 
     .await
     .unwrap()
 }
-fn crypto() -> Arc<ArEncryption> {
+pub(super) fn crypto() -> Arc<ArEncryption> {
     static CRYPTO: std::sync::OnceLock<Arc<ArEncryption>> = std::sync::OnceLock::new();
     CRYPTO
         .get_or_init(|| {

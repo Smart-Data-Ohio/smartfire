@@ -352,6 +352,7 @@ dependencies = [
  "campfire_routes",
  "campfire_storage",
  "campfire_views",
+ "caseless",
  "flate2",
  "futures-util",
  "hkdf",

@@ -26,6 +26,9 @@ mutations = [
     ("fetch-retries", "jobs.rs", "RetryPolicy::no_retries()", "RetryPolicy::application_job()", "github_fetch_declares_one_attempt", 1),
     ("fetch-review-tie", "fetcher.rs", "if at > existing.1", "if at >= existing.1", "github_fetch_persisted_fields", 1),
     ("fetch-json-rescue", "fetcher.rs", "error.kind == ErrorKind::Fetch", "true", "github_fetch_persisted_fields", 1),
+    ("agent-summary", "agent_actions.rs", "if action.action_name() != approval.action", "if false && action.action_name() != approval.action", "github_agent_rechecks_payload_and_linked_identity", 1),
+    ("agent-identity", "agent_actions.rs", "if approval.account_id != Some(account.id)", "if false && approval.account_id != Some(account.id)", "github_agent_rechecks_payload_and_linked_identity", 1),
+    ("agent-grant", "agent_actions.rs", "(deleted || !grant)", "(deleted || false && !grant)", "github_agent_rechecks_authority", 1),
     ("fetch-file-cap", "fetcher.rs", ".take(100)", ".take(usize::MAX)", "github_fetch_persisted_fields", 1),
 ]
 for name, filename, before, after, test_filter, expected_failures in mutations:

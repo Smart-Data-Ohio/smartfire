@@ -1,8 +1,8 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 85 mapped to Rust assertions; 341 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 126 mapped to Rust assertions; 300 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier/agent write job handlers, card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write actions remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier job handler, card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
 
@@ -380,57 +380,57 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
 | approving a github action enqueues the job, denying does not | Deferred; WS15g continuation | — |
-| a relinked GitHub account after approval makes no request | Deferred; WS15g continuation | — |
-| a replaced GitHub connection with the same login makes no request | Deferred; WS15g continuation | — |
-| an approval that recorded no GitHub identity makes no request | Deferred; WS15g continuation | — |
+| a relinked GitHub account after approval makes no request | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
+| a replaced GitHub connection with the same login makes no request | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
+| an approval that recorded no GitHub identity makes no request | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
 | approving a non-github action enqueues nothing | Deferred; WS15g continuation | — |
-| an approved comment posts with the agent token and records completion | Deferred; WS15g continuation | — |
-| an approved approve posts the review with the agent token | Deferred; WS15g continuation | — |
-| approved request_changes posts the review body | Deferred; WS15g continuation | — |
-| approved request_review posts the reviewer logins | Deferred; WS15g continuation | — |
-| a denied approval makes no request and records failure | Deferred; WS15g continuation | — |
-| an expired approval makes no request and records failure | Deferred; WS15g continuation | — |
-| a cancelled approval makes no request and records failure | Deferred; WS15g continuation | — |
-| removed membership makes no request and records failure | Deferred; WS15g continuation | — |
-| a revoked grant makes no request and records failure | Deferred; WS15g continuation | — |
-| a suspended agent makes no request and records failure | Deferred; WS15g continuation | — |
-| a deleted thread mapping makes no request and records failure | Deferred; WS15g continuation | — |
-| a disconnected account makes no request and records failure | Deferred; WS15g continuation | — |
-| a destroyed account makes no request and records failure | Deferred; WS15g continuation | — |
-| a GitHub 401 disconnects the account and records failure | Deferred; WS15g continuation | — |
-| a GitHub 403 records failure with GitHub's message | Deferred; WS15g continuation | — |
-| an approval whose payload describes a different action than its summary makes no request | Deferred; WS15g continuation | — |
-| an approval whose payload names a different pull request than its summary makes no request | Deferred; WS15g continuation | — |
-| running the job twice for one approval posts once | Deferred; WS15g continuation | — |
-| a historical completion row with a NULL approval column still suppresses a second run | Deferred; WS15g continuation | — |
-| a duplicate enqueue that slips past the check posts no second request | Deferred; WS15g continuation | — |
-| a job that loses the execution claim makes no GitHub request | Deferred; WS15g continuation | — |
-| a failed GitHub call rewrites the winner's claim as a failure | Deferred; WS15g continuation | — |
-| completion rows are unique per agent and approval | Deferred; WS15g continuation | — |
-| a failed run is not retried by a second run | Deferred; WS15g continuation | — |
-| a missing approval and a non-github approval are silent no-ops | Deferred; WS15g continuation | — |
+| an approved comment posts with the agent token and records completion | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| an approved approve posts the review with the agent token | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| approved request_changes posts the review body | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| approved request_review posts the reviewer logins | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| a denied approval makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_authority_before_any_write` |
+| an expired approval makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_authority_before_any_write` |
+| a cancelled approval makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_authority_before_any_write` |
+| removed membership makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_authority_before_any_write` |
+| a revoked grant makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_authority_before_any_write` |
+| a suspended agent makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_authority_before_any_write` |
+| a deleted thread mapping makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_authority_before_any_write` |
+| a disconnected account makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
+| a destroyed account makes no request and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
+| a GitHub 401 disconnects the account and records failure | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| a GitHub 403 records failure with GitHub's message | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| an approval whose payload describes a different action than its summary makes no request | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
+| an approval whose payload names a different pull request than its summary makes no request | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
+| running the job twice for one approval posts once | Mapped to grouped Rust assertions; WS15g | `github_agent_concurrent_duplicates_share_one_claim_and_one_outbound_write` |
+| a historical completion row with a NULL approval column still suppresses a second run | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| a duplicate enqueue that slips past the check posts no second request | Mapped to grouped Rust assertions; WS15g | `github_agent_concurrent_duplicates_share_one_claim_and_one_outbound_write` |
+| a job that loses the execution claim makes no GitHub request | Mapped to grouped Rust assertions; WS15g | `github_agent_concurrent_duplicates_share_one_claim_and_one_outbound_write` |
+| a failed GitHub call rewrites the winner's claim as a failure | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| completion rows are unique per agent and approval | Mapped to grouped Rust assertions; WS15g | `github_agent_completion_index_is_scoped_to_agent_approval_and_event_type` |
+| a failed run is not retried by a second run | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| a missing approval and a non-github approval are silent no-ops | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
 | a running claim older than 15 minutes is marked failed by the sweeper | Mapped to grouped Rust assertions; WS15g | `github_claim_persisted_outcomes_and_audits_match_pinned_rails` |
 | a claim the sweep already failed is not rewritten by a late finish | Mapped to grouped Rust assertions; WS15g | `github_claim_sweep_and_late_finish_keep_the_first_outcome_and_enqueue_once` |
 | a claim finished while the sweep runs keeps its result | Mapped to grouped Rust assertions; WS15g | `github_claim_sweep_and_late_finish_keep_the_first_outcome_and_enqueue_once` |
 | a fresh running claim is left alone by the sweeper | Mapped to grouped Rust assertions; WS15g | `github_claim_sweep_fails_only_overdue_running_claims_and_preserves_metadata` |
-| an approved action posts with the owner's app token when available | Deferred; WS15g continuation | — |
-| an owner PAT never overrides the agent account | Deferred; WS15g continuation | — |
+| an approved action posts with the owner's app token when available | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| an owner PAT never overrides the agent account | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
 
 ## `test/models/github/agent_pull_request_action_test.rb` (11 tests)
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| comment requires a body | Deferred; WS15g continuation | — |
-| request_changes requires a body | Deferred; WS15g continuation | — |
-| approve accepts a missing body | Deferred; WS15g continuation | — |
-| request_review requires 1 to 15 valid logins | Deferred; WS15g continuation | — |
-| request_review normalises logins like the human endpoint | Deferred; WS15g continuation | — |
-| unknown kinds are rejected | Deferred; WS15g continuation | — |
-| oversized bodies are rejected before the approval payload limit | Deferred; WS15g continuation | — |
-| summaries name the action and the pull request | Deferred; WS15g continuation | — |
-| payload carries pull_request_id, kind, body, and reviewers | Deferred; WS15g continuation | — |
-| from_payload rebuilds a valid action | Deferred; WS15g continuation | — |
-| perform calls the same client methods as the human controllers | Deferred; WS15g continuation | — |
+| comment requires a body | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| request_changes requires a body | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| approve accepts a missing body | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| request_review requires 1 to 15 valid logins | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| request_review normalises logins like the human endpoint | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| unknown kinds are rejected | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| oversized bodies are rejected before the approval payload limit | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| summaries name the action and the pull request | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| payload carries pull_request_id, kind, body, and reviewers | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| from_payload rebuilds a valid action | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
+| perform calls the same client methods as the human controllers | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
 
 ## `test/models/github/app_test.rb` (11 tests)
 

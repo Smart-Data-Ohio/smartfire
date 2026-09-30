@@ -189,6 +189,8 @@ async fn github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rai
             case["name"]
         );
         for (actual, expected) in received.iter().zip(expected) {
+            let authorization = (expected["authorized"] == true).then(|| format!("Bearer {}", case.get("token").and_then(Value::as_str).unwrap_or("fixture-workspace-token")));
+            assert_eq!(actual.header("Authorization"), authorization.as_deref());
             assert_eq!(
                 actual.target,
                 expected["path"].as_str().unwrap(),
@@ -199,7 +201,6 @@ async fn github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rai
                 "Accept",
                 "User-Agent",
                 "X-GitHub-Api-Version",
-                "Authorization",
             ] {
                 assert_eq!(
                     actual.header(header),

@@ -101,36 +101,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -228,36 +228,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -349,36 +349,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -476,36 +476,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -603,36 +603,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -730,36 +730,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -857,36 +857,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -991,36 +991,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -1118,36 +1118,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -1245,36 +1245,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -1394,36 +1394,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -1534,36 +1534,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -1676,36 +1676,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -1803,36 +1803,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -1931,36 +1931,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -2039,18 +2039,18 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -2148,36 +2148,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -2275,36 +2275,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -2402,36 +2402,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -2534,36 +2534,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -2666,36 +2666,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -2798,36 +2798,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -2930,36 +2930,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -3062,36 +3062,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -3194,36 +3194,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -3326,36 +3326,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -3458,36 +3458,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -3590,36 +3590,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -3722,36 +3722,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -3854,36 +3854,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -3986,36 +3986,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -4114,27 +4114,27 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -4213,27 +4213,27 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -4311,27 +4311,27 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -4438,45 +4438,45 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/files?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"a.rs\",\"additions\":21,\"deletions\":3,\"status\":\"modified\"}],\"total_count\":2}",
@@ -4582,45 +4582,45 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/files?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"雪\\u003c\\u0026\\u003e.rs \",\"additions\":1,\"deletions\":0,\"status\":\"modified\"}],\"total_count\":2}",
@@ -4722,36 +4722,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -6180,45 +6180,45 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/files?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"1.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"2.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"3.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"4.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"5.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"6.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"7.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"8.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"9.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"10.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"11.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"12.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"13.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"14.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"15.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"16.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"17.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"18.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"19.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"20.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"21.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"22.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"23.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"24.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"25.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"26.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"27.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"28.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"29.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"30.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"31.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"32.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"33.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"34.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"35.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"36.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"37.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"38.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"39.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"40.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"41.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"42.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"43.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"44.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"45.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"46.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"47.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"48.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"49.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"50.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"51.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"52.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"53.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"54.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"55.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"56.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"57.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"58.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"59.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"60.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"61.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"62.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"63.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"64.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"65.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"66.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"67.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"68.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"69.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"70.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"71.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"72.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"73.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"74.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"75.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"76.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"77.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"78.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"79.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"80.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"81.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"82.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"83.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"84.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"85.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"86.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"87.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"88.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"89.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"90.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"91.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"92.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"93.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"94.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"95.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"96.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"97.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"98.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"99.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"},{\"filename\":\"100.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":150}",
@@ -6324,45 +6324,45 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/files?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"a.rs\",\"additions\":0,\"deletions\":0,\"status\":\"modified\"}],\"total_count\":1}",
@@ -6454,45 +6454,45 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/files?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[],\"total_count\":2}",
@@ -6592,45 +6592,45 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/files?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -6710,45 +6710,45 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/files?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -6827,9 +6827,9 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -6908,9 +6908,9 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -6989,9 +6989,9 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -7074,9 +7074,9 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -7155,9 +7155,9 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -7236,9 +7236,9 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -7312,9 +7312,9 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -7389,9 +7389,9 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -7489,36 +7489,36 @@
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
           "headers": {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "Smartfire-GitHub-Cards",
-            "Authorization": "Bearer fixture-workspace-token"
-          }
+            "User-Agent": "Smartfire-GitHub-Cards"
+          },
+          "authorized": true
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",
@@ -7618,7 +7618,8 @@
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "Smartfire-GitHub-Cards"
-          }
+          },
+          "authorized": false
         },
         {
           "path": "/repos/rails/rails/pulls/123/reviews?per_page=100",
@@ -7626,7 +7627,8 @@
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "Smartfire-GitHub-Cards"
-          }
+          },
+          "authorized": false
         },
         {
           "path": "/repos/rails/rails/commits/abc/check-runs?per_page=100",
@@ -7634,7 +7636,8 @@
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "Smartfire-GitHub-Cards"
-          }
+          },
+          "authorized": false
         },
         {
           "path": "/repos/rails/rails/commits/abc/status",
@@ -7642,7 +7645,8 @@
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "Smartfire-GitHub-Cards"
-          }
+          },
+          "authorized": false
         }
       ],
       "stored_files": "{\"files\":[{\"filename\":\"old.rs\",\"additions\":1,\"deletions\":0,\"status\":\"added\"}],\"total_count\":1}",

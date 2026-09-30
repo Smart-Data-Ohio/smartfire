@@ -71,7 +71,7 @@ add.call("no_workspace_token", token: nil)
 class FetchFakeHTTP
   def initialize(routes, received) = (@routes, @received = routes, received)
   def get(path, headers)
-    @received << { path:, headers: }
+    @received << { path:, headers: headers.except("Authorization"), authorized: headers.key?("Authorization") }
     test = @routes.fetch(path) { raise "Unexpected GitHub path #{path}" }
     response = Net::HTTPResponse::CODE_TO_OBJ.fetch(test[:status].to_s).new("1.1", test[:status].to_s, "fixture")
     (test[:headers] || {}).each { |key, value| response[key] = value }

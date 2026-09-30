@@ -2,6 +2,8 @@
 //! Controllers and HTML belong outside this module.
 
 pub mod accounts;
+pub mod actions;
+pub mod agent_actions;
 pub mod client;
 pub mod fetcher;
 pub mod jobs;

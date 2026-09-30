@@ -222,6 +222,9 @@ impl Accounts {
             repository_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+    pub fn write_client(&self, token: String) -> WriteClient {
+        WriteClient::with_network(token, self.network.clone())
+    }
     fn find(&self, id: i64) -> Result<Option<Account>> {
         self.db.read_blocking(|conn| Account::find(conn, id))
     }
