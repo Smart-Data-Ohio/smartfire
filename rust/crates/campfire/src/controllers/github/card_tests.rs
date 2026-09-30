@@ -29,10 +29,14 @@ fn cases() -> Value {
 impl Fresh {
     pub(super) async fn new(case: &Value) -> Self {
         let status = case["access"].as_u64().unwrap_or(200) as u16;
-        let (server, network) = fake(vec![
-            Route::new("GET", "api.github.com", "/repos/rails/rails", status).body("{}"),
-        ])
-        .await;
+        Self::with_routes(
+            case,
+            vec![Route::new("GET", "api.github.com", "/repos/rails/rails", status).body("{}")],
+        )
+        .await
+    }
+    pub(super) async fn with_routes(case: &Value, routes: Vec<Route>) -> Self {
+        let (server, network) = fake(routes).await;
         let dir = tempfile::tempdir_in(
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g"),
         )
@@ -46,12 +50,23 @@ impl Fresh {
             _ => None,
         })
         .unwrap();
-        let booted = app::boot_with_github_network(
+        let booted = app::boot_with_github_clients(
             config,
             std::sync::Arc::new(campfire_kit::FrozenClock::new(
                 "2026-01-01T12:00:00Z".parse().unwrap(),
             )),
             ReadClient::new(None),
+            crate::integrations::github::client::AppClient::with_network(
+                case["app_configured"]
+                    .as_bool()
+                    .unwrap_or(false)
+                    .then(|| "fixture-client".into()),
+                case["app_configured"]
+                    .as_bool()
+                    .unwrap_or(false)
+                    .then(|| "fixture-secret".into()),
+                network.clone(),
+            ),
             network,
         )
         .await

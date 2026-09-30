@@ -1,8 +1,8 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 241 mapped to Rust assertions; 185 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 269 mapped to Rust assertions; 157 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. GitHub health data/section pass independently; shared health-page wiring remains deferred. Remaining room-page/controller/system parity, helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors; profile/bot view and lifecycle cases remain explicit. GitHub health data/section pass independently; shared health-page wiring remains deferred. Remaining room-page/controller/system parity, helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 | Rails file | Cases passing grouped assertions | Deferred |
 |---|---:|---:|
@@ -10,17 +10,16 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/helpers/github_pull_requests_helper_test.rb` | 1/20 | 19 |
 | `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
 | `test/controllers/github/pull_request_review_requests_controller_test.rb` | 0/15 | 15 |
-| `test/controllers/github/app_connections_controller_test.rb` | 0/13 | 13 |
-| `test/controllers/github/connections_controller_test.rb` | 0/13 | 13 |
 | `test/controllers/github/pull_request_comments_controller_test.rb` | 0/11 | 11 |
-| `test/controllers/accounts/bots/github_connections_controller_test.rb` | 0/10 | 10 |
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
 | `test/controllers/github/pull_request_reviews_controller_test.rb` | 0/9 | 9 |
 | `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
 | `test/controllers/github/pull_request_threads_controller_test.rb` | 0/7 | 7 |
 | `test/jobs/audit_log_github_execution_test.rb` | 0/6 | 6 |
+| `test/controllers/github/connections_controller_test.rb` | 8/13 | 5 |
 | `test/controllers/github/pull_request_write_actions_controller_test.rb` | 0/5 | 5 |
 | `test/models/github/review_logins_test.rb` | 0/5 | 5 |
+| `test/controllers/accounts/bots/github_connections_controller_test.rb` | 7/10 | 3 |
 | `test/controllers/github/webhooks_controller_test.rb` | 18/21 | 3 |
 | `test/jobs/github/deliver_subscription_event_job_test.rb` | 34/37 | 3 |
 | `test/system/github_pr_write_actions_test.rb` | 0/3 | 3 |
@@ -29,6 +28,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/jobs/github/perform_agent_action_job_test.rb` | 34/36 | 2 |
 | `test/models/github/pull_request_test.rb` | 16/17 | 1 |
 | `test/models/github/write_client_test.rb` | 12/13 | 1 |
+| `test/controllers/github/app_connections_controller_test.rb` | 13/13 | 0 |
 | `test/controllers/rooms/github_subscriptions_controller_test.rb` | 17/17 | 0 |
 | `test/models/github/agent_pull_request_action_test.rb` | 11/11 | 0 |
 | `test/models/github/app_test.rb` | 11/11 | 0 |
@@ -42,14 +42,14 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| an administrator can link the agent's account | Deferred; WS15g continuation | — |
+| an administrator can link the agent's account | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | the owner without admin rights can neither link, relink, nor unlink | Deferred; WS15g continuation | — |
-| another member gets 403 linking and unlinking | Deferred; WS15g continuation | — |
-| an administrator can unlink the agent's account | Deferred; WS15g continuation | — |
-| a rejected token stores nothing and shows the GitHub message | Deferred; WS15g continuation | — |
-| an unreachable GitHub shows a retry message | Deferred; WS15g continuation | — |
-| a blank token is rejected | Deferred; WS15g continuation | — |
-| linking again after a disconnect replaces the token and clears the reason | Deferred; WS15g continuation | — |
+| another member gets 403 linking and unlinking | Mapped to grouped Rust assertions; WS15g | `github_connections_security_enforces_sudo_admin_active_bot_and_single_use_state` |
+| an administrator can unlink the agent's account | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| a rejected token stores nothing and shows the GitHub message | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| an unreachable GitHub shows a retry message | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| a blank token is rejected | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| linking again after a disconnect replaces the token and clears the reason | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | the bot page shows the login without ever rendering the token | Deferred; WS15g continuation | — |
 | deactivating the bot disconnects its GitHub account like a human's | Deferred; WS15g continuation | — |
 
@@ -97,34 +97,34 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| connect redirects to the GitHub App authorize URL | Deferred; WS15g continuation | — |
-| connect answers 404 while the App is unconfigured | Deferred; WS15g continuation | — |
-| callback exchanges the code and stores an app token | Deferred; WS15g continuation | — |
-| callback with a stale state sends the member back to try again | Deferred; WS15g continuation | — |
-| callback when GitHub reports an error | Deferred; WS15g continuation | — |
-| callback answers 404 while the App is unconfigured | Deferred; WS15g continuation | — |
-| disconnect revokes the app token remotely | Deferred; WS15g continuation | — |
-| disconnect refreshes an expired token before revoking the grant | Deferred; WS15g continuation | — |
-| disconnect proceeds when the refresh fails | Deferred; WS15g continuation | — |
-| disconnect proceeds when revocation fails | Deferred; WS15g continuation | — |
-| disconnect sends no revocation for a PAT | Deferred; WS15g continuation | — |
-| linking a PAT over an app connection resets the source | Deferred; WS15g continuation | — |
-| reconnecting through the app revokes only the previous app token | Deferred; WS15g continuation | — |
+| connect redirects to the GitHub App authorize URL | Mapped to grouped Rust assertions; WS15g | `github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange` |
+| connect answers 404 while the App is unconfigured | Mapped to grouped Rust assertions; WS15g | `github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange` |
+| callback exchanges the code and stores an app token | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| callback with a stale state sends the member back to try again | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| callback when GitHub reports an error | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| callback answers 404 while the App is unconfigured | Mapped to grouped Rust assertions; WS15g | `github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange` |
+| disconnect revokes the app token remotely | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| disconnect refreshes an expired token before revoking the grant | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| disconnect proceeds when the refresh fails | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| disconnect proceeds when revocation fails | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| disconnect sends no revocation for a PAT | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| linking a PAT over an app connection resets the source | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| reconnecting through the app revokes only the previous app token | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 
 ## `test/controllers/github/connections_controller_test.rb` (13 tests)
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| linking validates the token with GET /user and stores the login | Deferred; WS15g continuation | — |
-| linking sets the profile username when blank | Deferred; WS15g continuation | — |
-| linking replaces a differing profile username with the verified one | Deferred; WS15g continuation | — |
-| linking releases the login from a member who claimed it without verification | Deferred; WS15g continuation | — |
-| linking never takes a login another member's linked token verifies | Deferred; WS15g continuation | — |
+| linking validates the token with GET /user and stores the login | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| linking sets the profile username when blank | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| linking replaces a differing profile username with the verified one | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| linking releases the login from a member who claimed it without verification | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| linking never takes a login another member's linked token verifies | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | the profile cannot edit the login while a verified account is linked | Deferred; WS15g continuation | — |
 | the profile edits the login again once the link is disconnected | Deferred; WS15g continuation | — |
-| a rejected token stores nothing | Deferred; WS15g continuation | — |
-| linking again after a disconnect replaces the token and clears the reason | Deferred; WS15g continuation | — |
-| unlinking destroys the account | Deferred; WS15g continuation | — |
+| a rejected token stores nothing | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| linking again after a disconnect replaces the token and clears the reason | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
+| unlinking destroys the account | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | profile shows link and unlink state without rendering the token | Deferred; WS15g continuation | — |
 | linking never logs the pasted token | Deferred; WS15g continuation | — |
 | the token parameter is filtered from request logs | Deferred; WS15g continuation | — |

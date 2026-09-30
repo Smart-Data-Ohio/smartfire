@@ -41,6 +41,7 @@ pub struct AppState {
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     pub github_accounts: crate::integrations::github::accounts::Accounts,
+    pub github_app: crate::integrations::github::client::AppClient,
     pub github_read: crate::integrations::github::client::ReadClient,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
     /// and every render outside one.
@@ -94,6 +95,15 @@ pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, gi
 }
 
 pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    let github_app = crate::integrations::github::client::AppClient::with_network(
+        std::env::var("GITHUB_APP_CLIENT_ID").ok(),
+        std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
+        github_network.clone(),
+    );
+    boot_with_github_clients(config, clock, github_read, github_app, github_network).await
+}
+
+pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
@@ -141,13 +151,8 @@ pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock,
 
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
-    let github_app = crate::integrations::github::client::AppClient::with_network(
-        std::env::var("GITHUB_APP_CLIENT_ID").ok(),
-        std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
-        github_network.clone(),
-    );
     let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
-        db.clone(), Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets)), github_app, github_network,
+        db.clone(), Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets)), github_app.clone(), github_network,
     );
     let app = Arc::new(AppState {
         config,
@@ -161,6 +166,7 @@ pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock,
         mail,
         web_push,
         github_read,
+        github_app,
         github_accounts,
         fragment_cache,
     });

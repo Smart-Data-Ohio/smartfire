@@ -5,6 +5,7 @@ pub mod accounts;
 pub mod actions;
 pub mod agent_actions;
 pub mod client;
+pub mod connections;
 pub mod fetcher;
 pub mod health;
 pub mod jobs;

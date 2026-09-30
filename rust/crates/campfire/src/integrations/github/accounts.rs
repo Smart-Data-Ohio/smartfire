@@ -84,6 +84,16 @@ impl Account {
         let id = Self::for_user(tx.conn(), input.user_id)?.map(|a| a.id);
         Self::save(tx, crypto, id, input)
     }
+    pub fn relink_without_touch(tx: &mut Tx<'_>, crypto:&ArEncryption, input:&AccountInput<'_>)->Result<Self> {
+        if let Some(account)=Self::for_user(tx.conn(), input.user_id)? {
+            Self::validate(tx,Some(account.id),input)?;
+            if account.github_login==input.github_login && account.token_source==input.token_source && account.token_expires_at==input.token_expires_at && account.disconnected_reason.is_none() && account.last_error.is_none() && crypto.decrypt(&account.access_token).ok().as_deref()==Some(input.access_token) && account.refresh_token.as_deref().map(|s|crypto.decrypt(s)).transpose().ok().flatten().as_deref()==input.refresh_token {
+                account.claim_verified_login(tx)?;
+                return Ok(account);
+            }
+        }
+        Self::relink(tx,crypto,input)
+    }
     fn validate(tx: &Tx<'_>, id: Option<i64>, input: &AccountInput<'_>) -> Result<()> {
         let mut errors = Errors::default();
         if !tx.conn().query_row(

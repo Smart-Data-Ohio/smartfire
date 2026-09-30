@@ -4,5 +4,11 @@ mod card_tests;
 #[cfg(test)]
 mod subscription_tests;
 pub mod cards;
+pub mod connections;
 pub mod subscriptions;
 pub mod webhooks;
+
+#[cfg(test)]
+mod connection_tests;
+#[cfg(test)]
+mod test_support;

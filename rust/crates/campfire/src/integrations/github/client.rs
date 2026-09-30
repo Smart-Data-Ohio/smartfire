@@ -540,7 +540,7 @@ pub(super) fn present(value: Option<&Value>) -> bool {
         _ => true,
     }
 }
-pub(super) fn ruby_strip(s: &str) -> &str {
+pub(crate) fn ruby_strip(s: &str) -> &str {
     s.trim_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c', '\0'])
 }
 pub(crate) fn ruby_to_i(s: &str) -> i64 {
