@@ -503,5 +503,11 @@ mod refreshes_rails_cases;
 mod sidebars_rails_cases;
 
 #[cfg(test)]
+mod involvements_rails_cases;
+
+#[cfg(test)]
+mod reads_rails_cases;
+
+#[cfg(test)]
 #[path = "rooms/native_integration_tests.rs"]
 mod native_integration_tests;

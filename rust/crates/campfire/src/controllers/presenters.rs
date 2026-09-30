@@ -604,7 +604,7 @@ impl<'a> Presenter<'a> {
     pub fn sidebar_room(&self, room: &Room) -> campfire_views::users::SidebarRoom {
         campfire_views::users::SidebarRoom {
             id: room.id,
-            param_key: room_kind(room.room_type).param_key().to_string(),
+            param_key: accounts::room_param_key(room.room_type).to_string(),
             name: room.name.clone().unwrap_or_default(),
             unread: false,
             menu:accounts::room_menu(room,None,None,0,None),
