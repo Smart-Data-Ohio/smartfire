@@ -305,3 +305,68 @@ async fn review_signed_initial_thread_attachment_matches_rails() {
             .is_empty()
     );
 }
+
+#[tokio::test]
+async fn scalar_retry_paths_match_rails_bytes_and_rows() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/client-retries.json"
+    ))
+    .unwrap();
+    let mut requests = 0;
+    for row in oracle["rows"].as_array().unwrap() {
+        let app = app().await;
+        let (last_message, last_thread) = app
+            .db()
+            .read(|conn| {
+                Ok((
+                    conn.query_row("SELECT MAX(id) FROM messages", [], |r| r.get::<_, i64>(0))?,
+                    conn.query_row("SELECT MAX(id) FROM channel_threads", [], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                ))
+            })
+            .await
+            .unwrap();
+        if row["kind"] == "reply" {
+            thread(&app).await;
+        }
+        let mut browser = app.david();
+        for expected in row["responses"].as_array().unwrap() {
+            let response = browser
+                .write(
+                    Req::new(Method::POST, expected["path"].as_str().unwrap())
+                        .header("content-type", "application/json")
+                        .header("accept", "application/json")
+                        .body(expected["input"].to_string()),
+                )
+                .await;
+            let mut expected = expected.clone();
+            expected["name"] = row["name"].clone();
+            assert_response(&response, &expected);
+            requests += 1;
+        }
+        let state = app
+            .db()
+            .read(move |conn| {
+                let clients = conn
+                    .prepare("SELECT client_message_id FROM messages WHERE id > ? ORDER BY id")?
+                    .query_map([last_message], |r| r.get::<_, String>(0))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?;
+                let count = conn.query_row(
+                    "SELECT COUNT(*) FROM channel_threads WHERE id > ?",
+                    [last_thread],
+                    |r| r.get::<_, i64>(0),
+                )?;
+                Ok(json!({"clients": clients, "thread_count": count}))
+            })
+            .await
+            .unwrap();
+        let name = row["name"].as_str().unwrap();
+        assert_eq!(state["clients"], row["clients"], "{name}");
+        assert_eq!(state["thread_count"], row["thread_count"], "{name}");
+    }
+    assert_eq!(requests, 48);
+    println!(
+        "WS8bm client retries: 24 scenarios; 48 Rails HTTP responses byte-identical; scalar IDs and saved rows checked"
+    );
+}

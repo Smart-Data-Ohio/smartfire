@@ -13,7 +13,8 @@ scratch.mkdir(exist_ok=True)
 clone = Path(tempfile.mkdtemp(prefix='ws8bm-review-6375-', dir=scratch))
 subprocess.run(['git', 'clone', '--quiet', '--shared', '--no-checkout', str(ROOT), str(clone)], check=True)
 subprocess.run(['git', 'checkout', '--quiet', '--detach', BASE], cwd=clone, check=True)
-for file in ['rust/crates/campfire/src/controllers/messages/review_tests.rs', 'rust/vectors/messaging/thread-review.json']:
+assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=clone, text=True).strip() == BASE
+for file in ['rust/crates/campfire/src/controllers/messages/review_tests.rs', 'rust/vectors/messaging/thread-review.json', 'rust/vectors/messaging/client-retries.json']:
     shutil.copyfile(ROOT / file, clone / file)
 module = clone / 'rust/crates/campfire/src/controllers/messages.rs'
 module.write_text(module.read_text().replace('mod upload_tests;', 'mod upload_tests;\n#[cfg(test)]\nmod review_tests;'))

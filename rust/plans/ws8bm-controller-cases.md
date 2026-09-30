@@ -57,7 +57,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - mentioning an agent-backed bot posts exactly one webhook with the agent key — WS11; WS8bm HTTP integration.
 - revoked agent delivery posts no webhook — WS11; WS8bm HTTP integration.
 - mentioning a bot without an agent row still uses the legacy webhook — WS11; WS8bm HTTP integration.
-- retried create with the same client id returns the original message — WS8bm.
+- retried create with the same client id returns the original message — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
 - system notes render as a compact note without message chrome — WS8bm.
 - system notes cannot be edited or deleted by their actor — WS8bm.
 - system notes cannot be deleted by an administrator — WS8bm.
@@ -130,7 +130,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 24 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
 
 - creation accepts nested thread message parameters and joins only the creator — WS8bm.
-- retried creation with the same first-message client id returns the existing thread — WS8bm.
+- retried creation with the same first-message client id returns the existing thread — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
 - creator settings, joined-member reopening, and moderator lifecycle powers stay distinct — WS8bm.
 - browsing does not join and stale threads show as closed without writes — WS8bm.
 - explicitly closing an already-stale thread persists closed_at — WS8bm.
@@ -168,7 +168,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - editing a thread message broadcasts its meta with the edited marker — WS8bm.
 - identical thread message saves do not mark the message edited — WS8bm.
 - nested HTML message URL redirects into the parent room shell — WS8b-r; WS8bm list integration.
-- retried post with the same client id returns the original message — WS8bm.
+- retried post with the same client id returns the original message — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
 - thread system notes cannot be edited or deleted — WS8bm.
 
 ## test/controllers/channel_thread_messages_drive_attachments_test.rb

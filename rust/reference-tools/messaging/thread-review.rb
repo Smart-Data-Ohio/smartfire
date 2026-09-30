@@ -1,4 +1,5 @@
 require 'json'
+require_relative 'oracle-database'
 require 'active_support/testing/time_helpers'
 include ActiveSupport::Testing::TimeHelpers
 travel_to Time.utc(2026, 3, 2, 16)
@@ -16,12 +17,7 @@ capture = ->(name, path, input) do
   {name:, path:, input:, status: browser.response.status, body: browser.response.body,
    content_type: browser.response.headers['Content-Type'], cache_control: browser.response.headers['Cache-Control'], location: browser.response.headers['Location']}
 end
-scenario = ->(&block) do
-  ActiveRecord::Base.transaction do
-    block.call
-    raise ActiveRecord::Rollback
-  end
-end
+scenario = MessagingOracleDatabase.scenarios(ARGV.fetch(0))
 scenario.call do
   thread = ChannelThread.create!(room:, creator: User.find(149087659), name: 'Review')
   input = {message: {client_message_id: true, markdown_source: 'retry me'}}
