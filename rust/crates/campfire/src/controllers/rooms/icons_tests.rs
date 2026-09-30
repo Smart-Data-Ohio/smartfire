@@ -58,6 +58,7 @@ async fn room_icon_writes_require_a_human_with_create_or_administer_permission()
 #[tokio::test]
 async fn room_icon_creation_casts_normalizes_and_validates_before_any_write() {
     let app = TestApp::boot_frozen().await.expect("seed required");
+    app.db().write(|tx| { tx.conn().execute_cached("INSERT INTO workspace_icons(name,title,creator_id,created_at,updated_at) VALUES ('ws8br_custom','Custom icon',127326141,?,?)", [tx.now(),tx.now()])?; Ok(()) }).await.unwrap();
     let mut david = app.david();
     for row in oracle()["creations"].as_array().unwrap() {
         let before = counts(&app).await;

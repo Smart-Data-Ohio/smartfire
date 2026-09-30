@@ -10,6 +10,8 @@ require 'digest'
   'app/views/rooms/layouts/_form.html.erb'=>'e55e3280dc4d1afe607a05ed8fe5d1709eef431f564c6a45160c0221b3ee8459',
   'app/views/shared/_icon_field.html.erb'=>'55ee26af4fe040d8f4548f3f113bba89ae5545be1fc265d3aed7c56a8fa94df7',
 }.each { |path,hash| raise "reference drift: #{path}" unless Digest::SHA256.file(Rails.root.join(path)).hexdigest==hash }
+WorkspaceIcon.insert_all!([{name:'ws8br_custom',title:'Custom icon',creator_id:127326141,created_at:Time.current,updated_at:Time.current}])
+Icons.expire_custom_cache!
 user=User.find(127326141)
 session=user.sessions.create!(two_factor_verified_at:Time.current)
 request=ActionDispatch::Request.new(Rails.application.env_config.merge('HTTP_HOST'=>'campfire.test','rack.input'=>StringIO.new))
@@ -22,7 +24,7 @@ ActiveSupport::IsolatedExecutionState.clear
 token=Nokogiri::HTML(client.response.body).at_css('meta[name="csrf-token"]')['content']
 frames=[]
 ActionCable.server.define_singleton_method(:broadcast) { |stream,message,**_|frames << {stream:stream,html:message} }
-inputs=[nil,''," \t:: GITHUB ::\r\n",':slack:',':smile:',"\v:SMILE:\v","\u00a0",':::','missing_icon_ws8br',true,false,123,[],{'name'=>'smile'}]
+inputs=[':ws8br_custom:',"\u00a0:smile:\u00a0","\u2003github\u2003","\u0085slack\u0085",nil,''," \t:: GITHUB ::\r\n",':slack:',':smile:',"\v:SMILE:\v","\u00a0",':::','missing_icon_ws8br',true,false,123,[],{'name'=>'smile'}]
 creations=[]
 %w[opens closeds].each do |namespace|
   inputs.each do |input|

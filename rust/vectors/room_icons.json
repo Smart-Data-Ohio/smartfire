@@ -3,6 +3,54 @@
   "creations": [
     {
       "namespace": "opens",
+      "input": ":ws8br_custom:",
+      "status": 302,
+      "icon_name": "ws8br_custom",
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": " :smile: ",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": " github ",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": "slack",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
       "input": null,
       "status": 302,
       "icon_name": null,
@@ -170,6 +218,54 @@
         "audits": 1
       },
       "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": ":ws8br_custom:",
+      "status": 302,
+      "icon_name": "ws8br_custom",
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": " :smile: ",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": " github ",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": "slack",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
     },
     {
       "namespace": "closeds",
@@ -361,7 +457,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "after": {
         "type": "Rooms::Open",
@@ -377,7 +473,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "frames": 2,
       "alert": false
@@ -400,7 +496,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "after": {
         "type": "Rooms::Open",
@@ -416,7 +512,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "frames": 0,
       "alert": true
@@ -439,7 +535,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "after": {
         "type": "Rooms::Open",
@@ -455,7 +551,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "frames": 2,
       "alert": false
@@ -478,7 +574,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "after": {
         "type": "Rooms::Open",
@@ -494,7 +590,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "frames": 2,
       "alert": false
@@ -519,7 +615,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "after": {
         "type": "Rooms::Open",
@@ -535,7 +631,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "frames": 2,
       "alert": false
@@ -558,7 +654,7 @@
           773523956,
           773523959
         ],
-        "audits": 20
+        "audits": 22
       },
       "after": {
         "type": "Rooms::Closed",
@@ -568,7 +664,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "frames": 14,
       "alert": false
@@ -585,7 +681,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "after": {
         "type": "Rooms::Open",
@@ -595,7 +691,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "frames": 0,
       "alert": true
@@ -612,7 +708,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "after": {
         "type": "Rooms::Closed",
@@ -622,7 +718,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "frames": 2,
       "alert": false
@@ -639,7 +735,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "after": {
         "type": "Rooms::Closed",
@@ -649,7 +745,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "frames": 2,
       "alert": false
@@ -668,7 +764,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "after": {
         "type": "Rooms::Closed",
@@ -678,7 +774,7 @@
         "members": [
           127326141
         ],
-        "audits": 21
+        "audits": 23
       },
       "frames": 2,
       "alert": false

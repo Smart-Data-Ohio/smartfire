@@ -75,11 +75,19 @@ pub struct IconCatalog {
 impl IconResolver for IconCatalog {
     fn find(&self, name: &str) -> Option<Icon> {
         let key = name.trim().to_lowercase();
+        self.find_normalized(&key)
+    }
+}
+impl IconCatalog {
+    /// WS8br model-validation seam: Room has already applied Ruby's ASCII String#strip
+    /// and downcase. Resolve that exact storage key without Unicode-trimming it again.
+    /// The existing markdown entry point retains its behavior and all owner internals.
+    pub fn find_normalized(&self, key: &str) -> Option<Icon> {
         self.brands
-            .get(&key)
-            .or_else(|| self.custom.get(&key))
+            .get(key)
+            .or_else(|| self.custom.get(key))
             .cloned()
-            .or_else(|| EMOJI_ALIASES.get(&key).map(|raw| Icon::Emoji(raw.clone())))
+            .or_else(|| EMOJI_ALIASES.get(key).map(|raw| Icon::Emoji(raw.clone())))
     }
 }
 
