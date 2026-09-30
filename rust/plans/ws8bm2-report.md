@@ -1,75 +1,98 @@
-# WS8bm2 report — partial provider/composer/date integration
+# WS8bm2 review corrections and continuation
 
-**PARTIAL.** Public GitHub, X, event, LinkedIn and generic link-embed cards now render from batched persisted facts through the real message presenter. Ordinary room HTTP now mounts the published Markdown composer, slash/autocomplete registry and schedule-send control. Broader builder date parsing matches 175 pinned Rails cases, and request string coercion covers arrays/hashes with eight real reminder responses. The one remaining named controller behavior is agent invocation; it stays deferred under the lead's explicit WS11 instruction.
+**PARTIAL.** All three Astra P2 findings are fixed and pushed. Five deterministic regressions failed first against the exact reviewed `bcbac9f85b182329fd54aa332a07fec609ab6255`. Saved status updates preserve concurrent claims/schedules and Rails' loaded-record JSON response; compact dates preserve clocks and offsets; scheduled sends reach the subscribed unread stream. Additional slices provide all eight ordered human-edit replacement targets, correct composer identifiers for five room types, and broader compact-calendar parity.
 
-Physical tagged push sending (WS17), agent credentials/invocation (WS11) and huddle launch (WS13) remain named, flagged seams. All 45 browser cases remain deferred to the end-to-end Rust-server phase; no browser harness was built. Provider fetch/reference/write callbacks and private-card endpoints, the full owning shell/thread mount, and unprobed date/lookup coercions remain partial. This branch is not cutover-ready.
+The source verified in the independently prepared remote clone is `219f860cfccc1d20c0a39c293abb3f0007e537e6`. The final report commit only changes this report. The final workspace run passed **1723 tests, 0 failed, 11 existing ignores**; clippy exited 0. All **24/24** Rails fixtures replayed byte identically. No timing bounds or test concurrency were changed. WS17 physical tagged sending, WS11 agent credentials/invocation and WS13 huddle execution remain explicitly flagged seams. All 45 browser cases remain reserved for the end-to-end Rust-server phase.
 
-Worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm2`; branch `rust/ws8bm2-message-features`. Rails pin: `d7c7de9264c63015be398001d7a1094e7695a6db`. This continuation started at received `bcbac9f85b182329fd54aa332a07fec609ab6255`. Main remains unmerged, as instructed while its asset-fingerprint golden fix lands. Earlier merge `4acb20fc` of WS9 main `4278cb1e` remains an ancestor. No PR or deployment.
+## Changes by file and pushed slice
 
-## Pushed slices
+- `62f6e3e2`: merge commit incorporating `eaba80d5` (main, PR #168). Locked Cargo metadata exited 0 immediately after the merge; no lockfile or dependency changes.
+- `a27fecd9`, completed by `219f860c`: `db/src/models/saved_item.rs` writes only dirty columns. A status write preserves a concurrent dispatch claim or reminder reschedule; a reminder-only write preserves concurrent status. `db/src/tests/saved_item_test.rs` and `campfire/src/controllers/message_features/saved_tests.rs` verify these paths. The instance retains unassigned loaded attributes, matching Rails `update!` and the actual controller payload helper. `reference-tools/messaging/review_saved_race.rb` and its committed vector capture both persisted rows and serialized stale responses.
+- `5bb541d7`: `db/src/slash_commands/calendar.rs` preserves compact clocks, T-separated clocks and trailing numeric zones/Z; `time_parser.rs` handles short and seconds-bearing offsets and delegates its calendar fallback to the builder parser. Relative leading/trailing slash grammar retains Rails' intentional ISO matching/truncation behavior. `message_features/date_tests.rs` compares 88 builder and 88 slash results across UTC, New York, Berlin and Apia, including DST gaps/folds; 88 reminder and 88 scheduled HTTP requests persist the expected timestamps, and 88 dispatch pairs prove pending just before and sent exactly at due time.
+- `0d27d7a0`: `db/src/broadcasts.rs::unread_rooms_stream_name` is shared by `campfire/src/channels/unread_rooms.rs`, scheduled dispatch and slash dispatch. `message_features/scheduled_tests.rs` subscribes an actual WebSocket to `UnreadRoomsChannel` and checks its exact identifier and roomId payload. The reference-source checker now includes the Rails unread channel.
+- `4cb12141`: `controllers/messages.rs` replaces presentation, metadata, GitHub, X, quote, Fizzy, LinkedIn and generic embed containers in Rails order, including empty containers. `views/src/messages.rs::MetaPartial` is a pure partial adapter. `message_features/provider_tests.rs` compares **40/40 complete socket frames** from five actual Rails HTTP edits, including populated public/private cards and an edited empty message. Populated cases submit unchanged text so this proves replacement composition without claiming provider reference/write callback parity. The existing quote-test socket helper is shared.
+- `0dde49ae`: `views/src/messages/composer.rs::Facts.room_param_key` accepts concrete STI identity; `controllers/rooms.rs` supplies it through the ordinary HTTP presenter. Five complete Open/Closed/Voice/Stage/Board composers match Rails, and five ordinary room requests preserve both input id and label target. Original room/direct/thread/Drive composer goldens still pass. Thread-shell mounting and execution remain with their owners.
+- `77b8b715`: another **96** actual Rails cases cover packed 10/12-digit clocks, short/ordinal defaults, T/space-separated clocks, fractions, ignored compact named zones, nil results and exceptions in four zones. Total sampled builder coverage is **359** (69 + 106 + 88 + 96). This is sampled grammar parity, not universal Ruby Date parity.
+- `8e01b5d0`: updates the existing hub test to consume and verify metadata and all six card-container frames in order before testing boosts. The first fresh-clone run exposed the old two-frame expectation. This was a deterministic assertion failure caused by the changed edit sequence, not a timing flake.
 
-Previously received polls/pins, saved/reminders, scheduled, search/preloads, slash/autocomplete/play, quotes/Files, reminder policy/job seam, root cache/private frames, panels and nine deferred controller behaviors remain present. Their historical reports and evidence are in branch history; the commands below describe this continuation only.
+Crate-local paths above refer to `campfire/src/`, `db/src/` or `views/src/` under `rust/crates/`; Ruby tools and vectors are under `rust/`. All runtime test inputs are committed or built independently from the pinned Rails seed. The domain changes have no HTML dependency. Provider adapters remain read-only, and no physical push or owner credential/transport implementation was added.
 
-| Slice | Pushed source SHA |
-| --- | --- |
-| Public GitHub, LinkedIn and generic embeds | `c21349ef21fc034af8291a9f5e1b1abfbbd29c66` |
-| Published WS14e event partial mount | `f9ee4d07253a70dbc3a5103ae194483caee9e6c9` |
-| Published WS15e X cards and formatter mount | `4fcd5aa3b1836fbe432e93adc62e54f750207a20` |
-| Published WS8b-r Markdown composer and schedule slot | `d9d00794b96a1307d197c79c2d66e803177d757f` |
-| Broader calendar parsing and request string coercion | `2ceb6035f5a9e56e92397f8fa6f6320c9157338a` |
-| Persisted cancellation and Drive mount assertions | `2453bc279bb85af84c9f24c5f51d903558ac13f8` |
+## Failing-first evidence at bcbac9f8
 
-**Fresh-clone verified source SHA: `2453bc279bb85af84c9f24c5f51d903558ac13f8`.** The following report-only commit has identical source; its pushed SHA is in the final reply.
+A scratch archive of the reviewed revision was constructed under this worktree, with only the five new regression tests and their Rails date input fixture added. The saved controller/model, scheduled model and old time parser were checked byte-for-byte against `git show bcbac9f8:<path>` before execution. Both runtime seeds were built for that archive. No production fix was present.
 
-## Changes by file and design
+```bash
+git archive bcbac9f8 | tar -x -C .scratch/review-baseline
+PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 .scratch/review-baseline/rust/parity/bin/seed build default first_run > .scratch/review-fixes/baseline-seed.log 2>&1
+TMPDIR="$PWD/.scratch/review-baseline/.scratch/tmp" CARGO_TARGET_DIR="$PWD/rust/target" CARGO_INCREMENTAL=0 CI=1 CABLE_TEST_PORT_RANGE=52500-52549 MAIL_TEST_PORT_RANGE=52550-52599 mise exec rust@1.98.1 -- cargo test --manifest-path .scratch/review-baseline/rust/Cargo.toml --locked -j4 -p campfire review_regression -- --test-threads=4 --nocapture > .scratch/review-fixes/baseline-regressions.log 2>&1
+```
+The completed baseline command exited 101 at the intended assertions (an earlier test-authoring compile error was corrected before this run). Raw baseline evidence:
 
-| Files relative to the assigned worktree | Changes |
-| --- | --- |
-| `rust/crates/db/src/models/message_rendering/{providers,event_cards,twitter}.rs`, `message_rendering.rs` | Read-only batch joins for public/private GitHub identity, PR discussion threads, raw embed-reference URLs, event/organizer/venue facts and X payloads. X ordering compares decimal identities beyond i64; domain facts carry no HTML or viewer tokens. |
-| `rust/crates/campfire/src/controllers/presenters/provider_cards.rs`, `presenters.rs` | Small flagged root/provider adapter builds typed DTOs from preloads. Private/unknown GitHub rows expose neutral frames only; embed suppression and reference URLs are preserved. Meet URLs require HTTPS and a host. |
-| `rust/crates/views/src/message_providers.rs`, `message_providers/events.rs`, `templates/message_providers/*` | Public GitHub loading/error/state/authors/branches/reviews/checks/Discuss and thread-link markup; generic embeds; LinkedIn player/chips. Actual container bytes match pinned Rails. |
-| `rust/crates/views/src/events.rs`, `templates/rooms/events/*` | Reused the published WS14e pure card view from local remote ref `origin/rust/ws14e-events` at `d6d2dcc5`. The small adapter mounts populated cards and viewer-neutral lazy attendance frames; event writes/attendance endpoints stay with WS14e. |
-| `rust/crates/views/src/twitter/*`, `templates/twitter/posts/_card.html` | Reused WS15e's published pure card/count/formatter views from `origin/rust/ws15e-embeds` at `a9e14853`. A tiny formatter URL-escape adapter reuses the existing view helper without adding a dependency. |
-| `rust/crates/views/src/messages.rs`, `templates/messages/_message.html`, `lib.rs` | Typed optional provider fields and flagged root helper calls mount populated cards. Legacy fixtures without typed facts retain their existing fallback; ordinary presenters supply the new facts. |
-| `rust/crates/views/src/messages/composer.rs`, `templates/messages/_composer.html` | Reused the published reusable WS8b-r composer from `origin/rust/ws8br-rooms-http` at `3e779615`. The owned schedule control fills its slot. Four complete Rails composers cover DM/root/thread and Drive metadata/share layouts. |
-| `rust/crates/views/src/helpers/forms.rs` | Copied only the owner-provided namespace capability: thread IDs prefix field IDs while Rails parameter names stay unchanged. |
-| `rust/crates/views/src/rooms.rs`, `templates/rooms/show/_composer.html`, `rust/crates/campfire/src/controllers/rooms.rs` | Small flagged optional shell seam. Ordinary room responses always supply Markdown facts, read the full builtin/room-agent registry and read only Google grant scopes for metadata-picker availability. Form rendering remains request-scoped, outside message fragments. Legacy WS6 shell fixtures retain the old fallback; broader shell ownership stays WS8b-r. |
-| `rust/crates/db/src/slash_commands/calendar.rs`, `time_parser.rs`, `slash_commands.rs` | Separate builder calendar grammar with literal short years, compact civil defaults, named months, h/AMPM clocks, comma fractions, short offsets, invalid-date errors and Rails week/ordinal field defaults. Future-oriented slash parsing remains separate. |
-| `rust/crates/campfire/src/controllers/message_features.rs`, `saved_items.rs`, `searches.rs`, `rooms/{files,slash_commands}.rs`, `autocompletable/{icons,slash_commands}.rs` | Explicit owned `to_s` sites use Ruby scalar/array/Parameters string forms. Kit-wide `Param::to_s`, WS9/auth casting and ActiveRecord lookup semantics were not changed. |
-| `rust/crates/campfire/src/controllers/message_features/{provider_tests,composer_tests,date_tests,quote_integration_tests}.rs` | Actual persisted-row/container comparisons; zero-query preloaded rendering; private content/session exclusion; warm GitHub/embed/X cache refresh; ordinary Markdown/Drive/schedule/registry mount; 175 date probes, 15 coercions and eight exact reminder responses. |
-| `rust/reference-tools/messaging/{providers,event_cards,twitter_preloads,composer,date_coercions}.rb`, corresponding `rust/vectors/messaging/*.json` | New actual pinned Rails fixtures. The canceled-event recipe explicitly updates cancellation after creation. No expected HTML was reconstructed from Rust. |
-| `rust/reference-tools/embeds/{twitter_cards,twitter_text}.rb`, `rust/vectors/ws15e_twitter_*.json` | Owner-provided reference recipes/vectors: independently replayed against the pin before reuse, including 15 X cards, 19 formatter cases and 16 compact counts. Only the formatter portions of the text vector are asserted by the imported view tests; URL-extraction/domain behavior remains provider-owned. |
-| `rust/reference-tools/messaging/{features-reference-check,features-discriminate,verify_oracles}.py` | 105 consumed reference files, seven new compiled mutation checks and 19 independently replayed oracle fixtures. |
-| `rust/plans/ws8bm2-report.md` | Tracked copy of the external report. |
-
-No schema, dependency, Cargo.lock, Rails-source, parity-mask or allowlist changes. No other worker branch was merged. The copied view files and small adapters are explicit cross-workstream touches; provider transports/write callbacks, Google endpoints, and broader room/message/thread shells retain their owners.
-
-Provider rendering performs zero queries after preload, including 1 versus 18 GitHub/embed messages, distinct event containers and all persisted X containers. Warm related-row changes refresh root fragments without touching the message. X fixture identities exceed 64-bit integer range and sort numerically, including leading zeros. Shared fragments contain no private GitHub content, authenticity tokens or nonces. These checks establish read-only composition, not outbound fetch or write-callback delivery.
-
-The composer uses the real request context for CSRF and exposes the full slash registry, including read-only agent metadata. It mounts the schedule dialog in the Markdown send row. Standalone thread facts match Rails, but the owning thread HTTP shell is not present on this base branch. Configured Drive-share slot bytes are proved; normal layout configuration/Google endpoints still need WS14g wiring. Browser interactions remain unproved.
-
-Builder parsing is independent of slash-relative phrases. Actual Rails `Date._parse(..., false)` probes show that short years stay literal, that ordinal/week fields are recognized but ignored by TimeZone's civil conversion, and that a reminder array/hash string can still contain a parseable date. The port now reproduces the sampled behavior rather than dropping those parameters. Full Ruby date grammar, exact exceptional messages outside these probes, file-object coercion and odd ActiveRecord lookup/pager shapes remain partial. The slash commands' existing narrower calendar fallback has not been replaced by the new builder grammar; cross-path calendar grammar parity remains unproved.
-
-## Fresh-clone verification
-
-The remote branch was cloned at the verified source SHA, with no copied local vectors, seeds, secrets or Cargo build output. Both seeds were rebuilt in that checkout. All new test inputs are committed; scratch contains output and runtime seed copies only. The workspace suite and clippy use that clone's separate target directory. Concurrency and timing thresholds were unchanged.
-
-From the assigned worktree root:
-
-```sh
-git clone --single-branch --branch rust/ws8bm2-message-features https://github.com/Smart-Data-Ohio/smartfire.git .scratch/ws8bm2-final/repo > .scratch/final-clone.log 2>&1
+```text
+REVIEW_EARLY_HTTP {"id":3,"room_id":486777696,"thread_id":null,"markdown_source":"Reviewer date probe","send_at":"2026-03-05T00:00:00.000Z","sent_at":null,"dropped_at":null}
+REVIEW_RACE after HTTP patch: status=done reminded_at=None
+REVIEW_EARLY_DISPATCH sent_at_00_01=true expected_due_14_30=true
+REVIEW_RACE after HTTP patch: status=done reminded_at=None
+REVIEW_RACE repeated_dispatch=true durable_push_jobs=2
+REVIEW_SCHEDULED_UNREAD frame=Err(Elapsed(()))
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 604 filtered out; finished in 3.13s
 ```
 
-From `.scratch/ws8bm2-final/repo/rust` (the output/TMPDIR directory exists):
+1. **Saved claim race:** the dispatch transaction claims the row, signals readiness, and blocks on a channel. The HTTP PATCH performs its stale read and queues its writer. The test waits for `queued_writes() > 0`, then releases the dispatch transaction. No sleeps establish the interleaving. At the reviewed revision, a second dispatch is true and there are two durable push jobs. After the fix, the persisted claim is `2026-03-02 16:02:00`, the second dispatch is false and there is one job. An independent reschedule interleaving retains 18:00 in the database. Rails' stale JSON still returns its loaded 16:01 reminder/nil claim; the new oracle exercises the real private controller payload helper and Rust HTTP tests check these fields.
+2. **Compact dates:** the reviewed parser stores midnight for `20260305 14:30`, and a real dispatch sends at 00:01. The fix stores 14:30 and stays pending at 00:01. The date matrix catches trailing -0500, short ±05 and seconds-bearing numeric offsets, plus compact clocks and DST edge behavior. The separate early-send regression checks actual dispatch again at 14:30.
+3. **Unread stream:** the reviewed scheduled-send test receives `Err(Elapsed(()))` from an actual subscribed socket. The fixed socket receives `{"roomId":486777696}` under the `UnreadRoomsChannel` identifier. Its one-second test bound is unchanged.
 
-```sh
-PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 parity/bin/seed build default first_run > ../.scratch/final-seed.log 2>&1
-mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 > ../.scratch/final-metadata.json
-TMPDIR="$PWD/../.scratch/tmp" CARGO_TARGET_DIR="$PWD/target" CARGO_INCREMENTAL=0 CI=1 CABLE_TEST_PORT_RANGE=52500-52549 MAIL_TEST_PORT_RANGE=52550-52599 mise exec rust@1.98.1 -- cargo test --locked -j4 --workspace --exclude html5ever -- --test-threads=4 --nocapture > ../.scratch/final-workspace-test.log 2>&1
-TMPDIR="$PWD/../.scratch/tmp" CARGO_TARGET_DIR="$PWD/target" CARGO_INCREMENTAL=0 mise exec rust@1.98.1 -- cargo clippy --locked -j4 --workspace --exclude html5ever --all-targets -- -D warnings > ../.scratch/final-clippy.log 2>&1
+Raw final-source observations (the reschedule-only case has no fired claim):
+
+```text
+WS8bm2 STI composer HTTP: 5/5 room types preserve Rails reply-control ids and labels
+WS8bm2 broader dates: 202/202 Rails coercion/compact-width cases match
+REVIEW_EARLY_HTTP {"id":3,"room_id":486777696,"thread_id":null,"markdown_source":"Reviewer date probe","send_at":"2026-03-05T14:30:00.000Z","sent_at":null,"dropped_at":null}
+REVIEW_EARLY_DISPATCH sent_at_00_01=false expected_due_14_30=true
+WS8bm2 date HTTP: 88 saved timestamps, 88 scheduled timestamps and 88 before/due dispatch pairs match Rails
+WS8bm2 provider edits: 5 HTTP edits, 40/40 real socket replacement frames byte-identical to Rails
+REVIEW_RACE after HTTP patch: status=done reminded_at=None
+REVIEW_RACE after HTTP patch: status=done reminded_at=Some(2026-03-02 16:02:00)
+REVIEW_RACE repeated_dispatch=false durable_push_jobs=1
+REVIEW_SCHEDULED_UNREAD frame=Ok("{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":486777696}}")
 ```
 
-Clone, seed build, locked metadata, the final workspace suite and clippy exited 0. Metadata produced JSON and has no native summary line. Raw seed summaries:
+A production-literal scan also found the slash dispatcher's literal correct name; both dispatchers now use the common helper. The only production literal is the helper itself; the independent subscription test retains a literal protocol expectation.
+
+```bash
+rg -n 'user_.*(unread_rooms|unreads)' rust/crates --glob '*.rs'
+```
+```text
+rust/crates/db/src/broadcasts.rs:19:    format!("user_{user_id}_unreads")
+rust/crates/campfire/src/channels/broadcasts.rs:250:    /// `broadcast_unread_room`: `{ roomId: }` to each member's `user_<id>_unreads`, leaving out
+rust/crates/campfire/src/channels/tests/reference_test.rs:292:        &format!("user_{}_unreads", id("jz")),
+rust/crates/campfire/src/controllers/message_features/scheduled_tests.rs:772:        "scheduled sends never reach the subscribed user_*_unreads stream"
+```
+
+## Fresh-clone validation
+
+The remote branch was cloned under `.scratch/review-final/repo`, without copying worktree seed data, vectors, secrets or Cargo output. Both seeds were rebuilt there. The clone was fast-forwarded from the remote after the socket-test correction and the additional saved-response parity correction; its final source SHA is recorded above. All tracked source remained clean. Existing build output in that independently prepared clone was reused for subsequent runs, and all results below belong to its final source. Scratch contains generated output and runtime seed copies, not hidden test inputs.
+
+The first full run at `77b8b715` failed only the outdated hub assertion:
+
+```text
+test result: FAILED. 635 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 110.66s
+```
+The focused corrected hub check passed, and an intermediate full run at `8e01b5d0` passed. After the real Rails stale-response differential prompted a production correction, the full suite was rerun again at the final source. No failure was treated as inherited, ignored or hidden through timing changes.
+
+```bash
+git clone --single-branch --branch rust/ws8bm2-message-features https://github.com/Smart-Data-Ohio/smartfire.git .scratch/review-final/repo
+cd .scratch/review-final/repo/rust
+mkdir -p ../.scratch/tmp
+CARGO_BUILD_JOBS=2 PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 parity/bin/seed build default first_run > ../.scratch/final-seed.log 2>&1
+cd ..
+git pull --ff-only > .scratch/final-pull.log 2>&1
+git rev-parse HEAD > .scratch/final-source-sha.txt
+CARGO_BUILD_JOBS=2 mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 --manifest-path rust/Cargo.toml > .scratch/final-metadata.json
+CARGO_BUILD_JOBS=2 TMPDIR="$PWD/.scratch/tmp" CARGO_TARGET_DIR="$PWD/rust/target" CARGO_INCREMENTAL=0 CI=1 CABLE_TEST_PORT_RANGE=52500-52549 MAIL_TEST_PORT_RANGE=52550-52599 mise exec rust@1.98.1 -- cargo test --manifest-path rust/Cargo.toml --locked -j4 --workspace --exclude html5ever -- --test-threads=4 --nocapture > .scratch/final-workspace-test.log 2>&1
+CARGO_BUILD_JOBS=2 TMPDIR="$PWD/.scratch/tmp" CARGO_TARGET_DIR="$PWD/rust/target" CARGO_INCREMENTAL=0 mise exec rust@1.98.1 -- cargo clippy --manifest-path rust/Cargo.toml --locked -j4 --workspace --exclude html5ever --all-targets -- -D warnings > .scratch/final-clippy.log 2>&1
+```
+Seed build, locked metadata, final full suite and clippy exited 0. Metadata produced JSON and has no native summary line. Raw seed, test and clippy summaries:
 
 ```text
 seed: building default
@@ -77,92 +100,69 @@ seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
 ```
-
-The fresh suite totals **1684 passed, 0 failed, 11 existing ignored** across 46 raw summaries. It includes **150 owned feature tests and 45 owned search tests (195 total)**, with no owned ignores. No timing test flaked and no test concurrency/threshold was changed.
-
 ```text
-test result: ok. 614 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 128.97s
+test result: ok. 636 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 109.33s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.18s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.41s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
-test result: ok. 446 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 64.69s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.76s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.01s
+test result: ok. 447 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 99.47s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.29s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.99s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.02s
 test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.04s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.18s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.14s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.99s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.74s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.10s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.41s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
-test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.88s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.31s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.08s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.82s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.11s
-test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.67s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.99s
+test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.28s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
-
-Raw fresh-clone clippy summary:
-
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 53.16s
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 59.64s
 ```
 
-The eleven existing ignores are two reference recorders, WS11 bot management, the push-latency measurement, four database scenario/export/Rails/rollback tests, one mail rollback export and two kit doctests. Conditional ACME validation returned with PEBBLE_MINICA unset. Version-dependent media byte comparisons returned because this host has libvips 8.18.6/ffmpeg n9.0.2 while the vectors use 8.16.1/7.1.5. The missing-seed “skipping locally” line is the intentional empty-temporary-directory guard test; both required runtime seeds were rebuilt and validated. No owned seeded test skipped. html5ever is excluded explicitly by the standard workspace command above.
+The eleven existing ignores cover the reference recorders, WS11 bot management, push-latency measurement, database export/scenario/Rails/rollback checks, mail rollback export and two kit doctests. ACME validation remains conditional on PEBBLE_MINICA. Version-dependent media byte checks report the libvips/ffmpeg mismatch against recorded versions. The intentional missing-seed guard test reports its empty temporary directory; both real required seeds were present, rebuilt and validated. No owned seeded case skipped. The standard command explicitly excludes vendored html5ever. Expected panic tests log panics and pass; they are not suite failures. No timing flake was observed in the final run.
 
+Independent Rails checks run from the same clone:
 
-From `.scratch/ws8bm2-final/repo`:
-
-```sh
+```bash
+python3 rust/reference-tools/messaging/verify_oracles.py > .scratch/final-oracle-replay.log 2>&1
 PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/campfire/verify_parity_seed.rb default > .scratch/final-validate-default.log 2>&1
 PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 rust/parity/bin/reference runner --seed first_run --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/campfire/verify_parity_seed.rb first_run > .scratch/final-validate-first-run.log 2>&1
-python3 rust/reference-tools/messaging/features-reference-check.py > .scratch/final-reference-check.log 2>&1
-python3 rust/reference-tools/messaging/verify_oracles.py > .scratch/final-oracle-replay.log 2>&1
+PARITY_IMAGE=ws8bm2-reference:d7c7de92 python3 rust/reference-tools/messaging/features-reference-check.py > .scratch/final-reference-check.log 2>&1
 ```
-
-All four exited 0. Validators closed with these raw lines (default, then first_run):
-
 ```text
-  "passed": 29,
-  "failed": 0
-}
-  "passed": 4,
-  "failed": 0
-}
-```
-
-Raw source check and independently replayed Rails summaries:
-
-```text
-WS8bm2 reference source check: 105 controller, model, helper and template files match d7c7de92
-WS8bm2 reference check self-test: 2 injected source-byte/file-set differences rejected
 WS8bm2 Rails oracle: 8 poll reads/ballots; 6 poll creates; 4 pin writes; 11 partials; 10 zone/date probes
 WS8bm2 oracle replay: features.json byte-identical
 WS8bm2 saved Rails oracle: 11 HTTP responses; 6 item partials; 1 empty page
@@ -187,78 +187,46 @@ WS8bm2 panels Rails oracle: 4 pin panels; 2 sidebar links
 WS8bm2 oracle replay: panels.json byte-identical
 WS8bm2 date Rails oracle: 69 Time.zone.parse cases in 3 zones
 WS8bm2 oracle replay: date_inputs.json byte-identical
+WS8bm2 Rails saved race: claim preserved=true; reschedule preserved=true
+WS8bm2 oracle replay: review_saved_race.json byte-identical
+WS8bm2 review date Rails oracle: 88 compact/offset/DST cases in 4 zones
+WS8bm2 oracle replay: review_dates.json byte-identical
+WS8bm2 compact width Rails oracle: 96 short/ordinal/fraction/compact-clock cases in 4 zones
+WS8bm2 oracle replay: date_compact_widths.json byte-identical
 WS8bm2 provider Rails oracle: 11 GitHub containers; 7 embed/LinkedIn containers; 8 fixture tables
 WS8bm2 oracle replay: providers.json byte-identical
+WS8bm2 provider Rails oracle: 11 GitHub containers; 7 embed/LinkedIn containers; 8 fixture tables
+WS8bm2 provider edit Rails oracle: 5 HTTP edits; 40 exact replacement frames
+WS8bm2 oracle replay: provider_edits.json byte-identical
 WS8bm2 event cards Rails oracle: 3 populated containers; 5 fixture tables
 WS8bm2 oracle replay: event_cards.json byte-identical
 WS8bm2 broader date/coercion Rails oracle: 106 calendar cases; 15 parameter string/presence probes; 8 reminder HTTP responses
 WS8bm2 oracle replay: date_coercions.json byte-identical
 WS8bm2 composer Rails oracle: 4 complete Markdown composers including thread and Drive-share controls
 WS8bm2 oracle replay: composer.json byte-identical
+WS8bm2 STI composer Rails oracle: 5 complete Open/Closed/Voice/Stage/Board Markdown composers
+WS8bm2 oracle replay: composer_sti.json byte-identical
 WS8bm2 X preload Rails oracle: 3 populated containers; 4 persisted posts
 WS8bm2 oracle replay: twitter_preloads.json byte-identical
 WS8bm2 oracle replay: twitter_cards.json byte-identical
 WS8bm2 oracle replay: twitter_text.json byte-identical
-WS8bm2 oracle replay: 19/19 independently replayed fixtures byte-identical
+WS8bm2 oracle replay: 24/24 independently replayed fixtures byte-identical
 ```
-
-## Failing first and compiled discrimination
-
-Actual compiled failing-first tests are in `.scratch/{provider,event,twitter,composer}-failing-first.log`, `.scratch/date-coercion-failing-first.log` and `.scratch/param-failing-first.log`. Provider privacy/shared-response assertions failed before implementation; the X/event/composer tests failed on empty or legacy root composition; the date and coercion tests failed on actual Rails mismatches. A test-helper compile error during composer setup was corrected and is not counted as a failing-first result.
-
-Raw failing-first summaries, in the log order above:
-
 ```text
-test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 604 filtered out; finished in 0.51s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 608 filtered out; finished in 0.13s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 609 filtered out; finished in 0.09s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 610 filtered out; finished in 0.43s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 613 filtered out; finished in 1.16s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 614 filtered out; finished in 0.00s
+WS8bm2 reference source check: 106 controller, model, helper and template files match d7c7de92
+WS8bm2 reference check self-test: 2 injected source-byte/file-set differences rejected
 ```
-
-The focused continuation command below ran after all mutation sources were restored, with 150 owned feature tests passing. It is also covered by the final fresh-clone suite:
-
-```sh
-TMPDIR="$PWD/.scratch/tmp" CARGO_TARGET_DIR="$PWD/rust/target" CARGO_INCREMENTAL=0 CI=1 CABLE_TEST_PORT_RANGE=52500-52549 MAIL_TEST_PORT_RANGE=52550-52599 mise exec rust@1.98.1 -- cargo test --manifest-path rust/Cargo.toml --locked -j4 -p campfire controllers::message_features -- --test-threads=4 --nocapture > .scratch/final-owned-tests.log 2>&1
-```
-
 ```text
-test result: ok. 150 passed; 0 failed; 0 ignored; 0 measured; 467 filtered out; finished in 17.58s
+"passed": 29,
+  "failed": 0
 ```
-
-From the assigned worktree root, these compiled mutations ran separately, each restoring its source afterward:
-
-```sh
-CARGO_INCREMENTAL=0 python3 rust/reference-tools/messaging/features-discriminate.py provider- > .scratch/provider-mutations.log 2>&1
-CARGO_INCREMENTAL=0 python3 rust/reference-tools/messaging/features-discriminate.py event- > .scratch/event-mutations.log 2>&1
-CARGO_INCREMENTAL=0 python3 rust/reference-tools/messaging/features-discriminate.py x- > .scratch/twitter-mutations.log 2>&1
-CARGO_INCREMENTAL=0 python3 rust/reference-tools/messaging/features-discriminate.py composer- > .scratch/composer-mutations.log 2>&1
-CARGO_INCREMENTAL=0 python3 rust/reference-tools/messaging/features-discriminate.py calendar- > .scratch/calendar-mutations.log 2>&1
-CARGO_INCREMENTAL=0 python3 rust/reference-tools/messaging/features-discriminate.py coercion- > .scratch/coercion-mutations.log 2>&1
-```
-
-Each rejected the intended compiled regression: private GitHub disclosure, normalized URL replacing the reference URL, unsafe Meet URLs, reversed numeric X order, missing thread field namespaces, converting literal short years to 20xx, and dropping array-valued reminder dates. Raw closing lines:
-
 ```text
-provider-private-content: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 0.60s
-provider-reference-url: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 0.14s
-WS8bm2 discrimination: 2 compiled regressions detected; sources restored
-event-meet-scheme: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 608 filtered out; finished in 0.63s
-WS8bm2 discrimination: 1 compiled regressions detected; sources restored
-x-identity-order: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 609 filtered out; finished in 0.13s
-WS8bm2 discrimination: 1 compiled regressions detected; sources restored
-composer-thread-field-ids: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 613 filtered out; finished in 0.06s
-WS8bm2 discrimination: 1 compiled regressions detected; sources restored
-calendar-short-year: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 616 filtered out; finished in 2.29s
-WS8bm2 discrimination: 1 compiled regressions detected; sources restored
-coercion-array-reminder: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 616 filtered out; finished in 0.89s
-WS8bm2 discrimination: 1 compiled regressions detected; sources restored
+"passed": 4,
+  "failed": 0
 ```
+The default seed has 29/29 Rails checks; first_run has 4/4. The consumed-file check concerns the pinned reference image. Main also carries the authorized post-pin status-popup/board-nudge changes; their controller/UI and physical push parity remain with WS8b-r2 and WS17/WS12, respectively. No source masks or golden allowlists changed here.
 
-## Grouped Rails behavior coverage
-
-Counts below are named Rails reference behaviors mapped to passing grouped Rust tests and pinned oracles; **the Rails controller suites were not run as suites**. They do not imply complete provider, shell or browser parity.
+## Rails cases grouped by file
 
 | Rails controller file under `test/controllers/` | Named behaviors covered / total | Remaining integration |
 | --- | --- | --- |
@@ -285,14 +253,14 @@ Counts below are named Rails reference behaviors mapped to passing grouped Rust 
 | `scheduled_messages_test.rb` | 0 / 4 |
 | **Total** | **0 / 45; reserved for end-to-end phase, none attempted** |
 
+## Precise remaining work and ownership
 
-## Remaining work, in priority order
+1. **Last controller behavior:** agent invocation in `rooms/slash_commands_controller_test.rb` remains the sole 1/140 named behavior seam, owned by WS11. Read-only agent metadata/autocomplete is present; credential acceptance and execution are not implemented here.
+2. **Provider callbacks/endpoints:** WS15g/WS15e/WS14e own network fetches, reference synchronization, provider-write broadcasts, private GitHub/Fizzy card endpoints and event attendance endpoints. The human-edit composition sequence is complete; changed URLs still need these owner callbacks. Prove populated complete search/older-window pages after those callbacks integrate. Audit other owners' deletion/unpin request-origin scopes.
+3. **Shell/panel/Drive:** wire the owning thread shell, configured Drive-share availability/endpoints (WS14g), action menus, Files tab and full WS8b-r shell. Ordinary Markdown/schedule mounting and concrete room composer ids are complete. Legacy WS6 fixture fallbacks remain partial. Post-pin status-popup/sidebar changes belong to WS8b-r2.
+4. **Date/coercion:** the two calendar paths now share the sampled fallback and 359 builder cases pass. Signed/long years, expanded ISO and additional unprobed compact/zone grammar, exact exceptional messages, odd ActiveRecord array/hash lookups, user filtering, structured pager/link parameters, option stripping and file-object coercions still need actual Rails differentials. No universal grammar or coercion parity is claimed.
+5. **Additional non-browser proof:** constant-query poll/pin-list measurements and the periodic poll-close job's actual runtime socket delivery remain unverified. Existing vote/pin sockets and zero-query quote/provider checks do not prove those separate paths.
+6. **Flagged owner seams:** WS17 physical tagged reminder send is `campfire/src/jobs/reminders.rs` and intentionally leaves the durable job unfinished until transport is installed; policy/payload/tag/subscriptions are retained. WS11 credential recognition is `concerns.rs::WS11_AGENT_AUTHENTICATION_SEAM`; command execution is flagged in the dispatcher. WS13 huddle launch is flagged in the dispatcher. No physical send, agent integration or huddle execution was added.
+7. **End-to-end phase:** all 45 inventoried browser cases remain deferred against the Rust server. No browser harness, browser/pixel matrix, deployment or Rust Docker build was attempted.
 
-1. **Provider/owner integration:** batched populated root rendering is complete for the rows above. WS15g/WS15e/WS14e retain fetch requests/transports, reference synchronization, provider-write broadcasts, private GitHub/Fizzy card endpoints and event attendance endpoints. Complete human edit replacement targets still need the owner adapters. Prove populated full search/older-window bytes with those integrated callbacks; container goldens and read-only preloads do not establish whole-page provider parity. Audit request-origin scopes on other owners' deletion/unpin paths.
-2. **Owning shell:** ordinary room Markdown/schedule mounting is complete; reusable thread bytes are proved. Wire the owning thread shell, configured Google/Drive-share availability/endpoints (WS14g), action menus, Files tab and full WS8b-r shell. Preserve correct voice/stage/board STI reply-control identifiers when that shell supplies broader room facts. Legacy WS6 fixture fallback remains explicitly partial.
-3. **Date/coercion:** 175 actual Rails builder cases and 15 parameter probes pass. Remaining unprobed Ruby formats include negative/long years, variable compact/zone forms and exact exceptional messages. Odd ActiveRecord array/hash lookup semantics, user filtering, structured pager/link parameters, option stripping and file-object coercions still need actual Rails differentials. No universal Ruby date/coercion parity is claimed.
-4. **Additional non-browser proof:** poll/pin-list constant-query measurements and a periodic poll-close job's real runtime socket delivery remain unverified. Existing vote/pin sockets and quote/provider zero-query checks do not establish those separate paths.
-5. **Explicit deferred seams:** physical tagged push send stays at `rust/crates/campfire/src/jobs/reminders.rs` (WS17); agent credentials remain at `concerns.rs::WS11_AGENT_AUTHENTICATION_SEAM` and agent command execution at the dispatcher (WS11, the last 1/140 named controller behavior); huddle launch stays at the WS13 dispatcher seam. None was implemented here.
-6. **End-to-end phase:** all 45 browser cases inventoried above remain deferred against the Rust server. No browser harness, browser/pixel matrix or Rust Docker build was attempted.
-
-No open product decision is required. The external report and tracked copy are byte-identical. The implementation remains partial at the explicit boundaries above.
+No new product decision is required. Logs are retained under `.scratch/review-fixes/` and the independently prepared clone's `.scratch/`; its regenerable target directory is cleaned after verification per the shared resource rule. This external report and the tracked copy are byte-identical. The branch remains partial at the specific boundaries above.
