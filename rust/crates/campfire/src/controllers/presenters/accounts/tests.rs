@@ -670,6 +670,10 @@ async fn agent_directory_lists_active_then_inactive_without_private_facts() {
     let bot_id: i64 = test.label("users.bender").parse().unwrap();
     test.booted.app.db.write(move |tx| {
         tx.conn().execute("UPDATE agents SET status='working', status_note='<working & now>', last_seen_at=?, webhook_signing_secret='private-directory-fixture' WHERE user_id=?", rusqlite::params![tx.now(), bot_id])?;
+        for name in ["ΟΣ", "Ος"] {
+            let bot = campfire_db::User::create_bot(tx, name, None)?;
+            tx.conn().execute("INSERT INTO agents(user_id,owner_id,kind,created_at,updated_at) VALUES(?,?,'workspace',?,?)", rusqlite::params![bot.id, 127326141, tx.now(), tx.now()])?;
+        }
         let suspended = campfire_db::User::create_bot(tx, "Aaron Suspended", None)?;
         tx.conn().execute("INSERT INTO agents(user_id,owner_id,kind,suspended_at,created_at,updated_at) VALUES(?,?,'workspace',?,?,?)", rusqlite::params![suspended.id, 127326141, tx.now(), tx.now(), tx.now()])?;
         Ok(())
@@ -680,6 +684,7 @@ async fn agent_directory_lists_active_then_inactive_without_private_facts() {
     assert_eq!(response.status, StatusCode::OK);
     let html = response.text();
     assert!(html.find("Bender Bot").unwrap() < html.find("Aaron Suspended").unwrap());
+    assert!(html.find("Ος").unwrap() < html.find("ΟΣ").unwrap(), "Ruby lowercases Σ without Rust's final-sigma context rule");
     assert!(html.contains("Workspace agent, managed by David"));
     assert!(html.contains("&lt;working &amp; now&gt;"));
     assert!(html.contains("agent-status-badge--working"));

@@ -5,7 +5,7 @@ david = User.find_by!(email_address: "david@37signals.com")
 kevin = User.find_by!(email_address: "kevin@37signals.com")
 bender = User.find_by!(name: "Bender Bot")
 bender.agent.update!(status: "working", status_note: "Running <tests> & checks", last_seen_at: 5.minutes.ago, status_changed_at: 15.minutes.ago)
-[["Aaron Suspended", :workspace, david, true], ["Élodie Personal", :personal, kevin, false], ["Banned Bot", :workspace, david, false]].each do |name, kind, owner, suspended|
+[["ΟΣ", :workspace, david, false], ["Ος", :workspace, david, false], ["Aaron Suspended", :workspace, david, true], ["Élodie Personal", :personal, kevin, false], ["Banned Bot", :workspace, david, false]].each do |name, kind, owner, suspended|
   bot = User.create_bot!(name:)
   agent = bot.create_agent!(kind:, owner:)
   agent.update!(suspended_at: Time.current) if suspended

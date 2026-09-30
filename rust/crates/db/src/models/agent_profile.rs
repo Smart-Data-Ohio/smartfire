@@ -1,4 +1,6 @@
 //! Read-only Agent association seam for the management pages. Lifecycle writes remain WS11.
+mod downcase_table;
+
 use crate::sql::query_one;
 use crate::{Connection, Result, Timestamp};
 
@@ -71,8 +73,19 @@ pub fn for_directory(conn: &Connection) -> Result<Vec<DirectoryRecord>> {
     records.sort_by_cached_key(|record| {
         (
             !(record.user.is_active() && !record.suspended),
-            record.user.name.to_lowercase(),
+            ruby_downcase(&record.user.name),
         )
     });
     Ok(records)
+}
+
+fn ruby_downcase(value: &str) -> String {
+    let mut result = String::with_capacity(value.len());
+    for character in value.chars() {
+        match downcase_table::MAPPINGS.binary_search_by_key(&character, |&(character, _)| character) {
+            Ok(index) => result.push_str(downcase_table::MAPPINGS[index].1),
+            Err(_) => result.push(character),
+        }
+    }
+    result
 }
