@@ -141,6 +141,8 @@ pub struct UserChanges {
     pub role: Option<Role>,
     pub status: Option<Status>,
     pub bio: Option<Option<String>>,
+    /// `Users::ProfilesController`: blocks Google email auto-linking after a self-change.
+    pub email_self_changed_at: Option<Timestamp>,
 }
 
 const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
@@ -414,6 +416,9 @@ impl User {
             self.bio = bio.clone();
             sets.push(("bio", Box::new(bio)));
         }
+        if let Some(at) = changes.email_self_changed_at {
+            sets.push(("email_self_changed_at", Box::new(at)));
+        }
         if sets.is_empty() {
             return Ok(());
         }
@@ -661,6 +666,26 @@ impl User {
             Some(digest) if !digest.is_empty() => bcrypt::verify(password, digest).unwrap_or(false),
             _ => false,
         }
+    }
+
+    /// Rails `email_change_requested?`: strip, then Unicode `casecmp?`. The submitted
+    /// value is still saved verbatim; only the security check uses this comparison.
+    pub fn email_change_requested(&self, submitted: &str) -> bool {
+        use caseless::Caseless;
+        use campfire_richtext::ruby::strip;
+        !strip(submitted).chars().default_case_fold().eq(
+            strip(self.email_address.as_deref().unwrap_or(""))
+                .chars()
+                .default_case_fold(),
+        )
+    }
+
+    /// Google-provisioned accounts have no existing password to confirm.
+    pub fn current_password_confirmed(&self, submitted: &str) -> bool {
+        self.password_digest
+            .as_deref()
+            .is_none_or(campfire_richtext::ruby::is_blank)
+            || self.authenticate(submitted)
     }
 
     pub fn is_member(&self) -> bool {

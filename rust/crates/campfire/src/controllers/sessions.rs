@@ -74,8 +74,35 @@ async fn ensure_user_exists(c: &mut Ctx) -> Result<()> {
 
 /// `flash.now[:alert] = "Too many requests or unauthorized."; render :new, status:`
 async fn render_rejection(c: &mut Ctx, status: StatusCode) -> Result {
+    record_sign_in_failure(
+        c,
+        "password",
+        c.params
+            .get("email_address")
+            .and_then(|p| p.to_s())
+            .unwrap_or_default(),
+    )
+    .await?;
     c.flash().now("alert", REJECTION);
     render_new(c, status).await
+}
+
+pub(super) async fn record_sign_in_failure(
+    c: &Ctx,
+    method: &'static str,
+    email: String,
+) -> Result<()> {
+    let context = super::two_factor::audit_context(c)?;
+    c.app()
+        .db
+        .write(move |tx| {
+            campfire_db::models::audit_log::AuditLog::record_sign_in_failure(
+                tx, &email, method, &context,
+            )?;
+            Ok(())
+        })
+        .await
+        .map_err(Error::internal)
 }
 
 async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {

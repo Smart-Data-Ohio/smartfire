@@ -14,8 +14,21 @@ use crate::controllers::presenters::{self, accounts::string_attribute};
 /// `set_user` (`Current.user`); memberships partitioned into direct and shared rooms.
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    c.respond_to(&[&format::HTML])?;
     let user = concerns::require_current_user(c)?.clone();
+    render_show(c, StatusCode::OK, user, None).await
+}
+
+async fn render_show(
+    c: &mut Ctx,
+    status: StatusCode,
+    user: campfire_db::User,
+    current_password_error: Option<&'static str>,
+) -> Result {
+    c.respond_to(&[&format::HTML])?;
+    let has_password = user
+        .password_digest
+        .as_deref()
+        .is_some_and(|s| !campfire_richtext::ruby::is_blank(s));
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
     let (avatar_attached, (direct_memberships, shared_memberships)) = {
@@ -65,8 +78,10 @@ pub async fn show(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
-    framed_page!(c, StatusCode::OK, |ctx| users::ProfileShow {
+    framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
+        has_password,
+        current_password_error,
         security: security.clone(),
         now,
         user: user.clone(),
@@ -92,8 +107,53 @@ pub async fn update(c: &mut Ctx) -> Result {
         "bio",
     ]));
     let password_changing = params.get("password").is_some_and(|p| p.is_present());
+    // Rails checks the raw request before strong parameters discard non-scalars.
+    let email_changing = c
+        .params
+        .get("user")
+        .and_then(|p| p.get("email_address"))
+        .is_some_and(|p| {
+            user.email_change_requested(
+                &p.to_s()
+                    .unwrap_or_else(|| campfire_richtext::ruby::json_value_inspect(&p.to_json())),
+            )
+        });
+    if email_changing {
+        let current_password = c.params.get("user").and_then(|p| p.get("current_password"));
+        let missing = current_password.is_none_or(|p| !p.is_present());
+        let password = current_password.and_then(|p| p.to_s()).unwrap_or_default();
+        let existing = user.clone();
+        let confirmed =
+            tokio::task::spawn_blocking(move || existing.current_password_confirmed(&password))
+                .await
+                .map_err(Error::internal)?;
+        if !confirmed {
+            // Rails assigns the submitted non-secret attributes only to the error view.
+            if let Some(value) = compact_string(&params, "name") {
+                user.name = value;
+            }
+            if let Some(value) = compact_string(&params, "email_address") {
+                user.email_address = Some(value);
+            }
+            if let Some(value) = compact_string(&params, "bio") {
+                user.bio = Some(value);
+            }
+            c.set_current(concerns::CurrentUser(user.clone()));
+            return render_show(
+                c,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                user,
+                Some(if missing {
+                    "is required to change your email address"
+                } else {
+                    "is incorrect"
+                }),
+            )
+            .await;
+        }
+    }
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    let present = |key: &str| string_attribute(&params, key).flatten();
+    let present = |key: &str| compact_string(&params, key);
     let changes = UserChanges {
         name: present("name"),
         email_address: present("email_address").map(Some),
@@ -124,21 +184,14 @@ pub async fn update(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            user.update(tx, changes)?;
-            if password_changing {
-                campfire_db::TwoFactorRememberedDevice::revoke_all(tx, user.id)?;
-                use campfire_db::models::audit_log::{Actor, AuditLog, NewAuditLog, Target};
-                AuditLog::record(
-                    tx,
-                    NewAuditLog {
-                        action: "user.password.change".into(),
-                        actor: Some(Actor::from(&user)),
-                        target: Some(Target::from(&user)),
-                        ..Default::default()
-                    },
-                    &audit,
-                )?;
-            }
+            crate::authentication::update_profile(
+                tx,
+                &mut user,
+                changes,
+                email_changing,
+                password_changing,
+                &audit,
+            )?;
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
         .await
@@ -153,4 +206,10 @@ pub async fn update(c: &mut Ctx) -> Result {
             ..Redirect::default()
         },
     )
+}
+
+/// `user_params.compact` drops nil instead of coercing it to an empty string.
+fn compact_string(params: &campfire_kit::ParamMap, key: &str) -> Option<String> {
+    params.get(key).filter(|p| !p.is_null())?;
+    string_attribute(params, key).flatten()
 }

@@ -148,6 +148,8 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
+    pub has_password: bool,
+    pub current_password_error: Option<&'a str>,
     pub security: crate::two_factor::ProfileData,
     pub now: jiff::Timestamp,
     pub ctx: &'a ViewContext<'a>,

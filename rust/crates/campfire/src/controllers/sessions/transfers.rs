@@ -40,6 +40,9 @@ pub async fn update(c: &mut Ctx) -> Result {
     };
     match user {
         Some(user) => crate::controllers::two_factor::begin_session_for(c, user, "transfer").await,
-        None => Ok(c.head(StatusCode::BAD_REQUEST)),
+        None => {
+            super::record_sign_in_failure(c, "transfer", String::new()).await?;
+            Ok(c.head(StatusCode::BAD_REQUEST))
+        }
     }
 }

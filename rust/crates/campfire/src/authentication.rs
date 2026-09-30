@@ -1,13 +1,60 @@
 //! Transactional auth operations shared by HTML and future JSON controllers.
 //! Matches `app/controllers/two_factor/{setups,challenges,backup_codes,remembered_devices}_controller.rb`.
 //! No request, cookies or rendering enter this layer.
-use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
+use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target, pair};
 use campfire_db::{
     ActivityItem, ChallengeFailure, Result, Session, TwoFactorBackupCode, TwoFactorCredential,
-    TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User,
+    TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
 };
 use rails_compat::{ar_encryption::ArEncryption, totp};
 use serde_json::json;
+
+/// `app/controllers/users/profiles_controller.rb`: security audits and the rollback marker
+/// commit with the user update.
+/// The controller checks the existing password before constructing these changes.
+pub fn update_profile(
+    tx: &mut Tx<'_>,
+    user: &mut User,
+    mut changes: UserChanges,
+    email_changing: bool,
+    password_changing: bool,
+    context: &Context,
+) -> Result<()> {
+    let previous_email = user.email_address.clone();
+    if email_changing {
+        changes.email_self_changed_at = Some(tx.now());
+    }
+    user.update(tx, changes)?;
+    if email_changing {
+        AuditLog::record(
+            tx,
+            NewAuditLog {
+                action: "user.email.change".into(),
+                actor: Some(Actor::from(&*user)),
+                target: Some(Target::from(&*user)),
+                changes: Some(
+                    json!({"email_address": pair(json!(previous_email), json!(user.email_address))}),
+                ),
+                ..Default::default()
+            },
+            context,
+        )?;
+    }
+    if password_changing {
+        AuditLog::record(
+            tx,
+            NewAuditLog {
+                action: "user.password.change".into(),
+                actor: Some(Actor::from(&*user)),
+                target: Some(Target::from(&*user)),
+                ..Default::default()
+            },
+            context,
+        )?;
+        TwoFactorRememberedDevice::revoke_all(tx, user.id)?;
+    }
+    Ok(())
+}
 
 /// `Authentication#start_new_session_for` and `NewSignInAlert`: the durable mail decision is
 /// committed with the new session, device and inbox row. Pending first factors never call this.
