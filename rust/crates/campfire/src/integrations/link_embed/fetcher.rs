@@ -78,7 +78,7 @@ async fn fetch_metadata(net: &Network, url: &str) -> Result<Metadata, &'static s
         Some(image)
             if uri::parse(&image)
                 .ok()
-                .is_some_and(|url| url.scheme.as_deref() == Some("https") && url.host.is_some()) =>
+                .is_some_and(|url| url.scheme.as_deref().is_some_and(|scheme| scheme.eq_ignore_ascii_case("https")) && url.host.is_some()) =>
         {
             let mut location = Location::new_with_options(net, Some(&image), OPTIONS);
             let content_type = location.fetch_content_type().await;

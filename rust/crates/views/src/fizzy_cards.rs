@@ -25,12 +25,27 @@ fn truthy(value: &Value) -> bool {
     !matches!(value, Value::Null | Value::Bool(false))
 }
 fn text(value: &Value) -> String {
-    match value {
-        Value::Null => String::new(),
-        Value::String(s) => s.clone(),
-        _ => value.to_string(),
-    }
+    campfire_richtext::ruby::json_value_to_s(value)
 }
+/// Time.zone.parse accepts civil dates/times in the viewer's zone as well as offset timestamps.
+fn last_active_at(zone: &Zone, value: &Value) -> Option<jiff::Timestamp> {
+    let value = text(value);
+    let value = value.trim();
+    if let Ok(at) = value.parse::<jiff::Timestamp>() {
+        return Some(at);
+    }
+    let local = value.parse::<jiff::civil::DateTime>().ok().or_else(|| {
+        value
+            .parse::<jiff::civil::Date>()
+            .ok()
+            .map(|date| date.at(0, 0, 0, 0))
+    });
+    local?
+        .to_zoned(zone.tz().clone())
+        .ok()
+        .map(|time| time.timestamp())
+}
+
 fn escaped(value: &Value) -> String {
     h::escape(&text(value))
 }
@@ -42,9 +57,12 @@ fn array(value: &Value) -> Vec<&Value> {
     }
 }
 fn https(url: &str) -> bool {
-    // URI.parse preserves scheme case; an absolute HTTPS URL may use any nonblank host.
+    // URI::HTTPS normalizes its scheme; an absolute HTTPS URL may use any nonblank host.
     campfire_richtext::uri::parse(url).ok().is_some_and(|uri| {
-        uri.scheme.as_deref() == Some("https") && uri.host.is_some_and(|host| !h::is_blank(&host))
+        uri.scheme
+            .as_deref()
+            .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https"))
+            && uri.host.is_some_and(|host| !h::is_blank(&host))
     })
 }
 impl Frame<'_> {
@@ -135,7 +153,7 @@ impl Frame<'_> {
             html.push_str("    <p class=\"fizzy-card__loading\">Loading card…</p>\n");
         }
         html.push_str("\n  <footer class=\"fizzy-card__footer\">\n");
-        if let Ok(active) = text(&p["last_active_at"]).parse::<jiff::Timestamp>() {
+        if let Some(active) = last_active_at(self.zone, &p["last_active_at"]) {
             html.push_str(&format!(
                 "      <span class=\"fizzy-card__updated\">Active {}</span>\n",
                 crate::time::local_datetime_tag(self.zone, active, "time", h::attrs(), "").0

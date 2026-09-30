@@ -271,7 +271,10 @@ fn posted_at(tweet: &Value) -> Option<Timestamp> {
 fn twimg_url(value: &Value) -> Option<String> {
     let string = json_value_to_s(value);
     let parsed = uri::parse(&string).ok()?;
-    (parsed.scheme.as_deref() == Some("https")
+    (parsed
+        .scheme
+        .as_deref()
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https"))
         && matches!(
             parsed.host.as_deref(),
             Some("pbs.twimg.com" | "video.twimg.com")

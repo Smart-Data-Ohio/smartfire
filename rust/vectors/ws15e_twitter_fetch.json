@@ -267,6 +267,46 @@
       }
     },
     {
+      "name": "scheme case",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"HTTPs://pbs.twimg.com/a.jpg\"},\"media\":{\"photos\":[{\"type\":\"photo\",\"url\":\"HTTPS://pbs.twimg.com/a.jpg\"}],\"videos\":[{\"type\":\"video\",\"url\":\"HTTPS://video.twimg.com/a.mp4\",\"thumbnail_url\":\"HTTPs://pbs.twimg.com/t.jpg\"}]}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "HTTPs://pbs.twimg.com/a.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "HTTPS://pbs.twimg.com/a.jpg",
+            "thumbnail_url": null,
+            "width": null,
+            "height": null,
+            "alt": null
+          },
+          {
+            "type": "video",
+            "url": "HTTPS://video.twimg.com/a.mp4",
+            "thumbnail_url": "HTTPs://pbs.twimg.com/t.jpg",
+            "width": null,
+            "height": null,
+            "alt": null
+          }
+        ],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
       "name": "twimg strict",
       "url": "https://x.com/jack/status/424242",
       "post_id": "424242",

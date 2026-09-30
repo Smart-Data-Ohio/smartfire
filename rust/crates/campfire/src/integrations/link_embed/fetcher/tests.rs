@@ -19,6 +19,7 @@ async fn ws15e_link_fetch_records_positive_negative_and_guarded_image_results() 
             "<meta property='og:title' content='Title'><meta property='og:image' content='/photo.png'>",
         ),
         Route::new("HEAD", "example.com", "/photo.png", 200).header("Content-Type", "IMAGE/PNG"),
+        page("/upper-image", "<title>Safe title</title><meta property='og:image' content='HTTPs://example.com/photo.png'>"),
         page(
             "/param-image",
             "<title>Safe title</title><meta property='og:image' content='/param.png'>",
@@ -49,6 +50,7 @@ async fn ws15e_link_fetch_records_positive_negative_and_guarded_image_results() 
     let net = network(resolver, dialer.clone());
     for (path, error, image) in [
         ("/good", None, Some("https://example.com/photo.png")),
+        ("/upper-image", None, Some("HTTPs://example.com/photo.png")),
         ("/param-image", None, None),
         ("/private-image", None, None),
         ("/svg", None, None),
@@ -80,7 +82,7 @@ async fn ws15e_link_fetch_records_positive_negative_and_guarded_image_results() 
     assert_eq!(received.iter().filter(|request| request.target == "/redirect").count(), 4);
     assert_eq!(
         received.iter().filter(|request| request.target == "/photo.png").count(),
-        1,
+        2,
         "HTTP and private images were never fetched"
     );
 }

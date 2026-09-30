@@ -163,3 +163,6 @@ pub struct Platform {
     /// `ApplicationPlatform#operating_system` ("macOS", "Windows", "iPhone", ...).
     pub operating_system: String,
 }
+
+#[cfg(test)]
+mod card_html_audit;
