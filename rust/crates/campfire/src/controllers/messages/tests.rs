@@ -494,3 +494,80 @@ async fn ws11_webhook_secrets_reload_encrypt_and_rotate() {
         std::fs::write(path, serde_json::to_string_pretty(&export).unwrap()).unwrap();
     }
 }
+
+#[tokio::test]
+async fn ws11_bot_key_message_budget_overflow_notifies_once() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    app.db().write(|tx| {
+        tx.conn().execute("UPDATE agents SET daily_message_cap=1 WHERE user_id=?", [BENDER])?;
+        Message::create(tx, campfire_db::NewMessage { room_id: ALL_TALK, creator_id: BENDER, body: Some("Spent".into()), ..Default::default() })?;
+        Ok(())
+    }).await.unwrap();
+    let mut bot = app.anonymous();
+    for attempt in 0..2 {
+        let response = bot.send(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages")).body("Over budget")).await;
+        assert_eq!(response.status, StatusCode::TOO_MANY_REQUESTS);
+        let body: serde_json::Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(body["error"], "Daily message budget exceeded (1/day)");
+        assert_eq!(body["cap"], "messages");
+        assert_eq!(body["limit"], 1);
+        assert!(body["retry_after"].as_i64().unwrap() > 0);
+        assert!(response.headers.get("retry-after").is_none());
+        if attempt == 0 {
+            app.db().write(|tx| {
+                tx.conn().execute("UPDATE activity_items SET read_at=? WHERE source_type='AgentBudgetNotice'", [tx.now()])?;
+                Ok(())
+            }).await.unwrap();
+        }
+    }
+    app.db().read(|conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_budget_notices WHERE cap='messages'", [], |r| r.get::<_, i64>(0))?, 1);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentBudgetNotice' AND event_type='agent_budget_exceeded' AND user_id=?", [DAVID], |r| r.get::<_, i64>(0))?, 1);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentBudgetNotice' AND read_at IS NOT NULL", [], |r| r.get::<_, i64>(0))?, 1, "repeated overflow made the notice unread again");
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn ws11_bot_key_idempotency_replay_precedes_budget() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let message = app.db().write(|tx| {
+        tx.conn().execute("UPDATE agents SET daily_message_cap=1 WHERE user_id=?", [BENDER])?;
+        Message::create(tx, campfire_db::NewMessage { room_id: ALL_TALK, creator_id: BENDER, client_message_id: Some("ws11-retry".into()), body: Some("Original".into()), ..Default::default() })
+    }).await.unwrap();
+    let count: i64 = app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))?)).await.unwrap();
+    let mut bot = app.anonymous();
+    let body = r#"{"message":{"client_message_id":"ws11-retry","body":"Replacement"}}"#;
+    let response = bot.send(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages")).header("content-type", "application/json").body(body)).await;
+    assert_eq!(response.status, StatusCode::CREATED);
+    assert_eq!(response.location().unwrap().rsplit('/').next().unwrap(), message.id.to_string());
+    app.db().read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?, count);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_budget_notices", [], |r| r.get::<_, i64>(0))?, 0);
+        assert_eq!(Message::find(conn, message.id)?.body_html(conn)?.as_deref(), Some("Original"));
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn ws11_legacy_bot_keeps_raw_body_and_ignores_client_message_id() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    app.db().write(|tx| { tx.conn().execute("DELETE FROM agents WHERE user_id=?", [BENDER])?; Ok(()) }).await.unwrap();
+    let mut bot = app.anonymous();
+    let mut ids = Vec::new();
+    for _ in 0..2 {
+        let response = bot.send(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages")).header("content-type", "application/json").body(r#"{"message":{"client_message_id":"ws11-legacy","body":"JSON is raw text"}}"#)).await;
+        assert_eq!(response.status, StatusCode::CREATED);
+        ids.push(response.location().unwrap().rsplit('/').next().unwrap().parse::<i64>().unwrap());
+    }
+    assert_ne!(ids[0], ids[1]);
+    app.db().read(move |conn| {
+        for id in ids {
+            let message = Message::find(conn, id)?;
+            assert_ne!(message.client_message_id, "ws11-legacy");
+            assert_eq!(message.markdown_source, None);
+            assert!(message.body_html(conn)?.unwrap().contains("JSON is raw text"));
+        }
+        Ok(())
+    }).await.unwrap();
+}

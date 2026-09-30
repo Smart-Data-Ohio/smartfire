@@ -7,7 +7,7 @@ use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permi
 use campfire_views::messages::json;
 
 use super::{
-    MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message, destroy_message, release_webhooks,
+    MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message_with_agent_policy, destroy_message, release_webhooks,
     ensure_can_administer, find_paged_messages, present, set_message, update_message,
 };
 use crate::app::AppCtx;
@@ -44,10 +44,17 @@ pub async fn create(c: &mut Ctx) -> Result {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
     // MessagesController#create
-    let attributes = message_params(c)?;
-    let message = create_message(c, &room, attributes).await?;
-    broadcast_create(c, &room, &message).await?;
-    release_webhooks(c, &message).await;
+    let mut attributes = message_params(c)?;
+    attributes.client_message_id = c.params.get("message").and_then(|p| p.get("client_message_id")).filter(|p| !p.is_null()).and_then(Param::to_s);
+    let message = match create_message_with_agent_policy(c, &room, attributes, true).await? {
+        campfire_db::models::agent_posting::PostingOutcome::Created(message) => {
+            broadcast_create(c, &room, &message).await?;
+            release_webhooks(c, &message).await;
+            message
+        }
+        campfire_db::models::agent_posting::PostingOutcome::Replay(message) => message,
+        campfire_db::models::agent_posting::PostingOutcome::Budget(payload) => return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &format::JSON, payload.to_string())),
+    };
 
     let location = c.url_for(&campfire_routes::message(message.id));
     c.head_with_location(StatusCode::CREATED, &location)

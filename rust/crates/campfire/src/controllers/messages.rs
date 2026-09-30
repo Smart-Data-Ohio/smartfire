@@ -219,6 +219,14 @@ pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Mess
 /// `@room.messages.create!` and, in its transaction, `deliver_webhooks_to_bots`: the webhook
 /// jobs are held until the caller has broadcast the message ([`release_webhooks`]).
 pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<Message> {
+    match create_message_with_agent_policy(c, room, attributes, false).await? {
+        campfire_db::models::agent_posting::PostingOutcome::Created(message) => Ok(message),
+        _ => unreachable!("human posting does not run agent policy"),
+    }
+}
+
+pub(crate) async fn create_message_with_agent_policy(c: &Ctx, room: &Room, mut attributes: MessageParams, agent_policy: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
+    use campfire_db::models::agent_posting::{PostingOutcome, PostingCheck};
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
     let room = room.clone();
@@ -235,6 +243,14 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
         .app()
         .db
         .write(move |tx| {
+            if agent_policy {
+                match campfire_db::models::agent_posting::prepare_for_user(tx, creator_id, room_id, attributes.client_message_id.as_deref())? {
+                    Some(PostingCheck::Replay(message)) => return Ok((PostingOutcome::Replay(*message), None)),
+                    Some(PostingCheck::Budget(payload)) => return Ok((PostingOutcome::Budget(payload), None)),
+                    Some(PostingCheck::Allowed) => {},
+                    None => attributes.client_message_id = None,
+                }
+            }
             let blob = attachment.map(|staged| save_staged(tx, staged)).transpose()?;
             let message = Message::create(
                 tx,
@@ -248,15 +264,21 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                 },
             )?;
             deliver_webhooks_to_bots(tx, &room, &message)?;
-            Ok((message, blob))
+            Ok((PostingOutcome::Created(message), blob))
         })
         .await
         .map_err(db_error)?;
     if let Some(blob) = blob {
         process_attachment(c.app(), blob).await?;
     }
-    let id = message.id;
-    c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
+    match message {
+        PostingOutcome::Created(message) => {
+            let id = message.id;
+            let message = c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)?;
+            Ok(PostingOutcome::Created(message))
+        }
+        outcome => Ok(outcome),
+    }
 }
 
 /// Inserts a staged blob's row, keeping its file once the transaction commits.
