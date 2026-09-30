@@ -432,6 +432,14 @@ async fn execute(
 ) -> std::result::Result<ServiceResult, ToolError> {
     use super::super::presenters::page::db_error;
     match name {
+        "request_approval" => {
+            let identity=*c.current::<crate::concerns::CurrentAgent>().expect("authenticated agent");
+            Ok(super::approvals::create_operation(c,identity,args).await?)
+        }
+        "get_approval" => {
+            let id=ruby_i64(required(&args,"approval_id")?);
+            Ok(c.app().db.write(move |tx|campfire_db::models::agent_approvals::show(tx,agent_id,id)).await.map_err(db_error)?)
+        }
         "poll_events" => {
             let allowed = c
                 .app()
@@ -578,7 +586,7 @@ async fn execute(
     }
 }
 
-fn blank(value: &Value) -> bool {
+pub(super) fn blank(value: &Value) -> bool {
     match value {
         Value::Null | Value::Bool(false) => true,
         Value::String(s) => campfire_richtext::ruby::is_blank(s),

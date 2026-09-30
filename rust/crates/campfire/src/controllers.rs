@@ -191,6 +191,10 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages#destroy" => arc(messages::destroy),
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
+        "agents/approvals#index" => arc(agents::approvals::index),
+        "agents/approvals#show" => arc(agents::approvals::show),
+        "agents/approvals#create" => arc(agents::approvals::create),
+        "agents/approvals#destroy" => arc(agents::approvals::destroy),
         "agents/events#index" => arc(agents::events),
         "agents#me" => arc(agents::me),
         "agents#update" => arc(agents::update_me),
@@ -634,3 +638,6 @@ mod tests {
         assert_eq!(normalize_path("/a%2fb"), "/a%2Fb");
     }
 }
+
+#[cfg(test)]
+mod agent_surface_tests;

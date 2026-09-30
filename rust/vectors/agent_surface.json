@@ -1,0 +1,546 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "approvals_list",
+      "method": "get",
+      "path": "/agents/approvals",
+      "body": null,
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": [],
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_show",
+      "method": "get",
+      "path": "/agents/approvals/900100001",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "approval": "pending"
+      },
+      "status": 200,
+      "response": {
+        "id": 900100001,
+        "action": "deploy",
+        "summary": "Existing",
+        "room_id": 486777696,
+        "room_name": "All Talk",
+        "external_id": "surface-replay",
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z",
+        "created_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_expired",
+      "method": "get",
+      "path": "/agents/approvals/900100001",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "approval": "expired"
+      },
+      "status": 200,
+      "response": {
+        "id": 900100001,
+        "action": "deploy",
+        "summary": "Existing",
+        "room_id": 486777696,
+        "room_name": "All Talk",
+        "external_id": "surface-replay",
+        "status": "expired",
+        "expires_at": "2026-03-02T15:59:00.000Z",
+        "created_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_cancel",
+      "method": "delete",
+      "path": "/agents/approvals/900100001",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "approval": "pending"
+      },
+      "status": 200,
+      "response": {
+        "id": 900100001,
+        "action": "deploy",
+        "summary": "Existing",
+        "room_id": 486777696,
+        "room_name": "All Talk",
+        "external_id": "surface-replay",
+        "status": "cancelled",
+        "expires_at": "2026-03-03T16:00:00.000Z",
+        "created_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_cancel_decided",
+      "method": "delete",
+      "path": "/agents/approvals/900100001",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "approval": "approved"
+      },
+      "status": 422,
+      "response": {
+        "error": "Request is already approved"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_missing",
+      "method": "get",
+      "path": "/agents/approvals/0",
+      "body": null,
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_nested",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"approval\":{\"action\":\"deploy\",\"summary\":\"Ship\",\"payload\":{\"x\":[1,true]},\"room_id\":486777696,\"expires_in_seconds\":3600}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 201,
+      "response": {
+        "id": 1,
+        "status": "pending",
+        "expires_at": "2026-03-02T17:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_top",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Ship\",\"expires_at\":\"2026-03-03T16:00:00Z\"}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 201,
+      "response": {
+        "id": 1,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_invalid",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"Bad Action!\",\"summary\":\"\"}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 422,
+      "response": {
+        "error": "Action is invalid and Summary can't be blank"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_invalid_expiry",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Ship\",\"expires_in\":\"abc\"}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 422,
+      "response": {
+        "error": "Invalid expires_in"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_github",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"github.comment\",\"summary\":\"Ship\"}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 422,
+      "response": {
+        "error": "github.* actions are requested through /rooms/:room_id/agents/github/pull_request_actions"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_fizzy",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"fizzy.create\",\"summary\":\"Ship\"}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 422,
+      "response": {
+        "error": "fizzy.* actions are requested through /agents/fizzy/card_actions"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_nonmember",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Ship\",\"room_id\":201306877}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_denied",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Ship\"}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks external_action capability"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_replay",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"github.comment\",\"summary\":\"Ignored\",\"external_id\":\"surface-replay\",\"expires_in\":\"abc\"}",
+      "setup": {
+        "grant": "external_action",
+        "approval": "pending",
+        "cap": 0
+      },
+      "status": 200,
+      "response": {
+        "id": 900100001,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_budget",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{\"action\":\"deploy\",\"summary\":\"Ship\"}",
+      "setup": {
+        "grant": "external_action",
+        "cap": 0
+      },
+      "status": 429,
+      "response": {
+        "error": "Daily external action budget exceeded (0/day)",
+        "cap": "external_actions",
+        "limit": 0,
+        "retry_after": 28799
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "approvals_rate",
+      "method": "get",
+      "path": "/agents/approvals",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "repeat": 120
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "approvals_create_rate",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{}",
+      "setup": {
+        "grant": "external_action",
+        "repeat": 60
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_request_approval",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Ship\",\"payload\":{\"x\":1}}}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"id\":1,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}"
+            }
+          ],
+          "structuredContent": {
+            "id": 1,
+            "status": "pending",
+            "expires_at": "2026-03-03T16:00:00.000Z"
+          },
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_request_approval_invalid",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{}}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Action can't be blank, Action is invalid, and Summary can't be blank"
+            }
+          ],
+          "structuredContent": {
+            "error": "Action can't be blank, Action is invalid, and Summary can't be blank",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_get_approval",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_approval\",\"arguments\":{\"approval_id\":900100001}}}",
+      "setup": {
+        "grant": "external_action",
+        "approval": "pending"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"id\":900100001,\"action\":\"deploy\",\"summary\":\"Existing\",\"room_id\":486777696,\"room_name\":\"All Talk\",\"external_id\":\"surface-replay\",\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\",\"created_at\":\"2026-03-02T16:00:00.000Z\"}"
+            }
+          ],
+          "structuredContent": {
+            "id": 900100001,
+            "action": "deploy",
+            "summary": "Existing",
+            "room_id": 486777696,
+            "room_name": "All Talk",
+            "external_id": "surface-replay",
+            "status": "pending",
+            "expires_at": "2026-03-03T16:00:00.000Z",
+            "created_at": "2026-03-02T16:00:00.000Z"
+          },
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_get_approval_missing",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_approval\",\"arguments\":{\"approval_id\":0}}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Approval not found"
+            }
+          ],
+          "structuredContent": {
+            "error": "Approval not found",
+            "status": "not_found"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_request_approval_denied",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Ship\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks external_action capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks external_action capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_request_approval_budget",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{\"action\":\"deploy\",\"summary\":\"Ship\"}}}",
+      "setup": {
+        "grant": "external_action",
+        "cap": 0
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Daily external action budget exceeded (0/day)"
+            }
+          ],
+          "structuredContent": {
+            "error": "Daily external action budget exceeded (0/day)",
+            "status": "too_many_requests",
+            "cap": "external_actions",
+            "limit": 0,
+            "retry_after": 28799
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    }
+  ]
+}

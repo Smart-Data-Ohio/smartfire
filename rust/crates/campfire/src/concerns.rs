@@ -48,6 +48,7 @@ pub mod agent_api;
 #[derive(Clone, Copy)]
 pub struct CurrentAgent {
     pub agent_id: i64,
+    pub credential_id: i64,
 }
 
 use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, User};
@@ -350,7 +351,7 @@ pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
     let ip = c.request.remote_ip()?.to_string();
     let identity = c.app().db.write(move |tx| campfire_db::models::agent_access::authenticate_identity(tx, &secret, &ip)).await.map_err(Error::internal)?;
     let Some(identity) = identity else { return halt(head(StatusCode::UNAUTHORIZED)) };
-    c.set_current(CurrentAgent { agent_id: identity.agent_id });
+    c.set_current(CurrentAgent { agent_id: identity.agent_id, credential_id: identity.credential_id });
     c.set_current(CurrentUser(identity.user));
     set_authenticated_by(c, AuthenticatedBy::AgentToken);
     Ok(true)

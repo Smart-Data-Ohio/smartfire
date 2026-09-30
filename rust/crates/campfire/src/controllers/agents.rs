@@ -6,6 +6,7 @@ use serde_json::{Value, json};
 
 use super::presenters::page::db_error;
 pub mod mcp;
+pub mod approvals;
 
 pub async fn me(c: &mut Ctx) -> Result {
     concerns::before_actions(c, concerns::Before::default().allow_agent_access()).await?;
