@@ -11,13 +11,23 @@ use crate::messages::support::epoch_ms;
 use crate::messages::{room_dom_id, MessageItem, RoomKind, UserView};
 use crate::ViewContext;
 
-/// `room_display_name(room, for_user:)`: a direct room is named after its other members
-/// (`room.users.without(for_user).pluck(:name).to_sentence`), falling back to the user's own
-/// name when they're alone in it.
+/// `Rooms::Direct#direct_display_name`: named rooms keep their name; unnamed
+/// groups preview three first names. The caller supplies ordered other members.
 pub fn room_display_name(name: Option<&str>, direct: bool, other_member_names: &[String], for_user_name: Option<&str>) -> String {
     if direct {
-        let sentence = h::to_sentence(other_member_names, " and ");
-        if sentence.trim().is_empty() { for_user_name.unwrap_or_default().to_string() } else { sentence }
+        if let Some(name) = h::presence(name) { return name.to_owned(); }
+        match other_member_names {
+            [] => for_user_name.unwrap_or_default().to_owned(),
+            [name] => name.clone(),
+            names => {
+                let firsts = names.iter().take(3).map(|name| {
+                    name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c'])
+                        .find(|s| !s.is_empty()).unwrap_or_default()
+                }).collect::<Vec<_>>().join(", ");
+                let remaining = names.len().saturating_sub(3);
+                if remaining > 0 { format!("{firsts} +{remaining}") } else { firsts }
+            }
+        }
     } else {
         name.unwrap_or_default().to_string()
     }

@@ -92,11 +92,14 @@ pub fn mention_user(secrets: &Secrets, user: &User) -> MentionUser {
 
 /// `room_display_name(room, for_user:)`: a direct room is named after its other members.
 pub fn room_display_name(conn: &Connection, room: &Room, for_user: &User) -> campfire_db::Result<String> {
-    let names: Vec<String> = if room.direct() {
+    let mut names: Vec<String> = if room.direct() {
         room.users(conn)?.into_iter().filter(|user| user.id != for_user.id).map(|user| user.name).collect()
     } else {
         Vec::new()
     };
+    // This association uses User.ordered (SQL LOWER), unlike the directory's
+    // explicit Ruby name.downcase sort. SQLite folds ASCII only.
+    names.sort_by_cached_key(|name| name.to_ascii_lowercase());
     Ok(campfire_views::rooms::room_display_name(room.name.as_deref(), room.direct(), &names, Some(&for_user.name)))
 }
 

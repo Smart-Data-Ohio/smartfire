@@ -1,5 +1,131 @@
 //! Seeded HTTP equivalents of Rails credential/grant administration cases.
 use super::*;
+
+#[tokio::test]
+async fn demoted_administrator_keeps_owner_reads_but_loses_credential_and_grant_creation() {
+    let test = boot_seed("default").await.expect("default seed");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    let david: i64 = test.label("users.david").parse().unwrap();
+    let mut viewer = test.browser("198.51.100.158");
+    viewer.sign_in(&test.label("emails.david")).await;
+    viewer.grant_sudo_access();
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            campfire_db::User::find(tx.conn(), david)?.update(
+                tx,
+                campfire_db::UserChanges {
+                    role: Some(campfire_db::Role::Member),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let path = format!("/account/bots/{bot}");
+    for area in ["credentials", "grants"] {
+        let response = viewer.get(&format!("{path}/{area}")).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let back = if area == "credentials" {
+            format!("/account/bots/{bot}/edit")
+        } else {
+            format!("/users/{bot}")
+        };
+        assert!(response.text().contains(&format!("href=\"{back}\"")));
+    }
+    assert_eq!(
+        viewer
+            .form(
+                "post",
+                &format!("{path}/credentials"),
+                &[("agent_credential[name]", "Must not issue")]
+            )
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        viewer
+            .form(
+                "post",
+                &format!("{path}/grants"),
+                &[("agent_grant[capability]", "react")]
+            )
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+    test.booted
+        .app
+        .db
+        .read(|conn| {
+            assert_eq!(
+                conn.query_row("SELECT COUNT(*) FROM agent_credentials", [], |r| r
+                    .get::<_, i64>(0))?,
+                1
+            );
+            assert_eq!(
+                conn.query_row("SELECT COUNT(*) FROM agent_grants", [], |r| r
+                    .get::<_, i64>(0))?,
+                0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn grant_scopes_name_direct_participants_and_keep_deleted_room_history() {
+    let test = boot_seed("default").await.expect("default seed");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    let room: i64 = test.label("rooms.watercooler").parse().unwrap();
+    let direct: i64 = test.label("rooms.bender_and_kevin").parse().unwrap();
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            let agent = campfire_db::Agent::for_user(tx.conn(), bot)?.unwrap();
+            for room_id in [room, direct] {
+                campfire_db::AgentGrant::create(
+                    tx,
+                    campfire_db::NewGrant {
+                        agent_id: agent.id,
+                        room_id: Some(room_id),
+                        capability: "post_messages".into(),
+                        granted_by_id: 127326141,
+                        ..Default::default()
+                    },
+                )?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut admin = test.browser("198.51.100.159");
+    admin.sign_in(&test.label("emails.david")).await;
+    let path = format!("/account/bots/{bot}/grants");
+    let response = admin.get(&path).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    assert!(
+        response.text().contains("Bender, Kevin"),
+        "{}",
+        response.text()
+    );
+    assert!(!response.text().contains("Deleted room"));
+    test.booted
+        .app
+        .db
+        .write(move |tx| campfire_db::Room::find(tx.conn(), room)?.destroy(tx))
+        .await
+        .unwrap();
+    let response = admin.get(&path).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    assert!(response.text().contains("Deleted room"));
+    assert!(response.text().contains("Revoked"));
+    assert!(response.text().contains("Bender, Kevin"));
+}
 async fn owner(test: &Test, bot_id: i64) {
     let owner_id: i64 = test.label("users.kevin").parse().unwrap();
     test.booted

@@ -17,6 +17,24 @@ fn errors(v: &Value) -> Vec<String> {
 fn bot_access_pages_match_pinned_rails_bytes() {
     let data: Value =
         serde_json::from_str(include_str!("../golden/bot_access_ui/pages.json")).unwrap();
+    for fact in data["direct_names"].as_array().unwrap() {
+        let names = fact["names"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|name| name.as_str().unwrap().to_owned())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            campfire_views::rooms::room_display_name(
+                fact["room_name"].as_str(),
+                true,
+                &names,
+                fact["viewer_name"].as_str()
+            ),
+            fact["expected"].as_str().unwrap(),
+            "{fact}"
+        );
+    }
     let env = include_str!("../../../../parity/.env.reference");
     let secrets = rails_compat::Secrets::new(
         env.lines()

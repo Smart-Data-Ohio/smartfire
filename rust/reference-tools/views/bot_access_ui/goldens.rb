@@ -24,12 +24,15 @@ credentials_case(result, "credentials_admin", bot, david, AgentCredential.new)
 agent.update!(owner: kevin)
 credentials_case(result, "credentials_owner", bot, kevin, AgentCredential.new)
 expired, = AgentCredential.create_with_secret!(agent:, name: "Expired <runner>", created_by: david, expires_at: 1.day.ago)
-expired.update!(token_last_four: "e123")
+expired_digest = AgentCredential.digest("fixture-expired-view-secret")
+expired.update!(token_digest: expired_digest, token_last_four: expired_digest[0, 4])
 revoked, = AgentCredential.create_with_secret!(agent:, name: "Revoked & runner", created_by: david)
-revoked.update!(token_last_four: "r123")
+revoked_digest = AgentCredential.digest("fixture-revoked-view-secret")
+revoked.update!(token_digest: revoked_digest, token_last_four: revoked_digest[0, 4])
 revoked.revoke!
 used, = AgentCredential.create_with_secret!(agent:, name: "Used runner", created_by: david, expires_at: 2.days.from_now)
-used.update!(last_used_at: 2.hours.ago, token_last_four: "u123")
+used_digest = AgentCredential.digest("fixture-used-view-secret")
+used.update!(last_used_at: 2.hours.ago, token_digest: used_digest, token_last_four: used_digest[0, 4])
 credentials_case(result, "credentials_states", bot, david, AgentCredential.new(expires_at: 1.day.from_now))
 invalid = AgentCredential.new(agent:, name: "", created_by: david, token_digest: "fixture-digest", token_last_four: "abcd")
 invalid.valid?
@@ -60,5 +63,28 @@ grants_case(result, "grants_owner", bot, kevin, AgentGrant.new)
 invalid = AgentGrant.new(agent:, granted_by: david, capability: "dm_anyone", room:)
 invalid.valid?
 grants_case(result, "grants_invalid", bot, david, invalid)
+direct = Room.directs.find { |room| room.users.include?(bot) && room.users.include?(kevin) }
+raise "bot/owner direct room missing" unless direct
+AgentGrant.create!(agent:, granted_by: david, capability: "post_messages", room: direct)
+grants_case(result, "grants_direct_admin", bot, david, AgentGrant.new)
+grants_case(result, "grants_direct_owner", bot, kevin, AgentGrant.new)
+room.destroy!
+grants_case(result, "grants_deleted_room", bot, david, AgentGrant.new)
+result[:direct_names] = [
+  [nil, []], [nil, ["Only Full Name"]], ["Named group", ["A One", "B Two"]],
+  [" \t", ["Alice Able", "Bob Baker"]],
+  [nil, ["Alice Able", "Bob Baker", "Chris Clark"]],
+  [nil, ["Alice Able", "Bob Baker", "Chris Clark", "Dana Doe"]],
+  [nil, ["Alice Able", "Bob Baker", "Chris Clark", "Dana Doe", "Evan Example"]],
+  [nil, [" Alice  Able", "Bob\tBaker"]],
+  [nil, ["Alice\vAble", "Bob\fBaker"]],
+  [nil, ["Alice\u00a0Able", "Bob\u3000Baker"]],
+  [nil, ["", "Bob Baker"]], ["\u00a0", ["Alice Able", "Bob Baker"]]
+].map do |name, names|
+  members = names.map { |member| User.new(name: member) }.sort_by { |member| member.name.downcase }
+  viewer = User.new(name: "Fixture Viewer")
+  { room_name: name, names: members.map(&:name), viewer_name: viewer.name,
+    expected: Rooms::Direct.new(name:).direct_display_name(members:, for_user: viewer) }
+end
 File.write("/rails/storage/db/bot-access-ui.json", JSON.pretty_generate(result) + "\n")
-puts "Rails bot access UI goldens: #{result[:pages].size} pages"
+puts "Rails bot access UI goldens: #{result[:pages].size} pages, #{result[:direct_names].size} direct-room names"

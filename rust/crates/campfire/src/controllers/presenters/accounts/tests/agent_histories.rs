@@ -1,6 +1,70 @@
 //! Human history pagination, lazy expiry and content policy through the real HTTP stack.
 use super::*;
 use campfire_db::{Agent, AgentApproval, AgentGrant, NewApproval};
+
+#[tokio::test]
+async fn disabling_approval_inbox_preferences_preserves_history_and_decision_access() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = configure(&test).await;
+    let owner_id: i64 = test.label("users.kevin").parse().unwrap();
+    let approval_id = test
+        .booted
+        .app
+        .db
+        .write(move |tx| {
+            // WS8 owns the preference editor; configure its persisted boolean shape.
+            tx.conn().execute(
+                "UPDATE users SET inbox_preferences=? WHERE id=?",
+                rusqlite::params![serde_json::json!({"agent_approvals":false}), owner_id],
+            )?;
+            Ok(AgentApproval::create(
+                tx,
+                NewApproval {
+                    agent_id: id,
+                    action: "deploy".into(),
+                    summary: "Available without inbox delivery".into(),
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    test.booted
+        .app
+        .db
+        .read(move |conn| {
+            assert!(
+                campfire_db::ActivityItem::find_by_user_and_source(
+                    conn,
+                    owner_id,
+                    "AgentApproval",
+                    approval_id
+                )?
+                .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut owner = test.browser("198.51.100.160");
+    owner.sign_in(&test.label("emails.kevin")).await;
+    let response = owner.get(&format!("/agents/{id}/approvals")).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    assert!(response.text().contains("Available without inbox delivery"));
+    let response = owner
+        .form(
+            "patch",
+            &format!("/agent_approvals/{approval_id}.json"),
+            &[("decision", "approved")],
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&response.body).unwrap()["status"],
+        "approved"
+    );
+}
 async fn configure(test: &Test) -> i64 {
     let bot: i64 = test.label("users.bender").parse().unwrap();
     let owner: i64 = test.label("users.kevin").parse().unwrap();
