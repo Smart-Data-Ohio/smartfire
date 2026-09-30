@@ -32,7 +32,7 @@ pub(super) async fn render_settings(
     settings: campfire_db::UserStatusSettings,
     errors: campfire_db::Errors,
 ) -> Result {
-    render_profile(c, status, settings, errors, true).await
+    render_profile(c, status, settings, errors, true, None).await
 }
 
 async fn render_profile(
@@ -41,6 +41,7 @@ async fn render_profile(
     settings: campfire_db::UserStatusSettings,
     errors: campfire_db::Errors,
     settings_error: bool,
+    current_password_error: Option<&'static str>,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
     let user = settings.user.clone();
@@ -56,6 +57,10 @@ async fn render_profile(
             )));
         }
     }
+    let has_password = user
+        .password_digest
+        .as_deref()
+        .is_some_and(|s| !campfire_richtext::ruby::is_blank(s));
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
     let now = c.app().db.env().now();
@@ -82,9 +87,44 @@ async fn render_profile(
             .await
             .map_err(Error::internal)?
     };
+    let id = user.id;
+    let now = c.now();
+    let google = c.app().two_factor.google().is_some();
+    let security = c
+        .app()
+        .db
+        .read(move |conn| {
+            let credential = campfire_db::TwoFactorCredential::for_user(conn, id)?;
+            let devices = campfire_db::TwoFactorRememberedDevice::for_user(conn, id)?
+                .into_iter()
+                .filter(|d| d.expires_at.jiff() > now)
+                .map(|d| campfire_views::two_factor::Device {
+                    id: d.id,
+                    user_agent: d.user_agent,
+                    ip_address: d.ip_address,
+                    last_used_at: d.last_used_at.map(|t| t.jiff()),
+                })
+                .collect();
+            Ok(campfire_views::two_factor::ProfileData {
+                confirmed_at: credential.and_then(|c| c.confirmed_at).map(|t| t.jiff()),
+                devices,
+                google: google
+                    && conn.query_row(
+                        "SELECT EXISTS(SELECT 1 FROM google_identities WHERE user_id=?)",
+                        [id],
+                        |r| r.get::<_, bool>(0),
+                    )?,
+            })
+        })
+        .await
+        .map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
+        has_password,
+        current_password_error,
+        security: security.clone(),
+        now,
         user: user.clone(),
         avatar_attached,
         transfer_id: transfer_id.clone(),
@@ -100,7 +140,10 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let mut user = concerns::require_current_user(c)?.clone();
 
-    // params.require(:user).permit(:name, :avatar, :email_address, :password, :bio).compact
+    // Rails checks raw keys/presence before strong parameters discard compound values.
+    let raw = c.params.require("user")?;
+    let password_changing = raw.get("password").is_some_and(|p| p.is_present());
+    let time_zone_submitted = raw.get("time_zone").is_some();
     let params = c.params.require("user")?.permit(&permit_keys(&[
         "name",
         "avatar",
@@ -111,19 +154,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         "text_size",
         "time_zone",
     ]));
-    let present = |key: &str| string_attribute(&params, key).flatten();
-    let changes = UserChanges {
-        name: present("name"),
-        email_address: present("email_address").map(Some),
-        // `password=` ignores a blank password.
-        password_digest: concerns::password_digest(
-            c,
-            present("password").filter(|password| !password.is_empty()),
-        )
-        .await?,
-        bio: present("bio").map(Some),
-        ..UserChanges::default()
-    };
+    let present = |key: &str| compact_string(&params, key);
     let id = user.id;
     let mut settings = c
         .app()
@@ -140,9 +171,64 @@ pub async fn update(c: &mut Ctx) -> Result {
     if let Some(zone) = present("time_zone") {
         settings.time_zone = Some(zone);
     }
-    if params.get("time_zone").is_some() {
+    if time_zone_submitted {
         settings.time_zone_explicit = true;
     }
+    // Rails checks the raw request before strong parameters discard non-scalars.
+    let email_changing = c
+        .params
+        .get("user")
+        .and_then(|p| p.get("email_address"))
+        .is_some_and(|p| {
+            user.email_change_requested(
+                &p.to_s()
+                    .unwrap_or_else(|| campfire_richtext::ruby::json_value_inspect(&p.to_json())),
+            )
+        });
+    if email_changing {
+        let current_password = c.params.get("user").and_then(|p| p.get("current_password"));
+        let missing = current_password.is_none_or(|p| !p.is_present());
+        let password = current_password.and_then(|p| p.to_s()).unwrap_or_default();
+        let existing = user.clone();
+        let confirmed =
+            tokio::task::spawn_blocking(move || existing.current_password_confirmed(&password))
+                .await
+                .map_err(Error::internal)?;
+        if !confirmed {
+            // Rails assigns the submitted non-secret attributes only to the error view.
+            assign_error_attributes(&mut user, &params);
+            c.set_current(concerns::CurrentUser(user.clone()));
+            settings.user = user;
+            return render_profile(
+                c,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                settings,
+                campfire_db::Errors::default(),
+                false,
+                Some(if missing {
+                    "is required to change your email address"
+                } else {
+                    "is incorrect"
+                }),
+            )
+            .await;
+        }
+    }
+    let audit = crate::controllers::two_factor::audit_context(c)?;
+    let changes = UserChanges {
+        name: present("name"),
+        email_address: present("email_address").map(Some),
+        // `password=` ignores a blank password.
+        password_digest: concerns::password_digest(
+            c,
+            present("password").filter(|password| !password.is_empty()),
+        )
+        .await?,
+        bio: present("bio").map(Some),
+        time_zone: present("time_zone").map(Some),
+        time_zone_explicit: time_zone_submitted.then_some(true),
+        ..UserChanges::default()
+    };
     let mut submitted = settings.clone();
     if let Some(name) = &changes.name {
         submitted.user.name = name.clone();
@@ -167,24 +253,34 @@ pub async fn update(c: &mut Ctx) -> Result {
     };
 
     let avatar = avatar.stage(c.app()).await?;
+    let error_user = submitted.user.clone();
     let result = c
         .app()
         .db
         .write(move |tx| {
             settings.save(tx)?;
-            user.update(tx, changes)?;
+            crate::authentication::update_profile(
+                tx,
+                &mut user,
+                changes,
+                email_changing,
+                password_changing,
+                &audit,
+            )?;
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
         .await;
     let pending = match result {
         Ok(pending) => pending,
         Err(campfire_db::Error::RecordInvalid(errors)) => {
+            c.set_current(concerns::CurrentUser(error_user));
             return render_profile(
                 c,
                 StatusCode::UNPROCESSABLE_ENTITY,
                 submitted,
                 errors,
                 false,
+                None,
             )
             .await;
         }
@@ -200,6 +296,25 @@ pub async fn update(c: &mut Ctx) -> Result {
             ..Redirect::default()
         },
     )
+}
+
+/// Submitted public attributes stay visible after a rejected save; passwords stay blank.
+fn assign_error_attributes(user: &mut campfire_db::User, params: &campfire_kit::ParamMap) {
+    if let Some(value) = compact_string(params, "name") {
+        user.name = value;
+    }
+    if let Some(value) = compact_string(params, "email_address") {
+        user.email_address = Some(value);
+    }
+    if let Some(value) = compact_string(params, "bio") {
+        user.bio = Some(value);
+    }
+}
+
+/// `user_params.compact` drops nil instead of coercing it to an empty string.
+fn compact_string(params: &campfire_kit::ParamMap, key: &str) -> Option<String> {
+    params.get(key).filter(|p| !p.is_null())?;
+    string_attribute(params, key).flatten()
 }
 
 #[cfg(test)]

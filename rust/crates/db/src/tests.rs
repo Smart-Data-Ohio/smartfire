@@ -38,7 +38,10 @@ mod scheduled_message_test;
 mod save_touches_test;
 mod search_query_test;
 mod session_test;
+mod two_factor_test;
+mod two_factor_rollback_test;
 mod user_test;
+mod user_device_test;
 
 use std::sync::Arc;
 

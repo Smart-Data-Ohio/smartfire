@@ -12,9 +12,12 @@
 /// `RQRCode::QRCode.new(data).as_svg(viewbox: true, fill: :white, color: :black)`, for the binary
 /// string `Base64.urlsafe_decode64` returns; `None` when it doesn't fit a version 40 code.
 pub fn svg_bytes(data: &[u8]) -> Option<String> {
+    svg_with_options(data, 11, 0)
+}
+
+pub(super) fn svg_with_options(data: &[u8], module_size: usize, offset: usize) -> Option<String> {
     let modules = QrCode::new(data)?.modules;
-    let module_size = 11;
-    let dimension = modules.len() * module_size;
+    let dimension = modules.len() * module_size + 2 * offset;
     let mut out = String::with_capacity(256 + modules.len() * modules.len() * 30);
     out.push_str(r#"<?xml version="1.0" standalone="yes"?>"#);
     out.push_str(&format!(
@@ -24,7 +27,7 @@ pub fn svg_bytes(data: &[u8]) -> Option<String> {
     for (row, cells) in modules.iter().enumerate() {
         for (col, &dark) in cells.iter().enumerate() {
             if dark {
-                let (x, y) = (col * module_size, row * module_size);
+                let (x, y) = (col * module_size + offset, row * module_size + offset);
                 out.push_str(&format!(r#"<rect width="{module_size}" height="{module_size}" x="{x}" y="{y}" fill="black"/>"#));
             }
         }

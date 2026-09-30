@@ -178,3 +178,116 @@ async fn ws17_layout_carries_current_and_future_meeting_and_ooo_windows() {
         assert!(!html.contains("name=\"ooo-quiet\""));
     }
 }
+
+/// Integration with WS9: appearance and authentication writes share the original save transaction.
+#[tokio::test]
+async fn ws17_profile_auth_rejection_keeps_submitted_appearance_without_saving_it() {
+    let app = TestApp::boot().await.expect("parity seed");
+    let before = appearance(&app).await;
+    let mut browser = app.david();
+    let response = browser
+        .write(Req::new(Method::PATCH, PATH).form(&[
+            ("user[email_address]", "ws17-new@example.test"),
+            ("user[name]", "Unsaved name"),
+            ("user[theme]", "dark"),
+            ("user[text_size]", "large"),
+            ("user[time_zone]", "America/New_York"),
+        ]))
+        .await;
+    assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let html = response.text();
+    assert!(html.contains("Current password is required to change your email address."));
+    assert!(html.contains("value=\"Unsaved name\""));
+    assert!(
+        html.contains("id=\"user_theme_dark\" type=\"radio\" value=\"dark\" checked=\"checked\"")
+    );
+    assert!(html.contains(
+        "id=\"user_text_size_large\" type=\"radio\" value=\"large\" checked=\"checked\""
+    ));
+    assert!(html.contains("<option selected=\"selected\" value=\"America/New_York\">"));
+    assert_eq!(appearance(&app).await, before);
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(campfire_db::User::find(conn, DAVID)?.name))
+            .await
+            .unwrap(),
+        "David"
+    );
+}
+
+#[tokio::test]
+async fn ws17_profile_auth_audit_failure_rolls_back_the_earlier_appearance_save() {
+    let app = TestApp::boot().await.expect("parity seed");
+    let before = appearance(&app).await;
+    let user_before = app
+        .db()
+        .read(|conn| campfire_db::User::find(conn, DAVID))
+        .await
+        .unwrap();
+    let marker_before = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT email_self_changed_at FROM users WHERE id=?",
+                [DAVID],
+                |r| r.get::<_, Option<String>>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    let audits_before = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row("SELECT COUNT(*) FROM audit_logs", [], |r| {
+                r.get::<_, i64>(0)
+            })?)
+        })
+        .await
+        .unwrap();
+    app.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER ws17_refuse_profile_audit BEFORE INSERT ON audit_logs WHEN NEW.action='user.email.change' BEGIN SELECT RAISE(ABORT, 'audit unavailable'); END")?;
+        Ok(())
+    }).await.unwrap();
+    let mut browser = app.david();
+    let response = browser
+        .write(Req::new(Method::PATCH, PATH).form(&[
+            ("user[email_address]", "ws17-atomic@example.test"),
+            ("user[current_password]", "secret123456"),
+            ("user[name]", "Submitted name"),
+            ("user[theme]", "dark"),
+            ("user[text_size]", "large"),
+            ("user[time_zone]", "America/New_York"),
+        ]))
+        .await;
+    assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(appearance(&app).await, before);
+    let user_after = app
+        .db()
+        .read(|conn| campfire_db::User::find(conn, DAVID))
+        .await
+        .unwrap();
+    assert_eq!(user_after.name, user_before.name);
+    assert_eq!(user_after.email_address, user_before.email_address);
+    let marker_after = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT email_self_changed_at FROM users WHERE id=?",
+                [DAVID],
+                |r| r.get::<_, Option<String>>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(marker_after, marker_before);
+    assert_eq!(
+        app.db()
+            .read(
+                |conn| Ok(conn.query_row("SELECT COUNT(*) FROM audit_logs", [], |r| r
+                    .get::<_, i64>(0))?)
+            )
+            .await
+            .unwrap(),
+        audits_before
+    );
+}

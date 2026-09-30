@@ -39,9 +39,13 @@ pub struct UserSummary {
     pub status: Status,
     /// `fresh_user_avatar_path(user)`.
     pub avatar_path: String,
+    pub two_factor_enabled: bool,
 }
 
 impl UserSummary {
+    pub fn two_factor_reset_confirmation(&self) -> String {
+        format!("Reset two-step sign-in for {}? They will sign out everywhere and set it up again at next sign-in.",self.name)
+    }
     pub fn active(&self) -> bool { self.status == Status::Active }
     pub fn banned(&self) -> bool { self.status == Status::Banned }
     pub fn deactivated(&self) -> bool { self.status == Status::Deactivated }

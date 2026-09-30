@@ -12,6 +12,8 @@ fn vectors() -> Value {
 }
 fn with_pool(original: &App, pool: Pool) -> App {
     Arc::new(AppState {
+        sudo: Default::default(),
+        two_factor: Default::default(),
         subscription_network: original.subscription_network.clone(),
         config: original.config.clone(),
         secrets: original.secrets.clone(),

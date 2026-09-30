@@ -10,6 +10,7 @@ pub mod profiles;
 pub mod presences;
 pub mod push_subscriptions;
 pub mod sidebars;
+pub mod sessions;
 
 use askama::Template;
 use campfire_db::{Account, NewUser, User};

@@ -65,11 +65,23 @@ pub(crate) fn strip(text: &str) -> &str {
     text.trim_matches(|c: char| matches!(c, '\0' | '\t' | '\n' | '\x0b' | '\x0c' | '\r' | ' '))
 }
 pub(crate) fn known_zone(name: &str) -> Option<TimeZone> {
-    static ALIASES: OnceLock<std::collections::HashMap<String, String>> = OnceLock::new();
-    let aliases = ALIASES.get_or_init(|| {
-        serde_json::from_str(include_str!("../tests/ws8_slash_zones.json")).unwrap()
+    // ActiveSupport::TimeZone[] resolves its exact aliases or TZInfo's case-sensitive
+    // identifiers. Jiff alone accepts wrong-case names and additional host zones.
+    // Generated from pinned Rails by reference-tools/auth/round_four.rb.
+    #[derive(serde::Deserialize)]
+    struct Names {
+        identifiers: std::collections::HashSet<String>,
+        mapping: std::collections::HashMap<String, String>,
+    }
+    static NAMES: OnceLock<Names> = OnceLock::new();
+    let names = NAMES.get_or_init(|| {
+        serde_json::from_str(include_str!("../rails_time_zones.json")).expect("pinned Rails zones")
     });
-    TimeZone::get(aliases.get(name).map(String::as_str).unwrap_or(name)).ok()
+    let identifier = names.mapping.get(name).map(String::as_str).unwrap_or(name);
+    if !names.identifiers.contains(identifier) {
+        return None;
+    }
+    TimeZone::get(identifier).ok()
 }
 pub(crate) fn zone(name: &str) -> TimeZone {
     known_zone(name).unwrap_or(TimeZone::UTC)
