@@ -300,3 +300,60 @@ The remaining issue is main's asset-fingerprint golden drift, not a timing failu
 follow-up makes no production changes and does not alter the negative socket windows or
 checkpoint polling. Its mutation failures and real-code successes establish the two
 requested regression checks; the full app failure is separately disclosed above.
+
+## Multipart listener startup follow-up
+
+After merging PR #168 in `e366f6de`, the asset-page comparisons passed. The first subsequent
+loaded app attempt instead failed in `delayed_multipart_sign_in_is_bounded_on_target` at
+`security_tests.rs:518`: `our server bound both ports: RecvError(())`. Two later full app
+attempts passed, but that did not repair the newly observed startup flake.
+
+The fixture reserved HTTP and target sockets, dropped both, then asked the front server to
+bind their port numbers again. Its process-local binding mutex could not protect that gap
+against another process or the kernel assigning an outgoing connection that port. In the
+plain HTTP configuration, the server's pre-readiness error returns come from those binds;
+an error dropped the ready callback's sender without returning its error to the waiting test.
+The original log therefore identifies an early startup failure, not an expired readiness
+deadline; it did not preserve the underlying I/O error.
+
+A deterministic regression claims the released HTTP port with a competing real socket
+before the current-thread Tokio runtime can poll the server task. Against the old rebind
+path, the new reporter exposes the exact collision:
+
+```text
+a competing socket claimed the reserved HTTP port; startup: Err("server startup failed: Address already in use (os error 98) (AddrInUse)"); server: Err(Os { code: 98, kind: AddrInUse, message: "Address already in use" })
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 416 filtered out; finished in 0.00s
+```
+
+Changes:
+
+- `kit/src/front.rs`: a `test-support` API consumes owned `(HTTP, target)` listeners and runs
+  the existing front and target handlers on them. Both paths share the same server core;
+  normal production startup retains its existing configured bind behavior.
+- `campfire/src/app/security_tests.rs`: transfer the reserved listeners directly into that
+  API, without releasing or rebinding their ports. The regression now verifies that competing
+  sockets cannot claim either reservation before the server task is polled. A separate real
+  occupied-port test verifies that a failed normal startup reports `AddrInUse` through the
+  channel and still returns its original I/O error through the task result.
+- `campfire/src/test_support.rs`: retain the startup sender outside the server future, report
+  early errors/exit/panics through `Result<(), String>`, and preserve the server's result or
+  panic for its join handle. A panic regression verifies both the message and failed task.
+
+No startup retry or sleep was added; the existing 30-second bound is unchanged. Multipart
+413/session/cookie assertions and the valid sign-in control are unchanged, as are the socket
+silence windows, quote/broadcast assertions, CPU clock/budgets and checkpoint polling.
+
+Focused checks used `CARGO_BUILD_JOBS=2`, the host's rustc throttle, `CI=true`, both assigned
+port ranges and `--test-threads 8`:
+
+```sh
+mise exec rust@1.98.1 -- cargo test --locked -j 2 -p campfire app::security_tests:: -- --nocapture --test-threads 8
+mise exec rust@1.98.1 -- cargo test --locked -j 2 -p campfire test_support::server_startup_panics_reach_the_reporter_and_join_handle -- --exact --nocapture --test-threads 8
+```
+
+```text
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 2.71s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 418 filtered out; finished in 0.00s
+```
+
+Fresh-clone full app validation and workspace clippy follow below after completion.

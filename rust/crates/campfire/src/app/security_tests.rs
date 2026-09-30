@@ -448,10 +448,24 @@ async fn csp_reports_read_a_bounded_prefix_of_any_body() {
 
 // --- Session plumbing --------------------------------------------------------------------------
 
+fn start_front_server(
+    config: campfire_kit::front::FrontConfig,
+    app: axum::Router,
+    http: tokio::net::TcpListener,
+    upstream: tokio::net::TcpListener,
+    stopped: tokio::sync::oneshot::Receiver<()>,
+) -> (tokio::task::JoinHandle<std::io::Result<()>>, crate::test_support::ServerStartup) {
+    crate::test_support::spawn_server(move |ready| {
+        campfire_kit::front::serve_with_bound_listeners(config, app, None, (http, upstream), ready, async move {
+            let _ = stopped.await;
+        })
+    })
+}
+
 /// The multipart closing boundary is not the HTTP body's end. A delayed epilogue must be
 /// counted before sessions#create can insert a session, on either listener.
 async fn delayed_multipart_sign_in_is_bounded(target: bool) {
-    use campfire_kit::front::{self, FrontConfig};
+    use campfire_kit::front::FrontConfig;
     use crate::test_support::{LISTENER_BINDING, bind_listener_locked, wait};
     use futures_util::Stream;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -471,7 +485,6 @@ async fn delayed_multipart_sign_in_is_bounded(target: bool) {
         _ => None,
     });
     let (stop, stopped) = tokio::sync::oneshot::channel();
-    let (ready, started) = tokio::sync::oneshot::channel();
     // Observe actual request-body consumption. A sent TCP write alone does not mean that
     // the multipart parser has reached its closing boundary on a loaded server.
     let (body_read, mut body_reads) = tokio::sync::mpsc::unbounded_channel();
@@ -503,19 +516,16 @@ async fn delayed_multipart_sign_in_is_bounded(target: bool) {
             }
         },
     ));
-    drop((http_listener, upstream_listener));
-    let server = tokio::spawn(front::serve_with_ready(
+    let (server, started) = start_front_server(
         config,
         observed,
-        None,
-        move || {
-            let _ = ready.send(());
-        },
-        async move {
-            let _ = stopped.await;
-        },
-    ));
-    wait("both front server listeners to bind", started).await.expect("our server bound both ports");
+        http_listener,
+        upstream_listener,
+        stopped,
+    );
+    wait("both front server listeners to bind", started).await
+        .expect("server task reports its startup outcome")
+        .unwrap_or_else(|error| panic!("HTTP {http}, target {upstream}: {error}"));
     drop(binding);
     let port = if target { upstream } else { http };
     async fn read_reply(stream: &mut TcpStream) -> Reply {
@@ -598,6 +608,57 @@ async fn delayed_multipart_sign_in_is_bounded_on_front() {
 #[tokio::test]
 async fn delayed_multipart_sign_in_is_bounded_on_target() {
     delayed_multipart_sign_in_is_bounded(true).await;
+}
+
+/// A competing socket must not be able to claim a reserved port while the server task is
+/// waiting to be polled. This runtime cannot poll that task before the synchronous bind.
+#[tokio::test]
+async fn front_server_keeps_its_reserved_ports_through_startup() {
+    use crate::test_support::{LISTENER_BINDING, bind_listener_locked, wait};
+    let binding = LISTENER_BINDING.lock().await;
+    let http = bind_listener_locked().await;
+    let upstream = bind_listener_locked().await;
+    let http_addr = http.local_addr().unwrap();
+    let upstream_addr = upstream.local_addr().unwrap();
+    let config = campfire_kit::front::FrontConfig::from_lookup(|name| match name {
+        "HTTP_PORT" => Some(http_addr.port().to_string()),
+        "TARGET_PORT" => Some(upstream_addr.port().to_string()),
+        "LOG_REQUESTS" => Some("false".into()),
+        _ => None,
+    });
+    let (stop, stopped) = tokio::sync::oneshot::channel();
+    let (server, started) = start_front_server(config, axum::Router::new(), http, upstream, stopped);
+    let http_competitor = std::net::TcpListener::bind(http_addr);
+    let upstream_competitor = std::net::TcpListener::bind(upstream_addr);
+    let reserved = matches!(http_competitor, Err(ref error) if error.kind() == std::io::ErrorKind::AddrInUse)
+        && matches!(upstream_competitor, Err(ref error) if error.kind() == std::io::ErrorKind::AddrInUse);
+    let startup = wait("reserved front listeners to start", started).await.unwrap();
+    let _ = stop.send(());
+    let result = wait("reserved front server to stop", server).await.unwrap();
+    drop((http_competitor, upstream_competitor));
+    drop(binding);
+    assert!(reserved, "a competing socket could claim a reserved port; startup: {startup:?}; server: {result:?}");
+    startup.unwrap();
+    result.unwrap();
+}
+
+#[tokio::test]
+async fn front_server_reports_startup_bind_errors() {
+    use crate::test_support::{bind_listener, spawn_server, wait};
+    let occupied = bind_listener().await;
+    let port = occupied.local_addr().unwrap().port();
+    let config = campfire_kit::front::FrontConfig::from_lookup(|name| match name {
+        "HTTP_PORT" | "TARGET_PORT" => Some(port.to_string()),
+        "LOG_REQUESTS" => Some("false".into()),
+        _ => None,
+    });
+    let (server, started) = spawn_server(move |ready| {
+        campfire_kit::front::serve_with_ready(config, axum::Router::new(), None, ready, std::future::pending::<()>())
+    });
+    let startup = wait("front startup error report", started).await.unwrap().unwrap_err();
+    assert!(startup.contains("AddrInUse"), "{startup}");
+    let error = wait("failed front server to finish", server).await.unwrap().unwrap_err();
+    assert_eq!(error.kind(), std::io::ErrorKind::AddrInUse);
 }
 
 #[tokio::test]
