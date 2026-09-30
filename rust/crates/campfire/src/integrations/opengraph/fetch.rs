@@ -158,3 +158,7 @@ fn host_header(host: &str, port: u16, https: bool) -> String {
     let default_port = if https { 443 } else { 80 };
     if port == default_port { hostname.to_string() } else { format!("{hostname}:{port}") }
 }
+
+#[cfg(test)]
+#[path = "rails_fetch_tests.rs"]
+mod rails_fetch_tests;
