@@ -336,179 +336,28 @@ pub(crate) fn month(name: &str) -> Option<i8> {
 // ActiveSupport::TimeZone#parse delegates to Date._parse, with omitted date parts
 // filled from now. Explicit offsets denote absolute instants; clock-only forms stay today.
 fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
-    let text = strip(text);
-    if text.is_empty() {
-        return None;
-    }
-    if let Some(c) = re(r"\b(?P<date>[0-9]{8})(?P<clock>[0-9]{6})?\b").captures(text) {
-        let date = &c["date"];
-        let date = normalized_date(
-            date[..4].parse().ok()?,
-            date[4..6].parse().ok()?,
-            date[6..].parse().ok()?,
-        )?;
-        let (hour, minute, second) = if let Some(clock) = c.name("clock") {
-            let clock = clock.as_str();
-            (
-                clock[..2].parse::<i8>().ok()?,
-                clock[2..4].parse::<i8>().ok()?,
-                clock[4..].parse::<i8>().ok()?,
-            )
-        } else {
-            (0, 0, 0)
-        };
-        if hour > 24 || minute > 59 || second > 60 || hour == 24 && (minute != 0 || second != 0) {
-            return None;
-        }
-        let dt = date
-            .at(0, 0, 0, 0)
-            .checked_add(
-                Span::new()
-                    .seconds(i64::from(hour) * 3600 + i64::from(minute) * 60 + i64::from(second)),
-            )
-            .ok()?;
-        return resolve(dt, zone, None);
-    }
-    // Date._parse removes the clock and its zone before finding calendar parts.
-    // Otherwise e.g. "17:00 MART" becomes an invalid "00 March" date.
-    let clocks = re(
-        r"(?i)(?:\b|T)(?P<hour>[0-9]{1,2})(?::(?P<minute>[0-9]{2}))?(?::(?P<second>[0-9]{2})(?:\.(?P<fraction>[0-9]+))?)?\s*(?P<meridiem>(?:am|pm)\b)?",
-    );
-    let clock_match = clocks
-        .captures_iter(text)
-        .find(|c| c.name("minute").is_some() || c.name("meridiem").is_some());
-    let date_text = if let Some(c) = &clock_match {
-        let clock = c.get(0)?;
-        let rest = strip(&text[clock.end()..]);
-        let rest = offset_pattern()
-            .find(rest)
-            .map(|m| &rest[m.end()..])
-            .unwrap_or(rest);
-        format!("{} {rest}", &text[..clock.start()])
-    } else {
-        text.to_owned()
-    };
-    let zoned = now.jiff().to_zoned(zone.clone());
-    let mut date = zoned.date();
-    let mut found = false;
-    if let Some(c) = re(r"(?P<year>[0-9]{4})[-/](?P<month>[0-9]{1,2})[-/](?P<day>[0-9]{1,2})")
-        .captures(&date_text)
-    {
-        date = normalized_date(
-            c["year"].parse().ok()?,
-            c["month"].parse().ok()?,
-            c["day"].parse().ok()?,
-        )?;
-        found = true;
-    } else if let Some(c) =
-        re(r"\b(?P<day>[0-9]{1,2})[-/](?P<month>[0-9]{1,2})[-/](?P<year>[0-9]{2,4})\b")
-            .captures(&date_text)
-    {
-        let mut year = c["year"].parse::<i16>().ok()?;
-        if year < 100 {
-            year += if year < 69 { 2000 } else { 1900 };
-        }
-        date = normalized_date(year, c["month"].parse().ok()?, c["day"].parse().ok()?)?;
-        found = true;
-    } else {
-        let names = r"jan[a-z]*|feb[a-z]*|mar[a-z]*|apr[a-z]*|may|jun[a-z]*|jul[a-z]*|aug[a-z]*|sep[a-z]*|oct[a-z]*|nov[a-z]*|dec[a-z]*";
-        let month_year = re(&format!(
-            r"(?i)\b(?P<month>{names})\s+(?P<year>[0-9]{{4}})\b"
-        ));
-        let patterns = [
-            re(&format!(
-                r"(?i)\b(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?[ -]+(?P<month>{names})(?:[, -]+(?P<year>[0-9]{{4}}))?"
-            )),
-            re(&format!(
-                r"(?i)\b(?P<month>{names})[ -]+(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?\b(?:[, -]+(?P<year>[0-9]{{4}}))?"
-            )),
-        ];
-        if let Some(c) = patterns.iter().find_map(|p| p.captures(&date_text)) {
-            date = normalized_date(
-                c.name("year")
-                    .map(|y| y.as_str().parse::<i16>())
-                    .transpose()
-                    .ok()?
-                    .unwrap_or(date.year()),
-                month(&c["month"])?,
-                c["day"].parse().ok()?,
-            )?;
-            found = true;
-        } else if let Some(c) = month_year.captures(&date_text) {
-            date = normalized_date(c["year"].parse().ok()?, month(&c["month"])?, 1)?;
-            found = true;
-        }
-    }
-    if let Some(c) = clock_match {
-        let (h, m) = clock_parts(&c, true)?;
-        let second = c
-            .name("second")
-            .map(|s| s.as_str().parse::<i8>())
-            .transpose()
-            .ok()?
-            .unwrap_or(0);
-        let nanos = if let Some(f) = c.name("fraction") {
-            let mut f = f.as_str().chars().take(6).collect::<String>();
-            while f.len() < 6 {
-                f.push('0');
-            }
-            f.parse::<i32>().ok()? * 1000
-        } else {
-            0
-        };
-        // Time.new permits 24:00 and second 60, normalizing before zone resolution.
-        if second > 60 || h == 24 && second != 0 {
-            return None;
-        }
-        let dt = date
-            .at(0, 0, 0, nanos)
-            .checked_add(
-                Span::new().seconds(i64::from(h) * 3600 + i64::from(m) * 60 + i64::from(second)),
-            )
-            .ok()?;
-        let remaining = strip(&text[c.get(0)?.end()..]);
-        if let Some(seconds) = parsed_offset(remaining) {
-            return Some(Timestamp::from_jiff(
-                jiff::tz::Offset::from_seconds(seconds)
-                    .ok()?
-                    .to_timestamp(dt)
-                    .ok()?,
-            ));
-        }
-        return resolve(dt, zone, None);
-    }
-    // Date._parse's compact-number pass accepts a two-digit day even amid junk.
-    // In particular a failed documented-language regex can still reach this pass.
-    if !found
-        && let Some(c) = re(r"[0-9]{2,14}").find(text)
-        && c.as_str().len() == 2
-    {
-        date = normalized_date(date.year(), date.month(), c.as_str().parse().ok()?)?;
-        found = true;
-    }
-    if found
-        || WEEKDAYS
-            .iter()
-            .any(|d| text.to_ascii_lowercase().contains(d))
-    {
-        local(date, 0, 0, 0, 0, zone)
-    } else {
-        None
-    }
+    super::calendar::parse(text, zone, now).ok().flatten()
 }
 
 pub(super) fn offset_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
-    PATTERN.get_or_init(|| re(r"(?i)\A(?P<offset>(?:GMT|UTC?)?[+-](?:[0-9]{1,2}:[0-9]{2}|[0-9]{3,4}|[0-9]{1,2})|[[:alpha:].\x09-\x0d ]+(?:standard|daylight)\s+time\b|[[:alpha:]]+(?:\s+dst)?\b)"))
+    PATTERN.get_or_init(|| re(r"(?i)\A(?P<offset>(?:GMT|UTC?)?[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,4}|[0-9]{1,2})|[[:alpha:].\x09-\x0d ]+(?:standard|daylight)\s+time\b|[[:alpha:]]+(?:\s+dst)?\b)"))
 }
 pub(super) fn parsed_offset(text: &str) -> Option<i32> {
     let c = offset_pattern().captures(text)?;
     let token = c["offset"].to_ascii_lowercase();
-    if let Some(number) = re(r"[+-](?:[0-9]{1,2}:[0-9]{2}|[0-9]{3,4}|[0-9]{1,2})").find(&token) {
+    if let Some(number) = re(r"[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,4}|[0-9]{1,2})").find(&token) {
         let number = number.as_str();
-        let digits = number[1..].replace(':', "");
-        let (hour, minute) = if digits.len() <= 2 {(digits.parse::<i32>().ok()?,0)} else {(digits[..digits.len()-2].parse::<i32>().ok()?,digits[digits.len()-2..].parse::<i32>().ok()?)};
-        return Some((hour * 3600 + minute * 60) * if number.starts_with('-') { -1 } else { 1 });
+        let fields = number[1..].split(':').collect::<Vec<_>>();
+        let (hour, minute, second) = if fields.len() > 1 {
+            (fields[0].parse::<i32>().ok()?, fields[1].parse::<i32>().ok()?,
+                fields.get(2).map(|s| s.parse::<i32>()).transpose().ok()?.unwrap_or(0))
+        } else {
+            let digits = &number[1..];
+            if digits.len() <= 2 { (digits.parse::<i32>().ok()?, 0, 0) }
+            else { (digits[..digits.len()-2].parse::<i32>().ok()?, digits[digits.len()-2..].parse::<i32>().ok()?, 0) }
+        };
+        return Some((hour * 3600 + minute * 60 + second) * if number.starts_with('-') { -1 } else { 1 });
     }
     static OFFSETS: OnceLock<std::collections::HashMap<String, i32>> = OnceLock::new();
     OFFSETS

@@ -126,8 +126,8 @@ pub(super) fn parse(text: &str, zone: &TimeZone, now: Timestamp) -> Result<Optio
             p.found = true;
         } else if re(r"(?i)\b[0-9]{4}-W[0-9]{2}-[0-9]\b").is_match(&date_text) {
             p.found = true;
-        } else if let Some(c) = re(r"\b[0-9]{2,14}\b").find(&date_text) {
-            let digits = c.as_str();
+        } else if let Some(c) = re(r"(?i)\b(?P<digits>[0-9]{2,14})(?:T(?P<clock>[0-9]{6}))?(?P<zone>Z|[+-][0-9]{4})?\b").captures(&date_text) {
+            let digits = &c["digits"];
             match digits.len() {
                 14 | 8 => {
                     p.year = Some(number(&digits[..4])?);
@@ -157,6 +157,23 @@ pub(super) fn parse(text: &str, zone: &TimeZone, now: Timestamp) -> Result<Optio
                     p.found = true;
                 }
                 _ => {}
+            }
+            if let Some(clock) = c.name("clock") {
+                let digits = clock.as_str();
+                p.hour = number(&digits[..2])?;
+                p.minute = number(&digits[2..4])?;
+                p.second = number(&digits[4..])?;
+            }
+            // Date's compact-number pass also consumes a trailing numeric zone
+            // or Z, including a separated zone after a fourteen-digit clock.
+            if p.offset.is_none() {
+                p.offset = c.name("zone").and_then(|z| parsed_offset(z.as_str()));
+                if p.offset.is_none() && (digits.len() == 14 || c.name("clock").is_some()) {
+                    let rest = campfire_richtext::ruby::strip(&date_text[c.get(0).unwrap().end()..]);
+                    if rest.starts_with(['+', '-']) || rest.starts_with(['Z', 'z']) {
+                        p.offset = parsed_offset(rest);
+                    }
+                }
             }
         }
     }
