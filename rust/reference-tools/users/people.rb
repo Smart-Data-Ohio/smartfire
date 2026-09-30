@@ -7,6 +7,7 @@ Rails.logger = ActiveSupport::Logger.new($stderr)
   expected = JSON.parse(File.read(File.join(ENV.fetch("PARITY_WORK"), "reference-tools/users/people-source-hashes.json"))).fetch(file)
   raise "source drift: #{file}" unless Digest::SHA256.file(Rails.root.join(file)).hexdigest == expected
 end
+load File.join(ENV.fetch("PARITY_WORK"), "reference-tools/users/post_pin.rb")
 class PeopleGoldenController < ApplicationController
   def form_authenticity_token(form_options: {})
     action, method = form_options.values_at(:action, :method)
@@ -64,5 +65,5 @@ directories = [false, true].map do |star|
   end
   result
 end
-puts JSON.pretty_generate(reference: "d7c7de92", cards: cases, directories: directories)
+puts JSON.pretty_generate(reference: "d7c7de92", status_reference: "2e20b24c", cards: cases, directories: directories)
 warn "Rails people oracle: #{cases.size} cards, #{directories.size} directories; reference d7c7de92"

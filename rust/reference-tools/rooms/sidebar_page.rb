@@ -1,5 +1,9 @@
+load File.join(ENV.fetch('PARITY_WORK'),'reference-tools/users/post_pin.rb')
 # Full, unnormalized sidebar bytes from the pinned app. Tokens are lent to both renderers.
 require 'json'
+Rails.logger=ActiveSupport::Logger.new($stderr)
+ActionView::Base.logger=Rails.logger
+ActionController::Base.logger=Rails.logger
 require "digest"
 {
   "app/controllers/users/sidebars_controller.rb" => "a5816989380845cdd31e9abb2b75106629ccbfde1ee1c4edea1ab51a90381341",
@@ -69,4 +73,4 @@ ActiveRecord::Base.transaction do
 end
 Current.reset
 puts JSON.pretty_generate(rows)
-warn "Rails sidebar page: #{rows.size} complete frame goldens; reference d7c7de92"
+warn "Rails sidebar page: #{rows.size} complete frame goldens; sidebar template 2e20b24c, other files d7c7de92"

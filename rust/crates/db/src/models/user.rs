@@ -870,3 +870,5 @@ fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
     }
     Ok(())
 }
+
+pub mod status_form;

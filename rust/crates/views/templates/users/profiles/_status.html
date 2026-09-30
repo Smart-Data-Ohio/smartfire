@@ -3,7 +3,8 @@
     <legend class="txt-large">Status</legend>
     <p class="txt-small margin-none">Automatic shows you online while you're here and idle after 10 quiet minutes. Your custom status shows beside your name.</p>
 
-    {% include "users/profiles/_status_fields.html" %}
+    {{ self.status_fields() }}
+
     <div class="flex flex-wrap align-center gap pad-block-half">
       {{ h::profile_form_submit_button(ctx) }}
       {{ h::button_tag(h::attrs().name("user[clear_custom_status]").value("1").class("btn txt-small"), "Clear status") }}

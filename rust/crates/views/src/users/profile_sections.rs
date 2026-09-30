@@ -27,7 +27,8 @@ pub struct InboxSwitch {
     pub description: &'static str,
     pub enabled: bool,
 }
-#[derive(Clone, Default)]
+#[derive(Clone, Default, serde::Deserialize)]
+#[serde(default)]
 pub struct StatusFields {
     pub presence: String,
     pub emoji: Option<String>,
@@ -35,6 +36,7 @@ pub struct StatusFields {
     pub ooo_note: Option<String>,
     pub ooo_return: Option<String>,
     pub manual_ooo: bool,
+    pub errors: std::collections::BTreeMap<String, Vec<String>>,
 }
 #[derive(Clone, Default)]
 pub struct NotificationFields {

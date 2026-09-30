@@ -15,7 +15,7 @@ use crate::controllers::presenters::{self, accounts::string_attribute};
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let user = concerns::require_current_user(c)?.clone();
-    render_show(c, StatusCode::OK, user, None, None).await
+    render_show(c, StatusCode::OK, user, None, None, None).await
 }
 
 async fn render_show(
@@ -23,6 +23,7 @@ async fn render_show(
     status: StatusCode,
     user: campfire_db::User,
     current_password_error: Option<&'static str>,
+    status_preview: Option<users::StatusFields>,
     settings_error: Option<(
         campfire_db::models::user::profile_settings::Changes,
         campfire_db::Errors,
@@ -146,6 +147,7 @@ async fn render_show(
             .await
             .map_err(Error::internal)?;
     }
+    if let Some(fields) = status_preview { sections.status = fields; }
     if let Some(changes) = preview_settings {
         presenters::profile_sections::preview(&mut sections, &changes, &errors);
     }
@@ -240,6 +242,7 @@ pub async fn update(c: &mut Ctx) -> Result {
                 } else {
                     "is incorrect"
                 }),
+                None,
                 Some((settings, campfire_db::Errors::default())),
             )
             .await;
@@ -303,6 +306,7 @@ pub async fn update(c: &mut Ctx) -> Result {
                 StatusCode::UNPROCESSABLE_ENTITY,
                 error_user,
                 None,
+                None,
                 Some((preview_settings, errors)),
             )
             .await;
@@ -338,4 +342,10 @@ fn assign_error_attributes(user: &mut campfire_db::User, params: &campfire_kit::
 fn compact_string(params: &campfire_kit::ParamMap, key: &str) -> Option<String> {
     params.get(key).filter(|p| !p.is_null())?;
     string_attribute(params, key).flatten()
+}
+
+/// Shared profile fallback for WS17's rejected status submissions.
+pub async fn render_status_error(c: &mut Ctx, fields: users::StatusFields) -> Result {
+    let user=concerns::require_current_user(c)?.clone();
+    render_show(c,StatusCode::UNPROCESSABLE_ENTITY,user,None,Some(fields),None).await
 }

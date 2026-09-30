@@ -27,6 +27,7 @@
 
     <div class="profile-card__actions">
 {% if ctx.is_current_user(person.user.id) %}        {{ h::link_to("/users/me/profile",h::attrs().class("btn btn--reversed full-width").data("turbo_frame","_top"),"Edit profile") }}
+        {{ h::link_to(&h::routes::edit_user_status(), h::attrs().class("btn full-width"), "Set a status") }}
 {% else if person.user.active() %}        {{ self.action_button(false) }}
 {% if !person.user.bot() %}          {{ self.action_button(true) }}
 {% endif %}        {{ h::link_to(&h::routes::user(person.user.id),h::attrs().class("btn full-width").data("turbo_frame","_top"),"View profile") }}

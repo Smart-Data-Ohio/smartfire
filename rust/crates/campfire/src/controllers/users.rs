@@ -9,6 +9,7 @@ pub mod push_subscriptions;
 pub mod sidebars;
 pub mod time_zones;
 pub mod tours;
+pub mod statuses;
 
 #[cfg(test)]
 mod preferences_tests;
@@ -150,3 +151,6 @@ mod joining_tests;
 
 #[cfg(test)]
 mod profile_sections_tests;
+
+#[cfg(test)]
+mod status_popup_tests;

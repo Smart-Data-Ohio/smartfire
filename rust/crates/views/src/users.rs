@@ -233,3 +233,6 @@ impl Page for PushSubscriptionsIndex<'_> {
 
 mod profile_sections;
 pub use profile_sections::*;
+
+mod status_popup;
+pub use status_popup::*;
