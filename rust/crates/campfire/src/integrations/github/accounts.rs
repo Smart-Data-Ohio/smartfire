@@ -84,15 +84,34 @@ impl Account {
         let id = Self::for_user(tx.conn(), input.user_id)?.map(|a| a.id);
         Self::save(tx, crypto, id, input)
     }
-    pub fn relink_without_touch(tx: &mut Tx<'_>, crypto:&ArEncryption, input:&AccountInput<'_>)->Result<Self> {
-        if let Some(account)=Self::for_user(tx.conn(), input.user_id)? {
-            Self::validate(tx,Some(account.id),input)?;
-            if account.github_login==input.github_login && account.token_source==input.token_source && account.token_expires_at==input.token_expires_at && account.disconnected_reason.is_none() && account.last_error.is_none() && crypto.decrypt(&account.access_token).ok().as_deref()==Some(input.access_token) && account.refresh_token.as_deref().map(|s|crypto.decrypt(s)).transpose().ok().flatten().as_deref()==input.refresh_token {
+    pub fn relink_without_touch(
+        tx: &mut Tx<'_>,
+        crypto: &ArEncryption,
+        input: &AccountInput<'_>,
+    ) -> Result<Self> {
+        if let Some(account) = Self::for_user(tx.conn(), input.user_id)? {
+            Self::validate(tx, Some(account.id), input)?;
+            if account.github_login == input.github_login
+                && account.token_source == input.token_source
+                && account.token_expires_at == input.token_expires_at
+                && account.disconnected_reason.is_none()
+                && account.last_error.is_none()
+                && crypto.decrypt(&account.access_token).ok().as_deref() == Some(input.access_token)
+                && account
+                    .refresh_token
+                    .as_deref()
+                    .map(|s| crypto.decrypt(s))
+                    .transpose()
+                    .ok()
+                    .flatten()
+                    .as_deref()
+                    == input.refresh_token
+            {
                 account.claim_verified_login(tx)?;
                 return Ok(account);
             }
         }
-        Self::relink(tx,crypto,input)
+        Self::relink(tx, crypto, input)
     }
     fn validate(tx: &Tx<'_>, id: Option<i64>, input: &AccountInput<'_>) -> Result<()> {
         let mut errors = Errors::default();
@@ -195,13 +214,18 @@ impl Account {
         )?;
         Ok(())
     }
-    /// Marking disconnected uses `update!`: `updated_at` changes; it does not claim a login.
+    /// Marking disconnected uses `update!`: dirty saves update the stamp; no-op saves keep it.
     pub fn mark_disconnected(tx: &Tx<'_>, id: i64, reason: &str) -> Result<()> {
         let account = Self::find(tx.conn(), id)?
             .ok_or(campfire_db::Error::RecordNotFound("GithubConnectedAccount"))?;
         account.validate_current(tx)?;
+        if account.disconnected_reason.as_deref() == Some(reason) {
+            return account.claim_verified_login(tx);
+        }
         tx.conn().execute("UPDATE github_connected_accounts SET disconnected_reason = ?, updated_at = ? WHERE id = ?", params![reason, tx.now(), id])?;
-        Ok(())
+        Self::find(tx.conn(), id)?
+            .ok_or(campfire_db::Error::RecordNotFound("GithubConnectedAccount"))?
+            .claim_verified_login(tx)
     }
 }
 
@@ -493,4 +517,12 @@ fn expires_in(value: &Value) -> Result<i64> {
             "GitHub returned an invalid expiry".into(),
         )),
     }
+}
+
+/// User#deactivate marks the linked account disconnected without revoking its remote grant.
+pub fn on_user_deactivation(tx: &mut Tx<'_>, user: &campfire_db::User) -> Result<()> {
+    if let Some(account) = Account::for_user(tx.conn(), user.id)? {
+        Account::mark_disconnected(tx, account.id, "Account deactivated")?;
+    }
+    Ok(())
 }

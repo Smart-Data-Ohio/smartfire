@@ -1,6 +1,6 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 316 mapped to Rust assertions; 110 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 317 mapped to Rust assertions; 109 explicitly deferred.
 
 These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors; profile/bot view and lifecycle cases remain explicit. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Remaining room-page/controller/system parity, helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
@@ -13,10 +13,10 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
 | `test/jobs/audit_log_github_execution_test.rb` | 0/6 | 6 |
 | `test/controllers/github/connections_controller_test.rb` | 8/13 | 5 |
-| `test/controllers/accounts/bots/github_connections_controller_test.rb` | 7/10 | 3 |
 | `test/controllers/github/webhooks_controller_test.rb` | 18/21 | 3 |
 | `test/jobs/github/deliver_subscription_event_job_test.rb` | 34/37 | 3 |
 | `test/system/github_pr_write_actions_test.rb` | 0/3 | 3 |
+| `test/controllers/accounts/bots/github_connections_controller_test.rb` | 8/10 | 2 |
 | `test/controllers/github/pull_request_threads_controller_test.rb` | 5/7 | 2 |
 | `test/controllers/rooms/github/pull_request_cards_controller_test.rb` | 13/15 | 2 |
 | `test/jobs/github/fetch_pull_request_job_test.rb` | 20/22 | 2 |
@@ -51,7 +51,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | a blank token is rejected | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | linking again after a disconnect replaces the token and clears the reason | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | the bot page shows the login without ever rendering the token | Deferred; WS15g continuation | — |
-| deactivating the bot disconnects its GitHub account like a human's | Deferred; WS15g continuation | — |
+| deactivating the bot disconnects its GitHub account like a human's | Mapped to grouped Rust assertions; WS15g | `github_user_and_bot_deactivation_disconnects_inside_real_user_transaction` |
 
 ## `test/controllers/agents/github/pull_request_actions_controller_test.rb` (21 tests)
 

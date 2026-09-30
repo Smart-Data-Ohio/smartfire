@@ -49,7 +49,11 @@ pub struct Env {
     /// App-owned reference domains run on Message's real save hooks, in its transaction.
     /// The flag lets importers reconcile rows without scheduling network fetches.
     pub message_reference_syncs: Vec<MessageReferenceSync>,
+    /// App-owned account disconnects run inside User::deactivate, before its status save.
+    pub user_deactivation_hooks: Vec<UserDeactivationHook>,
 }
+
+pub type UserDeactivationHook = fn(&mut Tx<'_>, &crate::User) -> Result<()>;
 
 pub type MessageReferenceSync = fn(&mut Tx<'_>, &crate::Message, bool) -> Result<()>;
 
@@ -61,6 +65,7 @@ impl Default for Env {
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 12,
             message_reference_syncs: Vec::new(),
+            user_deactivation_hooks: Vec::new(),
         }
     }
 }

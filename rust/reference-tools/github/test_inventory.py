@@ -15,7 +15,7 @@ names = {
     'test/controllers/github/pull_request_threads_controller_test.rb': ['github_discuss_http_redirect_persistence_membership_and_fetch_match_rails'] * 2 + [None,None] + ['github_discuss_security_requires_membership_root_parent_and_exact_reference'] * 3,
     'test/controllers/github/connections_controller_test.rb': ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 5 + [None,None] + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 3 + [None,None,None],
     'test/controllers/github/app_connections_controller_test.rb': ['github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange'] * 2 + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 3 + ['github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange'] + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 7,
-    'test/controllers/accounts/bots/github_connections_controller_test.rb': ['github_connections_http_identity_flash_revocation_and_audits_match_rails',None,'github_connections_security_enforces_sudo_admin_active_bot_and_single_use_state'] + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 5 + [None,None],
+    'test/controllers/accounts/bots/github_connections_controller_test.rb': ['github_connections_http_identity_flash_revocation_and_audits_match_rails',None,'github_connections_security_enforces_sudo_admin_active_bot_and_single_use_state'] + ['github_connections_http_identity_flash_revocation_and_audits_match_rails'] * 5 + [None,'github_user_and_bot_deactivation_disconnects_inside_real_user_transaction'],
     'test/controllers/rooms/github_subscriptions_controller_test.rb': [
         'github_subscription_http_status_flash_token_events_and_membership_match_rails',
     ] * 7 + ['github_subscription_http_security_rejects_nonmembers_plain_members_direct_deleted_and_cross_room'] * 3 + [
@@ -181,6 +181,7 @@ rust_tests = (root / 'crates/campfire/src/integrations/github/pull_requests/test
 rust_tests += (root / 'crates/campfire/src/controllers/github/card_tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/subscription_tests.rs').read_text()
 rust_tests += (root / 'crates/campfire/src/controllers/github/connection_tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/discussion_tests.rs').read_text()
 rust_tests += (root / 'crates/campfire/src/controllers/github/write_tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/lifecycle_tests.rs').read_text()
 for path in paths:
     content = subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True)
     tests = re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', content, re.M)

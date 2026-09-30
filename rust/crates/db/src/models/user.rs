@@ -494,6 +494,9 @@ impl User {
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
+        for disconnect in tx.env().user_deactivation_hooks.clone() {
+            disconnect(tx, self)?;
+        }
         let email = self.deactivated_email_address();
         self.update(
             tx,

@@ -23,3 +23,6 @@ mod discussion_tests;
 
 #[cfg(test)]
 mod write_tests;
+
+#[cfg(test)]
+mod lifecycle_tests;
