@@ -2,7 +2,8 @@
 
 {% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
 
-{% block content %}<section class="txt-align-center">
+{% block content %}
+<section class="txt-align-center">
   <div class="panel {% if ctx.flash_alert.is_some() %}shake{% endif %}">
     {{ h::account_logo_tag(ctx, Some("center margin-block-end txt-xx-large")) }}
 
@@ -30,7 +31,15 @@
           {{ h::image_tag(ctx, "arrow-right.svg", h::attrs().aria_hidden()) }}
           <span class="for-screen-reader">Go</span>
 {% endfilter %}      </fieldset>
-{% endfilter %}  </div>
+{% endfilter %}
+    {{ h::empty() }}
+  </div>
+
+  <nav class="txt-align-center txt-small margin-block-start" aria-label="About this workspace">
+    {{ h::link_to_text("About", &h::routes::about(), h::attrs().attr("target", "_blank").attr("rel", "noopener")) }} ·
+    {{ h::link_to_text("Privacy Policy", &h::routes::privacy(), h::attrs().attr("target", "_blank").attr("rel", "noopener")) }} ·
+    {{ h::link_to_text("Terms of Service", &h::routes::terms(), h::attrs().attr("target", "_blank").attr("rel", "noopener")) }}
+  </nav>
 
   {% include "accounts/_help_contact.html" %}
 </section>

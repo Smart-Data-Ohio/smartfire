@@ -14,6 +14,37 @@ pub use summary::*;
 mod people;
 pub use people::*;
 
+#[derive(Clone)]
+pub struct UserSession {
+    pub id: i64,
+    pub current: bool,
+    pub description: String,
+    pub ip_address: Option<String>,
+    pub last_active_at: jiff::Timestamp,
+    pub created_at: jiff::Timestamp,
+}
+#[derive(Template)]
+#[template(path="users/sessions/index.html",blocks=["head","nav","content"])]
+pub struct SessionsIndex<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub sessions: Vec<UserSession>,
+    pub now: jiff::Timestamp,
+}
+impl Page for SessionsIndex<'_> {
+    fn page_title(&self) -> Option<String> { Some("Your sessions".into()) }
+}
+impl SessionsIndex<'_> {
+    fn ip<'s>(&self,s: &'s UserSession) -> Option<&'s str> { s.ip_address.as_deref().filter(|v| !v.chars().all(char::is_whitespace)) }
+    fn last_active(&self,s: &UserSession) -> String { h::time_ago_in_words(&self.ctx.time_zone,s.last_active_at,self.now) }
+    fn signed_in(&self,s: &UserSession) -> h::Html {
+        h::local_datetime_tag(&self.ctx.time_zone,s.created_at,"date",h::attrs(),&self.ctx.time_zone.to_fs(s.created_at,"short"))
+    }
+}
+
+#[derive(Template)]
+#[template(path="users/profiles/_sessions.html")]
+pub struct ProfileSessions<'a> { pub ctx: &'a ViewContext<'a> }
+
 /// `users/new.html.erb` (the join page).
 #[derive(Template)]
 #[template(path = "users/new.html", blocks = ["head", "content"])]
@@ -24,8 +55,12 @@ pub struct New<'a> {
 }
 
 impl Page for New<'_> {
-    fn page_title(&self) -> Option<String> { Some("Sign up".into()) }
-    fn body_class(&self) -> Option<&str> { Some("signup") }
+    fn page_title(&self) -> Option<String> {
+        Some("Sign up".into())
+    }
+    fn body_class(&self) -> Option<&str> {
+        Some("signup")
+    }
 }
 
 /// `users/show.html.erb`.
@@ -39,7 +74,9 @@ pub struct Show<'a> {
 }
 
 impl Page for Show<'_> {
-    fn page_title(&self) -> Option<String> { Some(self.user.name.clone()) }
+    fn page_title(&self) -> Option<String> {
+        Some(self.user.name.clone())
+    }
 }
 
 /// `users/_ban_button.html.erb` on its own.
@@ -60,7 +97,9 @@ pub struct MentionUser {
 
 impl std::ops::Deref for MentionUser {
     type Target = UserSummary;
-    fn deref(&self) -> &UserSummary { &self.user }
+    fn deref(&self) -> &UserSummary {
+        &self.user
+    }
 }
 
 /// `users/_mention.html.erb`: the mention attachment's HTML.
@@ -101,7 +140,11 @@ pub struct ProfileMembership {
 
 impl ProfileMembership {
     pub fn involvement_room(&self) -> h::InvolvementRoom<'_> {
-        h::InvolvementRoom { id: self.room_id, param_key: &self.room_param_key, direct: self.direct }
+        h::InvolvementRoom {
+            id: self.room_id,
+            param_key: &self.room_param_key,
+            direct: self.direct,
+        }
     }
 }
 
@@ -109,6 +152,10 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
+    pub has_password: bool,
+    pub current_password_error: Option<&'a str>,
+    pub security: crate::two_factor::ProfileData,
+    pub now: jiff::Timestamp,
     pub ctx: &'a ViewContext<'a>,
     pub user: UserSummary,
     pub avatar_attached: bool,
@@ -118,14 +165,30 @@ pub struct ProfileShow<'a> {
 }
 
 impl<'a> ProfileShow<'a> {
+    fn security_panel(&self) -> h::Html {
+        h::raw(
+            crate::two_factor::Profile {
+                ctx: self.ctx,
+                data: self.security.clone(),
+                now: self.now,
+            }
+            .render()
+            .unwrap(),
+        )
+    }
     /// `profile_form_with(@user, **params)`.
     fn profile_form(&self) -> h::FormWith {
-        h::form_with(h::routes::user_profile()).model("user").method("patch").data("controller", "form")
+        h::form_with(h::routes::user_profile())
+            .model("user")
+            .method("patch")
+            .data("controller", "form")
     }
 }
 
 impl Page for ProfileShow<'_> {
-    fn page_title(&self) -> Option<String> { Some(self.user.name.clone()) }
+    fn page_title(&self) -> Option<String> {
+        Some(self.user.name.clone())
+    }
 }
 
 /// `users/profiles/_transfer.html.erb` on its own.
@@ -156,5 +219,7 @@ pub struct PushSubscriptionsIndex<'a> {
 }
 
 impl Page for PushSubscriptionsIndex<'_> {
-    fn page_title(&self) -> Option<String> { Some("Push notification subscriptions".into()) }
+    fn page_title(&self) -> Option<String> {
+        Some("Push notification subscriptions".into())
+    }
 }

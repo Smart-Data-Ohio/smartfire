@@ -32,7 +32,7 @@ pub async fn edit(c: &mut Ctx) -> Result {
 
     let secrets = c.app().secrets.clone();
     let (administrators, members): (Vec<_>, Vec<_>) =
-        users.iter().map(|user| presenters::user_summary(&secrets, user)).partition(|user| user.administrator());
+        c.app().db.read(move |conn| users.iter().map(|user| presenters::account_user_summary(conn,&secrets,user)).collect::<campfire_db::Result<Vec<_>>>()).await.map_err(Error::internal)?.into_iter().partition(|user| user.administrator());
     let next_page = (!page.is_last()).then(|| page.next_param().to_string());
     let restrict_room_creation_to_administrators = account.settings().restrict_room_creation_to_administrators();
     framed_page!(c, StatusCode::OK, |ctx| accounts::Edit {

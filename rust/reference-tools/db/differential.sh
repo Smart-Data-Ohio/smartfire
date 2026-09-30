@@ -33,7 +33,7 @@ reference() {
     -e RAILS_ENV=test -e RAILS_LOG_LEVEL=warn -e SCHEMA_QUERY="$SCHEMA_QUERY" -e CAMPFIRE_FIXTURES_NOW \
     -v "${CAMPFIRE_REFERENCE:-$ROOT/..}/test:/rails/test:ro" \
     -v "$ROOT/crates/db/ruby:/tools:ro" -v "$OUT:/out" \
-    "${PARITY_IMAGE:-campfire-reference:latest}" sh -ec "$1" 2> >(grep -v -e VIPS -e '^$' >&2)
+    "${PARITY_IMAGE:-${REFERENCE_IMAGE:-campfire-reference:latest}}" sh -ec "$1" 2> >(grep -v -e VIPS -e '^$' >&2)
 }
 
 echo "== reference: db:prepare, db:fixtures:load, scenario.rb, save_touches.rb"
@@ -48,10 +48,18 @@ reference '
   bin/rails runner /tools/save_touches.rb /out/save_touches_ruby.json'
 
 echo "== campfire_db differential tests"
-CAMPFIRE_RUBY_FIXTURES_DB=$OUT/fixtures_ruby.sqlite3 \
-CAMPFIRE_RUBY_SCENARIO_DB=$OUT/scenario_ruby.sqlite3 \
-CAMPFIRE_EXPORT_DB=$OUT/rust_export.sqlite3 \
-  cargo test -j "${CARGO_BUILD_JOBS:-4}" -p campfire_db -- --ignored --test-threads=2
+export CAMPFIRE_RUBY_FIXTURES_DB=$OUT/fixtures_ruby.sqlite3
+export CAMPFIRE_RUBY_SCENARIO_DB=$OUT/scenario_ruby.sqlite3
+export CAMPFIRE_EXPORT_DB=$OUT/rust_export.sqlite3
+# Only these three tests belong to this fixture workflow. Other ignored tests (for example
+# WS9's encrypted-credential round trip) have their own reference inputs and runners.
+test_status=0
+for test in tests::fixtures_test::fixtures_match_ruby_row_for_row \
+    tests::differential_test::scenario_matches_ruby tests::fixtures_test::export_database_for_rails; do
+  cargo test --locked -j "${CARGO_BUILD_JOBS:-4}" -p campfire_db "$test" -- --exact --ignored || test_status=1
+done
+[ "$test_status" -eq 0 ] || exit "$test_status"
+
 
 echo "== message save touches"
 diff -u "$ROOT/crates/db/src/tests/message_save_touches.json" "$OUT/save_touches_ruby.json"

@@ -1,6 +1,8 @@
 //! `Accounts::UsersController` (reference/app/controllers/accounts/users_controller.rb): the
 //! people list's next pages, role changes and removal.
 
+pub mod two_factor_resets;
+
 use askama::Template;
 use campfire_db::{Role, User, UserChanges};
 use campfire_kit::{Ctx, Error, Result, format};
@@ -20,7 +22,8 @@ pub async fn index(c: &mut Ctx) -> Result {
     let users = c.app().db.read(User::active_ordered_without_bots).await.map_err(Error::internal)?;
     let page = Page::new(c.param_str("page"), users.len() as i64, &[500]);
     let secrets = c.app().secrets.clone();
-    let users: Vec<_> = page.records(&users).iter().map(|user| presenters::user_summary(&secrets, user)).collect();
+    let selected=page.records(&users).to_vec();
+    let users=c.app().db.read(move|conn| selected.iter().map(|user|presenters::account_user_summary(conn,&secrets,user)).collect::<campfire_db::Result<Vec<_>>>()).await.map_err(Error::internal)?;
     let next_page = (!page.is_last()).then(|| page.next_param().to_string());
 
     let layout = Layout::load(c).await?;
@@ -34,6 +37,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut user = set_user(c).await?;
+    concerns::sudo::require_sudo_mode(c)?;
     let role = match c.params.require("user")?.get("role").and_then(|role| role.as_str()) {
         Some("administrator") => Role::Administrator,
         _ => Role::Member,
@@ -51,6 +55,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut user = set_user(c).await?;
+    concerns::sudo::require_sudo_mode(c)?;
     c.app().db.write(move |tx| user.deactivate(tx)).await.map_err(Error::internal)?;
     redirect_to_edit_account(c)
 }

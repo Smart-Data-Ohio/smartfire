@@ -14,6 +14,7 @@ pub mod tours;
 mod preferences_tests;
 #[cfg(test)]
 mod people_tests;
+pub mod sessions;
 
 use askama::Template;
 use campfire_db::{Account, NewUser, User};

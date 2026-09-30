@@ -1,0 +1,4687 @@
+{
+  "profile": {
+    "missing": {
+      "params": {
+        "email_address": "ws9-reviewed@example.test",
+        "password": "proposed-password",
+        "name": "Submitted name",
+        "bio": "Submitted bio"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is required to change your email address.\n        </p>\n"
+    },
+    "blank": {
+      "params": {
+        "email_address": "ws9-reviewed@example.test",
+        "current_password": "  "
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is required to change your email address.\n        </p>\n"
+    },
+    "wrong": {
+      "params": {
+        "email_address": "ws9-reviewed@example.test",
+        "current_password": "wrong"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is incorrect.\n        </p>\n"
+    },
+    "new_is_not_current": {
+      "params": {
+        "email_address": "ws9-reviewed@example.test",
+        "password": "proposed-password",
+        "current_password": "proposed-password"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is incorrect.\n        </p>\n"
+    },
+    "correct": {
+      "params": {
+        "email_address": "ws9-reviewed@example.test",
+        "current_password": "secret123456"
+      },
+      "status": 302,
+      "email": "ws9-reviewed@example.test",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": "2026-03-02T16:00:00.000000Z",
+      "allowed": true,
+      "audits": [
+        {
+          "action": "user.email.change",
+          "actor_id": 127326141,
+          "actor_label": "David <ws9-reviewed@example.test>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <ws9-reviewed@example.test>",
+          "details": {
+            "email_address": {
+              "before": "david@37signals.com",
+              "after": "ws9-reviewed@example.test"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "email_and_password": {
+      "params": {
+        "email_address": "ws9-reviewed@example.test",
+        "password": "proposed-password",
+        "current_password": "secret123456"
+      },
+      "status": 302,
+      "email": "ws9-reviewed@example.test",
+      "name": "David",
+      "bio": null,
+      "password_changed": true,
+      "marker": "2026-03-02T16:00:00.000000Z",
+      "allowed": true,
+      "audits": [
+        {
+          "action": "user.email.change",
+          "actor_id": 127326141,
+          "actor_label": "David <ws9-reviewed@example.test>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <ws9-reviewed@example.test>",
+          "details": {
+            "email_address": {
+              "before": "david@37signals.com",
+              "after": "ws9-reviewed@example.test"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "user.password.change",
+          "actor_id": 127326141,
+          "actor_label": "David <ws9-reviewed@example.test>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <ws9-reviewed@example.test>",
+          "details": {},
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "case_only": {
+      "params": {
+        "email_address": "DAVID@37SIGNALS.COM",
+        "name": "Submitted name",
+        "bio": "Submitted bio"
+      },
+      "status": 302,
+      "email": "DAVID@37SIGNALS.COM",
+      "name": "Submitted name",
+      "bio": "Submitted bio",
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "whitespace_only": {
+      "params": {
+        "email_address": "  david@37signals.com  "
+      },
+      "status": 302,
+      "email": "  david@37signals.com  ",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "password_only": {
+      "params": {
+        "password": "proposed-password"
+      },
+      "status": 302,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": true,
+      "marker": null,
+      "allowed": true,
+      "audits": [
+        {
+          "action": "user.password.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <david@37signals.com>",
+          "details": {},
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "passwordless": {
+      "params": {
+        "email_address": "ws9-reviewed@example.test"
+      },
+      "status": 302,
+      "email": "ws9-reviewed@example.test",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": "2026-03-02T16:00:00.000000Z",
+      "allowed": true,
+      "audits": [
+        {
+          "action": "user.email.change",
+          "actor_id": 127326141,
+          "actor_label": "David <ws9-reviewed@example.test>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <ws9-reviewed@example.test>",
+          "details": {
+            "email_address": {
+              "before": "david@37signals.com",
+              "after": "ws9-reviewed@example.test"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "unicode_case_only": {
+      "params": {
+        "email_address": "straße@example.test"
+      },
+      "status": 302,
+      "email": "straße@example.test",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "nil_email_correct": {
+      "params": {
+        "email_address": null,
+        "name": null,
+        "bio": null,
+        "current_password": "secret123456"
+      },
+      "status": 302,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": "2026-03-02T16:00:00.000000Z",
+      "allowed": true,
+      "audits": [
+        {
+          "action": "user.email.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <david@37signals.com>",
+          "details": {
+            "email_address": {
+              "before": "david@37signals.com",
+              "after": "david@37signals.com"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "nil_email_missing": {
+      "params": {
+        "email_address": null,
+        "password": "proposed-password"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is required to change your email address.\n        </p>\n"
+    },
+    "array_email_missing": {
+      "params": {
+        "email_address": [
+          "ws9-reviewed@example.test"
+        ],
+        "name": "Submitted name"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is required to change your email address.\n        </p>\n"
+    },
+    "hash_email_missing": {
+      "params": {
+        "email_address": {
+          "value": "ws9-reviewed@example.test"
+        },
+        "name": "Submitted name"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is required to change your email address.\n        </p>\n"
+    }
+  },
+  "failure": [
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "david@37signals.com",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "another@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "a-password-in-email",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "ANOTHER@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray1@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray2@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray3@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray4@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray5@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray6@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray7@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray8@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray9@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray10@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray11@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray12@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray13@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray14@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray14@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray15@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray14@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray15@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray16@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray14@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray15@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray16@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray17@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray14@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray15@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray16@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray17@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray18@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray14@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray15@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray16@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray17@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password",
+            "suppressed_count": 1
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray19@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray14@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray15@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray16@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray17@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password",
+            "suppressed_count": 2
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray20@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray14@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray15@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray16@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray17@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password",
+            "suppressed_count": 3
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "email": "spray21@example.test",
+      "status": 429,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "another@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray1@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray2@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray3@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray4@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray5@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray6@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray7@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray8@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray9@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray10@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray11@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray12@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray13@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray14@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray15@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray16@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "spray17@example.test",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password",
+            "suppressed_count": 4
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    }
+  ],
+  "transfer": {
+    "status": 400,
+    "audits": [
+      {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "[unrecognized]",
+        "target_type": null,
+        "target_id": null,
+        "target_label": null,
+        "details": {
+          "method": "transfer"
+        },
+        "ip_address": "127.0.0.1",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    ]
+  },
+  "failure_windows": [
+    {
+      "offset": 0,
+      "ip": "192.0.2.10",
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.10",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "offset": 0,
+      "ip": "192.0.2.20",
+      "email": "DAVID@37SIGNALS.COM",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.10",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "DAVID@37SIGNALS.COM",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.20",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "offset": 299,
+      "ip": "192.0.2.10",
+      "email": "DAVID@37SIGNALS.COM",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.10",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "DAVID@37SIGNALS.COM",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.20",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "offset": 300,
+      "ip": "192.0.2.10",
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.10",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "DAVID@37SIGNALS.COM",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.20",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "offset": 301,
+      "ip": "192.0.2.10",
+      "email": "david@37signals.com",
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.10",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "DAVID@37SIGNALS.COM",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.20",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "david@37signals.com",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "192.0.2.10",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    }
+  ]
+}
