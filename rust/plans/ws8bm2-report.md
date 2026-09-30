@@ -309,3 +309,16 @@ WS8bm2 reference check self-test: 2 injected source-byte/file-set differences re
 ```
 
 The final fresh-clone verification will replace historical command summaries above. Status remains partial; next are message links/files, integration gaps, reminder push and browser/deferred Rails cases.
+
+## Message-link endpoint and room Files continuation slice
+
+New domain modules `db/models/{message_quote,room_files}.rs` keep reference scope, source visibility and bounded cumulative file/Drive listing independent of HTML. New `controllers/rooms/{message_links,files}.rs` authenticate and authorize before reading. Source frames return a viewer-neutral card only for a current source-room member and a non-system-note source; others get the private chip with no source facts. Missing/foreign references return Rails' empty 404. New plain models/templates in `views/{message_links,room_files}.rs` match the pinned quote responses and fifteen Files sections exactly. Files preserve upload attachment ordering, literal case-insensitive filename filters, the five fixed MIME groups (including SQL NULL semantics), independently capped upload/Drive pages and thread/root jump paths. Drive rows contain only picker IDs and generic labels. Storage exposes one bounded blob lookup; creators are joined in the listing reads.
+
+17 owned tests pass: 5/12 named Rails quote cases, 8/8 named Rails Files cases and four additional byte/size/page/privacy checks. The full HTTP SELECT-execution trace installs on all reader connections and counts cached statements as well; four versus sixteen upload/Drive rows cost the same queries. A newest foreign upload made the isolation check sensitive to the compiled scope regression. Three Files mutations (scope, literal LIKE, lazy blob reads) and one quote privacy mutation fail and restore sources. Initial real endpoint/security run failed all fourteen checks before implementation. Quotes still require WS8b-m root composition, cache and edit/delete refresh integration for the other seven named cases; these are not claimed as endpoint coverage.
+
+```text
+test result: FAILED. 0 passed; 14 failed; 0 ignored; 0 measured; 467 filtered out; finished in 0.35s
+WS8bm2 links/files Rails oracle: 15 Files sections; 5 quote HTTP responses; 2 quote partials; 16 size values; 9 fixture tables
+WS8bm2 discrimination: 3 compiled regressions detected; sources restored
+WS8bm2 discrimination: 1 compiled regressions detected; sources restored
+```

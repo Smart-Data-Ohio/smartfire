@@ -161,3 +161,6 @@ pub struct Platform {
     /// `ApplicationPlatform#operating_system` ("macOS", "Windows", "iPhone", ...).
     pub operating_system: String,
 }
+
+pub mod room_files;
+pub mod message_links;

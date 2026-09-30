@@ -132,6 +132,15 @@ impl Blob {
         Ok(conn.prepare_cached(&SQL)?.query_row([id], Blob::from_row).optional()?)
     }
 
+    /// WS8bm2 room Files: one blob read for the bounded upload window, including duplicates.
+    pub fn find_many(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Blob>> {
+        if ids.is_empty() { return Ok(std::collections::HashMap::new()); }
+        let sql = format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE id IN ({})", vec!["?"; ids.len()].join(","));
+        let mut statement = conn.prepare(&sql)?;
+        let blobs = statement.query_map(rusqlite::params_from_iter(ids), Self::from_row)?;
+        Ok(blobs.map(|blob| blob.map(|b| (b.id, b))).collect::<rusqlite::Result<_>>()?)
+    }
+
     pub fn find_by_key(conn: &Connection, key: &str) -> Result<Option<Blob>> {
         static SQL: LazyLock<String> = LazyLock::new(|| format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE key = ?1"));
         Ok(conn.prepare_cached(&SQL)?.query_row([key], Blob::from_row).optional()?)
