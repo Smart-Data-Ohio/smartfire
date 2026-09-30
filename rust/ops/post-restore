@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+# Mirrors hooks/post-restore's database restore, using the app's path precedence.
+storage="${CAMPFIRE_STORAGE_PATH:-${CAMPFIRE_STORAGE:-/rails/storage}}"
+db_name="${RAILS_ENV:-production}.sqlite3"
+db="${CAMPFIRE_DATABASE_PATH:-$storage/db/$db_name}"
+backups="${CAMPFIRE_BACKUPS_PATH:-$storage/backups}"
+snapshot="$backups/$(basename "$db")"
+
+if [ -f "$snapshot" ]; then
+  mkdir -p "$(dirname "$db")"
+  cp "$snapshot" "$db"
+  rm -f "$db-wal" "$db-shm"
+fi
+# Redis removal is an explicit cutover step, never a Rust restore side effect.
