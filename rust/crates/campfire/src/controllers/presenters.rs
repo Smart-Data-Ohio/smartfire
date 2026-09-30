@@ -3,6 +3,7 @@
 //! partials) computed up front.
 
 pub mod accounts;
+pub mod rooms_directory;
 pub mod switcher;
 pub mod attachments;
 pub mod page;
@@ -26,7 +27,7 @@ use campfire_views::messages::{
 };
 use campfire_views::messages::support::RubyNumber;
 use campfire_views::fragment_cache;
-use campfire_views::rooms::{RoomView, room_display_name};
+use campfire_views::rooms::RoomView;
 use rails_compat::Secrets;
 use regex::Regex;
 use rusqlite::OptionalExtension;
@@ -172,24 +173,21 @@ impl<'a> Presenter<'a> {
 
     /// `room_display_name(room, for_user:)`.
     pub fn room_display_name(&self, room: &Room, for_user: Option<&User>) -> Result<String> {
-        let names: Vec<String> = if room.direct() {
-            room.users(self.conn)?
-                .into_iter()
-                .filter(|user| for_user.is_none_or(|for_user| for_user.id != user.id))
-                .map(|user| user.name)
-                .collect()
+        Ok(if room.direct() {
+            room.direct_display_name(self.conn, for_user, None)?.unwrap_or_default()
         } else {
-            Vec::new()
-        };
-        Ok(room_display_name(room.name.as_deref(), room.direct(), &names, for_user.map(|u| u.name.as_str())))
+            room.name.clone().unwrap_or_default()
+        })
     }
 
     pub fn room_view(&self, room: &Room, for_user: &User) -> Result<RoomView> {
+        let header = rooms_directory::header(self.conn, room, for_user)?;
         Ok(RoomView {
             id: room.id,
             kind: room_kind(room.room_type),
             name: room.name.clone(),
-            display_name: self.room_display_name(room, Some(for_user))?,
+            display_name: header.display_name.clone(),
+            header: Some(header),
         })
     }
 

@@ -25,6 +25,10 @@ try:
     for path in paths:
         source = subprocess.check_output(["git", "show", f"bb6c5d78:rust/{path}"], cwd=repo)
         if path.endswith("controllers/rooms.rs"):
+            # Compile the old controllers against the new row API; this only supplies the
+            # render context, leaving all old authorization and mutation logic unchanged.
+            source = source.replace(b'&base_url, |_| {', b'&base_url, |ctx| {')
+            source = source.replace(b'SidebarSharedPartial { room: sidebar_room }', b'SidebarSharedPartial { ctx, room: sidebar_room }')
             source += b"\n#[cfg(test)]\nmod parity_tests;\n"
         (rust / path).write_bytes(source)
     result = subprocess.run(command, cwd=rust, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

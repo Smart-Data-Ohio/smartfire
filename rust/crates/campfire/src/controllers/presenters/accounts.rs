@@ -179,7 +179,10 @@ pub fn sidebar(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db
 
 /// `users/sidebars/rooms/_direct` locals: `room.users.without(membership.user).presence || [ membership.user ]`.
 pub fn sidebar_direct(conn: &Connection, secrets: &Secrets, membership: &Membership, room: &Room) -> campfire_db::Result<SidebarDirect> {
-    let users = room.users(conn)?;
+    // The Rails preload groups Membership records, not the room.users join. In the seeded
+    // group these association orders differ; avatars follow membership insertion order.
+    let mut statement = conn.prepare_cached("SELECT users.* FROM memberships INNER JOIN users ON users.id=memberships.user_id WHERE memberships.room_id=? ORDER BY memberships.id")?;
+    let users = statement.query_map([room.id], User::from_row)?.collect::<rusqlite::Result<Vec<_>>>()?;
     let mut members: Vec<&User> = users.iter().filter(|user| user.id != membership.user_id).collect();
     let own;
     if members.is_empty() {
@@ -333,11 +336,16 @@ pub fn room_menu(room: &Room, membership: Option<&Membership>, viewer: Option<&U
 
 pub fn sidebar_direct_label(name: Option<&str>, members: &[UserSummary]) -> String {
     if let Some(name)=name.filter(|s|!campfire_richtext::ruby::is_blank(s)){return name.into();}
-    if members.len()<=1 {return members.first().map(UserSummary::first_name).unwrap_or_default().to_string();}
+    if members.len()<=1 {return members.first().map(|u|sidebar_first_name(&u.name)).unwrap_or_default().to_string();}
     let mut names: Vec<&str>=members.iter().map(|m|m.name.as_str()).collect();
     names.sort_by_key(|n|n.to_lowercase());
-    let label=names.iter().take(3).map(|n|n.split_whitespace().next().unwrap_or_default()).collect::<Vec<_>>().join(", ");
+    let label=names.iter().take(3).map(|n|sidebar_first_name(n)).collect::<Vec<_>>().join(", ");
     if names.len()>3 {format!("{label} +{}",names.len()-3)}else{label}
+}
+
+fn sidebar_first_name(name: &str) -> &str {
+    // Ruby String#split(" "): vertical tab separates words; NBSP does not.
+    name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c']).find(|part|!part.is_empty()).unwrap_or_default()
 }
 
 pub fn resolve_room_icon(conn: &Connection, name: Option<&str>) -> Option<campfire_views::helpers::AvatarIcon> {

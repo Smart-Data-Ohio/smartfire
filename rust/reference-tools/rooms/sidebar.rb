@@ -14,7 +14,7 @@ render_row = lambda do |name, room, membership, actor|
   Current.reset
   Current.user = actor
   direct = room.direct?
-  members = direct ? room.users.to_a.reject { |u| u.id == membership.user_id } : []
+  members = direct ? room.memberships.includes(:user).map(&:user).reject { |u| u.id == membership.user_id } : []
   members = [membership.user] if direct && members.empty?
   label = if direct
     members.many? || room.name.present? ? helpers.direct_room_display_name(room, members: members, for_user: membership.user) : members.first.name.split(" ")[0]
@@ -34,6 +34,8 @@ jason = User.find(149087659)
 jz = User.find(773523953)
 shared = Room.find(486777696)
 member = shared.memberships.find_by!(user: david)
+seed_group = Room.find(699448329)
+render_row.call("direct_seed_group", seed_group, seed_group.memberships.find_by!(user: david), david)
 render_row.call("shared_admin_read", shared, member, david)
 member.update!(unread_at: Time.current, involvement: "muted", favorite_position: 3)
 category = david.room_categories.create!(name: "Squad")

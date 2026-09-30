@@ -1,5 +1,51 @@
 [
   {
+    "name": "direct_seed_group",
+    "direct": true,
+    "room_id": 699448329,
+    "param_key": "rooms_direct",
+    "room_name": null,
+    "unread": false,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/699448329/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "Jason, JZ, Kevin"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 149087659,
+        "name": "Jason",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+      },
+      {
+        "id": 773523953,
+        "name": "JZ",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+      },
+      {
+        "id": 712064548,
+        "name": "Kevin",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+      }
+    ],
+    "label": "Jason, JZ, Kevin",
+    "membership_id": 1021579682,
+    "membership_updated_at": "2026-03-02T13:00:00.000000Z",
+    "updated_at_epoch": "1772456400000",
+    "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772456400000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, JZ, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, JZ, Kevin\n      </span>\n    </span>\n</a></div>"
+  },
+  {
     "name": "shared_admin_read",
     "direct": false,
     "room_id": 486777696,

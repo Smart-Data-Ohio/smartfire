@@ -1,6 +1,9 @@
 //! Views for `reference/app/views/rooms`, plus `RoomsHelper`, `Rooms::InvolvementsHelper` and
 //! the `MessagesHelper` tags the room screen uses.
 
+mod header;
+pub use header::{HeaderIdentity, header_identity};
+
 use askama::Template;
 use jiff::Timestamp;
 use serde::Deserialize;
@@ -36,9 +39,26 @@ pub struct RoomView {
     pub name: Option<String>,
     /// `room_display_name(room)` for `Current.user`.
     pub display_name: String,
+    #[serde(default)]
+    pub header: Option<HeaderIdentity>,
 }
 
 impl RoomView {
+    pub fn header_html(&self, ctx: &ViewContext) -> h::Html {
+        let fallback;
+        let header = match &self.header {
+            Some(header) => header,
+            None => {
+                fallback = HeaderIdentity {
+                    id: self.id, param_key: self.kind.param_key().into(), direct: self.is_direct(),
+                    kind_label: if self.is_direct() { "Direct message" } else { "Channel" }.into(),
+                    display_name: self.display_name.clone(), icon: None,
+                };
+                &fallback
+            }
+        };
+        header_identity(ctx, header)
+    }
     pub fn dom_id(&self, prefix: &str) -> String {
         room_dom_id(self.kind, self.id, prefix)
     }

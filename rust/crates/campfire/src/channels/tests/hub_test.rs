@@ -16,6 +16,9 @@ use crate::controllers::presenters::test_support::{
 const DISCONNECT_RECONNECT: &str = r#"{"type":"disconnect","reason":"remote","reconnect":true}"#;
 const UNAUTHORIZED: &str = r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#;
 
+#[path = "directory_test.rs"]
+mod directory;
+
 struct Hub {
     app: TestApp,
     url: String,
