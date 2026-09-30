@@ -6,7 +6,7 @@
     "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?.",
+    "test/models/message_streaming_test.rb": "19 named comparisons include installed production link-reference callbacks. Four rendered start/trailing and full activity/finalization cases still await peer adapters.",
     "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation.",
     "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence."
   },
@@ -115,36 +115,7 @@
         "stream start broadcasts the append without the unread broadcast",
         "finalize fires every side effect exactly once",
         "appends re-render without firing side effects",
-        "a coalesced update sends a trailing broadcast with the final text",
-        "link references sync at finalize, not while streaming"
-      ]
-    },
-    {
-      "rails_file": "test/models/webhook_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "payload",
-        "delivery",
-        "delivery with OK text reply",
-        "sync text reply lands in the triggering message's thread",
-        "legacy sync reply lands in the triggering message's thread",
-        "sync reply to a board post lands in the post",
-        "sync reply to a root message references the trigger",
-        "sync attachment reply lands in the triggering message's thread",
-        "agent delivery that times out raises instead of posting",
-        "agent sync reply into a locked thread is logged, not raised",
-        "legacy delivery without a secret sends no signature",
-        "legacy delivery with a secret signs the body",
-        "legacy sync reply into a locked thread still raises",
-        "delivery with OK attachment reply",
-        "delivery with error reply",
-        "delivery that times out",
-        "delivery to a loopback URL is refused without posting",
-        "delivery to a hostname resolving to a private address is refused",
-        "agent delivery to a refused URL raises instead of replying",
-        "agent approval webhook to a refused URL raises",
-        "delivery to an unresolvable hostname raises without posting",
-        "signing secret generation mints exactly one secret when raced"
+        "a coalesced update sends a trailing broadcast with the final text"
       ]
     },
     {

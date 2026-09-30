@@ -165,6 +165,16 @@ impl TestApp {
         })
     }
 
+    pub async fn stop_jobs(self) -> (crate::app::App, tempfile::TempDir) {
+        let Self { booted, _dir } = self;
+        let app = booted.app.clone();
+        booted
+            .jobs
+            .shutdown(std::time::Duration::from_secs(5))
+            .await;
+        (app, _dir)
+    }
+
     pub fn db(&self) -> &campfire_db::Database {
         &self.booted.app.db
     }

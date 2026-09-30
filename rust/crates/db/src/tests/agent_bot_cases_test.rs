@@ -137,3 +137,30 @@ fn ws11_bot_case_pre_migration_fixture_digest_keeps_working() {
         Ok(())
     });
 }
+
+#[test]
+fn ws11_webhook_case_signing_secret_generation_adopts_winner() {
+    let t = TestDb::new();
+    let crypto = rails_compat::ar_encryption::ArEncryption::new(&rails_compat::Secrets::new(
+        &"ws11 public test material ".repeat(8),
+    ));
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE webhooks SET signing_secret=NULL WHERE user_id=?",
+            [id("bender")],
+        )?;
+        let mut stale = crate::Webhook::find_by_user(tx.conn(), id("bender"))?.unwrap();
+        assert!(stale.signing_secret(&crypto)?.is_none());
+        let winner = crate::Webhook::find_by_user(tx.conn(), id("bender"))?
+            .unwrap()
+            .ensure_signing_secret(tx, &crypto)?;
+        assert_eq!(stale.ensure_signing_secret(tx, &crypto)?, winner);
+        assert_eq!(
+            crate::Webhook::find_by_user(tx.conn(), id("bender"))?
+                .unwrap()
+                .signing_secret(&crypto)?,
+            Some(winner)
+        );
+        Ok(())
+    });
+}

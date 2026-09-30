@@ -15,7 +15,7 @@ for group in mapping['files']:
     assert len(set(mapped)) == len(mapped), group['rails_file']
     assert mapped == [name for name in names if name in mapped], group['rails_file']
     rust = (ROOT / group['rust_file']).read_text()
-    ports = re.findall(r'^(?:async )?fn (ws11_\w+)\(', rust, re.M)
+    ports = re.findall(r'^\s*(?:async )?fn (ws11_\w+)\(', rust, re.M)
     expected_ports = [case['rust'] for case in group['cases']]
     assert all(port in ports for port in expected_ports), group['rust_file']
     total, prior = counts.get(group['rails_file'], (len(names), set()))
