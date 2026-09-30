@@ -5,6 +5,7 @@ use crate::{
     Ban, Membership, Message, NewUser, PasswordDigest, PushSubscription, Role, Room, RoomType, Search, Session,
     Status, User, UserChanges, Webhook,
 };
+use crate::models::user::{BOT_KEY_PLACEHOLDER, digest_bot_token, secure_compare};
 
 fn user(t: &TestDb, label: &str) -> User {
     let user_id = id(label);
@@ -140,15 +141,110 @@ fn initials_and_title() {
 
 // User::Bot
 
+/// `User::Bot` "creation writes the digest alone and stored bots hide their key".
 #[test]
 fn create_bot() {
     let t = TestDb::new();
     let bot = t.write(|tx| User::create_bot(tx, "Bender", None));
-    let token = bot.bot_token.clone().unwrap();
+    let token = bot.plain_bot_token.clone().unwrap();
     assert_eq!(token.len(), 12);
     assert_eq!(bot.bot_key(), format!("{}-{token}", bot.id));
     assert_eq!(bot.role, Role::Bot);
     assert!(bot.password_digest.is_none());
+
+    let stored = t.read(|c| User::find(c, bot.id));
+    assert_eq!(stored.bot_token_digest, Some(digest_bot_token(&token)));
+    let plaintext: Option<String> = t.read(|c| {
+        Ok(c.query_row("SELECT bot_token FROM users WHERE id = ?", [bot.id], |r| r.get(0))?)
+    });
+    assert_eq!(plaintext, None, "the plaintext column is never written");
+    assert_eq!(stored.plain_bot_key(), None);
+    assert_eq!(stored.bot_key(), BOT_KEY_PLACEHOLDER);
+    assert_eq!(
+        t.read(|c| User::authenticate_bot(c, &format!("{}-{token}", bot.id))).map(|u| u.id),
+        Some(bot.id)
+    );
+}
+
+/// `User.digest_bot_token` against vectors from our Rails.
+#[test]
+fn bot_token_digest_matches_rails() {
+    assert_eq!(digest_bot_token("BenderToken1"), BENDER_TOKEN_DIGEST);
+    assert_eq!(
+        digest_bot_token("5M0aLYwQyBXOXa5Wsz6NZb11EE4tW2"),
+        "aaf402e02932d4f28f1f1115b44fd22b6a17b658f58402d28db3bfa02b404ae9"
+    );
+}
+
+/// The bender fixture's key authenticates by its digest alone.
+#[test]
+fn fixture_bot_authenticates_by_digest() {
+    let t = TestDb::new();
+    let key = format!("{}-BenderToken1", id("bender"));
+    assert_eq!(t.read(|c| User::authenticate_bot(c, &key)).map(|u| u.id), Some(id("bender")));
+}
+
+/// A tampered key is refused: every changed character of the token, a truncated or extended
+/// token, another bot's id, and a leftover plaintext token ("leftover plaintext is never
+/// consulted").
+#[test]
+fn tampered_bot_keys_are_refused() {
+    let t = TestDb::new();
+    let bot = t.write(|tx| User::create_bot(tx, "Bender", None));
+    let token = bot.plain_bot_token.clone().unwrap();
+    let key = bot.bot_key();
+    assert!(t.read(|c| User::authenticate_bot(c, &key)).is_some());
+
+    let mut tampered = Vec::new();
+    for i in 0..token.len() {
+        let mut bytes = token.clone().into_bytes();
+        bytes[i] = if bytes[i] == b'x' { b'y' } else { b'x' };
+        tampered.push(format!("{}-{}", bot.id, String::from_utf8(bytes).unwrap()));
+    }
+    tampered.push(format!("{}-{}", bot.id, &token[..11]));
+    tampered.push(format!("{}-{token}x", bot.id));
+    tampered.push(format!("{}-{}", bot.id, token.to_uppercase()));
+    tampered.push(format!("{}-{token}", id("bender")));
+    tampered.push(format!("{}-{}", bot.id, digest_bot_token(&token)));
+    for key in &tampered {
+        assert!(t.read(|c| User::authenticate_bot(c, key)).is_none(), "{key}");
+    }
+
+    let bot_id = bot.id;
+    t.write(move |tx| {
+        tx.conn().execute("UPDATE users SET bot_token = 'DecoyToken12' WHERE id = ?", [bot_id])?;
+        Ok(())
+    });
+    assert!(t.read(|c| User::authenticate_bot(c, &format!("{bot_id}-DecoyToken12"))).is_none());
+    assert!(t.read(|c| User::authenticate_bot(c, &key)).is_some());
+}
+
+/// "a bot without a digest cannot authenticate until its key is reset"
+#[test]
+fn a_bot_without_a_digest_cannot_authenticate_until_its_key_is_reset() {
+    let t = TestDb::new();
+    let bot = t.write(|tx| User::create_bot(tx, "Legacy", None));
+    let bot_id = bot.id;
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE users SET bot_token = 'OldRelease12', bot_token_digest = NULL WHERE id = ?",
+            [bot_id],
+        )?;
+        Ok(())
+    });
+    assert!(t.read(|c| User::authenticate_bot(c, &format!("{bot_id}-OldRelease12"))).is_none());
+    let new_key = t.write(move |tx| User::find(tx.conn(), bot_id)?.reset_bot_key(tx));
+    assert_eq!(t.read(|c| User::authenticate_bot(c, &new_key)).map(|u| u.id), Some(bot_id));
+}
+
+/// `secure_compare`: equal only for identical bytes of the same length.
+#[test]
+fn secure_compare_needs_identical_bytes() {
+    assert!(secure_compare(b"abc", b"abc"));
+    assert!(!secure_compare(b"abc", b"abd"));
+    assert!(!secure_compare(b"abc", b"ab"));
+    assert!(!secure_compare(b"", b"a"));
+    assert!(secure_compare(b"", b""));
 }
 
 #[test]
@@ -172,17 +268,32 @@ fn create_bot_with_webhook() {
     assert_eq!(t.read(|c| User::find(c, bot.id)).name, "Bot2");
 }
 
+/// "reset stores the digest alone, clears leftover plaintext, and retires the old key"
 #[test]
 fn reset_bot_key() {
     let t = TestDb::new();
     let bot = t.write(|tx| User::create_bot(tx, "Bender", None));
+    let bot_id = bot.id;
+    t.write(move |tx| {
+        tx.conn().execute("UPDATE users SET bot_token = 'PreRetire123' WHERE id = ?", [bot_id])?;
+        Ok(())
+    });
     let first = bot.bot_key();
-    let mut b = bot.clone();
+    let mut b = t.read(|c| User::find(c, bot_id));
+    assert_eq!(b.bot_key(), BOT_KEY_PLACEHOLDER);
     let second = t.write(move |tx| {
-        b.reset_bot_key(tx)?;
-        Ok(b.bot_key())
+        let key = b.reset_bot_key(tx)?;
+        assert_eq!(b.bot_key(), key);
+        Ok(key)
     });
     assert_ne!(first, second);
+    let stored = t.read(|c| User::find(c, bot_id));
+    let (_, token) = second.split_once('-').unwrap();
+    assert_eq!(stored.bot_token_digest, Some(digest_bot_token(token)));
+    let plaintext: Option<String> = t.read(|c| {
+        Ok(c.query_row("SELECT bot_token FROM users WHERE id = ?", [bot_id], |r| r.get(0))?)
+    });
+    assert_eq!(plaintext, None);
     assert!(t.read(|c| User::authenticate_bot(c, &first)).is_none());
     assert!(t.read(|c| User::authenticate_bot(c, &second)).is_some());
 }
@@ -197,11 +308,27 @@ fn authenticate_bot() {
             .id,
         bot.id
     );
-    assert!(t.read(|c| User::authenticate_bot(c, "nonsense")).is_none());
-    assert!(
-        t.read(|c| User::authenticate_bot(c, &format!("{}-", bot.id)))
-            .is_none()
-    );
+    let token = bot.plain_bot_token.clone().unwrap();
+    // `split("-", 2)`, then a blank or non-numeric id, or a blank token, finds nothing.
+    for key in [
+        "nonsense".to_string(),
+        String::new(),
+        format!("{}-", bot.id),
+        format!("{}-   ", bot.id),
+        format!("-{token}"),
+        format!(" {}-{token}", bot.id),
+        format!("{}x-{token}", bot.id),
+        format!("+{}-{token}", bot.id),
+        format!("99999999999999999999999-{token}"),
+    ] {
+        assert!(t.read(|c| User::authenticate_bot(c, &key)).is_none(), "{key:?}");
+    }
+    // `find_by(id: "007")` casts the id.
+    assert!(t.read(|c| User::authenticate_bot(c, &format!("00{}-{token}", bot.id))).is_some());
+    // A deactivated bot doesn't authenticate.
+    let mut deactivated = bot.clone();
+    t.write(move |tx| deactivated.deactivate(tx));
+    assert!(t.read(|c| User::authenticate_bot(c, &bot.bot_key())).is_none());
 }
 
 #[test]

@@ -5,10 +5,14 @@
 //! bytes of text before it, when that follows another fragment) and the text in between (the
 //! layout). Each part is compressed once, against the part before it as a preset dictionary, and
 //! kept: deflate back-references can reach anything in the last 32 KB of output, so a piece is
-//! valid wherever the same predecessor comes right before it. Pages render the same until what
-//! they show changes (there are no per-request CSRF tokens), so from one request to the next a page
-//! is a run of stored pieces: gzip costs a CRC and some copying, and the ETag a hash of the parts'
-//! digests instead of the whole body. Compressing each part on its own would lose what consecutive
+//! valid wherever the same predecessor comes right before it. Fragments render the same until what
+//! they show changes, so from one request to the next most of a page is a run of stored pieces:
+//! gzip costs a CRC and some copying, and the ETag a hash of the parts' digests instead of the
+//! whole body. The layout text between them isn't: it carries the page's CSRF tokens (masked
+//! afresh for every response) and CSP nonce, so a text part holding them is compressed on each
+//! request and its stored piece is never reused. Pieces are keyed by the SHA-256 of their bytes
+//! (and their predecessor), so one visitor's tokens can't end up in another's page; a page with no
+//! fragments that carries tokens isn't split or stored at all (`rack_etag` in `ctx.rs`). Compressing each part on its own would lose what consecutive
 //! messages share and make a room page ~4× larger; chained like this it's within 1% of compressing
 //! the page whole.
 //!

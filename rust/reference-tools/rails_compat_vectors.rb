@@ -10,6 +10,10 @@ class RailsCompatVectors
   include ReferenceTools
 
   def generate
+    # Sign-ins enqueue jobs and broadcast over Action Cable; without Redis both raise and the
+    # request answers 500 instead of the status under test.
+    ActiveJob::Base.queue_adapter = :test
+    ActionCable.server.instance_variable_set(:@pubsub, ActionCable::SubscriptionAdapter::Test.new(ActionCable.server))
     reset_database!
 
     travel_to(NOW)

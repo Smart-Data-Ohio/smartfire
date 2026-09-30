@@ -2,9 +2,11 @@
 //! `ActionDispatch::Request#POST` do: JSON by content type, urlencoded forms (also for a POST
 //! with no content type), and multipart with file parts spooled to temp files.
 
-use axum::body::{Body, Bytes};
+use axum::body::{Body, Bytes, HttpBody};
 use axum::http::{HeaderMap, Method, StatusCode, header};
-use tokio::io::AsyncWriteExt;
+use futures_util::StreamExt;
+use http_body_util::BodyExt;
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 use crate::format;
 use crate::params::{self, ParamError, ParamMap, RawPair, UploadedFile};
@@ -42,6 +44,8 @@ pub enum BodyError {
     TooLarge,
     #[error("error reading request body: {0}")]
     Read(String),
+    #[error("error spooling request body: {0}")]
+    Storage(#[from] std::io::Error),
 }
 
 impl BodyError {
@@ -49,6 +53,7 @@ impl BodyError {
         match self {
             BodyError::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             BodyError::Read(_) => StatusCode::BAD_REQUEST,
+            BodyError::Storage(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -71,13 +76,8 @@ pub async fn parse(
 
     // Everything but multipart (whose files spool to disk) is read into memory, so it's bounded
     // while it's read, whatever the configured limit.
-    let raw = axum::body::to_bytes(body, limit.unwrap_or(usize::MAX).min(MAX_BUFFERED_BODY)).await.map_err(|e| {
-        if e.into_inner().downcast_ref::<http_body_util::LengthLimitError>().is_some() {
-            BodyError::TooLarge
-        } else {
-            BodyError::Read("unreadable body".into())
-        }
-    })?;
+    let raw = axum::body::to_bytes(body, limit.unwrap_or(usize::MAX).min(MAX_BUFFERED_BODY))
+        .await.map_err(|error| read_error(&error))?;
 
     let is_json = format::content_mime_type(content_type).ok().flatten() == Some(&format::JSON);
     let params = if is_json && !raw.is_empty() {
@@ -94,9 +94,11 @@ pub async fn parse(
 }
 
 async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>) -> Result<ParsedBody, BodyError> {
-    let limit = limit.map_or(MULTIPART_BYTESIZE_LIMIT, |limit| (limit as u64).min(MULTIPART_BYTESIZE_LIMIT));
-    let constraints = multer::Constraints::new().size_limit(multer::SizeLimit::new().whole_stream(limit));
-    let mut multipart = multer::Multipart::with_constraints(body.into_data_stream(), boundary, constraints);
+    let limit = limit.unwrap_or(usize::MAX).min(usize::try_from(MULTIPART_BYTESIZE_LIMIT).unwrap_or(usize::MAX));
+    // Multer stops at the MIME boundary, which may precede the HTTP body's end. Keep the
+    // limited stream here so even bytes multer buffers or leaves unread count toward the cap.
+    let mut stream = Body::new(http_body_util::Limited::new(body, limit)).into_data_stream();
+    let mut multipart = multer::Multipart::new(&mut stream, boundary);
     let mut pairs = Vec::new();
     let mut parts = 0;
     let mut files = 0;
@@ -149,15 +151,70 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>) -> 
 
     let params = match result {
         Err(Stop::TooLarge) => return Err(BodyError::TooLarge),
+        Err(Stop::Read(error)) => return Err(error),
         Err(Stop::Params(error)) => Err(error),
         Ok(()) => params::from_pairs(pairs),
     };
+    drop(multipart);
+    // Validate the epilogue before exposing params to an action. Discard each chunk instead of
+    // collecting it, and stop immediately on a size/read failure (including a stalled upload).
+    while let Some(chunk) = stream.next().await {
+        chunk.map_err(|error| read_error(&error))?;
+    }
     Ok(ParsedBody { raw: Bytes::new(), params })
+}
+
+/// Read an unparsed body's entire stream before entering the action, as Puma does. Spool it
+/// to an anonymous temporary file so raw uploads need only one chunk in memory, then replay it
+/// for `Ctx::read_body`. A handler that never reads its body must not bypass its size limit.
+pub(crate) async fn validate_unparsed(body: Body, limit: Option<usize>) -> Result<Body, BodyError> {
+    if body.is_end_stream() {
+        return Ok(body);
+    }
+    let mut body = match limit {
+        Some(limit) => Body::new(http_body_util::Limited::new(body, limit)),
+        None => body,
+    };
+    let file = tokio::task::spawn_blocking(tempfile::tempfile).await.map_err(std::io::Error::other)??;
+    let mut file = tokio::fs::File::from_std(file);
+    while let Some(frame) = body.frame().await {
+        let frame = frame.map_err(|error| read_error(&error))?;
+        if let Ok(data) = frame.into_data() {
+            for chunk in data.chunks(64 * 1024) {
+                file.write_all(chunk).await?;
+            }
+        }
+    }
+    file.seek(std::io::SeekFrom::Start(0)).await?;
+    let stream = futures_util::stream::try_unfold(file, |mut file| async move {
+        let mut chunk = vec![0; 64 * 1024];
+        let size = file.read(&mut chunk).await?;
+        if size == 0 {
+            Ok::<_, std::io::Error>(None)
+        } else {
+            chunk.truncate(size);
+            Ok(Some((Bytes::from(chunk), file)))
+        }
+    });
+    Ok(Body::from_stream(stream))
+}
+
+fn read_error(mut error: &(dyn std::error::Error + 'static)) -> BodyError {
+    loop {
+        if error.is::<http_body_util::LengthLimitError>() {
+            return BodyError::TooLarge;
+        }
+        match error.source() {
+            Some(source) => error = source,
+            None => return BodyError::Read("unreadable body".into()),
+        }
+    }
 }
 
 /// Why reading a multipart body stopped early.
 enum Stop {
     TooLarge,
+    Read(BodyError),
     Params(ParamError),
 }
 
@@ -171,6 +228,7 @@ impl From<multer::Error> for Stop {
     fn from(error: multer::Error) -> Self {
         match error {
             multer::Error::StreamSizeExceeded { .. } => Stop::TooLarge,
+            multer::Error::StreamReadFailed(error) => Stop::Read(read_error(error.as_ref())),
             _ => Stop::Params(ParamError::Parse),
         }
     }

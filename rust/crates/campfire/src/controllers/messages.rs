@@ -7,7 +7,7 @@ pub mod boosts;
 pub mod by_bots;
 
 use askama::Template;
-use campfire_db::{Message, NewMessage, Role, Room, Status, User};
+use campfire_db::{Job as _, Message, NewMessage, Role, Room, Status, Timeline};
 use campfire_kit::format;
 use campfire_kit::{Ctx, Error, Freshness, Param, Result, StatusCode, halt, permit_keys};
 use campfire_richtext::Content;
@@ -20,6 +20,7 @@ use crate::concerns::{self, Before, before_actions, cast_integer, require_curren
 use crate::controllers::presenters::page::{self, Rendered, db_error};
 use crate::controllers::presenters::attachments::Assignment;
 use crate::controllers::presenters::{DbResolver, Presenter, cache_key_with_version, room_kind, storage_error};
+use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
 
 // --- Actions ------------------------------------------------------------------------------------
 
@@ -64,7 +65,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let attributes = message_params(c)?;
     let message = create_message(c, &room, attributes).await?;
     broadcast_create(c, &room, &message).await?;
-    deliver_webhooks_to_bots(c, &room, &message).await?;
+    release_webhooks(c, &message).await;
 
     // The message partial comes out of the fragment cache `broadcast_create` just filled
     // (`cache [ message, "presentation-v3" ]`), so it's the request-less rendering: no CSRF
@@ -188,7 +189,7 @@ pub(crate) fn attachment_assignment(permitted: &campfire_kit::ParamMap) -> Resul
     }
 }
 
-/// `@room.messages.find(params[:before])` and friends (`find_paged_messages`).
+/// `@room.root_messages.find(params[:before])` and friends (`find_paged_messages`).
 pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Message>> {
     let present = |key: &str| c.params.get(key).filter(|p| p.is_present()).map(|p| p.as_str().and_then(cast_integer));
     let (before, after) = (present("before"), present("after"));
@@ -197,14 +198,14 @@ pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Mess
         .db
         .read(move |conn| match (before, after) {
             (Some(before), _) => {
-                let message = Message::find_in_room(conn, room_id, before.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
-                Message::page_before(conn, room_id, &message)
+                let message = Message::find_in(conn, Timeline::Room(room_id), before.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
+                Message::page_before(conn, Timeline::Room(room_id), &message)
             }
             (None, Some(after)) => {
-                let message = Message::find_in_room(conn, room_id, after.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
-                Message::page_after(conn, room_id, &message)
+                let message = Message::find_in(conn, Timeline::Room(room_id), after.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
+                Message::page_after(conn, Timeline::Room(room_id), &message)
             }
-            (None, None) => Message::last_page(conn, room_id),
+            (None, None) => Message::last_page(conn, Timeline::Room(room_id)),
         })
         .await
         .map_err(db_error)
@@ -215,9 +216,12 @@ pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Mess
 /// `@room.messages.create_with_attachment!(attributes)`: the message (with its uploaded blob, in
 /// one transaction), then `process_attachment`. The upload's file is copied into storage and the
 /// body canonicalized before the transaction, so the writer only inserts rows.
+/// `@room.messages.create!` and, in its transaction, `deliver_webhooks_to_bots`: the webhook
+/// jobs are held until the caller has broadcast the message ([`release_webhooks`]).
 pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<Message> {
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
+    let room = room.clone();
     let attachment = match attributes.attachment {
         Some(Assignment::Create(upload)) => Some(upload.stage(c.app()).await?),
         Some(Assignment::Invalid) => return Err(invalid_attachment()),
@@ -240,8 +244,10 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                     client_message_id: attributes.client_message_id,
                     body,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
+                    ..Default::default()
                 },
             )?;
+            deliver_webhooks_to_bots(tx, &room, &message)?;
             Ok((message, blob))
         })
         .await
@@ -411,33 +417,33 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
         .map_err(db_error)
 }
 
-/// `deliver_webhooks_to_bots`: every active bot in a direct room, else every mentioned active
-/// bot, except the message's creator.
-pub(crate) async fn deliver_webhooks_to_bots(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
-    let (app, room, eligible) = (c.app().clone(), room.clone(), message.clone());
-    let bots: Vec<User> = c
-        .app()
-        .db
-        .read(move |conn| {
-            let candidates =
-                if room.direct() { room.active_bots(conn)? } else { eligible.mentionees(conn, &*app.db.env().rich_text)? };
-            Ok(candidates
-                .into_iter()
-                .filter(|user| user.role == Role::Bot && user.status == Status::Active && user.id != eligible.creator_id)
-                .collect())
-        })
-        .await
-        .map_err(db_error)?;
-    if bots.is_empty() {
-        return Ok(());
+/// `deliver_webhooks_to_bots`, in the message's transaction: every active bot in a direct room,
+/// else every mentioned active bot, except the message's creator, gets `bot.deliver_webhook_later
+/// (@message)` when it has a webhook. Rails enqueues them after the message is saved, processed
+/// and broadcast, in a separate step that a crash (or a failed enqueue) can skip. Here the job
+/// rows commit, or roll back, with the message; each is held for [`WEBHOOK_HOLD`] so a bot can't
+/// be told (and reply) before the room sees the message, and [`release_webhooks`] makes them due
+/// once it has been broadcast.
+fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
+    let candidates = if room.direct() { room.active_bots(tx.conn())? } else { message.mentionees(tx.conn(), tx.rich_text())? };
+    for bot in candidates.into_iter().filter(|user| user.role == Role::Bot && user.status == Status::Active && user.id != message.creator_id) {
+        if bot.webhook(tx.conn())?.is_some() {
+            tx.emit_after_commit(campfire_db::Event::job_in(WEBHOOK_HOLD, &WebhookJob { bot_id: bot.id, message_id: message.id }));
+        }
     }
-    // bot.deliver_webhook_later(@message)
-    let message_id = message.id;
-    c.app()
-        .db
-        .write(move |tx| bots.iter().try_for_each(|bot| bot.deliver_webhook_later(tx, message_id)))
-        .await
-        .map_err(db_error)
+    Ok(())
+}
+
+/// Releases the webhooks [`create_message`] held, now that the message has been broadcast. A
+/// failure is logged: they're delivered when the hold runs out.
+pub(crate) async fn release_webhooks(c: &Ctx, message: &Message) {
+    let (queue, message_id) = (c.app().jobs.queue.clone(), message.id);
+    let released = c.app().db.write(move |tx| queue.release_held(tx, WebhookJob::CLASS, "message_id", message_id)).await;
+    match released {
+        Ok(0) => {}
+        Ok(_) => c.app().jobs.queue.wake(WebhookJob::CLASS),
+        Err(error) => tracing::error!(%error, message_id, "releasing the message's webhooks failed; they're delivered in {WEBHOOK_HOLD:?}"),
+    }
 }
 
 // --- Rendering ------------------------------------------------------------------------------------

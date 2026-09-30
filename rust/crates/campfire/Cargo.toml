@@ -8,6 +8,7 @@ rails_compat.workspace = true
 campfire_kit.workspace = true
 campfire_routes.workspace = true
 campfire_db.workspace = true
+campfire_jobs.workspace = true
 campfire_richtext.workspace = true
 campfire_storage.workspace = true
 campfire_cable.workspace = true
@@ -50,6 +51,7 @@ uuid.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+campfire_kit = { workspace = true, features = ["test-support"] }
 campfire_db = { workspace = true, features = ["test-support"] }
 tikv-jemalloc-sys.workspace = true
 tower = { workspace = true, features = ["util"] }

@@ -1,0 +1,194 @@
+{
+  "finished/bare/attach_nil": {
+    "message_updated_at": 0,
+    "streaming_updated_at": null,
+    "room_updated_at": 0,
+    "attached": false
+  },
+  "finished/bare/attach_blob": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/bare/body_same": {
+    "message_updated_at": 0,
+    "streaming_updated_at": null,
+    "room_updated_at": 0,
+    "attached": false
+  },
+  "finished/bare/body_new": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/bare/touch": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/bare/boost_create": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/bare/boost_destroy": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/bare/destroy": {
+    "message_updated_at": null,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/attached/attach_nil": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/attached/attach_blob": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/body_same": {
+    "message_updated_at": 0,
+    "streaming_updated_at": null,
+    "room_updated_at": 0,
+    "attached": true
+  },
+  "finished/attached/body_new": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/touch": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/boost_create": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/boost_destroy": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/destroy": {
+    "message_updated_at": null,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/attach_nil": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/attach_blob": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/bare/body_same": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/body_new": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/touch": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/boost_create": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/boost_destroy": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/destroy": {
+    "message_updated_at": null,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/attached/attach_nil": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/attached/attach_blob": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/body_same": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/body_new": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/touch": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/boost_create": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/boost_destroy": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/destroy": {
+    "message_updated_at": null,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  }
+}

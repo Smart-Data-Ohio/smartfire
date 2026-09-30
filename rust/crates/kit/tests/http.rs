@@ -28,8 +28,29 @@ async fn show(c: &mut Ctx) -> Result {
     Ok(c.html(format!("<p>{name} room {id}</p>")))
 }
 
+/// A page with `csrf_meta_tags` and a form (`form_with url: "/form"`), each with its token.
 async fn form(c: &mut Ctx) -> Result {
-    Ok(c.html("<form method=\"post\" action=\"/form\"></form>"))
+    let tokens = c.authenticity_tokens();
+    let (meta, form) = (tokens.global(), tokens.for_form("/form", "post"));
+    Ok(c.html(format!(
+        "<meta name=\"csrf-token\" content=\"{meta}\"><form method=\"post\" action=\"/form\">\
+         <input type=\"hidden\" name=\"authenticity_token\" value=\"{form}\"></form>"
+    )))
+}
+
+/// `csp_meta_tag`: the request's nonce, in the body.
+async fn nonce(c: &mut Ctx) -> Result {
+    if c.param_str("write").is_some() {
+        c.session().insert("seen", true);
+    }
+    let nonce = c.content_security_policy_nonce().unwrap_or_default();
+    Ok(c.html(format!("<meta name=\"csp-nonce\" content=\"{nonce}\">")))
+}
+
+/// A response that sets its own policy (`content_security_policy false` or a per-action one).
+async fn own_policy(c: &mut Ctx) -> Result {
+    c.set_header("content-security-policy", "default-src 'none'");
+    Ok(c.html("own"))
 }
 
 async fn create(c: &mut Ctx) -> Result {
@@ -220,7 +241,9 @@ fn app_with(config: KitConfig) -> Router {
         .route("/created", campfire_kit::get(created))
         .route("/file", campfire_kit::get(file))
         .route("/logo", campfire_kit::get(logo))
-        .route("/fresh", campfire_kit::get(index_fresh));
+        .route("/fresh", campfire_kit::get(index_fresh))
+        .route("/nonce", campfire_kit::get(nonce))
+        .route("/own_policy", campfire_kit::get(own_policy));
     campfire_kit::app(router, kit_with(config))
 }
 
@@ -408,55 +431,169 @@ fn ssl_app() -> Router {
     app_with(config)
 }
 
-fn post_from(site: Option<&str>) -> HttpRequest<AxumBody> {
-    let request = post("/form");
-    let request = match site {
-        Some(site) => request.header("sec-fetch-site", site),
-        None => request,
-    };
-    request.header(header::CONTENT_TYPE, "application/x-www-form-urlencoded").body(AxumBody::from("x=1")).unwrap()
+/// The meta and form tokens of a page from `/form`, and the session cookie that came with it.
+async fn form_page(app: &Router, cookie: Option<&str>) -> (String, String, String) {
+    let mut request = get("/form");
+    if let Some(cookie) = cookie {
+        request = request.header(header::COOKIE, cookie);
+    }
+    let page = send(app, request.body(AxumBody::empty()).unwrap()).await;
+    let text = page.text();
+    let meta = text.split("content=\"").nth(1).unwrap().split('"').next().unwrap().to_string();
+    let form = text.split("value=\"").nth(1).unwrap().split('"').next().unwrap().to_string();
+    let jar = if page.cookies().is_empty() { cookie.unwrap_or("").to_string() } else { page.cookie_jar() };
+    (jar, meta, form)
+}
+
+fn post_form(cookie: &str, header_token: Option<&str>) -> axum::http::request::Builder {
+    let mut request = post("/form").header(header::COOKIE, cookie).header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
+    if let Some(token) = header_token {
+        request = request.header("x-csrf-token", token);
+    }
+    request
+}
+
+fn form_body(token: Option<&str>) -> AxumBody {
+    match token {
+        Some(token) => AxumBody::from(format!("x=1&authenticity_token={}", campfire_kit::cookies::escape(token))),
+        None => AxumBody::from("x=1"),
+    }
 }
 
 #[tokio::test]
-async fn forgery_protection_trusts_same_site_requests_by_sec_fetch_site() {
+async fn forgery_protection_accepts_the_pages_tokens() {
     let app = ssl_app();
-    for site in ["same-origin", "same-site"] {
-        let ok = send(&app, post_from(Some(site))).await;
-        assert_eq!(ok.status, StatusCode::OK, "{site}");
+    let (cookie, meta, form) = form_page(&app, None).await;
+    assert!(cookie.starts_with("_campfire_session="), "rendering tokens starts a session");
+    for (param, header) in [(Some(form.as_str()), None), (Some(meta.as_str()), None), (None, Some(meta.as_str())), (Some("bad"), Some(meta.as_str())), (Some(form.as_str()), Some("bad"))] {
+        let ok = send(&app, post_form(&cookie, header).body(form_body(param)).unwrap()).await;
+        assert_eq!(ok.status, StatusCode::OK, "{param:?} {header:?}");
         assert_eq!(ok.json()["params"]["x"], "1");
     }
-    for site in [Some("cross-site"), Some("none"), Some("bogus"), None] {
-        let forged = send(&app, post_from(site)).await;
-        assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY, "{site:?}");
+    // The session keeps its token: a second page's tokens are masked differently but work too.
+    let (same_cookie, meta2, form2) = form_page(&app, Some(&cookie)).await;
+    assert_eq!(same_cookie, cookie, "an unchanged session isn't rewritten");
+    assert_ne!(form2, form);
+    assert_ne!(meta2, meta);
+    let ok = send(&app, post_form(&cookie, None).body(form_body(Some(&form2))).unwrap()).await;
+    assert_eq!(ok.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn forgery_protection_rejects_missing_forged_and_foreign_tokens() {
+    let app = ssl_app();
+    let (cookie, _, form) = form_page(&app, None).await;
+    let (other_cookie, other_meta, other_form) = form_page(&app, None).await;
+    let tampered = format!("{}{}", if form.starts_with('A') { "B" } else { "A" }, &form[1..]);
+    let forged = "z1FAXTN4P9BfpfzcU7YdmtlVpR0ZwggU1QBiTBlO3s7pdPcS8wG4zZ0KWmz2M-rf5IhDc4JyEjleeWd3AWoXxw";
+    let cases: [(&str, &str, Option<&str>, Option<&str>); 7] = [
+        ("no token", &cookie, None, None),
+        ("forged", &cookie, Some(forged), None),
+        ("tampered", &cookie, Some(&tampered), None),
+        ("another session's form token", &cookie, Some(&other_form), None),
+        ("another session's meta token", &cookie, None, Some(&other_meta)),
+        ("the other session's cookie", &other_cookie, Some(&form), None),
+        ("no session", "", Some(&form), None),
+    ];
+    for (label, cookie, param, header) in cases {
+        let forged = send(&app, post_form(cookie, header).body(form_body(param)).unwrap()).await;
+        assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY, "{label}");
         assert_eq!(forged.text(), "<h1>Unprocessable</h1>");
-        assert!(forged.cookies().is_empty(), "errors don't commit cookies");
+        assert!(forged.cookies().is_empty(), "{label}: errors don't commit cookies");
     }
 }
 
 #[tokio::test]
-async fn forgery_protection_allows_a_missing_header_only_without_ssl() {
-    // Browsers send `Sec-Fetch-Site` only to secure origins, so plain HTTP can't require it.
-    let app = app();
-    assert_eq!(send(&app, post_from(None)).await.status, StatusCode::OK);
-    assert_eq!(send(&app, post_from(Some("cross-site"))).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+async fn sec_fetch_site_no_longer_stands_in_for_a_token() {
+    for app in [ssl_app(), app()] {
+        let same_origin = post("/form").header("sec-fetch-site", "same-origin").body(AxumBody::from("x=1")).unwrap();
+        assert_eq!(send(&app, same_origin).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+        let (cookie, _, form) = form_page(&app, None).await;
+        let cross_site = post_form(&cookie, None).header("sec-fetch-site", "cross-site").body(form_body(Some(&form))).unwrap();
+        assert_eq!(send(&app, cross_site).await.status, StatusCode::OK, "the token decides, as in Rails");
+    }
 }
 
 #[tokio::test]
-async fn pages_carry_no_forgery_token_or_session() {
-    let page = send(&app(), get("/form").body(AxumBody::empty()).unwrap()).await;
-    assert!(!page.text().contains("authenticity_token"));
-    assert!(page.cookies().is_empty(), "rendering a form doesn't start a session");
+async fn pages_without_tokens_start_no_session() {
+    let page = send(&app(), get("/rooms/5").body(AxumBody::empty()).unwrap()).await;
+    assert!(page.cookies().is_empty(), "a page that renders no token doesn't start a session");
 }
 
 #[tokio::test]
 async fn forgery_protection_checks_the_origin() {
     let app = ssl_app();
-    let with_origin = |origin: &str| {
-        post("/form").header("sec-fetch-site", "same-origin").header(header::ORIGIN, origin).body(AxumBody::empty()).unwrap()
-    };
+    let (cookie, _, form) = form_page(&app, None).await;
+    let with_origin = |origin: &str| post_form(&cookie, None).header(header::ORIGIN, origin).body(form_body(Some(&form))).unwrap();
     assert_eq!(send(&app, with_origin("https://chat.example.com")).await.status, StatusCode::OK);
     assert_eq!(send(&app, with_origin("https://evil.example")).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(send(&app, with_origin("http://chat.example.com")).await.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(send(&app, with_origin("null")).await.status, StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+fn csp_app() -> Router {
+    use campfire_kit::csp::{ContentSecurityPolicy, Source};
+    use std::sync::Arc;
+    let policy = ContentSecurityPolicy::new()
+        .directive("default-src", ["'self'".into()])
+        .directive("script-src", ["'self'".into()])
+        .directive("connect-src", ["'self'".into(), Source::Dynamic(Arc::new(|| vec!["wss://lk.test".into()]))])
+        .directive("report-uri", ["/csp_reports".into()])
+        .nonce(Arc::new(|id: Option<&str>| format!("n-{}", id.unwrap_or("random"))), &["script-src"]);
+    let error_pages = ErrorPages::new([(404, "<h1>Not found</h1>".into())]);
+    app_with(KitConfig { error_pages, content_security_policy: Some(Arc::new(policy)), ..KitConfig::default() })
+}
+
+#[tokio::test]
+async fn content_security_policy_goes_on_controller_responses() {
+    let app = csp_app();
+    let page = send(&app, get("/rooms/5").body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(
+        page.header("content-security-policy"),
+        Some("default-src 'self'; script-src 'self' 'nonce-n-random'; connect-src 'self' wss://lk.test; report-uri /csp_reports")
+    );
+    let redirect = send(&app, get("/redirect").body(AxumBody::empty()).unwrap()).await;
+    assert!(redirect.header("content-security-policy").is_some(), "redirects carry it too");
+
+    let etag = send(&app, get("/fresh").body(AxumBody::empty()).unwrap()).await.header("etag").unwrap().to_string();
+    let not_modified = send(&app, get("/fresh").header(header::IF_NONE_MATCH, etag).body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(not_modified.status, StatusCode::NOT_MODIFIED);
+    assert_eq!(not_modified.header("content-security-policy"), None, "not on a 304");
+
+    let own = send(&app, get("/own_policy").body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(own.header("content-security-policy"), Some("default-src 'none'"), "an action's own policy stays");
+
+    let missing = send(&app, get("/nowhere").body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert_eq!(missing.header("content-security-policy"), None, "not on error pages");
+
+    let without = send(&app_with(KitConfig::default()), get("/rooms/5").body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(without.header("content-security-policy"), None);
+}
+
+#[tokio::test]
+async fn csp_nonce_follows_the_session_id_rails_reports() {
+    let app = csp_app();
+    let nonce_of = |reply: &Reply| reply.text().split("content=\"").nth(1).unwrap().split('"').next().unwrap().to_string();
+
+    // No session cookie and nothing written: no session id yet, so a random nonce.
+    let first = send(&app, get("/nonce").body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(nonce_of(&first), "n-random");
+    assert!(first.header("content-security-policy").unwrap().contains("'nonce-n-random'"), "the header and the page agree");
+
+    // A request that writes the session has its new id.
+    let written = send(&app, get("/nonce?write=1").body(AxumBody::empty()).unwrap()).await;
+    let cookie = written.cookie_jar();
+    let id = send(&app, get("/session").header(header::COOKIE, &cookie).body(AxumBody::empty()).unwrap()).await.json()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(nonce_of(&written), format!("n-{id}"));
+
+    // Later requests carry the cookie, and the nonce stays the session's.
+    let later = send(&app, get("/nonce").header(header::COOKIE, &cookie).body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(nonce_of(&later), format!("n-{id}"));
+    assert!(later.header("content-security-policy").unwrap().contains(&format!("'nonce-n-{id}'")));
 }
 
 #[tokio::test]
@@ -716,7 +853,8 @@ async fn force_ssl_redirects_and_hardens() {
     let production = app_with(KitConfig::production(false));
     let secure = send(&production, get("/sign_in").body(AxumBody::empty()).unwrap()).await;
     assert_eq!(secure.status, StatusCode::OK);
-    assert_eq!(secure.header("strict-transport-security"), Some("max-age=63072000; includeSubDomains"));
+    // Our `ssl_options`: `hsts: { expires: 1.year, subdomains: true }` (`1.year` is 365.2425 days).
+    assert_eq!(secure.header("strict-transport-security"), Some("max-age=31556952; includeSubDomains"));
     assert!(secure.cookies().iter().all(|c| c.ends_with("; secure")));
 
     let https = send(&production, get("/redirect").body(AxumBody::empty()).unwrap()).await;
@@ -773,4 +911,48 @@ async fn serves_with_peer_addresses_and_shuts_down_gracefully() {
     stop.send(()).unwrap();
     tokio::time::timeout(std::time::Duration::from_secs(5), server).await.unwrap().unwrap();
     tokio::time::timeout(std::time::Duration::from_secs(5), shutdown.drained()).await.unwrap();
+}
+
+/// `rate_limit to: 2, within: 1.minute, only: :create` with the default `with:` (a 429), and a
+/// second, named limit that renders its own rejection.
+async fn limited(c: &mut Ctx) -> Result {
+    c.rate_limit(&campfire_kit::RateLimit::new("limited", 2, jiff::SignedDuration::from_mins(1)))?;
+    let by_name = campfire_kit::RateLimit::new("limited", 3, jiff::SignedDuration::from_mins(1)).named("by_user");
+    let user = c.request.header("x-user").unwrap_or("nobody").to_string();
+    if c.rate_limited(&by_name, Some(&user))? {
+        return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &HTML, "slow down"));
+    }
+    Ok(c.head(StatusCode::NO_CONTENT))
+}
+
+#[tokio::test]
+async fn rate_limit_hits_the_limit_then_resets() {
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new("2026-01-01T12:00:00Z".parse().unwrap()));
+    let error_pages = ErrorPages::new([(429, "<h1>Too many</h1>".into())]);
+    let kit = Kit::new(KitConfig { error_pages, ..KitConfig::default() }, testing::crypto(), clock.clone(), AppState { name: "Campfire" });
+    let app = campfire_kit::app(Router::new().route("/limited", campfire_kit::get(limited)), kit);
+    let hit = |ip: &'static str, user: &'static str| {
+        let app = app.clone();
+        async move {
+            let mut request = get("/limited").header("x-user", user).body(AxumBody::empty()).unwrap();
+            request.extensions_mut().insert(ConnectInfo(format!("{ip}:5000").parse::<SocketAddr>().unwrap()));
+            send(&app, request).await
+        }
+    };
+
+    let statuses = [hit("10.0.0.1", "a").await.status, hit("10.0.0.1", "a").await.status, hit("10.0.0.1", "a").await.status];
+    assert_eq!(statuses, [StatusCode::NO_CONTENT, StatusCode::NO_CONTENT, StatusCode::TOO_MANY_REQUESTS]);
+    let limited = hit("10.0.0.1", "a").await;
+    assert_eq!((limited.status, limited.text().as_str()), (StatusCode::TOO_MANY_REQUESTS, "<h1>Too many</h1>"));
+    assert_eq!(hit("10.0.0.2", "a").await.status, StatusCode::NO_CONTENT, "another IP has its own count");
+
+    // The named limit counts by user: "a" has made 3 requests that got past the first limit.
+    let by_user = hit("10.0.0.3", "a").await;
+    assert_eq!((by_user.status, by_user.text().as_str()), (StatusCode::TOO_MANY_REQUESTS, "slow down"));
+
+    clock.advance(jiff::SignedDuration::from_secs(59));
+    assert_eq!(hit("10.0.0.1", "b").await.status, StatusCode::TOO_MANY_REQUESTS, "still inside the window");
+    clock.advance(jiff::SignedDuration::from_secs(1));
+    assert_eq!(hit("10.0.0.1", "b").await.status, StatusCode::NO_CONTENT, "the window from the first request is over");
+    assert_eq!(hit("10.0.0.3", "a").await.status, StatusCode::NO_CONTENT);
 }

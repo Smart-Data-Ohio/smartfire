@@ -9,7 +9,7 @@
     <div class="message__actions-menu border shadow" data-popup-target="menu">
       <div class="quick-boosts">
         {%- for (character, title) in crate::messages::REACTIONS %}
-          <form data-turbo-frame="{{ message.dom_id("boosting") }}" data-action="popup#close" action="{{ message.boosts_path() }}" accept-charset="UTF-8" method="post">
+          <form data-turbo-frame="{{ message.dom_id("boosting") }}" data-action="popup#close" action="{{ message.boosts_path() }}" accept-charset="UTF-8" method="post">{{ crate::helpers::token_tag(&message.boosts_path().to_string(), "post") }}
             <input type="hidden" name="boost[content]" id="boost_content" value="{{ character }}" />
             <button name="button" type="submit" title="{{ title }}" class="btn message__action-btn" data-emoji="{{ character }}">
               <figure class="margin-none boost-character">{{ character }}</figure>

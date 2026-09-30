@@ -9,6 +9,8 @@ mod membership_test;
 mod message_test;
 mod push_test;
 mod room_test;
+mod save_touches_test;
+mod session_test;
 mod user_test;
 
 use std::sync::Arc;
@@ -28,9 +30,13 @@ pub struct TestDb {
 
 impl TestDb {
     pub fn new() -> Self {
+        Self::with_clock(TestClock::new(), 4)
+    }
+
+    /// Fixtures loaded with `clock` and BCrypt cost `bcrypt_cost` for their password digests.
+    pub fn with_clock(clock: TestClock, bcrypt_cost: u32) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let sink = RecordingSink::new();
-        let clock = TestClock::new();
         let env = Env {
             clock: Arc::new(clock.clone()),
             sink: Arc::new(sink.clone()),
@@ -41,10 +47,10 @@ impl TestDb {
         config.readers = 2;
         config.environment = "test".into();
         let db = Database::open(config, env).unwrap();
-        db.write_blocking(|tx| {
+        db.write_blocking(move |tx| {
             let options = fixtures::Options {
                 now: tx.now(),
-                bcrypt_cost: 4,
+                bcrypt_cost,
             };
             fixtures::load(tx.conn(), &fixtures::reference_dir(), &options)
         })
@@ -88,6 +94,10 @@ impl TestDb {
         self.clock.travel(jiff::SignedDuration::from_secs(seconds));
     }
 }
+
+/// Golden vectors from our Rails (`bin/rails runner` in the reference image):
+/// `User.digest_bot_token("BenderToken1")`, the bender fixture's `bot_token_digest`.
+pub const BENDER_TOKEN_DIGEST: &str = "eca7c1486ccaf098cc637f7f8e48cad465ac9f14a4da3b2287e0f5addc62a4c2";
 
 /// A fixture's id, by label.
 pub fn id(label: &str) -> i64 {

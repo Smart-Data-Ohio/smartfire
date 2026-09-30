@@ -1,6 +1,6 @@
 {#- reference/app/views/rooms/layouts/_form.html.erb: used as the `room_form` filter block -#}
 <form action="{{ room.action(*kind) }}" accept-charset="UTF-8" method="post">
-{%- if room.id.is_some() %}<input type="hidden" name="_method" value="patch" />{% else %}{% endif %}
+{%- if room.id.is_some() %}<input type="hidden" name="_method" value="patch" />{{ crate::helpers::token_tag(&room.action(*kind).to_string(), "patch") }}{% else %}{{ crate::helpers::token_tag(&room.action(*kind).to_string(), "post") }}{% endif %}
   <div class="flex align-center gap">
     {%- if can_administer %}
       {{ h::translation_button(ctx, "room_name") }}

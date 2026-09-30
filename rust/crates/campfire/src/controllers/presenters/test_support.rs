@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot};
+use crate::app::{Booted, boot_with_clock};
 use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -18,7 +18,10 @@ pub const DAVID: i64 = 127326141;
 pub const JASON: i64 = 149087659;
 pub const KEVIN: i64 = 712064548;
 pub const BENDER: i64 = 394959859;
-pub const BENDER_KEY: &str = "394959859-BenderBot123";
+/// Bender's key as our Rails accepts it: the seed keeps the fixture's `bot_token_digest`
+/// (`User.digest_bot_token("BenderToken1")`); the plaintext `bot_token` column is legacy and
+/// no longer authenticates (`User::Bot.authenticate_bot`).
+pub const BENDER_KEY: &str = "394959859-BenderToken1";
 /// Rooms::Closed "All Talk" (David, Jason, Bender): 131 messages.
 pub const ALL_TALK: i64 = 486777696;
 /// Rooms::Open "HQ" (David can't see messages; no messages).
@@ -29,6 +32,28 @@ pub const QUIET_CORNER: i64 = 699448326;
 pub const DIRECT_DAVID_JASON: i64 = 186869642;
 /// Kevin and Bender's direct room: David isn't in it.
 pub const DIRECT_KEVIN_BENDER: i64 = 340026324;
+
+/// `NOW` in the parity seeds (`parity/seeds/README.md`): the reference serves a seed with its
+/// clock started there (`reference up --time 2026-03-02T16:00:00Z`).
+pub const SEED_NOW: &str = "2026-03-02T16:00:00Z";
+
+/// The clock a seeded app runs on: [`SEED_NOW`] when the app boots, then ticking, as the
+/// reference's libfaketime clock does. (On the real clock, the seed's administrator sessions,
+/// last active that afternoon, are long past `ADMIN_SESSION_IDLE_TIMEOUT_DAYS`.)
+pub fn seed_clock() -> campfire_kit::SharedClock {
+    #[derive(Debug)]
+    struct SeedClock {
+        start: jiff::Timestamp,
+        booted: std::time::Instant,
+    }
+    impl campfire_kit::Clock for SeedClock {
+        fn now(&self) -> jiff::Timestamp {
+            let elapsed = jiff::SignedDuration::try_from(self.booted.elapsed()).unwrap();
+            self.start.checked_add(elapsed).unwrap()
+        }
+    }
+    std::sync::Arc::new(SeedClock { start: SEED_NOW.parse().unwrap(), booted: std::time::Instant::now() })
+}
 
 fn seed_dir() -> Option<PathBuf> {
     let dir = Path::new(ROOT).join("parity/.seed/default");
@@ -81,7 +106,7 @@ impl TestApp {
             _ => None,
         })
         .unwrap();
-        Some(TestApp { booted: boot(config).await.unwrap(), _dir: dir })
+        Some(TestApp { booted: boot_with_clock(config, seed_clock()).await.unwrap(), _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {
@@ -97,6 +122,19 @@ impl TestApp {
 
     pub fn anonymous(&self) -> Browser<'_> {
         Browser { app: self, cookies: BTreeMap::new() }
+    }
+
+    /// A browser signed in as `user_id` with a new session of its own (two-factor verified, as
+    /// the seed's are), for anyone the session vectors don't cover.
+    pub async fn sign_in(&self, user_id: i64) -> Browser<'_> {
+        use campfire_kit::Crypto;
+
+        let attributes = campfire_db::NewSession { user_agent: None, ip_address: Some("127.0.0.1"), device_id: None, two_factor_verified: true };
+        let session = self.db().write(move |tx| campfire_db::Session::start_with(tx, user_id, attributes)).await.unwrap();
+        let signed = campfire_kit::RailsCrypto::new(self.booted.app.secrets.clone()).sign_cookie("session_token", &session.token, None);
+        let mut browser = self.anonymous();
+        browser.cookies.insert("session_token".into(), campfire_kit::cookies::escape(&signed));
+        browser
     }
 }
 
@@ -250,8 +288,54 @@ impl Browser<'_> {
         self.send(Req::new(Method::GET, path)).await
     }
 
-    /// A write as the app's own pages make it: same-origin, by `Sec-Fetch-Site`.
+    /// A write as the app's own pages make it: with the session's authenticity token in
+    /// `X-CSRF-Token`, as Turbo sends it from the `csrf-token` meta tag.
     pub async fn write(&mut self, req: Req) -> Reply {
-        self.send(req.header("sec-fetch-site", "same-origin")).await
+        let token = self.authenticity_token().await;
+        self.send(req.header(campfire_kit::csrf::HEADER, &token)).await
     }
+
+    /// A masked global token for this browser's session, as `csrf_meta_tags` renders it. A
+    /// session without one yet gets one from a page first.
+    pub async fn authenticity_token(&mut self) -> String {
+        if let Some(token) = self.session_token() {
+            return token;
+        }
+        let mut path = "/".to_string();
+        for _ in 0..3 {
+            match self.get(&path).await.location() {
+                Some(location) => path = location.to_string(),
+                None => break,
+            }
+        }
+        self.session_token().expect("the session has an authenticity token after a page")
+    }
+
+    fn session_token(&self) -> Option<String> {
+        masked_session_token(&self.app.booted.app.secrets, self.cookies.get(campfire_kit::session::SESSION_KEY)?)
+    }
+
+    /// The real (unmasked) authenticity token in this browser's session, which every token its
+    /// pages carry must verify against, or `None` before a page has given it one.
+    pub fn real_authenticity_token(&self) -> Option<campfire_kit::csrf::RealToken> {
+        use campfire_kit::Crypto;
+
+        let raw = self.cookies.get(campfire_kit::session::SESSION_KEY)?;
+        let raw = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
+        let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
+        let session = crypto.decrypt_cookie(campfire_kit::session::SESSION_KEY, &raw, jiff::Timestamp::now())?;
+        campfire_kit::csrf::RealToken::decode(session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?)
+    }
+}
+
+/// A masked global authenticity token for the session in the `_campfire_session` cookie value
+/// `raw` (as sent, still escaped), or `None` when the session hasn't been given one.
+pub fn masked_session_token(secrets: &std::sync::Arc<rails_compat::Secrets>, raw: &str) -> Option<String> {
+    use campfire_kit::Crypto;
+
+    let raw = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
+    let crypto = campfire_kit::RailsCrypto::new(secrets.clone());
+    let session = crypto.decrypt_cookie(campfire_kit::session::SESSION_KEY, &raw, jiff::Timestamp::now())?;
+    let real = session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?;
+    Some(campfire_kit::csrf::RealToken::decode(real)?.masked(None))
 }

@@ -92,12 +92,20 @@ jobs:
             --env CARGO_INCREMENTAL=0 --env CARGO_PROFILE_DEV_DEBUG=line-tables-only \
             campfire-toolchain cargo build --locked --workspace
 
-      # NON-BLOCKING until WS2 (schema port) lands, which re-enables this as a gate by removing
-      # continue-on-error. The port's schema.sql, models and asset vectors are still stock
-      # Campfire's while the reference (our fixtures, schema and assets) is Smartfire, so about 120
-      # tests fail (`no such table: agent_credentials` and friends). The step still shows as failed
-      # in the run, and the summary below counts the failures.
-      - name: Tests (non-blocking until WS2)
+      # A gate: campfire_db runs against our schema.sql and test/fixtures, so any failure is a
+      # regression.
+      - name: Tests (campfire_db)
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" --volume "$PWD:/src" --workdir /src/rust \
+            --env HOME=/tmp --env CARGO_HOME=/src/rust/.cargo-home --env CARGO_TERM_COLOR=always \
+            --env CARGO_INCREMENTAL=0 --env CARGO_PROFILE_DEV_DEBUG=line-tables-only \
+            campfire-toolchain cargo test --locked -p campfire_db
+
+      # NON-BLOCKING until the rest of the port catches up with our Rails app. campfire_db is gated
+      # above; what still fails here is campfire_assets' reference tests (its asset vectors are
+      # stock Campfire's while the reference's assets are Smartfire's). The step still shows as
+      # failed in the run, and the summary below counts the failures.
+      - name: Tests (non-blocking)
         id: tests
         continue-on-error: true
         shell: bash
@@ -119,7 +127,7 @@ jobs:
             awk '/^test result:/ { for (i = 1; i < NF; i++) { if ($(i+1) ~ /^passed/) p += $i; if ($(i+1) ~ /^failed/) f += $i; if ($(i+1) ~ /^ignored/) g += $i } }
                  END { print p + 0, f + 0, g + 0 }')
           {
-            echo "### Rust tests (non-blocking until WS2)"
+            echo "### Rust tests (non-blocking)"
             echo
             echo "Outcome: **${OUTCOME}**. ${passed} passed, ${failed} failed, ${ignored} ignored."
             echo
@@ -128,7 +136,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$OUTCOME" != success ]; then
-            echo "::warning title=Rust tests (non-blocking until WS2)::${failed} failed, ${passed} passed; see the Tests step's log"
+            echo "::warning title=Rust tests (non-blocking)::${failed} failed, ${passed} passed; see the Tests step's log"
           fi
 
       - name: Save cargo registry and target

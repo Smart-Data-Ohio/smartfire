@@ -6,14 +6,12 @@
 
 use serde_json::Value;
 
-use crate::attachables::{
-    self, Attachable, Attachment, PlainTextRepresentation, RenderContext, attachment_from_node,
-};
+use crate::Error;
+use crate::attachables::{self, Attachable, Attachment, PlainTextRepresentation, RenderContext, attachment_from_node};
 use crate::dom::{Dom, NodeId};
 use crate::plain_text;
 use crate::ruby::{self, is_blank, presence, strip};
 use crate::sanitizer::{self, ATTACHMENT_ATTRIBUTES, SafeList};
-use crate::Error;
 
 pub const ATTACHMENT_TAG: &str = "action-text-attachment";
 
@@ -77,9 +75,9 @@ impl Content {
     }
 
     /// `Content#to_s`: the content partial inside `layouts/action_text/contents/_content.html.erb`,
-    /// which Campfire overrides with a `lexxy-content` wrapper.
+    /// which our fork overrides with a `trix-content` wrapper.
     pub fn to_rendered_html_with_layout(&self, ctx: &RenderContext) -> Result<String, Error> {
-        Ok(format!("<div class=\"lexxy-content\">\n  {}\n</div>\n", self.render(ctx)?))
+        Ok(format!("<div class=\"trix-content\">\n  {}\n</div>\n", self.render(ctx)?))
     }
 }
 
@@ -218,7 +216,7 @@ pub fn render_attachment_html(attachment: &Attachment, ctx: &RenderContext) -> R
 }
 
 fn render_attachment_html_at(attachment: &Attachment, ctx: &RenderContext, depth: usize) -> Result<String, Error> {
-    attachables::render_attachment(attachment, &|content: &str| {
+    attachables::render_attachment(attachment, ctx, &|content: &str| {
         if depth >= MAX_CONTENT_ATTACHMENT_DEPTH {
             return Ok(String::new());
         }

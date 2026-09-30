@@ -4,7 +4,8 @@
 //! (create the bot's message, process an attachment, `broadcast_create`).
 
 use anyhow::{Context as _, anyhow};
-use campfire_db::{Database, Event, Message, NewMessage, PushSubscription, Room, User, Webhook};
+use campfire_db::{Database, Message, NewMessage, PushSubscription, Room, User, Webhook};
+use campfire_jobs::{Execution, JobResult, Outcome};
 use campfire_views::messages as views;
 
 use super::net::Network;
@@ -15,27 +16,30 @@ use crate::config::Config;
 use crate::controllers::presenters::page::{self, Rendered};
 use crate::controllers::messages::{canonicalize_body, process_attachment, save_staged};
 use crate::controllers::presenters::Presenter;
-use crate::jobs::{JobKind, Registry};
+use crate::jobs::{PushMessageJob, Registry, WebhookJob, discard_missing};
 
-/// Registers the handlers for `Event::PushMessage` and `Event::DeliverWebhook`.
+/// Registers `Room::PushMessageJob` and `Bot::WebhookJob`.
 pub fn register_jobs(registry: &mut Registry) {
-    registry.handle(JobKind::PushMessage, push_message);
-    registry.handle(JobKind::DeliverWebhook, deliver_webhook);
+    registry.register(push_message);
+    registry.register(deliver_webhook);
 }
 
 /// `Room::PushMessageJob#perform(room, message)`: `Room::MessagePusher.new(room:, message:).push`,
-/// unless Web Push is off.
-async fn push_message(app: App, event: Event) -> anyhow::Result<()> {
-    let Event::PushMessage { message_id, .. } = event else { return Ok(()) };
-    let Some(pool) = app.web_push.clone() else { return Ok(()) };
-    let db = app.db.clone();
-    app.db
+/// unless Web Push is off. A room or message that's gone discards the job.
+async fn push_message(app: App, job: PushMessageJob, _: Execution) -> JobResult {
+    let Some(pool) = app.web_push.clone() else { return Ok(Outcome::Done) };
+    let PushMessageJob { room_id, message_id } = job;
+    let message = app
+        .db
         .read(move |conn| {
-            let message = Message::find(conn, message_id)?;
-            web_push::push_message(&pool, conn, &*db.env().rich_text, &message, db.env().now()).map(|_| ())
+            Room::find(conn, room_id)?;
+            Message::find(conn, message_id)
         })
-        .await?;
-    Ok(())
+        .await
+        .map_err(discard_missing)?;
+    let db = app.db.clone();
+    app.db.read(move |conn| web_push::push_message(&pool, conn, &*db.env().rich_text, &message, db.env().now()).map(|_| ())).await?;
+    Ok(Outcome::Done)
 }
 
 /// config/initializers/web_push.rb (`config.x.web_push_pool`): the pool, whose invalid
@@ -66,14 +70,14 @@ pub fn web_push_pool(config: &Config, db: &Database) -> Option<web_push::Pool> {
 
 /// `Bot::WebhookJob#perform(bot, message)`: `bot.deliver_webhook(message)`, i.e.
 /// `webhook.deliver(message)`, then the reply.
-async fn deliver_webhook(app: App, event: Event) -> anyhow::Result<()> {
-    let Event::DeliverWebhook { bot_id, message_id } = event else { return Ok(()) };
+async fn deliver_webhook(app: App, job: WebhookJob, _: Execution) -> JobResult {
+    let WebhookJob { bot_id, message_id } = job;
+    // A bot or message that's gone discards the job.
+    let (bot, message) = app.db.read(move |conn| Ok((User::find(conn, bot_id)?, Message::find(conn, message_id)?))).await.map_err(discard_missing)?;
     let db = app.db.clone();
     let (bot, room, url, payload) = app
         .db
         .read(move |conn| {
-            let bot = User::find(conn, bot_id)?;
-            let message = Message::find(conn, message_id)?;
             let room = Room::find(conn, message.room_id)?;
             let Some(webhook) = Webhook::find_by_user(conn, bot_id)? else { return Ok(None) };
             let payload = webhook.payload(
@@ -90,11 +94,12 @@ async fn deliver_webhook(app: App, event: Event) -> anyhow::Result<()> {
 
     let delivery = webhook::deliver(&Network::system(), url.as_deref().unwrap_or(""), payload).await?;
     let message = match delivery.reply {
-        WebhookReply::None => return Ok(()),
+        WebhookReply::None => return Ok(Outcome::Done),
         WebhookReply::Text(text) => create_text_reply(&app, &room, &bot, text).await?,
         WebhookReply::Attachment(attachment) => create_attachment_reply(&app, &room, &bot, attachment).await?,
     };
-    broadcast_create(&app, &room, &message).await
+    broadcast_create(&app, &room, &message).await?;
+    Ok(Outcome::Done)
 }
 
 /// `room.messages.create!(body: text, creator: user)`: the text is assigned to the rich text
@@ -105,7 +110,7 @@ async fn create_text_reply(app: &App, room: &Room, bot: &User, text: String) -> 
     let body = canonicalize_body(app, text, None).await.map_err(|e| anyhow!("{e:?}"))?;
     let message = app
         .db
-        .write(move |tx| Message::create(tx, NewMessage { room_id, creator_id, client_message_id: None, body: Some(body), attachment_blob_id: None }))
+        .write(move |tx| Message::create(tx, NewMessage { room_id, creator_id, client_message_id: None, body: Some(body), attachment_blob_id: None, ..Default::default() }))
         .await?;
     Ok(message)
 }
@@ -121,7 +126,7 @@ async fn create_attachment_reply(app: &App, room: &Room, bot: &User, attachment:
     let (room_id, creator_id, blob_id) = (room.id, bot.id, blob.id);
     let message = app
         .db
-        .write(move |tx| Message::create(tx, NewMessage { room_id, creator_id, client_message_id: None, body: None, attachment_blob_id: Some(blob_id) }))
+        .write(move |tx| Message::create(tx, NewMessage { room_id, creator_id, client_message_id: None, body: None, attachment_blob_id: Some(blob_id), ..Default::default() }))
         .await?;
     process_attachment(app, blob).await.map_err(|e| anyhow!("{e:?}"))?;
     let id = message.id;

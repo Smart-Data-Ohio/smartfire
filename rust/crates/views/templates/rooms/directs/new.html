@@ -4,7 +4,7 @@
 {%- block content %}
 <turbo-frame id="direct_rooms_control" target="_top">
   <div class="directs directs--new flex flex-column gap">
-    <form class="flex gap flex-item-grow" data-controller="form" data-action="keydown.esc-&gt;form#cancel" action="{{ h::routes::rooms_directs() }}" accept-charset="UTF-8" method="post">
+    <form class="flex gap flex-item-grow" data-controller="form" data-action="keydown.esc-&gt;form#cancel" action="{{ h::routes::rooms_directs() }}" accept-charset="UTF-8" method="post">{{ crate::helpers::token_tag(&h::routes::rooms_directs().to_string(), "post") }}
       <a class="btn flex-item-no-shrink" data-turbo-frame="user_sidebar" data-form-target="cancel" href="{{ h::routes::user_sidebar() }}">
         <img aria-hidden="true" src="{{ ctx.asset("arrow-left.svg") }}" />
         <span class="for-screen-reader">Cancel changes</span>
