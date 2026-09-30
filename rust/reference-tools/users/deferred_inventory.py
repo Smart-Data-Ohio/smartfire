@@ -42,6 +42,7 @@ covered_before = {
 }
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
+    "system/timezone_detection_test.rb": {"the browser does not report its zone without a CSRF token", "the browser reports its detected zone once"},
     "system/audit_log_test.rb": {"admin browses filters and exports the audit log", "audit log stays usable at phone width"},
     "controllers/pwa_controller_test.rb": covered_before["controllers/pwa_controller_test.rb"] | {"service worker fetch and notification logic"},
     "system/service_worker_test.rb": {"the worker caches static assets and never authenticated responses", "the offline shell renders with working retry behavior"},

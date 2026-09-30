@@ -22,7 +22,8 @@ picker_mode = sys.argv[1:] == ["--picker"]
 status_mode = sys.argv[1:] == ["--status"]
 pwa_mode = sys.argv[1:] == ["--pwa"]
 audit_mode = sys.argv[1:] == ["--audit"]
-assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode or audit_mode, "expected --picker, --status, --pwa, --audit or no arguments"
+timezone_mode = sys.argv[1:] == ["--timezone"]
+assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode or audit_mode or timezone_mode, "expected --picker, --status, --pwa, --audit, --timezone or no arguments"
 if audit_mode:
     setup_env = os.environ.copy()
     setup_env.pop("LD_LIBRARY_PATH", None)
@@ -30,15 +31,19 @@ if audit_mode:
     subprocess.run([str(root / "parity/bin/seed"), "build", "ws8br2_browser_audit"], env=setup_env, check=True)
     seed = root / "parity/.seed/ws8br2_browser_audit"
 browser_seed = None
-if picker_mode:
+if picker_mode or timezone_mode:
     browser_seed = root / f"parity/.seed/ws8br2-browser-{os.getpid()}"
     shutil.copytree(seed, browser_seed)
     seed = browser_seed
     with sqlite3.connect(seed / "db/production.sqlite3") as db:
-        for id, name, email in ((9100000001, "Chad Puterbaugh", "chad@example.test"), (9100000002, "Renée Dupont", "renee@example.test")):
+        if timezone_mode:
+            david = json.loads((seed / "labels.json").read_text())["users.david"]
+            db.execute("UPDATE users SET time_zone=NULL,time_zone_explicit=0 WHERE id=?", [david])
+        for id, name, email in (((9100000001, "Chad Puterbaugh", "chad@example.test"), (9100000002, "Renée Dupont", "renee@example.test")) if picker_mode else ()):
             db.execute("INSERT INTO users(id,name,email_address,created_at,updated_at) VALUES (?,?,?,'2026-03-02 16:00:00','2026-03-02 16:00:00')", (id,name,email))
     input_labels = json.loads((seed / "labels.json").read_text())
-    input_labels.update({"users.chad":9100000001,"users.renee":9100000002})
+    if picker_mode:
+        input_labels.update({"users.chad":9100000001,"users.renee":9100000002})
     (seed / "labels.json").write_text(json.dumps(input_labels))
 assert (seed / "db/production.sqlite3").is_file(), "build the default seed first"
 target = Path(os.environ.get("CARGO_TARGET_DIR", root / "target"))
@@ -90,7 +95,7 @@ try:
             subprocess.run(["docker", "run", "--rm", "--network", "host", "--label", "parity.owner=ws8br2",
                             "-v", f"{root.parent}:/work:ro", "-e", f"WS8BR2_BROWSER_URL=http://127.0.0.1:{port}",
                             "-e", f"WS8BR2_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json", image,
-                            "node", "/work/rust/reference-tools/users/" + ("browser_audit.mjs" if audit_mode else "browser_pwa.mjs" if pwa_mode else "browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
+                            "node", "/work/rust/reference-tools/users/" + ("browser_timezone.mjs" if timezone_mode else "browser_audit.mjs" if audit_mode else "browser_pwa.mjs" if pwa_mode else "browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
 finally:
     if server is not None:
         server.terminate()
