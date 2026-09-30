@@ -23,3 +23,5 @@ check('webhook-replay-bypass',root/'crates/db/src/models/google_calendar.rs','AN
 print('Google controller security discrimination: 3 mutations rejected',flush=True)
 check('unreadable-grant-bypass',root/'crates/db/src/models/google_account.rs','self.mark_disconnected(tx, UNREADABLE_TOKEN_REASON)?;\n                Ok(false)','self.mark_disconnected(tx, UNREADABLE_TOKEN_REASON)?;\n                Ok(true)','models::google_account::tests::unreadable_grant_disconnects',package='campfire_db')
 print('Google connection security discrimination: 1 mutation rejected',flush=True)
+check('html-whitespace',root/'crates/views/templates/sessions/_google_sign_in.html','Sign in with Google\n','Sign in with Google \n','sign_in_partial_matches_pinned_rails',package='campfire_views')
+print('Google HTML discrimination: 1 mutation rejected',flush=True)

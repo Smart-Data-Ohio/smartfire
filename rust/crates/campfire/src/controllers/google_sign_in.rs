@@ -7,8 +7,8 @@ use crate::{
 use campfire_db::{
     Status, User, UserChanges,
     models::{
-        audit_log::{Actor, AuditLog, NewAuditLog, Target},
-        google_identity::{self, ResolutionKind},
+        audit_log::{AuditLog, NewAuditLog, Target},
+        google_identity,
     },
 };
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
@@ -186,60 +186,9 @@ async fn complete_sign_in(c: &mut Ctx, claims: Map<String, Value>) -> Result {
         .app()
         .db
         .write(move |tx| {
-            let resolution = google_identity::GoogleIdentity::resolve(tx, &claims)?;
-            let user = resolution.user;
-            let action = match resolution.kind {
-                ResolutionKind::Provisioned => Some(("user.create", json!({"method":"google"}))),
-                ResolutionKind::Linked => {
-                    Some(("google.sign_in.link", json!({"email":claims.get("email")})))
-                }
-                ResolutionKind::Existing => None,
-            };
-            if let Some((action, changes)) = action {
-                AuditLog::record(
-                    tx,
-                    NewAuditLog {
-                        action: action.into(),
-                        actor: Some(Actor::from(&user)),
-                        target: Some(Target::from(&user)),
-                        changes: Some(changes),
-                        ..Default::default()
-                    },
-                    &context,
-                )?;
-            }
-            let enabled = user.two_factor_enabled(tx.conn())?;
-            let remembered = enabled
-                && campfire_db::TwoFactorRememberedDevice::find_valid(
-                    tx,
-                    remember.as_deref(),
-                    Some(user.id),
-                )?
-                .is_some();
-            let session = if enabled && !remembered {
-                None
-            } else {
-                let session = crate::authentication::start_session(
-                    tx,
-                    user.id,
-                    campfire_db::NewSession {
-                        user_agent: agent.as_deref(),
-                        ip_address: Some(&ip),
-                        device_id: Some(&device_id),
-                        two_factor_verified: remembered,
-                    },
-                    notify,
-                )?;
-                crate::authentication::record_sign_in(
-                    tx,
-                    &user,
-                    "google",
-                    remembered.then_some("remembered_device"),
-                    &context,
-                )?;
-                Some(session)
-            };
-            Ok((user, session))
+            crate::authentication::begin_google_session(tx, &claims, campfire_db::NewSession {
+                user_agent: agent.as_deref(), ip_address: Some(&ip), device_id: Some(&device_id), two_factor_verified: false,
+            }, remember.as_deref(), notify, &context)
         })
         .await;
     let (user, session) = match result {
