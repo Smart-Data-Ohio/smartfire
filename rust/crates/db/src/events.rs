@@ -150,6 +150,10 @@ impl Event {
 }
 
 pub trait EventSink: Send + Sync {
+    /// Peer model adapter. The default is a flagged uninstalled stub, as with
+    /// `callbacks::Registry`; production Jobs dispatches its installed handlers.
+    fn model_callback(&self, _tx: &mut Tx<'_>, _callback: crate::callbacks::Callback) -> Result<()> { Ok(()) }
+
     /// Hands the event off, once its write has committed (or right away, for [`Tx::emit_now`]).
     fn emit(&self, event: Event);
 
@@ -198,6 +202,10 @@ impl EventSink for RecordingSink {
 }
 
 impl<T: EventSink + ?Sized> EventSink for Arc<T> {
+    fn model_callback(&self, tx: &mut Tx<'_>, callback: crate::callbacks::Callback) -> Result<()> {
+        (**self).model_callback(tx, callback)
+    }
+
     fn emit(&self, event: Event) {
         (**self).emit(event)
     }

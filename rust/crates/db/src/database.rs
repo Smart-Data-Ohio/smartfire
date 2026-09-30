@@ -85,6 +85,11 @@ pub struct Tx<'c> {
 }
 
 impl<'c> Tx<'c> {
+    pub fn model_callback(&mut self, phase: crate::callbacks::Phase, record_id: i64) -> Result<()> {
+        let sink = self.env.sink.clone();
+        sink.model_callback(self, crate::callbacks::Callback { phase, record_id })
+    }
+
     pub fn conn(&self) -> &'c Connection {
         self.conn
     }

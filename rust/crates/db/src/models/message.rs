@@ -461,7 +461,8 @@ impl Message {
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
-            crate::models::message_reference::sync(tx, &message)?;
+            if !message.system_note { tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?; }
+            message.sync_all_references(tx)?;
             message.push_later_in_conversation(tx);
         }
         if message.thread_id.is_some() {
@@ -796,7 +797,7 @@ impl Message {
         }
         if !self.streaming {
             self.update_in_index(tx)?;
-            if references_changed { crate::models::message_reference::sync(tx, self)?; }
+            if references_changed { self.sync_all_references(tx)?; }
         }
         Ok(())
     }
@@ -1137,6 +1138,18 @@ impl Message {
         Ok(claimed)
     }
 
+    /// `sync_all_references`, in the Rails declaration order. Peer adapters
+    /// implement their import/fetch policy; no network I/O runs here.
+    pub fn sync_all_references(&self, tx: &mut Tx<'_>) -> Result<()> {
+        use crate::callbacks::Phase;
+        for phase in [Phase::MessageGithubReferences, Phase::MessageFizzyReferences,
+            Phase::MessageTwitterReferences, Phase::MessageEventReferences] {
+            tx.model_callback(phase, self.id)?;
+        }
+        crate::models::message_reference::sync(tx,self)?;
+        tx.model_callback(Phase::MessageLinkReferences, self.id)
+    }
+
     /// Normal finalization runs the deferred WS8/WS11 callbacks exactly once.
     /// WS12's activity recorder and WS14/15's external reference syncs attach here
     /// when their domains merge, as they do in the ordinary message create chain.
@@ -1148,8 +1161,9 @@ impl Message {
         self.create_in_index(tx)?;
         self.receive_in_conversation(tx)?;
         self.push_later_in_conversation(tx);
+        if !self.system_note { tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
         crate::models::agent_delivery::enqueue_for_message(tx,self)?;
-        crate::models::message_reference::sync(tx,self)?;
+        self.sync_all_references(tx)?;
         crate::models::bot_webhook_fanout::deliver(tx,self)?;
         if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
         if let Some(mut agent)=crate::Agent::find(tx.conn(),agent_id.expect("active agent"))? {agent.clear_working_presence(tx)?;}
