@@ -80,6 +80,10 @@ async fn account_and_ban_mutations_authorize_before_writes_and_audits() {
 
 #[tokio::test]
 async fn account_mutations_and_audits_match_pinned_rails_http_vectors() {
+    run_mutation_cases(None).await;
+}
+
+async fn run_mutation_cases(selected: Option<&str>) {
     let app = TestApp::boot_frozen().await.expect("seed required");
     let cases: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../vectors/users_account_mutations.json"
@@ -90,13 +94,16 @@ async fn account_mutations_and_audits_match_pinned_rails_http_vectors() {
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
         .await;
     assert_eq!(confirmed.status, StatusCode::FOUND);
-    for case in cases["cases"].as_array().unwrap() {
+    for case in cases["cases"].as_array().unwrap().iter().filter(|case| selected.is_none_or(|name| case["name"] == name)) {
         let setup = case.clone();
+        let isolated_unban = selected == Some("unban_banned");
         let (old_code,active)=app.db().write(move |tx| {
             tx.conn().execute("UPDATE accounts SET name='Signal',settings='{\"restrict_room_creation_to_administrators\":false}',custom_styles=?",[setup["styles_before"].as_str()])?;
             tx.conn().execute("UPDATE users SET role=0,status=?,theme=? WHERE id=?",rusqlite::params![setup["status_before"].as_i64().unwrap_or(0),setup["theme_before"].as_str().unwrap(),KEVIN])?;
             if let Some(ip)=setup["session_ip"].as_str() {tx.conn().execute("UPDATE sessions SET ip_address=? WHERE user_id=?",rusqlite::params![ip,KEVIN])?;}
             if setup["name"]=="ban_active" {campfire_db::Session::start(tx,KEVIN,Some("ws8br2-target"),Some("203.0.113.43"))?;}
+            // In the Rails sequence this subject has already been banned, destroying sessions.
+            if isolated_unban {tx.conn().execute("DELETE FROM sessions WHERE user_id=?",[KEVIN])?;}
             tx.conn().execute("DELETE FROM audit_logs",[])?;
             Ok((Account::first(tx.conn())?.unwrap().join_code,tx.conn().query_row("SELECT COUNT(*) FROM users WHERE status=0",[],|r|r.get::<_,i64>(0))?))
         }).await.unwrap();
@@ -142,6 +149,9 @@ async fn account_mutations_and_audits_match_pinned_rails_http_vectors() {
             Ok((serde_json::json!({"account_name":account.name,"restrict":account.settings().restrict_room_creation_to_administrators(),"styles":account.custom_styles,"code_changed":account.join_code!=old_code,"role":user.role.name(),"status":user.status.name(),"subject_status":subject.as_ref().map(|u|u.status.name()),"subject_role":subject.as_ref().map(|u|u.role.name()),"active_delta":after_active-active,"target_sessions":target_sessions,"banned_ips":banned_ips}),rows))
         }).await.unwrap();
         assert_eq!(state, case["state"], "{}", case["name"]);
+        if selected.is_some() {
+            assert_eq!(rows.len(),1,"{}: exactly one audit row",case["name"]);
+        }
         assert_eq!(
             serde_json::json!(rows),
             case["audits"],
@@ -149,4 +159,49 @@ async fn account_mutations_and_audits_match_pinned_rails_http_vectors() {
             case["name"]
         );
     }
+}
+
+#[tokio::test]
+async fn settings_name_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("settings_name")).await;
+}
+
+#[tokio::test]
+async fn settings_restrict_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("settings_restrict")).await;
+}
+
+#[tokio::test]
+async fn custom_styles_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("custom_styles")).await;
+}
+
+#[tokio::test]
+async fn logo_removal_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("logo_delete")).await;
+}
+
+#[tokio::test]
+async fn join_code_reset_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("join_reset")).await;
+}
+
+#[tokio::test]
+async fn role_change_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("role_promote")).await;
+}
+
+#[tokio::test]
+async fn deactivation_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("deactivate")).await;
+}
+
+#[tokio::test]
+async fn ban_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("ban_active")).await;
+}
+
+#[tokio::test]
+async fn unban_writes_exactly_one_rails_audit_row() {
+    run_mutation_cases(Some("unban_banned")).await;
 }

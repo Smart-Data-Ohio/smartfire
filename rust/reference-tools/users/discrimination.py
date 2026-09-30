@@ -11,9 +11,12 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("account-view-auth", "crates/views/templates/accounts/users/_user.html", "{% if ctx.can_administer() && user.active() %}", "{% if !ctx.can_administer() && user.active() %}", "account_member_rows_match_google_security_role_and_inactive_rails_controls"),
+    ("account-view-google", "crates/views/src/users/summary.rs", "self.email_self_changed || !self.google_email_link_allowed", "self.email_self_changed || self.google_email_link_allowed", "account_member_rows_match_google_security_role_and_inactive_rails_controls"),
+    ("audit-duplicate", "crates/campfire/src/account_security.rs", "    )?;\n    Ok(())\n}\n\npub fn settings_changed", "    )?;\n    AuditLog::record(tx, NewAuditLog { action: action.into(), target: Some(Target::from(account)), ..Default::default() }, context)?;\n    Ok(())\n}\n\npub fn settings_changed", "settings_name_writes_exactly_one_rails_audit_row"),
     ("account-admin", "crates/campfire/src/controllers/accounts.rs", "concerns::ensure_can_administer(c)?;", "let _ = concerns::require_current_user(c)?;", "account_and_ban_mutations_authorize_before_writes_and_audits"),
     ("account-sudo", "crates/campfire/src/controllers/accounts/join_codes.rs", "concerns::sudo::require_sudo_mode(c)?;", "// removed sudo for the discrimination check", "account_and_ban_mutations_authorize_before_writes_and_audits"),
-    ("account-role", "crates/db/src/models/account_mutations.rs", "user.role != before", "user.role == before", "account_mutations_and_audits_match_pinned_rails_http_vectors"),
+    ("account-role", "crates/campfire/src/authentication.rs", "user.role != before", "user.role == before", "account_mutations_and_audits_match_pinned_rails_http_vectors"),
     ("ban-invalid", "crates/campfire/src/controllers/users/bans.rs", "Error::Status(StatusCode::UNPROCESSABLE_ENTITY)", 'Error::internal(anyhow::anyhow!("forced invalid record status"))', "account_mutations_and_audits_match_pinned_rails_http_vectors"),
     ("profile-settings", "crates/db/src/models/user/profile_settings.rs", "crate::slash_commands::user_settings::update(tx, user, Value::Object(attrs))", "let _ = attrs; Ok(())", "manual_profile_settings_match_pinned_rails_patch_vectors"),
     ("profile-fields", "crates/views/src/users/appearance.rs", "errors.is_empty()", "!errors.is_empty()", "appearance_partial_matches_all_pinned_rails_bytes"),
@@ -32,7 +35,7 @@ mutations = [
     ("preference-csrf", "crates/campfire/src/controllers/users/time_zones.rs", "Before::default()", "Before::default().skip_forgery_protection()", "preference_writes_require_session_and_csrf_and_scope_to_current_user"),
     ("preference-scope", "crates/campfire/src/controllers/users/time_zones.rs", "let user_id = concerns::require_current_user(c)?.id;", 'let user_id = c.param_str("user_id").and_then(|value| value.parse().ok()).unwrap_or(concerns::require_current_user(c)?.id);', "preference_writes_require_session_and_csrf_and_scope_to_current_user"),
     ("preference-explicit", "crates/db/src/models/user.rs", "&& !explicit &&", "&& (explicit || !explicit) &&", "time_zone_detection_matches_rails_validation_and_saved_choice_vectors"),
-    ("preference-zone-case", "crates/db/src/slash_commands/time_parser.rs", "identifiers.binary_search_by(|value| value.as_str().cmp(identifier)).ok()?;", "let _ = identifiers;", "time_zone_detection_matches_rails_validation_and_saved_choice_vectors"),
+    ("preference-zone-case", "crates/db/src/slash_commands/time_parser.rs", "if !names.identifiers.contains(identifier)", "if names.identifiers.contains(identifier)", "time_zone_detection_matches_rails_validation_and_saved_choice_vectors"),
     ("tour-stamp", "crates/db/src/models/user.rs", "SET tour_completed_at=?,updated_at=?", "SET created_at=?,updated_at=?", "tour_touch_matches_rails_and_refreshes_on_repeated_completion"),
 ]
 selected = set(sys.argv[1:])
