@@ -21,6 +21,7 @@ pub mod calendar_credentials;
 pub mod verifiers;
 pub mod webhook;
 pub mod jwt;
+pub mod totp;
 
 mod encoding;
 mod json;
