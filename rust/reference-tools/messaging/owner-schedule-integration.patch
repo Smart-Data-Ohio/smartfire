@@ -1,0 +1,68 @@
+--- a/rust/crates/campfire/src/controllers/channel_threads.rs
++++ b/rust/crates/campfire/src/controllers/channel_threads.rs
+@@ -116,11 +116,11 @@
+     }).await
+ }
+ 
+-/// Flagged WS8b-m2 integration call site, under the live request's context and CSRF provider.
+-/// Once its provider is merged, render `scheduled_messages::ComposerButton { ctx, room_id,
+-/// thread_id: Some(thread_id) }` here. Do not treat the current empty child as full pane parity.
+-fn render_thread_schedule_control(_ctx: &campfire_views::ViewContext<'_>, _room_id: i64, _thread_id: i64) -> campfire_views::helpers::Html {
+-    campfire_views::helpers::empty()
++/// WS8b-m2's schedule child, rendered under this request's context and CSRF provider.
++fn render_thread_schedule_control(ctx: &campfire_views::ViewContext<'_>, room_id: i64, thread_id: i64) -> campfire_views::helpers::Html {
++    campfire_views::helpers::raw(campfire_views::scheduled_messages::ComposerButton {
++        ctx, room_id, thread_id: Some(thread_id),
++    }.render().expect("schedule control renders"))
+ }
+ 
+ async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {
+--- a/rust/crates/campfire/src/controllers/channel_threads/content_tests.rs
++++ b/rust/crates/campfire/src/controllers/channel_threads/content_tests.rs
+@@ -69,9 +69,9 @@
+             let steps = p.thread_steps(id)?;
+             let composer = p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, false)?)?;
+             assert_eq!(serde_json::json!(composer.slash_commands), oracle()["slash_names"]);
+-            // The schedule child is an explicit owner input, produced by the actual Rails child.
+-            let scheduled_control = h::raw(row_owned["composer_button"].as_str().unwrap());
+             page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| request_forgery::rendering_with(RequestSecrets {tokens: Box::new(FixedTokens), csp_nonce: None}, || {
++                let scheduled_control = super::render_thread_schedule_control(ctx, ALL_TALK, id);
++                assert_eq!(scheduled_control.0,row_owned["composer_button"].as_str().unwrap());
+                 campfire_views::channel_threads::Conversation {ctx, thread_id: id, room_updated_at: room.updated_at.jiff(), anchor,
+                     messages: &messages, user: &user, steps: &steps, composer: &composer, scheduled_control: &scheduled_control}.render()
+             })).map_err(|e| campfire_db::Error::Other(e.to_string()))
+@@ -83,8 +83,9 @@
+     let (html,footer,pending) = app.db().read(move |conn| {
+         let p = Presenter::new(conn, &runtime, None);
+         let composer = p.composer_facts(&Room::find(conn, ALL_TALK)?, &User::find(conn, DAVID)?, None, p.composer_drive_flow(&User::find(conn, DAVID)?, false)?)?;
+-        let scheduled_control = h::raw(oracle()["room_schedule"].as_str().unwrap());
+         page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| request_forgery::rendering_with(RequestSecrets {tokens: Box::new(FixedTokens), csp_nonce: None}, || {
++            let scheduled_control = h::raw(campfire_views::scheduled_messages::ComposerButton {ctx,room_id: ALL_TALK,thread_id: None}.render().unwrap());
++            assert_eq!(scheduled_control.0,oracle()["room_schedule"].as_str().unwrap());
+             Ok::<_,askama::Error>((campfire_views::messages::composer::Composer {ctx, facts: &composer, scheduled_control: &scheduled_control}.render()?,
+                 campfire_views::messages::composer::FooterComposer {ctx, facts: &composer, scheduled_control: &scheduled_control}.render()?,
+                 campfire_views::channel_threads::PendingTemplate {ctx,user: &p.user_view(DAVID).unwrap()}.render()?))
+@@ -113,6 +114,8 @@
+             assert!(text.contains("name=\"authenticity_token\""));
+             let token = text.split("name=\"authenticity_token\" value=\"").nth(1).unwrap().split('"').next().unwrap();
+             assert!(browser.real_authenticity_token().unwrap().is_valid(token, &format!("/rooms/{ALL_TALK}/threads/{id}/messages"), "post"));
++            assert!(text.contains(&format!("data-schedule-send-thread-id-value=\"{id}\"")));
++            assert!(text.contains(&format!("id=\"schedule-send-thread-{id}\"")));
+             assert!(!text.contains("<!DOCTYPE html>"));
+             assert!(text.contains(&format!("id=\"composer_channel_thread_{id}\"")));
+             assert_eq!(text.matches("role=\"log\"").count(), 1);
+--- a/rust/crates/campfire/src/controllers/presenters/room_native.rs
++++ b/rust/crates/campfire/src/controllers/presenters/room_native.rs
+@@ -1,10 +1,10 @@
+ //! Mount owner components in the request rendering scope. Never cache composer/template HTML.
+ use askama::Template;
+ use campfire_views::{ViewContext, helpers as h, rooms::{Show,ShowView}};
+-use campfire_views::messages::composer::{Composer,Facts};
++use campfire_views::messages::composer::{FooterComposer,Facts};
+ pub(crate) fn components(ctx:&ViewContext<'_>,user:&campfire_views::messages::UserView,composer:&Facts)->askama::Result<(String,String)> {
+     let schedule=h::raw(campfire_views::scheduled_messages::ComposerButton{ctx,room_id:composer.room_id,thread_id:None}.render()?);
+-    Ok((Composer{ctx,facts:composer,scheduled_control:&schedule}.render()?,
++    Ok((FooterComposer{ctx,facts:composer,scheduled_control:&schedule}.render()?,
+         campfire_views::channel_threads::PendingTemplate{ctx,user}.render()?))
+ }
+ pub fn render(ctx:&ViewContext<'_>,show:&ShowView,composer:&Facts,frame:bool)->askama::Result<String> {

@@ -80,15 +80,19 @@ async fn conversation_and_room_composer_match_fixed_secret_rails_bytes() {
         if html != expected {rails_mismatch(&html, expected, row["name"].as_str().unwrap());}
     }
     let runtime = app.booted.app.clone();
-    let html = app.db().read(move |conn| {
+    let (html,footer,pending) = app.db().read(move |conn| {
         let p = Presenter::new(conn, &runtime, None);
         let composer = p.composer_facts(&Room::find(conn, ALL_TALK)?, &User::find(conn, DAVID)?, None, p.composer_drive_flow(&User::find(conn, DAVID)?, false)?)?;
         let scheduled_control = h::raw(oracle()["room_schedule"].as_str().unwrap());
         page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| request_forgery::rendering_with(RequestSecrets {tokens: Box::new(FixedTokens), csp_nonce: None}, || {
-            campfire_views::messages::composer::Composer {ctx, facts: &composer, scheduled_control: &scheduled_control}.render()
+            Ok::<_,askama::Error>((campfire_views::messages::composer::Composer {ctx, facts: &composer, scheduled_control: &scheduled_control}.render()?,
+                campfire_views::messages::composer::FooterComposer {ctx, facts: &composer, scheduled_control: &scheduled_control}.render()?,
+                campfire_views::channel_threads::PendingTemplate {ctx,user: &p.user_view(DAVID).unwrap()}.render()?))
         })).map_err(|e| campfire_db::Error::Other(e.to_string()))
     }).await.unwrap();
     if html != oracle()["room_composer"].as_str().unwrap() {rails_mismatch(&html, oracle()["room_composer"].as_str().unwrap(), "room composer");}
+    if footer != oracle()["room_footer"].as_str().unwrap() {rails_mismatch(&footer,oracle()["room_footer"].as_str().unwrap(),"room footer");}
+    if pending != oracle()["pending_template"].as_str().unwrap() {rails_mismatch(&pending,oracle()["pending_template"].as_str().unwrap(),"pending template");}
 }
 
 #[tokio::test]
