@@ -50,7 +50,7 @@ mutations = [
     ("subscription-member-authority", "../../controllers/github/subscriptions.rs", "if !user.can_administer(Some(room.creator_id), false)", "if false && !user.can_administer(Some(room.creator_id), false)", "github_subscription_http_security", 1),
     ("subscription-override-authority", "../../controllers/github/subscriptions.rs", "administrator_override: user.is_administrator()", "administrator_override: true", "github_subscription_http_status", 1),
     ("subscription-section-authority", "../../../../views/src/github/subscriptions.rs", "if !self.can_administer", "if false && !self.can_administer", "github_subscription_sections", 1),
-    ("connection-sudo", "../../controllers/github/connections.rs", "concerns::require_sudo_mode(c)?;", "", "github_connections_security", 1),
+    ("connection-sudo", "../../controllers/github/connections.rs", "concerns::sudo::require_sudo_mode(c)?;", "", "github_connections_security", 1),
     ("bot-link-admin", "../../controllers/github/connections.rs", "concerns::ensure_can_administer(c)?;", "", "github_connections_security", 1),
     ("app-callback-state", "../../controllers/github/connections.rs", "if !oauth::valid_state(", "if false && !oauth::valid_state(", "github_connections_security", 1),
     ("health-admin", "../../controllers/accounts/integrations_health.rs", "concerns::ensure_can_administer(c)?;", "", "integration_health_http_security", 1),

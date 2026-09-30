@@ -8,7 +8,12 @@ use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
 /// `AllowBrowser::VERSIONS`, minus the browsers it blocks outright (`ie: false`).
-pub const ALLOW_BROWSER_VERSIONS: [(&str, &str); 4] = [("safari", "17.2"), ("chrome", "120"), ("firefox", "121"), ("opera", "104")];
+pub const ALLOW_BROWSER_VERSIONS: [(&str, &str); 4] = [
+    ("safari", "17.2"),
+    ("chrome", "120"),
+    ("firefox", "121"),
+    ("opera", "104"),
+];
 
 /// `sessions/new.html.erb`.
 #[derive(Template)]
@@ -36,7 +41,14 @@ pub struct IncompatibleBrowser<'a> {
 
 impl Page for IncompatibleBrowser<'_> {
     fn page_title(&self) -> Option<String> {
-        Some(if self.ctx.platform.apple_messages { "Campfire" } else { "Unsupported browser" }.into())
+        Some(
+            if self.ctx.platform.apple_messages {
+                "Smartfire"
+            } else {
+                "Unsupported browser"
+            }
+            .into(),
+        )
     }
 }
 

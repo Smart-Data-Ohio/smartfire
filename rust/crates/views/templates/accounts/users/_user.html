@@ -9,7 +9,9 @@
 
   <hr class="separator" aria-hidden="true">
 
-{% if ctx.can_administer() && user.active() %}{% if !user.bot() %}{% let form = h::form_with(h::routes::account_user(user.id)).model("user").data("controller", "form").method("patch") %}      {% filter form_with(form) %}
+{% if ctx.can_administer() && user.active() %}{% if !user.bot() %}{% if !ctx.is_current_user(user.id) && user.two_factor_enabled %}{% let reset_path = h::routes::account_user_two_factor_reset(user.id) %}        {% filter button_to(&reset_path,h::attrs().method("post").class("btn txt-small flex-item-no-shrink").title("Reset two-step sign-in").data("turbo_confirm",user.two_factor_reset_confirmation())) %}          {{ h::image_tag(ctx,"key.svg",h::attrs().size(20).aria_hidden()) }}
+          <span class="for-screen-reader">Reset two-step sign-in for {{ user.name }}</span>
+{% endfilter %}{% endif %}{% let form = h::form_with(h::routes::account_user(user.id)).model("user").data("controller", "form").method("patch") %}      {% filter form_with(form) %}
         <label class="btn txt-small flex-item-no-shrink" for="{{ h::dom_id("user", user.id, Some("role")) }}">
           <span class="for-screen-reader">Role: {% if user.administrator() %}Administrator{% else %}Member{% endif %}</span>
           {{ h::image_tag(ctx, "crown.svg", h::attrs().size(20).aria_hidden()) }}
@@ -23,4 +25,3 @@
       {{ h::image_tag(ctx, "pencil.svg", h::attrs().size(20).aria_hidden()) }}
       <span class="for-screen-reader">My settings</span>
 {% endfilter %}{% endif %}</li>
-

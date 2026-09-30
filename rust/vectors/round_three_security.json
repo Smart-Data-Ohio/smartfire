@@ -1,0 +1,592 @@
+{
+  "password": {
+    "array": {
+      "value": [
+        "ignored"
+      ],
+      "status": 302,
+      "changed": false,
+      "devices": 0,
+      "audits": [
+        {
+          "action": "user.password.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <david@37signals.com>",
+          "details": {},
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "hash": {
+      "value": {
+        "value": "ignored"
+      },
+      "status": 302,
+      "changed": false,
+      "devices": 0,
+      "audits": [
+        {
+          "action": "user.password.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <david@37signals.com>",
+          "details": {},
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "empty_array": {
+      "value": [],
+      "status": 302,
+      "changed": false,
+      "devices": 1,
+      "audits": []
+    },
+    "empty_hash": {
+      "value": {},
+      "status": 302,
+      "changed": false,
+      "devices": 1,
+      "audits": []
+    },
+    "nil": {
+      "value": null,
+      "status": 302,
+      "changed": false,
+      "devices": 1,
+      "audits": []
+    }
+  },
+  "email": {
+    "array": {
+      "value": [
+        "david@37signals.com"
+      ],
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[\"david@37signals.com\"]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "two": {
+      "value": [
+        "david@37signals.com",
+        "kevin@37signals.com"
+      ],
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "escaped": {
+      "value": [
+        "dav\"id@37signals.com"
+      ],
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[\"dav\\\"id@37signals.com\"]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "empty_array": {
+      "value": [],
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "nil": {
+      "value": null,
+      "status": 401,
+      "audits": [
+        {
+          "action": "session.sign_in.failure",
+          "actor_id": null,
+          "actor_label": "[unrecognized]",
+          "target_type": null,
+          "target_id": null,
+          "target_label": null,
+          "details": {
+            "method": "password"
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    }
+  },
+  "rate": {
+    "value": [
+      "david@37signals.com"
+    ],
+    "status": 429,
+    "audits": [
+      {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "david@37signals.com",
+        "target_type": null,
+        "target_id": null,
+        "target_label": null,
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "127.0.0.1",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      },
+      {
+        "action": "session.sign_in.failure",
+        "actor_id": null,
+        "actor_label": "[\"david@37signals.com\"]",
+        "target_type": null,
+        "target_id": null,
+        "target_label": null,
+        "details": {
+          "method": "password"
+        },
+        "ip_address": "127.0.0.1",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    ]
+  },
+  "zone": {
+    "blank": {
+      "params": {
+        "time_zone": ""
+      },
+      "status": 302,
+      "zone": null,
+      "explicit": true,
+      "audits": []
+    },
+    "selected": {
+      "params": {
+        "time_zone": "America/New_York"
+      },
+      "status": 302,
+      "zone": "America/New_York",
+      "explicit": true,
+      "audits": []
+    },
+    "nil": {
+      "params": {
+        "time_zone": null
+      },
+      "status": 302,
+      "zone": "UTC",
+      "explicit": true,
+      "audits": []
+    },
+    "whitespace": {
+      "params": {
+        "time_zone": " \t"
+      },
+      "status": 302,
+      "zone": null,
+      "explicit": true,
+      "audits": []
+    },
+    "alias": {
+      "params": {
+        "time_zone": "Eastern Time (US & Canada)"
+      },
+      "status": 302,
+      "zone": "Eastern Time (US & Canada)",
+      "explicit": true,
+      "audits": []
+    },
+    "array": {
+      "params": {
+        "time_zone": [
+          "ignored"
+        ]
+      },
+      "status": 302,
+      "zone": "UTC",
+      "explicit": true,
+      "audits": []
+    },
+    "hash": {
+      "params": {
+        "time_zone": {
+          "value": "ignored"
+        }
+      },
+      "status": 302,
+      "zone": "UTC",
+      "explicit": true,
+      "audits": []
+    },
+    "absent": {
+      "params": {
+        "bio": "Updated bio"
+      },
+      "status": 302,
+      "zone": "UTC",
+      "explicit": false,
+      "audits": []
+    },
+    "rejected": {
+      "params": {
+        "time_zone": "",
+        "email_address": "changed@example.test"
+      },
+      "status": 422,
+      "zone": "UTC",
+      "explicit": false,
+      "audits": []
+    },
+    "invalid": {
+      "params": {
+        "time_zone": "Mars/Olympus",
+        "email_address": "changed@example.test",
+        "current_password": "secret123456",
+        "password": "proposed-password",
+        "bio": "Submitted bio"
+      },
+      "status": 422,
+      "zone": "UTC",
+      "explicit": false,
+      "audits": []
+    },
+    "already_explicit": {
+      "params": {
+        "time_zone": "America/New_York"
+      },
+      "status": 302,
+      "zone": "America/New_York",
+      "explicit": true,
+      "audits": []
+    }
+  },
+  "admin": {
+    "promote": {
+      "method": "patch",
+      "route": "account",
+      "before_status": "active",
+      "before_role": "member",
+      "params": {
+        "user": {
+          "role": "administrator"
+        }
+      },
+      "status": 302,
+      "user_status": "active",
+      "user_role": "administrator",
+      "audits": [
+        {
+          "action": "user.role.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "role": {
+              "before": "member",
+              "after": "administrator"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "demote": {
+      "method": "patch",
+      "route": "account",
+      "before_status": "active",
+      "before_role": "administrator",
+      "params": {
+        "user": {
+          "role": "member"
+        }
+      },
+      "status": 302,
+      "user_status": "active",
+      "user_role": "member",
+      "audits": [
+        {
+          "action": "user.role.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "role": {
+              "before": "administrator",
+              "after": "member"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "role_noop": {
+      "method": "patch",
+      "route": "account",
+      "before_status": "active",
+      "before_role": "member",
+      "params": {
+        "user": {
+          "role": "member"
+        }
+      },
+      "status": 302,
+      "user_status": "active",
+      "user_role": "member",
+      "audits": []
+    },
+    "invalid_role": {
+      "method": "patch",
+      "route": "account",
+      "before_status": "active",
+      "before_role": "administrator",
+      "params": {
+        "user": {
+          "role": [
+            "administrator"
+          ]
+        }
+      },
+      "status": 302,
+      "user_status": "active",
+      "user_role": "member",
+      "audits": [
+        {
+          "action": "user.role.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "role": {
+              "before": "administrator",
+              "after": "member"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "deactivate": {
+      "method": "delete",
+      "route": "account",
+      "before_status": "active",
+      "before_role": "member",
+      "params": {},
+      "status": 302,
+      "user_status": "deactivated",
+      "user_role": "member",
+      "audits": [
+        {
+          "action": "user.deactivate",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "active",
+              "after": "deactivated"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "ban": {
+      "method": "post",
+      "route": "ban",
+      "before_status": "active",
+      "before_role": "member",
+      "params": {},
+      "status": 302,
+      "user_status": "banned",
+      "user_role": "member",
+      "audits": [
+        {
+          "action": "user.ban",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "active",
+              "after": "banned"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "ban_noop": {
+      "method": "post",
+      "route": "ban",
+      "before_status": "banned",
+      "before_role": "member",
+      "params": {},
+      "status": 302,
+      "user_status": "banned",
+      "user_role": "member",
+      "audits": []
+    },
+    "ban_deactivated": {
+      "method": "post",
+      "route": "ban",
+      "before_status": "deactivated",
+      "before_role": "member",
+      "params": {},
+      "status": 302,
+      "user_status": "banned",
+      "user_role": "member",
+      "audits": [
+        {
+          "action": "user.ban",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "deactivated",
+              "after": "banned"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "unban": {
+      "method": "delete",
+      "route": "ban",
+      "before_status": "banned",
+      "before_role": "member",
+      "params": {},
+      "status": 302,
+      "user_status": "active",
+      "user_role": "member",
+      "audits": [
+        {
+          "action": "user.unban",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "banned",
+              "after": "active"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    "unban_noop": {
+      "method": "delete",
+      "route": "ban",
+      "before_status": "active",
+      "before_role": "member",
+      "params": {},
+      "status": 302,
+      "user_status": "active",
+      "user_role": "member",
+      "audits": []
+    },
+    "unban_deactivated": {
+      "method": "delete",
+      "route": "ban",
+      "before_status": "deactivated",
+      "before_role": "member",
+      "params": {},
+      "status": 302,
+      "user_status": "active",
+      "user_role": "member",
+      "audits": [
+        {
+          "action": "user.unban",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "User",
+          "target_id": 712064548,
+          "target_label": "Kevin <kevin@37signals.com>",
+          "details": {
+            "status": {
+              "before": "deactivated",
+              "after": "active"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ]
+    }
+  }
+}

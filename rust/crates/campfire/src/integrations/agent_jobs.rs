@@ -454,7 +454,9 @@ mod tests {
     async fn ws11_approval_queue_failure_rolls_back_decision_ledger_and_inbox() {
         use campfire_db::{AgentApproval, NewApproval};
         let test=TestApp::boot().await.expect("default seed");
-        let db=test.db();
+        let db=test.db().clone();
+        // Inspect durable enqueue before any worker can consume the committed job.
+        test.booted.jobs.shutdown(std::time::Duration::from_secs(1)).await;
         let approval=db.write(|tx| {
             let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
             AgentApproval::create(tx,NewApproval {agent_id,action:"deploy".into(),summary:"Ship".into(),..Default::default()})
