@@ -1,0 +1,19 @@
+{%- filter content_tag("div",row.direct_options()) %}
+
+{% if row.members.len() > 1 %}    <div class="avatar__group">
+{% for user in row.members.iter().take(3) %}        {{ self.avatar_button(user,20,true)|safe }}{% endfor %}    </div>
+
+{% else %}    {{ self.avatar_button(row.members.first().unwrap(),48,false)|safe }}
+{% endif %}  {% filter link_to(h::routes::room(row.id),h::attrs().class("direct__link").data("room_id",row.id).merge(row.menu())) %}
+    <span class="direct__author min-width">
+      <span class="overflow-ellipsis">
+        <span class="for-screen-reader">Ping with</span>
+        {{ row.name }}
+      </span>
+    </span>
+{% endfilter %}{% if configured %}    <span class="voice-room__trailing">
+      {{ row.participants()|safe }}
+    </span>
+{% endif %}{% if row.call.unread %}    <span class="sidebar-item__status">New</span>
+{% endif %}{% endfilter %}{% if !collection %}
+{% endif %}{{ "" }}

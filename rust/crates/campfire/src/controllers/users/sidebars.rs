@@ -1,110 +1,53 @@
-//! `Users::SidebarsController` (reference/app/controllers/users/sidebars_controller.rb): the room
-//! list, loaded into the `user_sidebar` turbo frame.
-
-use askama::Template;
-use campfire_db::{Account, Involvement, Membership};
-use campfire_kit::{Ctx, Error, Result, StatusCode, format};
-use campfire_views::users;
-
+//! `Users::SidebarsController`: the complete per-viewer workspace sidebar.
+mod composition;
+#[cfg(test)]
+mod tests;
 use crate::app::AppCtx;
-use crate::channels::user_gid;
 use crate::concerns::{self, Before};
 use crate::controllers::presenters::{self, view_context};
-
+use askama::Template;
+use campfire_kit::{Ctx, Error, Result, StatusCode, format};
+use campfire_views::users;
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     c.respond_to(&[&format::HTML])?;
     let user = concerns::require_current_user(c)?.clone();
-    let secrets = c.app().secrets.clone();
-    let (sidebar, call_memberships, restricted) = {
-        let (user, secrets, fragments, app) = (
-            user.clone(),
-            secrets.clone(),
-            c.app().fragment_cache.clone(),
-            c.app().clone(),
-        );
-        c.app()
-            .db
-            .read(move |conn| {
-                // The direct rooms' fragments come from the store the render then uses.
-                let mut sidebar = campfire_views::fragment_cache::with(&fragments, || {
-                    presenters::accounts::sidebar(conn, &secrets, &user)
-                })?;
-                let mut call_memberships = Vec::new();
-                for (membership, room) in Membership::visible_with_ordered_room(conn, user.id)? {
-                    if !room.voice() && !room.stage() {
-                        continue;
-                    }
-                    let mut row = crate::controllers::rooms::call_channels::row(&app, conn, &room)?;
-                    row.unread = membership.unread();
-                    row.muted = membership.involvement == Some(Involvement::Muted);
-                    row.membership = true;
-                    row.favorited = membership.favorited();
-                    row.favorite_position = membership.favorite_position;
-                    row.category_id = membership.room_category_id;
-                    row.can_delete = user.can_administer(Some(room.creator_id), false);
-                    call_memberships.push(row);
-                }
-                sidebar.other_memberships.retain(|room| {
-                    room.param_key != "rooms_voice" && room.param_key != "rooms_stage"
-                });
-                let restricted = Account::first(conn)?.is_some_and(|account| {
-                    account
-                        .settings()
-                        .restrict_room_creation_to_administrators()
-                });
-                Ok((sidebar, call_memberships, restricted))
-            })
-            .await
-            .map_err(Error::internal)?
-    };
-
-    let data = SidebarData {
-        current_user: presenters::user_summary(&secrets, &user),
-        // turbo_stream_from :rooms / turbo_stream_from Current.user, :rooms
-        rooms_stream: rails_compat::turbo::signed_stream_name(&secrets, &["rooms"]),
-        user_rooms_stream: rails_compat::turbo::signed_stream_name(
-            &secrets,
-            &[&user_gid(user.id).to_param(), "rooms"],
-        ),
-        sidebar,
-        call_memberships,
-        // `Current.user.administrator? || !Current.account.settings.restrict_room_creation_to_administrators?`
-        can_create_rooms: user.is_administrator() || !restricted,
-    };
+    let app = c.app().clone();
+    let actor = user.clone();
+    let (sidebar, legacy) = c
+        .app()
+        .db
+        .read(move |conn| composition::load(&app, conn, &actor))
+        .await
+        .map_err(Error::internal)?;
+    let summary = presenters::user_summary(&c.app().secrets, &user);
     view_context::page_or_frame(
         c,
         StatusCode::OK,
-        |ctx| data.page(ctx).render(),
+        |ctx| page(ctx, &sidebar, &summary, &legacy).render(),
         |ctx| {
-            let page = data.page(ctx);
-            campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
+            let p = page(ctx, &sidebar, &summary, &legacy);
+            campfire_views::layouts::frame(ctx, p.as_head(), p.as_content())
         },
     )
     .await
 }
-
-struct SidebarData {
-    current_user: campfire_views::users::UserSummary,
-    rooms_stream: String,
-    user_rooms_stream: String,
-    sidebar: presenters::accounts::Sidebar,
-    call_memberships: Vec<campfire_views::rooms::calls::CallRow>,
-    can_create_rooms: bool,
-}
-
-impl SidebarData {
-    fn page<'a>(&self, ctx: &'a campfire_views::ViewContext<'a>) -> users::SidebarShow<'a> {
-        users::SidebarShow {
-            ctx,
-            current_user: self.current_user.clone(),
-            rooms_stream: self.rooms_stream.clone(),
-            user_rooms_stream: self.user_rooms_stream.clone(),
-            direct_memberships: self.sidebar.direct_memberships.clone(),
-            direct_placeholder_users: self.sidebar.direct_placeholder_users.clone(),
-            other_memberships: self.sidebar.other_memberships.clone(),
-            call_memberships: self.call_memberships.clone(),
-            can_create_rooms: self.can_create_rooms,
-        }
+fn page<'a>(
+    ctx: &'a campfire_views::ViewContext<'a>,
+    sidebar: &'a users::sidebar::Sidebar,
+    current_user: &users::UserSummary,
+    legacy: &presenters::accounts::Sidebar,
+) -> users::SidebarShow<'a> {
+    users::SidebarShow {
+        ctx,
+        composition: Some(sidebar),
+        current_user: current_user.clone(),
+        rooms_stream: String::new(),
+        user_rooms_stream: String::new(),
+        direct_memberships: legacy.direct_memberships.clone(),
+        direct_placeholder_users: legacy.direct_placeholder_users.clone(),
+        other_memberships: legacy.other_memberships.clone(),
+        call_memberships: Vec::new(),
+        can_create_rooms: sidebar.can_create,
     }
 }

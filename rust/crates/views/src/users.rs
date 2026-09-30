@@ -7,6 +7,7 @@ use crate::accounts::HelpContact;
 use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
+pub mod sidebar;
 mod summary;
 pub use summary::*;
 
@@ -258,6 +259,7 @@ impl SidebarRoom {
 #[derive(Template)]
 #[template(path = "users/sidebars/show.html", blocks = ["head", "content"])]
 pub struct SidebarShow<'a> {
+    pub composition: Option<&'a sidebar::Sidebar>,
     pub ctx: &'a ViewContext<'a>,
     pub current_user: UserSummary,
     /// `Turbo::StreamsChannel.signed_stream_name(:rooms)`.

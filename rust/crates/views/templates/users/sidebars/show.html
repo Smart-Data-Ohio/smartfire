@@ -1,6 +1,6 @@
 {% extends "layouts/application.html" %}
 
-{% block content %}{% filter sidebar_turbo_frame_tag %}
+{% block content %}{% if let Some(sidebar) = composition %}{{ sidebar.render(ctx)|safe }}{% else %}{% filter sidebar_turbo_frame_tag %}
   {{ h::turbo_stream_from(rooms_stream.as_str()) }}
   {{ h::turbo_stream_from(user_rooms_stream.as_str()) }}
 
@@ -52,4 +52,4 @@
       {{ h::image_tag(ctx, "settings.svg", h::attrs().size(20).aria_hidden().style("view-transition-name: account-settings")) }}
       <span class="for-screen-reader">Account Settings</span>
 {% endfilter %}  </div>
-{% endfilter %}{% endblock %}
+{% endfilter %}{% endif %}{% endblock %}
