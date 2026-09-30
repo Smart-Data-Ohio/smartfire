@@ -1,18 +1,20 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. Twelve declarations now have complete assertion coverage: nine resolver declarations and three Stage hand declarations. The other 536 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. System tests below are deferred until LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 91 declarations now have complete assertion coverage mapped below. The other 457 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
 The following have verified core coverage, while the original declarations remain individually listed below. Owners remain WS13 unless the original entry identifies WS17 transport or Notifications::Policy.
 
 - `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Running every protocol shape through HTTP and completing presence/notice assertions remain open.
-- `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations now have 49 exact Rails issuance scenarios; stream callbacks remain open; committed presence and leave/call-ended notices now have the coverage below.
+- `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations now have 49 exact Rails issuance scenarios; Stream callbacks now run; committed presence and leave/call-ended notices now have the coverage below.
 - `huddle_gateway_node.mjs`: all 16 existing gateway tests run through real Rust endpoints. Ordinary responses are not fabricated; denial injections revoke SQLite rows. Only the original explicit outage/stall/malformed-response injections remain at the proxy. The test-only Rust launcher is ignored by default because it needs Node and the pinned ws package; it was explicitly run successfully in this slice.
 
 The presence slice adds 50 exact pinned Rails participant renders (sidebar/header across five room kinds) and a real seeded app/queue/WebSocket proof of first-seen fan-out and silent rollback. The notice slice adds exact pinned Rails join/leave/call-ended payload sequences, real grant revoke/leave callbacks, registered join/push-invitation workers, retained unknown-handler replay, and a WS17 payload seam. Its push-scope corpus exercises 36 actual Rails invitation/join cases, subscription selection and the conditional throttle; the policy decisions are Rails inputs, so this does not port Notifications::Policy or prove transport delivery. Current raw pass counts and exact corpus sizes are in ws13-wave4-report.md.
 
-The process task now runs invitations, stale presenter state and cleanups in Rails order with per-row commits and isolated failures. Issuance/dedup/suppression and overdue resolution are implemented; hand mutations and role clearing are implemented. Stream creation/end render callbacks, host-departure succession, hand controller throttling, moderation policies, WS17 policy/transport delivery, public controllers and the other 18 huddle views remain open. The stale stream corpus certifies persisted state only, not the deferred Stream broadcasts. Real LiveKit system declarations retain the LIVEKIT_SYSTEM_TESTS=1 reason.
+The process task now runs invitations, stale streams and cleanups in Rails order with per-row commits and isolated failures. Stream create/end callbacks, explicit stopped events, last-host succession and quiet timeline delivery, role/mute grant revocation, and role/hand/moderation controllers are implemented. The stream/lifecycle corpus has 20 production Rails cases, moderation has 29 real requests, roles/hands has 34 real requests plus a real minute-bucket throttle probe, and Stage fragments have 400 byte-identical renders. Real socket tests prove committed changes, personal delivery, single rejoin behavior and silent rollback.
+
+Passed titles are backed jointly by those differential tests, the real HTTP/Cable tests in `call_lifecycle_tests.rs` and `huddle_effects_tests.rs`, and the existing WS8a `room_test.rs` and grant tests. Counts are original declarations, not vector counts. Whole per-viewer fan-out declarations, combinations not explicitly exercised (for example another administrator as moderation target), preload/query assertions and creation/edit flows remain open even where the underlying method is implemented. Full public huddles and aggregate presence controllers, voice/stage CRUD controllers, and 11 of the original 19 owned views remain open. The extra event venue dot is verified with Stage fragments. WS17 retains policy/transport; real LiveKit system tests retain LIVEKIT_SYSTEM_TESTS=1 with a real server as the reason.
 
 ## Rails declaration coverage by file
 
@@ -20,40 +22,40 @@ These are original declaration counts, not Rust test counts or individual vector
 
 | Rails file | Original | Assertions covered (passed) | Partial/deferred |
 | --- | ---: | ---: | ---: |
-| `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
-| `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 0 | 19 |
+| `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 16 | 22 |
+| `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
-| `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 0 | 15 |
-| `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 0 | 20 |
-| `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 0 | 38 |
-| `test/controllers/rooms/stage_view_test.rb` | 16 | 0 | 16 |
+| `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
+| `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
+| `test/system/huddles_test.rb` | 31 | 0 | 31 |
+| `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
+| `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
+| `test/models/stream_test.rb` | 27 | 14 | 13 |
 | `test/controllers/rooms/stages_controller_test.rb` | 24 | 0 | 24 |
+| `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
+| `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
 | `test/controllers/rooms/voices_controller_test.rb` | 18 | 0 | 18 |
+| `test/controllers/rooms/stage_view_test.rb` | 16 | 0 | 16 |
+| `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
+| `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
+| `test/system/stage_test.rb` | 15 | 0 | 15 |
+| `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
+| `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
+| `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
+| `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
+| `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
+| `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
+| `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
+| `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
 | `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 0 | 6 |
+| `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
 | `test/integration/huddle_presence_test.rb` | 5 | 0 | 5 |
-| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
+| `test/models/rooms/voice_test.rb` | 5 | 2 | 3 |
 | `test/jobs/huddle/join_notice_job_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
-| `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
-| `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
-| `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
-| `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
-| `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
-| `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
-| `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
-| `test/models/rooms/stage_test.rb` | 27 | 3 | 24 |
-| `test/models/rooms/voice_test.rb` | 5 | 0 | 5 |
-| `test/models/stream_test.rb` | 27 | 0 | 27 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
-| `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
-| `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
-| `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
-| `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
-| `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
-| `test/system/huddles_test.rb` | 31 | 0 | 31 |
-| `test/system/stage_test.rb` | 15 | 0 | 15 |
-| `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
-| **Total** | **548** | **12** | **536** |
+| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
+| **Total** | **548** | **91** | **457** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -91,26 +93,26 @@ Owner: WS13. Deferred.
 
 ## test/controllers/rooms/call_moderation_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 13/19 declarations passed; the other 6 remain WS13 work.
 
 - a host server-mutes a speaker, revoking publish until unmuted
 - muting delivers a roster to every member and a rejoin event to the target
-- mute and unmute role events carry the server-muted state
-- muting twice and unmuting a member who was never muted both succeed
-- a repeated mute keeps the member's fresh grant and sends no rejoin
-- unmuting a member who was never muted sends no rejoin
+- **Passed:** mute and unmute role events carry the server-muted state
+- **Passed:** muting twice and unmuting a member who was never muted both succeed
+- **Passed:** a repeated mute keeps the member's fresh grant and sends no rejoin
+- **Passed:** unmuting a member who was never muted sends no rejoin
 - a publish grant that survived a mute fails authorization
-- disconnect drops the member from the call but keeps the membership
-- an administrator who is not a host moderates a stage room
-- a host cannot mute, unmute, or disconnect an administrator
+- **Passed:** disconnect drops the member from the call but keeps the membership
+- **Passed:** an administrator who is not a host moderates a stage room
+- **Passed:** a host cannot mute, unmute, or disconnect an administrator
 - an administrator moderates another administrator
-- a server-muted administrator unmutes themselves
-- a server-muted host cannot unmute themselves
+- **Passed:** a server-muted administrator unmutes themselves
+- **Passed:** a server-muted host cannot unmute themselves
 - speakers and listeners cannot moderate
-- moderating your own session is rejected
-- moderation is unreachable outside stage and voice rooms
-- moderation denies outsiders, unknown memberships, and unauthenticated requests
-- an administrator server-mutes a voice member, and members cannot
+- **Passed:** moderating your own session is rejected
+- **Passed:** moderation is unreachable outside stage and voice rooms
+- **Passed:** moderation denies outsiders, unknown memberships, and unauthenticated requests
+- **Passed:** an administrator server-mutes a voice member, and members cannot
 - server mute only exists on stage and voice rooms
 
 ## test/controllers/rooms/huddles_controller_test.rb
@@ -156,91 +158,91 @@ Owner: WS13. Deferred.
 
 ## test/controllers/rooms/stage/hands_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 9/15 declarations passed; the other 6 remain WS13 work.
 
 - a listener raises their hand and every viewer gets their own roster
 - a double raise keeps the first timestamp and queue place
-- raising hands is rate limited per membership
-- the hand-raise rate limit resets after a minute
-- a turbo-stream raise swaps the actor's own controls without navigating
-- speakers and hosts cannot raise a hand
-- a listener lowers their own hand
-- lowering a hand that was never raised succeeds
-- a host lowers another member's hand without promoting them
-- an administrator member lowers another member's hand
+- **Passed:** raising hands is rate limited per membership
+- **Passed:** the hand-raise rate limit resets after a minute
+- **Passed:** a turbo-stream raise swaps the actor's own controls without navigating
+- **Passed:** speakers and hosts cannot raise a hand
+- **Passed:** a listener lowers their own hand
+- **Passed:** lowering a hand that was never raised succeeds
+- **Passed:** a host lowers another member's hand without promoting them
+- **Passed:** an administrator member lowers another member's hand
 - a listener cannot lower another member's hand
-- lowering a non-member's hand is not found
+- **Passed:** lowering a non-member's hand is not found
 - non-members get not found
 - an administrator who is not a member gets not found
 - hands do not exist outside stage rooms
 
 ## test/controllers/rooms/stage/roles_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 16/20 declarations passed; the other 4 remain WS13 work.
 
 - a host promotes a listener, clearing their hand and revoking their grants
-- the affected member's panel replacement carries no rejoin trigger
-- a publish-boundary crossing appends a rejoin event to the member's persistent target
-- a host-speaker change broadcasts roster and panel but no rejoin event and revokes nothing
-- a demotion appends a rejoin event to the member's persistent target
-- a turbo-stream role change replaces the roster without navigating
-- a host demotes a speaker back to the audience
-- a host demoting themselves is allowed unless they are the last host
-- a failed last-host demotion revokes nothing
-- a host who is not an administrator cannot demote an administrator
-- a listener cannot change anyone's role
-- a speaker cannot change anyone's role
-- an administrator member manages roles without being a host
+- **Passed:** the affected member's panel replacement carries no rejoin trigger
+- **Passed:** a publish-boundary crossing appends a rejoin event to the member's persistent target
+- **Passed:** a host-speaker change broadcasts roster and panel but no rejoin event and revokes nothing
+- **Passed:** a demotion appends a rejoin event to the member's persistent target
+- **Passed:** a turbo-stream role change replaces the roster without navigating
+- **Passed:** a host demotes a speaker back to the audience
+- **Passed:** a host demoting themselves is allowed unless they are the last host
+- **Passed:** a failed last-host demotion revokes nothing
+- **Passed:** a host who is not an administrator cannot demote an administrator
+- **Passed:** a listener cannot change anyone's role
+- **Passed:** a speaker cannot change anyone's role
+- **Passed:** an administrator member manages roles without being a host
 - an administrator who is not a member gets not found
 - an administrator member promotes a new host when the stage has none
-- non-members get not found
-- changing a non-member's role is not found
-- an unknown role is unprocessable
+- **Passed:** non-members get not found
+- **Passed:** changing a non-member's role is not found
+- **Passed:** an unknown role is unprocessable
 - a missing role is unprocessable
-- roles do not exist outside stage rooms
+- **Passed:** roles do not exist outside stage rooms
 
 ## test/controllers/rooms/stage/streams_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 16/38 declarations passed; the other 22 remain WS13 work.
 
 - a host goes live, broadcasting the badge, dot, and panels
-- a speaker goes live
-- a turbo-stream start swaps the actor's own panel without navigating
+- **Passed:** a speaker goes live
+- **Passed:** a turbo-stream start swaps the actor's own panel without navigating
 - a listener cannot go live
-- a speaker cannot go live when the stage has no host
+- **Passed:** a speaker cannot go live when the stage has no host
 - a speaker goes live again after the last host leaves and a successor is promoted
-- an administrator listener cannot go live
-- a server-muted speaker cannot go live
+- **Passed:** an administrator listener cannot go live
+- **Passed:** a server-muted speaker cannot go live
 - a server-muted host cannot go live
-- a host without a huddle grant cannot go live
+- **Passed:** a host without a huddle grant cannot go live
 - a host whose grant was revoked cannot go live
 - a host with a quiet grant cannot go live
 - a host whose grant went quiet cannot go live
-- an unknown quality is unprocessable
+- **Passed:** an unknown quality is unprocessable
 - a missing quality is unprocessable
-- starting while another stream is live returns conflict naming the presenter
+- **Passed:** starting while another stream is live returns conflict naming the presenter
 - the presenter stops the stream
 - a speaker presenter stops their own stream
-- a host stops another member's stream
+- **Passed:** a host stops another member's stream
 - a host stop appends a stream-stopped event for the presenter
 - a presenter stop appends no stream-stopped event
 - an administrator member stops the stream without being a host
 - a listener cannot stop the stream
-- a speaker who is not the presenter cannot stop the stream
-- stopping with the live stream id ends that stream
-- stopping with a stale stream id ends nothing, even when another stream is live
+- **Passed:** a speaker who is not the presenter cannot stop the stream
+- **Passed:** stopping with the live stream id ends that stream
+- **Passed:** stopping with a stale stream id ends nothing, even when another stream is live
 - stopping with an unknown stream id ends nothing
-- the stop control sends its stream id
+- **Passed:** the stop control sends its stream id
 - stopping with nothing live succeeds for hosts and stays silent
 - stopping with nothing live is forbidden for listeners
 - a turbo-stream stop swaps the actor's own panel without navigating
 - non-members get not found
 - an administrator who is not a member gets not found
 - streams do not exist outside stage rooms
-- demoting the presenter to listener ends the stream in the same transaction
+- **Passed:** demoting the presenter to listener ends the stream in the same transaction
 - removing the presenter through the members edit ends the stream
-- promoting a speaker to host keeps the grant and the live stream
-- demoting a host to speaker keeps the grant and the live stream
+- **Passed:** promoting a speaker to host keeps the grant and the live stream
+- **Passed:** demoting a host to speaker keeps the grant and the live stream
 
 ## test/controllers/rooms/stage_view_test.rb
 
@@ -541,29 +543,29 @@ Owner: WS13. Deferred.
 
 ## test/models/rooms/stage_test.rb
 
-Owner: WS13. Partial: three hand declarations passed against the 17-case Rails hand corpus (`hand_mutations_and_role_clearing_match_seventeen_rails_scenarios`); the other 24 remain open.
+Owner: WS13. Partial: 12/27 declarations passed against the hand, lifecycle and participation corpora plus existing WS8a room tests; the other 15 remain open.
 
-- type predicate
+- **Passed:** type predicate
 - stage rooms are listed without directs but outside the voice scope
-- default involvement for new members is mentions
-- the room creator becomes host and every other member becomes a listener
-- the creator becomes host even when they were not in the member list
+- **Passed:** default involvement for new members is mentions
+- **Passed:** the room creator becomes host and every other member becomes a listener
+- **Passed:** the creator becomes host even when they were not in the member list
 - members added later become listeners
-- the last host cannot be demoted
+- **Passed:** the last host cannot be demoted
 - a host demotion checks for another host after locking the room in its transaction
-- a host can step down once another host exists
-- non-stage rooms leave the stage columns nil
+- **Passed:** a host can step down once another host exists
+- **Passed:** non-stage rooms leave the stage columns nil
 - **Passed:** only listeners can raise a hand, and any promotion clears it
 - **Passed:** raising twice keeps the first timestamp
 - **Passed:** lowering a hand that was never raised succeeds
 - stage members can reach the room's messages like any channel
-- deactivating a user removes their stage memberships
+- **Passed:** deactivating a user removes their stage memberships
 - deactivating the sole host ends the live session and promotes an administrator member
 - deactivating the sole host promotes the earliest remaining member without an administrator
 - deactivating a host promotes nobody when another host remains
 - deactivating the last member of a stage leaves the emptied room alone
 - destroying the last host membership ends the live session and promotes an administrator successor
-- destroying the last host promotes the earliest remaining member without an administrator
+- **Passed:** destroying the last host promotes the earliest remaining member without an administrator
 - destroying a host while another host remains ends nothing and promotes nobody
 - destroying a speaker ends only their own stream and grants
 - destroying the last host locks the room and checks for another host inside its transaction
@@ -573,45 +575,45 @@ Owner: WS13. Partial: three hand declarations passed against the 17-case Rails h
 
 ## test/models/rooms/voice_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 2/5 declarations passed; the other 3 remain WS13 work.
 
-- type predicate
+- **Passed:** type predicate
 - voices scope and channel queries include voice rooms
-- default involvement for new members is mentions
+- **Passed:** default involvement for new members is mentions
 - voice members can reach the room's messages like any channel
 - deactivating a user removes their voice memberships
 
 ## test/models/stream_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 14/27 declarations passed; the other 13 remain WS13 work.
 
-- quality must be a known preset
-- started_at defaults to now
+- **Passed:** quality must be a known preset
+- **Passed:** started_at defaults to now
 - live scope only returns unended streams
-- one live stream per room
-- an ended stream frees the room for another
-- end! is idempotent
+- **Passed:** one live stream per room
+- **Passed:** an ended stream frees the room for another
+- **Passed:** end! is idempotent
 - starting broadcasts the badge, dot, and per-viewer panel
-- starting broadcasts the event venue dot
-- ending broadcasts the cleared event venue dot
+- **Passed:** starting broadcasts the event venue dot
+- **Passed:** ending broadcasts the cleared event venue dot
 - ending broadcasts the cleared badge, dot, and panel
 - ending twice broadcasts once
 - a host stop appends a stream-stopped event to the presenter's persistent target
 - a presenter stop appends no stream-stopped event
 - an automatic end appends no stream-stopped event
-- revoking the presenter's last grant for the room ends the stream
+- **Passed:** revoking the presenter's last grant for the room ends the stream
 - revoking another member's grant leaves the stream live
 - a grant revoked through authorization ends the stream
 - removing the presenter's membership ends the stream
-- removing the presenter's membership without grants ends the stream and broadcasts the end
+- **Passed:** removing the presenter's membership without grants ends the stream and broadcasts the end
 - deactivating the presenter ends the stream
-- deactivating the presenter ends the stream even without grants
+- **Passed:** deactivating the presenter ends the stream even without grants
 - destroying the room destroys its streams
 - revoking a grant outside a stage room runs no stream queries
-- end_stale_live! ends streams whose presenter went quiet over thirty seconds ago
-- end_stale_live! ends streams whose presenter was never seen
-- end_stale_live! keeps streams with a recently seen presenter
-- end_stale_live! ignores other memberships' grants in the room
+- **Passed:** end_stale_live! ends streams whose presenter went quiet over thirty seconds ago
+- **Passed:** end_stale_live! ends streams whose presenter was never seen
+- **Passed:** end_stale_live! keeps streams with a recently seen presenter
+- **Passed:** end_stale_live! ignores other memberships' grants in the room
 
 ## test/services/huddle/reconciler_test.rb
 
@@ -624,7 +626,7 @@ Owner: WS13. Deferred.
 
 ## test/system/huddle_audio_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - the capture asks for no browser suppression while RNNoise is on
 - the capture keeps browser suppression while RNNoise is off
@@ -637,7 +639,7 @@ Owner: WS13. Deferred.
 
 ## test/system/huddle_invitations_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - the recipient sees an incoming huddle banner and dismissing it marks the item read
 - joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel
@@ -652,7 +654,7 @@ Owner: WS13. Deferred.
 
 ## test/system/huddle_join_notices_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - an in-call member sees a join toast and hears the join sound
 - rapid joins batch into one toast with one sound
@@ -673,7 +675,7 @@ Owner: WS13. Deferred.
 
 ## test/system/huddle_presence_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - the channel sidebar row and header show participants and empty on revoke
 - the DM sidebar row and header show the peer and empty on revoke
@@ -684,7 +686,7 @@ Owner: WS13. Deferred.
 
 ## test/system/huddle_roster_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - muting patches the local roster row instead of rebuilding it
 - speaking and mute changes patch the remote row in place
@@ -697,7 +699,7 @@ Owner: WS13. Deferred.
 
 ## test/system/huddles_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Deferred: all 31 declarations require LIVEKIT_SYSTEM_TESTS=1 and a configured real LiveKit server (the class setup skips otherwise).
 
 - two users exchange audio and a screen while navigating and muting
 - two users exchange camera video while navigating, muting, toggling, and leaving
@@ -733,7 +735,7 @@ Owner: WS13. Deferred.
 
 ## test/system/stage_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial/deferred: 11 browser declarations remain WS13 public-controller/HTML/browser-harness work. Four declarations explicitly skip unless LIVEKIT_SYSTEM_TESTS=1 with a real server: subscribe-only listener/host publishing, role-change reconnect publishing, host server-mute/unmute reconnect, and full listener reconnect.
 
 - stage rooms list in their own section with distinct creation controls and a stage panel
 - a listener raises and lowers their hand without seeing host controls
@@ -753,7 +755,7 @@ Owner: WS13. Deferred.
 
 ## test/system/voice_channels_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - the sidebar row and header show participants and update when a grant is revoked
 - the sidebar loads once when the cable connects and reloads on reconnect

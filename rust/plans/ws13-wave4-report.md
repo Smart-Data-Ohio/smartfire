@@ -1,257 +1,126 @@
-# WS13 Wave 4 report — partial, four continued behavior slices
+# WS13 Wave 4 report — partial, lifecycle and render continuation
 
-Branch `rust/ws13-huddles`, worktree `rust-ws13`, reference our Rails `d7c7de92`. Main `21a7332f` remains merged by real merge commit `a8b6538c`; no rebase, PR, or deployment. The following four coherent source slices were committed and pushed during this continuation (newest first). The verification/report commit follows them; the final pushed HEAD is supplied in the handoff reply.
+Branch `rust/ws13-huddles`, owned worktree `rust-ws13`. Frozen Rails pin `d7c7de9264c63015be398001d7a1094e7695a6db`. Main remains `21a7332f2d3c324f0862cdf448baf17a84395aa0`, included through the existing real merge commit `a8b6538c`. Four coherent source slices were pushed in this continuation; the report/tooling commit follows. Verified source HEAD: `e610ef11eee22803f52215dd9fb4ebafbe2740bf`.
 
 ```text
-70032480d98d2eaf68e2d33f9bc3d8c767337abd Match Stage hand mutation and validation semantics
-b66909372f8b695d7908301f1412d5eac7f74d89 Reconcile stale presenter state before due huddle cleanups
-442bdc8ec68f4eaa4df77806bf5e0dbe59173f8f Resolve overdue huddle invitations in the process task
-6e303fe52fffdd65654b11a4e7e17706786fb2b4 Match huddle issuance invitations, retries and suppression
+39a6c0b0b1b5003c3c35f82a52ebbc2d61257a8f Make the Rust gateway acceptance test self-contained
+ef5441f9f4e1b6ea5e100c41e5881983e89f6d5c Port stream lifecycle, Stage callbacks and call moderation
+596927fd32d3d2942d7d6d983edca7d94bd06692 Port Stage roles and hands with personal render effects
+e610ef11eee22803f52215dd9fb4ebafbe2740bf Deliver quiet Stage succession notes through Cable
 ```
 
-## Done and precise limits
+## Done, by file
 
-1. **Issuance:** `HuddleGrant::issue` clears the caller's open started/missed invitations, then fans out to the other eligible humans in a direct room. It preserves existing read timestamps while handling late joins; excludes bots, inactive users, and off/hidden members; respects current in-call sightings; applies inclusive two-minute invitation/grant dedupe; prioritizes the current grant's owned row; repoints an unhandled same-attempt row at up to ten minutes; and creates banner-only intents when huddle inbox items are switched off. Muted members still ring. Rails' in-call recipient and recent sibling checks intentionally do not apply the active/revoked scope. Exact item IDs, row fields/timestamps, ordered ring payloads, and invitation job IDs match **49 Rails cases**. Sound policy and transport delivery remain at WS17's seam.
-2. **Overdue invitations:** strict older-than-45-seconds resolution, per-user filtering, unchanged handled/recent rows, missing/other sources, missed versus handled outcomes, preserved read timestamps, revoked grants as join evidence, group recipients and repeat-run idempotence match **29 Rails cases**. WS12 can call the lazy resolver seam.
-3. **Process reconciler:** all three state passes now run in Rails order: overdue invitations, stale presenter streams, then due LiveKit cleanup. The first two run with admin configuration absent. Each item/stream commits separately; a later failure preserves earlier progress, is logged, and does not stop the subsequent phase. Actual scheduler execution, SQL-enforced phase order, retained earlier rows, and real cleanup HTTP requests are tested. Stale persisted state matches **16 Rails cases**, with strict 30-second sightings, room/membership scope, revoked grants, other devices, ended history, deleted rooms and imported orphan coordinates. This is **state parity only**: the common Stream ended render callbacks are still missing. The reconciler is wired, but full reconciler observable/render acceptance remains partial until those callbacks land.
-4. **Hands:** membership raise/lower mutations, first timestamp preservation, unchanged updated_at on empty lowers, speaker/host rejection, non-stage validations, imported inconsistent hands and role changes clearing hands match **17 Rails cases**. Public authorization, minute-bucket throttling and roster/controls rendering remain open.
-
-Earlier pushed slices remain present and were reverified: tokens and strict shapes; Twirp and cleanup jobs/backoff; all six revocation seams; actual gateway endpoints; committed participant stacks (one Askama partial, **50 byte-identical renders**); join/leave/call-ended payloads (**67 cases**); invitation/join push payload and subscription/throttle preparation (**36 cases**). The existing gateway Node implementation and test suite were unchanged. No Rails, schema/migration, dependency/lockfile, asset override, sidecar, parity mask or allowlist changes.
-
-These new 111 differential cases are four Rust test declarations. Six additional real app tests cover queue effects, rollback, the process loop and phase failures. Vector counts are not Rust test counts or completed original Rails declarations.
-
-## Files changed in this continuation
-
-| Files under rust/ | Change |
+| Files under rust/ | Final behavior and verification |
 | --- | --- |
-| `crates/db/src/models/huddle_grant.rs` | Carry the reused grant's previous issuance timestamp into after-issued processing; invitation writes and durable intents commit with issuance. Existing eligibility, reuse, unique retry and revocation rules retained. |
-| `crates/db/src/models/huddle_invitations.rs`, `models.rs` | Issuance clearing, recipient fan-out, owned/same-attempt refresh, dedupe/suppression; typed ring intent and policy-supplied publisher; lazy/per-item overdue resolver. |
-| `crates/db/src/models/activity_item.rs`, `huddle_notices.rs` | Huddle-aware activity payload hook and mark_handled read-stamp preservation; share the existing inbox preference caster. Other source/event types keep the ordinary activity frame. |
-| `crates/db/src/models/huddle_stream_liveness.rs` | Re-read the current live row and current presenter liveness under the writer transaction; persist stale ends. Rails' declared quality validation runs; this app does not require belongs_to association validation on stream updates. Full Stream callbacks remain open. |
-| `crates/db/src/models/membership.rs` | Hand raise/lower domain methods using the existing call-attribute validations; exact no-op and timestamp behavior. |
-| `crates/campfire/src/jobs/huddle.rs`, `jobs/periodic.rs` | Register all three reconciler state phases in the existing in-process task; isolate resolver/stale failures; keep admin-gated cleanup and its 100-row cap/backoff. |
-| `crates/campfire/src/jobs/tests.rs`, `huddle/tests.rs` | Real issuance ring/push intents, recent-ring join suppression, failed enqueue rollback, actual process scheduling, phase order/failure isolation and earlier-row persistence. Existing join worker test now sets up a quiet grant directly; issuance would correctly suppress the join notice it tests. |
-| `crates/db/src/tests/huddle_invitations_test.rs`, `tests/huddle_notices_test.rs`, `tests.rs` | Four complete differential replay tests, shared fixture insertion, exact timestamps/rows/payloads/errors, group/filter and repeated-resolution assertions. |
-| `crates/db/src/models/huddle_{issuance,resolver,stale_stream,hand}_vectors.json` | Golden output from the pinned real Rails implementation. The stale-stream corpus explicitly certifies persisted state, not HTML. |
-| `reference-tools/huddle_{issuance,resolver,stale_streams,hands}.rb` | Real model methods/callbacks run; only external Cable/job delivery and the Rails ring-policy quiet_check test seam are captured. Fixture session tokens are explicit inputs, so regeneration is reproducible. No output masks. Issuance snapshots explicitly read main.sqlite_sequence because fixture loading creates a shadowing temporary table, and reload memberships before snapshotting updated/removal state. Random generated grant identities are verified by the existing grant tests, not compared as deterministic issuance output. |
-| `reference-tools/huddle_discrimination.py` | Expand the compiled assertion-failure discrimination corpus from 33 to 49 deliberate regressions; restore all sources in finally. |
-| `reference-tools/ws13_verify_declarations.py`, `plans/ws13-deferred-tests.md`, this report | Retain every original title, verify it against Rails, and report complete versus partial declaration counts by file. |
+| `db/src/models/stream.rs`, `huddle_stream_liveness.rs`, `huddle_grant.rs` | Persist validated stream creation, default/explicit start time, the live uniqueness constraint, idempotent end, and common membership/user/room end paths. Emit committed changed frames and an explicit stopped event only for a different actor. Stale reconciliation now invokes the same end callbacks. Rails does not require belongs_to existence on stream updates; imported orphan coordinates can end. 20 real Rails lifecycle scenarios plus the existing 16 stale-state cases. |
+| `db/src/models/stage.rs`, `membership.rs`, `user.rs` | Last-host departure runs synchronously inside the immediate writer transaction: end streams, revoke room grants, create a quiet plain Action Text timeline note, then prefer an active administrator successor or the earliest joined remaining member. No-op with another host or no remaining members. Membership removal and deactivation are wired. Quiet note causes no unread/push work. Existing WS8a room-deletion and last-active Stage-grant seams remain wired. |
+| `db/src/models/call_moderation.rs`, `stage_streams.rs`, `stage_participation.rs` | Shared domain policies, transactional stream and grant effects, last-host validation, administrator rank and self-target rules. A listener-boundary role change revokes grants; host↔speaker retains them and the stream. Repeated mute preserves a fresh grant, while still ending an imported live stream. Disconnect keeps membership. Hands preserve the first timestamp and an empty lower's updated_at. |
+| `campfire/src/controllers/rooms/{call_moderation,stage_streams,stage_participation}.rs`, `controllers.rs`, `rooms.rs` | Real public stream, role, hand and moderation routes: ordered authorization, exact errors/status/content types, HTML redirects, Turbo responses, CSRF on request forms, X-Stream-Id, and exact string comparison against stale stop IDs. Hand raising uses a shared per-membership/minute counter; ten successes then 429, separate membership buckets, and next-minute reset. Rails' null test-store default is unthrottled. 29 real moderation HTTP requests, 34 real role/hand requests, a Rails throttle probe, and stream security/lifecycle HTTP tests. |
+| `db/src/models/huddle_effects.rs`, `campfire/src/channels/{huddle_effects,sink}.rs` | Typed render descriptions delivered after commit through WS7's guarded publisher: badge, sidebar/event dots, per-viewer panels/rosters, affected member panel, one persistent rejoin on publish-boundary crossing, stream-stopped event, and quiet Stage timeline note. A Stage-owned note descriptor uses the existing message presenter; generic WS8b messaging descriptors remain WS8b's seam. Real sockets verify delivery, no extra host↔speaker rejoin, idempotence and silent rollback. |
+| `views/src/huddle_stage.rs`, `views/templates/rooms/stage/*`, `huddle_stage_vectors.json` | Seven owned Stage partials and the additional event venue live dot match 400 complete Rails renders (50 inputs × 8 fragments). Cover live/quiet streams, raised-hand queue order including fractional timestamps, administrator rank, muted roles, multiple/no hosts, and exact forms/hidden inputs/newlines. Shared frames contain no session secrets. Personal request forms receive CSRF tokens. |
+| `campfire/src/channels/huddle_stage_note_vectors.json`, `huddle_effects_tests.rs` | A fixed-ID real Rails system note render matches Rust bytes, and a real last-host removal delivers the note to the room's socket. |
+| `campfire/src/controllers/internal_huddle_tests.rs`, `reference-tools/huddle_gateway_node.mjs` | Node acceptance installs the committed gateway lockfile in a test-created tempfile and uses its pinned ws wrapper. No pre-existing `.scratch/node-deps` dependency. Await all Rust proxy requests before asserting final persisted liveness, eliminating the left-request race. Original gateway implementation and suite are unchanged; all 16 pass from the fresh clone. |
+| `reference-tools/huddle_{stream_lifecycle,moderation,stage_views,participation,stage_note}.rb`, committed JSON vectors | Actual production Rails models/controllers/partials are the oracle. Verified sessions, explicit fixture identities and fixed time; only external Cable/job delivery is captured. Integration oracle disables forgery protection like Rails integration tests; Rust requests use real CSRF. Clear Rails execution context between scenarios, as the parity seed does. No masks or output normalization to hide HTML differences. |
+| `reference-tools/huddle_discrimination.py`, `ws13_verify_{corpora,reference,declarations}.py`, `plans/ws13-deferred-tests.md` | 67 compiled regressions caught; all source files restored. All 16 full golden files regenerate byte-identically. Reference classes/initializer match the frozen pin by SHA256. All 548 original titles retained and checked, with per-file counts sorted largest first. |
+
+CSP additions already exist in merged `campfire/src/security.rs`: wasm-unsafe-eval and LiveKit's paired WebSocket/HTTP origins. The existing whole-header Rails vector test passed in the fresh seeded suite; the actual initializer hash also matches the pin. This continuation changes no CSP policy.
+
+Earlier pushed work was reverified: strict token shapes, Twirp and durable cleanup/backoff, six revocation triggers, gateway contract, 50 participant-stack renders, 67 notice cases, 36 push-preparation cases, 49 issuance cases, 29 resolver cases and 17 hand-domain cases. The in-process reconciler remains invitations → stale streams → due cleanups, with per-row commits, error isolation and real registered job handlers. No Rails/schema/migration/asset override/sidecar/parity mask/allowlist or dependency-lock changes.
 
 ## Cross-workstream seams
 
-**WS17 retains all policy and transport integration.** Nothing here assumes that a request authorizes delivery; neither WS17 class has a stub success handler.
-
-Existing push seam, in `db::models::huddle_notices`:
+WS17 retains policy and transport integration; the lead reconciles these unchanged seams. Neither class has a stub success handler:
 
 ```rust
-pub struct PushRequest {
-    pub kind: PushKind, // huddle or huddle_join
-    pub recipient_id: i64,
-    pub sender_id: i64,
-    pub room_id: i64,
-    pub room_membership_id: Option<i64>,
-    pub payload: PushPayload, // title, body, path, tag
-}
-// Job class: Notifications::HuddlePushJob
+// db::models::huddle_notices
+// class Notifications::HuddlePushJob
 pub fn enqueue_huddle_push(tx: &mut Tx<'_>, request: &PushRequest);
 pub fn prepare_push(tx: &mut Tx<'_>, request: &PushRequest, policy_allowed: bool)
     -> Result<Option<PushDelivery>>;
-```
+// PushRequest { kind: Huddle/HuddleJoin, recipient_id, sender_id, room_id,
+//   room_membership_id: Option<i64>, payload: { title, body, path, tag } }
 
-WS17 evaluates Notifications::Policy from current records and enqueues its actual delivery in the **same transaction** that prepares subscriptions and claims the join throttle. WS13 owns subscription selection and conditional throttle: disconnected is connected_at NULL or strictly older than 60 seconds, independent of connections; off/hidden excluded for both kinds, muted additionally excluded for joins; join needs subscriptions before a strict older-than-600-seconds claim, does not touch updated_at, and never burns the claim on denial/no subscriptions. Invitations preserve Rails' empty-subscription queue-call behavior. The existing trigger test proves enqueue failure rolls back the claim and triggering inbox write.
-
-New audible-ring seam, in `db::models::huddle_invitations`:
-
-```rust
-pub struct RingRequest {
-    pub recipient_id: i64,
-    pub sender_id: i64,
-    pub invitation: serde_json::Value,
-}
-// Job class: Notifications::HuddleRingJob
+// db::models::huddle_invitations
+// class Notifications::HuddleRingJob
 pub fn publish_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: bool)
     -> Result<()>;
+// RingRequest { recipient_id, sender_id, invitation: serde_json::Value }
+
+// WS12 lazy inbox resolver
+pub fn resolve_overdue(tx: &mut Tx<'_>, user_id: Option<i64>) -> Result<()>;
 ```
 
-The request carries Rails' complete invitation payload at mutation time, excluding silent until WS17 supplies the decision. It includes the zero-ID/empty-path suppressed variant. WS17's decision corresponds to `Notifications::Policy.new(recipient:, sender:, kind: :huddle).sound?`; the helper writes silent and publishes through WS7 after commit, to active humans only. Register/reconcile this proposed class with WS17 at merge time. Both WS17 classes currently remain durable unknown-handler failures, preserving intents for the lead to recover after registering the real handlers; replay only the exact unknown-class error. Presence/JoinNotice/PushInvitation handlers remain real, registered, and recover only their own exact historical unknown errors.
+WS17 evaluates current Notifications::Policy and enqueues transport delivery in the same transaction as prepare_push's subscription selection and strict join-throttle claim. Policy denial/no subscriptions never burns the claim; enqueue failure rolls it back. Invitation empty-subscription behavior is preserved. Ring intents capture the complete invitation without silent until the supplied sound decision; publish_ring emits through WS7 after commit, active humans only. Both WS17 classes remain durable unknown-handler failures for exact-class recovery once real handlers are registered. Presence, cleanup, join-notice and push-invitation handlers are real and registered. WS8b remains responsible for its generic message/other partial descriptors; Stage's quiet note now has its own registered handler.
 
-**WS12:** `resolve_overdue(tx: &mut Tx<'_>, user_id: Option<i64>) -> Result<()>` is the lazy inbox seam. The process loop uses `overdue_ids(conn, now, user_id) -> Result<Vec<i64>>` then `resolve_item(tx, id) -> Result<()>` per writer transaction. Route huddle state changes through ActivityItem::broadcast_change/mark_handled so their invitation intent is retained.
+## Fresh-clone verification
 
-**WS8a/WS6/WS7:** synchronous last-active Stage grant and room-deletion stream state remain wired. The remaining Stream/Stage render callbacks must use the existing broadcast guard and per-viewer rendering; no complete render parity claim is made for the newly ended streams.
+All commands below were run again during this continuation. Rust 1.98.1, locked Cargo, -j4, private target, assigned ports. The fresh clone contains tracked branch files only; no target, seed or scratch content was copied from the worktree. Its own committed seed builder created both databases from the pinned Rails image. The clone's source was fast-forwarded to the final source SHA before testing. The report/tooling commit changes no Rust runtime source.
 
-## Original Rails declaration counts
-
-All 548 original titles remain listed in `plans/ws13-deferred-tests.md`. Nine resolver declarations and three Stage hand declarations have complete original assertion coverage, with their exact titles marked Passed and mapped to the executable corpora. Other files conservatively retain all original declarations even where lower-level coverage exists. LiveKit system tests remain deferred for LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. WS17 owns policy/transport; other retained work is WS13 unless its individual entry names a collaborator.
-
-| Rails file | Original | Assertions covered (passed) | Partial/deferred |
-| --- | ---: | ---: | ---: |
-| `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
-| `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 0 | 19 |
-| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
-| `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 0 | 15 |
-| `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 0 | 20 |
-| `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 0 | 38 |
-| `test/controllers/rooms/stage_view_test.rb` | 16 | 0 | 16 |
-| `test/controllers/rooms/stages_controller_test.rb` | 24 | 0 | 24 |
-| `test/controllers/rooms/voices_controller_test.rb` | 18 | 0 | 18 |
-| `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 0 | 6 |
-| `test/integration/huddle_presence_test.rb` | 5 | 0 | 5 |
-| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| `test/jobs/huddle/join_notice_job_test.rb` | 4 | 0 | 4 |
-| `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
-| `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
-| `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
-| `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
-| `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
-| `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
-| `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
-| `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
-| `test/models/rooms/stage_test.rb` | 27 | 3 | 24 |
-| `test/models/rooms/voice_test.rb` | 5 | 0 | 5 |
-| `test/models/stream_test.rb` | 27 | 0 | 27 |
-| `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
-| `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
-| `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
-| `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
-| `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
-| `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
-| `test/system/huddles_test.rb` | 31 | 0 | 31 |
-| `test/system/stage_test.rb` | 15 | 0 | 15 |
-| `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
-| **Total** | **548** | **12** | **536** |
-
-
-## Fail-first and discrimination evidence
-
-Before the issuance callback, the replay failed on fresh_direct's missing invitation rows; before the stale pass, the real process test failed because a quiet presenter remained live. These are historical red runs in authorized scratch, not current failures:
-
-```text
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 423 filtered out; finished in 0.15s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 341 filtered out; finished in 0.12s
-```
-
-The following command was rerun, exit 0. It compiles each regression and requires a panic/test assertion failure, rejecting compile failures, then restores its source. Wrong/missing gateway authentication, revoked/removed grants, listener/server-mute publishing and invalid token acceptance are covered alongside the new banned/bot issuance gates, ring suppression, dedupe, resolver and hand permissions:
+From the owned worktree:
 
 ```sh
-python3 rust/reference-tools/huddle_discrimination.py > .scratch/huddle-discrimination-final.log 2>&1
+git clone --single-branch --branch rust/ws13-huddles --no-local . .scratch/fresh-check
 ```
 
-```text
-issuance-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.08s
-issuance-banned-caller: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 4.00s
-issuance-bot-caller: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 4.20s
-issuance-off-hidden-recipient: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.94s
-issuance-inbox-suppression-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 1.63s
-issuance-reused-grant-dedupe-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 4.15s
-issuance-owned-priority-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 2.15s
-issuance-sound-policy-ignored: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 2.20s
-resolver-wait-shortened: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.18s
-resolver-revoked-join-evidence-ignored: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 1.60s
-stale-exact-thirty-kept: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.46s
-stale-other-presenter-kept: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.93s
-reconciler-admin-gate-skips-invitations: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 5.10s
-reconciler-stale-pass-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.10s
-hand-speaker-permission-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.58s
-hand-repeat-idempotence-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.26s
-push-connection-scope-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 1.19s
-push-throttle-shortened: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 3.88s
-push-policy-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.97s
-push-denied-burns-throttle: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 1.08s
-notice-revoked-and-stale-joiner: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 1.49s
-notice-inactive-humans: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.11s
-notice-second-device-leave: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 4.77s
-notice-rejoin-window: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 2.11s
-notice-call-ended-while-others-remain: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 5.75s
-notice-join-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 10.11s
-notice-invitation-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 10.13s
-notice-push-request-dropped: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.08s
-notice-revocation-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 4.97s
-notice-leave-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 5.16s
-presence-before-commit: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.15s
-presence-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 3.11s
-presence-sink-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 3.10s
-presence-recovery-disabled: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.18s
-gateway-secret-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.40s
-revoked-grant-authorized: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.45s
-removed-member-authorized: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.47s
-grant-revocation-bypassed: test result: FAILED. 5 passed; 9 failed; 0 ignored; 0 measured; 413 filtered out; finished in 0.66s
-disconnect-floor-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.11s
-broadcast-config-port-truncation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.00s
-twirp-placeholder: test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.03s
-endpoint-separation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.00s
-listener-publishing: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.00s
-server-muted-publishing: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.00s
-forbidden-token-permissions: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.00s
-expired-token: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 0.00s
-cleanup-placeholder: test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 422 filtered out; finished in 0.24s
-cleanup-backoff: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.09s
-cleanup-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 342 filtered out; finished in 10.10s
-WS13 discrimination: 49 compiled regressions detected; sources restored
-
-```
-
-## Fresh final verification
-
-All commands cited below were rerun in this worktree. Rust 1.98.1, locked Cargo, -j 4, own rust/target and authorized scratch. The existing default and first_run seeds were built from the pin in the preceding slice and both were validated again by real Rails. CI=1 makes missing seeds fail. The printed missing-seed helper message deliberately tests that helper; the actual seeded suite ran.
-
-Seed validation, both exit 0:
+In `.scratch/fresh-check`:
 
 ```sh
-PARITY_NAMESPACE=ws13 PARITY_IMAGE=ws13-reference:d7c7de92 PARITY_OWNER=ws13 rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/campfire/verify_parity_seed.rb default > .scratch/seed-default-final.log 2>&1
-PARITY_NAMESPACE=ws13 PARITY_IMAGE=ws13-reference:d7c7de92 PARITY_OWNER=ws13 rust/parity/bin/reference runner --seed first_run --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/campfire/verify_parity_seed.rb first_run > .scratch/seed-first_run-final.log 2>&1
+mkdir -p .scratch
+PARITY_OWNER=ws13 PARITY_CPUS=2 PARITY_IMAGE=ws13-reference:d7c7de92 rust/parity/bin/seed build default first_run > .scratch/fresh-seed.log 2>&1
+git fetch origin
+git merge --ff-only origin/rust/ws13-huddles
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CI=1 CABLE_TEST_PORT_RANGE=52300-52349 MAIL_TEST_PORT_RANGE=52350-52399 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml --workspace -- --test-threads=4 > .scratch/fresh-workspace-test.log 2>&1
 ```
 
-Raw summary fields from the two verifier outputs, default then first_run:
+Seed build raw lines (exit 0):
 
 ```text
-  "passed": 29,
-  "failed": 0
-  "passed": 4,
-  "failed": 0
+seed: building default
+seed: default -> parity/.seed/default (6.1M)
+seed: building first_run
+seed: first_run -> parity/.seed/first_run (1.5M)
 ```
 
-Workspace, exit 0. App is the first line; DB is the 424-pass line:
-
-```sh
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CI=1 CABLE_TEST_PORT_RANGE=52300-52349 MAIL_TEST_PORT_RANGE=52350-52399 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml --workspace --exclude html5ever --no-fail-fast -- --test-threads=4 --nocapture > .scratch/workspace-final.log 2>&1
-```
+Workspace exit 0, including html5ever. Raw summary lines in executable order; app is the first line and database is the 428-pass line:
 
 ```text
-test result: ok. 339 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 27.59s
+test result: ok. 350 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 32.31s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.50s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.71s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
-test result: ok. 424 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 47.52s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.17s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.97s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 428 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 60.53s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.65s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.14s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.01s
 test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.14s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.25s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.48s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.56s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.63s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.66s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.23s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
-test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.83s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.79s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.40s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.93s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.54s
-test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 73 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.39s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.54s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 73 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.03s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -263,14 +132,15 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-Totals from the raw summaries: **1,379 passed, zero failures, 11 explicit ignores**. App: **339 passed, zero failures**. Its four default ignores are reference recording, measurement, WS11 manages_bots, and the external Node launcher. Node was explicitly run below, leaving ten ignored declarations unexecuted overall. Existing cable/DB recorders/exporters and two kit doc examples remain ignored. ACME returned with PEBBLE_MINICA unset; exact media bytes printed the existing version gate (vectors libvips 8.16.1/ffmpeg 7.1.5; host 8.18.6/n9.0.2). No ACME or exact media-byte parity claim.
+Aggregate of those lines: 1,404 passed, zero failed, 11 ignored. Explicit Node execution below runs one of the ignored tests. The remaining ten are: WS11 manages_bots, reference-frame recording, push latency measurement, three external Rails database/export tests, storage's pinned-media bytes test, mail export, and two kit documentation examples. Pinned exact-media acceptance and PEBBLE ACME are unexecuted. These are recorded limitations, separate from the zero-failure seeded app suite.
 
-Gateway's unchanged own node --test script/livekit-gateway/ suite against real Rust HTTP (the existing adapter only preserves original explicit fault injections); exit 0, after source restoration. Node and pinned ws@8.21.3 are installed in authorized scratch.
+Fresh clone, explicit gateway acceptance, exit 0. It installs locked Node dependencies into its own test-created tempfile:
 
 ```sh
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CI=1 CABLE_TEST_PORT_RANGE=52300-52349 MAIL_TEST_PORT_RANGE=52350-52399 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire huddle_gateway_own_node -- --ignored --nocapture > .scratch/gateway-final.log 2>&1
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CI=1 CABLE_TEST_PORT_RANGE=52300-52349 MAIL_TEST_PORT_RANGE=52350-52399 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire huddle_gateway_own_node_suite_against_rust_endpoints -- --ignored --nocapture > .scratch/fresh-gateway-node.log 2>&1
 ```
 
 ```text
@@ -281,82 +151,175 @@ TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CI=1 CABLE_TEST_PORT_
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 2954.739912
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 342 filtered out; finished in 3.00s
+ℹ duration_ms 3063.914616
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 353 filtered out; finished in 3.32s
 ```
 
-Entire workspace clippy, including html5ever, all targets and denied warnings; exit 0:
+Fresh clone workspace clippy, exit 0:
 
 ```sh
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings > .scratch/clippy-final.log 2>&1
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy --locked -j4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings > .scratch/fresh-clippy.log 2>&1
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.20s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 52.19s
 ```
 
-
-## Oracle regeneration and source identity
-
-Every one of the eleven corpora was regenerated by real Rails and byte-compared again, exit 0. This exact orchestration invokes the reference tools sequentially and writes only authorized scratch:
+Both freshly built seeds validated again by real Rails, exit 0:
 
 ```sh
-python3 - <<'PYCODE' > .scratch/huddle-reference-final.log
-import json,os,pathlib,subprocess
+PARITY_NAMESPACE=ws13 PARITY_IMAGE=ws13-reference:d7c7de92 PARITY_OWNER=ws13 PARITY_CPUS=2 rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/campfire/verify_parity_seed.rb default > .scratch/fresh-seed-default-verify.log 2>&1
+PARITY_NAMESPACE=ws13 PARITY_IMAGE=ws13-reference:d7c7de92 PARITY_OWNER=ws13 PARITY_CPUS=2 rust/parity/bin/reference runner --seed first_run --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/campfire/verify_parity_seed.rb first_run > .scratch/fresh-seed-first-run-verify.log 2>&1
+```
+
+Raw fields, default then first_run:
+
+```text
+  "passed": 29,
+  "failed": 0
+```
+
+```text
+  "passed": 4,
+  "failed": 0
+```
+
+Locked metadata, duplicate workspace-key detection and main ancestry, run in the fresh clone, exit 0:
+
+```sh
+python3 - <<'PYCODE' > .scratch/fresh-metadata.log
+import pathlib,subprocess,tomllib
 root=pathlib.Path.cwd()
-env=dict(os.environ,PARITY_NAMESPACE='ws13',PARITY_IMAGE='ws13-reference:d7c7de92',PARITY_OWNER='ws13')
-outputs={
- 'protocol':'rust/crates/campfire/src/huddle/protocol_vectors.json',
- 'cleanup':'rust/crates/db/src/models/huddle_cleanup_vectors.json',
- 'grants':'rust/crates/db/src/models/huddle_grant_vectors.json',
- 'gateway':'rust/crates/campfire/src/huddle/gateway_vectors.json',
- 'presence':'rust/crates/views/src/huddle_presence_vectors.json',
- 'notices':'rust/crates/db/src/models/huddle_notice_vectors.json',
- 'pushes':'rust/crates/db/src/models/huddle_push_vectors.json',
- 'issuance':'rust/crates/db/src/models/huddle_issuance_vectors.json',
- 'resolver':'rust/crates/db/src/models/huddle_resolver_vectors.json',
- 'stale_streams':'rust/crates/db/src/models/huddle_stale_stream_vectors.json',
- 'hands':'rust/crates/db/src/models/huddle_hand_vectors.json',
-}
-for name,path in outputs.items():
- output_path=root/'.scratch'/f'huddle-{name}-final.json'
- with output_path.open('wb') as output, (root/'.scratch'/f'huddle-{name}-final.log').open('wb') as error:
-  subprocess.run(['rust/parity/bin/reference','runner','-e','RAILS_LOG_LEVEL=fatal',f'rust/reference-tools/huddle_{name}.rb'],env=env,stdout=output,stderr=error,check=True)
- subprocess.run(['cmp',str(output_path),str(root/path)],check=True)
- data=json.loads(output_path.read_bytes())
- count=len(data['cases']) if 'cases' in data else None
- print(f'{name}: reference rerun byte-identical; cmp exit 0'+(f'; {count} cases' if count is not None else ''),flush=True)
+subprocess.run(['mise','exec','rust@1.98.1','--','cargo','metadata','--locked','--format-version','1'],cwd=root/'rust',stdout=subprocess.DEVNULL,check=True)
+print('cargo metadata --locked --format-version 1: exit 0')
+d=tomllib.loads((root/'rust/Cargo.toml').read_text())['workspace']['dependencies']
+print(f'Workspace dependency keys: {len(d)} unique; no duplicates')
+subprocess.run(['git','merge-base','--is-ancestor','21a7332f','HEAD'],check=True)
+print('Main 21a7332f is an ancestor of HEAD: exit 0')
+print('Fresh clone source HEAD: '+subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
 PYCODE
 ```
 
 ```text
-protocol: reference rerun byte-identical; cmp exit 0
-cleanup: reference rerun byte-identical; cmp exit 0
-grants: reference rerun byte-identical; cmp exit 0
-gateway: reference rerun byte-identical; cmp exit 0; 39 cases
-presence: reference rerun byte-identical; cmp exit 0; 50 cases
-notices: reference rerun byte-identical; cmp exit 0; 67 cases
-pushes: reference rerun byte-identical; cmp exit 0; 36 cases
-issuance: reference rerun byte-identical; cmp exit 0; 49 cases
-resolver: reference rerun byte-identical; cmp exit 0; 29 cases
-stale_streams: reference rerun byte-identical; cmp exit 0; 16 cases
-hands: reference rerun byte-identical; cmp exit 0; 17 cases
+cargo metadata --locked --format-version 1: exit 0
+Workspace dependency keys: 75 unique; no duplicates
+Main 21a7332f is an ancestor of HEAD: exit 0
+Fresh clone source HEAD: e610ef11eee22803f52215dd9fb4ebafbe2740bf
 ```
 
-Actual reference classes were SHA256-compared with git show at the pin, exit 0:
+## Fail-first and differential evidence
+
+Before implementation, the stream and role/hand security tests failed on 501 versus expected 403. Before the Stage note handler, the real socket test failed because no note arrived. These were assertion failures, not compile failures. Each subsequently passed in the fresh clone. Two early fixture mistakes (missing seeded membership and fixture administrator rank) were corrected and are not counted as fail-first evidence.
+
+All 67 deliberate regressions were compiled and rejected by actual panics/assertion failures; the tool rejects compilation failures and restores each source in finally. This covers gateway secret, revoked/removed grants, expired/invalid/listener/server-muted tokens, rank and rate limits, mutation rollback, callback/panel/rejoin delivery, stale stops, issuance/resolver suppression and the process reconciler. The owning worktree was isolated from other source builds during mutation; the fresh clone verification used its own immutable checkout.
+
+From the owned worktree, rerun exit 0:
 
 ```sh
-python3 - <<'PYCODE' > .scratch/source-identity-final.log
-import hashlib,subprocess
-paths=['app/models/huddle_grant.rb','app/models/huddle/join_notifier.rb','app/models/huddle/join_pusher.rb','app/models/huddle/invitation_pusher.rb','app/models/user/inbox_preferences.rb','app/models/membership.rb','app/models/stream.rb','app/controllers/internal/huddle_controller.rb','app/models/activity_item.rb','app/models/huddle/invitation_resolver.rb','app/models/huddle/ring_policy.rb']
-raw=subprocess.check_output(['docker','run','--rm','--name','ws13-source-check-final','--network','none','--entrypoint','sha256sum','ws13-reference:d7c7de92',*[f'/rails/{path}' for path in paths]],text=True)
-for line in raw.splitlines():
- digest,path=line.split(); local=path.removeprefix('/rails/')
- expected=hashlib.sha256(subprocess.check_output(['git','show',f'd7c7de92:{local}'])).hexdigest()
- assert digest==expected,local
- print(f'{local}: pin SHA256 matches reference image')
-print(f'Reference identity: {len(paths)} files match d7c7de92')
-PYCODE
+python3 rust/reference-tools/huddle_discrimination.py > .scratch/final-discrimination.log 2>&1
+```
+
+```text
+stage-note-delivery-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 3.12s
+role-rank-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.43s
+role-demotion-without-grant-left-live: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.25s
+role-personal-panel-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.19s
+role-unnecessary-rejoin: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.36s
+hand-repeat-roster-noisy: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 4.46s
+hand-rate-limit-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.43s
+moderation-enqueue-failure-swallowed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.07s
+stream-start-seen-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.43s
+stream-stale-stop-protection-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.51s
+stream-quality-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.31s
+stream-committed-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 3.12s
+stream-explicit-stopped-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.91s
+stage-admin-successor-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.29s
+stage-succession-note-noisy: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.08s
+stream-user-without-grant-left-live: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.20s
+stage-forms-visible-to-listeners: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 37 filtered out; finished in 0.01s
+moderation-administrator-rank-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.43s
+issuance-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.19s
+issuance-banned-caller: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 7.56s
+issuance-bot-caller: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 7.22s
+issuance-off-hidden-recipient: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.93s
+issuance-inbox-suppression-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.92s
+issuance-reused-grant-dedupe-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 4.29s
+issuance-owned-priority-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 2.67s
+issuance-sound-policy-ignored: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 2.52s
+resolver-wait-shortened: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.26s
+resolver-revoked-join-evidence-ignored: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.75s
+stale-exact-thirty-kept: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.91s
+stale-other-presenter-kept: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.93s
+reconciler-admin-gate-skips-invitations: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 5.10s
+reconciler-stale-pass-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.11s
+hand-speaker-permission-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.58s
+hand-repeat-idempotence-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.27s
+push-connection-scope-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.30s
+push-throttle-shortened: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 4.26s
+push-policy-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.89s
+push-denied-burns-throttle: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.86s
+notice-revoked-and-stale-joiner: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.18s
+notice-inactive-humans: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.09s
+notice-second-device-leave: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 4.06s
+notice-rejoin-window: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.47s
+notice-call-ended-while-others-remain: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 4.54s
+notice-join-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 10.10s
+notice-invitation-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 10.10s
+notice-push-request-dropped: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.07s
+notice-revocation-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 5.25s
+notice-leave-callback-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 6.63s
+presence-before-commit: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.43s
+presence-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 3.10s
+presence-sink-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 3.13s
+presence-recovery-disabled: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.11s
+gateway-secret-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.53s
+revoked-grant-authorized: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.41s
+removed-member-authorized: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.45s
+grant-revocation-bypassed: test result: FAILED. 5 passed; 9 failed; 0 ignored; 0 measured; 417 filtered out; finished in 0.68s
+disconnect-floor-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.24s
+broadcast-config-port-truncation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.00s
+twirp-placeholder: test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 349 filtered out; finished in 0.03s
+endpoint-separation: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.00s
+listener-publishing: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.00s
+server-muted-publishing: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.00s
+forbidden-token-permissions: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.00s
+expired-token: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.00s
+cleanup-placeholder: test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.44s
+cleanup-backoff: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 430 filtered out; finished in 0.07s
+cleanup-worker-bypassed: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 10.21s
+WS13 discrimination: 67 compiled regressions detected; sources restored
+```
+
+Whole golden files regenerated from real pinned Rails, compared without masks, exit 0:
+
+```sh
+python3 rust/reference-tools/ws13_verify_corpora.py > .scratch/final-corpora.log 2>&1
+```
+
+```text
+protocol: reference rerun byte-identical
+cleanup: reference rerun byte-identical
+grants: reference rerun byte-identical
+gateway: reference rerun byte-identical; 39 cases
+presence: reference rerun byte-identical; 50 cases
+notices: reference rerun byte-identical; 67 cases
+pushes: reference rerun byte-identical; 36 cases
+issuance: reference rerun byte-identical; 49 cases
+resolver: reference rerun byte-identical; 29 cases
+stale_streams: reference rerun byte-identical; 16 cases
+hands: reference rerun byte-identical; 17 cases
+stream_lifecycle: reference rerun byte-identical; 20 cases
+moderation: reference rerun byte-identical; 29 cases
+stage_views: reference rerun byte-identical; 50 cases
+participation: reference rerun byte-identical; 34 cases
+stage_note: reference rerun byte-identical
+WS13 corpora: 16 complete files regenerated byte-identically
+```
+
+Actual reference classes/initializer checked against the pin, exit 0:
+
+```sh
+python3 rust/reference-tools/ws13_verify_reference.py > .scratch/final-source-identity.log
 ```
 
 ```text
@@ -371,48 +334,71 @@ app/controllers/internal/huddle_controller.rb: pin SHA256 matches reference imag
 app/models/activity_item.rb: pin SHA256 matches reference image
 app/models/huddle/invitation_resolver.rb: pin SHA256 matches reference image
 app/models/huddle/ring_policy.rb: pin SHA256 matches reference image
-Reference identity: 11 files match d7c7de92
+app/models/rooms/stage.rb: pin SHA256 matches reference image
+app/models/rooms/voice.rb: pin SHA256 matches reference image
+app/controllers/rooms/call_moderation_controller.rb: pin SHA256 matches reference image
+app/controllers/rooms/stage/streams_controller.rb: pin SHA256 matches reference image
+app/controllers/rooms/stage/roles_controller.rb: pin SHA256 matches reference image
+app/controllers/rooms/stage/hands_controller.rb: pin SHA256 matches reference image
+config/initializers/content_security_policy.rb: pin SHA256 matches reference image
+Reference identity: 18 files match d7c7de92
 ```
 
-## Locked metadata and declaration validation
+## Original Rails declaration accounting
 
-Locked metadata stdout was redirected as requested, TOML parsing checks duplicate workspace keys, and main ancestry was rechecked; exit 0:
+Every original title is retained in `plans/ws13-deferred-tests.md`. Passed titles combine the real request/state corpora, complete fragment goldens, real Cable delivery tests and existing WS8a model tests; vector counts are not declaration counts. Whole fan-out declarations, controller combinations not exercised, original lock/preload/query assertions and public page flows stay open. Largest files appear first.
 
 ```sh
-python3 - <<'PYCODE' > .scratch/metadata-final.log
-import pathlib,subprocess,tomllib
-root=pathlib.Path.cwd()
-subprocess.run(['mise','exec','rust@1.98.1','--','cargo','metadata','--locked','--format-version','1'],cwd=root/'rust',stdout=subprocess.DEVNULL,check=True)
-print('cargo metadata --locked --format-version 1: exit 0')
-d=tomllib.loads((root/'rust/Cargo.toml').read_text())['workspace']['dependencies']
-print(f'Workspace dependency keys: {len(d)} unique; no duplicates')
-subprocess.run(['git','merge-base','--is-ancestor','21a7332f','HEAD'],check=True)
-print('Main 21a7332f is an ancestor of HEAD: exit 0')
-PYCODE
+python3 rust/reference-tools/ws13_verify_declarations.py > .scratch/final-declarations.log
 ```
 
 ```text
-cargo metadata --locked --format-version 1: exit 0
-Workspace dependency keys: 75 unique; no duplicates
-Main 21a7332f is an ancestor of HEAD: exit 0
+Rails declaration catalogue: 548 titles retained; 91 passed; 457 partial/deferred; 33 files; source titles match
 ```
 
-All catalogue titles and counts were checked against the actual Rails files, exit 0:
-
-```sh
-python3 rust/reference-tools/ws13_verify_declarations.py > .scratch/declarations-final.log
-```
-
-```text
-Rails declaration catalogue: 548 titles retained; 12 passed; 536 partial/deferred; 33 files; source titles match
-```
+| Rails file | Original | Assertions covered (passed) | Partial/deferred |
+| --- | ---: | ---: | ---: |
+| `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 16 | 22 |
+| `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
+| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
+| `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
+| `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
+| `test/system/huddles_test.rb` | 31 | 0 | 31 |
+| `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
+| `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
+| `test/models/stream_test.rb` | 27 | 14 | 13 |
+| `test/controllers/rooms/stages_controller_test.rb` | 24 | 0 | 24 |
+| `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
+| `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
+| `test/controllers/rooms/voices_controller_test.rb` | 18 | 0 | 18 |
+| `test/controllers/rooms/stage_view_test.rb` | 16 | 0 | 16 |
+| `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
+| `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
+| `test/system/stage_test.rb` | 15 | 0 | 15 |
+| `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
+| `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
+| `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
+| `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
+| `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
+| `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
+| `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
+| `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
+| `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 0 | 6 |
+| `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
+| `test/integration/huddle_presence_test.rb` | 5 | 0 | 5 |
+| `test/models/rooms/voice_test.rb` | 5 | 2 | 3 |
+| `test/jobs/huddle/join_notice_job_test.rb` | 4 | 0 | 4 |
+| `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
+| `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
+| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
+| **Total** | **548** | **91** | **457** |
 
 ## Exactly what remains
 
-1. **WS13 lifecycle:** full Stream create/live/end/quality APIs and callbacks; the four badge/sidebar/event-dot/per-viewer-panel updates for every explicit/automatic end; explicit other-actor stream-stopped event; complete voice/stage lifecycle and start/stop call policies; hostless-stage transaction, quiet plain Action Text timeline note and successor promotion, including membership destruction and user deactivation; remaining role/rejoin effects; hand controller authorization/minute-bucket throttle; call moderation rank/self rules and mute/unmute/disconnect responses/effects. Persisted stale ends are implemented but their render callbacks are explicitly pending. Preserve WS8a's already-wired deleted-room/last-active Stage grant behavior.
-2. **WS17 integration, by lead:** reconcile/register both named policy/transport seams with WS17's implementation, then recover their exact unknown-handler failures. No policy or transport delivery was implemented here or claimed verified.
-3. **WS13 public controllers/views:** huddle show/create/participants/leave, user-presence, voice/stage, roles/hands/streams and call moderation; the remaining **18** views and actual sidebar/header/group-DM page integration, byte-identical for the parity seed. The one participant partial is already proven for 50 renders. Existing WS4 wasm-unsafe-eval/LiveKit connect-src support and tests remain present; public browser/CSP integration acceptance and any further additions are pending.
-4. **WS13 tests:** the remaining **536** partial/deferred original declarations grouped above and individually retained in the catalogue. Real LiveKit system declarations stay deferred with the explicit LIVEKIT_SYSTEM_TESTS=1/real-server reason. The existing gateway Node suite has been verified against Rust.
-5. Retained unproven external boundaries: successful TLS/open-timeout RoomService probes, broader network error taxonomy, process-kill/restart rehearsal, real LiveKit/production acceptance. No newly failing source test was reassigned as inherited.
+1. WS13 public controllers: `Rooms::HuddlesController` show/create/participants/leave; `Users::HuddlePresenceController#show`; voice and stage creation/edit/update/member-management/deletion routes. The stream/roles/hands/moderation routes are implemented, but full room pages, navigation/sidebar and layout integration remain incomplete.
+2. Eleven of the original nineteen owned view integrations/golden checks (some WS6 template scaffolds already exist): `rooms/voices/{new,edit,_form}.html.erb`, `rooms/stages/{new,edit,_form}.html.erb`, `layouts/{_huddle,_huddle_invitation,_huddle_join_notice}.html.erb`, and `users/sidebars/rooms/{_voice,_stage}.html.erb`. Seven owned Stage fragments and the participant partial are ported; the additional WS14 event venue dot is also byte-identical. Full parity-seed pages and these eleven views must still be compared byte-for-byte. Existing CSP additions are verified above.
+3. The 457 original partial/deferred declarations listed individually in the catalogue. Of these, 35 real-LiveKit declarations may remain deferred for LIVEKIT_SYSTEM_TESTS=1 with a configured server (31 HuddlesTest plus four explicitly gated StageTest cases). The 71 other browser system declarations use stubs and remain ordinary WS13 work after public HTML/controller integration. They are not covered by the real-LiveKit exception. The remaining model/controller/job/service/integration assertions remain WS13 work, with WS17 policy/transport integration retained at the named seams.
+4. Lead/WS17 integration: register/reconcile HuddlePushJob and HuddleRingJob with current Notifications::Policy and real transport, preserving atomic claim/enqueue and recovering only each exact unknown-handler error. No policy or transport delivery is claimed here.
+5. Retained external acceptance gaps: actual LiveKit/browser runs, successful TLS/open-timeout RoomService probes and broader network taxonomy, process-kill/restart rehearsal, production acceptance, and pinned media/PEBBLE tests. No PR or deployment was performed.
 
-No open design decision or approval request. This is a coherent pushed **partial** delivery. Stop point: issuance, resolver, reconciler state sweeps and hand mutations are verified; resume at the complete Stream/Stage lifecycle/render slice.
+Stop point: the pushed lifecycle/render slices and fresh-clone checks are coherent. WS13 is partial until the public controllers/views and remaining declarations above are completed.
