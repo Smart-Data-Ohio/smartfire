@@ -1,6 +1,7 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod auth_audit;
 pub mod active_storage;
 pub mod ban;
 pub mod boost;
@@ -20,6 +21,7 @@ pub mod webhook;
 pub mod workspace_presence_lease;
 
 pub use account::{Account, AccountSettings};
+pub use auth_audit::{AuthAudit, SudoVerifier};
 pub use active_storage::{Attachment, Blob};
 pub use ban::Ban;
 pub use boost::Boost;

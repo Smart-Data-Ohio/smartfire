@@ -48,6 +48,7 @@ pub mod qr_code;
 pub mod rooms;
 pub mod searches;
 pub mod sessions;
+pub mod sudos;
 pub mod unfurl_links;
 pub mod users;
 pub mod welcome;
@@ -143,6 +144,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
+        "sudos#new" => arc(sudos::new),
+        "sudos#create" => arc(sudos::create),
+        "sudos#google" => arc(sudos::google),
         "content_security_policy_reports#create" => arc(csp_reports::create),
         "accounts/users#index" => arc(accounts::users::index),
         "accounts/users#update" => arc(accounts::users::update),

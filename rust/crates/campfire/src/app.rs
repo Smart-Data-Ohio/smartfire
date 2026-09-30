@@ -38,6 +38,7 @@ pub struct AppState {
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
     pub mail: crate::mail::State,
+    pub sudo: crate::concerns::sudo::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
@@ -131,6 +132,7 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
         cable,
         jobs,
         mail,
+        sudo: crate::concerns::sudo::State::default(),
         web_push,
         fragment_cache,
     });
@@ -380,5 +382,8 @@ fn copy_database(source: &std::path::Path, target: &std::path::Path) -> anyhow::
 
 #[cfg(test)]
 mod security_tests;
+
+#[cfg(test)]
+mod sudo_tests;
 #[cfg(test)]
 mod tests;

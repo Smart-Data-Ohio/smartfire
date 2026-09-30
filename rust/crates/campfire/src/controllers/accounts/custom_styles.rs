@@ -22,6 +22,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut account = super::current_account(c).await?;
+    concerns::sudo::require_sudo_mode(c)?;
     let params = c.params.require("account")?.permit(&permit_keys(&["custom_styles"]));
     let custom_styles = params.contains_key("custom_styles").then(|| params.get("custom_styles").and_then(Param::to_s));
     c.app()

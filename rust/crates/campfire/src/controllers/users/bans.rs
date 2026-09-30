@@ -11,6 +11,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut user = find_user(c, "user_id").await?;
+    concerns::sudo::require_sudo_mode(c)?;
     let id = user.id;
     c.app().db.write(move |tx| user.ban(tx)).await.map_err(Error::internal)?;
     redirect_to_user(c, id)
@@ -21,6 +22,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut user = find_user(c, "user_id").await?;
+    concerns::sudo::require_sudo_mode(c)?;
     let id = user.id;
     c.app().db.write(move |tx| user.unban(tx)).await.map_err(Error::internal)?;
     redirect_to_user(c, id)

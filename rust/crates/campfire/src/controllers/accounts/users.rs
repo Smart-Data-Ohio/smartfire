@@ -34,6 +34,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut user = set_user(c).await?;
+    concerns::sudo::require_sudo_mode(c)?;
     let role = match c.params.require("user")?.get("role").and_then(|role| role.as_str()) {
         Some("administrator") => Role::Administrator,
         _ => Role::Member,
@@ -51,6 +52,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut user = set_user(c).await?;
+    concerns::sudo::require_sudo_mode(c)?;
     c.app().db.write(move |tx| user.deactivate(tx)).await.map_err(Error::internal)?;
     redirect_to_edit_account(c)
 }

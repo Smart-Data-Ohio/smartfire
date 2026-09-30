@@ -198,6 +198,11 @@ impl Browser<'_> {
         let reply = self.form("post", "/session", &[("email_address", email), ("password", PASSWORD)]).await;
         assert_eq!(reply.status, StatusCode::FOUND, "sign in as {email}: {}", reply.text());
     }
+
+    async fn confirm_sudo(&mut self) {
+        assert_eq!(self.get("/sudo/new").await.status, StatusCode::OK);
+        assert_redirect(&self.form("post", "/sudo", &[("password", PASSWORD)]).await, "http://campfire.test/");
+    }
 }
 
 fn encode(value: &str) -> String {
@@ -375,6 +380,7 @@ async fn administers_the_account() {
     let Some(test) = boot_seed("default").await else { return };
     let mut admin = test.browser("198.51.100.11");
     admin.sign_in(&test.label("emails.david")).await;
+    admin.confirm_sudo().await;
     let account_id = test.label("accounts.signal");
 
     let edit = admin.get("/account/edit").await;
@@ -421,6 +427,7 @@ async fn manages_bots() {
     let Some(test) = boot_seed("default").await else { return };
     let mut admin = test.browser("198.51.100.13");
     admin.sign_in(&test.label("emails.david")).await;
+    admin.confirm_sudo().await;
     let index = admin.get("/account/bots").await;
     assert_eq!(index.status, StatusCode::OK);
     assert!(index.text().contains(&test.label("bot_keys.bender")));
@@ -515,6 +522,7 @@ async fn bans_and_unbans() {
     let Some(test) = boot_seed("default").await else { return };
     let mut admin = test.browser("198.51.100.16");
     admin.sign_in(&test.label("emails.david")).await;
+    admin.confirm_sudo().await;
     let jz = test.label("users.jz");
     let page = admin.get(&format!("/users/{jz}")).await;
     let action = format!("/users/{jz}/ban");

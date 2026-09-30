@@ -9,6 +9,7 @@ use crate::concerns::{self, Before};
 pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
+    concerns::sudo::require_sudo_mode(c)?;
     let mut account = super::current_account(c).await?;
     c.app().db.write(move |tx| account.reset_join_code(tx)).await.map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account());

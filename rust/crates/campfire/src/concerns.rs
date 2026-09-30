@@ -42,6 +42,7 @@
 
 pub mod platform;
 pub mod session_keys;
+pub mod sudo;
 pub mod user_agent;
 
 use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, User};
