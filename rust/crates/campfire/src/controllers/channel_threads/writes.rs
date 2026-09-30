@@ -85,7 +85,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             else { Some(!matches!(value.to_s().as_deref(), Some("false" | "FALSE" | "f" | "F" | "0" | "off" | "OFF"))) }
         });
         let storage = c.app().storage.clone();
-        let thread = c.app().db.write(move |tx| {
+        c.app().db.write(move |tx| {
             let room = Room::find(tx.conn(), room_id)?;
             if room.deleted_at.is_some() || Membership::find_by_room_and_user(tx.conn(), room_id, creator)?.is_none() {
                 return Err(campfire_db::Error::RecordNotFound("Membership"));
@@ -103,8 +103,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
                 crate::messaging::process_message_attachment(tx, storage, &message)?;
             }
             Ok(thread)
-        }).await.map_err(db_error)?;
-        thread
+        }).await.map_err(db_error)?
     };
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::HTML {
         return c.redirect_to(&c.url_for(&format!("/rooms/{room_id}/threads/{}", thread.id)));

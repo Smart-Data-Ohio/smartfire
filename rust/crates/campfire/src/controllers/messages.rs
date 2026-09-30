@@ -307,8 +307,7 @@ pub(crate) async fn human_message_params_with_client_id(c: &Ctx, root_room: Opti
     let mut attributes = message_params(c)?;
     (attributes.attachment, attributes.existing_attachment) = resolve_human_attachment(c, attributes.attachment, message.get("attachment")).await?;
     let permitted = message.permit(&permit_keys(&["markdown_source", "client_message_id", "reply_to_message_id", "reply_notify_author"]));
-    let text = |key: &str| permitted.get(key).and_then(string_column);
-    attributes.markdown_source = text("markdown_source");
+    attributes.markdown_source = permitted.get("markdown_source").and_then(string_column);
     attributes.client_message_id = client_id;
     if attributes.markdown_source.is_some() {
         attributes.body = None;
