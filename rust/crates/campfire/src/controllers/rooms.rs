@@ -509,5 +509,20 @@ mod involvements_rails_cases;
 mod reads_rails_cases;
 
 #[cfg(test)]
+mod organization_rails_support;
+
+#[cfg(test)]
+mod favorites_rails_cases;
+
+#[cfg(test)]
+mod room_categories_rails_cases;
+
+#[cfg(test)]
+mod categories_rails_cases;
+
+#[cfg(test)]
+mod switchers_rails_cases;
+
+#[cfg(test)]
 #[path = "rooms/native_integration_tests.rs"]
 mod native_integration_tests;
