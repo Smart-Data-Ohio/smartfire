@@ -503,7 +503,13 @@ pub fn user_summary(secrets: &Secrets, user: &User) -> campfire_views::users::Us
             campfire_db::Status::Banned => Status::Banned,
         },
         avatar_path: avatar_path(secrets, user),
+        two_factor_enabled: false,
     }
+}
+
+/// The account list additionally offers administrator recovery for enrolled humans.
+pub fn account_user_summary(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db::Result<campfire_views::users::UserSummary> {
+    Ok(campfire_views::users::UserSummary { two_factor_enabled: user.two_factor_enabled(conn)?, ..user_summary(secrets,user) })
 }
 
 /// `to_fs(:epoch)` as a string (milliseconds).

@@ -1,0 +1,27 @@
+{% extends "layouts/application.html" %}
+{% block head %}{% endblock %}
+{% block content %}
+<section class="txt-align-center">
+  <div class="panel flex flex-column gap">
+    <h1 class="margin-none">Save your backup codes</h1>
+    <p class="margin-none">Each code signs you in once if you lose your authenticator. They will not be shown again.</p>
+{% if signed_out > 0 %}      <p class="margin-none">Signed out your other devices</p>
+{% endif %}
+    <ul class="flex flex-column gap" id="two_factor_backup_codes" style="list-style: none;">
+{% for code in codes %}        <li><code class="txt-large">{{ code }}</code></li>
+{% endfor %}    </ul>
+
+    <div class="flex align-center center gap">
+      {% filter button_to_copy_to_clipboard(self.text()) %}
+        {{ h::image_tag(ctx, "copy-paste.svg", h::attrs().aria_hidden().size(20)) }}
+        <span>Copy all</span>
+{% endfilter %}
+      {% filter link_to(self.download(), h::attrs().attr("download", "smartfire-backup-codes.txt").class("btn")) %}
+        {{ h::image_tag(ctx, "arrow-right.svg", h::attrs().aria_hidden().size(20)) }}
+        <span>Download</span>
+{% endfilter %}    </div>
+
+    {{ h::link_to(&continue_url, h::attrs().class("btn btn--reversed center"), "Continue") }}
+  </div>
+</section>
+{% endblock %}

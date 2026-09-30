@@ -52,7 +52,10 @@ pub fn seed_clock() -> campfire_kit::SharedClock {
             self.start.checked_add(elapsed).unwrap()
         }
     }
-    std::sync::Arc::new(SeedClock { start: SEED_NOW.parse().unwrap(), booted: std::time::Instant::now() })
+    std::sync::Arc::new(SeedClock {
+        start: SEED_NOW.parse().unwrap(),
+        booted: std::time::Instant::now(),
+    })
 }
 
 pub fn seed_dir(name: &str) -> Option<PathBuf> {
@@ -93,13 +96,17 @@ fn built_seed_is_found_in_ci() {
 
 fn parity_env(name: &str) -> Option<String> {
     let env = std::fs::read_to_string(Path::new(ROOT).join("parity/.env.reference")).ok()?;
-    env.lines().find_map(|line| line.strip_prefix(&format!("{name}=")).map(str::to_string))
+    env.lines()
+        .find_map(|line| line.strip_prefix(&format!("{name}=")).map(str::to_string))
 }
 
 /// David's Rails-issued `session_token` cookie header.
 pub fn david_cookie() -> String {
-    let vectors: serde_json::Value =
-        serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/campfire_sessions.json"))).unwrap();
+    let vectors: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../vectors/campfire_sessions.json"
+    )))
+    .unwrap();
     vectors["sessions"]
         .as_array()
         .unwrap()
@@ -119,28 +126,35 @@ pub struct TestApp {
 impl TestApp {
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
-        Self::boot_using_clock(seed_clock()).await
+        Self::boot_with_clock(seed_clock()).await
     }
 
     /// Byte goldens generated with the reference's --freeze clock.
     pub async fn boot_frozen() -> Option<TestApp> {
-        Self::boot_using_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()))).await
-    }
-
-    async fn boot_using_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
-        Self::boot_using_clock_env(clock, &[]).await
+        Self::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()))).await
     }
 
     /// Test-local configuration; no process environment changes or pre-existing input files.
     pub async fn boot_frozen_with_env(values: &[(&str, &str)]) -> Option<TestApp> {
-        Self::boot_using_clock_env(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), values).await
+        Self::boot_with_clock_and_env(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), values).await
     }
 
-    async fn boot_using_clock_env(clock: campfire_kit::SharedClock, values: &[(&str, &str)]) -> Option<TestApp> {
+    pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_with_clock_and_env(clock, &[]).await
+    }
+
+    pub async fn boot_with_clock_and_env(
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
-        std::fs::copy(seed.join("db/production.sqlite3"), dir.path().join("db/production.sqlite3")).unwrap();
+        std::fs::copy(
+            seed.join("db/production.sqlite3"),
+            dir.path().join("db/production.sqlite3"),
+        )
+        .unwrap();
         copy_dir(&seed.join("storage"), &dir.path().join("files"));
         let root = dir.path().to_string_lossy().into_owned();
         let secret = parity_env("SECRET_KEY_BASE").unwrap();
@@ -149,10 +163,17 @@ impl TestApp {
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
             "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
-            _ => values.iter().find(|(key,_)| *key == name).map(|(_,value)| (*value).to_string()),
+            _ => extra
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| (*value).into()),
         })
         .unwrap();
-        Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap(), _dir: dir })
+        Some(TestApp {
+            booted: boot_with_clock(config, clock).await.unwrap(),
+            _dir: dir,
+        })
+
     }
 
     pub fn db(&self) -> &campfire_db::Database {
@@ -161,13 +182,19 @@ impl TestApp {
 
     /// A browser signed in as David.
     pub fn david(&self) -> Browser<'_> {
-        let mut browser = Browser { app: self, cookies: BTreeMap::new() };
+        let mut browser = Browser {
+            app: self,
+            cookies: BTreeMap::new(),
+        };
         browser.absorb_cookie_header(&david_cookie());
         browser
     }
 
     pub fn anonymous(&self) -> Browser<'_> {
-        Browser { app: self, cookies: BTreeMap::new() }
+        Browser {
+            app: self,
+            cookies: BTreeMap::new(),
+        }
     }
 
     /// A browser signed in as `user_id` with a new session of its own (two-factor verified, as
@@ -175,11 +202,27 @@ impl TestApp {
     pub async fn sign_in(&self, user_id: i64) -> Browser<'_> {
         use campfire_kit::Crypto;
 
-        let attributes = campfire_db::NewSession { user_agent: None, ip_address: Some("127.0.0.1"), device_id: None, two_factor_verified: true };
-        let session = self.db().write(move |tx| campfire_db::Session::start_with(tx, user_id, attributes)).await.unwrap();
-        let signed = campfire_kit::RailsCrypto::new(self.booted.app.secrets.clone()).sign_cookie("session_token", &session.token, None);
+        let attributes = campfire_db::NewSession {
+            user_agent: None,
+            ip_address: Some("127.0.0.1"),
+            device_id: None,
+            two_factor_verified: true,
+        };
+        let session = self
+            .db()
+            .write(move |tx| campfire_db::Session::start_with(tx, user_id, attributes))
+            .await
+            .unwrap();
+        let signed = campfire_kit::RailsCrypto::new(self.booted.app.secrets.clone()).sign_cookie(
+            "session_token",
+            &session.token,
+            None,
+        );
         let mut browser = self.anonymous();
-        browser.cookies.insert("session_token".into(), campfire_kit::cookies::escape(&signed));
+        browser.cookies.insert(
+            "session_token".into(),
+            campfire_kit::cookies::escape(&signed),
+        );
         browser
     }
 }
@@ -240,7 +283,12 @@ pub struct Req {
 
 impl Req {
     pub fn new(method: Method, path: &str) -> Self {
-        Req { method, path: path.to_string(), headers: Vec::new(), body: Vec::new() }
+        Req {
+            method,
+            path: path.to_string(),
+            headers: Vec::new(),
+            body: Vec::new(),
+        }
     }
 
     pub fn header(mut self, name: &str, value: &str) -> Self {
@@ -277,7 +325,10 @@ impl Req {
         body.extend_from_slice(data);
         body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
         self.body = body;
-        self.header("content-type", &format!("multipart/form-data; boundary={boundary}"))
+        self.header(
+            "content-type",
+            &format!("multipart/form-data; boundary={boundary}"),
+        )
     }
 }
 
@@ -286,7 +337,11 @@ pub fn encode(value: &str) -> String {
 }
 
 impl Browser<'_> {
-    fn absorb_cookie_header(&mut self, header: &str) {
+    pub fn cookie_header(&self) -> String {
+        self.cookies.iter().map(|(k,v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ")
+    }
+
+    pub fn absorb_cookie_header(&mut self, header: &str) {
         for pair in header.split(';') {
             if let Some((name, value)) = pair.trim().split_once('=') {
                 self.cookies.insert(name.to_string(), value.to_string());
@@ -309,12 +364,23 @@ impl Browser<'_> {
     }
 
     pub async fn send(&mut self, req: Req) -> Reply {
-        let mut request = Request::builder().method(req.method.clone()).uri(&req.path).header(header::HOST, "campfire.test");
+        let mut request = Request::builder()
+            .method(req.method.clone())
+            .uri(&req.path)
+            .header(header::HOST, "campfire.test");
         if !self.cookies.is_empty() {
-            let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
+            let cookie = self
+                .cookies
+                .iter()
+                .map(|(k, v)| format!("{k}={v}"))
+                .collect::<Vec<_>>()
+                .join("; ");
             request = request.header(header::COOKIE, cookie);
         }
-        let has_accept = req.headers.iter().any(|(k, _)| k.eq_ignore_ascii_case("accept"));
+        let has_accept = req
+            .headers
+            .iter()
+            .any(|(k, _)| k.eq_ignore_ascii_case("accept"));
         if !has_accept {
             request = request.header(header::ACCEPT, "text/html,application/xhtml+xml");
         }
@@ -322,12 +388,26 @@ impl Browser<'_> {
             request = request.header(name.as_str(), value.as_str());
         }
         let request = request.body(Body::from(req.body)).unwrap();
-        let response = self.app.booted.router.clone().oneshot(request).await.unwrap();
+        let response = self
+            .app
+            .booted
+            .router
+            .clone()
+            .oneshot(request)
+            .await
+            .unwrap();
         let status = response.status();
         let headers = response.headers().clone();
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap().to_vec();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap()
+            .to_vec();
         self.absorb_set_cookies(&headers);
-        Reply { status, headers, body }
+        Reply {
+            status,
+            headers,
+            body,
+        }
     }
 
     pub async fn get(&mut self, path: &str) -> Reply {
@@ -338,7 +418,8 @@ impl Browser<'_> {
     /// `X-CSRF-Token`, as Turbo sends it from the `csrf-token` meta tag.
     pub async fn write(&mut self, req: Req) -> Reply {
         let token = self.authenticity_token().await;
-        self.send(req.header(campfire_kit::csrf::HEADER, &token)).await
+        self.send(req.header(campfire_kit::csrf::HEADER, &token))
+            .await
     }
 
     /// A masked global token for this browser's session, as `csrf_meta_tags` renders it. A
@@ -354,11 +435,15 @@ impl Browser<'_> {
                 None => break,
             }
         }
-        self.session_token().expect("the session has an authenticity token after a page")
+        self.session_token()
+            .expect("the session has an authenticity token after a page")
     }
 
     fn session_token(&self) -> Option<String> {
-        masked_session_token(&self.app.booted.app.secrets, self.cookies.get(campfire_kit::session::SESSION_KEY)?)
+        masked_session_token(
+            &self.app.booted.app.secrets,
+            self.cookies.get(campfire_kit::session::SESSION_KEY)?,
+        )
     }
 
     /// The real (unmasked) authenticity token in this browser's session, which every token its
@@ -369,19 +454,32 @@ impl Browser<'_> {
         let raw = self.cookies.get(campfire_kit::session::SESSION_KEY)?;
         let raw = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
         let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
-        let session = crypto.decrypt_cookie(campfire_kit::session::SESSION_KEY, &raw, jiff::Timestamp::now())?;
-        campfire_kit::csrf::RealToken::decode(session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?)
+        let session = crypto.decrypt_cookie(
+            campfire_kit::session::SESSION_KEY,
+            &raw,
+            jiff::Timestamp::now(),
+        )?;
+        campfire_kit::csrf::RealToken::decode(
+            session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?,
+        )
     }
 }
 
 /// A masked global authenticity token for the session in the `_campfire_session` cookie value
 /// `raw` (as sent, still escaped), or `None` when the session hasn't been given one.
-pub fn masked_session_token(secrets: &std::sync::Arc<rails_compat::Secrets>, raw: &str) -> Option<String> {
+pub fn masked_session_token(
+    secrets: &std::sync::Arc<rails_compat::Secrets>,
+    raw: &str,
+) -> Option<String> {
     use campfire_kit::Crypto;
 
     let raw = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
     let crypto = campfire_kit::RailsCrypto::new(secrets.clone());
-    let session = crypto.decrypt_cookie(campfire_kit::session::SESSION_KEY, &raw, jiff::Timestamp::now())?;
+    let session = crypto.decrypt_cookie(
+        campfire_kit::session::SESSION_KEY,
+        &raw,
+        jiff::Timestamp::now(),
+    )?;
     let real = session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?;
     Some(campfire_kit::csrf::RealToken::decode(real)?.masked(None))
 }

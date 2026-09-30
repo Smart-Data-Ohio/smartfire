@@ -135,9 +135,13 @@ impl FormWith {
     /// (`html_options_for_form_with` + `extra_tags_for_form`). The token is the per-form one for
     /// this action and method (see [`super::request_forgery`]).
     pub fn open(&self) -> Html {
-        let mut html = attrs()
-            .attr_opt("id", self.id.as_deref())
-            .attr_opt("class", self.class.as_deref());
+        let mut html = attrs();
+        if let Some(id) = &self.id {
+            html = html.attr("id", id.as_str());
+        }
+        if let Some(class) = &self.class {
+            html = html.class(class.as_str());
+        }
         html = html.merge(self.data.clone()).merge(self.html.clone());
         if self.multipart.get() {
             html = html.attr("enctype", "multipart/form-data");
