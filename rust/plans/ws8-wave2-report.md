@@ -1,12 +1,12 @@
-# WS8a messaging models — partial handoff, updated for Astra's review
+# WS8a messaging models — main merge verification and partial handoff
 
-Branch: `rust/ws8-messaging-models`. Verified implementation commits: `f2d502e8` (room destruction/retention), `41356cc24c0963ef2311dcb2044f6da943e3aee5` (continue2 runtime adapters) and `e31262256331459cb7fb121e86f3b856a8d061c8` (Astra review fixes). The following report commit changes documentation only. **WS8a remains partial at the named integration boundaries below.** Controllers/templates remain WS8b. The user authorized committing and pushing; no PR was opened.
+Branch: `rust/ws8-messaging-models`. Current verified code: `8fe8589aa52b4158dcd13f18d2181ef205909da7`; main merge: `dda958c942ea757c570db82f1995eb1d2da0d06f` (parents `6cd91358`, `a2fbe296`). The lead merged the reviewed slash branch in `6cd91358`. Earlier continue2 and Astra fixes are retained. **WS8a remains partial at the named integration boundaries below.** This report is mirrored only under `rust/plans/`; `.claude/delegation/**` is not tracked. The user authorized committing and pushing; no PR was opened.
 
 ## Recovery and scope
 
 Opus's committed threads, edits/forwarding and polls and its uncommitted pins/saves were preserved in the earlier takeover; the in-progress work was committed first as `5b373ef2`. Subsequent verified slices added keywords, scheduled messages, categories/favorites, durable queue checks, references/cards, group DMs, search, audit and initial runtime wiring. That handoff is preserved in report commit `fa404c9f`.
 
-Continue2 started from `fa404c9f` and handled its remaining items 1, 3 and 4, pushed as `6811fcd7` including its report. This review follow-up starts there. **Slash commands were deliberately untouched:** a separate Sol worker owns `rust/ws8a-slash`, forked from `fa404c9f`. Existing WS3/WS5 merges and model reference `fec615be` remain in the branch; no rebase or stash was used. The newer decisions pin `d7c7de92` only changes the PWA install partial, outside this model work; its UI acceptance is WS6/WS8b and is not claimed here.
+Continue2 started from `fa404c9f` and handled its remaining items 1, 3 and 4, pushed as `6811fcd7` including its report. This review follow-up starts there. **Slash implementation was delivered by the separate Sol worker** on `rust/ws8a-slash`, forked from `fa404c9f`, and is now merged by the lead. This continuation only adapts its broadcast constructors to WS7's envelope; it implements no slash commands. Existing WS3/WS5 merges and model reference `fec615be` remain in the branch; no rebase or stash was used. The newer decisions pin `d7c7de92` only changes the PWA install partial, outside this model work; its UI acceptance is WS6/WS8b and is not claimed here.
 
 Astra's review of `fa404c9f` was merge after fixes, with no P1s. Its original five vectors regenerated identically and its atomic enqueue rejection passed. The four reproductions under `/home/riels/.cache/rust-port/ws8r/` were re-created as committed Rails-generated checks here. This does not claim Astra has re-reviewed continue2 or the fixes.
 
@@ -16,9 +16,9 @@ Astra's review of `fa404c9f` was merge after fixes, with no P1s. Its original fi
 2. Search uses the Unicode word class, including connector punctuation and join controls, so `a＿b` remains one quoted FTS phrase. Seventeen Rails queries also cover the other connector characters, zero-width joiners, ordinary whitespace/hyphens, circled letters and numeric characters. Actual SQLite results distinguish adjacent `a b` from separated `a x b`.
 3. Continue2 already canonicalized create/edit bodies and propagated adapter errors. The review's `# hi` case plus an edit are now explicit Rails-generated regression checks. Separate deliberate create and edit bypasses both fail the test; the existing three adapter-error rollback checks remain intact. No redundant production change was made for this finding.
 4. Unloaded DM members use SQL ORDER BY LOWER(users.name), while supplied members retain Ruby-style Unicode lowercase sorting. Three generated ordering cases cover `Ø/á`, `é/É`, Greek capitals, and both viewer-excluding paths. Custom names return before issuing a member query.
-5. The Cable golden no longer contains handwritten `{threadId:4}`. A real Rails threaded Message create triggers ChannelThread#receive; the generator captures ActionCable.server.broadcast and verifies one recipient-stream callback. A Rust Message create generates the corresponding typed event, then passes it through the actual template-free adapter. Expected stream/payload come only from Rails and include roomId. Removing roomId fails the new check. The generic Turbo remove formatting check remains separate.
+5. The Cable golden no longer contains handwritten `{threadId:4}`. A real Rails threaded Message create triggers ChannelThread#receive; the generator captures ActionCable.server.broadcast and verifies one recipient-stream callback. A Rust Message create generates the corresponding typed event, then passes it through the actual template-free adapter. Expected stream/payload come only from Rails and include roomId. Removing roomId fails the new check. The merge continuation also replaces the old helper-only remove vector with a real Membership#destroy callback capture, including its encoded stream name.
 
-The three new DB tests initially failed together (`.scratch/review-db-before.log`). Seven reproducible review regressions cover full folding, fold boundaries, phrase splitting, default ordering, canonicalization on create, canonicalization on edit and Cable roomId. Raw results appear below. The previous 36 regressions are also rerun, for 43 total domain/runtime mutations plus six migration comparator mutations.
+The three new DB tests initially failed together (`.scratch/review-db-before.log`). Seven reproducible review regressions cover full folding, fold boundaries, phrase splitting, default ordering, canonicalization on create, canonicalization on edit and Cable roomId. Raw results appear below. The previous 43 domain/runtime regressions and the merged slash branch's nine regressions are rerun, alongside six migration comparator mutations.
 
 ## Complete in this continuation
 
@@ -26,6 +26,7 @@ The three new DB tests initially failed together (`.scratch/review-db-before.log
 - Retention's nine row kinds, calendar-year audit cutoff, strict/inclusive expiry boundaries, unread/pending/active exceptions, grant cleanup unlink/dependent inbox deletion and daily stuck-room backstop. Real app workers and periodic tasks are registered.
 - Production Markdown/canonicalization/plain-text/mention failures now propagate through Message writes. Scheduled send, edit and forward run through the production adapter and match Rails-generated output.
 - A real storage forward copier verifies source checksum, preserves metadata/content type and stages a new file. The transaction owns its file guard, including when a deferred durable enqueue fails after forwarding returns successfully.
+- Reviewed non-agent slash registry, parser, dispatcher and seven command handlers are merged; huddle/event/play execution adapters retain their named deferrals. The real AppRichText slash row check runs after the merge.
 - Runtime saved-reminder, scheduled-send and poll-close loops are checked against Rails with a failing first row and a successfully processed second row. Existing quote worker and template-free broadcasts remain registered. Rendered partials and notification delivery remain partial.
 
 ## Changes by file
@@ -92,7 +93,7 @@ The real file copier installs Staged's guard on Tx's after-commit path. Returnin
 | Group DMs | Cap 10/private-pair/admin guards, direct-name generic validation, keyed/unkeyed lookup, rename/add/leave notes and per-user directory/header events; last-member begin_destroy now complete at database layer. | Huddle participant locals WS13; rendered sidebar/header and HTTP WS8b; broader Ruby scenarios/query instrumentation partial. |
 | Room deletion | Room creator/direct-name validation; marker/direct key/timestamps; membership delete_all; grant presence/identity uniqueness and revocation; quality validation/stream end; cleanup enum/presence/snapshot/lease/job; atomic destroy job; retries/recovery/dependencies/alive directories. | Huddle in-call ended/leave/voice callbacks and synchronous Stage last-grant stream behavior WS13; thread work callbacks WS11/WS12; calendar consumer WS14; HTTP switches to begin_destroy and rendered delivery WS8b. |
 | Search | Operator grammar/chips, invalid-token preservation, Unicode FTS words, bound literal LIKE values, dates/attachment/thread predicates, alive/access scopes and tuple cursor. | Board/work/event sections WS12/WS14; timezone/DST/coercion and HTTP/preloads partial WS8a/WS8b. |
-| Non-agent slash | No new implementation in this branch. Existing action flag support is available to the handler. | **Owned by parallel `rust/ws8a-slash` worker**, including dispatcher/time parser/handlers and WS13/WS14 stubs. |
+| Non-agent slash | Reviewed registry, permissions, dispatcher, timezone parser; shrug/me/remind/status/dnd/ooo/poll; existing-user validations and cached calendar/OOO rules; atomic root/thread push and legacy webhook enqueue. | HTTP authorization, JSON/pickers and presentation WS8b; agent invocation WS11; huddle launch WS13; event form/save WS14; play presentation/client execution WS8b/WS5. Full Date._parse grammar and coercions remain partial. |
 | Retention/audit | All nine retention row kinds/backstop and audit append-only/action presence, snapshots/redaction/user-agent cap/digest/failure collapse. Retention alone deletes old audit rows, as in Ruby. | Current/audit foreign labels/UI WS4/WS11/WS14/WS17/WS8b; broader nil/IP/coercion parity partial. HuddleGrant destroy inbox/unlink ported; revocation broadcasts WS13. |
 
 Additional row audit: Event destruction removes attendance, calendar entries, event references and source inbox items; EventCalendarEntry's remote-delete snapshot is enqueued in the same transaction (consumer WS14). RepositorySubscription dependent notifications and bot-membership removal are satisfied by the room membership delete_all; these rows have no additional destroy hooks. WorkThreadEvent, BoardSlaNudge, WorkThreadLink, WorkHandoff, AgentStep and PR mapping dependent rows are removed with their source inbox dependencies where applicable; their create/update models remain their owners' work. Venue/agent references and cleanup unlink use Ruby's update_all semantics, intentionally skipping validation/touches. Active Stream update! checks quality; unchanged association validation follows Rails' configured required-FK behavior. The deleted room suppresses normal Stage stream/presence rendering lookups; remaining in-call notifications are explicitly WS13.
@@ -103,7 +104,7 @@ ActivityItem remains a minimal reminder/drop writer, not the complete WS12 inbox
 
 Existing typed events remain: parent thread indicator replacement and user unread-thread Cable; poll replacement; pin badge/count/list replacements and quiet-note append; active-human activity Cable; scheduled conversation append/root unread Cable; quote-card replacement/removal; group room timeline notes and recipient-specific sidebar/header replacement/prepend/removal. Membership removal disconnects after its sidebar removal. QuoteCards, DirectSidebar, RoomHeader, Poll, pin, thread and message partial descriptions remain available to WS8b.
 
-Only plain Cable payloads and template-free Turbo remove are delivered by the existing app sink. The unread-thread payload is now differentially checked via real callbacks in both models, including roomId; the earlier handwritten/pass-through Cable case was circular and did not prove that contract. Partials remain explicitly unregistered; no HTML/subscriber acceptance is claimed. Marking uses membership delete_all, so it intentionally skips individual Membership destroy broadcasts/callbacks, like Ruby. No new Huddle broadcast delivery was fabricated for the deferred WS13 callbacks.
+Plain Cable payloads and template-free Turbo remove now go through WS7's single app sink; Turbo frames use its conservative session-bound guard. The unread-thread payload is now differentially checked via real callbacks in both models, including roomId; the earlier handwritten/pass-through Cable case was circular and did not prove that contract. Partial descriptions remain explicitly unregistered for WS8b. The new Rails-generated remove and unread-thread frames are proven through actual WebSocket subscribers; full rendered domain-partial acceptance remains partial. Marking uses membership delete_all, so it intentionally skips individual Membership destroy broadcasts/callbacks, like Ruby. No new Huddle broadcast delivery was fabricated for the deferred WS13 callbacks.
 
 ## Ruby scenario counts versus Rust proof
 
@@ -129,15 +130,58 @@ Ruby Minitest files were read/count-checked, **not executed as whole suites**. R
 | `models/rooms/direct_test.rb` | 28 | Six consolidated tests, WS2 key checks, display vectors and Rails rollback group reads; complete last-member database deletion added; broader agent/huddle/rendering scenarios partial. |
 | `models/search_query_test.rb` | 24 | Three consolidated grammar/filter/cursor tests; timezone/DST and side sections partial. |
 | `models/audit_log_test.rb` | 17 | Eight consolidated audit tests; external-context/foreign-label and broader coercion parity partial. |
+| `services/slash_commands/time_parser_test.rb` | 10 | Merged parser tests cover 3,328 base, 2,610 review and 2,444 supplemental Rails-generated inputs; exhaustive Date._parse/civil-range parity remains partial. |
+| `services/slash_commands/dispatcher_test.rb` | 40 | Merged registry/recognition, dispatch/row/callback and user/calendar differentials plus three queue rejection tests and real renderer row checks; agent cases WS11 and HTTP/UI cases WS8b/WS13/WS14. No complete one-to-one Ruby scenario mapping is claimed. |
 | `models/channel_thread_board_test.rb`, `channel_thread_auto_assign_test.rb`, `channel_thread_agent_assignment_test.rb`, `channel_thread_handoff_test.rb` | 16 + 10 + 29 + 11 | 0 ported by WS8; WS12/WS11 ownership. |
 
 Extra Rust tests have no separate Ruby scenario count: three renderer error propagation checks, production Markdown/canonicalization checks, staged-file/durable-enqueue fault check, periodic row-failure check and queue atomicity properties. The fixtures and timestamps are produced by Rails, while transaction/file safety assertions test the required queue adaptation.
 
+## Main merge
+
+The lead's uncommitted merge of `origin/main` at `a2fbe296f0675b1a657cf81c1f537b6687451403` is resolved and committed. The reviewed slash merge remains intact, including fallible `prepare_body` for Markdown. No test functions were dropped: both parents have 16 membership tests and 29 room tests, all retained. The shared callback assertions now check one broadcast followed by one reconnect event, rather than filtering away extra events.
+
+| Conflict | Resolution |
+|---|---|
+| `Cargo.toml` | Keep both caseless and pinned unicode-segmentation dependencies. TOML has 72 unique workspace dependency keys. |
+| `crates/campfire/src/main.rs` | Keep both messaging and security module registrations. |
+| `crates/db/src/events.rs` | Keep WS7's open BroadcastRequest/trait envelope; serialize WS8 descriptions into it; retain WS8 job/broadcast decoding helpers. |
+| `crates/db/src/models.rs` | Union domain modules/exports, retaining MessageChanges, RoomRemovalBroadcast and WorkspacePresenceLease. |
+| `crates/db/src/models/membership.rs` | Emit WS7 RoomRemovalBroadcast once, then reconnect, remove thread membership, and refresh direct keys in Rails order. Preserve WS8 alive readers/favorites/categories. |
+| `crates/db/src/tests/membership_test.rs` | Keep every test and main's exact ordered broadcast-plus-disconnect assertion; WS8 thread cleanup coverage remains. |
+| `crates/db/src/tests/room_test.rs` | Keep every test, exact revocation event assertions, and WS8 deletion/domain behavior. |
+
+Additional integration edits: `broadcasts.rs` derives serialization, stores symbol names as owned strings, and uses WS1's encoded GlobalID params for actual wire stream names. Raw record identities remain available for the slash oracle's callback-argument comparison. Every WS8 and slash broadcaster uses Event::broadcast; there is one delivery arm in Jobs and one WS7 channel sink. The moved template-free adapter publishes Turbo through broadcast_stream_to (including the conservative guard) and Cable JSON through the same server. It logs unregistered partial descriptions with their WS8b owner instead of inventing rendering.
+
+`ws8_runtime_vectors.rb` captures both real Ruby threaded-message and membership-destroy callbacks. Its old helper-only, URI-named remove case is gone. The new subscriber test first failed by timeout (`.scratch/merge-sink-before.log`), failed again with the old URI wire names, then passed after the envelope bridge and encoded naming fix. Existing auth/ban tests also failed with the newer WS19 seed: it starts with fresh verified sessions and loopback IPs. Only their setup changes in `app/tests.rs` and `controllers/presenters/accounts/tests.rs`: explicitly stale/unverified sessions and a separate public ban target. Their assertions remain intact; no production authentication/ban behavior was changed.
+
+Clippy required moving the new trait implementation/helper before test modules. The slash discrimination and generation tools now use four Cargo jobs, `/home/riels/.cache/rust-port/ws8/slash/` and `ws8-` Docker names. Freshly generated setup SQL can contain changed encrypted fixture bytes and SQLite-default wall-clock timestamps; no hand-authored normalization was applied.
+
+The merge inherited main's Rails/UI/test/CI changes, including the Edge PWA fix and background_jobs migration; this worker makes no additional Rails source change. Shared Cargo.lock already retained both registry and vendored html5ever 0.35 entries: locked metadata succeeds without any lock repair. No rebase, stash, parity allowlist/mask change or production/deployment action.
+
 ## Commands rerun and raw evidence
 
-All commands below were rerun in this worktree during this continuation. Successful suites were rerun with restored sources after discrimination. Logs/scratch are below `.scratch/`; nothing was written to /tmp. No Docker ports were exposed. The isolated `ws8-reference-models` image is based on image id `83d1ae45158680dc665489d1e1cb7c053ac3a860c0e2841d6f19b29f731329f5` with this checkout's Rails db overlaid; relevant source identity is checked explicitly, not inferred from the image name. The shared reference image was not changed.
+All commands below were rerun in this worktree after merging. Cargo builds use four jobs and this worktree's target. Scratch stays outside `/tmp`. Docker names start `ws8-`; socket tests use only `48000-48049`. Logs are in `.scratch/`. Tests that require seeds have both reference-built default and first_run seeds; no seed-based skips were observed. No whole Ruby Minitest/browser/media acceptance is implied.
 
-### Reference and Rails generation
+### Locked dependency checks
+
+Run from `rust/`:
+
+```sh
+TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" CARGO_BUILD_JOBS=4 mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 >/dev/null
+python3 - <<'CHECK'
+import tomllib
+with open("Cargo.toml", "rb") as f: doc = tomllib.load(f)
+print(f"workspace dependencies: {len(doc['workspace']['dependencies'])} unique keys; TOML parsed successfully")
+CHECK
+```
+
+```text
+workspace dependencies: 72 unique keys; TOML parsed successfully
+```
+
+Metadata exited 0 with no output. Cargo.lock was not edited for this merge.
+
+### Rails reference, seeds and vectors
 
 Run from the worktree root:
 
@@ -159,40 +203,134 @@ WS8 loop vectors: 3 first-row SQL failures, 4 continuation checks
 WS8 review vectors: 3 redaction, 17 phrase queries, 3 direct ordering, 2 canonicalized writes
 ```
 
-The loop generator deliberately injects SQL errors on the first row and invokes the real Ruby dispatchers, allowing their rescue behavior to generate the expected continuation results. Deletion setup includes real associations/callbacks; retention covers ±1 microsecond and exact boundaries. Setup SQL is a delta of actual Rails writes. Opaque encrypted fixture bytes can change when regenerated; they are not hand-authored expectations.
-
-### Successful Rust checks
-
 ```sh
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -- --test-threads=4 > .scratch/test-final.log 2>&1
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire rich_text::tests::runtime_ -- --test-threads=4 > .scratch/app-rich-text-final.log 2>&1
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire jobs::tests::ws8_ -- --test-threads=4 > .scratch/app-jobs-final.log 2>&1
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy -j 4 --manifest-path rust/Cargo.toml --workspace --exclude html5ever --all-targets -- -D warnings > .scratch/clippy-final.log 2>&1
+PARITY_NAMESPACE=ws8 PARITY_OWNER=ws8 PARITY_CPUS=2 PARITY_IMAGE=ws19-reference-fec615be TMPDIR="$PWD/.scratch" bash rust/parity/bin/seed build default first_run > .scratch/merge-seeds.log 2>&1
 ```
 
 ```text
-test result: ok. 368 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 9.08s
-test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.05s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 182 filtered out; finished in 0.31s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 180 filtered out; finished in 0.24s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.83s
+seed: building default
+seed: default -> parity/.seed/default (6.1M)
+seed: building first_run
+seed: first_run -> parity/.seed/first_run (1.5M)
 ```
 
-The normal DB run ignores three environment-dependent differential/export tests; the next command runs all three. Jobs' two crash-process tests also ran. The app selections ran five runtime renderer tests and seven WS8 job/broadcast/storage/loop tests; 182 and 180 filtered tests respectively were **not run**. No fixture-based app acceptance was silently claimed. Other app/workspace test suites, media-vector parity and browser parity were not executed; clippy compiled all workspace targets.
+The model image identity check covers 50 implementation files, icons and Rails db. Seed construction uses the pinned WS19 reference image and current checked-in seed scripts. Five WS8 vector generators call our real Ruby callbacks/dispatchers; generated setup SQL may contain encrypted random bytes or SQLite-default wall-clock timestamps. Expectations were not hand-edited. The reviewed slash corpora are inherited from the merged branch; this continuation reruns their Rust comparisons and discrimination, not their oracle generator or 56-scenario slash export validator. Their prior results in `plans/ws8-slash-report.md` are historical. The general Rails rollback validator below is rerun here.
 
-### Rails rollback, fixture/timestamp and migration checks
+### Rust checks, including the requested binary and Cable suites
+
+Run from the worktree root:
+
+DB, queue and process-crash tests:
+
+```sh
+CABLE_TEST_PORT_RANGE=48000-48049 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -- --test-threads=4 > .scratch/test-final.log 2>&1
+```
+
+```text
+test result: ok. 375 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 35.66s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.05s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Full richtext renderer:
+
+```sh
+CABLE_TEST_PORT_RANGE=48000-48049 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire_richtext -- --test-threads=4 > .scratch/renderer-final.log 2>&1
+```
+
+```text
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.75s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.34s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.65s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.87s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+WS8 production renderer adapter:
+
+```sh
+CABLE_TEST_PORT_RANGE=48000-48049 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire rich_text::tests::runtime_ -- --test-threads=4 > .scratch/app-rich-text-final.log 2>&1
+```
+
+```text
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 286 filtered out; finished in 0.38s
+```
+
+WS8 real job/broadcast/storage/loop runtime:
+
+```sh
+CABLE_TEST_PORT_RANGE=48000-48049 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire jobs::tests::ws8_ -- --test-threads=4 > .scratch/app-jobs-final.log 2>&1
+```
+
+```text
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 284 filtered out; finished in 0.28s
+```
+
+Merged slash production adapter:
+
+```sh
+CABLE_TEST_PORT_RANGE=48000-48049 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire slash_runtime_ -- --test-threads=4 --nocapture > .scratch/app-slash-final.log 2>&1
+```
+
+```text
+WS8 slash runtime: 19 Rails-generated rich-text/FTS row comparisons
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 290 filtered out; finished in 3.41s
+```
+
+Cable package (actual Cargo name campfire_cable):
+
+```sh
+CABLE_TEST_PORT_RANGE=48000-48049 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire_cable -- --test-threads=4 > .scratch/cable-final.log 2>&1
+```
+
+```text
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test replays_reference_frames ... ok
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.05s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Full campfire binary:
+
+```sh
+CABLE_TEST_PORT_RANGE=48000-48049 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test -j 4 --manifest-path rust/Cargo.toml -p campfire --bin campfire -- --test-threads=4 --nocapture > .scratch/campfire-bin-final.log 2>&1
+```
+
+```text
+WS8 slash runtime: 19 Rails-generated rich-text/FTS row comparisons
+test channels::tests::golden::replays_reference_frames ... ok
+test result: FAILED. 288 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 24.21s
+```
+
+Full workspace clippy, including vendored html5ever:
+
+```sh
+CABLE_TEST_PORT_RANGE=48000-48049 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings > .scratch/clippy-final.log 2>&1
+```
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.30s
+```
+
+The normal DB run ignores three environment-dependent tests, all executed by the differential command below. Cable ignores only its Rails recorder; the binary ignores the Rails recorder and optional push-latency measurement. **Binary acceptance is partial:** exit 101, only `controllers::presenters::accounts::tests::manages_bots` fails (the inherited bot-key assertion, WS11). All other listed Rust test commands and workspace clippy exit 0. Neither replay is skipped. The separate adapter selections deliberately filter other binary tests; the full binary command exercises them. Broader workspace unit suites and browser/media-vector acceptance are not claimed.
+
+### Rails rollback, timestamp and migration differential
 
 Run the first command from `rust/`:
 
 ```sh
-OUT="$PWD/../.scratch/differential" CONTAINER_PREFIX=ws8 PARITY_IMAGE=ws8-reference-models CARGO_TARGET_DIR="$PWD/target" TMPDIR="$PWD/../.scratch" mise exec rust@1.98.1 -- bash reference-tools/db/differential.sh > ../.scratch/differential-final.log 2>&1
+OUT="$PWD/../.scratch/differential" CONTAINER_PREFIX=ws8 PARITY_IMAGE=ws8-reference-models CARGO_TARGET_DIR="$PWD/target" TMPDIR="$PWD/../.scratch" CARGO_BUILD_JOBS=4 mise exec rust@1.98.1 -- bash reference-tools/db/differential.sh > ../.scratch/differential-final.log 2>&1
 ```
 
 ```text
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 368 filtered out; finished in 4.11s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 375 filtered out; finished in 4.12s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 message_save_touches.json matches the reference
 schema.sql, reference db:prepare and Rust prepare agree
@@ -211,133 +349,159 @@ self-test: all 6 mutations caught
 migration replay matches schema.sql: 1279 facts, 87 tables with an id, 248 indexes, 128 versions
 ```
 
-The Rails boot validates all 122 exported rows, including the newly marked Room and claimed HuddleCleanup, then performs its read/write/delete rollback checks. This is representative rollback compatibility, not exhaustive validation of every possible row combination.
+Rails reads/validates all 122 representative exported rows and exercises rollback reads/edits/deletes. This is not exhaustive validation of every possible row combination.
 
 ### Failing-first and discrimination evidence
 
-All new test functions were shown failing against scaffolds or deliberate regressions before accepting their implementation: room begin/cascade/recovery/readers/retry/no-op, retention survivors, room/sweep queue atomicity, real maintenance registry, production write flows, canonical/plain-text/mention failures, real copier/file rollback and loop rescue. The final SLA dependency case was added to the Rails oracle, failed against the missing dependency, then passed after the fix (`.scratch/sla-cascade-before.log`). Initial scaffold failures are also retained in `.scratch/*-before.log`; the reproducible evidence below rejects compile-only failures and asserts the names of the tests that must fail.
-
-The four commands run sequentially; no other source editing/build runs during mutation. Each restores the original source in finally. Older recovered tests outside these selected checks remain individually unproven; mutation evidence is not rewritten as a complete TDD history for Opus's work.
+The new shared-sink subscriber test failed by an actual frame timeout before its bridge/stream naming fixes; the real callback oracle also participates in the rerun shared-sink regression. The three existing seed-sensitive tests failed in the initial binary run before their setup changes; their assertions were retained. Earlier room/retention/renderer/copy/loop and Astra failing-first logs remain in `.scratch/*-before.log`. The selected reproducible checks below reject compile-only failures, require named test assertions/timeouts, and restore source in finally. All five run sequentially without other source edits/builds. Afterward `git diff --exit-code` passed, and the final clean Rust pass above reran. Older recovered tests beyond these selections remain individually unproven; no complete TDD history for Opus's work is invented.
 
 ```sh
-python3 rust/reference-tools/db/ws8-discrimination.py > .scratch/discrimination-final.log 2>&1
-python3 rust/reference-tools/db/ws8-maintenance-discrimination.py > .scratch/maintenance-discrimination-final.log 2>&1
-python3 rust/reference-tools/db/ws8-runtime-discrimination.py > .scratch/runtime-discrimination-final.log 2>&1
-python3 rust/reference-tools/db/ws8-review-discrimination.py > .scratch/review-discrimination-final.log 2>&1
+CABLE_TEST_PORT_RANGE=48000-48049 python3 rust/reference-tools/db/ws8-discrimination.py > .scratch/discrimination-final.log 2>&1
+CABLE_TEST_PORT_RANGE=48000-48049 python3 rust/reference-tools/db/ws8-maintenance-discrimination.py > .scratch/maintenance-discrimination-final.log 2>&1
+CABLE_TEST_PORT_RANGE=48000-48049 python3 rust/reference-tools/db/ws8-runtime-discrimination.py > .scratch/runtime-discrimination-final.log 2>&1
+CABLE_TEST_PORT_RANGE=48000-48049 python3 rust/reference-tools/db/ws8-review-discrimination.py > .scratch/review-discrimination-final.log 2>&1
+CABLE_TEST_PORT_RANGE=48000-48049 python3 rust/reference-tools/db/ws8-slash-discrimination.py > .scratch/slash-discrimination-final.log 2>&1
 ```
 
 ```text
 keyword-rules: detected (14 failing tests)
-test result: FAILED. 0 passed; 14 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.13s
+test result: FAILED. 0 passed; 14 failed; 0 ignored; 0 measured; 364 filtered out; finished in 0.12s
 scheduled-claim: detected (4 failing tests)
-test result: FAILED. 21 passed; 4 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.63s
+test result: FAILED. 21 passed; 4 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.62s
 scheduled-validation: detected (2 failing tests)
-test result: FAILED. 23 passed; 2 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.61s
+test result: FAILED. 23 passed; 2 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.72s
 scheduled-access: detected (5 failing tests)
-test result: FAILED. 20 passed; 5 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.62s
+test result: FAILED. 20 passed; 5 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.72s
 scheduled-thread-drop: detected (2 failing tests)
-test result: FAILED. 23 passed; 2 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.64s
+test result: FAILED. 23 passed; 2 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.67s
 category-validation: detected (2 failing tests)
-test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.18s
+test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.21s
 category-nullify: detected (1 failing tests)
-test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.21s
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.23s
 favorite-writes: detected (2 failing tests)
-test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 363 filtered out; finished in 0.19s
+test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.25s
 transaction-rollback: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.08s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.09s
 save-touch-golden: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.13s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.20s
 thread-job-atomicity: detected (2 failing tests)
-test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.15s
+test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.18s
 reminder-job-atomicity: detected (1 failing tests)
-test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.16s
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.18s
 quote-references: detected (6 failing tests)
-test result: FAILED. 0 passed; 6 failed; 0 ignored; 0 measured; 365 filtered out; finished in 0.13s
+test result: FAILED. 0 passed; 6 failed; 0 ignored; 0 measured; 372 filtered out; finished in 0.16s
 group-dms: detected (7 failing tests)
-test result: FAILED. 0 passed; 7 failed; 0 ignored; 0 measured; 364 filtered out; finished in 0.20s
+test result: FAILED. 0 passed; 7 failed; 0 ignored; 0 measured; 371 filtered out; finished in 0.25s
 search-grammar: detected (4 failing tests)
-test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 367 filtered out; finished in 0.11s
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 374 filtered out; finished in 0.14s
 audit-contract: detected (9 failing tests)
-test result: FAILED. 0 passed; 9 failed; 0 ignored; 0 measured; 362 filtered out; finished in 0.17s
+test result: FAILED. 0 passed; 9 failed; 0 ignored; 0 measured; 369 filtered out; finished in 0.23s
 runtime-markdown: detected (5 failing tests)
-test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 182 filtered out; finished in 0.22s
-runtime-jobs-broadcasts: detected (4 failing tests)
-test result: FAILED. 3 passed; 4 failed; 0 ignored; 0 measured; 180 filtered out; finished in 0.19s
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 286 filtered out; finished in 0.34s
+runtime-jobs-broadcasts: detected (5 failing tests)
+test result: FAILED. 3 passed; 5 failed; 0 ignored; 0 measured; 283 filtered out; finished in 5.21s
 quote-job-atomicity: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 48 filtered out; finished in 0.12s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 51 filtered out; finished in 0.08s
 WS8 discrimination: 19 mutations detected; sources restored
 room-start: detected (4 failing tests)
-test result: FAILED. 2 passed; 4 failed; 0 ignored; 0 measured; 365 filtered out; finished in 0.18s
+test result: FAILED. 2 passed; 4 failed; 0 ignored; 0 measured; 372 filtered out; finished in 0.25s
 room-worker: detected (3 failing tests)
-test result: FAILED. 3 passed; 3 failed; 0 ignored; 0 measured; 365 filtered out; finished in 0.20s
+test result: FAILED. 3 passed; 3 failed; 0 ignored; 0 measured; 372 filtered out; finished in 0.23s
 room-live-guard: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.08s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.10s
 room-sweep: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.07s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.10s
 room-readers: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.07s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.08s
 retention: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.07s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.09s
 room-enqueue-atomicity: detected (2 failing tests)
-test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.15s
+test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.20s
 maintenance-registry: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.09s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.15s
 cleanup-enqueue-atomicity: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 48 filtered out; finished in 0.07s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 51 filtered out; finished in 0.10s
 sla-dependent-inbox: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.08s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.10s
 WS8 maintenance discrimination: 10 mutations detected; sources restored
 renderer-failure-propagation: detected (3 failing tests)
-test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 368 filtered out; finished in 0.15s
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 375 filtered out; finished in 0.20s
 write-flow-markdown: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.15s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.18s
 real-file-copier: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.09s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.10s
 file-rollback: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.10s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.11s
 loop-saved: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.10s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.11s
 loop-scheduled: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.11s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.11s
 loop-poll: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.11s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.12s
 WS8 runtime discrimination: 7 mutations detected; sources restored
 review-audit-fold: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.08s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.10s
 review-audit-boundaries: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.07s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.08s
 review-search-phrase: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.08s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.10s
 review-direct-order: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.07s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.07s
 review-create-canonical: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.12s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.12s
 review-edit-canonical: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.13s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.12s
 review-cable-room: detected (1 failing tests)
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.10s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.10s
 WS8 review discrimination: 7 mutations detected; sources restored
+registry: detected (1 named tests)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.03s
+parser: detected (1 named tests)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.04s
+dispatch: detected (1 named tests)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.10s
+callbacks: detected (1 named tests)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 3.28s
+validation: detected (1 named tests)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 377 filtered out; finished in 0.73s
+push-atomicity: detected (3 named tests)
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 49 filtered out; finished in 0.12s
+webhook-atomicity: detected (1 named tests)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 51 filtered out; finished in 0.08s
+runtime-richtext: detected (1 named tests)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 0.36s
+review-fold: detected (2 named tests)
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 376 filtered out; finished in 7.89s
+WS8 slash discrimination: 9 mutations detected; all 11 new tests failed; sources restored
 ```
+
+Initial new subscriber test (actual compiled timeout, before the fixes):
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 290 filtered out; finished in 5.13s
+```
+
+52 model/runtime/slash mutations plus six migration comparator mutations detected; no deliberate mutation remains committed.
 
 ## Cross-workstream touches
 
-- WS2: minimal Room/Membership/Message extensions, alive directories, fallible RichText seams, destruction dependencies and rollback export. No core schema redesign.
-- WS3: additive messaging job module/register call and two periodic entries; six queue tests. Queue/store internals are unchanged. Cleanup/calendar DTOs are durably written but need their domain consumers.
-- WS5: production adapter calls and exception propagation; richtext implementation unchanged. Compatibility callers outside the fallible Message paths remain partial.
-- WS10/storage: small stage_copy helper and existing Staged guard reuse. WS8b must supply the new copier; after-commit attachment processing remains its owner integration.
-- WS11/WS12/WS13/WS14: dependency rows required for room deletion/retention are handled here; domain-specific deferred callbacks/consumers are listed precisely below. These deletes do not claim complete domain model ports.
-- WS7/WS8b: existing typed partial events retained; no controllers/templates changed and no rendered-delivery acceptance.
-- Parallel slash branch: no slash implementation touched; module/registry additions are small and additive. The mutable BlobCopier seam requires any new implementer to accept mutable Tx, but registration points were not reorganized.
-- The merged Rails background_jobs migration is inherited from main. No Rails source edits, PR, deployment or production data changes were made. The external report is the explicitly requested exception to rust-only writes; its tracked copy is identical.
+- WS2: retain Room/Membership/Message extensions, alive scopes, fallible RichText seams, destruction dependencies and export. RoomType serialization supports the shared envelope; no schema redesign.
+- WS3: keep atomic job persistence, additive messaging registry and periodic tasks. Jobs delivers broadcasts through WS7 once. Cleanup/calendar/push DTOs still need their named consumers.
+- WS5/WS10: retain production fallible rendering and staged forward-copy rollback. Compatibility callers and attachment/HTTP integration stay partial.
+- WS7: use its open broadcast envelope, RoomRemovalBroadcast, ordering, guarded publisher and both replay suites. Broadcast description changes propagate through models/tests and the reviewed slash constructors, without implementing slash logic.
+- WS6/WS19: inherited main's UI/parity work; update three integration-test setups for the newer seed. Production controllers/templates were not changed by this worker.
+- WS11/WS12/WS13/WS14/WS17: deletion dependencies remain implemented; their domain consumers/callbacks and the known binary failure remain named below.
+- Lead's slash merge: reviewed handlers/parser are retained. Resource limits and discrimination anchors follow the merged interface. Its separate tracked report records historical branch verification.
+- Main's Rails/UI/test/CI edits are inherited from the authorized merge. No additional Rails source edits, PR, deployment or production-data actions. The explicitly requested external report is identical to its Rust-only tracked copy; zero `.claude/delegation/**` paths are tracked.
 
 ## Precise remaining work / restart point
 
-1. **Parallel slash worker:** registry/dispatcher/permissions/timezone-aware time parsing and shrug/me/remind/status/dnd/ooo/poll, with WS13/WS14 huddle/event/play stubs, belong to `rust/ws8a-slash`. Merge/review that separate slice; nothing from it is claimed here.
-2. **Push runtime (WS17 with WS8a integration):** implement/register SavedItem::ReminderPushJob and ChannelThread::PushMessageJob using the real pusher services, actual notification/DND/quiet-hours policy and Web Push pool. The durable DTOs currently have no handlers and fail unknown-class in the runner. Payload/policy seams and enqueue atomicity are proven; delivery is not. Do not register no-op/always-allow handlers.
-3. **Huddle/Stage callbacks and remote cleanup (WS13):** in-call call-ended banners, leave notice/voice presence on grant revocation; synchronous alive-Stage last-grant stream ending/broadcasts and broader membership host-loss paths; real Huddle::CleanupJob/reconciler/network retry consumer. This branch writes validated revoke/cleanup state and atomic jobs, but does not consume that remote job. Marked-deleted Stage lookups suppress the normal stream/presence rendering, while in-call effects remain partial.
-4. **Calendar/Event integration (WS14):** consume Calendar::RemoteDeleteJob with real remote API behavior; full Event create/update/reference/audit-label model. Room destruction captures the exact delete snapshot and durably enqueues it before deleting entries; the consumer is not registered here.
-5. **Thread work deletion callbacks (WS11/WS12):** capture the deleted work item, write work_unassigned ledger and webhooks and enqueue their jobs in the triggering transaction; board row removal WS12/WS8b. Dependency inbox items are already removed. Hard-user-destroy and stream-finalization integration remain WS11; import suppression WS16; other reference sync WS14/WS15.
-6. **HTTP/rendering acceptance (WS8b with WS7/WS10/WS3):** switch room delete routes to begin_destroy (the existing handler still calls synchronous destroy), supply ForwarderCopier, coordinate attachment processing and render typed QuoteCards/group/pin/poll/thread/message events; execute route authorization, subscriber and HTTP-trigger enqueue rejection checks. No controllers/templates/browser parity were changed or tested here.
-7. **Unproven parity/instrumentation:** materialization/query-count proof for 500-message destruction and one unlink per retention batch; large multi-batch and retention crash-resume cases; non-Stage imported stream history; earlier broadcast-failure/hard-user/legacy-conversion cases; full ActivityItem accessibility; broader Unicode/coercion, nil/IP and timezone/DST inputs; foreign audit context/labels and every individual Ruby scenario/discrimination mapping. Old infallible RichText compatibility callers and storage crash/orphan recovery remain partial with WS2/WS5/WS8b/WS10.
+1. **Push runtime (WS17 with WS8a integration):** implement/register SavedItem::ReminderPushJob and ChannelThread::PushMessageJob with the actual notification/DND/quiet-hours policy and Web Push services. Durable DTOs currently lack these handlers; unknown-class is not masked by no-op consumers.
+2. **Huddle/Stage (WS13):** real Huddle::CleanupJob/reconciler/network retries; in-call ended, leave and voice effects on revocation; synchronous alive-Stage last-grant stream behavior and broader membership host-loss paths. Validated revocation/cleanup rows and atomic enqueue are complete here; remote consumption is not.
+3. **Calendar/Event (WS14):** Calendar::RemoteDeleteJob API consumer; Event create/update/reference/audit-label model and slash event form/save. Delete snapshots and durable enqueue before entry deletion are implemented.
+4. **Thread work/agents (WS11/WS12):** deleted-work snapshot, work_unassigned ledger/webhooks and their atomic jobs; board removal; hard-user-destroy/stream finalization. Agent slash invocation/capability/rate/event/webhook behavior remains WS11; import suppression WS16 and other reference sync WS14/WS15.
+5. **HTTP/rendering (WS8b with WS7/WS10/WS3):** begin_destroy route switch; ForwarderCopier and attachment processing; rendering the emitted QuoteCards/group/pin/poll/thread/message/UserStatus/OooNotice partials; slash/autocomplete endpoints, active-human/room/thread authorization and JSON/picker results; route-level enqueue rejection and browser acceptance. Slash huddle launching WS13, event execution WS14, play presentation/client sound WS8b/WS5. Only template-free subscriber delivery is proven here.
+6. **Parity/instrumentation still partial:** 500-message materialization/query-count proof, one retention unlink per batch, large multi-batch/crash-resume cases, non-Stage imported stream history, broadcast-failure/hard-user/legacy conversion cases, complete ActivityItem accessibility, broader Unicode/coercion/nil/IP and search timezone/DST, foreign audit context/labels, exhaustive Ruby Date._parse and civil-range behavior. Old infallible RichText callers and storage crash/orphan recovery remain WS2/WS5/WS8b/WS10.
+7. **Known binary failure (WS11):** manages_bots bot-key assertion. Full binary acceptance remains partial until its owner fixes it; no suppression/skip/expectation change is made here.
 
-There are no external blockers to these committed database/runtime adapter slices. This is a natural boundary at named domain consumers and WS8b delivery work, **not complete WS8a or a production/cutover acceptance**.
+No external blocker remains for this merge and the committed WS8 database/runtime slices. This report is a named integration handoff, not complete WS8a or production/cutover acceptance.
