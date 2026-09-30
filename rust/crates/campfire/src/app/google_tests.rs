@@ -913,7 +913,16 @@ impl std::io::Write for LogCapture {
 }
 #[tokio::test]
 async fn google_sessions_rejection_log_names_reason_without_token_or_authorization_code() {
-    use tracing::instrument::WithSubscriber;
+    let log = Arc::new(Mutex::new(vec![]));
+    let writer = log.clone();
+    let subscriber = tracing_subscriber::fmt()
+        .without_time()
+        .with_ansi(false)
+        .with_writer(move || LogCapture(writer.clone()))
+        .finish();
+    // This Tokio test uses the current-thread runtime. Keep capture installed
+    // through router setup and all awaits, as the queue log tests do.
+    let _capture = tracing::subscriber::set_default(subscriber);
     let (a, r) = app().await;
     let mut b = a.anonymous();
     b.get("/session/new").await;
@@ -923,25 +932,18 @@ async fn google_sessions_rejection_log_names_reason_without_token_or_authorizati
         200,
         serde_json::to_vec(&json!({"id_token":signed})).unwrap(),
     ));
-    let log = Arc::new(Mutex::new(vec![]));
-    let writer = log.clone();
-    let subscriber = tracing_subscriber::fmt()
-        .without_time()
-        .with_ansi(false)
-        .with_writer(move || LogCapture(writer.clone()))
-        .finish();
     let path = format!(
         "/session/google/callback?state={}&code=secret-auth-code",
         crate::controllers::presenters::test_support::encode(&q["state"])
     );
     assert_eq!(
-        b.get(&path).with_subscriber(subscriber).await.location(),
+        b.get(&path).await.location(),
         Some("http://campfire.test/session/new")
     );
     let output = String::from_utf8(log.lock().unwrap().clone()).unwrap();
     assert!(
         output.contains("Google sign-in rejected: wrong_domain"),
-        "{output}"
+        "rejection log assertion: {output}"
     );
     assert!(!output.contains(&signed));
     assert!(!output.contains("secret-auth-code"));
