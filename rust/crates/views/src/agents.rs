@@ -1,4 +1,5 @@
 //! Human-facing agent directory and broadcast-safe status fragments.
+pub mod history;
 use crate::{
     ViewContext,
     helpers::{self as h, filters},

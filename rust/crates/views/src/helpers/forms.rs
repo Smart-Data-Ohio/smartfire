@@ -442,6 +442,44 @@ pub fn hidden_field_tag(name: &str, value: Option<&str>, options: Attrs) -> Html
     legacy_tag("input", base.merge(options))
 }
 
+/// Model-less `text_field_tag`, including the Rails tag attribute order.
+pub fn text_field_tag(name: &str, value: Option<&str>, options: Attrs) -> Html {
+    legacy_tag(
+        "input",
+        attrs()
+            .type_("text")
+            .name(name)
+            .id(sanitize_to_id(name))
+            .attr_opt("value", value)
+            .merge(options),
+    )
+}
+
+/// `select_tag` with `options_for_select`; every supplied option is retained.
+pub fn select_tag(
+    name: &str,
+    choices: &[(String, String)],
+    selected: Option<&str>,
+    options: Attrs,
+) -> Html {
+    let contents = choices
+        .iter()
+        .map(|(label, value)| {
+            let mut options = attrs();
+            if selected == Some(value) {
+                options = options.attr("selected", "selected");
+            }
+            content_tag("option", options.value(value), &escape(label)).0
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    content_tag(
+        "select",
+        attrs().name(name).id(sanitize_to_id(name)).merge(options),
+        &contents,
+    )
+}
+
 /// `sanitize_to_id`: `]` removed, other non-id characters become "_".
 fn sanitize_to_id(name: &str) -> String {
     name.replace(']', "")

@@ -39,6 +39,7 @@ use crate::active_storage;
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
 pub mod agents;
+pub mod agent_approvals;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
@@ -150,6 +151,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts/users#destroy" => arc(accounts::users::destroy),
         "accounts/bots/keys#update" => arc(accounts::bots::keys::update),
         "agents/directory#index" => arc(agents::directory::index),
+        "agent_approvals#update" => arc(agent_approvals::update),
+        "agents/approvals#for_agent" => arc(agents::history::approvals),
+        "agents/events#ledger" => arc(agents::history::ledger),
         "accounts/bots/credentials#index" => arc(accounts::bots::credentials::index),
         "accounts/bots/credentials#create" => arc(accounts::bots::credentials::create),
         "accounts/bots/credentials#destroy" => arc(accounts::bots::credentials::destroy),
@@ -526,6 +530,8 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "agent_approvals#update",
+        "agents/approvals#for_agent", "agents/events#ledger",
         "agents/directory#index", "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",
         "sessions/transfers#update", "sessions#new", "sessions#create", "sessions#destroy",
         "content_security_policy_reports#create", "accounts/users#index", "accounts/users#update",

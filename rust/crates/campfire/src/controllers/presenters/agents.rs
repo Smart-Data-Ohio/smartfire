@@ -1,4 +1,5 @@
 //! Safe facts for the human directory. No credential, grant or signing secret is read.
+pub mod history;
 use super::{attachments, resolve_avatar_icon, user_summary};
 use campfire_db::{Connection, Result};
 use campfire_views::agents::DirectoryAgent;

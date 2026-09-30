@@ -1,0 +1,397 @@
+//! Human decision requests exercise WS11's atomic approval/inbox/ledger callbacks.
+use super::*;
+use campfire_db::{AgentApproval, NewApproval};
+
+async fn approval(test: &Test, action: &str) -> i64 {
+    let owner_id: i64 = test.label("users.kevin").parse().unwrap();
+    let bot_id: i64 = test.label("users.bender").parse().unwrap();
+    let action = action.to_owned();
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            let mut agent = campfire_db::Agent::for_user(tx.conn(), bot_id)?.unwrap();
+            agent.update(
+                tx,
+                campfire_db::AgentChanges {
+                    owner_id: Some(Some(owner_id)),
+                    ..Default::default()
+                },
+            )?;
+            Ok(AgentApproval::create(
+                tx,
+                NewApproval {
+                    agent_id: agent.id,
+                    action,
+                    summary: "A human must decide".into(),
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap()
+}
+fn payload(reply: &Reply) -> serde_json::Value {
+    serde_json::from_slice(&reply.body).expect("decision JSON")
+}
+async fn state(test: &Test, id: i64) -> AgentApproval {
+    test.booted
+        .app
+        .db
+        .read(move |conn| Ok(AgentApproval::find(conn, id)?.unwrap()))
+        .await
+        .unwrap()
+}
+#[tokio::test]
+async fn owner_approves_generic_action_with_atomic_inbox_ledger_and_audit() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    let mut owner = test.browser("198.51.100.201");
+    owner.sign_in(&test.label("emails.kevin")).await;
+    let response = owner
+        .form(
+            "patch",
+            &format!("/agent_approvals/{id}.json"),
+            &[("decision", "approved")],
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let result = payload(&response);
+    assert_eq!(result["status"], "approved");
+    assert_eq!(result["decided_by"], "Kevin");
+    assert!(result["decided_at"].as_str().unwrap().ends_with('Z'));
+    assert!(result.get("note").is_none());
+    test.booted.app.db.read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NULL", [id], |r|r.get::<_,i64>(0))?, 0);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=? AND event_type='approval_decided'", [id], |r|r.get::<_,i64>(0))?, 1);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.approval.decide' AND target_id=?", [id], |r|r.get::<_,i64>(0))?, 1);
+        Ok(())
+    }).await.unwrap();
+}
+#[tokio::test]
+async fn owner_cannot_approve_github_or_fizzy_but_can_deny_each() {
+    let test = boot_seed("default").await.expect("default seed");
+    let mut owner = test.browser("198.51.100.202");
+    owner.sign_in(&test.label("emails.kevin")).await;
+    for (action, service) in [("github.comment", "GitHub"), ("fizzy.comment", "Fizzy")] {
+        let id = approval(&test, action).await;
+        let path = format!("/agent_approvals/{id}.json");
+        let response = owner
+            .form("patch", &path, &[("decision", "approved")])
+            .await;
+        assert_eq!(
+            response.status,
+            StatusCode::FORBIDDEN,
+            "{}",
+            response.text()
+        );
+        assert_eq!(
+            payload(&response)["error"],
+            format!("Only an administrator can approve {service} write actions")
+        );
+        assert_eq!(state(&test, id).await.status, "pending");
+        let response = owner
+            .form(
+                "patch",
+                &path,
+                &[
+                    ("decision", "denied"),
+                    ("decision_note", "Please revise <this>"),
+                ],
+            )
+            .await;
+        assert_eq!(response.status, StatusCode::OK);
+        assert_eq!(payload(&response)["decision_note"], "Please revise <this>");
+        assert_eq!(
+            payload(&response)["note"],
+            payload(&response)["decision_note"]
+        );
+    }
+}
+#[tokio::test]
+async fn human_decisions_hide_requests_from_nondeciders_credentials_and_bot_keys() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    let mut other = test.browser("198.51.100.203");
+    other.sign_in(&test.label("emails.jz")).await;
+    let path = format!("/agent_approvals/{id}.json");
+    assert_eq!(
+        other
+            .form("patch", &path, &[("decision", "approved")])
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    let mut token = test.browser("198.51.100.204");
+    assert_eq!(
+        token
+            .request(
+                Method::PATCH,
+                &path,
+                &[("authorization", "Bearer bender-test-secret-1234")],
+                Some(("application/json", "{\"decision\":\"approved\"}".into()))
+            )
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    let path = format!("{path}?bot_key={}", encode(&test.label("bot_keys.bender")));
+    assert_eq!(
+        token
+            .request(
+                Method::PATCH,
+                &path,
+                &[],
+                Some(("application/json", "{\"decision\":\"approved\"}".into()))
+            )
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(state(&test, id).await.status, "pending");
+}
+#[tokio::test]
+async fn decisions_validate_choice_and_note_before_writing() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    let mut admin = test.browser("198.51.100.205");
+    admin.sign_in(&test.label("emails.david")).await;
+    let path = format!("/agent_approvals/{id}.json");
+    let response = admin
+        .form("patch", &path, &[("decision", "cancelled")])
+        .await;
+    assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        payload(&response)["error"],
+        "Decision must be approved or denied"
+    );
+    let note = "💬".repeat(201);
+    let response = admin
+        .form(
+            "patch",
+            &path,
+            &[("decision", "denied"), ("decision_note", &note)],
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        payload(&response)["error"],
+        "Decision note is too long (maximum is 200 characters)"
+    );
+    assert_eq!(state(&test, id).await.status, "pending");
+}
+#[tokio::test]
+async fn overdue_decision_returns_422_and_commits_lazy_expiry_without_audit() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE agent_approvals SET expires_at=? WHERE id=?",
+                rusqlite::params![tx.now(), id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut admin = test.browser("198.51.100.206");
+    admin.sign_in(&test.label("emails.david")).await;
+    let response = admin
+        .form(
+            "patch",
+            &format!("/agent_approvals/{id}.json"),
+            &[("decision", "approved")],
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(payload(&response)["error"], "Request has expired");
+    assert_eq!(state(&test, id).await.status, "expired");
+    test.booted.app.db.read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.approval.decide' AND target_id=?", [id], |r|r.get::<_,i64>(0))?, 0); Ok(())
+    }).await.unwrap();
+}
+#[tokio::test]
+async fn deciding_twice_returns_422_and_never_appends_another_event() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    let mut admin = test.browser("198.51.100.207");
+    admin.sign_in(&test.label("emails.david")).await;
+    let path = format!("/agent_approvals/{id}.json");
+    assert_eq!(
+        admin
+            .form(
+                "patch",
+                &path,
+                &[
+                    ("decision", "denied"),
+                    ("decision_note", ""),
+                    ("note", "Fallback")
+                ]
+            )
+            .await
+            .status,
+        StatusCode::OK
+    );
+    let response = admin
+        .form("patch", &path, &[("decision", "approved")])
+        .await;
+    assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(payload(&response)["error"], "Request is already denied");
+    assert_eq!(
+        state(&test, id).await.decision_note.as_deref(),
+        Some("Fallback")
+    );
+    test.booted
+        .app
+        .db
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",
+                    [id],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+#[tokio::test]
+async fn html_decisions_use_303_and_flash_with_same_host_referer_policy() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    let mut admin = test.browser("198.51.100.208");
+    admin.sign_in(&test.label("emails.david")).await;
+    let response = admin
+        .form(
+            "patch",
+            &format!("/agent_approvals/{id}"),
+            &[("decision", "denied")],
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::SEE_OTHER);
+    assert_eq!(response.location(), "http://campfire.test/activity_items");
+    use campfire_kit::Crypto;
+    let key = campfire_kit::session::SESSION_KEY;
+    let raw = percent_encoding::percent_decode_str(admin.cookies.get(key).unwrap())
+        .decode_utf8()
+        .unwrap();
+    let data = campfire_kit::RailsCrypto::new(test.booted.app.secrets.clone())
+        .decrypt_cookie(key, &raw, test.booted.app.clock.now())
+        .unwrap();
+    assert_eq!(data["flash"]["flashes"]["notice"], "Request denied.");
+}
+#[tokio::test]
+async fn audit_failure_rolls_back_decision_inbox_and_ledger() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    test.booted.app.db.write(|tx| { tx.conn().execute_batch("CREATE TRIGGER reject_approval_audit BEFORE INSERT ON audit_logs WHEN NEW.action='agent.approval.decide' BEGIN SELECT RAISE(ABORT, 'reject test audit'); END;")?; Ok(()) }).await.unwrap();
+    let mut admin = test.browser("198.51.100.209");
+    admin.sign_in(&test.label("emails.david")).await;
+    assert_eq!(
+        admin
+            .form(
+                "patch",
+                &format!("/agent_approvals/{id}.json"),
+                &[("decision", "approved")]
+            )
+            .await
+            .status,
+        StatusCode::INTERNAL_SERVER_ERROR
+    );
+    assert_eq!(state(&test, id).await.status, "pending");
+    test.booted.app.db.read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",[id],|r|r.get::<_,i64>(0))?, 0);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NOT NULL",[id],|r|r.get::<_,i64>(0))?, 0); Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn concurrent_deciders_produce_one_decision_event_and_audit() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    let mut admin = test.browser("198.51.100.210");
+    admin.sign_in(&test.label("emails.david")).await;
+    let mut owner = test.browser("198.51.100.211");
+    owner.sign_in(&test.label("emails.kevin")).await;
+    let path = format!("/agent_approvals/{id}.json");
+    let (approved, denied) = tokio::join!(
+        admin.form("patch", &path, &[("decision", "approved")]),
+        owner.form("patch", &path, &[("decision", "denied")])
+    );
+    let mut statuses = [approved.status.as_u16(), denied.status.as_u16()];
+    statuses.sort();
+    assert_eq!(statuses, [200, 422]);
+    test.booted.app.db.read(move |conn|{
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",[id],|r|r.get::<_,i64>(0))?,1);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.approval.decide' AND target_id=?",[id],|r|r.get::<_,i64>(0))?,1);Ok(())
+    }).await.unwrap();
+}
+#[tokio::test]
+async fn deactivated_bot_requests_are_hidden_and_unchanged() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "deploy").await;
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    test.booted
+        .app
+        .db
+        .write(move |tx| campfire_db::User::find(tx.conn(), bot)?.deactivate(tx))
+        .await
+        .unwrap();
+    let mut admin = test.browser("198.51.100.212");
+    admin.sign_in(&test.label("emails.david")).await;
+    assert_eq!(
+        admin
+            .form(
+                "patch",
+                &format!("/agent_approvals/{id}.json"),
+                &[("decision", "approved")]
+            )
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(state(&test, id).await.status, "pending");
+}
+#[tokio::test]
+async fn html_external_approve_is_303_for_owner_with_alert_and_safe_referer() {
+    let test = boot_seed("default").await.expect("default seed");
+    let id = approval(&test, "github.comment").await;
+    let mut owner = test.browser("198.51.100.213");
+    owner.sign_in(&test.label("emails.kevin")).await;
+    let response = owner
+        .request(
+            Method::PATCH,
+            &format!("/agent_approvals/{id}"),
+            &[("referer", "http://campfire.test/agents/773018776/approvals")],
+            Some((
+                "application/x-www-form-urlencoded",
+                "decision=approved".into(),
+            )),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::SEE_OTHER);
+    assert_eq!(
+        response.location(),
+        "http://campfire.test/agents/773018776/approvals"
+    );
+    let response = owner
+        .request(
+            Method::PATCH,
+            &format!("/agent_approvals/{id}"),
+            &[("referer", "https://attacker.test/")],
+            Some((
+                "application/x-www-form-urlencoded",
+                "decision=approved".into(),
+            )),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::SEE_OTHER);
+    assert_eq!(response.location(), "http://campfire.test/activity_items");
+    assert_eq!(state(&test, id).await.status, "pending");
+}
