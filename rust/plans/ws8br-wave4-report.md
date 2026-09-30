@@ -1,28 +1,38 @@
 # WS8br Wave 4 continuation report — PARTIAL
 
-This continuation merges `origin/main` at `eaba80d5` (#168), fixes eight of the nine native byte differences and maps five more original controller declarations. The latest tested Rust source is `def60c7b`; the final report commit changes documentation/inventory only. The seeded fresh-clone workspace has 2395 passes, 0 failures and 10 existing ignores across 58 harness summaries. No seed-dependent case silently skips. Full native room-page byte acceptance is still partial: one message-list region and ten original controller mappings remain. Browser/system acceptance stays inventoried for the end-to-end phase.
+Main is merged through `ea630861` (#170), including WS15e (#166), the shared asset-golden helper (#168), and board drift (#164/#165). The latest tested source is `f255912d`; the final report commit changes documentation only. This continuation integrates the real merged provider factories, closes three more missing native card slots and preserves constant/query-free preload behavior. The final independently seeded fresh-clone workspace has **2702 passes, 0 failures and 11 existing ignores across 58 harness summaries**. The app has no failures or silent seed skips. Full room-page byte parity is still partial: one GitHub card slot, owner panel/configuration integrations and ten original controller mappings remain. Browser interaction acceptance remains inventoried for the end-to-end phase. No screenshot or pixel-diff work is on the remaining list.
 
-## Pushed slices and files
+## Pushed coherent slices
 
 | Commit | Change |
 | --- | --- |
-| `49e120fe` | Merge current main with a merge commit. Locked metadata succeeds; every Cargo TOML parses without duplicate dependency keys. |
-| `20fc79cc` | Adapt root composer/footer and pending-template boundary bytes; add eight native region assertions using main's shared live-asset helper. Initial list boundary placement is corrected in the later slice. |
-| `9ffc23e5` | Add the three RoomsController link-preview cases, complete HTTP switcher query measurement, and complete HTTP named/unnamed group-DM sidebar query measurement. Trace actual SQLite executions on the writer and every pooled reader. Inventory reads the pinned Git declarations rather than silently incorporating post-pin Rails tests. |
-| `def60c7b` | Keep the shared message-list seam unchanged and add room-only whitespace in `room_native::message_list`. Apply the shared asset helper to the complete standalone thread-page golden. Record exact residual owner card bytes and independent boundary discriminators. |
+| `b4e888df` | Merge main at `8952bed4` with a merge commit. Compose main's provider code with the actual WS8bm/WS8bm2, WS11 and WS17 integrations already present. Locked metadata and all Cargo TOML duplicate-key checks pass. |
+| `5f87dfb9` | Compare complete Fizzy, generic-link and LinkedIn card containers through the actual room HTTP page; independently compile each omitted seam and require rejection. Record the sole remaining native card difference. |
+| `7db9ec99` | Batch provider facts for message and quote/reply-source preloads, retain the full merged scheduler roster, and commit the pinned-media test-executable runner. |
+| `0968fe8e` | Merge main again at `ea630861` (#170), which advanced during verification. Preserve native room adapters, M2 recent searches, WS11 task coverage and WS17 submitted-settings preferences. Rerun the complete fresh-clone verification on this source. |
+| `f255912d` | Regenerate the original thread-page golden from pinned Rails with the approved #163 layout overlay. Twenty-eight request cases retain all non-layout bodies/facts; eight full-page captures adopt the status action and corresponding live assets. |
 
-Production mounting changes are in `controllers/presenters/room_native.rs` and `controllers/rooms.rs`. `presenters/room_list.rs` ends identical to its pre-continuation implementation: owner list callers and its unread/anchor corpus retain their original bytes. Tests extend `rooms/rooms_rails_cases.rs`, `sidebars_rails_cases.rs`, `switchers_rails_cases.rs`, `native_integration_tests.rs` and `channel_threads/page_tests.rs`. The new `rooms/query_probe.rs` observes real full-request SQL and detaches callbacks before freeing state, reusing WS13's test tracing pattern. Query tests stop their own job runner so unrelated background reads cannot contaminate either leg; harness concurrency remains four. No room/message/pin/agent/presence policy was reimplemented.
+## Changes by file and cross-workstream boundaries
 
-`test-support/asset_goldens.rs` comes directly from main. It validates actual pipeline digests in identified local URL fields and keeps surrounding bytes exact. The thread golden's old `people-b8926caa.css` field corresponds to the live `people-8adb2aea.css` field. Its newly created parent/replies are text-only, with no serialized fixture asset URL requiring a frozen field. No custom masks or parity allowlists were added; the separate strict native comparator still rejects the remaining list.
+- `controllers/presenters.rs`, `presenters/link_embeds.rs`, `presenters/rich_text.rs`, `controllers/messages.rs`, `messages/rendered.rs`, `searches/preloads.rs`, `controllers/rooms.rs`: call WS15e's real Twitter, Fizzy, generic-link and LinkedIn factories from main while retaining WS8bm2 quote references and WS8bm message-list/composer behavior. Preloaded child presenters share pending fetch sets and Twitter facts with their parent. PageResolver delegates Twitter existence and signed image paths to the main resolver. Room rendering returns pending link/Twitter IDs from the reader and invokes main's enqueue seam on the writer. A rejected enqueue clears incomplete cached fragments so retry rendering registers those fetches again; claim atomicity and provider jobs remain the owner implementations.
+- `integrations/fizzy/cards.rs::Card::for_messages`, `integrations/link_embed/store.rs::Reference::for_messages`, `searches/preloads.rs`, `presenters/fizzy_cards.rs`: small read-only batch seams retain owner row parsing/order/rendering. Load provider facts for the selected messages and their quote/reply sources, and remember empty provider results. The existing quote regression renders without queries; four versus sixteen complete search-message renders retain the same query count. Lazy rendering still uses the owner lookups. This does not claim every arbitrary legacy inline-X URL is query-free.
+- `channels/sink.rs`, `channels/tests/hub_test.rs`, `controllers.rs`, `jobs/tests.rs`, views module/message registrations: union the main provider event/render paths with the actual M2 features and WS11/WS17 events. Preserve the stronger ordered edit-stream assertion and every registered periodic task. Shared message-partial changes are merge reconciliation only; no replacement message/composer implementation was written here.
+- `db/models/user.rs`: restore main's linked-account disconnect callback inside the existing deactivation transaction, alongside the real WS11 suspension/grant callbacks. No duplicate lifecycle SQL primitive is used.
+- `fizzy_message_cards/tests.rs`: the legacy bot webhook fixture now creates an actual legacy bot via `User::create_bot`, rather than treating the seed's now-agent Bender as a legacy bot. The expected one webhook job is unchanged; WS11 agent behavior is not weakened.
+- `integrations/action_claims/tests.rs`: assert the complete combined first-tick roster of thirteen tasks and the seven tasks due after thirty seconds. Main alone's smaller roster is insufficient once WS11 is merged. No scheduler interval or task filtering is changed.
+- `controllers/presenters/view_context.rs`: merge WS17's mutable submitted-settings preference rendering with M2's recent-search chrome. The later WS17 Unicode, notification/push and profile fixes come directly from main; this worker does not implement R2's users/account pages.
+- `rooms/native_integration_tests.rs`: the new real-HTTP assertion checks every merged-provider container against pinned Rails bytes, including empty containers, and requires exactly three populated seed bodies. It does not serialize the DOM or substitute golden HTML in production.
+- `reference-tools/rooms/native_provider_discrimination.py`, the existing boundary/remaining-case scripts, `native_residual.py`, `pinned_media_runner.py`, and `plans/ws8br-owner-integration.md`: reproducible integration checks, exact residual bytes, two build jobs and explicit owner inputs. No timing limits are widened.
+- `reference-tools/rooms/regenerate_thread_layout.py`, `vectors/messaging/thread-pages.json`: reproduce WS8bm's original Rails request corpus against the explicitly approved status/layout source overlay. No message-list or composer internal implementation is edited.
 
-## Native bytes and the exact remaining difference
+`rust/test-support/asset_goldens.rs` is main's shared helper, used directly for page goldens containing current local asset URLs. Actual digests are validated in identified URL fields; surrounding bytes stay exact. The separate strict native comparator applies no masks. Rails board changes `541c0f69` and `8952bed4` are merged reference drift owned by WS12. The post-pin status-popup drift remains WS8br2's responsibility.
 
-Fixed: composer and pending template for Designers (`654632876`), pair DM (`186869642`) and group DM (`699448329`), plus both DM message lists. Root footer capture contributes two spaces after removing the owner partial's one initial newline. Pending template contributes the missing final newline. Only the rooms/show list mount contributes `"\n    \n"`; the owner's standalone partial is unchanged.
+## Native byte result and exact remaining bytes
 
-Raw fresh-clone comparison:
+All six root composer/pending-template regions and both DM lists remain exact. The actual room-page GET now asserts the complete merged Fizzy, generic-link and LinkedIn container bytes. Fresh-clone strict result:
 
 ```text
-FAIL room 654632876 message_list: Rust 286287 bytes, Rails 288823 bytes
+FAIL room 654632876 message_list: Rust 287734 bytes, Rails 288823 bytes
 PASS room 654632876 composer: 10373 exact bytes
 PASS room 654632876 pending_template: 1449 exact bytes
 PASS room 186869642 message_list: 19547 exact bytes
@@ -34,132 +44,172 @@ PASS room 699448329 pending_template: 1464 exact bytes
 Native room component acceptance: 8 exact matches; 1 differences; no masks
 ```
 
-The populated Designers list is Rust 286287 bytes versus Rails 288823 bytes. Its sole remaining 2536-byte shortfall consists of these four empty owner containers:
-
-| Owner slot | Rust bytes | Rails bytes |
-| --- | ---: | ---: |
-| `github_pr_cards` | 101 | 1190 |
-| `fizzy_cards` | 93 | 272 |
-| `link_embed_cards` | 103 | 543 |
-| `linkedin_cards` | 104 | 932 |
-
-`rust/plans/ws8br-native-residual.json` contains **both complete Rails and Rust strings** for each unmatched region. Rust emits the existing empty `<div id="..." class="..."></div>` container; Rails adds respectively the public PR card (including discussion link), lazy Fizzy card frame, generic link article, and LinkedIn article. The diagnostic verifies that these four regions account for every remaining byte, without changing or accepting a production render. Full actual/expected list bytes and the unified diff are retained under the fresh clone's `.scratch/native-components-diff/654632876-message_list.*`.
-
-This difference remains with owner integration: WS15g supplies GitHub and WS15e supplies Fizzy/link/LinkedIn. Their code is on unmerged owner branches, not main. Their full branch merges also change shared transport, jobs, networking, models and page adapters; this continuation does not substitute local implementations for those owners or edit WS8bm's message/composer internals. The lead must reconcile those owner branches and call their real component factories. Native capture checks all root selections, asserts the eight completed regions, and explicitly leaves the Designers child-provider region to the nonzero strict checker. It does not claim all nine regions or a full page pass.
-
-## Exact shell-to-owner inputs
-
-The contract is documented in `rust/plans/ws8br-owner-integration.md`. The shell passes:
-
-- Actual reader/app, verified request origin, request host and shared fragment store; original root `Message` records (last 40, or 40 before + root anchor + 40 after), with foreign/missing/thread anchors falling back to the last page.
-- `room_native::message_list(&presenter, &messages, divider.message_id, divider.count)`, which calls the unchanged `Presenter::room_message_list` and adds only the rooms/show caller prefix. Divider facts come from the viewing membership's last-read pointer/unread timestamp; they stay outside shared message fragments.
-- `composer_facts(&room, &viewer, None, drive_flow)`: room ID/kind/display name, root thread `None`, ordered static and agent slash commands, Drive `None`/`Metadata`. WS14 Picker availability is still `false`; configured `Share` remains open.
-- The real request `ViewContext`, user ID/name/title/fresh signed avatar, account, request CSRF/CSP values and chrome. WS8bm2's `ComposerButton {ctx, room_id, thread_id: None}` becomes the composer's trusted scheduled control; WS8bm's `PendingTemplate {ctx, user}` is mounted once.
-- Room/header/involvement facts, selected cached fragments, updated timestamp, original/unpaged invitation, join code, signed message stream and WS17 OOO member facts. Voice/stage/board `RoomKind` remains the previous Closed fallback pending the corresponding screen owners; header/refresh target STI keys are preserved.
-
-Full root thread panel, complete pins panel, poll builder, configured huddle header/sidebar and configured Picker remain owner integrations. Pin refresh continues calling WS8bm2's real list/count seam; no pin logic is ported here.
-
-## Original controller mappings and exact remainder
-
-Pinned Rails: 14 owned controller files, 161 original declarations, all 161 executed successfully in Rails. Rust: **151 individually named original mappings passed, 10 deferred**. The two additional members regressions and one additional pins regression are separate from this original-case count. All previously delivered room CRUD, authorization, membership, unread/involvement/favorite/category, DM error/forms/notes, refresh/pins, members JSON and inbound-address cases remain in the fresh-clone run.
-
-| Rails file | Rust mapped original passes | Remaining |
-| --- | ---: | ---: |
-| rooms/directs | 29 | 0 |
-| rooms_controller | 27 | 2 |
-| rooms/opens | 15 | 0 |
-| users/sidebars | 6 | 8 |
-| rooms/members | 13 | 0 |
-| rooms/closeds | 12 | 0 |
-| rooms/involvements | 8 | 0 |
-| rooms/inbound_email_addresses | 8 | 0 |
-| rooms/reads | 7 | 0 |
-| rooms/favorites | 6 | 0 |
-| room_categories | 6 | 0 |
-| rooms/categories | 5 | 0 |
-| switchers | 5 | 0 |
-| rooms/refreshes | 4 | 0 |
-
-Remaining, by file:
-
-`test/controllers/rooms_controller_test.rb`:
-1. `show renders collapsed work-thread guidance in the new-thread panel` — WS8bm root-panel factory absent.
-2. `destroy succeeds when the queue is down and the sweep recovers the room` — conflicts with lead decision 2's atomic enqueue/rollback contract. Existing native HTTP queue fault injection is separate and is not mislabeled as this Rails case.
-
-`test/controllers/users/sidebars_controller_test.rb`:
-1. `channel row shows the live huddle stack with names and count`.
-2. `board row shows the live huddle stack with names and count`.
-3. `direct row shows the live huddle stack when the peer is in the call`.
-4. `quiet rows keep an empty stack target with no visible presence`.
-5. `direct row re-renders when a participant joins`.
-6. `group direct rooms render member names and a huddle stack`.
-7. `no channel or DM stacks without huddle configuration`.
-8. `sidebar query count does not grow with quiet channels, DMs, boards, and stages` — includes the source assertion of exactly one `huddle_grants` SELECT.
-
-These eight need WS13's grant/presence and configured stack/call-row adapter integration. The named/unnamed group-DM query case now measures the complete live HTTP request and detects per-row queries; it does not close the separate huddle row assertions. The source inventory deliberately stays at `d7c7de92` so main's additional status-popup/card declaration is not silently attributed to this worker. Post-pin status-popup/card parity stays with WS8br2.
-
-The broader inventory still includes all 58 original files and 512 source-declared cases, other owners and browser/system declarations. Browser/system acceptance stays inventoried: DM picker/create/settings, navigation/header/sidebar/switcher, per-viewer unread behavior, full list/composer/panels, responsive/accessibility/motion, configured huddle/venue states, and inbound-email reveal/enable/regenerate/disable/non-admin denial. Earlier shipped browser probes are tracked, not rerun here.
-
-## Discrimination and resolved verification failures
-
-Sequentially from the canonical worktree:
-
-```sh
-python3 rust/reference-tools/rooms/native_boundary_discrimination.py
-python3 rust/reference-tools/rooms/remaining_cases_discrimination.py
+```text
+github_pr_cards_message_dea0071a-bcd7-5548-a81a-8afdd467d12d: Rust 101 bytes; Rails 1190 bytes
+Native residual inventory: 1 empty owner card slots explain the complete remaining difference; strict acceptance still fails
 ```
 
-Each boundary is independently compiled without its adapter; each must fail. The preview regression trusts the attachment image URL and unsanitized body, rejecting all three security-relevant cases. The query regression inserts real SELECTs per membership while keeping response data intact; both full-request measurements reject it. Sources are restored in `finally`; no broken implementation is committed. Raw results:
+The remaining Designers list is **Rust 287734 bytes versus Rails 288823 bytes**, a 1089-byte shortfall. `github_pr_cards_message_dea0071a-bcd7-5548-a81a-8afdd467d12d` is Rust 101 bytes (the empty target) versus Rails 1190 bytes (the complete public PR card and discussion link). Both complete strings are tracked in `rust/plans/ws8br-native-residual.json`. The diagnostic proves this one empty owner region explains every remaining list byte; it neither changes a render nor accepts the difference. Actual/expected/diff files are retained in the fresh clone's `.scratch/native-components-diff/`.
+
+WS15g's GitHub-card factory is still absent from the merged main version. Its unmerged owner API is `github::message_cards(conn, app, message)` plus `github::cache_stamp(conn, message)`, carried by `MessageComponents.github_cards_html` and `github_cards_stamp`. The lead must reconcile these with M2 quotes and the now-merged other provider fields. No local GitHub-card port is substituted. The strict checker deliberately exits 1. A passing seeded app suite is not a claim that this ninth native region or the complete page is byte-identical.
+
+## Exact shell inputs passed to owners
+
+The stable entry points and full contract are in `rust/plans/ws8br-owner-integration.md`:
+
+1. Actual reader connection/app state, request host, verified request origin as cache base URL, and the app's shared fragment store.
+2. Original root message records: last forty, or up to forty before a same-room root anchor, the anchor and forty after (eighty-one). Missing, foreign and thread anchors fall back to the last page. No IDs/content/timestamps/feature facts are replaced.
+3. `room_native::message_list(&presenter, &messages, divider.message_id, divider.count)` calls unchanged `Presenter::room_message_list`. Viewer divider facts derive from membership `last_read_message_id` and `unread_at`, outside shared per-message fragments. Only the rooms/show caller adds `"\n    \n"`; standalone owner lists retain their bytes.
+4. `composer_facts(&room, &viewer, None, drive_flow)`: room ID/kind/viewer display name, root thread `None`, static slash commands followed by room agent commands, and Drive `None`/`Metadata`. Picker availability remains explicitly `false`, pending WS14. Open/Closed/Direct kinds are native; Voice/Stage/Board use the earlier Closed fallback until their owners' screen integration. Header and refresh STI keys remain complete.
+5. Actual request `ViewContext`, account/preferences/chrome, user ID/name/title/fresh signed avatar, CSRF and CSP values. M2's scheduled `ComposerButton {ctx, room_id, thread_id: None}` is passed as M1's trusted scheduled control. M1 `PendingTemplate {ctx, user}` is mounted once. Root footer removes one owner initial newline and adds two spaces; pending template retains Rails' final newline.
+6. Room/header/involvement facts, selected cached fragments, updated timestamp, original/unpaged invitation, join code, signed messages stream, divider jump/scroll facts, and real WS17 per-viewer OOO facts. Main provider graphs and shared pending-fetch IDs reach the main writer enqueue seam after rendering.
+
+Pin refresh continues invoking WS8bm2's actual count/list seam, including full STI stream targets and viewer-owned Unpin tokens. It contains no local pin policy. Still missing: M1's root thread-panel and poll-builder factories, M2's complete pins-panel factory (count/list exists), WS13 configured huddle header/sidebar adapters, and WS14 configured Picker availability. These are the remaining owner integrations before full native page acceptance.
+
+## Original controller mappings, largest files first
+
+Pinned Rails `d7c7de92`: fourteen owned files, 161 original declarations, **161 actually executed and passed in Rails**. Rust: **151 individually named original mappings passed; ten deferred**. Two additional members regressions and one additional pins regression remain separate (154 named mapping tests total). No new original-controller mappings are claimed in this continuation. All previously delivered CRUD/auth/membership/DM forms/errors/notes, unread/category/favorite/involvement, refresh/pins, members JSON and inbound-address cases execute in the final fresh-clone suite.
+
+| Rails file | Original Rust passes | Deferred |
+| --- | ---: | ---: |
+| `test/controllers/rooms/directs_controller_test.rb` | 29 | 0 |
+| `test/controllers/rooms_controller_test.rb` | 27 | 2 |
+| `test/controllers/rooms/opens_controller_test.rb` | 15 | 0 |
+| `test/controllers/users/sidebars_controller_test.rb` | 6 | 8 |
+| `test/controllers/rooms/members_controller_test.rb` | 13 | 0 |
+| `test/controllers/rooms/closeds_controller_test.rb` | 12 | 0 |
+| `test/controllers/rooms/inbound_email_addresses_controller_test.rb` | 8 | 0 |
+| `test/controllers/rooms/involvements_controller_test.rb` | 8 | 0 |
+| `test/controllers/rooms/reads_controller_test.rb` | 7 | 0 |
+| `test/controllers/room_categories_controller_test.rb` | 6 | 0 |
+| `test/controllers/rooms/favorites_controller_test.rb` | 6 | 0 |
+| `test/controllers/rooms/categories_controller_test.rb` | 5 | 0 |
+| `test/controllers/switchers_controller_test.rb` | 5 | 0 |
+| `test/controllers/rooms/refreshes_controller_test.rb` | 4 | 0 |
+
+Exact remaining original cases:
+
+`test/controllers/rooms_controller_test.rb`:
+
+1. `show renders collapsed work-thread guidance in the new-thread panel` — WS8bm thread-panel rendering.
+2. `destroy succeeds when the queue is down and the sweep recovers the room` — Lead decision 2 requires atomic queue rollback; native fault-injection coverage is separate.
+
+`test/controllers/users/sidebars_controller_test.rb`:
+
+1. `channel row shows the live huddle stack with names and count` — WS13 huddle grant/presence integration and full-request query instrumentation.
+2. `board row shows the live huddle stack with names and count` — WS13 huddle grant/presence integration and full-request query instrumentation.
+3. `direct row shows the live huddle stack when the peer is in the call` — WS13 huddle grant/presence integration and full-request query instrumentation.
+4. `quiet rows keep an empty stack target with no visible presence` — WS13 huddle grant/presence integration and full-request query instrumentation.
+5. `direct row re-renders when a participant joins` — WS13 huddle grant/presence integration and full-request query instrumentation.
+6. `group direct rooms render member names and a huddle stack` — WS13 huddle grant/presence integration and full-request query instrumentation.
+7. `no channel or DM stacks without huddle configuration` — WS13 huddle grant/presence integration and full-request query instrumentation.
+8. `sidebar query count does not grow with quiet channels, DMs, boards, and stages` — WS13 huddle grant/presence integration and full-request query instrumentation.
+
+The quiet huddle query case specifically requires exactly one `huddle_grants` SELECT; the completed ordinary group-DM full-request query measurement does not cover it. The cached direct-row participant case must invalidate when the participant joins, including the renamed peer facts. Do not manufacture WS13 grants/stacks locally. The queue-down destroy declaration conflicts with fixed decision 2 (atomic queue enqueue/rollback); native HTTP rollback fault coverage exists separately and is not mislabeled as that Rails declaration. This conflict remains a lead decision, not an accepted parity exemption.
+
+The broader inventory records 58 original files and 512 source declarations, including other owners' files and unexecuted system cases; that is not 512 executed tests. Browser behavior remaining for the end-to-end phase includes DM picker/create/settings, member selection, room/navigation/header/sidebar/switcher interactions, per-viewer unread behavior, native list/composer/panels, keyboard/focus/drawer interactions, configured huddle states, and inbound-email reveal/enable/regenerate/disable/non-admin denial. Previously shipped DM/inbound browser probes remain tracked but were not rerun this continuation. No screenshot/pixel comparison or visual matching project is deferred.
+
+## Failures shown before fixes and discrimination
+
+The initial merged WS15e run exposed the lost linked-account deactivation callback, incomplete cached render retry requests, and the seed's agent-versus-legacy-bot fixture mismatch. Those were fixed before the main/provider slice was pushed. The initial room-page card assertion also addressed the wrong room constant; it now reads the Designers room ID from the unchanged Rails fixture and asserts its viewer. That test-setup error is not counted as production regression evidence. Raw provider run summaries:
 
 ```text
-list: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1036 filtered out; finished in 1.50s
-composer: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1036 filtered out; finished in 1.13s
-template: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1036 filtered out; finished in 0.78s
+test result: FAILED. 190 passed; 4 failed; 0 ignored; 0 measured; 1100 filtered out; finished in 96.09s
+```
+
+```text
+test result: ok. 194 passed; 0 failed; 0 ignored; 0 measured; 1100 filtered out; finished in 121.58s
+```
+
+The first full fresh-clone run then found the two preload SQL regressions (three queries versus zero; twenty-seven versus sixty-three), the obsolete seven-task roster versus thirteen actual merged tasks, and a WS11 approval-queue inspection assertion (zero versus one). Batch provider facts and the complete roster fixed the first three. The unchanged WS11 test passed in the same four-thread focused run and subsequent complete runs. It is recorded as an observed queue-inspection race/flake, with no concurrency or deadline change, not called inherited. Host media validation separately rejected libvips 8.18.6 / ffmpeg n9.0.2 against pinned 8.16.1 / ffmpeg 7.1.5-0+deb13u1. No version guard was removed.
+
+```text
+test result: FAILED. 1289 passed; 4 failed; 2 ignored; 0 measured; 0 filtered out; finished in 385.12s
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.35s
+```
+
+```text
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1291 filtered out; finished in 4.57s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 1293 filtered out; finished in 1.40s
+```
+
+After the second main merge, the complete thread-page golden correctly rejected the adopted `user-status:changed@window->member-panel#refreshPresence` layout action missing from its older expected bytes. The app run had one failure:
+
+```text
+test result: FAILED. 1296 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 642.36s
+```
+
+The golden is regenerated from Rails, not patched from the Rust response. The committed script verifies ten approved #163 source files at `2e20b24c` and six thread/message source files at `d7c7de92`, then calls WS8bm's original exporter. It requires every non-layout body and fixture fact to remain identical. Eight raw complete layout bodies change only for the approved action and the two adopted live asset URLs. Diagnostic comparison during generation does not normalize production output or the test; the test still invokes main's strict asset-field verifier. Initial invocation omitted the original exporter's `--skip-executor` option and failed before capture; the corrected invocation uses that existing harness option. The failed setup log is retained. Command actually rerun:
+
+```sh
+python3 rust/reference-tools/rooms/regenerate_thread_layout.py
+```
+
+```text
+Rails thread layout source: 10 approved #163 files at 2e20b24c; 6 thread/message files at d7c7de92
+WS8bm thread-pages oracle: 28 actual Rails requests; state lists, standalone HTML/JSON, latest replies and deleted starter
+Rails thread layout capture: 28 original request cases; 8 complete layout renders updated; all other facts and response bodies unchanged
+```
+
+Compiled discrimination independently omits each merged provider seam, then independently omits the list/composer/template caller boundary. Existing unsafe preview and per-membership SQL mutations must also fail. Sources are restored in `finally`, and no mutant is committed. The preview mutation rejects all three security-relevant cases; full HTTP query tracing rejects per-row SQL. No authorization policy was changed in this continuation; the existing denial coverage runs in the full suite. Commands actually rerun from the canonical worktree:
+
+```sh
+RUSTC_BOOTSTRAP=1 CARGO_BUILD_JOBS=2 python3 rust/reference-tools/rooms/native_provider_discrimination.py
+RUSTC_BOOTSTRAP=1 CARGO_BUILD_JOBS=2 python3 rust/reference-tools/rooms/native_boundary_discrimination.py
+RUSTC_BOOTSTRAP=1 CARGO_BUILD_JOBS=2 python3 rust/reference-tools/rooms/remaining_cases_discrimination.py
+```
+
+```text
+fizzy_cards: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1294 filtered out; finished in 3.80s
+link_embed_cards: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1294 filtered out; finished in 2.62s
+linkedin_cards: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1294 filtered out; finished in 2.40s
+Native provider discrimination: three independently omitted owner card seams rejected; source restored
+```
+
+```text
+list: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1294 filtered out; finished in 0.73s
+composer: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1294 filtered out; finished in 0.64s
+template: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1294 filtered out; finished in 0.61s
 Native boundary discrimination: three independently compiled unadapted owner seams rejected; source restored
-test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 1034 filtered out; finished in 1.29s
-test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 1035 filtered out; finished in 0.89s
+```
+
+```text
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 1292 filtered out; finished in 1.47s
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 1293 filtered out; finished in 1.80s
 Remaining case discrimination: unsafe previews and per-row HTTP queries rejected; source restored
 ```
 
-The five new case run and corrected owner integration run respectively:
+Canonical focused commands, with CI=1, TMPDIR="$PWD/.scratch", CARGO_BUILD_JOBS=2, CARGO_PROFILE_TEST_DEBUG=0, CARGO_PROFILE_DEV_DEBUG=0, CABLE_TEST_PORT_RANGE=52100-52149, MAIL_TEST_PORT_RANGE=52100-52149 and RUSTC_BOOTSTRAP=1:
 
 ```sh
-CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire -- show_costs_a_constant_number_of_queries_as_rooms_people_and_threads_grow sidebar_query_count_does_not_grow_with_group_dms_named_or_not show_renders_a_link_preview show_renders_an_unfurled_link_preview --test-threads=4
-CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire -- native_component_capture_matches_rails_root_selection complete_standalone_thread_templates_match_rails_layout_bytes room_list_places_unread_outside_shared_fragments_and_matches_rails_around_pages --test-threads=4
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire --bin campfire ws15e_ -- --test-threads=4 -Z unstable-options --report-time
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire --bin campfire -- preloaded_quote_cards_render_without_queries_for_distinct_direct_rooms full_message_preloads_keep_queries_constant preloaded_complete_messages_match_rails_and_lazy_presenter native_room_page_provider_cards_match_rails_bytes --test-threads=4
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire --bin campfire -- github_claim_registered_periodic_task_executes_and_obeys_its_interval ws11_approval_queue_failure_rolls_back_decision_ledger_and_inbox --test-threads=4
 ```
 
-```text
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 1032 filtered out; finished in 1.42s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1034 filtered out; finished in 3.93s
-```
+Their raw summaries above are retained in `.scratch/merge10-provider-tests-final.log`, `.scratch/bulk-provider10-tests.log` and `.scratch/queue-roster10-tests.log`. The complete fresh-clone run below executes these cases again on the final source.
 
-The first full fresh-clone run exposed the shared list seam's six extra bytes and stale live `people.css` fingerprint in the complete thread golden:
+## Fresh-clone verification and runtime dependencies
 
-```text
-test result: FAILED. 1033 passed; 2 failed; 2 ignored; 0 measured; 0 filtered out; finished in 174.00s
-```
+Fresh clone: `.scratch/fresh-continue10/repo`, created with `git clone --no-local --single-branch --branch rust/ws8br-rooms-http . .scratch/fresh-continue10/repo`. Its target initially was empty. Independently build default and first-run seeds with tracked tooling and the pinned Rails reference image; no canonical target, seed, captured response or scratch fixture was copied in. The clone was fast-forwarded to each pushed source fix, including final `f255912d`, before the complete rerun. Only generated scratch/seed output is untracked. The prior complete `7db9ec99` run (2662 passes, zero failures, eleven existing ignores) is retained separately; the summaries below are one complete new run on `f255912d`, including doctests, not a union of selected reruns.
 
-Both were corrected and the entire fresh-clone workspace rerun: all regular harnesses pass, including the app. I overlapped clippy with the final doctests on the same target; ten doctest targets then reported E0463 crate-linkage errors. After clippy completed, all workspace doctests were rerun sequentially. Combined regular plus sequential doctest summaries below include every harness once; no failed compiler invocation is counted as a pass. These failures are not labeled inherited or timing flakes. Earlier build attempts failed before tests (rustc SIGKILL, then temporarily missing self-contained linker); unchanged-concurrency retries completed. No timing test flaked, no deadline was widened and no harness concurrency was lowered.
+`reference-tools/rooms/pinned_media_runner.py` is committed. Cargo still compiles every Rust executable on the host through the normal machine-wide rustc wrapper. Only the already compiled storage-vector executable runs in the pinned Rails/media container at the same fresh-clone absolute path. Its dependency file identifies `storage/tests/vectors.rs`; all other executables run natively. CI stays enabled, the strict media-version guard and every byte assertion stay enabled, and all eight vectors run, including the nineteen generated media outputs. This supplies the required media runtime rather than skipping or masking its corpus. The reference image is the same pinned dependency independently used to build the seeds. No rustc runs in Docker or bypasses the host throttle.
 
-## Fresh-clone verification
-
-Fresh clone: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br/.scratch/fresh-continue9/repo`. It was created with `git clone --no-local --single-branch --branch rust/ws8br-rooms-http . .scratch/fresh-continue9/repo`, then fast-forwarded to the pushed source slices before verification. Its compiler target began empty. Seeds were independently built from tracked tooling and the pinned Rails image; no canonical seed, target, captured response or scratch fixture was copied in. Only generated `.scratch/` output is untracked. The final source checked is `def60c7b`; later report/inventory changes do not change Rust source.
-
-From that clone, rerun commands:
+From the fresh clone, commands actually rerun sequentially (Cargo test finishes before clippy; clippy finishes before native capture):
 
 ```sh
-PARITY_NAMESPACE=ws8br-fresh9-seed PARITY_OWNER=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 rust/parity/bin/seed build default first_run
+PARITY_NAMESPACE=ws8br-fresh10-seed PARITY_OWNER=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 rust/parity/bin/seed build default first_run
+export CI=1 TMPDIR="$PWD/.scratch" CARGO_BUILD_JOBS=2 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 RUSTC_BOOTSTRAP=1 CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="$PWD/rust/reference-tools/rooms/pinned_media_runner.py"
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --no-fail-fast -- --test-threads=4 -Z unstable-options --report-time
+mise exec rust@1.98.1 -- cargo clippy --locked --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire --bin campfire native_component_capture_matches_rails_root_selection -- --test-threads=4 --nocapture
 mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 --manifest-path rust/Cargo.toml >/dev/null
 python3 rust/reference-tools/rooms/check_workspace.py
-CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 RUSTC_BOOTSTRAP=1 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml --workspace --no-fail-fast -- --test-threads=4 -Z unstable-options --report-time
-CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 RUSTC_BOOTSTRAP=1 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml --workspace --doc -- --test-threads=4 -Z unstable-options --report-time
-CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 mise exec rust@1.98.1 -- cargo clippy --locked -j4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
-CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 RUSTC_BOOTSTRAP=1 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire native_component_capture_matches_rails_root_selection -- --test-threads=4 --nocapture
 python3 rust/reference-tools/rooms/native_components_check.py --capture-log .scratch/native-capture.log
 python3 rust/reference-tools/rooms/native_residual.py --capture-log .scratch/native-capture.log
 ```
 
-The strict comparator exits 1 for the reported owner-card difference. All regular workspace harnesses pass; the sequential doctest rerun and other final checks exit 0. The initial combined workspace command exits 101 at doctest linkage, as recorded below. Metadata intentionally has no stdout. `RUSTC_BOOTSTRAP` is used to obtain libtest timing output on stable 1.98.1; debug symbols are disabled for disk usage, not debug assertions/deadlines. Seed/key/clippy raw lines:
+Every final verification command above exits zero except the strict native comparator, which exits one for the explicitly reported GitHub difference. Metadata intentionally produces no stdout. `RUSTC_BOOTSTRAP=1` enables libtest timing output on stable 1.98.1. Disabling debug symbols saves disk, without changing debug assertions or timing deadlines. Build jobs stay two; harness threads stay four (at most eight permitted). Seed/key/clippy/native-capture raw lines:
 
 ```text
 seed: building default
@@ -167,59 +217,59 @@ seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
 Cargo TOML duplicate-key check: all manifests parse; no duplicate workspace dependency keys
-    Finished `dev` profile [unoptimized] target(s) in 4m 09s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1036 filtered out; finished in 1.04s
+    Finished `dev` profile [unoptimized] target(s) in 39.31s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1298 filtered out; finished in 0.61s
 ```
 
-Raw regular-harness plus successful sequential doctest summaries:
+Raw final workspace summaries (all 58 harnesses, including doctests):
 
 ```text
-test result: ok. 1035 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 236.15s
+test result: ok. 1297 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 489.52s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.25s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.08s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
-test result: ok. 697 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 74.17s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.66s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.10s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.03s
+test result: ok. 705 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 56.21s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.62s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
 test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
 test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.36s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.34s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.60s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 25.13s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.04s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.39s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.63s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.58s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.20s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.14s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.79s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.45s
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.90s
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.89s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.14s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -234,46 +284,61 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-Logs are in `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br/.scratch/fresh-continue9/repo/.scratch`: `workspace-tests-final.log`, `workspace-doc-tests.log`, `workspace-clippy.log`, `seed-build.log`, `native-capture.log`, `native-comparison.log`. The first failed full run is retained as `workspace-tests.log`; exact owner failure artifacts are preserved in that clone's `rust/target/ws8bm-diffs/`.
+Existing ignores, distinct from silent seed skips:
+
+```text
+test channels::tests::golden::record_reference ... ignored, needs a running reference app; see the module docs
+test jobs::tests::push_latency ... ignored, a measurement, not a test
+test record_reference ... ignored, needs a running reference app; see the module docs
+test tests::differential_test::scenario_matches_ruby ... ignored, needs CAMPFIRE_RUBY_SCENARIO_DB, the reference app's database after scenario.rb
+test tests::fixtures_test::export_database_for_rails ... ignored, writes a database to CAMPFIRE_EXPORT_DB for the Rails rollback check
+test tests::fixtures_test::fixtures_match_ruby_row_for_row ... ignored, needs CAMPFIRE_RUBY_FIXTURES_DB, a database the reference app filled with `db:fixtures:load` at CAMPFIRE_FIXTURES_NOW
+test tests::two_factor_rollback_test::read_rails_rollback_changes ... ignored, requires Rails to mutate the rollback fixture; run reference-tools/auth/rollback.sh
+test acme_tls_alpn_certificate_cached_and_reused ... ignored, requires a local Pebble ACME CA, PEBBLE_MINICA root certificate and TLS ports 5001/5002
+test export_for_rails ... ignored, exports a database for the Rails rollback check; requires CAMPFIRE_MAIL_EXPORT_DIR
+test crates/kit/src/error.rs - error::halt (line 91) ... ignored
+test crates/kit/src/lib.rs - (line 7) ... ignored
+```
 
 ## Runtime observations
 
-The app harness took 236.15 s. Four threads and full coverage are unchanged. Its slowest observed tests:
+No coverage is cut, test concurrency lowered or timing threshold widened. These are shared-host observations, not controlled benchmark comparisons. The prior `7db9ec99` app run took 514.54 seconds. Final app raw summary:
 
-- `app::admin_two_factor_tests::self_service_limits_use_ip_and_user_windows_and_remembered_actions_share_a_bucket`: 25.090 s.
-- `app::round_four_security_tests::profile_zone_case_and_alias_validation_matches_rails_without_partial_writes`: 21.454 s.
-- `channels::tests::golden::replays_reference_frames`: 20.940 s.
-- `app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails`: 14.580 s.
-- `app::round_four_security_tests::settings_audit_has_only_changed_values_and_updated_account_label`: 13.917 s.
+```text
+test result: ok. 1297 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 489.52s
+```
 
-The slowest tests across the whole workspace:
+Final app slowest six tests:
 
-- `concurrent_cutoff_drops_later_publications`: 43.252 s.
-- `tests::slash_commands_test::slash_review_parser_differential_matches_rails`: 38.935 s.
-- `tests::slash_commands_test::slash_callbacks_match_rails`: 37.265 s.
-- `tests::slash_commands_test::slash_dispatch_and_rows_match_rails`: 37.158 s.
-- `corpus_matches_rails`: 25.126 s.
+- `controllers::channel_thread_messages::tests::nested_reads_require_alive_membership_and_both_thread_and_message_scope`: 51.336 s.
+- `controllers::messages::paging_tests::root_formats_and_destroy_side_effects_match_rails`: 44.057 s.
+- `controllers::messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches`: 43.713 s.
+- `controllers::messages::paging_tests::page_anchors_require_alive_membership_and_a_root_message`: 43.344 s.
+- `controllers::messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes`: 41.744 s.
+- `controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix`: 41.000 s.
 
-The slowest owned room cases:
+Final owned room slowest six tests:
 
-- `controllers::rooms::closeds_rails_cases::updating_the_icon_replaces_sidebar_rows_and_headers_for_members_only`: 2.440 s.
-- `controllers::rooms::closeds_rails_cases::create_case`: 1.758 s.
-- `controllers::rooms::tests::room_pages_carry_only_their_own_viewers_session_bound_values`: 1.176 s.
-- `controllers::rooms::opens_rails_cases::create_case`: 1.155 s.
-- `controllers::rooms::involvements_rails_cases::update_involvement_sends_turbo_update_when_becoming_visible_and_when_going_invisible`: 1.107 s.
+- `controllers::rooms::rooms_rails_cases::show_keeps_the_last_page_when_the_first_unread_fell_off_it_and_links_the_pill_to_it`: 11.056 s.
+- `controllers::rooms::direct_rename_tests::direct_rename_coercions_and_rejections_match_real_rails_requests`: 4.638 s.
+- `controllers::rooms::closeds_rails_cases::updating_the_icon_replaces_sidebar_rows_and_headers_for_members_only`: 2.803 s.
+- `controllers::rooms::direct_selection_tests::direct_selection_queries_match_rails_and_commit_notes_audits_and_flash`: 2.437 s.
+- `controllers::rooms::closeds_rails_cases::create_case`: 2.284 s.
+- `controllers::rooms::direct_forms_tests::invalid_direct_rename_renders_the_attempted_name_without_writes`: 1.705 s.
 
-These measurements reflect shared-host load, not a controlled speed comparison. No owned room test individually accounts for the previous 588-second app run; the named slow cases are retained, not shortened.
+The last-page/off-page unread-pill case performs many serial page requests and is retained in full. No claim is made that these few timings explain the entire earlier 588-second run; exact current per-test evidence is provided rather than reducing coverage.
 
-## Pinned Rails execution and case inventory receipts
+## Pinned Rails execution and mapping receipts
 
-From the canonical worktree, rerun:
+From the canonical worktree, commands actually rerun:
 
 ```sh
 python3 rust/reference-tools/rooms/check_controller_files.py
-python3 rust/reference-tools/rooms/deferred_inventory.py --test-log .scratch/fresh-continue9/repo/.scratch/workspace-tests-final.log --rails-log .scratch/controller-reference9.log
+python3 rust/reference-tools/rooms/check_controller_files.py --inject-source-drift
+python3 rust/reference-tools/rooms/deferred_inventory.py --test-log .scratch/fresh-continue10/repo/.scratch/workspace-tests-final.log --rails-log .scratch/controller-reference10.log
 ```
 
-Raw Rails source-file execution summaries (separate from Rust mappings):
+Raw per-file Rails executions (separate from Rust mappings):
 
 ```text
 test/controllers/rooms_controller_test.rb
@@ -307,7 +372,11 @@ test/controllers/users/sidebars_controller_test.rb
 WS8br Rails controller reference: 14 files passed; reference counts only
 ```
 
-Raw mapping receipts:
+```text
+Rails controller source-pin injection: wrong hash rejected before tests
+```
+
+Raw named Rust mapping receipts:
 
 ```text
 Rails case port receipts: test/controllers/rooms/inbound_email_addresses_controller_test.rb: 8 Rust cases passed, 0 deferred; Rails reference executions recorded separately
@@ -328,4 +397,14 @@ Rails controller reference receipts: 14 files, 161 passes, 0 failures, 0 errors,
 Rails deferred inventory: 58 files, 512 source-declared cases; 161 Rails tests run, 161 Rails reference passes; Rust mappings separate
 ```
 
-Tracked mirror: `rust/plans/ws8br-wave4-report.md`. Required external report: `/home/riels/Projects/SD-Labs/Campfire/.claude/delegation/rust-port/wave4/ws8br-report.md`.
+## Retained evidence and cleanup
+
+Final logs are under `.scratch/fresh-continue10/repo/.scratch/`: `workspace-tests-final.log`, `workspace-clippy.log`, `native-capture.log`, `native-comparison.log`, `native-residual.log`, and `workspace-keys.log`. The initial failed fresh-clone run is `workspace-tests-initial.log`; successful pre-WS17 runs have the `-7db9ec99` suffix. The second main-merge golden failure is `workspace-tests-0968fe8e.log`. Canonical seed/reference/discrimination/focused follow-up and Rails thread-layout logs are under `.scratch/`, as named above. Exact native bytes/diffs remain outside the target directory. Target diagnostics are retained in `.scratch/retained-fresh10-diffs/`. The old fresh-continue9 target and the current fresh-continue10 target are deleted after retaining evidence; no extra target or owned test process is left running.
+
+```text
+Fresh-clone targets: fresh-continue9 and fresh-continue10 deleted; logs and byte diagnostics retained
+Owned Cargo, rustc and test executable processes: none running
+Owned ws8br Docker test/reference containers: none running
+```
+
+Tracked mirror: `rust/plans/ws8br-wave4-report.md`. Required external report: `/home/riels/Projects/SD-Labs/Campfire/.claude/delegation/rust-port/wave4/ws8br-report.md`. The reports are identical. Final report commit contains only this report and the owner integration contract; tested source remains `f255912d`.

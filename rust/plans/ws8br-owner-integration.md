@@ -1,8 +1,9 @@
 # Room owner integration contract — native adapters mounted, byte acceptance partial
 
-Main `4278cb1e` is already merged. This continuation merges the actual WS17
-`41dbe4bd`, WS11 `18c9219c`, WS8bm `b14759da` and WS8bm2 `d24317e8` code with
-merge commits. WS9 authentication and request concerns remain the main implementations.
+Main is merged through `ea630861` (#170), including WS15e (#166), the shared
+asset-golden helper (#168), board drift (#164/#165), and the updated WS17 code.
+Earlier merge commits brought in WS11 `18c9219c`, WS8bm `b14759da` and WS8bm2
+`d24317e8`. WS9 authentication and request concerns remain the main implementations.
 WS8br2 is not merged or implemented here. Its presenter entry points and shell fields
 remain stable.
 
