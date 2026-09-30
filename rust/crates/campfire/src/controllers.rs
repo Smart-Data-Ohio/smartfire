@@ -198,6 +198,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/sidebars#show" => arc(users::sidebars::show),
         "users/profiles#show" => arc(users::profiles::show),
         "users/profiles#update" => arc(users::profiles::update),
+        "users/sessions#index" => arc(users::sessions::index),
+        "users/sessions#destroy" => arc(users::sessions::destroy),
+        "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
         "users/push_subscriptions/test_notifications#create" => {
             arc(users::push_subscriptions::test_notifications::create)
         }

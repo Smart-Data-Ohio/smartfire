@@ -96,7 +96,7 @@ async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
 }
 
 /// `Push::Subscription.destroy_by(endpoint: params[:push_subscription_endpoint], user_id: Current.user.id)`
-async fn remove_push_subscription(c: &mut Ctx) -> Result<()> {
+pub(crate) async fn remove_push_subscription(c: &mut Ctx) -> Result<()> {
     let Some(endpoint) = c
         .param_str("push_subscription_endpoint")
         .map(str::to_string)

@@ -326,6 +326,10 @@ pub fn encode(value: &str) -> String {
 }
 
 impl Browser<'_> {
+    pub fn cookie_header(&self) -> String {
+        self.cookies.iter().map(|(k,v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ")
+    }
+
     pub fn absorb_cookie_header(&mut self, header: &str) {
         for pair in header.split(';') {
             if let Some((name, value)) = pair.trim().split_once('=') {

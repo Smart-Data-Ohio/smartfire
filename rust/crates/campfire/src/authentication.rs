@@ -9,6 +9,114 @@ use campfire_db::{
 use rails_compat::{ar_encryption::ArEncryption, totp};
 use serde_json::json;
 
+/// `Authentication#start_new_session_for` and `NewSignInAlert`: the durable mail decision is
+/// committed with the new session, device and inbox row. Pending first factors never call this.
+pub fn start_session(
+    tx: &mut Tx<'_>,
+    user_id: i64,
+    attributes: campfire_db::NewSession<'_>,
+    notify: bool,
+) -> Result<Session> {
+    let session = Session::start_with(tx, user_id, attributes)?;
+    if campfire_db::UserDevice::record_sign_in(
+        tx,
+        user_id,
+        session.device_id.as_deref(),
+        session.user_agent.as_deref(),
+    )? == campfire_db::DeviceSignIn::NewDevice
+    {
+        let item = ActivityItem::refresh_unread(tx, user_id, "Session", session.id, "new_sign_in")?;
+        if notify {
+            campfire_mail::jobs::new_sign_in_alert_later(tx, item.id);
+        }
+    }
+    Ok(session)
+}
+
+pub fn device_description(session: &Session) -> String {
+    let ua = session.user_agent.as_deref().unwrap_or("");
+    let platform = crate::concerns::platform::ApplicationPlatform::new(Some(ua));
+    let browser = if ua.contains("Edg/") {
+        "Edge"
+    } else if platform.chrome() {
+        "Chrome"
+    } else if platform.firefox() {
+        "Firefox"
+    } else if platform.safari() {
+        "Safari"
+    } else {
+        "Unknown browser"
+    };
+    let os = platform
+        .operating_system()
+        .filter(|s| !s.chars().all(char::is_whitespace))
+        .unwrap_or("Unknown device".into());
+    format!("{browser} on {os}")
+}
+
+pub fn visible_sessions(
+    conn: &campfire_db::Connection,
+    user: &User,
+    timeout: jiff::SignedDuration,
+    now: campfire_db::Timestamp,
+) -> Result<Vec<Session>> {
+    let mut sessions = Session::for_user(conn, user.id)?;
+    sessions.retain(|s| !crate::concerns::session_expired(s, user, timeout, now));
+    sessions.sort_by_key(|s| std::cmp::Reverse(s.last_active_at));
+    Ok(sessions)
+}
+
+pub fn revoke_session(
+    tx: &mut Tx<'_>,
+    user: &User,
+    session: &Session,
+    context: &Context,
+) -> Result<()> {
+    session.destroy(tx)?;
+    user.reset_remote_connections(tx);
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "session.revoke".into(),
+            target: Some(Target::from(user)),
+            changes: Some(json!({"revoked_session_id":session.id})),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(())
+}
+
+pub fn revoke_other_sessions(
+    tx: &mut Tx<'_>,
+    user: &User,
+    current_id: i64,
+    context: &Context,
+) -> Result<usize> {
+    let others = Session::for_user(tx.conn(), user.id)?
+        .into_iter()
+        .filter(|s| s.id != current_id)
+        .collect::<Vec<_>>();
+    if others.is_empty() {
+        return Ok(0);
+    }
+    for session in &others {
+        session.destroy(tx)?;
+    }
+    user.reset_remote_connections(tx);
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "session.revoke_others".into(),
+            target: Some(Target::from(user)),
+            changes: Some(json!({"count":others.len()})),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(others.len())
+}
+
 pub enum Enrollment {
     Enabled,
     Wrong,

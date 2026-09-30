@@ -10,6 +10,37 @@ use crate::layouts::Page;
 mod summary;
 pub use summary::*;
 
+#[derive(Clone)]
+pub struct UserSession {
+    pub id: i64,
+    pub current: bool,
+    pub description: String,
+    pub ip_address: Option<String>,
+    pub last_active_at: jiff::Timestamp,
+    pub created_at: jiff::Timestamp,
+}
+#[derive(Template)]
+#[template(path="users/sessions/index.html",blocks=["head","nav","content"])]
+pub struct SessionsIndex<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub sessions: Vec<UserSession>,
+    pub now: jiff::Timestamp,
+}
+impl Page for SessionsIndex<'_> {
+    fn page_title(&self) -> Option<String> { Some("Your sessions".into()) }
+}
+impl SessionsIndex<'_> {
+    fn ip<'s>(&self,s: &'s UserSession) -> Option<&'s str> { s.ip_address.as_deref().filter(|v| !v.chars().all(char::is_whitespace)) }
+    fn last_active(&self,s: &UserSession) -> String { h::time_ago_in_words(&self.ctx.time_zone,s.last_active_at,self.now) }
+    fn signed_in(&self,s: &UserSession) -> h::Html {
+        h::local_datetime_tag(&self.ctx.time_zone,s.created_at,"date",h::attrs(),&self.ctx.time_zone.to_fs(s.created_at,"short"))
+    }
+}
+
+#[derive(Template)]
+#[template(path="users/profiles/_sessions.html")]
+pub struct ProfileSessions<'a> { pub ctx: &'a ViewContext<'a> }
+
 /// `users/new.html.erb` (the join page).
 #[derive(Template)]
 #[template(path = "users/new.html", blocks = ["head", "content"])]

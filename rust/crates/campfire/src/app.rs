@@ -468,5 +468,8 @@ mod challenge_tests;
 
 #[cfg(test)]
 mod enforcement_tests;
+
+#[cfg(test)]
+mod session_management_tests;
 #[cfg(test)]
 mod tests;

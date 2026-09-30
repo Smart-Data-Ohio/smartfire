@@ -570,8 +570,8 @@ pub async fn authenticate_by(
 /// concurrent first renders don't each start their own).
 ///
 /// Rails' `two_factor_verified:` defaults to false; the completed challenge and remembered-device
-/// flows pass true through `start_new_verified_session_for`. New-device sign-in alerts are the
-/// next session/device slice.
+/// flows pass true through `start_new_verified_session_for`. Every real session records its
+/// device and alerts on a new device, using WS10's typed mail API when configured.
 pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
     start_session(c, user, false).await
 }
@@ -589,6 +589,7 @@ async fn start_session(c: &mut Ctx, user: User, two_factor_verified: bool) -> Re
         c.request.remote_ip()?.to_string(),
     );
     let user_id = user.id;
+    let notify = c.app().mail.config.security_configured();
     let session = c
         .app()
         .db
@@ -599,7 +600,7 @@ async fn start_session(c: &mut Ctx, user: User, two_factor_verified: bool) -> Re
                 device_id: Some(&device_id),
                 two_factor_verified,
             };
-            Session::start_with(tx, user_id, attributes)
+            crate::authentication::start_session(tx, user_id, attributes, notify)
         })
         .await
         .map_err(Error::internal)?;

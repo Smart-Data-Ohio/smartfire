@@ -89,6 +89,8 @@
 
   {{ self.security_panel() }}
 
+  {% include "users/profiles/_sessions.html" %}
+
   {% include "users/profiles/_transfer.html" %}
 </section>
 {% endblock %}
