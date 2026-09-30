@@ -39,6 +39,13 @@ fn redirect(reply: &Reply, id: i64) {
     );
 }
 async fn stream(app: &TestApp, browser: &Browser<'_>) -> (Client, Server) {
+    stream_for(app, browser, &["rooms"]).await
+}
+pub(super) async fn stream_for(
+    app: &TestApp,
+    browser: &Browser<'_>,
+    segments: &[&str],
+) -> (Client, Server) {
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     let listener = crate::channels::tests::support::bind_listener().await;
     let addr = listener.local_addr().unwrap();
@@ -59,7 +66,7 @@ async fn stream(app: &TestApp, browser: &Browser<'_>) -> (Client, Server) {
     let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
     let mut client = Client { socket };
     assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let signed = rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &["rooms"]);
+    let signed = rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, segments);
     client
         .confirm(&identifier(
             serde_json::json!({"channel":"Turbo::StreamsChannel","signed_stream_name":signed}),
@@ -67,13 +74,13 @@ async fn stream(app: &TestApp, browser: &Browser<'_>) -> (Client, Server) {
         .await;
     (client, server)
 }
-struct Server(tokio::task::JoinHandle<()>);
+pub(super) struct Server(tokio::task::JoinHandle<()>);
 impl Drop for Server {
     fn drop(&mut self) {
         self.0.abort();
     }
 }
-async fn frame(client: &mut Client) -> String {
+pub(super) async fn frame(client: &mut Client) -> String {
     let row: serde_json::Value = serde_json::from_str(&client.next_text().await).unwrap();
     row["message"].as_str().unwrap().to_owned()
 }

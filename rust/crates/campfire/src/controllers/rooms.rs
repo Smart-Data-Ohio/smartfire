@@ -465,3 +465,6 @@ mod rooms_rails_cases;
 
 #[cfg(test)]
 mod opens_rails_cases;
+
+#[cfg(test)]
+mod closeds_rails_cases;

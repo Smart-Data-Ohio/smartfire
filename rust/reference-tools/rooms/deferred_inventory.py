@@ -120,6 +120,9 @@ if args.test_log:
          {'new':'new_case','create':'create_case','update':'update_case',
           "a direct room can't be promoted to open by its creator":'a_direct_room_cant_be_promoted_to_open_by_its_creator',
           "a direct room can't be promoted to open by an administrator either":'a_direct_room_cant_be_promoted_to_open_by_an_administrator_either'},{}),
+        ('test/controllers/rooms/closeds_controller_test.rb','closeds_rails_cases',
+         {'new':'new_case','create':'create_case',
+          "a direct room can't be converted to closed and have its participants revised":'a_direct_room_cant_be_converted_to_closed_and_have_its_participants_revised'},{}),
     ]
     for path,module,renamed,deferred in groups:
         file=next(row for row in result if row['file']==path)

@@ -306,57 +306,84 @@
       "declared_cases": [
         {
           "name": "show redirects to get general show",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::closeds_rails_cases::show_redirects_to_get_general_show",
+          "rust_result": "passed"
         },
         {
           "name": "new",
-          "line": 12
+          "line": 12,
+          "rust_test": "controllers::rooms::closeds_rails_cases::new_case",
+          "rust_result": "passed"
         },
         {
           "name": "create",
-          "line": 17
+          "line": 17,
+          "rust_test": "controllers::rooms::closeds_rails_cases::create_case",
+          "rust_result": "passed"
         },
         {
           "name": "create forbidden by non-admin when account restricts creation to admins",
-          "line": 31
+          "line": 31,
+          "rust_test": "controllers::rooms::closeds_rails_cases::create_forbidden_by_non_admin_when_account_restricts_creation_to_admins",
+          "rust_result": "passed"
         },
         {
           "name": "update with membership revisions",
-          "line": 40
+          "line": 40,
+          "rust_test": "controllers::rooms::closeds_rails_cases::update_with_membership_revisions",
+          "rust_result": "passed"
         },
         {
           "name": "update an open room to be closed",
-          "line": 52
+          "line": 52,
+          "rust_test": "controllers::rooms::closeds_rails_cases::update_an_open_room_to_be_closed",
+          "rust_result": "passed"
         },
         {
           "name": "only admins or creators can update",
-          "line": 57
+          "line": 57,
+          "rust_test": "controllers::rooms::closeds_rails_cases::only_admins_or_creators_can_update",
+          "rust_result": "passed"
         },
         {
           "name": "updating the icon replaces sidebar rows and headers for members only",
-          "line": 68
+          "line": 68,
+          "rust_test": "controllers::rooms::closeds_rails_cases::updating_the_icon_replaces_sidebar_rows_and_headers_for_members_only",
+          "rust_result": "passed"
         },
         {
           "name": "create with an unknown icon re-renders the new form",
-          "line": 91
+          "line": 91,
+          "rust_test": "controllers::rooms::closeds_rails_cases::create_with_an_unknown_icon_re_renders_the_new_form",
+          "rust_result": "passed"
         },
         {
           "name": "update with an unknown icon re-renders the edit form without revising members",
-          "line": 100
+          "line": 100,
+          "rust_test": "controllers::rooms::closeds_rails_cases::update_with_an_unknown_icon_re_renders_the_edit_form_without_revising_members",
+          "rust_result": "passed"
         },
         {
           "name": "a direct room can't be converted to closed and have its participants revised",
-          "line": 115
+          "line": 115,
+          "rust_test": "controllers::rooms::closeds_rails_cases::a_direct_room_cant_be_converted_to_closed_and_have_its_participants_revised",
+          "rust_result": "passed"
         },
         {
           "name": "remove yourself",
-          "line": 127
+          "line": 127,
+          "rust_test": "controllers::rooms::closeds_rails_cases::remove_yourself",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 12,
       "rails_tests_run": 12,
       "rails_pass_count": 12,
-      "status": "full-file acceptance deferred",
+      "status": "12 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 12,
+      "rust_pass_count": 12,
+      "rust_cases_deferred": 0,
       "rails_assertions": 68
     },
     {
