@@ -156,7 +156,7 @@ pub fn sidebar(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db
             let row=sidebar_direct(conn,secrets,membership,room)?;
             Ok(match campfire_views::users::cached_direct_room_fragment(&row) {
                 Some(html)=>SidebarDirectItem::Fragment(html),
-                None=>SidebarDirectItem::View(row),
+                None=>SidebarDirectItem::from(row),
             })
         })
         .collect::<campfire_db::Result<_>>()?;

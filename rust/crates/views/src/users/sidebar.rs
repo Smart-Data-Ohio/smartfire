@@ -87,11 +87,11 @@ impl SidebarDirect {
 #[derive(Clone, Debug)]
 pub enum SidebarDirectItem {
     Fragment(crate::fragment_cache::Fragment),
-    View(SidebarDirect),
+    View(Box<SidebarDirect>),
 }
 impl From<SidebarDirect> for SidebarDirectItem {
     fn from(value: SidebarDirect) -> Self {
-        Self::View(value)
+        Self::View(Box::new(value))
     }
 }
 /// Single-member broadcasts do not use the page collection cache in Rails.

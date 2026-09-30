@@ -148,7 +148,7 @@ fn cached_rows_partition_administrator_and_huddle_participants() {
     let store = campfire_views::fragment_cache::FragmentCache::new(1024 * 1024);
     let render = |row: &users::SidebarDirect| {
         campfire_views::fragment_cache::with(&store, || {
-            users::cached_direct_room(&ctx, &users::SidebarDirectItem::View(row.clone()))
+            users::cached_direct_room(&ctx, &users::SidebarDirectItem::from(row.clone()))
                 .to_string()
         })
     };
