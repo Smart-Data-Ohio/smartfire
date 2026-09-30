@@ -27,6 +27,13 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "your profile opens your card, falling back to the profile page" do
+    get user_sidebar_url
+
+    assert_select "a.workspace-user[href='#{user_profile_path}'][data-action='click->profile-card#open']" \
+      "[data-profile-card-url='#{user_card_path(users(:david))}']"
+  end
+
   test "unread directs" do
     rooms(:david_and_jason).messages.create! client_message_id: 999, body: "Hello", creator: users(:jason)
 
