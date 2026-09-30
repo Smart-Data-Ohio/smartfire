@@ -141,6 +141,11 @@ pub struct UserChanges {
     pub role: Option<Role>,
     pub status: Option<Status>,
     pub bio: Option<Option<String>>,
+    pub time_zone: Option<Option<String>>,
+    /// A submitted zone key is an explicit choice even when its value is filtered or nil.
+    pub time_zone_explicit: Option<bool>,
+    /// `Users::ProfilesController`: blocks Google email auto-linking after a self-change.
+    pub email_self_changed_at: Option<Timestamp>,
 }
 
 const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
@@ -389,6 +394,22 @@ impl User {
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {
+        // `User::StatusSettings`: blank Not set normalizes to nil; unknown zones fail save.
+        let zone = changes.time_zone
+            .map(|zone| zone.filter(|value| !campfire_richtext::ruby::is_blank(value)));
+        let current_zone: Option<String> = tx.conn().query_row(
+            "SELECT time_zone FROM users WHERE id=?", [self.id], |r| r.get(0),
+        )?;
+        // Rails validates the effective zone on every save, including an unchanged
+        // persisted value; no other field or security marker may bypass that validation.
+        if zone.as_ref().unwrap_or(&current_zone).as_deref()
+            .filter(|name| !campfire_richtext::ruby::is_blank(name))
+            .is_some_and(|name| crate::slash_commands::time_parser::known_zone(name).is_none())
+        {
+            let mut errors = crate::Errors::default();
+            errors.add("time_zone", "is not a valid time zone");
+            return Err(crate::Error::RecordInvalid(errors));
+        }
         let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql>)> = Vec::new();
         if let Some(name) = changes.name.filter(|n| *n != self.name) {
             self.name = name.clone();
@@ -413,6 +434,26 @@ impl User {
         if let Some(bio) = changes.bio.filter(|b| *b != self.bio) {
             self.bio = bio.clone();
             sets.push(("bio", Box::new(bio)));
+        }
+        if let Some(at) = changes.email_self_changed_at {
+            sets.push(("email_self_changed_at", Box::new(at)));
+        }
+        // These profile preferences are not part of the compact User projection. Compare
+        // stored values so an unchanged assignment doesn't touch updated_at (Rails dirty tracking).
+        if let Some(zone) = zone
+            && zone != current_zone
+        {
+            sets.push(("time_zone", Box::new(zone)));
+        }
+        if let Some(explicit) = changes.time_zone_explicit {
+            let current: Option<bool> = tx.conn().query_row(
+                "SELECT time_zone_explicit FROM users WHERE id=?",
+                [self.id],
+                |r| r.get(0),
+            )?;
+            if current != Some(explicit) {
+                sets.push(("time_zone_explicit", Box::new(explicit)));
+            }
         }
         if sets.is_empty() {
             return Ok(());
@@ -489,6 +530,7 @@ impl User {
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
+        conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
         let email = self.deactivated_email_address();
         self.update(
             tx,
@@ -660,6 +702,26 @@ impl User {
             Some(digest) if !digest.is_empty() => bcrypt::verify(password, digest).unwrap_or(false),
             _ => false,
         }
+    }
+
+    /// Rails `email_change_requested?`: strip, then Unicode `casecmp?`. The submitted
+    /// value is still saved verbatim; only the security check uses this comparison.
+    pub fn email_change_requested(&self, submitted: &str) -> bool {
+        use caseless::Caseless;
+        use campfire_richtext::ruby::strip;
+        !strip(submitted).chars().default_case_fold().eq(
+            strip(self.email_address.as_deref().unwrap_or(""))
+                .chars()
+                .default_case_fold(),
+        )
+    }
+
+    /// Google-provisioned accounts have no existing password to confirm.
+    pub fn current_password_confirmed(&self, submitted: &str) -> bool {
+        self.password_digest
+            .as_deref()
+            .is_none_or(campfire_richtext::ruby::is_blank)
+            || self.authenticate(submitted)
     }
 
     pub fn is_member(&self) -> bool {

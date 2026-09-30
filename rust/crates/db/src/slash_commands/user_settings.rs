@@ -26,6 +26,7 @@ pub(super) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
             match v {
                 Value::Null => SqlValue::Null,
                 Value::Bool(b) => SqlValue::Integer(i64::from(*b)),
+                Value::String(s) if key == "time_zone" && campfire_richtext::ruby::is_blank(s) => SqlValue::Null,
                 Value::String(s) => SqlValue::Text(s.clone()),
                 _ => unreachable!("typed internal changes"),
             },
