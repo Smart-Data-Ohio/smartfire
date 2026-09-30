@@ -56,15 +56,83 @@ async fn analyzer_blob(app: &TestApp, case: &serde_json::Value) -> Blob {
         )
         .unwrap();
     // A direct upload stores its row before identification; assignment identifies it.
+    let declared_type = case["content_type"].as_str().map(str::to_string);
     app.db()
         .write(move |tx| {
             let mut blob = crate::controllers::messages::save_staged(tx, staged)?;
+            tx.conn().execute(
+                "UPDATE active_storage_blobs SET content_type = ?1 WHERE id = ?2",
+                rusqlite::params![declared_type, blob.id],
+            )?;
+            blob.content_type = declared_type;
             blob.update_metadata(tx.conn(), campfire_storage::Json::object())
                 .map_err(storage_error)?;
             Ok(blob)
         })
         .await
         .unwrap()
+}
+
+fn filename_vectors() -> serde_json::Value {
+    serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../vectors/attachment_filenames.json"
+    )))
+    .unwrap()
+}
+
+async fn filename_assignment(index: usize, reject_jobs: bool) {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    hold_analysis(&app).await;
+    if reject_jobs {
+        reject_analysis(&app).await;
+    }
+    let expected = filename_vectors()["assignments"][index].clone();
+    let blob = analyzer_blob(&app, &expected).await;
+    let reply = app
+        .david()
+        .write(Req::new(Method::PATCH, "/account").form(&[("account[logo]", &signed(&app, &blob))]))
+        .await;
+    assert_eq!(
+        reply.status.as_u16(),
+        expected["status"].as_u64().unwrap() as u16,
+        "{}",
+        reply.text()
+    );
+    let kind = expected["kind"].as_str().unwrap().to_string();
+    app.db()
+        .read(move |conn| {
+            let account = campfire_db::Account::first(conn)?.unwrap();
+            let attached = attached_blob(conn, "Account", account.id, "logo")?.unwrap();
+            assert_eq!(attached.id, blob.id);
+            assert_eq!(attached.filename.raw(), expected["stored_filename"]);
+            assert_eq!(attached.filename.sanitized(), expected["sanitized"]);
+            assert_eq!(attached.content_type(), expected["identified_content_type"]);
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&attached.metadata.encode()).unwrap(),
+                expected["metadata"]
+            );
+            assert_eq!(
+                analysis_jobs(conn)?,
+                expected["analysis_jobs"].as_i64().unwrap()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    export_analyzer_readback(&app, &kind).await;
+}
+
+#[tokio::test]
+async fn signed_filename_slash_runs_null_analyzer_without_job() {
+    filename_assignment(0, true).await;
+}
+
+#[tokio::test]
+async fn signed_filename_space_queues_image_analyzer() {
+    filename_assignment(1, false).await;
 }
 
 fn signed(app: &TestApp, blob: &Blob) -> String {

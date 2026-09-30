@@ -8,6 +8,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use base64::Engine as _;
 use campfire_storage::marshal::Value;
 use campfire_storage::{
     AppMessageVerifier, Blob, DiskService, Filename, Json, Storage, Variation, Verifier, disk, disposition, marcel,
@@ -157,6 +158,48 @@ fn filenames_and_dispositions() {
         assert_eq!(disposition::format("inline", &sanitized), f["inline"].as_str().unwrap());
         assert_eq!(disposition::format("attachment", &sanitized), f["attachment"].as_str().unwrap());
         assert_eq!(disposition::escape_path(&sanitized), f["escaped_path"].as_str().unwrap());
+    }
+}
+
+#[test]
+fn blob_filenames_match_pinned_rails() {
+    let vectors: J = serde_json::from_str(include_str!("../../../vectors/attachment_filenames.json")).unwrap();
+    assert_eq!(vectors["filename_count"], 141);
+    assert_eq!(vectors["cases"].as_array().unwrap().len(), 564);
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    for case in vectors["cases"].as_array().unwrap() {
+        let name = case["filename"].as_str().unwrap();
+        let label = format!("{name:?} {}", case["kind"]);
+        let bytes = base64::engine::general_purpose::STANDARD.decode(case["data_base64"].as_str().unwrap()).unwrap();
+        let filename = Filename::new(name);
+        assert_eq!(filename.sanitized(), case["sanitized"], "{label}");
+        // Direct uploads persist the declared type and no identification metadata.
+        let mut pending = campfire_storage::blob::NewBlob::unfurl(&bytes, filename.clone(), case["content_type"].as_str(), "local", false);
+        pending.metadata = Json::object();
+        storage.service.upload(&pending.key, bytes.as_slice(), Some(&pending.checksum)).unwrap();
+        let direct = pending.insert(&conn, now()).unwrap();
+        assert_eq!(direct.filename.raw(), case["stored_before"], "{label}");
+        let mut identified = storage.identify_blob(direct).unwrap();
+        assert_eq!(identified.content_type(), case["identified_content_type"], "{label} identified MIME");
+        assert_eq!(serde_json::from_str::<J>(&identified.metadata.encode()).unwrap(), case["metadata"], "{label}");
+        assert_eq!(campfire_storage::analyze::Analyzer::for_content_type(identified.content_type()).analyze_later(), case["analyze_later"].as_bool().unwrap(), "{label}");
+        conn.execute("UPDATE active_storage_blobs SET content_type = ?1 WHERE id = ?2", rusqlite::params![identified.content_type, identified.id]).unwrap();
+        identified.update_metadata(&conn, identified.metadata.clone()).unwrap();
+        assert_eq!(Blob::find(&conn, identified.id).unwrap().unwrap().filename.raw(), case["stored_after"], "{label}");
+
+        // Ordinary uploads and file staging use the same sanitized identification input.
+        let uploaded = storage.create_and_upload(&conn, &bytes, filename.clone(), case["content_type"].as_str(), now()).unwrap();
+        assert_eq!(uploaded.content_type(), case["identified_content_type"], "{label} upload MIME");
+        assert_eq!(uploaded.filename.raw(), case["uploaded_filename"], "{label}");
+        assert_eq!(serde_json::from_str::<J>(&uploaded.metadata.encode()).unwrap(), case["uploaded_metadata"], "{label}");
+        let source = root.path().join("source");
+        std::fs::write(&source, &bytes).unwrap();
+        let staged = storage.stage_file(&source, filename, case["content_type"].as_str()).unwrap();
+        assert_eq!(staged.blob().content_type.as_deref(), case["identified_content_type"].as_str(), "{label} staged MIME");
+        assert_eq!(staged.blob().filename.raw(), case["uploaded_filename"], "{label}");
     }
 }
 

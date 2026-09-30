@@ -79,7 +79,8 @@ impl Storage {
             if blob.byte_size > 0 {
                 std::fs::File::open(self.path_for(&blob))?.take(4096).read_to_end(&mut head)?;
             }
-            blob.content_type = Some(crate::marcel::identify(&head, Some(blob.filename.raw()), blob.content_type.as_deref()));
+            // Blob::Identifiable#identify_content_type passes Filename#to_s (sanitized).
+            blob.content_type = Some(crate::marcel::identify(&head, Some(&blob.filename.sanitized()), blob.content_type.as_deref()));
             blob.metadata.set("identified", Json::Bool(true));
         }
         Ok(blob)
