@@ -1,6 +1,6 @@
 //! AgentGrant validations and revocation. Administrative authorization lives in callers.
 use super::agent_access::CAPABILITIES;
-use crate::sql::{exists, query_one};
+use crate::sql::{exists, query_all, query_one};
 use crate::{Connection, Errors, Result, Timestamp, Tx};
 use rusqlite::{Row, params};
 
@@ -32,6 +32,31 @@ pub struct GrantChanges {
     pub revoked_at: Option<Option<Timestamp>>,
 }
 impl AgentGrant {
+    pub fn active(&self) -> bool {
+        self.revoked_at.is_none()
+    }
+    pub fn revoked(&self) -> bool {
+        self.revoked_at.is_some()
+    }
+    pub fn workspace_wide(&self) -> bool {
+        self.room_id.is_none()
+    }
+    pub fn all_active(conn: &Connection) -> Result<Vec<Self>> {
+        query_all(
+            conn,
+            "SELECT * FROM agent_grants WHERE revoked_at IS NULL ORDER BY id",
+            [],
+            Self::from_row,
+        )
+    }
+    pub fn all_revoked(conn: &Connection) -> Result<Vec<Self>> {
+        query_all(
+            conn,
+            "SELECT * FROM agent_grants WHERE revoked_at IS NOT NULL ORDER BY id",
+            [],
+            Self::from_row,
+        )
+    }
     fn from_row(r: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
             id: r.get("id")?,
