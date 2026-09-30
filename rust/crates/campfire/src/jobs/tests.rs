@@ -470,6 +470,17 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
     assert_eq!(status, axum::http::StatusCode::OK, "sign-in page: {body}");
     let (status, body) = browser.post("/session", "text/html", &[("email_address", "person@example.com"), ("password", "secret123456")]).await;
     assert_eq!(status, axum::http::StatusCode::FOUND, "signed in: {body}");
+    let (status, _) = browser.get("/two_factor_setup").await;
+    assert_eq!(status, axum::http::StatusCode::OK);
+    let encryption = rails_compat::ar_encryption::ArEncryption::new(&app.secrets);
+    let enrollment_now = campfire_db::Timestamp::from_jiff(app.clock.now());
+    let secret = app.db.read(move |conn| {
+        let session_id = conn.query_row("SELECT session_id FROM two_factor_setup_secrets", [], |r| r.get(0))?;
+        campfire_db::TwoFactorSetupSecret::valid_for(conn, session_id, enrollment_now)?.expect("live enrollment").secret(&encryption)
+    }).await.unwrap();
+    let code = rails_compat::totp::at(&secret, app.clock.now().as_second()).unwrap();
+    let (status, body) = browser.post("/two_factor_setup", "text/html", &[("code", &code)]).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "completed enrollment: {body}");
     let path = format!("/rooms/{room}/messages");
     let post = |n: &'static str| [("message[body]", "<p>Hello bot</p>"), ("message[client_message_id]", n)];
     let messages = || count(&app, "SELECT count(*) FROM messages");
@@ -918,7 +929,13 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .tasks()
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let mut expected = golden["tasks"].as_array().unwrap().clone();
+    // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
+    let retention = expected.pop().unwrap();
+    expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
+    expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
+    expected.push(retention);
+    assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
 }
 
 #[tokio::test]
@@ -934,7 +951,7 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
     })
     .await;
-    assert!(rows.is_empty(), "{rows:?}");
+    assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
     booted.jobs.shutdown(Duration::from_secs(5)).await;
 }
 

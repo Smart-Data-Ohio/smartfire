@@ -3,6 +3,8 @@
 mod active_storage;
 mod admin;
 mod app;
+mod authentication;
+mod account_security;
 mod channels;
 mod concerns;
 mod config;

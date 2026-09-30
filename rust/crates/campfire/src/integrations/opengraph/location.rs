@@ -21,20 +21,33 @@ pub struct Location<'n> {
     url: Option<String>,
     parsed_url: Option<Uri>,
     resolved_ip: Option<Option<IpAddr>>,
+    options: fetch::FetchOptions,
+    pub errors: campfire_db::Errors,
 }
 
 impl<'n> Location<'n> {
     /// `Location.new(url)`: `parsed_url` is `URI.parse(url) rescue nil`.
     pub fn new(net: &'n Network, url: Option<&str>) -> Self {
+        Self::new_with_options(net, url, fetch::FetchOptions::default())
+    }
+
+    pub fn new_with_options(net: &'n Network, url: Option<&str>, options: fetch::FetchOptions) -> Self {
         let parsed_url = url.and_then(|url| uri::parse(url).ok());
-        Self { net, url: url.map(str::to_string), parsed_url, resolved_ip: None }
+        Self { net, url: url.map(str::to_string), parsed_url, resolved_ip: None, options, errors: Default::default() }
     }
 
     /// `valid?`: both validations run, so the host is resolved even for a non-http URL.
     pub async fn is_valid(&mut self) -> bool {
+        self.errors.0.clear();
         let http = self.parsed_url.as_ref().is_some_and(Uri::is_http);
         let public = self.resolved_ip().await.is_some();
-        http && public
+        if !http {
+            self.errors.add("url", "is invalid");
+        }
+        if !public {
+            self.errors.add("url", "is not public");
+        }
+        self.errors.is_empty()
     }
 
     /// `resolved_ip`: `PrivateNetworkGuard.resolve(parsed_url.host) rescue nil`, memoized.
@@ -60,7 +73,12 @@ impl<'n> Location<'n> {
         }
         let url = self.parsed_url.clone()?;
         let ip = self.resolved_ip().await?;
-        match fetch::fetch_document(self.net, &url, ip).await {
+        let fetched = if self.options.deadline.is_none() && self.options.max_redirects == fetch::MAX_REDIRECTS {
+            fetch::fetch_document(self.net, &url, ip).await
+        } else {
+            fetch::fetch_document_with(self.net, &url, ip, self.options).await
+        };
+        match fetched {
             Ok(html) => html,
             Err(error) => {
                 tracing::warn!("Failed to fetch {} at {ip} ({error})", url.to_s());
@@ -76,7 +94,12 @@ impl<'n> Location<'n> {
         }
         let url = self.parsed_url.clone()?;
         let ip = self.resolved_ip().await?;
-        match fetch::fetch_content_type(self.net, &url, ip).await {
+        let fetched = if self.options.deadline.is_none() && self.options.max_redirects == fetch::MAX_REDIRECTS {
+            fetch::fetch_content_type(self.net, &url, ip).await
+        } else {
+            fetch::fetch_content_type_with(self.net, &url, ip, self.options).await
+        };
+        match fetched {
             Ok(content_type) => content_type,
             Err(error) => {
                 tracing::warn!("Failed to fetch {} at {ip} ({error})", url.to_s());
@@ -85,3 +108,7 @@ impl<'n> Location<'n> {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "rails_location_tests.rs"]
+mod rails_tests;

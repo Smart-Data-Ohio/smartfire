@@ -29,8 +29,8 @@
 use std::sync::{Arc, LazyLock};
 
 use campfire_kit::{Ctx, Error, Method, Param, ParamMap, Result, StatusCode};
-use futures_util::future::BoxFuture;
 use campfire_routes::{ActionStatus, TableRoute};
+use futures_util::future::BoxFuture;
 use regex::Regex;
 
 use crate::active_storage;
@@ -41,6 +41,11 @@ pub mod accounts;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
+pub mod fizzy_cards;
+pub mod fizzy_connections;
+pub mod fizzy_message_cards;
+pub mod github;
+pub mod message_embed_suppressions;
 pub mod messages;
 pub mod presenters;
 pub mod pwa;
@@ -48,7 +53,10 @@ pub mod qr_code;
 pub mod rooms;
 pub mod searches;
 pub mod sessions;
+pub mod sudos;
+pub mod two_factor;
 pub mod unfurl_links;
+pub mod embeds;
 pub mod users;
 pub mod welcome;
 pub mod internal_huddle;
@@ -89,15 +97,27 @@ impl Route {
     fn new(spec: &'static TableRoute, action: Arc<dyn Action>) -> Self {
         let (regex, names) = compile(spec.spec);
         let verb = Method::from_bytes(spec.verb.as_bytes()).expect("a route verb");
-        Self { verb, pattern: spec.spec, endpoint: spec.endpoint, defaults: spec.defaults, action, regex, names }
+        Self {
+            verb,
+            pattern: spec.spec,
+            endpoint: spec.endpoint,
+            defaults: spec.defaults,
+            action,
+            regex,
+            names,
+        }
     }
 
     pub fn controller(&self) -> &'static str {
-        self.endpoint.split_once('#').map_or(self.endpoint, |(controller, _)| controller)
+        self.endpoint
+            .split_once('#')
+            .map_or(self.endpoint, |(controller, _)| controller)
     }
 
     pub fn action_name(&self) -> &'static str {
-        self.endpoint.split_once('#').map_or("", |(_, action)| action)
+        self.endpoint
+            .split_once('#')
+            .map_or("", |(_, action)| action)
     }
 }
 
@@ -179,6 +199,24 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
+        "rooms/fizzy/cards#show" => arc(fizzy_cards::show),
+        "fizzy/connections#create" => arc(fizzy_connections::create),
+        "fizzy/connections#destroy" => arc(fizzy_connections::destroy),
+        "rooms/fizzy/message_cards#new" => arc(fizzy_message_cards::new),
+        "rooms/fizzy/message_cards#create" => arc(fizzy_message_cards::create),
+        "github/webhooks#create" => arc(github::webhooks::create),
+        "two_factor/reauthentications#create" => arc(two_factor::reauthentication_create),
+        "two_factor/challenges#show" => arc(two_factor::challenge_show),
+        "two_factor/challenges#create" => arc(two_factor::challenge_create),
+        "two_factor/backup_codes#create" => arc(two_factor::backup_create),
+        "two_factor/remembered_devices#destroy" => arc(two_factor::device_destroy),
+        "two_factor/remembered_devices#destroy_all" => arc(two_factor::device_destroy_all),
+        "two_factor/setups#destroy" => arc(two_factor::setup_destroy),
+        "two_factor/setups#show" => arc(two_factor::setup_show),
+        "two_factor/setups#create" => arc(two_factor::setup_create),
+        "sudos#new" => arc(sudos::new),
+        "sudos#create" => arc(sudos::create),
+        "sudos#google" => arc(sudos::google),
         "content_security_policy_reports#create" => arc(csp_reports::create),
         "accounts/users#index" => arc(accounts::users::index),
         "accounts/users#update" => arc(accounts::users::update),
@@ -208,7 +246,13 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/sidebars#show" => arc(users::sidebars::show),
         "users/profiles#show" => arc(users::profiles::show),
         "users/profiles#update" => arc(users::profiles::update),
-        "users/push_subscriptions/test_notifications#create" => arc(users::push_subscriptions::test_notifications::create),
+        "users/sessions#index" => arc(users::sessions::index),
+        "users/sessions#destroy" => arc(users::sessions::destroy),
+        "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
+        "accounts/users/two_factor_resets#create" => arc(accounts::users::two_factor_resets::create),
+        "users/push_subscriptions/test_notifications#create" => {
+            arc(users::push_subscriptions::test_notifications::create)
+        }
         "users/push_subscriptions#index" => arc(users::push_subscriptions::index),
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),
         "users/push_subscriptions#destroy" => arc(users::push_subscriptions::destroy),
@@ -255,7 +299,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "searches#index" => arc(searches::index),
         "searches#create" => arc(searches::create),
         "searches#clear" => arc(searches::clear),
+        "embeds/images#show" => arc(embeds::show),
         "unfurl_links#create" => arc(unfurl_links::create),
+        "message_embed_suppressions#create" => arc(message_embed_suppressions::create),
         "pwa#manifest" => arc(pwa::manifest),
         "pwa#service_worker" => arc(pwa::service_worker),
         "rails/health#show" => arc(health::show),
@@ -269,7 +315,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         | "action_mailbox/ingresses/sendgrid/inbound_emails#create"
         | "action_mailbox/ingresses/mandrill/inbound_emails#health_check"
         | "action_mailbox/ingresses/mandrill/inbound_emails#create"
-        | "action_mailbox/ingresses/mailgun/inbound_emails#create" => arc(mailbox::ingress_not_configured),
+        | "action_mailbox/ingresses/mailgun/inbound_emails#create" => {
+            arc(mailbox::ingress_not_configured)
+        }
         "rails/conductor/action_mailbox/inbound_emails#index"
         | "rails/conductor/action_mailbox/inbound_emails#create"
         | "rails/conductor/action_mailbox/inbound_emails#new"
@@ -280,7 +328,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         | "rails/conductor/action_mailbox/incinerates#create" => arc(mailbox::conductor),
         "active_storage/blobs/redirect#show" => arc(active_storage::blobs_redirect),
         "active_storage/blobs/proxy#show" => arc(active_storage::blobs_proxy),
-        "active_storage/representations/redirect#show" => arc(active_storage::representations_redirect),
+        "active_storage/representations/redirect#show" => {
+            arc(active_storage::representations_redirect)
+        }
         "active_storage/representations/proxy#show" => arc(active_storage::representations_proxy),
         "active_storage/disk#show" => arc(active_storage::disk_show),
         "active_storage/disk#update" => arc(active_storage::disk_update),
@@ -296,19 +346,27 @@ pub async fn dispatch(c: &mut Ctx) -> Result {
         return Err(Error::NotFound);
     };
     install_path_params(c, path_params);
-    c.set_current(MatchedRoute { endpoint: route.endpoint });
+    c.set_current(MatchedRoute {
+        endpoint: route.endpoint,
+    });
     route.action.call(c).await
 }
 
 /// The first route matching `method` and the normalized `path`, with its path parameters
 /// (defaults, then captures, then `controller`/`action`). HEAD requests match GET routes.
 pub fn recognize(method: &Method, path: &str) -> Result<Option<(&'static Route, ParamMap)>> {
-    let verb = if *method == Method::HEAD { &Method::GET } else { method };
+    let verb = if *method == Method::HEAD {
+        &Method::GET
+    } else {
+        method
+    };
     for route in routes() {
         if route.verb != *verb {
             continue;
         }
-        let Some(captures) = route.regex.captures(path) else { continue };
+        let Some(captures) = route.regex.captures(path) else {
+            continue;
+        };
         let mut params = ParamMap::new();
         for (name, value) in route.defaults {
             params.insert(*name, Param::Str(value.to_string()));
@@ -348,14 +406,17 @@ pub fn normalize_path(path: &str) -> String {
         normalized.pop();
     }
     static ESCAPE: LazyLock<Regex> = LazyLock::new(|| Regex::new("%[a-fA-F0-9]{2}").unwrap());
-    ESCAPE.replace_all(&normalized, |m: &regex::Captures| m[0].to_uppercase()).into_owned()
+    ESCAPE
+        .replace_all(&normalized, |m: &regex::Captures| m[0].to_uppercase())
+        .into_owned()
 }
 
 /// `Journey::Router::Utils.unescape_uri`, then Rails' check that the parameter is valid UTF-8
 /// (`ActionController::BadRequest` otherwise).
 fn unescape_uri(value: &str) -> Result<String> {
     let bytes: Vec<u8> = percent_encoding::percent_decode_str(value).collect();
-    String::from_utf8(bytes).map_err(|_| Error::BadRequest("Invalid path parameters: Invalid encoding".into()))
+    String::from_utf8(bytes)
+        .map_err(|_| Error::BadRequest("Invalid path parameters: Invalid encoding".into()))
 }
 
 /// A Journey path spec as an anchored regex, plus its parameter names in order.
@@ -369,7 +430,10 @@ fn compile(pattern: &str) -> (Regex, Vec<String>) {
             ')' => regex.push_str(")?"),
             ':' | '*' => {
                 let mut name = String::new();
-                while let Some(&n) = chars.peek().filter(|n| n.is_ascii_alphanumeric() || **n == '_') {
+                while let Some(&n) = chars
+                    .peek()
+                    .filter(|n| n.is_ascii_alphanumeric() || **n == '_')
+                {
                     name.push(n);
                     chars.next();
                 }
@@ -386,10 +450,16 @@ fn compile(pattern: &str) -> (Regex, Vec<String>) {
 /// A route whose Rails action exists but hasn't been ported yet: a 501 naming the endpoint (also
 /// in the `x-campfire-not-ported` header), never a 404 that could pass for Rails' answer.
 pub async fn not_yet_ported(c: &mut Ctx) -> Result {
-    let endpoint = c.current::<MatchedRoute>().map_or("?", |route| route.endpoint);
+    let endpoint = c
+        .current::<MatchedRoute>()
+        .map_or("?", |route| route.endpoint);
     tracing::warn!(endpoint, "route not yet ported");
     c.set_header("x-campfire-not-ported", endpoint);
-    Ok(c.render_as(StatusCode::NOT_IMPLEMENTED, "text/plain", format!("Not yet ported: {endpoint}\n")))
+    Ok(c.render_as(
+        StatusCode::NOT_IMPLEMENTED,
+        "text/plain",
+        format!("Not yet ported: {endpoint}\n"),
+    ))
 }
 
 /// A declared route whose action the controller doesn't define (`AbstractController::ActionNotFound`).
@@ -400,8 +470,12 @@ pub async fn action_not_found(_c: &mut Ctx) -> Result {
 /// A declared route whose controller doesn't exist, e.g. `resource :settings` under rooms: the
 /// reference answers 500 (the controller constant fails to load).
 pub async fn missing_controller(c: &mut Ctx) -> Result {
-    let endpoint = c.current::<MatchedRoute>().map_or("?", |route| route.endpoint);
-    Err(Error::internal(anyhow::anyhow!("uninitialized constant for {endpoint}")))
+    let endpoint = c
+        .current::<MatchedRoute>()
+        .map_or("?", |route| route.endpoint);
+    Err(Error::internal(anyhow::anyhow!(
+        "uninitialized constant for {endpoint}"
+    )))
 }
 
 /// `Rails::HealthController`
@@ -413,10 +487,16 @@ mod health {
     pub async fn show(c: &mut Ctx) -> Result {
         match c.respond_to(&[&format::HTML, &format::JSON])? {
             f if *f == format::JSON => {
-                let timestamp = jiff::Timestamp::from_second(c.now().as_second()).unwrap_or(c.now());
-                c.json(StatusCode::OK, &serde_json::json!({ "status": "up", "timestamp": timestamp.to_string() }))
+                let timestamp =
+                    jiff::Timestamp::from_second(c.now().as_second()).unwrap_or(c.now());
+                c.json(
+                    StatusCode::OK,
+                    &serde_json::json!({ "status": "up", "timestamp": timestamp.to_string() }),
+                )
             }
-            _ => Ok(c.html(r#"<!DOCTYPE html><html><body style="background-color: green"></body></html>"#)),
+            _ => Ok(c.html(
+                r#"<!DOCTYPE html><html><body style="background-color: green"></body></html>"#,
+            )),
         }
     }
 }
@@ -481,7 +561,10 @@ mod tests {
     }
 
     fn vectors() -> Vectors {
-        let json = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/campfire_routes.json"));
+        let json = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../vectors/campfire_routes.json"
+        ));
         serde_json::from_str(json).unwrap()
     }
 
@@ -493,15 +576,27 @@ mod tests {
         let rails = vectors().routes;
         let ours = routes();
         for (i, (rails, ours)) in rails.iter().zip(ours).enumerate() {
-            let defaults: std::collections::BTreeMap<String, String> =
-                ours.defaults.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+            let defaults: std::collections::BTreeMap<String, String> = ours
+                .defaults
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect();
             assert_eq!(
-                (rails.verb.as_str(), rails.path.as_str(), rails.endpoint.as_str(), &rails.defaults),
+                (
+                    rails.verb.as_str(),
+                    rails.path.as_str(),
+                    rails.endpoint.as_str(),
+                    &rails.defaults
+                ),
                 (ours.verb.as_str(), ours.pattern, ours.endpoint, &defaults),
                 "route #{i}"
             );
         }
-        assert_eq!(rails.len(), ours.len(), "every Rails route is in the table, and nothing else");
+        assert_eq!(
+            rails.len(),
+            ours.len(),
+            "every Rails route is in the table, and nothing else"
+        );
     }
 
     #[test]
@@ -513,31 +608,46 @@ mod tests {
             match (&sample.endpoint, recognized) {
                 (Some(endpoint), Some((route, params))) => {
                     assert_eq!(route.endpoint, endpoint, "{} {}", sample.verb, sample.path);
-                    let mut params: std::collections::BTreeMap<String, String> =
-                        params.iter().map(|(k, v)| (k.clone(), v.as_str().unwrap().to_string())).collect();
+                    let mut params: std::collections::BTreeMap<String, String> = params
+                        .iter()
+                        .map(|(k, v)| (k.clone(), v.as_str().unwrap().to_string()))
+                        .collect();
                     params.remove("controller");
                     params.remove("action");
                     assert_eq!(params, sample.params, "{} {}", sample.verb, sample.path);
                 }
                 (None, Some((route, _))) => {
-                    assert!(MISSING_CONTROLLERS.contains(&route.controller()), "{} {} matched {}", sample.verb, sample.path, route.endpoint)
+                    assert!(
+                        MISSING_CONTROLLERS.contains(&route.controller()),
+                        "{} {} matched {}",
+                        sample.verb,
+                        sample.path,
+                        route.endpoint
+                    )
                 }
                 (None, None) => {}
-                (Some(endpoint), None) => panic!("{} {} should be {endpoint}", sample.verb, sample.path),
+                (Some(endpoint), None) => {
+                    panic!("{} {} should be {endpoint}", sample.verb, sample.path)
+                }
             }
         }
     }
 
     #[test]
     fn every_ported_endpoint_is_a_real_rails_action() {
-        let actions: std::collections::HashMap<&str, ActionStatus> =
-            campfire_routes::TABLE.iter().map(|route| (route.endpoint, route.action)).collect();
+        let actions: std::collections::HashMap<&str, ActionStatus> = campfire_routes::TABLE
+            .iter()
+            .map(|route| (route.endpoint, route.action))
+            .collect();
         let mut ported_count = 0;
         for route in campfire_routes::TABLE {
             if ported(route.endpoint).is_some() {
                 ported_count += 1;
                 assert!(
-                    matches!(actions[route.endpoint], ActionStatus::Defined | ActionStatus::Implicit),
+                    matches!(
+                        actions[route.endpoint],
+                        ActionStatus::Defined | ActionStatus::Implicit
+                    ),
                     "{} is ported but Rails answers {:?}",
                     route.endpoint,
                     route.action
@@ -547,7 +657,10 @@ mod tests {
         assert!(ported_count > 0);
         // A typo in `ported` would silently leave the endpoint on `not_yet_ported`.
         for endpoint in PORTED_ENDPOINTS {
-            assert!(actions.contains_key(endpoint), "{endpoint} isn't in config/routes.rb");
+            assert!(
+                actions.contains_key(endpoint),
+                "{endpoint} isn't in config/routes.rb"
+            );
             assert!(ported(endpoint).is_some(), "{endpoint}");
         }
     }
@@ -591,7 +704,7 @@ mod tests {
         "rooms/closeds#destroy", "rooms/closeds#create", "rooms/closeds#new", "rooms/closeds#edit",
         "rooms/closeds#show", "rooms/closeds#update", "rooms/directs#create", "rooms/directs#new",
         "rooms/directs#edit", "rooms/directs#show", "rooms/directs#destroy", "searches#index",
-        "searches#create", "searches#clear", "unfurl_links#create", "pwa#manifest", "pwa#service_worker",
+        "searches#create", "searches#clear", "unfurl_links#create", "embeds/images#show", "pwa#manifest", "pwa#service_worker",
         "rails/health#show", "turbo/native/navigation#recede", "turbo/native/navigation#resume",
         "turbo/native/navigation#refresh", "action_mailbox/ingresses/postmark/inbound_emails#create",
         "action_mailbox/ingresses/sendgrid/inbound_emails#create",
@@ -604,18 +717,31 @@ mod tests {
         "rails/conductor/action_mailbox/inbound_emails#show",
         "rails/conductor/action_mailbox/inbound_emails/sources#new",
         "rails/conductor/action_mailbox/inbound_emails/sources#create",
-        "rails/conductor/action_mailbox/reroutes#create", "rails/conductor/action_mailbox/incinerates#create",
-        "active_storage/blobs/redirect#show", "active_storage/blobs/proxy#show",
-        "active_storage/representations/redirect#show", "active_storage/representations/proxy#show",
-        "active_storage/disk#show", "active_storage/disk#update", "active_storage/direct_uploads#create",
+        "rails/conductor/action_mailbox/reroutes#create",
+        "rails/conductor/action_mailbox/incinerates#create",
+        "active_storage/blobs/redirect#show",
+        "active_storage/blobs/proxy#show",
+        "active_storage/representations/redirect#show",
+        "active_storage/representations/proxy#show",
+        "active_storage/disk#show",
+        "active_storage/disk#update",
+        "active_storage/direct_uploads#create",
     ];
 
     fn dispatch_router() -> axum::Router {
         use campfire_kit::{Kit, KitConfig, testing};
-        let kit = Kit::new(KitConfig::default(), testing::crypto(), testing::frozen_clock(), ());
+        let kit = Kit::new(
+            KitConfig::default(),
+            testing::crypto(),
+            testing::frozen_clock(),
+            (),
+        );
         let routes = axum::Router::new()
             .route("/", axum::routing::any(campfire_kit::action(dispatch)))
-            .route("/{*path}", axum::routing::any(campfire_kit::action(dispatch)));
+            .route(
+                "/{*path}",
+                axum::routing::any(campfire_kit::action(dispatch)),
+            );
         campfire_kit::app(routes, kit)
     }
 
@@ -629,8 +755,13 @@ mod tests {
             .unwrap();
         let response = dispatch_router().oneshot(request).await.unwrap();
         let status = response.status();
-        let header = response.headers().get("x-campfire-not-ported").map(|v| v.to_str().unwrap().to_string());
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let header = response
+            .headers()
+            .get("x-campfire-not-ported")
+            .map(|v| v.to_str().unwrap().to_string());
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         (status, header, String::from_utf8_lossy(&body).into_owned())
     }
 
