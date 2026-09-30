@@ -79,7 +79,7 @@ pub(crate) fn preferences(
     });
     Ok(preferences)
 }
-fn epochs(raw: &str, zone: &campfire_views::time::Zone) -> Vec<(i64, i64)> {
+pub(crate) fn epochs(raw: &str, zone: &campfire_views::time::Zone) -> Vec<(i64, i64)> {
     let Ok(serde_json::Value::Array(pairs)) = serde_json::from_str(raw) else {
         return Vec::new();
     };

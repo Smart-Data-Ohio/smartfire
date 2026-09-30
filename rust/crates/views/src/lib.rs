@@ -31,6 +31,7 @@ pub mod searches;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the
 /// helpers read from `Current`, `request`, `flash` and the session.
+#[derive(Clone)]
 pub struct ViewContext<'a> {
     pub current_user: Option<CurrentUser>,
     pub account: AccountSummary,

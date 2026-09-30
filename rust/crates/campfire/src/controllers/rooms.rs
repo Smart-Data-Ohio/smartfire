@@ -236,6 +236,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
                 messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
                 navigation: Some(call_navigation::model(&app, conn, &room, &user)?),
+                shell: shell::load(conn,&room,user.id,&messages,campfire_db::Timestamp::from_jiff(app.clock.now()))?,
                 thread_panel_name: Some(if room.direct() {room.direct_display_name(conn,None,None)?.unwrap_or_default()} else {room.name.clone().unwrap_or_default()}),
             };
             Ok((show, presenter.pending_link_fetches(), presenter.pending_twitter_fetches()))
@@ -257,6 +258,7 @@ mod tests;
 mod call_page_tests;
 
 mod call_navigation;
+mod shell;
 
 #[cfg(test)]
 mod stream_controller_tests;
@@ -275,3 +277,8 @@ mod remaining_presence_tests;
 
 #[cfg(test)]
 mod room_composition_tests;
+
+#[cfg(test)]
+mod room_shell_tests;
+#[cfg(test)]
+mod full_room_tests;
