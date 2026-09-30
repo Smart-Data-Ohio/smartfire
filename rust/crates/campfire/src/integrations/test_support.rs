@@ -148,10 +148,14 @@ impl FakeServer {
     }
 
     pub async fn start_tls(routes: Vec<Route>) -> Self {
+        Self::start_tls_with(routes, include_bytes!("testdata/tls/server.pem"), include_bytes!("testdata/tls/server.key")).await
+    }
+
+    pub async fn start_tls_with(routes: Vec<Route>, cert: &[u8], key: &[u8]) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-        let certs = vec![CertificateDer::from_pem_slice(include_bytes!("testdata/tls/server.pem")).unwrap()];
-        let key = PrivateKeyDer::from_pem_slice(include_bytes!("testdata/tls/server.key")).unwrap();
+        let certs = vec![CertificateDer::from_pem_slice(cert).unwrap()];
+        let key = PrivateKeyDer::from_pem_slice(key).unwrap();
         let provider = Arc::new(rustls::crypto::ring::default_provider());
         let config = rustls::ServerConfig::builder_with_provider(provider)
             .with_safe_default_protocol_versions()

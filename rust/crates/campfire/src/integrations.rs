@@ -13,6 +13,7 @@
 //! plans/rust-conversion.md, "HTTP clients: three distinct policies"). Oracles for the tests
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
+pub mod google;
 mod jobs;
 pub mod net;
 pub mod opengraph;
