@@ -8,8 +8,9 @@ s=(root/'rust/plans/ws13-deferred-tests.md').read_text()
 rows=re.findall(r'^\| `(test/[^`]+)` \| (\d+) \| (\d+) \| (\d+) \|$',s,re.M)
 assert len(rows)==33
 assert sum(int(row[1]) for row in rows)==548
-assert sum(int(row[2]) for row in rows)==147
-assert sum(int(row[3]) for row in rows)==401
+assert sum(int(row[2]) for row in rows)==184
+assert sum(int(row[3]) for row in rows)==364
+assert "| **Total** | **548** | **184** | **364** |" in s
 for name,total,passed,remaining in rows:
     assert int(total)==int(passed)+int(remaining)
     raw=(root/name).read_text()
@@ -19,4 +20,4 @@ for name,total,passed,remaining in rows:
     actual=re.findall(r'^- (?:\*\*Passed:\*\* )?(.*)$',section,re.M)
     assert sorted(titles)==sorted(actual),name
     assert section.count('- **Passed:** ')==int(passed),name
-print('Rails declaration catalogue: 548 titles retained; 147 passed; 401 partial/deferred; 33 files; source titles match')
+print('Rails declaration catalogue: 548 titles retained; 184 passed; 364 partial/deferred; 33 files; source titles match')

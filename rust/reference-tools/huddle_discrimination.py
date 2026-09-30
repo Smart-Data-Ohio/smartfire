@@ -56,6 +56,9 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("composed-stage-publish-hint-bypassed", ROOT / "rust/crates/views/src/rooms/navigation.rs", lambda s: replace_once(s,'.map(|s| s.viewer().role != "listener"),','.map(|_| true),'),"campfire","stage_page_composes_listener_permissions_and_sti_targets"),
+    ("composed-edit-github-section-bypassed", ROOT / "rust/crates/views/templates/rooms/calls/_edit.html", lambda s: replace_once(s,'{{ form.github_section(ctx)|safe }}','{{ "" }}'),"campfire","complete_voice_and_stage_form_pages_match_fourteen_rails_renders"),
+    ("stream-controller-id-header-bypassed", ROOT / "rust/crates/campfire/src/controllers/rooms/stage_streams.rs", lambda s: replace_once(s,'"X-Stream-Id"','"X-Broken-Stream-Id"'),"campfire","stream_controller_start_stop_and_silent_noop_deliver_exact_rails_fanout"),
     ("call-channel-update-policy-bypassed", K, lambda s: replace_once(s,"    ensure_can_administer(c, &room)?;",""),"campfire","call_channel_updates_deny_unprivileged_members_and_wrong_namespaces"),
     ("call-channel-sole-host-check-bypassed", K, lambda s: replace_once(s,"if room.stage() && has_remaining_ids {","if false && room.stage() && has_remaining_ids {"),"campfire","stage_member_edit_cannot_remove_the_sole_host_or_commit_the_rename"),
     ("call-channel-broadcast-bypassed", K, lambda s: replace_body(s,"async fn broadcast(","Ok(())"),"campfire","call_channel_create_and_member_revision_deliver_ordered_sidebar_and_header_frames"),

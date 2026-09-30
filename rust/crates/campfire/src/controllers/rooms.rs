@@ -248,3 +248,9 @@ mod tests;
 mod call_page_tests;
 
 mod call_navigation;
+
+#[cfg(test)]
+mod stream_controller_tests;
+
+#[cfg(test)]
+mod stage_page_tests;

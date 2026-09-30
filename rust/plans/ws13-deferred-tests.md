@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 147 declarations now have complete assertion coverage mapped below. The other 401 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 184 declarations now have complete assertion coverage mapped below. The other 364 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -14,7 +14,7 @@ The presence slice adds 50 exact pinned Rails participant renders (sidebar/heade
 
 The process task now runs invitations, stale streams and cleanups in Rails order with per-row commits and isolated failures. Stream create/end callbacks, explicit stopped events, last-host succession and quiet timeline delivery, role/mute grant revocation, and role/hand/moderation controllers are implemented. The stream/lifecycle corpus has 20 production Rails cases, moderation has 29 real requests, roles/hands has 34 real requests plus a real minute-bucket throttle probe, and Stage fragments have 400 byte-identical renders. Real socket tests prove committed changes, personal delivery, single rejoin behavior and silent rollback.
 
-Passed titles are backed jointly by those differential tests, the real HTTP/Cable tests in `call_lifecycle_tests.rs` and `huddle_effects_tests.rs`, and the existing WS8a `room_test.rs` and grant tests. Counts are original declarations, not vector counts. Whole per-viewer fan-out declarations, combinations not explicitly exercised (for example another administrator as moderation target), preload/query assertions and full page composition remain open even where the underlying method is implemented. Public huddles and aggregate presence now have 65 production Rails HTTP vectors; voice/stage CRUD has 47 request vectors, two deletion vectors and real ordered Cable delivery. Component goldens cover both form partials in new/edit states, both sidebar rows, three huddle panels and both new-page content blocks. Both edit templates are implemented, but their full composition (GitHub/inbound-email sections), request-wide new/edit page byte checks and room/sidebar insertion remain open. No WS13b model/job/service cases were newly ported in this continuation. The extra event venue dot is verified with Stage fragments. WS17 retains policy/transport; real LiveKit system tests retain LIVEKIT_SYSTEM_TESTS=1 with a real server as the reason.
+Passed titles are backed jointly by those differential tests, the real HTTP/Cable tests in `call_lifecycle_tests.rs` and `huddle_effects_tests.rs`, and the existing WS8a `room_test.rs` and grant tests. Counts are original declarations, not vector counts. Whole per-viewer fan-out declarations, combinations not explicitly exercised (for example another administrator as moderation target), preload/query assertions and full page composition remain open even where the underlying method is implemented. Public huddles and aggregate presence now have 65 production Rails HTTP vectors; voice/stage CRUD has 47 request vectors, two deletion vectors and real ordered Cable delivery. Component goldens cover both form partials in new/edit states, both sidebar rows, three huddle panels and both new-page content blocks. The complete header region now has 28 byte-identical Rails renders across five room types, configuration states and Stage viewers. Complete voice/Stage new/edit pages have 14 byte-identical parity-seed renders, including GitHub and inbound-email sections, with explicit shared chrome inputs. Whole room content and sidebar composition remain open. Runtime recent-search, Drive and notification-policy chrome adapters remain with their owners; the page goldens supply their plain Rails-rendered inputs and do not claim those integrations. The stream controller file now has 38/38 complete original declarations; Stage view requests have 15/16, with the sidebar live-dot declaration open. No WS13b model/job/service cases were newly ported in this continuation. The extra event venue dot is verified with Stage fragments. WS17 retains policy/transport; real LiveKit system tests retain LIVEKIT_SYSTEM_TESTS=1 with a real server as the reason.
 
 ## Rails declaration coverage by file
 
@@ -22,7 +22,7 @@ These are original declaration counts, not Rust test counts or individual vector
 
 | Rails file | Original | Assertions covered (passed) | Partial/deferred |
 | --- | ---: | ---: | ---: |
-| `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 16 | 22 |
+| `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 38 | 0 |
 | `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 23 | 13 |
 | `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
@@ -35,7 +35,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
 | `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
 | `test/controllers/rooms/voices_controller_test.rb` | 18 | 13 | 5 |
-| `test/controllers/rooms/stage_view_test.rb` | 16 | 0 | 16 |
+| `test/controllers/rooms/stage_view_test.rb` | 16 | 15 | 1 |
 | `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
 | `test/system/stage_test.rb` | 15 | 0 | 15 |
@@ -55,7 +55,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **147** | **401** |
+| **Total** | **548** | **184** | **364** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -203,67 +203,67 @@ Owner: WS13. Partial: 16/20 declarations passed; the other 4 remain WS13 work.
 
 ## test/controllers/rooms/stage/streams_controller_test.rb
 
-Owner: WS13. Partial: 16/38 declarations passed; the other 22 remain WS13 work.
+Owner: WS13. Complete: 38/38 declarations passed.
 
-- a host goes live, broadcasting the badge, dot, and panels
+- **Passed:** a host goes live, broadcasting the badge, dot, and panels
 - **Passed:** a speaker goes live
 - **Passed:** a turbo-stream start swaps the actor's own panel without navigating
-- a listener cannot go live
+- **Passed:** a listener cannot go live
 - **Passed:** a speaker cannot go live when the stage has no host
-- a speaker goes live again after the last host leaves and a successor is promoted
+- **Passed:** a speaker goes live again after the last host leaves and a successor is promoted
 - **Passed:** an administrator listener cannot go live
 - **Passed:** a server-muted speaker cannot go live
-- a server-muted host cannot go live
+- **Passed:** a server-muted host cannot go live
 - **Passed:** a host without a huddle grant cannot go live
-- a host whose grant was revoked cannot go live
-- a host with a quiet grant cannot go live
-- a host whose grant went quiet cannot go live
+- **Passed:** a host whose grant was revoked cannot go live
+- **Passed:** a host with a quiet grant cannot go live
+- **Passed:** a host whose grant went quiet cannot go live
 - **Passed:** an unknown quality is unprocessable
-- a missing quality is unprocessable
+- **Passed:** a missing quality is unprocessable
 - **Passed:** starting while another stream is live returns conflict naming the presenter
-- the presenter stops the stream
-- a speaker presenter stops their own stream
+- **Passed:** the presenter stops the stream
+- **Passed:** a speaker presenter stops their own stream
 - **Passed:** a host stops another member's stream
-- a host stop appends a stream-stopped event for the presenter
-- a presenter stop appends no stream-stopped event
-- an administrator member stops the stream without being a host
-- a listener cannot stop the stream
+- **Passed:** a host stop appends a stream-stopped event for the presenter
+- **Passed:** a presenter stop appends no stream-stopped event
+- **Passed:** an administrator member stops the stream without being a host
+- **Passed:** a listener cannot stop the stream
 - **Passed:** a speaker who is not the presenter cannot stop the stream
 - **Passed:** stopping with the live stream id ends that stream
 - **Passed:** stopping with a stale stream id ends nothing, even when another stream is live
-- stopping with an unknown stream id ends nothing
+- **Passed:** stopping with an unknown stream id ends nothing
 - **Passed:** the stop control sends its stream id
-- stopping with nothing live succeeds for hosts and stays silent
-- stopping with nothing live is forbidden for listeners
-- a turbo-stream stop swaps the actor's own panel without navigating
-- non-members get not found
-- an administrator who is not a member gets not found
-- streams do not exist outside stage rooms
+- **Passed:** stopping with nothing live succeeds for hosts and stays silent
+- **Passed:** stopping with nothing live is forbidden for listeners
+- **Passed:** a turbo-stream stop swaps the actor's own panel without navigating
+- **Passed:** non-members get not found
+- **Passed:** an administrator who is not a member gets not found
+- **Passed:** streams do not exist outside stage rooms
 - **Passed:** demoting the presenter to listener ends the stream in the same transaction
-- removing the presenter through the members edit ends the stream
+- **Passed:** removing the presenter through the members edit ends the stream
 - **Passed:** promoting a speaker to host keeps the grant and the live stream
 - **Passed:** demoting a host to speaker keeps the grant and the live stream
 
 ## test/controllers/rooms/stage_view_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 15/16 declarations passed; the other 1 remains open.
 
-- a listener's join control hints that publishing is unavailable
-- a host's join control hints that publishing is available
-- a speaker's join control hints that publishing is available
-- a voice channel's join control carries no publishing hint
-- the layout renders the persistent role-event target for signed-in users
-- a listener's stage panel renders no role forms
-- a host's stage panel renders role forms
-- a host sees no moderation controls on an administrator's row
-- a muted administrator sees an unmute control on their own row
-- an administrator sees moderation controls on every other row
-- the header Live badge renders only while live
+- **Passed:** a listener's join control hints that publishing is unavailable
+- **Passed:** a host's join control hints that publishing is available
+- **Passed:** a speaker's join control hints that publishing is available
+- **Passed:** a voice channel's join control carries no publishing hint
+- **Passed:** the layout renders the persistent role-event target for signed-in users
+- **Passed:** a listener's stage panel renders no role forms
+- **Passed:** a host's stage panel renders role forms
+- **Passed:** a host sees no moderation controls on an administrator's row
+- **Passed:** a muted administrator sees an unmute control on their own row
+- **Passed:** an administrator sees moderation controls on every other row
+- **Passed:** the header Live badge renders only while live
 - the sidebar live dot renders only while live
-- the Go live form renders for hosts and speakers
-- the Go live form renders for no listener and never while live
-- Stop stream renders for the presenter but not for listeners
-- Stop stream renders for hosts and the presenting speaker
+- **Passed:** the Go live form renders for hosts and speakers
+- **Passed:** the Go live form renders for no listener and never while live
+- **Passed:** Stop stream renders for the presenter but not for listeners
+- **Passed:** Stop stream renders for hosts and the presenting speaker
 
 ## test/controllers/rooms/stages_controller_test.rb
 
@@ -769,3 +769,9 @@ Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers
 - a participants 404 stops polling and clears the stack without retrying
 - the voice header fits narrow phones and caps the stack
 - the room page shares one participants request across its stacks
+
+## Current continuation evidence
+
+`stream_controller_tests.rs` closes the 22 previously open stream declarations with exact HTTP bodies, global stream-count guards, outsider/admin/type isolation, presenter and stale-id behavior, member-edit teardown and last-host succession. Its real Cable test checks one room badge and three per-user replacements, explicit presenter-stop silence, a moderator's single stopped event, and a barrier proving silent no-op stop without sleeping or changing timing thresholds. `stage_page_tests.rs` checks the 15 page declarations through the actual generic room endpoint. Domain/model/job/service files remain WS13b-owned.
+
+The 35 real LiveKit declarations remain individually inventoried above: 31 in `test/system/huddles_test.rb`, four in `test/system/stage_test.rb`. Their browser WebRTC/media/reconnect assertions cannot be expressed by recorded responses from the injected administrative LiveKit client. Recorded client/Twirp and gateway contracts remain covered; the other 71 stubbed browser declarations remain open, rather than being reclassified as LiveKit-dependent.
