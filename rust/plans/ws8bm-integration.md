@@ -63,3 +63,26 @@ thread-only messages stream and emits a single live region. Reads do not join th
 The committed differential compares this full view with a fixed-token Rails renderer,
 with the actual Rails schedule child supplied as the explicit feature input; the HTTP
 check verifies windows, headers and live CSRF validity separately. No response mask is used.
+
+## Standalone thread show and PR integration
+
+`GET /rooms/:room_id/threads/:id` routes to `channel_threads::show` and returns 200 for
+ordinary reachable threads (the latest 40 replies), using `layouts::Application` or
+`layouts::FrameLayout`. The pinned standalone Rails show has no composer or schedule
+child; those belong to `/content` and `Conversation`, as documented above. Full fixed-token
+template/layout goldens cover ordinary, empty, stale, closed, locked, deleted-starter and
+Turbo-frame cases. Live HTTP retains its real session tokens; its owned body and headers
+are checked separately. Chrome is an explicit owner input in full-layout goldens; current
+`Layout::load` still needs the owner's icons/Google/presence facts for full live-page parity.
+
+The clearly named WS15g call site is
+`controllers/channel_threads.rs::render_thread_pull_request_header`. Its output becomes
+`campfire_views::channel_threads::Show.pull_request_header`, directly after the thread header
+and before its starter, with Rails's surrounding whitespace. Main at the inspected baseline
+does not contain WS15g's provider. The call site is explicitly flagged and currently empty;
+after the lead's owner merge, resolve `github_pr_thread_pull_request(thread)` there and render
+WS15g's `campfire_views::github::thread_header(ctx, room_id, thread_id, card)` with the proper
+request context. Do not treat an empty PR slot as acceptance of a populated PR thread.
+
+Work and board HTML show routes return an authorized 501 pending WS12; their JSON read
+details retain the existing API. No work/board shell or control policy is implemented here.

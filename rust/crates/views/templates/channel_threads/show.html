@@ -5,7 +5,8 @@
     <p>{{ status }} · {{ count }} messages</p>
   </header>
 
-
+{% if !pull_request_header.0.is_empty() %}    {{ pull_request_header }}
+{% endif %}
 {% if let Some(parent) = parent %}    <article aria-label="Thread starter">{{ crate::messages::cached_message_item(ctx, parent) }}</article>
 {% endif %}
   <section aria-label="Thread messages">

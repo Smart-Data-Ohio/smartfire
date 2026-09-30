@@ -4,6 +4,17 @@ require "active_support/testing/time_helpers"
 include ActiveSupport::Testing::TimeHelpers
 travel_to Time.utc(2026, 3, 2, 16)
 Rails.application.env_config["action_dispatch.show_exceptions"] = :all
+class GoldenThreadPageController < ChannelThreadsController
+  def self.controller_name = "channel_threads"
+  def form_authenticity_token(form_options: {})
+    action, method = form_options.values_at(:action, :method)
+    action && method ? "#{method.to_s.downcase}:#{action}" : "GLOBAL"
+  end
+end
+page_env = { http_host: "campfire.test", https: false,
+  "HTTP_USER_AGENT" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "rack.session" => {}, "action_dispatch.content_security_policy" => Rails.application.config.content_security_policy,
+  "action_dispatch.content_security_policy_nonce_generator" => ->(_request) { "NONCE" } }
 viewer = User.find(127326141)
 creator = User.find(149087659)
 room = viewer.rooms.find(486777696)
@@ -41,9 +52,12 @@ capture = ->(name, path, template, frame = nil) do
   body = html ? ApplicationController.renderer.new(http_host: "campfire.test", https: false).render(
     template:, layout: false, assigns: browser.controller.view_assigns) : response.body
   raise "session value in page" if html && (body.include?("authenticity_token") || body.match?(/nonce="[^"]+/))
+  Current.user = viewer
+  full_body = html ? GoldenThreadPageController.renderer.new(page_env).render(template:,
+    layout: frame ? "turbo_rails/frame" : "application", assigns: browser.controller.view_assigns) : nil
   rows << { name:, path:, frame:, html:, status: response.status, cache_control: response.headers["Cache-Control"],
     content_type: response.headers["Content-Type"], body: response.successful? ? body : nil,
-    title: html ? response.body[/<title>.*?<\/title>/m] : nil,
+    title: html ? response.body[/<title>.*?<\/title>/m] : nil, full_body:,
     ids: browser.controller.view_assigns["threads"]&.map(&:id),
     message_ids: browser.controller.view_assigns["messages"]&.map(&:id) }
 end
@@ -59,12 +73,21 @@ capture.call("index_xml", "#{base}.xml", "channel_threads/index")
 capture.call("show_json", "#{base}/#{threads.first.id}.json", "channel_threads/show")
 capture.call("show_html", "#{base}/#{threads.first.id}", "channel_threads/show")
 capture.call("show_frame", "#{base}/#{threads.first.id}", "channel_threads/show", "thread-pane")
+capture.call("show_empty_html", "#{base}/#{threads[1].id}", "channel_threads/show")
+capture.call("show_stale_html", "#{base}/#{threads[2].id}", "channel_threads/show")
+capture.call("show_closed_html", "#{base}/#{threads[3].id}", "channel_threads/show")
+capture.call("show_locked_html", "#{base}/#{threads[4].id}", "channel_threads/show")
 capture.call("show_empty", "#{base}/#{threads[1].id}.json", "channel_threads/show")
 capture.call("show_locked", "#{base}/#{threads[4].id}.json", "channel_threads/show")
 capture.call("show_work", "#{base}/#{threads[5].id}.json", "channel_threads/show")
 capture.call("show_xml", "#{base}/#{threads.first.id}.xml", "channel_threads/show")
 parent.destroy!
 capture.call("show_deleted_parent", "#{base}/#{threads.first.id}.json", "channel_threads/show")
+capture.call("show_deleted_parent_html", "#{base}/#{threads.first.id}", "channel_threads/show")
 File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", parent_id: parent.id,
-  thread_ids: threads.map(&:id), message_ids: messages.map(&:id), work_event_id: event.id, rows:) + "\n")
+  thread_ids: threads.map(&:id), message_ids: messages.map(&:id), work_event_id: event.id, rows:,
+  brand_icon_names: Icons.client_icon_names,
+  viewer: {theme: viewer.theme, text_size: viewer.text_size, time_zone: viewer.time_zone,
+    time_zone_explicit: viewer.time_zone_explicit, tour_completed: viewer.tour_completed_at.present?,
+    voice_mode: viewer.voice_mode, push_to_talk_key: viewer.push_to_talk_key}) + "\n")
 puts "WS8bm thread-pages oracle: #{rows.size} actual Rails requests; state lists, standalone HTML/JSON, latest replies and deleted starter"

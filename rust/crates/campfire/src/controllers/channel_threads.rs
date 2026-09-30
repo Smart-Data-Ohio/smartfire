@@ -64,7 +64,7 @@ pub async fn index(c: &mut Ctx) -> Result {
 
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let (_, thread) = scope(c).await?;
+    let (room, thread) = scope(c).await?;
     let thread_id = thread.id;
     let records = c.app().db.read(move |conn| Message::last_page(conn, Timeline::Thread(thread_id))).await.map_err(db_error)?;
     if c.format()? == Some(&format::JSON) { c.no_store(); }
@@ -78,6 +78,10 @@ pub async fn show(c: &mut Ctx) -> Result {
                 "messages": records.iter().map(|message| messages::payload::thread_message(p, message, &viewer, &base)).collect::<campfire_db::Result<Vec<_>>>()?}))
         }).await?;
         return render_json(c, StatusCode::OK, &payload);
+    }
+    if room.board() || thread.work() {
+        // WS12 owns board posts, work links, owner controls and work history.
+        return Ok(c.head(StatusCode::NOT_IMPLEMENTED));
     }
     render_standalone(c, thread, records, StatusCode::OK).await
 }
@@ -108,14 +112,23 @@ pub async fn content(c: &mut Ctx) -> Result {
 
 async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {
     let name = thread.name.clone();
-    let (parent, items, count, status) = messages::present(c, move |p| {
+    let (parent, items, count, status, pull_request_header) = messages::present(c, move |p| {
         let parent = thread.parent_message_id.map(|id| Message::find(p.conn, id)).transpose()?.as_ref().map(|message| p.message_item(message)).transpose()?;
-        Ok((parent, p.messages(&records)?, thread.message_count(p.conn)?, thread.status(p.conn, Timestamp::from_jiff(p.now))?.name()))
+        Ok((parent, p.messages(&records)?, thread.message_count(p.conn)?, thread.status(p.conn, Timestamp::from_jiff(p.now))?.name(),
+            render_thread_pull_request_header(p, &thread)?))
     }).await?;
     // Work/board/PR sections are integration seams with WS12/WS15. The ordinary standalone
     // thread uses the same stable collection entry point as the room's message list.
     page::titled_content(c, response_status, &name, |ctx| campfire_views::channel_threads::Show { ctx,
-        name: &name, status, count, parent: parent.as_ref(), messages: &items }.render()).await
+        name: &name, status, count, pull_request_header: &pull_request_header, parent: parent.as_ref(), messages: &items }.render()).await
+}
+
+/// WS15g integration call site: resolve `github_pr_thread_pull_request(thread)` here, then
+/// lend its card to `campfire_views::github::thread_header(ctx, room_id, thread_id, card)`.
+/// Neither provider is on main at this branch's baseline. This is an explicit empty-fragment
+/// seam, not acceptance of populated PR headers; it does not block ordinary thread HTML.
+fn render_thread_pull_request_header(_p: &crate::controllers::presenters::Presenter<'_>, _thread: &ChannelThread) -> campfire_db::Result<campfire_views::helpers::Html> {
+    Ok(campfire_views::helpers::empty())
 }
 
 fn work_status_label(status: Option<&str>) -> Option<&'static str> {

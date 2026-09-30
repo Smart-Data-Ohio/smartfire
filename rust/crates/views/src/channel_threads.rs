@@ -30,6 +30,8 @@ pub struct Show<'a> {
     pub name: &'a str,
     pub status: &'a str,
     pub count: i64,
+    /// WS15g's `github::thread_header`, rendered before the starter as Rails does.
+    pub pull_request_header: &'a h::Html,
     pub parent: Option<&'a MessageItem>,
     pub messages: &'a [MessageItem],
 }
