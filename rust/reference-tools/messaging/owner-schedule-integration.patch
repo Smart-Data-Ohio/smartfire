@@ -66,3 +66,13 @@
          campfire_views::channel_threads::PendingTemplate{ctx,user}.render()?))
  }
  pub fn render(ctx:&ViewContext<'_>,show:&ShowView,composer:&Facts,frame:bool)->askama::Result<String> {
+--- a/rust/crates/campfire/src/controllers/messages.rs
++++ b/rust/crates/campfire/src/controllers/messages.rs
+@@ -1,6 +1,6 @@
+             let message = if let Some(mut thread) = thread {
+                     let message = thread.post_message(tx, creator_id, attributes)?;
+                     crate::messaging::process_message_attachment(tx, storage, &message)?;
+-                    return Ok((message, None));
++                    return Ok((PostingOutcome::Created(message), None));
+                 } else {
+                     let message = Message::create(tx, attributes)?;
