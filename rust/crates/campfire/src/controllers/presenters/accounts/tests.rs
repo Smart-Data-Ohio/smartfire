@@ -441,8 +441,13 @@ async fn manages_bots() {
     let edit = admin.get(&format!("/account/bots/{bender}/edit")).await;
     let key_action = format!("/account/bots/{bender}/key");
     edit.assert_button(&key_action, "put");
+    let bender_id: i64 = bender.parse().unwrap();
+    let old_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
     assert_redirect(&admin.form("put", &key_action, &[]).await, "http://campfire.test/account/bots");
-    assert!(!admin.get("/account/bots").await.text().contains(&test.label("bot_keys.bender")));
+    let new_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
+    assert_ne!(old_digest, new_digest);
+    // Rails shows the same placeholder for persisted digest-only keys before and after reset.
+    assert!(admin.get("/account/bots").await.text().contains(campfire_db::user::BOT_KEY_PLACEHOLDER));
 
     admin.get(&format!("/account/bots/{bender}/edit")).await.assert_button(&action, "delete");
     assert_redirect(&admin.form("delete", &action, &[]).await, "http://campfire.test/account/bots");

@@ -719,7 +719,9 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .tasks()
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let ws8_count = golden["tasks"].as_array().unwrap().len();
+    assert_eq!(serde_json::json!(&tasks[..ws8_count]), golden["tasks"]);
+    assert_eq!(&tasks[ws8_count..], &[serde_json::json!({"name":"stuck GitHub claims","seconds":30})]);
 }
 
 #[tokio::test]

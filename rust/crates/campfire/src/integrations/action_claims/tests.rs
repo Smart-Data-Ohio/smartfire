@@ -274,7 +274,7 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
         retention: std::time::Duration::from_secs(86400),
     });
     assert_eq!(
-        periodic.tick(booted.app.clone(), db.env().now()).await,
+        periodic.tick(booted.app.clone(), db.env().now()).await.into_iter().filter(|name| *name == "stuck GitHub claims").collect::<Vec<_>>(),
         ["stuck GitHub claims"]
     );
     assert_eq!(snapshot(db).await["metadata"]["status"], "failed");
@@ -287,7 +287,7 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
     );
     clock.advance(jiff::SignedDuration::from_secs(1));
     assert_eq!(
-        periodic.tick(booted.app.clone(), db.env().now()).await,
+        periodic.tick(booted.app.clone(), db.env().now()).await.into_iter().filter(|name| *name == "stuck GitHub claims").collect::<Vec<_>>(),
         ["stuck GitHub claims"]
     );
     assert_eq!(snapshot(db).await["audits"], 1);
