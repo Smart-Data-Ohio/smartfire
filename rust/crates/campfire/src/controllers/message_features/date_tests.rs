@@ -75,7 +75,16 @@ fn broader_calendar_inputs_match_actual_rails() {
     ))
     .unwrap();
     let mut mismatches = Vec::new();
-    for row in oracle["cases"].as_array().unwrap() {
+    let widths: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/date_compact_widths.json"
+    ))
+    .unwrap();
+    for row in oracle["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .chain(widths["cases"].as_array().unwrap())
+    {
         let zone = campfire_views::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
         let result = super::parse_time(
             row["input"].as_str().unwrap(),
@@ -97,6 +106,7 @@ fn broader_calendar_inputs_match_actual_rails() {
         }
     }
     assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    println!("WS8bm2 broader dates: 202/202 Rails coercion/compact-width cases match");
 }
 
 #[test]

@@ -126,19 +126,23 @@ pub(super) fn parse(text: &str, zone: &TimeZone, now: Timestamp) -> Result<Optio
             p.found = true;
         } else if re(r"(?i)\b[0-9]{4}-W[0-9]{2}-[0-9]\b").is_match(&date_text) {
             p.found = true;
-        } else if let Some(c) = re(r"(?i)\b(?P<digits>[0-9]{2,14})(?:T(?P<clock>[0-9]{6}))?(?P<zone>Z|[+-][0-9]{4})?\b").captures(&date_text) {
+        } else if let Some(c) = re(r"(?i)\b(?P<digits>[0-9]{2,14})(?:[T ](?P<clock>[0-9]{4}(?:[0-9]{2})?))?(?:\.(?P<fraction>[0-9]+))?(?P<zone>Z|[+-][0-9]{4})?\b").captures(&date_text) {
             let digits = &c["digits"];
             match digits.len() {
-                14 | 8 => {
+                14 | 12 | 10 | 8 => {
                     p.year = Some(number(&digits[..4])?);
                     p.month = Some(number(&digits[4..6])?);
                     p.day = Some(number(&digits[6..8])?);
-                    if digits.len() == 14 {
+                    if digits.len() > 8 {
                         p.hour = number(&digits[8..10])?;
-                        p.minute = number(&digits[10..12])?;
-                        p.second = number(&digits[12..])?;
+                        p.minute = if digits.len() > 10 { number(&digits[10..12])? } else { 0 };
+                        p.second = if digits.len() > 12 { number(&digits[12..])? } else { 0 };
                     }
                     p.found = true;
+                }
+                7 => {
+                    p.year = Some(number(&digits[..4])?);
+                    p.found = true; // yday is ignored by parts_to_time.
                 }
                 6 => {
                     p.year = Some(number(&digits[..2])?);
@@ -162,13 +166,18 @@ pub(super) fn parse(text: &str, zone: &TimeZone, now: Timestamp) -> Result<Optio
                 let digits = clock.as_str();
                 p.hour = number(&digits[..2])?;
                 p.minute = number(&digits[2..4])?;
-                p.second = number(&digits[4..])?;
+                p.second = if digits.len() > 4 { number(&digits[4..])? } else { 0 };
+            }
+            if let Some(fraction) = c.name("fraction") {
+                let mut digits = fraction.as_str().chars().take(6).collect::<String>();
+                while digits.len() < 6 { digits.push('0'); }
+                p.nanos = number::<i32>(&digits)? * 1000;
             }
             // Date's compact-number pass also consumes a trailing numeric zone
             // or Z, including a separated zone after a fourteen-digit clock.
             if p.offset.is_none() {
                 p.offset = c.name("zone").and_then(|z| parsed_offset(z.as_str()));
-                if p.offset.is_none() && (digits.len() == 14 || c.name("clock").is_some()) {
+                if p.offset.is_none() && (digits.len() > 8 || c.name("clock").is_some()) {
                     let rest = campfire_richtext::ruby::strip(&date_text[c.get(0).unwrap().end()..]);
                     if rest.starts_with(['+', '-']) || rest.starts_with(['Z', 'z']) {
                         p.offset = parsed_offset(rest);

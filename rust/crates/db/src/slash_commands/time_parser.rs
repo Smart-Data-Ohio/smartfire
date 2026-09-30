@@ -346,18 +346,37 @@ pub(super) fn offset_pattern() -> &'static Regex {
 pub(super) fn parsed_offset(text: &str) -> Option<i32> {
     let c = offset_pattern().captures(text)?;
     let token = c["offset"].to_ascii_lowercase();
-    if let Some(number) = re(r"[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,4}|[0-9]{1,2})").find(&token) {
+    if let Some(number) =
+        re(r"[+-](?:[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?|[0-9]{3,4}|[0-9]{1,2})").find(&token)
+    {
         let number = number.as_str();
         let fields = number[1..].split(':').collect::<Vec<_>>();
         let (hour, minute, second) = if fields.len() > 1 {
-            (fields[0].parse::<i32>().ok()?, fields[1].parse::<i32>().ok()?,
-                fields.get(2).map(|s| s.parse::<i32>()).transpose().ok()?.unwrap_or(0))
+            (
+                fields[0].parse::<i32>().ok()?,
+                fields[1].parse::<i32>().ok()?,
+                fields
+                    .get(2)
+                    .map(|s| s.parse::<i32>())
+                    .transpose()
+                    .ok()?
+                    .unwrap_or(0),
+            )
         } else {
             let digits = &number[1..];
-            if digits.len() <= 2 { (digits.parse::<i32>().ok()?, 0, 0) }
-            else { (digits[..digits.len()-2].parse::<i32>().ok()?, digits[digits.len()-2..].parse::<i32>().ok()?, 0) }
+            if digits.len() <= 2 {
+                (digits.parse::<i32>().ok()?, 0, 0)
+            } else {
+                (
+                    digits[..digits.len() - 2].parse::<i32>().ok()?,
+                    digits[digits.len() - 2..].parse::<i32>().ok()?,
+                    0,
+                )
+            }
         };
-        return Some((hour * 3600 + minute * 60 + second) * if number.starts_with('-') { -1 } else { 1 });
+        return Some(
+            (hour * 3600 + minute * 60 + second) * if number.starts_with('-') { -1 } else { 1 },
+        );
     }
     static OFFSETS: OnceLock<std::collections::HashMap<String, i32>> = OnceLock::new();
     OFFSETS
