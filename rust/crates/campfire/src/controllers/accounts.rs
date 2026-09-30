@@ -5,6 +5,8 @@ pub mod custom_styles;
 pub mod join_codes;
 pub mod logos;
 pub mod users;
+#[cfg(test)]
+mod mutation_tests;
 
 use campfire_db::Account;
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, format};
@@ -59,14 +61,18 @@ pub async fn update(c: &mut Ctx) -> Result {
         settings.iter().map(|(key, value)| (key.clone(), value.to_s().unwrap_or_default())).collect()
     });
     let logo = Assignment::from_params(&params, "logo")?.stage(c.app()).await?;
+    let audit = super::two_factor::audit_context(c)?;
 
     let pending = c
         .app()
         .db
         .write(move |tx| {
+            let previous = campfire_db::models::account_mutations::SettingsSnapshot::take(tx, &account)?;
             let settings: Option<Vec<(&str, &str)>> = settings.as_ref().map(|s| s.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect());
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
-            attachments::assign(tx, Record::account(account.id), "logo", logo)
+            let pending = attachments::assign(tx, Record::account(account.id), "logo", logo)?;
+            campfire_db::models::account_mutations::record_settings_changes(tx, &account, previous, &audit)?;
+            Ok(pending)
         })
         .await
         .map_err(Error::internal)?;

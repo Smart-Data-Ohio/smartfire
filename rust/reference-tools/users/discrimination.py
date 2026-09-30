@@ -11,6 +11,10 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("account-admin", "crates/campfire/src/controllers/accounts.rs", "concerns::ensure_can_administer(c)?;", "let _ = concerns::require_current_user(c)?;", "account_and_ban_mutations_authorize_before_writes_and_audits"),
+    ("account-sudo", "crates/campfire/src/controllers/accounts/join_codes.rs", "concerns::sudo::require_sudo_mode(c)?;", "// removed sudo for the discrimination check", "account_and_ban_mutations_authorize_before_writes_and_audits"),
+    ("account-role", "crates/db/src/models/account_mutations.rs", "user.role != before", "user.role == before", "account_mutations_and_audits_match_pinned_rails_http_vectors"),
+    ("ban-invalid", "crates/campfire/src/controllers/users/bans.rs", "Error::Status(StatusCode::UNPROCESSABLE_ENTITY)", 'Error::internal(anyhow::anyhow!("forced invalid record status"))', "account_mutations_and_audits_match_pinned_rails_http_vectors"),
     ("profile-settings", "crates/db/src/models/user/profile_settings.rs", "crate::slash_commands::user_settings::update(tx, user, Value::Object(attrs))", "let _ = attrs; Ok(())", "manual_profile_settings_match_pinned_rails_patch_vectors"),
     ("profile-fields", "crates/views/src/users/appearance.rs", "errors.is_empty()", "!errors.is_empty()", "appearance_partial_matches_all_pinned_rails_bytes"),
     ("people-auth", "crates/campfire/src/controllers/users/cards.rs", "Before::default()", "Before::default().allow_unauthenticated_access()", "cards_require_sign_in_and_unknown_people_are_not_found"),

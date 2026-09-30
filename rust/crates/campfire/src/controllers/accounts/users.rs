@@ -4,7 +4,7 @@
 pub mod two_factor_resets;
 
 use askama::Template;
-use campfire_db::{Role, User, UserChanges};
+use campfire_db::{Role, User};
 use campfire_kit::{Ctx, Error, Result, format};
 use campfire_views::accounts;
 
@@ -42,9 +42,10 @@ pub async fn update(c: &mut Ctx) -> Result {
         Some("administrator") => Role::Administrator,
         _ => Role::Member,
     };
+    let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
-        .write(move |tx| user.update(tx, UserChanges { role: Some(role), ..UserChanges::default() }))
+        .write(move |tx| campfire_db::models::account_mutations::change_role(tx, &mut user, role, &audit))
         .await
         .map_err(Error::internal)?;
     redirect_to_edit_account(c)
@@ -56,7 +57,8 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::ensure_can_administer(c)?;
     let mut user = set_user(c).await?;
     concerns::sudo::require_sudo_mode(c)?;
-    c.app().db.write(move |tx| user.deactivate(tx)).await.map_err(Error::internal)?;
+    let audit = crate::controllers::two_factor::audit_context(c)?;
+    c.app().db.write(move |tx| campfire_db::models::account_mutations::deactivate(tx, &mut user, &audit)).await.map_err(Error::internal)?;
     redirect_to_edit_account(c)
 }
 

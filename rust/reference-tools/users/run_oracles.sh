@@ -19,8 +19,9 @@ run preferences default vectors/users_preferences.json preferences
 run people default vectors/users_people.json people
 run profiles default vectors/users_profile_settings.json profiles
 run appearance default vectors/users_appearance.json appearance
+run accounts default vectors/users_account_mutations.json accounts
 run pwa default vectors/users_pwa_default.json pwa-default
 run pwa first_run vectors/users_pwa_first_run.json pwa-first-run
 run zones first_run crates/db/src/slash_commands/rails_zone_identifiers.json zones
 run zones first_run crates/db/src/slash_commands/rails_named_zones.json named-zones named
-echo 'WS8br2 oracle verification: all 10 fresh files match byte for byte; no masks or normalization'
+echo 'WS8br2 oracle verification: all 11 fresh files match byte for byte; no masks or normalization'

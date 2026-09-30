@@ -24,10 +24,11 @@ pub async fn update(c: &mut Ctx) -> Result {
     let mut account = super::current_account(c).await?;
     concerns::sudo::require_sudo_mode(c)?;
     let params = c.params.require("account")?.permit(&permit_keys(&["custom_styles"]));
-    let custom_styles = params.contains_key("custom_styles").then(|| params.get("custom_styles").and_then(Param::to_s));
+    let custom_styles = params.contains_key("custom_styles").then(|| params.get("custom_styles").filter(|p| !p.is_null()).and_then(Param::to_s));
+    let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
-        .write(move |tx| account.update(tx, None, custom_styles.as_ref().map(|styles| styles.as_deref()), None))
+        .write(move |tx| campfire_db::models::account_mutations::change_custom_styles(tx, &mut account, custom_styles.as_ref().map(|styles| styles.as_deref()), &audit))
         .await
         .map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account_custom_styles());

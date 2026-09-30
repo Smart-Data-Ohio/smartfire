@@ -1,6 +1,7 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod account_mutations;
 pub mod auth_audit;
 pub mod audit_log;
 pub mod activity_item;
