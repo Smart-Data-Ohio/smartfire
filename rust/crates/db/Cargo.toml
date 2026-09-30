@@ -6,6 +6,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+campfire_richtext.workspace = true
 rusqlite.workspace = true
 jiff.workspace = true
 serde.workspace = true

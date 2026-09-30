@@ -135,6 +135,7 @@ check("sent schedule") do
 end
 pending = ScheduledMessage.find_by!(markdown_source: "Pending hello")
 check("pending schedule") { pending.pending? && pending.sendable? && ScheduledMessage.owned_by(david).include?(pending) }
+check("quote references") { Message.find_by!(client_message_id: "rust-quote").referenced_messages.to_a == [ pinned ] }
 dropped = ScheduledMessage.find_by!(markdown_source: "Dropped hello")
 check("dropped schedule") do
   dropped.dropped? && dropped.drop_reason == "its thread was deleted" &&

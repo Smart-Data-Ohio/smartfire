@@ -549,6 +549,8 @@ fn export_database_for_rails() {
         let mut dropped = crate::ScheduledMessage::create(tx, crate::NewScheduledMessage { markdown_source: "Dropped hello".into(), ..attrs })?;
         dropped.drop(tx, Some("its thread was deleted"), now)?;
         assert!(pending.pending());
+        Message::create(tx, crate::NewMessage { room_id:id("designers"),creator_id:id("david"),client_message_id:Some("rust-quote".into()),
+            body:Some(format!("<a href='/rooms/999/@{}'>quoted</a>", first.id)),..Default::default() })?;
         Ok(())
     })
     .unwrap();

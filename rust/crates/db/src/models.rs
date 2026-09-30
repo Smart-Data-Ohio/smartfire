@@ -11,6 +11,7 @@ pub mod forwarder;
 pub mod membership;
 pub mod keyword_alert;
 pub mod message_pin;
+pub mod message_reference;
 pub mod message;
 pub mod poll;
 pub mod push_subscription;

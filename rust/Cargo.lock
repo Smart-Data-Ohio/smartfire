@@ -421,6 +421,7 @@ dependencies = [
  "base64 0.22.1",
  "bcrypt",
  "campfire_db",
+ "campfire_richtext",
  "crc32fast",
  "hex",
  "jiff",

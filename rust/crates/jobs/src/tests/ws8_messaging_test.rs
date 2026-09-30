@@ -218,3 +218,56 @@ fn scheduled_thread_post_rolls_back_claim_and_history_with_a_failed_enqueue() {
         serde_json::json!({"thread_id": thread, "message_id": row.sent_message_id.unwrap()})
     );
 }
+
+#[test]
+fn source_edit_rolls_back_with_a_failed_quote_refresh_enqueue() {
+    let (h, user, room, _) = messaging_harness();
+    let source =
+        h.db.write_blocking(move |tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: room,
+                    creator_id: user,
+                    body: Some("original source".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .unwrap()
+        .id;
+    h.db.write_blocking(|tx| {
+        tx.conn()
+            .execute_cached("DELETE FROM background_jobs", [])?;
+        Ok(())
+    })
+    .unwrap();
+    reject_jobs(&h);
+    let edit = move |tx: &mut Tx<'_>| {
+        let mut message = Message::find(tx.conn(), source)?;
+        message.edit(
+            tx,
+            campfire_db::MessageChanges {
+                body: Some("changed source".into()),
+                ..Default::default()
+            },
+        )
+    };
+    assert!(h.db.write_blocking(edit).is_err());
+    assert_eq!(
+        h.db.read_blocking(|conn| Message::find(conn, source)?.body_html(conn))
+            .unwrap()
+            .as_deref(),
+        Some("original source")
+    );
+    assert!(h.jobs().is_empty());
+    restore_jobs(&h);
+    h.db.write_blocking(edit).unwrap();
+    let jobs = h.jobs();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].class, "Message::QuoteCardsRefreshJob");
+    assert_eq!(
+        jobs[0].arguments,
+        serde_json::json!({"source_message_id":source})
+    );
+}

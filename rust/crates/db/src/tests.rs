@@ -11,6 +11,7 @@ mod membership_test;
 mod keyword_alert_test;
 mod message_edit_test;
 mod message_pin_test;
+mod message_reference_test;
 mod message_test;
 mod poll_test;
 mod push_test;

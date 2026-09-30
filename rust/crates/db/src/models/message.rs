@@ -484,6 +484,7 @@ impl Message {
         if !self.streaming {
             self.create_in_index(tx)?;
             self.receive_in_conversation(tx)?;
+            crate::models::message_reference::sync(tx, self)?;
         }
         if self.thread_id.is_some() {
             // `close_stale_sibling_threads`: with no scheduled sweep, thread writes persist the
@@ -715,6 +716,7 @@ impl Message {
         };
         let current_body = self.body_html(conn)?;
         let body = body.filter(|body| current_body.as_deref() != Some(body.as_str()));
+        let references_changed = !self.streaming && (markdown_source != self.markdown_source || body.is_some());
         let current_drive_ids = drive_file_ids(conn, self.id)?;
         let drive_file_ids = changes.drive_file_ids.clone().unwrap_or_else(|| current_drive_ids.clone());
         let forward_note = changes.forward_note.clone().unwrap_or_else(|| self.forward_note.clone());
@@ -782,6 +784,9 @@ impl Message {
         }
         Room::touch(tx, self.room_id)?;
         self.reload(tx.conn())?;
+        if references_changed {
+            tx.emit_after_commit(Event::job(&crate::models::message_reference::QuoteCardsRefreshJob { source_message_id: self.id }));
+        }
         let id = self.id;
         tx.after_commit(move |tx| {
             // Destroyed later in the same transaction: only its destroy callbacks run.
@@ -789,7 +794,9 @@ impl Message {
             if message.streaming {
                 return Ok(());
             }
-            message.update_in_index(tx)
+            message.update_in_index(tx)?;
+            if references_changed { crate::models::message_reference::sync(tx, &message)?; }
+            Ok(())
         });
         Ok(())
     }
@@ -870,6 +877,7 @@ impl Message {
     }
 
     fn destroy_inner(&self, tx: &mut Tx<'_>, with_conversation: bool) -> Result<()> {
+        let quoting_ids = crate::models::message_reference::incoming_ids(tx.conn(), self.id)?;
         let now = tx.now();
         tx.conn().execute_cached(
             r#"UPDATE "messages" SET "reply_to_message_id" = NULL, "reply_target_deleted_at" = ?, "updated_at" = ? WHERE "messages"."reply_to_message_id" = ?"#,
@@ -928,6 +936,7 @@ impl Message {
         let id = self.id;
         tx.after_commit(move |tx| {
             remove_from_index(tx, id)?;
+            crate::models::message_reference::removed_source(tx, quoting_ids)?;
             ChannelThread::broadcast_thread_indicators(tx, &indicator_threads)
         });
         Ok(())
