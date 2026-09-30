@@ -49,7 +49,7 @@ impl Layout {
         let secrets = app.secrets.clone();
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
-        let (account, has_logo, preferences) = app
+        let (account, has_logo, preferences, recent_searches) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
@@ -61,7 +61,12 @@ impl Layout {
                     Some(user_id) => user_preferences(conn, user_id)?,
                     None => UserPreferences::default(),
                 };
-                Ok((account, has_logo, preferences))
+                // WS8bm2 chrome seam: all signed-in pages share ten recent searches.
+                let recent_searches = match user_id {
+                    Some(id) => campfire_db::Search::recent_for_user(conn,id)?.into_iter().map(|s|campfire_views::layouts::RecentSearch{id:s.id,query:s.query}).collect(),
+                    None => Vec::new(),
+                };
+                Ok((account, has_logo, preferences, recent_searches))
             })
             .await
             .map_err(Error::internal)?;
@@ -74,8 +79,8 @@ impl Layout {
             brand_icon_names: Vec::new(),
             google_picker: None,
             huddle_configured: false,
-            global_search_query: None,
-            recent_searches: Vec::new(),
+            global_search_query: if c.request.path().starts_with("/searches") { crate::controllers::searches::display_query(c) } else { None },
+            recent_searches,
         };
         Ok(Self {
             current_user,

@@ -7,6 +7,9 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 FILES = [
+    "app/controllers/searches_controller.rb", "app/models/search_query.rb", "app/models/search.rb", "app/helpers/searches_helper.rb",
+    "app/views/searches/index.html.erb", "app/views/searches/index.turbo_stream.erb", "app/views/searches/clear.turbo_stream.erb",
+    "app/views/searches/_filters.html.erb", "app/views/searches/_sections.html.erb", "app/views/searches/_load_older.html.erb", "app/views/searches/_page_recents.html.erb", "app/views/searches/_dropdown_recents.html.erb",
     "app/controllers/scheduled_messages_controller.rb", "app/models/scheduled_message.rb", "app/models/scheduled_message/dispatcher.rb",
     "app/views/scheduled_messages/index.html.erb", "app/views/scheduled_messages/_item.html.erb", "app/views/scheduled_messages/_past_item.html.erb", "app/views/scheduled_messages/_composer_button.html.erb",
     "app/controllers/rooms/polls_controller.rb", "app/controllers/messages/pins_controller.rb",
