@@ -3,7 +3,7 @@
 //! Set `CAMPFIRE_STORAGE_VECTORS=/path/to/storage.json` to check against another run (e.g. one
 //! generated on a host whose libvips/ffmpeg match the local ones). Processed media is compared
 //! byte for byte only when the local libvips/ffmpeg versions match the ones that produced the
-//! vectors; otherwise the mismatch is reported and the byte checks are skipped.
+//! vectors; the byte pipeline is explicitly ignored unless run in that pinned environment.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -226,8 +226,6 @@ CREATE UNIQUE INDEX index_active_storage_variant_records_uniqueness ON active_st
 "#;
 
 struct Comparison {
-    compare_images: bool,
-    compare_video: bool,
     mismatches: Vec<String>,
     identical: Vec<String>,
 }
@@ -236,25 +234,17 @@ impl Comparison {
     fn new(versions: &J) -> Self {
         let local_vips = campfire_storage::vips::version();
         let local_ffmpeg = ffmpeg_version();
-        let compare_images = versions["libvips"] == local_vips.as_str();
-        let compare_video = compare_images && versions["ffmpeg"] == local_ffmpeg.as_str();
-        if !compare_images || !compare_video {
-            eprintln!(
-                "skipping byte comparisons that depend on versions: vectors have libvips {} / {}, local libvips {local_vips} / {local_ffmpeg}",
-                versions["libvips"], versions["ffmpeg"]
-            );
-        }
-        Self { compare_images, compare_video, mismatches: vec![], identical: vec![] }
+        assert_eq!(versions["libvips"], local_vips.as_str(), "byte parity needs the pinned libvips");
+        assert_eq!(versions["ffmpeg"], local_ffmpeg.as_str(), "byte parity needs the pinned ffmpeg");
+        Self { mismatches: vec![], identical: vec![] }
     }
 
-    /// Row fields that don't depend on processing output always match; checksum, size and
-    /// dimensions of processed media only when the versions match.
-    fn blob(&mut self, label: &str, actual: &Blob, expected: &J, processed: bool, video: bool) {
+    /// Every row, metadata and byte assertion runs in the pinned processing environment.
+    fn blob(&mut self, label: &str, actual: &Blob, expected: &J, _processed: bool, _video: bool) {
         assert_eq!(actual.filename.raw(), expected["filename"], "{label} filename");
         assert_eq!(actual.content_type.as_deref(), expected["content_type"].as_str(), "{label} content_type");
         assert_eq!(actual.service_name, expected["service_name"], "{label} service_name");
-        let compare = !processed || if video { self.compare_video } else { self.compare_images };
-        if compare {
+        {
             assert_eq!(actual.metadata.encode(), expected["metadata"].as_str().unwrap(), "{label} metadata");
             if actual.checksum.as_deref() == expected["checksum"].as_str() && actual.byte_size == expected["byte_size"].as_i64().unwrap() {
                 self.identical.push(label.to_string());
@@ -274,6 +264,7 @@ fn ffmpeg_version() -> String {
 }
 
 #[test]
+#[ignore = "requires pinned libvips 8.16.1 and Debian ffmpeg 7.1.5-0+deb13u1 for Rails storage byte parity"]
 fn pipeline_matches_the_reference() {
     let vectors = vectors();
     let files = vectors_path().parent().unwrap().join("storage");
