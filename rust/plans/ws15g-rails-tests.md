@@ -1,15 +1,14 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 356 mapped to Rust assertions; 70 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 362 mapped to Rust assertions; 64 explicitly deferred.
 
-These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; the GitHub profile/bot sections are wired, with exact seed fragment bytes and real HTTP callers; manual profile login-edit policy remains deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Room-card integration is 14/16 covered through actual room requests and pinned full card-container bytes; constant-query preload and the open-room join page remain deferred. Other room-page/controller/system parity and helper cache cases remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; the GitHub profile/bot sections are wired, with exact seed fragment bytes and real HTTP callers; manual profile login-edit policy remains deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Room-card integration is 14/16 covered through actual room requests and pinned full card-container bytes; constant-query preload and the open-room join page remain deferred. Execution-audit cases are 6/6 mapped to regenerated Rails execution/sweep vectors, including audit outages and retry dedupe. Other room-page/controller/system parity and helper cache cases remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 | Rails file | Cases passing grouped assertions | Deferred |
 |---|---:|---:|
 | `test/helpers/github_pull_requests_helper_test.rb` | 3/20 | 17 |
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
 | `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
-| `test/jobs/audit_log_github_execution_test.rb` | 0/6 | 6 |
 | `test/controllers/github/connections_controller_test.rb` | 9/13 | 4 |
 | `test/controllers/github/webhooks_controller_test.rb` | 18/21 | 3 |
 | `test/jobs/github/deliver_subscription_event_job_test.rb` | 34/37 | 3 |
@@ -29,6 +28,7 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | `test/controllers/github/app_connections_controller_test.rb` | 13/13 | 0 |
 | `test/controllers/github/pull_request_reviews_controller_test.rb` | 9/9 | 0 |
 | `test/controllers/rooms/github_subscriptions_controller_test.rb` | 17/17 | 0 |
+| `test/jobs/audit_log_github_execution_test.rb` | 6/6 | 0 |
 | `test/models/github/agent_pull_request_action_test.rb` | 11/11 | 0 |
 | `test/models/github/app_test.rb` | 11/11 | 0 |
 | `test/models/github/notification_test.rb` | 3/3 | 0 |
@@ -333,12 +333,12 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| a completed GitHub action is recorded with the decider as actor | Deferred; WS15g continuation | — |
-| a refused execution is recorded as failed without a GitHub request | Deferred; WS15g continuation | — |
-| a retried job records no second row | Deferred; WS15g continuation | — |
-| a failing audit write still enqueues the outcome webhook | Deferred; WS15g continuation | — |
-| a failing sweep audit write still enqueues the outcome webhook | Deferred; WS15g continuation | — |
-| a stuck claim recovered by the sweep is recorded as failed | Deferred; WS15g continuation | — |
+| a completed GitHub action is recorded with the decider as actor | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| a refused execution is recorded as failed without a GitHub request | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| a retried job records no second row | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| a failing audit write still enqueues the outcome webhook | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
+| a failing sweep audit write still enqueues the outcome webhook | Mapped to grouped Rust assertions; WS15g | `github_claim_audit_failure_does_not_skip_webhook_and_queue_failure_rolls_back` |
+| a stuck claim recovered by the sweep is recorded as failed | Mapped to grouped Rust assertions; WS15g | `github_claim_persisted_outcomes_and_audits_match_pinned_rails` |
 
 ## `test/jobs/github/deliver_subscription_event_job_test.rb` (37 tests)
 
