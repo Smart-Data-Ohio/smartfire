@@ -365,7 +365,7 @@ pub fn post_service(
     Ok(PostResult::Posted(Box::new(message)))
 }
 
-pub fn broadcast_create(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
+pub fn broadcast_stream_start(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     use crate::broadcasts::{Broadcast, Partial, conversation_messages, dom_id, room_dom_id};
     let room = crate::Room::find(tx.conn(), message.room_id)?;
     let target = message.thread_id.map_or_else(
@@ -379,6 +379,11 @@ pub fn broadcast_create(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
             message_id: message.id,
         },
     )));
+    Ok(())
+}
+
+pub fn broadcast_create(tx:&mut Tx<'_>,message:&Message)->Result<()> {
+    broadcast_stream_start(tx,message)?;
     if message.thread_id.is_none() && !message.system_note {
         broadcast_unread_room(tx, message)?;
     }

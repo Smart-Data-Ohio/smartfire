@@ -10,6 +10,7 @@ pub mod agent_service;
 pub mod agent_context;
 pub mod agent_direct_messages;
 pub mod agent_lifecycle;
+pub mod agent_streaming;
 pub mod agent_slash_command;
 pub mod agent_step;
 pub mod agent_working_presence;

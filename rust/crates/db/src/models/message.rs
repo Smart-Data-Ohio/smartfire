@@ -1137,6 +1137,27 @@ impl Message {
         Ok(claimed)
     }
 
+    /// Normal finalization runs the deferred WS8/WS11 callbacks exactly once.
+    /// WS12's activity recorder and WS14/15's external reference syncs attach here
+    /// when their domains merge, as they do in the ordinary message create chain.
+    pub fn finalize_stream(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        let agent_id:Option<i64>=query_one(tx.conn(),"SELECT id FROM agents WHERE user_id=?",[self.creator_id],|r|r.get(0))?;
+        let active=agent_id.map(|id|crate::Agent::find(tx.conn(),id)).transpose()?.flatten().map(|a|a.active(tx.conn())).transpose()?.unwrap_or(false);
+        if !active {return self.finalize_stream_quietly(tx);}
+        if !self.claim_stream_finalized_without_indicator(tx)? {return Ok(false);}
+        self.create_in_index(tx)?;
+        self.receive_in_conversation(tx)?;
+        self.push_later_in_conversation(tx);
+        crate::models::agent_delivery::enqueue_for_message(tx,self)?;
+        crate::models::message_reference::sync(tx,self)?;
+        crate::models::bot_webhook_fanout::deliver(tx,self)?;
+        if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
+        if let Some(mut agent)=crate::Agent::find(tx.conn(),agent_id.expect("active agent"))? {agent.clear_working_presence(tx)?;}
+        if self.thread_reply() && let Some(thread_id)=self.thread_id {tx.after_commit(move |tx|ChannelThread::broadcast_thread_indicators(tx,&[thread_id]));}
+        crate::models::agent_streaming::broadcast_final(tx,self)?;
+        Ok(true)
+    }
+
     /// Quiet finalize is used by suspension even in locked threads. It claims once,
     /// clears presence, updates the reply count and replaces the draft without fanout.
     pub fn finalize_stream_quietly(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
