@@ -79,8 +79,9 @@ impl IconResolver for IconCatalog {
     }
 }
 impl IconCatalog {
-    /// Room validation already applied Ruby's ASCII strip/downcase. Resolve that exact
-    /// storage key without the Unicode trimming used by the Markdown entry point.
+    /// WS8br model-validation seam: Room has already applied Ruby's ASCII String#strip
+    /// and downcase. Resolve that exact storage key without Unicode-trimming it again.
+    /// The existing markdown entry point retains its behavior and all owner internals.
     pub fn find_normalized(&self, key: &str) -> Option<Icon> {
         self.brands
             .get(key)
