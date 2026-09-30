@@ -549,6 +549,11 @@ fn export_database_for_rails() {
         let mut dropped = crate::ScheduledMessage::create(tx, crate::NewScheduledMessage { markdown_source: "Dropped hello".into(), ..attrs })?;
         dropped.drop(tx, Some("its thread was deleted"), now)?;
         assert!(pending.pending());
+        crate::models::audit_log::AuditLog::record(tx, crate::models::audit_log::NewAuditLog {
+            action: "room.membership.change".into(), actor: Some(crate::models::audit_log::Actor::from(&crate::User::find(tx.conn(),id("david"))?)),
+            target: Some(crate::models::audit_log::Target::from(&crate::Room::find(tx.conn(),id("designers"))?)),
+            changes: Some(serde_json::json!({"members": {"before": [], "after": [id("david")]}, "token": "test secret"})), ..Default::default()
+        }, &crate::models::audit_log::Context::default())?;
         let mut group = Room::create_for(tx, RoomType::Direct, None, id("david"), &[id("david"),id("jason"),id("kevin")])?;
         group.rename_direct(tx, "Rust Group", id("david"))?;
         group.add_direct_members(tx, &[id("jz")], id("david"))?;

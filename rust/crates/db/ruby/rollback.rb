@@ -135,6 +135,11 @@ check("sent schedule") do
 end
 pending = ScheduledMessage.find_by!(markdown_source: "Pending hello")
 check("pending schedule") { pending.pending? && pending.sendable? && ScheduledMessage.owned_by(david).include?(pending) }
+check("audit snapshots and filtering") do
+  entry = AuditLog.find_by!(action: "room.membership.change")
+  entry.actor_label == "David <david@37signals.com>" && entry.target_type == "Room" &&
+    entry.target_label == "Designers" && entry.details["token"] == "[FILTERED]" && entry.readonly?
+end
 group = Rooms::Direct.find_by!(name: "Rust Group")
 check("group mutations") do
   group.users.pluck(:name).sort == %w[ David JZ Jason ].sort &&
