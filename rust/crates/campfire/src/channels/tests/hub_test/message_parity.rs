@@ -19,7 +19,7 @@ async fn modern_reaction_replacements_match_rails_bytes_through_ws7() {
     let mut checked = 0;
     for row in boosts_tests::oracle()["rows"].as_array().unwrap() {
         if row["name"] == "duplicate_toggle" {boosts_tests::duplicates(&hub.app,id).await;}
-        let response = hub.app.david().write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(), row["path"].as_str().unwrap())
+        let response = hub.app.sign_in(row["user_id"].as_i64().unwrap()).await.write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(), row["path"].as_str().unwrap())
             .header("content-type", "application/json").header("accept", "application/json").body(row["input"].to_string())).await;
         assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{}", response.text());
         for frame in row["frames"].as_array().unwrap() {
@@ -33,7 +33,7 @@ async fn modern_reaction_replacements_match_rails_bytes_through_ws7() {
         }
         client.assert_silent().await;
     }
-    assert_eq!(checked, 20);
+    assert_eq!(checked, 44);
 }
 
 #[tokio::test]

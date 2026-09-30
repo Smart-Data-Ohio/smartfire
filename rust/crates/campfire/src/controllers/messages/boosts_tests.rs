@@ -44,7 +44,7 @@ async fn modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows() 
     let id = fixture(&app).await;
     for row in oracle()["rows"].as_array().unwrap() {
         if row["name"] == "duplicate_toggle" {duplicates(&app,id).await;}
-        let response = app.david().write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),row["path"].as_str().unwrap())
+        let response = app.sign_in(row["user_id"].as_i64().unwrap()).await.write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),row["path"].as_str().unwrap())
             .header("content-type","application/json").header("accept","application/json").body(row["input"].to_string())).await;
         let name = row["name"].as_str().unwrap();
         assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{name}: {}",response.text());
