@@ -71,3 +71,5 @@ pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
 
 pub mod google_calendar;
+
+pub mod google_account;
