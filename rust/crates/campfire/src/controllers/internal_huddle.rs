@@ -206,9 +206,8 @@ fn parse_time(raw: &str, now: jiff::Timestamp) -> Option<Timestamp> {
         LazyLock::new(|| regex::Regex::new(r"(-?\d{4,})-(\d{1,2})-(\d{1,2})").unwrap());
     static TIME: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?").unwrap());
-    static OFFSET: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(r"^\s*([+-])(\d{2})(?::?(\d{2}))?(?::?(\d{2}))?").unwrap()
-    });
+    static OFFSET: LazyLock<regex::Regex> =
+        LazyLock::new(|| regex::Regex::new(r"^\s*([+-])([0-9]+(?::[0-9]+){0,2})").unwrap());
     let date = DATE.captures(raw);
     let time = TIME.captures(raw);
     if date.is_none() && time.is_none() {
@@ -243,22 +242,44 @@ fn parse_time(raw: &str, now: jiff::Timestamp) -> Option<Timestamp> {
     {
         return None;
     }
-    // Time.zone.parse honors both compact and colon-separated numeric offsets.
-    // Validate before normalization: Time.new rejects +2500 and 24:01, but
-    // accepts exactly 24:00 and normalizes leap seconds rather than clamping.
+    // Date._parse normalizes compact offsets, but ignores colon offsets with
+    // invalid minutes/seconds. Time.new then rejects a total offset >= one day.
     let offset = match time
         .as_ref()
         .and_then(|t| OFFSET.captures(&raw[t.get(0).unwrap().end()..]))
     {
         Some(zone) => {
-            let hour = parse(&zone[2])?;
-            let minute = zone.get(3).map_or(Some(0), |m| parse(m.as_str()))?;
-            let second = zone.get(4).map_or(Some(0), |s| parse(s.as_str()))?;
-            if hour > 23 || minute > 59 || second > 59 {
-                return None;
+            let digits = &zone[2];
+            let (hour, minute, second, colon) = if digits.contains(':') {
+                let mut parts = digits.split(':');
+                (
+                    parse(parts.next()?)?,
+                    parse(parts.next()?)?,
+                    parts.next().map_or(Some(0), parse)?,
+                    true,
+                )
+            } else {
+                let n = digits.len();
+                match n {
+                    1 | 2 => (parse(digits)?, 0, 0, false),
+                    3 | 4 => (parse(&digits[..n - 2])?, parse(&digits[n - 2..])?, 0, false),
+                    _ => (
+                        parse(&digits[..n - 4])?,
+                        parse(&digits[n - 4..n - 2])?,
+                        parse(&digits[n - 2..])?,
+                        false,
+                    ),
+                }
+            };
+            if colon && (minute > 59 || second > 59) {
+                0
+            } else {
+                let seconds = hour.checked_mul(3600)?.checked_add(minute * 60 + second)?;
+                if seconds >= 86400 {
+                    return None;
+                }
+                if &zone[1] == "-" { -seconds } else { seconds }
             }
-            let sign = if &zone[1] == "-" { -1 } else { 1 };
-            sign * (hour * 3600 + minute * 60 + second)
         }
         None => 0,
     };

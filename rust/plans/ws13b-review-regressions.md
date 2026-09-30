@@ -17,3 +17,5 @@ test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 869 filtered out
 - The offset parser returned `17:00:00Z` against Rails' `12:00:00Z`; the HTTP request cleared a `12:00:01Z` rejoin. `24:01:00` normalized to the following day instead of being rejected.
 
 The independent probe calls actual Rails issuance, lifecycle callbacks, and the private gateway parser. Rails rings synchronously; it has no deferred ring job. The Rust ordering regression therefore checks that its additional asynchronous step cannot emit a started frame after Rails' ended/removal sequence. Actual Rails job-enqueue notifications establish that no ring job is queued.
+
+Additional pinned probes retain Date._parse's actual zone/offset fields. Compact `+0560` normalizes to six hours, colon offsets with invalid minute/second components have no offset, and total offsets of one day are rejected by Time.new. These extend the original failing-first parser regression to 22 timestamps without changing its original failure on `b38bbedd`.

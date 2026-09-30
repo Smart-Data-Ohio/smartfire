@@ -84,12 +84,18 @@ class WS13bReviewFixes
       "2026-01-01 17:00:00 +05:00", "2026-01-01T17:00:00+0500",
       "2026-01-01T12:00:00Z", "2026-01-01 17:00:00.500000 +0500",
       "2026-01-01T24:00:00Z", "2026-01-01T24:01:00Z", "2026-01-01T24:00:01Z",
-      "2026-01-01T12:00:60Z", "2026-01-01 17:00:00 +2500"]
+      "2026-01-01T12:00:60Z", "2026-01-01 17:00:00 +2500",
+      "2026-01-01 17:00:00 +0560", "2026-01-01 07:00:00 -0560",
+      "2026-01-01 17:00:00 +05:30:60", "2026-01-01 17:00:00 +2400",
+      "2026-01-01 17:00:00 +2360", "2026-01-01 17:00:00 +050000",
+      "2026-01-01 17:00:00 +05:30:00", "2026-01-01 17:00:00 +05",
+      "2026-01-01 17:00:00 +5", "2026-01-01 17:00:00 +0500tail",
+      "2026-01-01 17:00:00 +05:60"]
     times = inputs.map do |input|
       controller = Internal::HuddleController.new
       controller.params = ActionController::Parameters.new(disconnected_at: input)
       floor = controller.send(:disconnected_at_param)
-      {input: input, parsed: floor&.iso8601(6)}
+      {input: input, parsed: floor&.iso8601(6), parts: Date._parse(input, false).slice(:zone, :offset)}
     end
     boundaries = [-1, 0, 1].map do |seconds|
       setup
