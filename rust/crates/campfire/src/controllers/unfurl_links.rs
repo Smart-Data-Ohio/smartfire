@@ -35,6 +35,10 @@ async fn opengraph_json(c: &Ctx, url: &str) -> Result<Option<String>> {
 }
 
 #[cfg(test)]
+#[path = "unfurl_links/rails_tests.rs"]
+mod rails_tests;
+
+#[cfg(test)]
 mod tests {
     use axum::http::{Method, StatusCode};
 
