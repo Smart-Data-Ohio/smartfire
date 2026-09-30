@@ -22,6 +22,9 @@ mod directory;
 #[path = "reads_test.rs"]
 mod reads;
 
+#[path = "join_test.rs"]
+mod join;
+
 struct Hub {
     app: TestApp,
     url: String,

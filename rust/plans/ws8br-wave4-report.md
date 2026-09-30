@@ -1,6 +1,6 @@
 # WS8br Wave 4 — PARTIAL
 
-Branch `rust/ws8br-rooms-http`, assigned worktree `rust-ws8br`, Rails pin `d7c7de92`. Received base `c4849d54`; main `21a7332f` is already merged through `9f356e2f`. This continuation adds the read/quiet-refresh slice. No PR or deployment.
+Branch `rust/ws8br-rooms-http`, assigned worktree `rust-ws8br`, Rails pin `d7c7de92`. Received base `c4849d54`; main `21a7332f` is already merged through `9f356e2f`. Pushed read/quiet-refresh slice: `9a5fcea5`. This continuation also adds open-room preview/rejoin. No PR or deployment.
 
 ## Ownership and retained work
 
@@ -17,6 +17,11 @@ Earlier pushed work remains: room authorization/soft-delete/durable enqueue, gro
 - `channels/tests/reads_test.rs`, `hub_test.rs`, `directory_test.rs`, `channels/broadcasts.rs`: real socket test proves both requesting-user sessions receive the actual Rails frames, another member stays silent, and rejected IDs, failed writes and removed access publish nothing. The existing session helper gains sibling-test visibility only.
 - `reference-tools/rooms/reads_refresh.rb`, `vectors/reads_refresh.json`, `reads_discrimination.py`: real pinned Rails HTTP/status/state/recipient oracle; compiled failure against the received implementation, with source restored.
 - `reference-tools/rooms/deferred_inventory.py`, `plans/ws8br-rails-cases.json`: retain all source case names/hashes while explicitly assigning the split-off files to WS8br2. No full Rails-file execution claimed.
+
+- `controllers/rooms.rs`, `rooms/{opens,closeds}.rs`, `controllers.rs`: open nonmember preview and rejoin; aliases redirect through the same show-only fallback. Private/direct/voice/stage/board, deleted and missing rooms refuse rejoin; all mutation lookups remain scoped. Normal auth/CSRF, last-room cookie and root alert follow Rails.
+- `db/models/membership.rs`: additional small WS8a `join_open` seam validates the open/alive room and user, inserts with the normal transaction timestamp/default involvement, and checks fresh membership inside the serialized writer. Repeated joins preserve the membership and publish nothing; no creation restriction or audit is added.
+- `views/src/rooms.rs`, `templates/rooms/join.html`, `views/tests/room_join.rs`: escaped join-page body/nav bytes from Rails, exact title/body/sidebar facts. Existing shared layouts and presenters were not changed.
+- `controllers/rooms/join_tests.rs`, `channels/tests/join_test.rs`, oracle/vector/discrimination: four combined HTTP tests cover all six Rails preview/rejoin declarations, double submit, bot/auth/CSRF, failed insert, and exact row HTML over a real joiner socket with another member silent.
 
 No schema, Rails source, mask, parity allowlist, message-list/composer internals or owner-rendered partial changed. No new ignored test.
 
@@ -57,8 +62,29 @@ python3 rust/reference-tools/rooms/reads_discrimination.py > .scratch/reads-disc
 ```
 
 ```text
-test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.51s
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 345 filtered out; finished in 0.53s
 Reads discrimination: five compiled HTTP regressions rejected c4849d54; source restored
+```
+
+join-oracle:
+
+```bash
+PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/join.rb > .scratch/join.json 2> .scratch/join-oracle.log
+```
+
+```text
+Rails join oracle: 9 HTTP cases, 2 join-page regions; reference d7c7de92
+```
+
+join-discrimination:
+
+```bash
+python3 rust/reference-tools/rooms/join_discrimination.py > .scratch/join-discrimination-summary.log 2>&1
+```
+
+```text
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.48s
+Join discrimination: four compiled HTTP regressions rejected legacy lookup and absent dispatch; source restored
 ```
 
 app:
@@ -68,7 +94,7 @@ CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_
 ```
 
 ```text
-test result: ok. 342 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 31.17s
+test result: ok. 347 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 29.78s
 ```
 
 views:
@@ -79,10 +105,11 @@ TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1
 
 ```text
 test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
@@ -93,7 +120,7 @@ TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 36.80s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 26.38s
 ```
 
 The oracle exited 0 and its output is byte-identical to the tracked vector. The discrimination command exits 0 only when all five compiled HTTP tests fail; these include the nonmember guard. App/views/clippy exit 0. No full workspace test run, full Rails Minitest run, browser/system/pixel acceptance or complete room parity is claimed.
@@ -106,7 +133,7 @@ The oracle exited 0 and its output is byte-identical to the tracked vector. The 
 | --- | ---: | --- |
 | `rooms/reads_controller_test.rb` | 7 | All seven behaviors covered by five HTTP tests and one socket test; malformed parameter matrix and venue-specific writes remain. |
 | `rooms/refreshes_controller_test.rb` | 4 | Quiet 204 and lost-membership 404 covered; changed-message full bytes and pin count/list integration remain WS8b-m/WS8br. |
-| `rooms_controller_test.rb` | 29 | Previous delete/leave/guard/pagination/unread subsets retained; join preview/join, complete page, exact errors/flash and leave-failure rescue remain. |
+| `rooms_controller_test.rb` | 29 | Previous delete/leave/guard/pagination/unread subsets retained; Six join/preview declarations now covered by four HTTP tests and one socket test; complete page, exact errors/flash and leave-failure rescue remain. |
 | `rooms/opens_controller_test.rb` | 15 | Conversion/access subsets retained; icons, invalid forms, creation audit and complete CRUD/stream acceptance remain. |
 | `rooms/closeds_controller_test.rb` | 12 | Conversion/access subsets retained; icons, invalid forms, creation/membership audit and complete CRUD/stream acceptance remain. |
 | `rooms/directs_controller_test.rb` | 29 | Previous cap/reuse/rename/add/leave/delete and directory-frame subsets retained; picker/settings/invalid rename/overflow/no-op/show callback/removed-member acceptance remain. |
@@ -120,11 +147,11 @@ The oracle exited 0 and its output is byte-identical to the tracked vector. The 
 | `users/sidebars_controller_test.rb` | 14 | Complete frames/recipient state/cache subsets retained; query-count/configured-owner/browser acceptance remains. |
 | `unfurl_links_controller_test.rb` | 9 | Existing upstream re-diff remains WS8br; embed behavior WS15e. |
 
-Current own Rust counts: reads HTTP 5, reads socket 1, room parity 19, inherited room tests 16, sidebar controller 4, switcher 4, directory socket 3, sidebar views 5, shell views 3, header views 1. Full browser files remain deferred; transferred users/account/public/tour/PWA/QR files belong to WS8br2 as the machine-readable inventory records.
+Current own Rust counts: join HTTP 4, join socket 1, join views 1, reads HTTP 5, reads socket 1, room parity 19, inherited room tests 16, sidebar controller 4, switcher 4, directory socket 3, sidebar views 5, shell views 3, header views 1. Full browser files remain deferred; transferred users/account/public/tour/PWA/QR files belong to WS8br2 as the machine-readable inventory records.
 
 ## Precisely remaining, requested order
 
-1. Finish room HTTP: open/closed icons/invalid forms/audit/stream parity, join/preview, direct settings and failure paths, members JSON with WS17/WS11 facts, full refresh/pins integration, leave failure rescue and exact errors/flash/formats, broader involvement/categories/favorites cases. Voice/stage domain remains WS13, boards WS12; do not implement owner internals.
+1. Finish room HTTP: open/closed icons/invalid forms/audit/stream parity, direct settings and failure paths, members JSON with WS17/WS11 facts, full refresh/pins integration, leave failure rescue and exact errors/flash/formats, broader involvement/categories/favorites cases. Voice/stage domain remains WS13, boards WS12; do not implement owner internals.
 2. Integrate WS8b-m message list/composer/template/threads/pins/polls, WS17 viewer OOO facts and WS13 configured venue/header children; full seeded live room page byte/browser acceptance. The stable `rooms::room_message_list(ctx,&ShowView)` still defaults to the authorized zero-byte empty-room placeholder. Lending Rails owner fragments in shell goldens proves surrounding regions only.
 3. Inbound-email address browser acceptance. Rails' existing redirect `/rooms/:id/edit` targets a missing generic action at the pin; preserve the observed redirect and report this gap.
 4. Complete remaining owned Rails controller/system cases grouped by file, including query counts and valid agent-token guards when their owner auth lands. No full-file Rails pass count is inferred from Rust subset passes.

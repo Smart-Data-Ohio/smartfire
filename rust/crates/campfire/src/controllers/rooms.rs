@@ -65,9 +65,32 @@ pub async fn index(c: &mut Ctx) -> Result {
 /// `show`, also `GET /rooms/:room_id/@:message_id`.
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let room = set_room(c, Scope::All).await?;
+    let (room, join_preview) = set_room_for_show(c, Scope::All).await?;
     concerns::remember_last_room_visited(c, room.id);
+    if join_preview {
+        return page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::rooms::JoinPage { ctx, id:room.id, name:room.name.as_deref().unwrap_or_default() }).await;
+    }
     render_show(c, room).await
+}
+
+/// `join`: open rooms can be rejoined by link; creation restrictions do not restrict joins.
+pub async fn join(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let id = c.param_str("id").and_then(cast_integer);
+    let room = match id {
+        Some(id) => joinable_open_room(c, id).await?,
+        None => None,
+    };
+    let Some(room) = room else { return inaccessible_room(c); };
+    let user_id = require_current_user(c)?.id;
+    let room_id = room.id;
+    let (membership, created) = c.app().db.write(move |tx| campfire_db::Membership::join_open(tx, room_id, user_id)).await.map_err(db_error)?;
+    if created {
+        let partials = render_membership_sidebar(c, &room, &membership, Some(false)).await?;
+        use crate::channels::broadcasts::{Partials, Stream};
+        c.app().broadcasts.prepend(&Stream::user_rooms(user_id), "shared_rooms", &partials.shared_room(&room));
+    }
+    redirect_to_room(c, room.id)
 }
 
 /// `destroy` (RoomsController and `Rooms::DirectsController`).
@@ -144,12 +167,31 @@ pub async fn set_room(c: &mut Ctx, scope: Scope) -> Result<Room> {
     };
     match room.filter(|room| scope.includes(room)) {
         Some(room) => Ok(room),
-        None => {
-            let root = c.url_for(&campfire_routes::root());
-            let redirect = Redirect { alert: Some("Room not found or inaccessible".into()), ..Redirect::default() };
-            halt(c.redirect_to_with(&root, redirect)?)
-        }
+        None => inaccessible_room(c),
     }
+}
+
+fn inaccessible_room<T>(c: &mut Ctx) -> Result<T> {
+    let root = c.url_for(&campfire_routes::root());
+    let redirect = Redirect { alert: Some("Room not found or inaccessible".into()), ..Redirect::default() };
+    halt(c.redirect_to_with(&root, redirect)?)
+}
+
+async fn joinable_open_room(c: &Ctx, id: i64) -> Result<Option<Room>> {
+    c.app().db.read(move |conn| Ok(Room::find_by_id(conn, id)?.filter(|room| room.deleted_at.is_none() && room.room_type == RoomType::Open))).await.map_err(db_error)
+}
+
+/// Rails only falls back to an open-room preview for show, including the redirecting
+/// open/closed namespace actions. Edit, destroy and leave remain membership-scoped.
+pub(super) async fn set_room_for_show(c: &mut Ctx, scope: Scope) -> Result<(Room, bool)> {
+    let user_id = require_current_user(c)?.id;
+    let id = c.param_str("room_id").or_else(|| c.param_str("id")).and_then(cast_integer);
+    if let Some(id) = id {
+        let room = c.app().db.read(move |conn| Room::find_for_user(conn, user_id, id)).await.map_err(db_error)?;
+        if let Some(room) = room.filter(|room| scope.includes(room)) { return Ok((room, false)); }
+        if let Some(room) = joinable_open_room(c, id).await? { return Ok((room, true)); }
+    }
+    inaccessible_room(c)
 }
 
 /// `ensure_can_administer`: `head :forbidden unless Current.user.can_administer?(@room)`.
@@ -317,3 +359,6 @@ mod parity_tests;
 
 #[cfg(test)]
 mod reads_tests;
+
+#[cfg(test)]
+mod join_tests;

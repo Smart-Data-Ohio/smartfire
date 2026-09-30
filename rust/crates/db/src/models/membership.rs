@@ -197,6 +197,24 @@ impl Membership {
         )
     }
 
+    /// WS8b's open-room rejoin seam. A normal create uses the transaction clock, unlike
+    /// `Room#grant_to`'s bulk inserts. Open memberships have no stage defaults or direct-key
+    /// callback; the writer serializes double submits before this fresh existence check.
+    pub fn join_open(tx: &mut Tx<'_>, room_id: i64, user_id: i64) -> Result<(Self, bool)> {
+        let room = Room::find(tx.conn(), room_id)?;
+        if room.room_type != crate::RoomType::Open || room.deleted_at.is_some() {
+            return Err(crate::Error::RecordNotFound("Room"));
+        }
+        User::find(tx.conn(), user_id)?;
+        if let Some(membership) = Self::find_by_room_and_user(tx.conn(), room_id, user_id)? {
+            return Ok((membership, false));
+        }
+        let id = tx.conn().query_row_cached(
+            "INSERT INTO memberships (room_id,user_id,involvement,created_at,updated_at) VALUES (?,?,?,?,?) RETURNING id",
+            params![room_id,user_id,room.default_involvement(),tx.now(),tx.now()], |row| row.get(0))?;
+        Ok((Self::find(tx.conn(), id)?, true))
+    }
+
     /// `user.memberships.visible.with_ordered_room`, each with its room.
     pub fn visible_with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(

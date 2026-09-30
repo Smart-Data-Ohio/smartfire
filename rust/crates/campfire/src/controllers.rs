@@ -213,6 +213,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms#index" => arc(rooms::index),
         "rooms#show" => arc(rooms::show),
         "rooms#leave" => arc(rooms::leave),
+        "rooms#join" => arc(rooms::join),
         "rooms#destroy" => arc(rooms::destroy),
         "rooms/opens#index" | "rooms/closeds#index" | "rooms/directs#index" => arc(rooms::index),
         "rooms/opens#create" => arc(rooms::opens::create),

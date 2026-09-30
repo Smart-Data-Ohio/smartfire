@@ -17,7 +17,7 @@ const DEFAULT_ROOM_NAME: &str = "New room";
 
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let room = set_room(c, Scope::WithoutDirects).await?;
+    let (room, _) = super::set_room_for_show(c, Scope::WithoutDirects).await?;
     concerns::remember_last_room_visited(c, room.id);
     redirect_to_room(c, room.id)
 }

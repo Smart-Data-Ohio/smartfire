@@ -408,3 +408,22 @@ pub struct ShellComponents {
 pub fn room_message_list(_ctx:&ViewContext, show:&ShowView)->h::Html {
     show.shell.message_list.as_ref().map(|html|h::raw(html.clone())).unwrap_or_else(h::empty)
 }
+
+/// `rooms/join`: alive open-room preview for a nonmember.
+#[derive(Template)]
+#[template(path = "rooms/join.html", blocks = ["head", "content", "nav"])]
+pub struct JoinPage<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub id: i64,
+    pub name: &'a str,
+}
+impl Page for JoinPage<'_> {
+    fn page_title(&self)->Option<String> { Some(format!("Join #{}",self.name)) }
+    fn body_class(&self)->Option<&str> { Some("sidebar room-workspace") }
+    fn has_sidebar(&self)->bool { true }
+}
+impl JoinPage<'_> {
+    fn join_button(&self)->h::Html {
+        h::button_to(&campfire_routes::join_room(self.id),h::attrs().class("btn btn--reversed"),"Join channel")
+    }
+}
