@@ -34,7 +34,7 @@ reject("actor-header", root / "crates/campfire/src/channels/rooms_directory.rs",
        "User::find(conn, *for_user_id)?", "User::find(conn, 712064548)?",
        "group_directory_callbacks_match_rails_recipient_frames")
 reject("user-join-order", root / "crates/campfire/src/controllers/presenters/accounts.rs",
-       "ORDER BY memberships.id", "ORDER BY users.id",
+       ") ORDER BY memberships.id", ") ORDER BY users.id",
        "seeded_group_row_matches_rails_membership_order")
 reject("unicode-whitespace", root / "crates/campfire/src/controllers/presenters/accounts.rs",
        "name.split([' ', '\\t', '\\n', '\\r', '\\x0b', '\\x0c'])", "name.split_whitespace()",

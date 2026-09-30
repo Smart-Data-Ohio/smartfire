@@ -42,7 +42,7 @@ fn shared(row: &Value) -> users::SidebarRoom {
     users::SidebarRoom {
         id: row["room_id"].as_i64().unwrap(),
         param_key: row["param_key"].as_str().unwrap().into(),
-        name: row["room_name"].as_str().unwrap().into(),
+        name: row["room_name"].as_str().unwrap_or_default().into(),
         unread: row["unread"].as_bool().unwrap(),
         menu: serde_json::from_value(row["menu"].clone()).unwrap(),
         icon: row["icon_name"]
@@ -201,4 +201,108 @@ fn rows_do_not_capture_request_tokens_nonces_or_actor_permissions() {
         assert!(!actor.contains(forbidden), "{forbidden} in broadcast row");
     }
     assert!(actor.contains("data-menu-can-delete=\"false\""));
+}
+
+#[test]
+fn complete_sidebar_pages_match_rails() {
+    use campfire_views::helpers::request_forgery::{
+        AuthenticityTokens, RequestSecrets, rendering_with,
+    };
+    struct Tokens;
+    impl AuthenticityTokens for Tokens {
+        fn global(&self) -> String {
+            "GLOBAL".into()
+        }
+        fn for_form(&self, action: &str, method: &str) -> String {
+            format!("{method}:{action}")
+        }
+    }
+    let asset = |name: &str| campfire_assets::asset_path(name);
+    let signer = |_: &[&str]| String::new();
+    let fixtures: Vec<Value> =
+        serde_json::from_str(include_str!("golden/sidebar/page.json")).unwrap();
+    let mut failures = 0;
+    for row in fixtures {
+        let mut ctx = context(&asset, &signer);
+        ctx.account = campfire_views::AccountSummary {
+            name: row["account_name"].as_str().unwrap().into(),
+            logo_url: row["account_logo"].as_str().unwrap().into(),
+            has_logo: row["has_logo"].as_bool().unwrap(),
+        };
+        let user = |u: &Value| users::UserSummary {
+            id: u["id"].as_i64().unwrap(),
+            name: u["name"].as_str().unwrap().into(),
+            avatar_path: u["avatar_path"].as_str().unwrap().into(),
+            ..Default::default()
+        };
+        let list = |key: &str| {
+            row[key]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(shared)
+                .collect::<Vec<_>>()
+        };
+        let categorized = list("categorized_memberships");
+        let categories = row["room_categories"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| users::SidebarCategory {
+                id: c["id"].as_i64().unwrap(),
+                name: c["name"].as_str().unwrap().into(),
+                collapsed: c["collapsed"].as_bool().unwrap(),
+                rooms: categorized
+                    .iter()
+                    .filter(|r| r.menu.menu_category_id == c["id"].as_i64())
+                    .cloned()
+                    .collect(),
+            })
+            .collect();
+        let page = users::SidebarShow {
+            ctx: &ctx,
+            current_user: user(&row["user"]),
+            rooms_stream: String::new(),
+            user_rooms_stream: String::new(),
+            favorite_memberships: row["favorite_memberships"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| {
+                    if r["param_key"] == "rooms_direct" {
+                        users::SidebarItem::Direct(Box::new(direct(r)))
+                    } else {
+                        users::SidebarItem::Room(Box::new(shared(r)))
+                    }
+                })
+                .collect(),
+            categories,
+            direct_memberships: row["direct_memberships"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| direct(r).into())
+                .collect(),
+            direct_placeholder_users: row["direct_placeholder_users"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(user)
+                .collect(),
+            other_memberships: list("other_memberships"),
+            voice_memberships: list("voice_memberships"),
+            can_create_rooms: row["can_create_rooms"].as_bool().unwrap(),
+        };
+        let actual = rendering_with(
+            RequestSecrets {
+                tokens: Box::new(Tokens),
+                csp_nonce: Some("NONCE".into()),
+            },
+            || page.as_content().render().unwrap(),
+        );
+        if !compare(&row, &actual) {
+            failures += 1;
+        }
+    }
+    assert_eq!(failures, 0, "full sidebar byte mismatches");
 }

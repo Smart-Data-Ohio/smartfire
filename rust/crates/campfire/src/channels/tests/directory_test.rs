@@ -268,3 +268,51 @@ async fn group_directory_callbacks_match_rails_recipient_frames() {
         unrelated.assert_silent().await;
     }
 }
+
+#[tokio::test]
+async fn involvement_callbacks_match_rails_recipient_rows() {
+    let (hub, _) = frozen_hub().await;
+    let fixture: Vec<Value> = serde_json::from_str(include_str!(
+        "../../../../views/tests/golden/sidebar/involvement.json"
+    ))
+    .unwrap();
+    let mut recipient = connect_user(&hub, DAVID).await;
+    let identifier = hub.turbo(&[&user_gid(DAVID).to_param(), "rooms"]);
+    recipient.confirm(&identifier).await;
+    let mut unrelated = connect_user(&hub, JASON).await;
+    unrelated
+        .confirm(&hub.turbo(&[&user_gid(JASON).to_param(), "rooms"]))
+        .await;
+    let mut actor = hub.app.david();
+    for operation in fixture {
+        let id = operation["room_id"].as_i64().unwrap();
+        let level = operation["level"].as_str().unwrap();
+        let reply = actor
+            .write(
+                Req::new(Method::PUT, &format!("/rooms/{id}/involvement.json"))
+                    .form(&[("involvement", level)]),
+            )
+            .await;
+        assert_eq!(
+            reply.status,
+            axum::http::StatusCode::OK,
+            "{id} {level}: {}",
+            reply.text()
+        );
+        for expected in operation["frames"].as_array().unwrap() {
+            let frame =
+                tokio::time::timeout(std::time::Duration::from_secs(2), recipient.next_text())
+                    .await
+                    .expect("involvement frame missing");
+            let actual: Value = serde_json::from_str(&frame).unwrap();
+            assert_eq!(actual["identifier"].as_str(), Some(identifier.as_str()));
+            assert_eq!(actual["message"], expected["html"], "room {id}, {level}");
+            assert_eq!(
+                campfire_cable::turbo::session_bound(actual["message"].as_str().unwrap()),
+                None
+            );
+        }
+        recipient.assert_silent().await;
+        unrelated.assert_silent().await;
+    }
+}

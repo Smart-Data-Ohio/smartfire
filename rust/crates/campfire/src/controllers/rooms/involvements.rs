@@ -9,7 +9,7 @@ use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions};
 use crate::controllers::presenters::page::{self, db_error};
 use crate::controllers::presenters::{Presenter, room_kind};
-use crate::controllers::rooms::render_shared_room;
+use crate::controllers::rooms::render_membership_sidebar;
 
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
@@ -67,7 +67,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             .await
             .map_err(db_error)?
     } else {
-        render_shared_room(c, &room).await?
+        render_membership_sidebar(c, &room, &membership, if previous == Some(Involvement::Invisible) { None } else { Some(membership.unread()) }).await?
     };
     c.app().broadcasts.involvement_change(&room, &membership, previous, &partials);
 

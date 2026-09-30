@@ -156,6 +156,29 @@ pub struct SidebarRoom {
     pub huddle_participants: Option<String>,
 }
 impl SidebarRoom {
+    fn venue_children(&self) -> h::Html {
+        // WS13 can replace the complete children via huddle_participants. This default is
+        // Rails' empty venue mount, which exists even when Huddle.configured? is false.
+        self.huddle_participants
+            .as_ref()
+            .map(|html| h::raw(html.clone()))
+            .unwrap_or_else(|| {
+                h::raw(
+                    EmptyVenueChildren {
+                        id: self.id,
+                        param_key: &self.param_key,
+                        stage: self.param_key == "rooms_stage",
+                        label: if self.param_key == "rooms_stage" {
+                            "on stage"
+                        } else {
+                            "in voice"
+                        },
+                    }
+                    .render()
+                    .expect("empty venue mount renders"),
+                )
+            })
+    }
     fn link_attrs(&self) -> h::Attrs {
         h::attrs()
             .id(h::dom_id(&self.param_key, self.id, Some("list")))
@@ -165,7 +188,13 @@ impl SidebarRoom {
     }
     fn class_names(&self) -> String {
         format!(
-            "sidebar-item room btn{}{}",
+            "sidebar-item room btn{}{}{}",
+            match self.param_key.as_str() {
+                "rooms_board" => " board-room",
+                "rooms_voice" => " voice-room",
+                "rooms_stage" => " voice-room stage-room",
+                _ => "",
+            },
             if self.unread { " unread" } else { "" },
             if self.menu.menu_muted { " muted" } else { "" }
         )
@@ -184,6 +213,78 @@ pub struct SidebarSharedPartial<'a> {
     pub room: SidebarRoom,
 }
 
+/// The outer sidebar owns section layout; WS12/WS13 supply configured feature children.
+#[derive(Clone, Debug)]
+pub enum SidebarItem {
+    Direct(Box<SidebarDirect>),
+    Room(Box<SidebarRoom>),
+}
+impl SidebarItem {
+    pub fn render(&self, ctx: &ViewContext) -> h::Html {
+        h::raw(match self {
+            Self::Direct(row) => direct_room(ctx, row),
+            Self::Room(room) => SidebarSharedPartial {
+                ctx,
+                room: *room.clone(),
+            }
+            .render()
+            .expect("sidebar row renders"),
+        })
+    }
+}
+#[derive(Clone, Debug)]
+pub struct SidebarCategory {
+    pub id: i64,
+    pub name: String,
+    pub collapsed: bool,
+    pub rooms: Vec<SidebarRoom>,
+}
+impl SidebarCategory {
+    fn path(&self) -> String {
+        format!("/room_categories/{}", self.id)
+    }
+    fn toggle_label(&self) -> &'static str {
+        if self.collapsed { "Expand" } else { "Collapse" }
+    }
+    fn collapse_button(&self, ctx: &ViewContext) -> h::Html {
+        // button_to serializes nested params after its token, sorted by field name.
+        let image = h::image_tag(
+            ctx,
+            "disclosure.svg",
+            h::attrs().size(16).aria_hidden().attr_opt(
+                "class",
+                self.collapsed
+                    .then_some("room-category__disclosure--collapsed"),
+            ),
+        );
+        let button = h::button_to_form(
+            &self.path(),
+            h::attrs()
+                .method("patch")
+                .class("btn sidebar-section__collapse")
+                .aria("label", format!("{} {}", self.toggle_label(), self.name))
+                .attr("title", self.toggle_label()),
+            h::attrs().data("turbo_frame", "user_sidebar"),
+            &format!("\n        {}\n", image),
+        );
+        let field = h::legacy_tag(
+            "input",
+            h::attrs()
+                .type_("hidden")
+                .name("room_category[collapsed]")
+                .value(if self.collapsed { "false" } else { "true" }),
+        );
+        h::raw(
+            button
+                .0
+                .strip_suffix("</form>")
+                .expect("form closing tag")
+                .to_string()
+                + &field.0
+                + "</form>",
+        )
+    }
+}
 #[derive(Template)]
 #[template(path="users/sidebars/show.html",blocks=["head","content"])]
 pub struct SidebarShow<'a> {
@@ -191,9 +292,33 @@ pub struct SidebarShow<'a> {
     pub current_user: UserSummary,
     pub rooms_stream: String,
     pub user_rooms_stream: String,
+    pub favorite_memberships: Vec<SidebarItem>,
+    pub categories: Vec<SidebarCategory>,
     pub direct_memberships: Vec<SidebarDirectItem>,
     pub direct_placeholder_users: Vec<UserSummary>,
     pub other_memberships: Vec<SidebarRoom>,
+    pub voice_memberships: Vec<SidebarRoom>,
     pub can_create_rooms: bool,
 }
 impl Page for SidebarShow<'_> {}
+
+impl SidebarShow<'_> {
+    fn workspace_initial(&self) -> String {
+        self.ctx
+            .account
+            .name
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().to_string())
+            .unwrap_or_default()
+    }
+}
+
+#[derive(Template)]
+#[template(path = "users/sidebars/rooms/_empty_venue_children.html")]
+struct EmptyVenueChildren<'a> {
+    id: i64,
+    param_key: &'a str,
+    stage: bool,
+    label: &'a str,
+}

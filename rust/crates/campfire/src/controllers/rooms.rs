@@ -257,6 +257,20 @@ pub(crate) async fn render_shared_room(c: &Ctx, room: &Room) -> Result<Rendered>
     Ok(Rendered { shared_room: Some(html), ..Rendered::default() })
 }
 
+/// The involvement callback's row carries its recipient's membership and menu facts.
+pub(crate) async fn render_membership_sidebar(c:&Ctx, room:&Room, membership:&campfire_db::Membership, unread:Option<bool>)->Result<Rendered> {
+    let app=c.app().clone();let base_url=page::renderer_base_url(c);let room=room.clone();let membership=membership.clone();
+    let html=c.app().db.read(move |conn| {
+        let viewer=User::find(conn,membership.user_id)?;
+        let mut row=Presenter::new(conn,&app,None).sidebar_room(&room);
+        row.menu=super::presenters::accounts::room_menu(&room,Some(&membership),Some(&viewer),0,None);
+        row.unread=unread.unwrap_or(false);
+        let account=Account::first(conn)?;
+        Ok(page::render_detached_at(&app,account.as_ref(),&base_url,|ctx|campfire_views::users::SidebarSharedPartial{ctx,room:row}.render()))
+    }).await.map_err(db_error)?.map_err(Error::internal)?;
+    Ok(Rendered{shared_room:Some(html),..Default::default()})
+}
+
 /// `rooms/show` with `find_messages`: the page around `params[:message_id]`, else the last page.
 async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let app = c.app().clone();

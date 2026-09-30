@@ -151,8 +151,7 @@ impl Partials for Rendered {
         self.direct_rooms.iter().find(|(id, _)| *id == membership.id).map(|(_, html)| html.clone()).unwrap_or_default()
     }
 
-    /// Only the shared row is ported (`users/sidebars/rooms/_shared`); stage, voice and board rows
-    /// and the `unread:`/`membership:` locals wait on the sidebar views.
+    /// Controllers render the precise recipient membership and optional unread local before publication.
     fn sidebar_row(&self, _: &Room, _: &Membership, _: Option<bool>) -> String {
         self.shared_room.clone().unwrap_or_default()
     }
