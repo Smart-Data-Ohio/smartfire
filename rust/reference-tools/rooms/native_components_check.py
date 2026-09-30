@@ -14,11 +14,12 @@ for expected,row in zip(golden,actual,strict=True):
  assert (row['room_id'],row['user_id'])==(expected['room_id'],expected['user_id'])
  for name in ['message_list','composer','pending_template']:
   a,b=row[name],expected[name]
-  if a==b:passed+=1;print(f"PASS room {row['room_id']} {name}: {len(a)} exact bytes")
+  actual_bytes,expected_bytes=a.encode('utf-8'),b.encode('utf-8')
+  if actual_bytes==expected_bytes:passed+=1;print(f"PASS room {row['room_id']} {name}: {len(actual_bytes)} exact bytes")
   else:
    failed+=1;prefix=scratch/f"{row['room_id']}-{name}"
    prefix.with_suffix('.actual').write_text(a);prefix.with_suffix('.expected').write_text(b)
    prefix.with_suffix('.diff').write_text('\n'.join(difflib.unified_diff(b.splitlines(),a.splitlines(),fromfile='Rails',tofile='Rust')))
-   print(f"FAIL room {row['room_id']} {name}: Rust {len(a)} bytes, Rails {len(b)} bytes")
+   print(f"FAIL room {row['room_id']} {name}: Rust {len(actual_bytes)} bytes, Rails {len(expected_bytes)} bytes")
 print(f"Native room component acceptance: {passed} exact matches; {failed} differences; no masks")
 raise SystemExit(bool(failed))
