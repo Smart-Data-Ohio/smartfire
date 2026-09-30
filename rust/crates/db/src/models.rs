@@ -3,6 +3,7 @@
 pub mod account;
 pub mod agent_access;
 pub mod agent_delivery;
+pub mod agent_payloads;
 pub mod agent_posting;
 pub mod audit_log;
 pub mod activity_item;

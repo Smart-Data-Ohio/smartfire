@@ -78,37 +78,34 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
             let Some(webhook) = Webhook::find_by_user(tx.conn(), user_id)? else {
                 return Ok(None);
             };
+            let payload = campfire_db::models::agent_payloads::build(
+                tx.conn(),
+                &*db.env().rich_text,
+                &e,
+                &Default::default(),
+            )?;
+            let campfire_db::models::agent_payloads::Payload::Ready { body, sync_message } =
+                payload
+            else {
+                let campfire_db::models::agent_payloads::Payload::Unavailable(error) = payload
+                else {
+                    unreachable!()
+                };
+                return Err(campfire_db::Error::Other(format!(
+                    "Agent::Delivery::UndeliverableWebhook: {error}"
+                )));
+            };
+            let sync = sync_message
+                .map(|message| {
+                    Ok::<_, campfire_db::Error>((Room::find(tx.conn(), message.room_id)?, *message))
+                })
+                .transpose()?;
             let secret = campfire_db::models::agent_access::ensure_webhook_signing_secret(
                 tx,
                 &encryption,
                 id,
             )?;
-            let message = e
-                .message_id
-                .map(|id| Message::find_by_id(tx.conn(), id))
-                .transpose()?
-                .flatten();
-            if !domain::MESSAGE_TYPES.contains(&e.event_type.as_str()) {
-                return Err(campfire_db::Error::Other(format!(
-                    "Event type {} has no webhook payload",
-                    e.event_type
-                )));
-            }
-            let Some(message) = message else {
-                return Err(campfire_db::Error::Other(
-                    "Message no longer available".into(),
-                ));
-            };
-            let room = Room::find(tx.conn(), message.room_id)?;
-            let payload = webhook.payload_for_agent(
-                tx.conn(),
-                &*db.env().rich_text,
-                &message,
-                id,
-                e.id,
-                &serde_json::Value::Null,
-            )?;
-            Ok(Some((webhook, secret, payload, bot, room, message)))
+            Ok(Some((webhook, secret, body, bot, sync)))
         })
         .await;
     let prepared = match prepared {
@@ -119,15 +116,13 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
             );
         }
         Err(campfire_db::Error::Other(error))
-            if error == "Message no longer available" || error.starts_with("Event type ") =>
+            if error.starts_with("Agent::Delivery::UndeliverableWebhook: ") =>
         {
-            return AttemptOutcome::Permanent(format!(
-                "Agent::Delivery::UndeliverableWebhook: {error}"
-            ));
+            return AttemptOutcome::Permanent(error);
         }
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };
-    let (webhook, secret, payload, bot, room, message) = prepared;
+    let (webhook, secret, payload, bot, sync) = prepared;
     let response = match webhook::post_payload(
         net,
         webhook.url.as_deref().unwrap_or(""),
@@ -148,7 +143,9 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
             .and_then(|v| v.to_str().ok()),
         app.clock.now(),
     );
-    if matches!(result, AttemptOutcome::Delivered) {
+    if matches!(result, AttemptOutcome::Delivered)
+        && let Some((room, message)) = sync
+    {
         // Rails suppresses every sync-reply extraction/storage/broadcast error after a successful Agent POST.
         if let Err(error) = receive_sync_reply(app, &bot, &room, message, response).await {
             tracing::warn!(%error,"Agent webhook sync reply failed");
@@ -508,3 +505,7 @@ async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
         Ok(())
     }).await.unwrap();
 }
+
+#[cfg(test)]
+#[path = "agent_payload_tests.rs"]
+mod payload_tests;

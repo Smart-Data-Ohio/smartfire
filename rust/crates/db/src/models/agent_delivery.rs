@@ -156,7 +156,7 @@ impl AgentEvent {
         }
     }
 }
-fn ruby_i64(v: &Value) -> i64 {
+pub(crate) fn ruby_i64(v: &Value) -> i64 {
     match v {
         Value::Number(n) => n
             .as_i64()
