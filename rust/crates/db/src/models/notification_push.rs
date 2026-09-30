@@ -30,6 +30,61 @@ impl Job for BoardNudgeJob {
     const CLASS: &'static str = "BoardAutomations::NudgePushJob";
 }
 
+/// WS13's final wire contract. Its `huddle_notices::PushRequest` serializes this exact
+/// shape; no dependency on that owner's unmerged models is required by the transport.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HuddlePushKind {
+    Huddle,
+    HuddleJoin,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HuddlePushRequest {
+    pub kind: HuddlePushKind,
+    pub recipient_id: i64,
+    pub sender_id: i64,
+    pub room_id: i64,
+    pub room_membership_id: Option<i64>,
+    pub payload: PushPayload,
+}
+impl Job for HuddlePushRequest {
+    const CLASS: &'static str = "Notifications::HuddlePushJob";
+}
+
+/// Execute a WS13 intent against current policy. This transaction owns the single join
+/// throttle claim and the durable delivery enqueue. Do not call WS13's `prepare_push`
+/// before or after this adapter: that would claim the same window twice.
+pub fn enqueue_huddle_request(tx: &mut Tx<'_>, request: HuddlePushRequest) -> Result<bool> {
+    match request.kind {
+        HuddlePushKind::Huddle => enqueue_huddle_invitation(
+            tx,
+            request.room_id,
+            request.recipient_id,
+            request.sender_id,
+            request.payload,
+        ),
+        HuddlePushKind::HuddleJoin => {
+            let membership = Membership::find_by_room_and_user(
+                tx.conn(),
+                request.room_id,
+                request.recipient_id,
+            )?;
+            if request.room_membership_id.is_none()
+                || membership.as_ref().map(|m| m.id) != request.room_membership_id
+            {
+                return Ok(false);
+            }
+            enqueue_huddle_join(
+                tx,
+                request.room_id,
+                request.recipient_id,
+                request.sender_id,
+                request.payload,
+            )
+        }
+    }
+}
+
 /// Minimal live source reader until WS14's event model lands. No reminder claim/create here.
 #[derive(Debug)]
 pub struct EventReminderSource {

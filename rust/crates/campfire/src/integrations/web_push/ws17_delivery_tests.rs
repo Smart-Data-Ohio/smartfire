@@ -164,3 +164,88 @@ async fn ws17_huddle_join_enqueue_failure_rolls_back_throttle_and_source_write()
     let current=db.read(move|c|Ok((campfire_db::User::find(c,sender)?.name,campfire_db::Membership::find_by_room_and_user(c,room,recipient)?.unwrap().last_huddle_join_push_at,c.query_row::<i64,_,_>("SELECT count(*) FROM background_jobs WHERE job_class='Huddle::JoinDeliveryJob'",[],|r|r.get(0))?))).await.unwrap();
     assert_eq!(current, (before, None, 0));
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ws17_ws13_wire_requests_deliver_captured_payload_and_claim_join_once() {
+    let test = TestApp::boot().await.expect("parity seed");
+    test.booted.jobs.shutdown(Duration::from_secs(5)).await;
+    let original = test.booted.app.clone();
+    let db = original.db.clone();
+    let golden = vectors();
+    let service = push_service(201, "Created").await;
+    let receiver = Receiver::new();
+    let pool = Pool::new(service.net.clone(), vapid(), |_| Ok::<_, String>(()));
+    let app = with_pool(&original, pool.clone());
+    let mut expected = Vec::new();
+    for (name, kind) in [
+        ("invitation_baseline", "huddle"),
+        ("join_baseline", "huddle_join"),
+    ] {
+        let row = golden["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["name"] == name)
+            .unwrap()
+            .clone();
+        let setup = row["setup_sql"].as_str().unwrap().to_owned();
+        let sub = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc");
+        let fixture = row.clone();
+        let request=db.write(move|tx| {
+            tx.conn().execute_batch(&setup)?;
+            tx.conn().execute("UPDATE push_subscriptions SET endpoint=?,p256dh_key=?,auth_key=?",rusqlite::params![sub.endpoint,sub.p256dh_key,sub.auth_key])?;
+            let room=fixture["room_id"].as_i64().unwrap();let recipient=fixture["recipient_id"].as_i64().unwrap();
+            let membership=campfire_db::Membership::find_by_room_and_user(tx.conn(),room,recipient)?.unwrap();
+            // The exact JSON fields and enum spelling emitted by WS13's PushRequest.
+            let wire=serde_json::json!({"kind":kind,"recipient_id":recipient,"sender_id":fixture["sender_id"],"room_id":room,"room_membership_id":if kind=="huddle_join" {Some(membership.id)} else {None},"payload":fixture["deliveries"][0]["payload"]});
+            let request:HuddlePushRequest=serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(serde_json::to_value(&request).unwrap(),wire);
+            tx.emit_after_commit(Event::job(&request));Ok(request)
+        }).await.unwrap();
+        expected.extend(
+            row["deliveries"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|d| d["encoded"].as_array().unwrap())
+                .map(|s| serde_json::from_str::<Value>(s.as_str().unwrap()).unwrap()),
+        );
+        let runner = campfire_jobs::start(
+            db.clone(),
+            app.jobs.queue.clone(),
+            crate::jobs::registry(),
+            app.clone(),
+            crate::jobs::runner_config(&app.config),
+        );
+        let wait = || async {
+            tokio::time::timeout(Duration::from_secs(5),async {loop {
+            let count=db.read(|conn|Ok(conn.query_row("SELECT count(*) FROM background_jobs WHERE job_class IN ('Notifications::HuddlePushJob','Huddle::InvitationDeliveryJob','Huddle::JoinDeliveryJob')",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
+            if count==0 {break;}tokio::time::sleep(Duration::from_millis(10)).await;
+        }}).await.unwrap();
+        };
+        wait().await;
+        if kind == "huddle_join" {
+            db.write(move |tx| {
+                tx.emit_after_commit(Event::job(&request));
+                Ok(())
+            })
+            .await
+            .unwrap();
+            wait().await;
+        }
+        runner.shutdown(Duration::from_secs(5)).await;
+    }
+    pool.shutdown().await;
+    let mut actual = service
+        .server
+        .received()
+        .iter()
+        .map(|r| serde_json::from_str::<Value>(&receiver.open(&r.body)).unwrap())
+        .collect::<Vec<_>>();
+    actual.sort_by_key(Value::to_string);
+    expected.sort_by_key(Value::to_string);
+    assert_eq!(
+        actual, expected,
+        "captured source bytes and no second join delivery"
+    );
+}

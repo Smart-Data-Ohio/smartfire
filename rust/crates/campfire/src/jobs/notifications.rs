@@ -39,6 +39,7 @@ pub(super) fn register(registry: &mut Registry) {
     registry.register(board_nudge);
     registry.register(huddle_invitation_delivery);
     registry.register(huddle_join_delivery);
+    registry.register(huddle_push_request);
 }
 
 async fn test_notification(app: App, job: TestNotification, _: Execution) -> JobResult {
@@ -136,6 +137,21 @@ source_job!(
     HuddleJoinDelivery,
     campfire_db::models::notification_push::HuddleJoinDeliveryJob
 );
+source_job!(
+    HuddlePush,
+    campfire_db::models::notification_push::HuddlePushRequest
+);
+
+async fn huddle_push_request(app: App, job: HuddlePush, _: Execution) -> JobResult {
+    app.db
+        .write(move |tx| {
+            campfire_db::models::notification_push::enqueue_huddle_request(tx, job.0)?;
+            Ok(())
+        })
+        .await
+        .map_err(super::discard_missing)?;
+    Ok(Outcome::Done)
+}
 
 async fn event_reminder(app: App, job: EventReminder, _: Execution) -> JobResult {
     let Some(pool) = app.web_push.clone() else {

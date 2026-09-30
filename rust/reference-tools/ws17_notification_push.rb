@@ -26,13 +26,12 @@ travel_to(Time.utc(2026,3,2,16)) do
  roles=[user,recipient,other].map { |u|[u.id,u.role_before_type_cast] }.to_h
  subscriptions=Push::Subscription.where(user_id:[user.id,recipient.id,other.id]).map { |s|insert_sql(s) }
  run=lambda do |name,kind,custom=[]|
-  setup=base_sql.dup+subscriptions
+  setup=base_sql.dup+subscriptions+board_sql
   roles.each { |id,role|setup << "UPDATE users SET status=0,role=#{role},dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=540,quiet_hours_end_minute=1020,time_zone='UTC',meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0,inbox_preferences='{}' WHERE id=#{id};" }
   setup << "DELETE FROM dnd_allowed_users WHERE user_id IN (#{user.id},#{recipient.id},#{other.id});"
   setup << "DELETE FROM calendar_meeting_caches WHERE user_id IN (#{user.id},#{recipient.id},#{other.id});"
   setup << "UPDATE memberships SET involvement='mentions',connected_at=NULL,last_huddle_join_push_at=NULL WHERE room_id IN (#{room.id},#{direct.id});"
   setup << "UPDATE events SET room_id=#{room.id},organizer_id=#{user.id},title='Launch party planning',starts_at='2026-03-02 16:15:00',ends_at='2026-03-02 17:15:00',venue_room_id=NULL WHERE id=#{event.id};"
-  setup += board_sql if kind=="board"
   setup += custom
   setup.each { |sql|conn.execute(sql) }
   deliveries=[]

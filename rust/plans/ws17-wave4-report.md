@@ -29,6 +29,7 @@ Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pus
 | `reference-tools/ws17_browser.py`, `ws17_browser.mjs` | Ten individually named Chromium scenarios: 7 status notifications, 1 OOO and 2 service worker. Real forms, actual persisted readback, live Audio replacement exactly as the original test, computed CSS under opposite OS theme, 390px viewport, two Rails-issued user cookies and actual browser CacheStorage. Isolated private seed copy and native server on owned 52471; no source/controller stubs or output masks. Wait for observable CSS completion after the Turbo render. Google fetch/browser execution stays WS14-owned. |
 | `db/tests/status_settings_write_test.rs`, `keyword_alert_test.rs`, pinned reader declarations and regeneration | Close the four remaining exact StatusSettings reader sequences using real saves, loaded reloads and advancing clocks; complete the literal, blank-only and Unicode matcher cases already landed on this branch. The 4 reader and all 10 matcher original Ruby bodies run unchanged and pass 35 original assertions. Selected inventory now has StatusSettings 14/14 and KeywordMatcher 10/10. |
 | `campfire/integrations/web_push/tests.rs` | Close five deferred subscription sequences against the real Guard/model composition and delivery transport: loopback, link-local, empty DNS, deferred construction lookup and fresh private DNS refusal with no dial. The sixth case sets all four proxy keys in an isolated child process and proves actual TLS delivery still dials the pinned public address and decrypts the expected JSON. No unsafe global test environment mutation. |
+| `db/models/notification_push.rs`, `jobs/notifications.rs`, `web_push/ws17_delivery_tests.rs` | Final WS13 wire DTO and registered Notifications::HuddlePushJob bridge; actual owner JSON and single claim/durable delivery transaction. Standalone source vectors restore every row behind the captured unread badge. Existing event/board and direct huddle APIs remain final and unchanged. |
 | `reference-tools/ws17_profile_ui.rb`, regeneration script, verifier and injection runner | Actual pinned source/output verification; no Rails changes, output masks, allowlist changes or new ignores. |
 
 User/profile security, GitHub/inbox/voice settings and connected-service UI belong to WS9/WS11/WS12/WS13/WS14/WS15. The existing basic profile update path still needs those owners' callbacks. This slice adds only the owned appearance attributes, without claiming whole-profile parity.
@@ -71,6 +72,7 @@ Keep Rails' pusher scopes before delivery: visible/disconnected memberships, inv
 
 
 
+
 ## WS12/WS14 source jobs and WS13 durable adapter
 
 ```rust
@@ -88,6 +90,24 @@ pub fn enqueue_huddle_join(tx: &mut Tx, room_id: i64, recipient_id: i64,
 WS12/14 own reminder/nudge claims and source writes; emit the ID job with `tx.emit_after_commit(Event::job(&args))` before committing that write. Minimal live readers touch existing schema only. Missing source records discard through the existing queue error mapper. Event push intentionally ignores inbox switch and membership notification involvement, and permits the first five minutes after start; board push rechecks active-human membership even if hidden/connected. Reminder DND has no sender allowance.
 
 WS13 validates its activity item/grant, invitation/join lifecycle eligibility and sender/recipient IDs and builds `PushPayload` at the point Rails invokes its pusher, then calls this adapter on the source writer transaction. Payload bytes are captured there, preserving source ownership. `Huddle::InvitationDeliveryJob` and `Huddle::JoinDeliveryJob` are Rust durable adapters, default queue/version 1, JSON `{payload,subscription_ids}`. Join stamps the membership only after policy and actual subscriptions allow delivery; exactly ten minutes remains throttled. On enqueue failure, the entire source write and throttle roll back. Invitation retains the pin's empty scoped queue handoff. The handlers preserve that already-made decision/payload, re-read surviving subscription IDs, and use existing `Pool::queue` for current unread badge, VAPID/IP guard/encryption. Deleted subscriptions are skipped. Source callbacks and `Huddle::PushInvitationJob`/`JoinNoticeJob` integration remain WS13 seams; no grant or notifier lifecycle is faked.
+
+## Final WS13 wire handoff
+
+WS13's `huddle_notices::PushRequest` emits **`Notifications::HuddlePushJob`**, default queue/version 1. WS17 now registers that exact class. Its final wire shape is:
+
+```rust
+// campfire_db::models::notification_push (WS17 mirror of WS13 serialized shape)
+pub enum HuddlePushKind { Huddle, HuddleJoin } // serde: "huddle", "huddle_join"
+pub struct HuddlePushRequest {
+    pub kind: HuddlePushKind,
+    pub recipient_id: i64, pub sender_id: i64, pub room_id: i64,
+    pub room_membership_id: Option<i64>,
+    pub payload: PushPayload, // title/body/path; source tag string deserializes as Some(tag)
+}
+pub fn enqueue_huddle_request(tx: &mut Tx<'_>, request: HuddlePushRequest) -> Result<bool>;
+```
+
+WS13 continues to emit its own `PushRequest` with `enqueue_huddle_push(tx, &request)`; serialization is compatible without importing unmerged owner models. The registered WS17 handler evaluates current policy and calls the existing invitation/join adapter in one writer transaction, then the existing delivery handler uses the shared pool. That writer owns the one join throttle claim and delivery INSERT. **Do not run WS13 `prepare_push` before enqueueing a normal intent or again in the WS17 handler**: it would double-claim. Join requests require their source membership ID to still match the room/recipient row; deleted or replaced memberships skip. WS13 retains grant/activity item/lifecycle/payload ownership. Its normal source paths on the inspected branch emit intents without making a throttle claim; its isolated helper tests may still test `prepare_push` separately. Actual wire JSON, registered worker execution, complete decrypted Rails JSON and a repeated join prove the handoff. The new standalone replay exposed that the previous oracle omitted the board membership behind an unread badge; captured setup now includes those original board rows in every case, so each vector runs independently. No expected payload/badge masks were added.
 
 ## WS14 cache and dispatch seams
 
@@ -117,6 +137,24 @@ workspace dependency keys: 75 unique; 0 duplicates (strict TOML parse)
 ```
 
 All commands run in this worktree, own `rust/target`, pinned toolchain and `-j 4`. Seeded app tests require the built default/first-run seeds, not a silent local skip. Existing app ignores are main's cable recording/latency tests and WS11's `manages_bots`; no new ignore was added. DB's three existing oracle/export ignores require their dedicated external environment.
+
+`mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db notification_push_test`
+
+```text
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 550 filtered out; finished in 3.29s
+```
+
+`CI=1 CABLE_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire ws17_delivery`
+
+```text
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.27s
+```
+
+`mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.10s
+```
 
 `CI=1 CABLE_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire ws17_ -- --test-threads=4`
 
@@ -270,7 +308,7 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out
 `python3 rust/reference-tools/ws17_regenerate_notification_push.py`
 
 ```text
-pinned Rails source verified: 50 files match d7c7de92
+pinned Rails source verified: 53 files match d7c7de92
 Rails notification push: 50 complete source/policy payload cases
 ```
 
