@@ -75,6 +75,12 @@ class BoardsTest < ApplicationSystemTestCase
     visit room_thread_path(board, post)
     assert_selector ".board-post__header h1", text: "Ship it"
     assert_top_aligned ".board-post__header", "post page"
+    assert_no_selector "body.board-post"
+    assert_equal evaluate_script("window.innerWidth"), evaluate_script("document.body.getBoundingClientRect().width").round,
+      "expected the post page not to narrow the app shell"
+
+    visit new_room_thread_path(board)
+    assert_no_selector "body.board-post"
   end
 
   test "a non-member cannot open the board" do
