@@ -87,16 +87,18 @@ async fn create_action(c: &mut Ctx) -> Result {
         return Err(Error::internal(anyhow::anyhow!("message parameters do not support dig")));
     }
     // Rails checks retries before validating or staging the new payload.
-    let client_id = c.params.get("message").and_then(|message| message.get("client_message_id")).filter(|value| value.is_present()).and_then(string_column);
+    let raw_client_id = c.params.get("message").and_then(|message| message.get("client_message_id"));
+    let client_id = raw_client_id.and_then(string_column);
+    let lookup_id = raw_client_id.filter(|value| value.is_present()).and(client_id.clone());
     let (room_id, creator_id) = (room.id, require_current_user(c)?.id);
-    let duplicate = match client_id {
+    let duplicate = match lookup_id {
         Some(id) => c.app().db.read(move |conn| Message::find_duplicate(conn, room_id, creator_id, &id)).await.map_err(db_error)?,
         None => None,
     };
     let message = if let Some(duplicate) = duplicate {
         duplicate
     } else {
-        let attributes = root_create_params(c, &room).await?;
+        let attributes = human_message_params_with_client_id(c, Some(&room), client_id).await?;
         let message = create_message(c, &room, attributes).await?;
         broadcast_create(c, &room, &message).await?;
         release_webhooks(c, &message).await;
@@ -289,13 +291,15 @@ fn message_params(c: &Ctx) -> Result<MessageParams> {
     })
 }
 
-/// Additional parameters shared by the root create and human edit endpoints.
-async fn root_create_params(c: &Ctx, room: &Room) -> Result<MessageParams> {
-    human_message_params(c, Some(room)).await
-}
-
 /// Threads let the model validate their reply target; roots first scope it to root_messages.
 pub(crate) async fn human_message_params(c: &Ctx, root_room: Option<&Room>) -> Result<MessageParams> {
+    let client_id = c.params.get("message").and_then(|message| message.get("client_message_id")).and_then(string_column);
+    human_message_params_with_client_id(c, root_room, client_id).await
+}
+
+/// Create callers cast once before the retry lookup and pass that same column value here.
+/// Raw `blank?` still controls lookup: false persists as "f" but never deduplicates.
+pub(crate) async fn human_message_params_with_client_id(c: &Ctx, root_room: Option<&Room>, client_id: Option<String>) -> Result<MessageParams> {
     let message = c.params.require("message")?;
     if message.as_hash().is_none() {
         return Err(Error::internal(anyhow::anyhow!("message parameters do not support permit")));
@@ -312,7 +316,7 @@ pub(crate) async fn human_message_params(c: &Ctx, root_room: Option<&Room>) -> R
     let permitted = message.permit(&permit_keys(&["markdown_source", "client_message_id", "reply_to_message_id", "reply_notify_author"]));
     let text = |key: &str| permitted.get(key).and_then(string_column);
     attributes.markdown_source = text("markdown_source");
-    attributes.client_message_id = text("client_message_id");
+    attributes.client_message_id = client_id;
     if attributes.markdown_source.is_some() {
         attributes.body = None;
     }

@@ -57,8 +57,10 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
     let raw_initial = c.params.get("message").or_else(|| source(c).ok()?.get("message")).filter(|value| value.is_present());
     let initial = raw_initial.map(|value| value.permit(&permit_keys(&["body", "attachment", "markdown_source", "client_message_id", "reply_to_message_id", "reply_notify_author", "forward_note"]))).unwrap_or_default();
     let creator = require_current_user(c)?.id;
-    let client_id = initial.get("client_message_id").filter(|value| value.is_present()).and_then(messages::string_column);
-    let duplicate = if let Some(client_id) = client_id {
+    let raw_client_id = initial.get("client_message_id");
+    let client_id = raw_client_id.and_then(messages::string_column);
+    let lookup_id = raw_client_id.filter(|value| value.is_present()).and(client_id.clone());
+    let duplicate = if let Some(client_id) = lookup_id {
         c.app().db.read(move |conn| {
             let duplicate = Message::find_duplicate(conn, room_id, creator, &client_id)?;
             duplicate.and_then(|message| message.thread_id).map(|id| ChannelThread::find(conn, id)).transpose()
@@ -94,7 +96,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
                 if notify == Some(None) { return Err(campfire_db::Error::Other("reply_notify_author violates NOT NULL".into())); }
                 let blob = staged.map(|staged| messages::save_staged(tx, staged)).transpose()?;
                 let message = thread.post_message(tx, creator, NewMessage { body, markdown_source: markdown,
-                    client_message_id: initial.get("client_message_id").and_then(messages::string_column),
+                    client_message_id: client_id,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id), reply_to_message_id: reply, reply_notify_author: notify.flatten(),
                     forward_note: initial.get("forward_note").and_then(messages::string_column), ..Default::default() })?;
                 crate::messaging::process_message_attachment(tx, storage, &message)?;

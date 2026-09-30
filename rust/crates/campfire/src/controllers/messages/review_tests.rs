@@ -1,4 +1,39 @@
 use crate::controllers::presenters::test_support::*;
+
+fn oracle_row(name: &str) -> Value {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/thread-review.json"
+    ))
+    .unwrap();
+    oracle["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["name"] == name)
+        .unwrap()
+        .clone()
+}
+
+fn assert_response(response: &Reply, row: &Value) {
+    assert_eq!(
+        response.status.as_u16(),
+        row["status"].as_u64().unwrap() as u16
+    );
+    assert_eq!(response.content_type(), row["content_type"].as_str());
+    assert_eq!(
+        response.header("cache-control"),
+        row["cache_control"].as_str()
+    );
+    assert_eq!(response.location(), row["location"].as_str());
+    if response.text() != row["body"].as_str().unwrap() {
+        rails_mismatch(
+            &response.text(),
+            row["body"].as_str().unwrap(),
+            row["name"].as_str().unwrap(),
+        );
+    }
+}
+
 use axum::http::{Method, StatusCode};
 use campfire_db::{ChannelThread, Message, NewChannelThread, ThreadMembership};
 use campfire_kit::clock::FrozenClock;
@@ -83,6 +118,7 @@ async fn review_failed_thread_upload_rolls_back_like_rails() {
     );
     assert_eq!(row_snapshot(&app).await, rows);
     assert_eq!(file_snapshot(app.booted.app.storage.service.root()), files);
+    assert_response(&reply, &oracle_row("missing_file")["responses"][0]);
 }
 
 async fn row_snapshot(app: &TestApp) -> Vec<(String, Vec<Vec<String>>)> {
@@ -200,4 +236,34 @@ async fn thread_media_failure_rolls_back_uploaded_original_variants_and_all_rows
             "initial={initial}: generated files must roll back, existing files must survive"
         );
     }
+}
+#[tokio::test]
+async fn review_boolean_client_retry_matches_rails_one_row() {
+    let app = app().await;
+    let id = thread(&app).await;
+    let mut browser = app.david();
+    let body = json!({"message":{"client_message_id":true,"markdown_source":"retry me"}});
+    let a = browser.write(post(id, body.clone())).await;
+    let b = browser.write(post(id, body)).await;
+    let ids = app
+        .db()
+        .read(move |c| {
+            Ok(Message::in_thread(c, id)?
+                .into_iter()
+                .map(|m| (m.id, m.client_message_id))
+                .collect::<Vec<_>>())
+        })
+        .await
+        .unwrap();
+    println!(
+        "WS8bmr Rust boolean retry: statuses {} {}; rows {:?}",
+        a.status, b.status, ids
+    );
+    assert_eq!(a.status, StatusCode::CREATED);
+    assert_eq!(b.status, StatusCode::CREATED);
+    assert_eq!(
+        ids.len(),
+        1,
+        "Rails writes one message on a true client ID retry"
+    );
 }
