@@ -1,23 +1,18 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 274 mapped to Rust assertions; 152 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 316 mapped to Rust assertions; 110 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors; profile/bot view and lifecycle cases remain explicit. GitHub health data/section pass independently; shared health-page wiring remains deferred. Remaining room-page/controller/system parity, helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors; profile/bot view and lifecycle cases remain explicit. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Remaining room-page/controller/system parity, helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 | Rails file | Cases passing grouped assertions | Deferred |
 |---|---:|---:|
 | `test/controllers/agents/github/pull_request_actions_controller_test.rb` | 0/21 | 21 |
 | `test/helpers/github_pull_requests_helper_test.rb` | 1/20 | 19 |
 | `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
-| `test/controllers/github/pull_request_review_requests_controller_test.rb` | 0/15 | 15 |
-| `test/controllers/github/pull_request_comments_controller_test.rb` | 0/11 | 11 |
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
-| `test/controllers/github/pull_request_reviews_controller_test.rb` | 0/9 | 9 |
 | `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
 | `test/jobs/audit_log_github_execution_test.rb` | 0/6 | 6 |
 | `test/controllers/github/connections_controller_test.rb` | 8/13 | 5 |
-| `test/controllers/github/pull_request_write_actions_controller_test.rb` | 0/5 | 5 |
-| `test/models/github/review_logins_test.rb` | 0/5 | 5 |
 | `test/controllers/accounts/bots/github_connections_controller_test.rb` | 7/10 | 3 |
 | `test/controllers/github/webhooks_controller_test.rb` | 18/21 | 3 |
 | `test/jobs/github/deliver_subscription_event_job_test.rb` | 34/37 | 3 |
@@ -26,9 +21,13 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/controllers/rooms/github/pull_request_cards_controller_test.rb` | 13/15 | 2 |
 | `test/jobs/github/fetch_pull_request_job_test.rb` | 20/22 | 2 |
 | `test/jobs/github/perform_agent_action_job_test.rb` | 34/36 | 2 |
+| `test/controllers/github/pull_request_comments_controller_test.rb` | 10/11 | 1 |
+| `test/controllers/github/pull_request_review_requests_controller_test.rb` | 14/15 | 1 |
+| `test/controllers/github/pull_request_write_actions_controller_test.rb` | 4/5 | 1 |
 | `test/models/github/pull_request_test.rb` | 16/17 | 1 |
 | `test/models/github/write_client_test.rb` | 12/13 | 1 |
 | `test/controllers/github/app_connections_controller_test.rb` | 13/13 | 0 |
+| `test/controllers/github/pull_request_reviews_controller_test.rb` | 9/9 | 0 |
 | `test/controllers/rooms/github_subscriptions_controller_test.rb` | 17/17 | 0 |
 | `test/models/github/agent_pull_request_action_test.rb` | 11/11 | 0 |
 | `test/models/github/app_test.rb` | 11/11 | 0 |
@@ -36,6 +35,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/models/github/pull_request_thread_test.rb` | 11/11 | 0 |
 | `test/models/github/pull_request_url_test.rb` | 10/10 | 0 |
 | `test/models/github/repository_subscription_test.rb` | 10/10 | 0 |
+| `test/models/github/review_logins_test.rb` | 5/5 | 0 |
 | `test/models/github_connected_account_test.rb` | 20/20 | 0 |
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
@@ -133,51 +133,51 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| posts the comment with the member's token, never the workspace token | Deferred; WS15g continuation | — |
-| success over Turbo Stream replaces the frame with the confirmation | Deferred; WS15g continuation | — |
-| non-members get not found | Deferred; WS15g continuation | — |
-| a member without a linked token gets the connect prompt | Deferred; WS15g continuation | — |
-| a member with a disconnected token gets the reconnect prompt | Deferred; WS15g continuation | — |
-| a GitHub 403 renders inline with no retry | Deferred; WS15g continuation | — |
-| a failed comment keeps the body for retry | Deferred; WS15g continuation | — |
-| a GitHub 401 disconnects the account and shows the reconnect prompt | Deferred; WS15g continuation | — |
-| a blank body is rejected without calling GitHub | Deferred; WS15g continuation | — |
-| a PR the room does not discuss gets not found | Deferred; WS15g continuation | — |
+| posts the comment with the member's token, never the workspace token | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| success over Turbo Stream replaces the frame with the confirmation | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
+| a member without a linked token gets the connect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a member with a disconnected token gets the reconnect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a GitHub 403 renders inline with no retry | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a failed comment keeps the body for retry | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a GitHub 401 disconnects the account and shows the reconnect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a blank body is rejected without calling GitHub | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a PR the room does not discuss gets not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
 | posting never logs the member's token | Deferred; WS15g continuation | — |
 
 ## `test/controllers/github/pull_request_review_requests_controller_test.rb` (15 tests)
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| requests the review with the member's token, never the workspace token | Deferred; WS15g continuation | — |
-| reviewers are split on commas or whitespace, stripped of @, downcased, and deduped | Deferred; WS15g continuation | — |
-| success over Turbo Stream replaces the frame with the confirmation | Deferred; WS15g continuation | — |
-| non-members get not found | Deferred; WS15g continuation | — |
-| a member without a linked token gets the connect prompt | Deferred; WS15g continuation | — |
-| a member with a disconnected token gets the reconnect prompt | Deferred; WS15g continuation | — |
-| a GitHub 403 renders inline with no retry | Deferred; WS15g continuation | — |
-| a GitHub 422 keeps the submitted reviewers and shows the message | Deferred; WS15g continuation | — |
-| a GitHub 401 disconnects the account and shows the reconnect prompt | Deferred; WS15g continuation | — |
-| invalid logins are rejected without calling GitHub and keep the input | Deferred; WS15g continuation | — |
-| empty input is rejected without calling GitHub | Deferred; WS15g continuation | — |
-| more than 15 reviewers are rejected without calling GitHub | Deferred; WS15g continuation | — |
-| a PR the room does not discuss gets not found | Deferred; WS15g continuation | — |
-| a bot key is forbidden, exactly as the comments endpoint | Deferred; WS15g continuation | — |
+| requests the review with the member's token, never the workspace token | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| reviewers are split on commas or whitespace, stripped of @, downcased, and deduped | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| success over Turbo Stream replaces the frame with the confirmation | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
+| a member without a linked token gets the connect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a member with a disconnected token gets the reconnect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a GitHub 403 renders inline with no retry | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a GitHub 422 keeps the submitted reviewers and shows the message | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a GitHub 401 disconnects the account and shows the reconnect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| invalid logins are rejected without calling GitHub and keep the input | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| empty input is rejected without calling GitHub | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| more than 15 reviewers are rejected without calling GitHub | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a PR the room does not discuss gets not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
+| a bot key is forbidden, exactly as the comments endpoint | Mapped to grouped Rust assertions; WS15g | `github_write_bot_credentials_are_forbidden_and_never_reach_github` |
 | requesting never logs the member's token | Deferred; WS15g continuation | — |
 
 ## `test/controllers/github/pull_request_reviews_controller_test.rb` (9 tests)
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| approve posts with the member's token, never the workspace token | Deferred; WS15g continuation | — |
-| request-changes posts the review body | Deferred; WS15g continuation | — |
-| request-changes without a body is rejected locally with 422 | Deferred; WS15g continuation | — |
-| an unknown event is rejected without calling GitHub | Deferred; WS15g continuation | — |
-| non-members get not found | Deferred; WS15g continuation | — |
-| a member without a linked token gets the connect prompt | Deferred; WS15g continuation | — |
-| a GitHub 403 renders inline with no retry | Deferred; WS15g continuation | — |
-| a failed review keeps the body for retry | Deferred; WS15g continuation | — |
-| a GitHub 401 disconnects the account and shows the reconnect prompt | Deferred; WS15g continuation | — |
+| approve posts with the member's token, never the workspace token | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| request-changes posts the review body | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| request-changes without a body is rejected locally with 422 | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| an unknown event is rejected without calling GitHub | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
+| a member without a linked token gets the connect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a GitHub 403 renders inline with no retry | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a failed review keeps the body for retry | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a GitHub 401 disconnects the account and shows the reconnect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 
 ## `test/controllers/github/pull_request_threads_controller_test.rb` (7 tests)
 
@@ -195,10 +195,10 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| a linked member gets the composer and review buttons | Deferred; WS15g continuation | — |
-| a member without a linked token gets the connect prompt | Deferred; WS15g continuation | — |
-| a member with a disconnected token gets the reconnect prompt | Deferred; WS15g continuation | — |
-| non-members get not found | Deferred; WS15g continuation | — |
+| a linked member gets the composer and review buttons | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a member without a linked token gets the connect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| a member with a disconnected token gets the reconnect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
+| non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
 | the thread header carries the write-actions frame | Deferred; WS15g continuation | — |
 
 ## `test/controllers/github/webhooks_controller_test.rb` (21 tests)
@@ -562,11 +562,11 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| splits on commas and whitespace, strips @, downcases, and dedupes | Deferred; WS15g continuation | — |
-| accepts an array of tokens | Deferred; WS15g continuation | — |
-| blank input normalizes to an empty array | Deferred; WS15g continuation | — |
-| invalid logins normalize to nil | Deferred; WS15g continuation | — |
-| more than 15 unique logins normalizes to nil | Deferred; WS15g continuation | — |
+| splits on commas and whitespace, strips @, downcases, and dedupes | Mapped to grouped Rust assertions; WS15g | `github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries` |
+| accepts an array of tokens | Mapped to grouped Rust assertions; WS15g | `github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries` |
+| blank input normalizes to an empty array | Mapped to grouped Rust assertions; WS15g | `github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries` |
+| invalid logins normalize to nil | Mapped to grouped Rust assertions; WS15g | `github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries` |
+| more than 15 unique logins normalizes to nil | Mapped to grouped Rust assertions; WS15g | `github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries` |
 
 ## `test/models/github/write_client_test.rb` (13 tests)
 

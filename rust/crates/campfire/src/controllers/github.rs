@@ -8,6 +8,7 @@ pub mod connections;
 pub mod discussions;
 pub mod subscriptions;
 pub mod webhooks;
+pub mod writes;
 
 #[cfg(test)]
 mod connection_tests;
@@ -19,3 +20,6 @@ mod health_tests;
 
 #[cfg(test)]
 mod discussion_tests;
+
+#[cfg(test)]
+mod write_tests;

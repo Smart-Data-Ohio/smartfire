@@ -43,7 +43,17 @@ pub(super) async fn request(
     method: &str,
     path: &str,
     body: Value,
+    values: Value,
+) -> (u16, HeaderMap, String) {
+    request_with_accept(fresh, method, path, body, values, "text/html").await
+}
+pub(super) async fn request_with_accept(
+    fresh: &Fresh,
+    method: &str,
+    path: &str,
+    body: Value,
     mut values: Value,
+    accept: &str,
 ) -> (u16, HeaderMap, String) {
     // Use the actual CSRF/session protocol, with deterministic global token bytes.
     let raw = base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, [7u8; 32]);
@@ -60,6 +70,7 @@ pub(super) async fn request(
                 .header("Cookie", session(fresh, &values))
                 .header("X-CSRF-Token", token)
                 .header("Content-Type", "application/json")
+                .header("Accept", accept)
                 .body(if method == "GET" {
                     Body::empty()
                 } else {

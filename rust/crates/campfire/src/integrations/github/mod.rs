@@ -16,6 +16,7 @@ pub mod references;
 pub mod subscriptions;
 pub mod threads;
 pub mod webhooks;
+pub mod writes;
 
 pub(crate) fn blank(value: &str) -> bool {
     value.chars().all(char::is_whitespace)
