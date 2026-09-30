@@ -271,6 +271,17 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
     assert_eq!(status, axum::http::StatusCode::OK, "sign-in page: {body}");
     let (status, body) = browser.post("/session", "text/html", &[("email_address", "person@example.com"), ("password", "secret123456")]).await;
     assert_eq!(status, axum::http::StatusCode::FOUND, "signed in: {body}");
+    let (status, _) = browser.get("/two_factor_setup").await;
+    assert_eq!(status, axum::http::StatusCode::OK);
+    let encryption = rails_compat::ar_encryption::ArEncryption::new(&app.secrets);
+    let enrollment_now = campfire_db::Timestamp::from_jiff(app.clock.now());
+    let secret = app.db.read(move |conn| {
+        let session_id = conn.query_row("SELECT session_id FROM two_factor_setup_secrets", [], |r| r.get(0))?;
+        campfire_db::TwoFactorSetupSecret::valid_for(conn, session_id, enrollment_now)?.expect("live enrollment").secret(&encryption)
+    }).await.unwrap();
+    let code = rails_compat::totp::at(&secret, app.clock.now().as_second()).unwrap();
+    let (status, body) = browser.post("/two_factor_setup", "text/html", &[("code", &code)]).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "completed enrollment: {body}");
     let path = format!("/rooms/{room}/messages");
     let post = |n: &'static str| [("message[body]", "<p>Hello bot</p>"), ("message[client_message_id]", n)];
     let messages = || count(&app, "SELECT count(*) FROM messages");
@@ -735,8 +746,9 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     let app = booted.app.clone();
     app.db.write(|tx|{tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob{source_message_id:999}));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
     let rows = wait_for(&app, "quote refresh execution", |rows| {
-        rows.iter()
-            .all(|row| row.class != "Message::QuoteCardsRefreshJob")
+        // The periodic runner may enqueue retention alongside this job. Wait for
+        // that work too before asserting an empty queue, rather than racing it.
+        rows.is_empty()
             || rows
                 .iter()
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")

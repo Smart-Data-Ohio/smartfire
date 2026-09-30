@@ -354,6 +354,7 @@ mod tests {
 
         let output = json!({ "now": vectors["now"], "raw": raw, "data": data, "checks": vectors["session_keys"]["checks"] });
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/campfire_session_keys_rust_output.json");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, serde_json::to_string_pretty(&output).unwrap()).unwrap();
     }
 
