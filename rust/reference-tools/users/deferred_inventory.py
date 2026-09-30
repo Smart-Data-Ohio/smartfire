@@ -42,6 +42,7 @@ covered_before = {
 }
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
+    "controllers/public_pages_controller_test.rb": {"sign-in page links the public pages without OAuth"},
     "system/timezone_detection_test.rb": {"the browser does not report its zone without a CSRF token", "the browser reports its detected zone once"},
     "system/audit_log_test.rb": {"admin browses filters and exports the audit log", "audit log stays usable at phone width"},
     "controllers/pwa_controller_test.rb": covered_before["controllers/pwa_controller_test.rb"] | {"service worker fetch and notification logic"},
@@ -112,6 +113,7 @@ covered.update({
     },
     "controllers/users/bans_controller_test.rb": {
         "create bans user and creates ban records from sessions", "create destroys user sessions", "non-admins cannot ban users",
+        "create succeeds when the user has a pending two-factor setup secret", "create enqueues RemoveBannedContentJob", "RemoveBannedContentJob deletes messages",
         "destroy removes ban records and sets user to active", "non-admins cannot unban users",
     },
     "controllers/accounts_controller_test.rb": {"edit","edit groups administrators separately from members with a divider","update", "non-admins cannot update"},

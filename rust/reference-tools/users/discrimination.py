@@ -11,6 +11,10 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("sign-in-public-link", "crates/views/templates/sessions/new.html", 'h::link_to_text("Privacy Policy", &h::routes::privacy()', 'h::link_to_text("Privacy Policy", &h::routes::about()', "unconfigured_sign_in_links_all_public_pages_in_new_tabs"),
+    ("ban-setup-cleanup", "crates/db/src/models/user.rs", 'r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,\n            [self.id],\n        )?;\n        tx.emit_after_commit(Event::RemoveBannedContent', 'r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ? AND id < 0"#,\n            [self.id],\n        )?;\n        tx.emit_after_commit(Event::RemoveBannedContent', "banning_a_user_removes_pending_two_factor_setup_and_sessions"),
+    ("ban-job-enqueue", "crates/db/src/models/user.rs", 'tx.emit_after_commit(Event::RemoveBannedContent { user_id: self.id });', '// deliberate dropped ban enqueue', "ban_http_enqueue_is_atomic_and_writes_one_durable_remove_job"),
+    ("ban-job-perform", "crates/campfire/src/jobs.rs", 'for message in messages {\n        let (removed, room_id)', 'for message in messages.into_iter().take(0) {\n        let (removed, room_id)', "ban_http_removes_the_users_messages_through_the_real_runner"),
     ("dm-picker-view", "crates/views/templates/rooms/directs/new.html", "Type names to filter…", "Type names to filtez…", "seed_picker"),
     ("status-prefix", "crates/views/src/users/status_popup.rs", 'id_prefix: "status_popup".into()', 'id_prefix: "user".into()', "complete_popup_bodies_match_post_pin_rails"),
     ("status-redirect", "crates/campfire/src/controllers/users/statuses.rs", 'status: Some(StatusCode::SEE_OTHER)', 'status: Some(StatusCode::FOUND)', "popup_update_matches_rails_redirects_errors_and_current_user_state"),
@@ -61,7 +65,7 @@ for name, relative, before, after, test in mutations:
     assert source.count(before) == 1, (name, "mutation anchor", source.count(before))
     try:
         path.write_text(source.replace(before, after))
-        run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", "campfire", test, "--", "--nocapture"], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", "campfire", test, "--", "--nocapture", "--test-threads=4"], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         (scratch / f"{name}.log").write_text(run.stdout)
         summaries = [line for line in run.stdout.splitlines() if line.startswith("test result:")]
         assert run.returncode == 101 and summaries and "FAILED" in summaries[-1] and f"::{test} ... FAILED" in run.stdout, (name, run.stdout[-4000:])

@@ -46,6 +46,31 @@ mod tests {
     use axum::http::{Method, StatusCode};
 
     #[tokio::test]
+    async fn unconfigured_sign_in_links_all_public_pages_in_new_tabs() {
+        // PublicPagesControllerTest at d7c7de92; render WS9's sign-in page directly.
+        let app = TestApp::boot_frozen().await.expect("seed required");
+        let response = app.anonymous().get("/session/new").await;
+        assert_eq!(response.status, StatusCode::OK);
+        assert!(!response.text().contains("Sign in with Google"));
+        let body = response.text();
+        let links = body
+            .split_once("aria-label=\"About this workspace\"")
+            .unwrap()
+            .1
+            .split_once("</nav>")
+            .unwrap()
+            .0;
+        for path in ["/about", "/privacy", "/terms"] {
+            assert!(
+                links.contains(&format!(
+                    "<a target=\"_blank\" rel=\"noopener\" href=\"{path}\">"
+                )),
+                "missing protected public link {path}"
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn public_pages_bypass_authentication_browser_and_private_state() {
         let Some(app) = TestApp::boot().await else {
             return;

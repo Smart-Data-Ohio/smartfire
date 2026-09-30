@@ -157,3 +157,6 @@ mod status_popup_tests;
 
 #[cfg(test)]
 mod profile_security_tests;
+
+#[cfg(test)]
+mod ban_lifecycle_tests;

@@ -6,6 +6,8 @@ import sys
 
 log = Path(sys.argv[1]).read_text()
 files = {
+    "controllers::users::ban_lifecycle_tests": ("controllers/users/ban_lifecycle_tests.rs", 3),
+    "controllers::public_pages::tests": ("controllers/public_pages.rs", 4),
     "controllers::users::profile_security_tests": ("controllers/users/profile_security_tests.rs", 7),
     "controllers::rooms::directs::picker_tests": ("controllers/rooms/directs/picker_tests.rs", 5),
     "controllers::users::status_popup_tests": ("controllers/users/status_popup_tests.rs", 4),
@@ -26,4 +28,4 @@ for prefix, (file, expected) in files.items():
     results = re.findall(r"^test " + re.escape(prefix) + r"::[^\s]+ \.\.\. (ok|FAILED|ignored)", log, re.M)
     assert len(results) == expected and all(result == "ok" for result in results), (file, results)
     print(f"{file}: {len(results)} passed; 0 failed; 0 ignored")
-print("WS8br2 file accounting: 87 executed Rust groups; 4 DM picker bodies; 5 popup bodies and 6 HTTP status cases; 9 Google Calendar fragments and 11 status/meeting/OOO fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 3 icon bodies/navs, 9 logo PNG responses; 13 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 23 account/ban cases, 9 individual exactly-one audit checks, 13 account rows, 2 account bodies/navs/footers, 2 invites, 2 CSS bodies; 1 agent-owner case explicitly deferred")
+print("WS8br2 file accounting: 94 executed Rust groups; 4 DM picker bodies; 5 popup bodies and 6 HTTP status cases; 9 Google Calendar fragments and 11 status/meeting/OOO fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 3 icon bodies/navs, 9 logo PNG responses; 13 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 23 account/ban cases, 9 individual exactly-one audit checks, 13 account rows, 2 account bodies/navs/footers, 2 invites, 2 CSS bodies; 1 agent-owner case explicitly deferred")
