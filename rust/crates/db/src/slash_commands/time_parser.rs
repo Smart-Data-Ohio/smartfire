@@ -71,7 +71,8 @@ pub(crate) fn known_zone(name: &str) -> Option<TimeZone> {
     });
     TimeZone::get(aliases.get(name).map(String::as_str).unwrap_or(name)).ok()
 }
-pub(crate) fn zone(name: &str) -> TimeZone {
+/// Rails request-local zone resolution, shared with authenticated integration services.
+pub fn zone(name: &str) -> TimeZone {
     known_zone(name).unwrap_or(TimeZone::UTC)
 }
 pub(crate) fn local(

@@ -673,3 +673,6 @@ mod agent_conversation_tests;
 
 #[cfg(test)]
 mod agent_fizzy_tests;
+
+#[cfg(test)]
+mod agent_fizzy_action_tests;

@@ -721,33 +721,33 @@ async fn execute(
         "create_fizzy_card" => {
             required(&args, "board_id")?;
             required(&args, "title")?;
-            let mut args = args;
+            let mut args = super::integrations::action_fields(args, &["account_id", "board_id", "title", "description", "external_id"]);
             args["kind"] = json!("create");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         "comment_on_fizzy_card" => {
             required(&args, "number")?;
             required(&args, "body")?;
-            let mut args = args;
+            let mut args = super::integrations::action_fields(args, &["account_id", "number", "body", "external_id"]);
             args["kind"] = json!("comment");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         "move_fizzy_card" => {
             required(&args, "number")?;
             required(&args, "column_id")?;
-            let mut args = args;
+            let mut args = super::integrations::action_fields(args, &["account_id", "number", "column_id", "external_id"]);
             args["kind"] = json!("move");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         "close_fizzy_card" => {
             required(&args, "number")?;
-            let mut args = args;
+            let mut args = super::integrations::action_fields(args, &["account_id", "number", "external_id"]);
             args["kind"] = json!("close");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         "reopen_fizzy_card" => {
             required(&args, "number")?;
-            let mut args = args;
+            let mut args = super::integrations::action_fields(args, &["account_id", "number", "external_id"]);
             args["kind"] = json!("reopen");
             Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }

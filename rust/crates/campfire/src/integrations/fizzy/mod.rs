@@ -1,6 +1,9 @@
 //! WS15e's shared Fizzy reads; authenticated REST/MCP adapters use this domain layer.
 pub mod accounts;
 pub mod agent_reads;
+#[allow(dead_code, reason = "Fizzy action execution remains with WS15e's approval job")]
+pub mod agent_action;
+pub mod agent_requests;
 pub mod client;
 pub(super) mod error_body;
 use serde_json::Value;

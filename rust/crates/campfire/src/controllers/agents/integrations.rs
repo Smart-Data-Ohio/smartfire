@@ -60,51 +60,9 @@ fn preflight(
         }
         return Ok(None);
     }
-    let write = op == "fizzy_card_action";
-    let cap = if write { "external_action" } else { "fizzy" };
-    if !agent_access::capability_for_agent(tx.conn(), agent_id, cap, None)? {
-        return Ok(Some(ServiceResult::fail(
-            format!("Forbidden: agent lacks {cap} capability"),
-            403,
-        )));
-    }
-    let Some(owner) = agent.owner_id else {
-        return Ok(fail("Agent has no owner recorded", 422));
-    };
-    let account = linked_account(tx, encryption, "fizzy_connected_accounts", owner, false)?;
-    let Some(account) = account else {
-        return Ok(fail("Agent owner has no usable Fizzy account", 422));
-    };
-    if !write {
-        let valid_id = |value: &str| {
-            !value.is_empty()
-                && value
-                    .bytes()
-                    .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
-        };
-        if op == "fizzy_card" {
-            let number = text(args.get("number")).unwrap_or_default();
-            if number.is_empty() || !number.bytes().all(|b| b.is_ascii_digit()) {
-                return Ok(fail("Invalid card number", 404));
-            }
-        }
-        if op == "fizzy_search" && args.get("q").is_none_or(blank) {
-            return Ok(fail("Missing query", 422));
-        }
-        let resolved =
-            text(args.get("account_id").filter(|v| !blank(v))).unwrap_or_else(|| account.clone());
-        if !valid_id(&resolved) {
-            return Ok(fail("Not found in Fizzy", 404));
-        }
-        if op == "fizzy_board" && !valid_id(&text(args.get("board_id")).unwrap_or_default()) {
-            return Ok(fail("Not found in Fizzy", 404));
-        }
-    }
-    if write {
-        return action_preflight(tx, agent_id, op, args, Some(&account));
-    }
     Ok(None)
 }
+
 pub async fn operation(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceResult> {
     use crate::integrations::fizzy::agent_reads::{self, Read};
     let read = match op {
@@ -119,6 +77,17 @@ pub async fn operation(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<
         let result = agent_reads::read(app, &app.fizzy.network, &app.fizzy.base, agent_id, read).await.map_err(db_error)?;
         return Ok(ServiceResult { payload: result.payload, error: result.error, status: result.status });
     }
+    if op == "fizzy_card_action" {
+        let crypto = c.app().ar_encryption.clone();
+        let credential = c.current::<CurrentAgent>().map(|a| a.credential_id);
+        let user = concerns::require_current_user(c)?.id;
+        return c.app().db.write(move |tx| {
+            let zone: Option<String> = tx.conn().query_row("SELECT time_zone FROM users WHERE id=?", [user], |r| r.get(0))?;
+            let zone = campfire_db::slash_commands::time_parser::zone(zone.as_deref().unwrap_or("UTC"));
+            let result = crate::integrations::fizzy::agent_requests::create(tx, &crypto, agent_id, args, credential, &zone)?;
+            Ok(ServiceResult { payload: result.payload, error: result.error, status: result.status })
+        }).await.map_err(db_error);
+    }
     let op = op.to_owned();
     let encryption = c.app().ar_encryption.clone();
     c.app()
@@ -128,7 +97,7 @@ pub async fn operation(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<
                 return Ok(denial);
             }
             if op == "github_pull_request_action"
-                && let Some(denial) = action_preflight(tx, agent_id, &op, &args, None)?
+                && let Some(denial) = action_preflight(tx, agent_id, &op, &args)?
             {
                 return Ok(denial);
             }
@@ -153,6 +122,9 @@ async fn fizzy(c: &mut Ctx, controller: &str, action: &str, op: &str, limit: u64
     agent_api::throttle(c, limit, controller, action)?;
     agent_api::no_store(c);
     let mut args = c.params.to_json();
+    if op == "fizzy_card_action" {
+        args = action_fields(args, &["account_id", "kind", "board_id", "number", "column_id", "title", "description", "body", "external_id"]);
+    }
     if op == "fizzy_board" {
         args["board_id"] = args["id"].clone();
     }
@@ -216,7 +188,7 @@ pub async fn github_action(c: &mut Ctx) -> Result {
     super::render_result(c, result)
 }
 
-// Local usability only; refreshing App tokens and remote failure mapping remain WS15g/e.
+// Local GitHub usability only; App-token refresh and remote access remain WS15g.
 fn linked_account(
     tx: &Tx<'_>,
     encryption: &rails_compat::ar_encryption::ArEncryption,
@@ -253,12 +225,6 @@ fn linked_account(
         }
     }
 }
-fn valid_id(value: &str) -> bool {
-    !value.is_empty()
-        && value
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
-}
 fn normalized(args: &Value, key: &str) -> String {
     text(args.get(key))
         .unwrap_or_default()
@@ -270,7 +236,6 @@ fn action_preflight(
     agent_id: i64,
     op: &str,
     args: &Value,
-    account: Option<&str>,
 ) -> campfire_db::Result<Option<ServiceResult>> {
     if let Some(external) = args.get("external_id").filter(|v| !blank(v))
         && let Some(mut existing) = campfire_db::AgentApproval::find_by_external_id(
@@ -339,56 +304,6 @@ fn action_preflight(
                 errors.add("reviewers", "Enter GitHub usernames separated by commas.");
             }
         }
-    } else {
-        if !["create", "comment", "move", "close", "reopen"].contains(&kind.as_str()) {
-            errors.add(
-                "kind",
-                "must be one of: create, comment, move, close, reopen",
-            );
-        }
-        let account = text(args.get("account_id").filter(|v| !blank(v)))
-            .unwrap_or_else(|| account.unwrap_or_default().to_owned());
-        if campfire_richtext::ruby::is_blank(&account) {
-            errors.add("account_id", "can't be blank");
-        }
-        if !valid_id(&account) {
-            errors.add("account_id", "is invalid");
-        }
-        for key in ["board_id", "column_id"] {
-            if let Some(value) = args.get(key).filter(|v| !blank(v))
-                && !valid_id(&text(Some(value)).unwrap_or_default())
-            {
-                errors.add(key, "is invalid");
-            }
-        }
-        let number = text(args.get("number")).unwrap_or_default();
-        match kind.as_str() {
-            "create" => {
-                if normalized(args, "board_id").is_empty() {
-                    errors.add("board_id", "is required to create a card");
-                }
-                if normalized(args, "title").is_empty() {
-                    errors.add("title", "is required to create a card");
-                }
-            }
-            "comment" | "move" | "close" | "reopen" => {
-                if number.is_empty() || !number.bytes().all(|b| b.is_ascii_digit()) {
-                    errors.add("number", "is required");
-                }
-                if kind == "comment" && normalized(args, "body").is_empty() {
-                    errors.add("body", "is required for a comment");
-                }
-                if kind == "move" && normalized(args, "column_id").is_empty() {
-                    errors.add("column_id", "is required to move a card");
-                }
-            }
-            _ => {}
-        }
-        for (key, max) in [("title", 500), ("description", 3500), ("body", 3500)] {
-            if normalized(args, key).chars().count() > max {
-                errors.add(key, format!("is too long (maximum is {max} characters)"));
-            }
-        }
     }
     if !errors.is_empty() {
         let mut fields = serde_json::Map::new();
@@ -416,4 +331,9 @@ fn action_preflight(
         return Ok(Some(ServiceResult::budget(budget)));
     }
     Ok(None)
+}
+
+/// Each tool and REST controller supplies exactly the fields its Rails caller constructs.
+pub(super) fn action_fields(args: Value, keys: &[&str]) -> Value {
+    Value::Object(keys.iter().map(|key| ((*key).into(), args[*key].clone())).collect())
 }
