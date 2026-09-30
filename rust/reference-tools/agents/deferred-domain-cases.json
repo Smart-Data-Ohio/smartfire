@@ -1,0 +1,502 @@
+{
+  "reference_pin": "d7c7de92",
+  "status": "partial",
+  "meaning": "Named case ports only. Consolidated Rust checks and Rails contract vectors are additional evidence, not file closure.",
+  "boundary_deferred": {
+    "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api."
+  },
+  "files": [
+    {
+      "rails_file": "test/jobs/agent/delivery_concurrency_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "concurrent mentions cannot exceed the rate limit"
+      ]
+    },
+    {
+      "rails_file": "test/jobs/agent/delivery_job_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "mentioning an agent enqueues delivery and performing marks it delivered",
+        "delivery posts the webhook with the additive agent key",
+        "delivery without a webhook still marks the row delivered",
+        "revoked at perform time writes a suppression row",
+        "membership removed before delivery writes a suppression row",
+        "performing the same event twice posts the webhook only once",
+        "a job that loses the delivery race exits without posting",
+        "a delivery claimed inside a rolled-back transaction enqueues no webhook",
+        "a job that loses the suppression race writes no duplicate row",
+        "room soft-deleted before delivery suppresses without a new suppression row",
+        "message deleted before delivery suppresses without crashing or posting",
+        "rate check and insert run inside the agent lock",
+        "rate limit drops the 21st delivery with a suppression row and no job",
+        "rate limit is per agent per room",
+        "reply to an agent's message creates a reply event",
+        "a message that both mentions and replies records a single reply event",
+        "direct room messages create direct_message events",
+        "agent posting writes a posted row",
+        "agent never receives its own messages",
+        "bot without an agent row receives no events",
+        "hop limit suppresses a chain that reaches hop 3",
+        "replying to an old low-hop message does not reset the chain",
+        "suppression rows are never hop triggers",
+        "pending rows are hop triggers",
+        "deliveries older than five minutes are not hop triggers",
+        "bridging rooms carries the hop chain instead of resetting it",
+        "agent and legacy bot ping-pong escalates until the agent side suppresses",
+        "an agent's own posts are not hop triggers",
+        "self-assigned work does not raise the agent's own hop count"
+      ]
+    },
+    {
+      "rails_file": "test/jobs/agent/event_webhook_job_test.rb",
+      "owner": "WS11 delivery; WS15g live repository reader",
+      "remaining_named_case_ports": [
+        "a successful post marks the row delivered",
+        "a transport failure records the attempt and retries with backoff",
+        "a timeout records the attempt in the ledger and retries",
+        "the fifth failure marks the row failed without re-enqueueing",
+        "a 201 response counts as delivered",
+        "a 500 response retries with backoff and fails after five attempts",
+        "a 429 response waits out Retry-After before retrying",
+        "a 429 response without Retry-After retries with the default backoff",
+        "a 408 response retries instead of failing fast",
+        "a 404 response fails fast without retrying",
+        "an error response with an attachment body creates no sync reply",
+        "a guard refusal fails fast without retrying",
+        "an unresolvable host fails fast without retrying",
+        "a message deleted before the post fails fast without retrying",
+        "a removed webhook configuration clears the owed post",
+        "an already delivered row posts nothing",
+        "acking a pending row does not cancel its webhook"
+      ]
+    },
+    {
+      "rails_file": "test/lib/restricted_http/private_network_guard_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "private_ip? returns true for 'This' network (RFC1700)",
+        "private_ip? returns true for loopback addresses",
+        "private_ip? returns true for RFC1918 private addresses",
+        "private_ip? returns true for link-local addresses",
+        "private_ip? returns false for public addresses",
+        "private_ip? returns true for IPv4-mapped IPv6 addresses with private IPs",
+        "private_ip? returns true for IPv4-mapped IPv6 addresses with link-local IPs",
+        "private_ip? returns true for IPv4-mapped IPv6 addresses even with public IPs",
+        "private_ip? returns true for IPv4-compatible IPv6 addresses with private IPs",
+        "private_ip? returns true for IPv4-compatible IPv6 addresses with link-local IPs",
+        "private_ip? returns true for IPv4-compatible IPv6 addresses even with public IPs",
+        "private_ip? returns true for carrier-grade NAT addresses (RFC6598)",
+        "private_ip? returns true for NAT64 addresses embedding a private IPv4",
+        "private_ip? returns true for the whole local-use NAT64 block (RFC8215)",
+        "private_ip? returns true for SIIT IPv4-translated addresses (RFC2765)",
+        "private_ip? returns false for NAT64 addresses embedding a public IPv4",
+        "private_ip? returns true for 6to4 and Teredo transition addresses",
+        "private_ip? returns true for IPv6 loopback, ULA, and link-local",
+        "private_ip? returns true for IPv6 multicast, documentation, and benchmarking ranges",
+        "private_ip? returns false for public IPv6 addresses",
+        "private_ip? returns true for invalid addresses",
+        "resolve raises Violation for private hostname",
+        "resolve returns IP for public hostname",
+        "resolve refuses hostnames answering only blocked IPv6 addresses",
+        "resolve refuses numeric IPv4 literals however they are spelled",
+        "resolve returns the normalized address for public numeric literals",
+        "resolve refuses bracketed IPv6 literals pointing at blocked addresses",
+        "resolve raises Unresolvable, not Violation, when the host resolves to nothing"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent/delivery_recovery_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "a stranded pending row gets recovered",
+        "a stranded row with attempts remaining but some spent gets recovered",
+        "a fresh pending row is left alone",
+        "an exhausted pending row past its grace is marked failed",
+        "a recently exhausted pending row is left alone",
+        "settled webhook rows are left alone",
+        "a 429 with Retry-After 600 is not re-posted by the sweeper before 600 seconds",
+        "the sweeper does not overwrite a Retry-After stored after its read",
+        "a recovery pass keeps going past an enqueue failure",
+        "a job with a stale attempt number exits without posting",
+        "a scheduled retry records its next attempt in the future",
+        "the sweeper recovers a stranded pending delivery for a webhook-enabled agent",
+        "the sweeper leaves a fresh pending delivery alone"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_approval_test.rb",
+      "owner": "WS11 domain; WS11-ui human approval controller/pages",
+      "remaining_named_case_ports": [
+        "requires action, summary, and expires_at with valid formats",
+        "rejects actions outside the allowed charset or length",
+        "rejects summaries over 500 characters",
+        "rejects payloads over 4 KB",
+        "defaults expires_at to 24 hours",
+        "rejects expiry windows outside 5 minutes to 7 days",
+        "enforces unique external_id per agent",
+        "allows multiple rows without an external_id",
+        "effective_status reads expired once the deadline passes",
+        "expire_if_due! persists expired only for overdue pending rows",
+        "decide! rejects expired and already-decided rows",
+        "cancel_by_agent! rejects decided and expired rows",
+        "rejects decision notes over 200 characters",
+        "creates one inbox item per decider",
+        "a decider with approvals switched off gets no item but stays a decider",
+        "deciders fall back to administrators when the agent has no owner",
+        "decision webhook is enqueued after the transaction commits",
+        "decision webhook waits for a wrapping transaction",
+        "a second decision on an already decided request appends no second event",
+        "cancelling and expiring mark decider inbox items handled"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_budgets_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "usage counts today's messages, board posts, and approvals",
+        "a board post's first message counts only toward the board-post cap",
+        "an opener does not burn the message budget but replies do",
+        "usage ignores yesterday's rows",
+        "unlimited caps always pass",
+        "a hit cap answers 429 and notifies the owner once per day",
+        "each cap notifies separately",
+        "an ownerless agent notifies administrators",
+        "a stranger cannot read another agent's budget item",
+        "caps must be positive integers",
+        "an agent-created handoff counts toward no budget, even with caps exhausted"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_event_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "requires a known event type",
+        "accepts every documented event type",
+        "requires a known outcome",
+        "room, message, credential, and actor are optional",
+        "deliverable scope covers message types, approval decisions, work assignments, and github completions",
+        "message_deliverable scope excludes approval decisions, work assignments, and github completions",
+        "hop defaults to zero and reads metadata",
+        "acknowledged! is idempotent",
+        "destroying the agent removes its events",
+        "agent exposes its events"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_kill_switch_test.rb",
+      "owner": "WS11; WS15g/WS15e approved-action execution callbacks",
+      "remaining_named_case_ports": [
+        "kill switch suspends, cancels pending approvals, and audits",
+        "kill switch marks cancelled approvals' inbox items handled",
+        "kill switch blocks approved-but-unexecuted external actions",
+        "kill switch is safe to repeat",
+        "kill switch quietly finalizes the agent's open streams",
+        "suspend quietly finalizes the agent's open streams",
+        "a suspension that rolls back leaves open streams untouched",
+        "kill switch leaves owned work assigned without reassigning it"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_revocation_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "removing a membership revokes that agent's grants in that room only",
+        "workspace-wide grants survive membership removal",
+        "membership revocation persists in the same transaction as the removal",
+        "destroying a room revokes its grants and forbids the next post",
+        "suspending an agent revokes all of its grants immediately",
+        "deactivating the agent user revokes all of its grants",
+        "banning the agent user revokes all of its grants",
+        "destroying the agent user revokes all of its grants"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_slash_command_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "registers a command",
+        "new commands take arguments by default",
+        "names are unique per room across agents",
+        "names must be lowercase command words",
+        "names cannot shadow built-ins",
+        "descriptions are capped"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_step_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "attaches to the agent's own message",
+        "attaches to a work thread the agent owns",
+        "requires exactly one parent",
+        "rejects another author's message",
+        "rejects threads the agent does not own",
+        "rejects non-work threads",
+        "caps the count per parent",
+        "caps field sizes",
+        "positions follow creation order",
+        "steps die with their message and thread"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "kind defaults to personal",
+        "personal requires an owner on create",
+        "personal requires an owner on update",
+        "workspace requires an owner on create",
+        "ownerless workspace rows from the backfill stay valid on update",
+        "user is required and unique",
+        "belongs to bot user and owner",
+        "destroying the bot user removes its agent",
+        "active when not suspended and user is active",
+        "inactive when suspended",
+        "inactive when user is deactivated",
+        "legacy capabilities when no grants have ever existed",
+        "no legacy capabilities once any grant exists",
+        "revoking the last grant does not restore the legacy fallback",
+        "legacy agent keeps read, post, and react but nothing else",
+        "room grant authorizes only that room",
+        "workspace-wide grant authorizes every room",
+        "revoked grants do not authorize",
+        "suspended agent cannot do anything, even with legacy fallback",
+        "unknown capabilities are denied",
+        "status defaults to idle",
+        "status accepts the vocabulary and rejects anything else",
+        "status note allows 200 characters at most",
+        "description allows 500 characters at most",
+        "status_changed_at starts blank and is stamped on status change only",
+        "touch_last_seen_at throttles to once per minute",
+        "kind description covers personal, workspace, and ownerless agents",
+        "grants summary reports legacy access when no grants were ever recorded",
+        "grants summary counts room grants and flags workspace-wide grants",
+        "grants summary omits capabilities with no active grant",
+        "grants summary reports no active grants once everything is revoked",
+        "activity summary counts the last 24 hours from the ledger",
+        "for_directory lists active first, excludes deactivated users",
+        "status change broadcasts badge and directory row replaces to agents:all",
+        "status broadcasts carry no credentials or grants",
+        "note-only change still broadcasts the badge",
+        "touch_last_seen_at writes at most once when the throttle races",
+        "signing secret generation mints exactly one secret when raced",
+        "signing secret reset takes the row lock",
+        "last_seen_at touch alone broadcasts nothing",
+        "unrelated updates broadcast nothing"
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_working_presence_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "sets presence with a TTL",
+        "blank clears presence",
+        "expired presence reads as cleared",
+        "presence is capped in length",
+        "shared service sets and clears",
+        "shared service rejects overlong text"
+      ]
+    },
+    {
+      "rails_file": "test/models/agents/work_payload_test.rb",
+      "owner": "WS11; WS8 message presenter; WS15g private repository reader",
+      "remaining_named_case_ports": [
+        "carries the full work shape for a channel thread",
+        "marks human owners and null owners",
+        "carries board identity, tags, run_url, and links for a post"
+      ]
+    },
+    {
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "owner": "WS11 agent callbacks; WS12 mutation producers",
+      "remaining_named_case_ports": [
+        "an active member agent with post_messages is an eligible work owner",
+        "a legacy agent keeps post eligibility through the fallback",
+        "a suspended agent is rejected with a validation error",
+        "a non-member agent is rejected with a validation error",
+        "an agent without post_messages is rejected with a validation error",
+        "a human outside the parent room keeps the human eligibility error",
+        "a bot without an agent row is rejected with a validation error",
+        "suspending the agent or revoking its membership reads as an unavailable owner",
+        "assignment writes one work_assigned row in the same transaction as the work event",
+        "unassignment writes one work_unassigned row",
+        "unassignment after the agent left the room writes the ledger row but enqueues no webhook",
+        "assignment webhooks are enqueued after the outermost transaction commits",
+        "reassignment to a human writes work_unassigned and no work_assigned",
+        "reassignment between agents notifies both",
+        "status-only changes and human-to-human assignment write no agent rows",
+        "assignment rows roll back when the work event fails",
+        "the work event rolls back when the assignment row fails",
+        "an agent status update records a work event with the note",
+        "an agent status update reaches the inbox through the human path",
+        "an agent tags update replaces the set without touching the status",
+        "an agent work update validates tags and run_url",
+        "an agent result update records the event with the agent as actor",
+        "an agent cannot write the result of work it does not own",
+        "an agent cannot move work it does not own",
+        "an agent status update rejects unknown statuses and long notes",
+        "two agents assigning posts to each other stop at the hop limit",
+        "deleting an agent-owned thread emits work_unassigned",
+        "deleting a thread without an agent owner emits nothing",
+        "a human assignment starts a new root at hop 0"
+      ]
+    },
+    {
+      "rails_file": "test/models/message/bot_webhook_fanout_test.rb",
+      "owner": "WS11; WS16 import suppression integration",
+      "remaining_named_case_ports": [
+        "delivers a normal message mentioning a legacy bot",
+        "skips system notes mentioning a legacy bot"
+      ]
+    },
+    {
+      "rails_file": "test/models/message_streaming_test.rb",
+      "owner": "WS11 finalization; WS12 activity; WS14/15 external reference sync",
+      "remaining_named_case_ports": [
+        "a streaming create fires no side effects",
+        "stream start broadcasts the append without the unread broadcast",
+        "finalize fires every side effect exactly once",
+        "finalizing a thread stream fans out no legacy webhook",
+        "finalizing a thread stream sends no unread-room broadcast",
+        "appends re-render without firing side effects",
+        "stream broadcasts coalesce to about four per second",
+        "a coalesced update sends a trailing broadcast with the final text",
+        "a trailing broadcast stays quiet once a newer broadcast lands",
+        "a trailing broadcast stays quiet after finalize",
+        "overdue streams finalize from the sweep, fresh ones stay streaming",
+        "the sweep keys on inactivity, not creation",
+        "starting and appending stamp the stream's last activity",
+        "an append after a finalize is refused and leaves the final alone",
+        "a finalized stream can never resume",
+        "the overdue sweep query uses the streaming activity index",
+        "the sweep skips streams in locked threads until unlock",
+        "finalize skips side effects for a suspended agent",
+        "the sweep finalizes a suspended agent's streams quietly",
+        "finalize skips side effects for a deactivated agent",
+        "finalize clears the streaming agent's working presence",
+        "a stream may start empty and require no body until finalize",
+        "link references sync at finalize, not while streaming"
+      ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "owner": "WS11 bot domain/removal; WS11-api by-bot HTTP surface",
+      "remaining_named_case_ports": [
+        "create bot",
+        "reset bot key",
+        "authenticate",
+        "creation writes the digest alone and stored bots hide their key",
+        "leftover plaintext is never consulted",
+        "bot auth keeps working after plaintext clearing",
+        "a bot without a digest cannot authenticate until its key is reset",
+        "reset stores the digest alone, clears leftover plaintext, and retires the old key",
+        "reply token authenticates its bot for its room only",
+        "reply token expires",
+        "reply token is refused once the bot leaves or deactivates",
+        "authenticate refuses wrong, empty, and malformed keys",
+        "a deactivated bot's key is refused",
+        "existing keys keep working after the digest migration",
+        "deliver message by webhook"
+      ]
+    },
+    {
+      "rails_file": "test/models/webhook_agent_key_test.rb",
+      "owner": "WS11; WS8 presenter; WS15g live private repository access",
+      "remaining_named_case_ports": [
+        "deliver without agent context for an agent-backed bot sends no agent key or bot key",
+        "deliver for a legacy bot without an agent row sends the signed reply path as room.path",
+        "deliver for an agent-backed bot sends no reply url",
+        "deliver with agent context adds the agent key alongside existing keys",
+        "agent key renders null owner for ownerless agents",
+        "agent delivery in a PR thread carries the pull_request object",
+        "agent delivery signs the raw body and timestamps the post",
+        "approval, work, and completion deliveries sign with the agent secret",
+        "agent delivery outside PR threads carries a null pull_request"
+      ]
+    },
+    {
+      "rails_file": "test/models/webhook_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "payload",
+        "delivery",
+        "delivery with OK text reply",
+        "sync text reply lands in the triggering message's thread",
+        "legacy sync reply lands in the triggering message's thread",
+        "sync reply to a board post lands in the post",
+        "sync reply to a root message references the trigger",
+        "sync attachment reply lands in the triggering message's thread",
+        "agent delivery that times out raises instead of posting",
+        "agent sync reply into a locked thread is logged, not raised",
+        "legacy delivery without a secret sends no signature",
+        "legacy delivery with a secret signs the body",
+        "legacy sync reply into a locked thread still raises",
+        "delivery with OK attachment reply",
+        "delivery with error reply",
+        "delivery that times out",
+        "delivery to a loopback URL is refused without posting",
+        "delivery to a hostname resolving to a private address is refused",
+        "agent delivery to a refused URL raises instead of replying",
+        "agent approval webhook to a refused URL raises",
+        "delivery to an unresolvable hostname raises without posting",
+        "signing secret generation mints exactly one secret when raced"
+      ]
+    },
+    {
+      "rails_file": "test/services/bots/clear_plaintext_tokens_test.rb",
+      "owner": "WS11 domain",
+      "remaining_named_case_ports": [
+        "re-keys the digest from the plaintext, then clears it",
+        "a key reset between the read and the write wins over the stale plaintext",
+        "repeat runs are no-ops"
+      ]
+    },
+    {
+      "rails_file": "test/services/slash_commands/dispatcher_test.rb",
+      "owner": "WS11 agent dispatch; WS8 built-in commands",
+      "remaining_named_case_ports": [
+        "registry holds every shipped command with metadata",
+        "command_text? matches slash commands but not escapes or play passthrough",
+        "huddle starts a call when configured",
+        "huddle errors when unconfigured",
+        "event opens the prefilled form url",
+        "event without a time prefills the title only",
+        "event rejects past times",
+        "bare event opens the blank form",
+        "poll opens the builder in channels but not threads",
+        "remind posts and saves with a reminder",
+        "remind rejects unusable input without posting",
+        "status sets emoji and text until end of day",
+        "status rejects blank arguments",
+        "dnd toggles, takes durations, and turns off",
+        "dnd rejects garbage durations",
+        "ooo sets an end with a note, and off clears it",
+        "ooo takes week durations, dates, and datetimes",
+        "ooo bare tomorrow and weekdays run to the end of the day",
+        "ooo bare dates run to the end of the day",
+        "ooo bare month dates roll to next year when this year's passed",
+        "ooo day durations stay exact",
+        "ooo broadcasts the badge and the notice",
+        "ooo off while calendar OOO covers says the calendar still shows it",
+        "ooo rejects blank arguments, garbage, past times, and long notes",
+        "shrug posts with the shrug",
+        "posting commands in a board answer an error without posting",
+        "posting commands in a board thread still post",
+        "slash posts in threads skip the legacy webhook fanout",
+        "slash posts in channels fan out to legacy webhooks",
+        "slash posts in threads process attachments once",
+        "me posts an action line",
+        "me requires an action",
+        "play posts through the normal message path",
+        "slash posts never start a stream",
+        "unknown commands error with the available list",
+        "invoking an agent command delivers a slash_command event",
+        "invoking an agent command in a thread records the thread",
+        "invoking an agent command in the channel records no thread",
+        "invoking an agent command requires post_messages",
+        "invoking an agent command is rate limited"
+      ]
+    }
+  ]
+}
