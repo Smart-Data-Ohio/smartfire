@@ -1,8 +1,8 @@
-# WS17 Wave 4 — partial, 332 of 347 selected scenarios delivered
+# WS17 Wave 4 — review fixes complete; workstream partial, 332 of 347 selected scenarios delivered
 
-Reference Rails `d7c7de92`, with the shared brief's approved board tag from `a6f10a25`; status-popup target `2e20b24c` remains WS8b-r2-owned. Merged main `2e20b24c` at `093ca4ea`, retaining auth/board merge `68cd54bf` and the earlier `21a7332f` merge. Branch `rust/ws17-push-presence`. The full Rust workspace suite, strict clippy and all 11 Chromium scenarios ran in the fresh clone at `8dee44c8e8b57e61f62da51cd0b67663a15d1b2c`. The final report-only commit changes no runtime or test code. The delivery reply gives the final pushed SHA. The tracked report exactly mirrors the requested external report.
+Reference Rails `d7c7de92`, with the approved board tag from `a6f10a25` and shared layout/assets from `2e20b24c`. Main `2e20b24c` was merged at `093ca4ea`, retaining auth/board merge `68cd54bf` and the earlier `21a7332f` merge. Branch `rust/ws17-push-presence`. All four assigned independent-review P2s are fixed and proven against `1021be6a`. Review slices pushed: `5b6e7192` (pinned Ruby Unicode, matcher and nearby casing audit fixes), `ebccec8d` (Rails URI endpoint validation), `03c4475c` (baseline reproduction and real-constructor oracle rejection). The complete seeded workspace suite, strict clippy and all 11 Chromium cases ran in a fresh remote clone at **`03c4475c45428ad3538523ade8105c93c49a8013`**. The final report-only commit changes no runtime or test code; the delivery reply supplies its pushed SHA. This tracked report exactly mirrors the requested external report.
 
-This continuation closes **43 of the former 58 deferred exact titles**, leaving **332/347 passed equivalent and 15 source-owner cases deferred**. Pushed slices: `ee85dc13` (DM/profile), `809333f1` (10 browser cases), `7527a335` (readers/matcher/DNS/proxy), `98b2b3aa` (WS13 wire bridge), `79fae2b1` (push gating/forwarding), `68cd54bf` (main auth integration), `2b64dade` (reproducible source fixtures and exact remaining ownership), `87452458` (worker test-queue isolation), `41dbe4bd` (configured/disconnected Calendar browser link), `bb4571a1` (bounded exact icon-style assertions), `e4091d9c` (unsaved profile/error-layout metadata), `4f8297ad` (wrong explicit-zone ordering injection), `5efbc46f` (exact captured metadata assertions), `f21f1108` (approved #162 board tag and actual constructor payloads), `093ca4ea` (main reference merge), `edbb3042` (post-change global layout/assets and complete-page reference integration), and `8dee44c8` (post-change compiled/static asset reference exports).
+The earlier continuation closed 43 of the former 58 deferred exact titles. Original selected inventory remains **332/347 passed equivalent and 15 source-owner deferrals**. A read-only fetch found main at `eaba80d5` (#168 asset-golden drift); no WS12/WS13/WS14 owner prerequisite landed after the merged `2e20b24c`. That unrelated main change was not merged during this review-fix task. The accepted at-most-once durable Web Push handoff is unchanged; the full-profile gap remains WS8b-r2-owned; WS9's fresh-clone `session_keys` correction is integrated and passes here.
 
 ## Delivered
 
@@ -18,7 +18,7 @@ Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pus
 | `controllers/users/push_subscriptions.rs`, `push_subscriptions/ws17_tests.rs`; `app.rs`, test support | All six named subscription HTTP scenarios, including legacy revalidation and private-IP refusal. Per-app DNS dependency permits deterministic DNS answers while testing the real endpoint guard/model/HTTP stack. Production uses system DNS. Current-user deletion scope checked additionally. Real user-agent rendering matches four Rails cases. |
 | `views/templates/users/push_subscriptions/index.html`, `tests/ws17_settings.rs` | Complete subscription content byte comparison, including full row forms, fixed shared test CSRF values, actual asset URLs, escaping and whitespace. |
 | `controllers/users/dnd_allowances.rs` | Repeated star remains one row; deterministic real UNIQUE-index failure at insert follows Rails' success redirect, in addition to existing concurrent HTTP requests. No mocks of the writer. |
-| `db/models/activity_item/message_recorder.rs`, message callback, `tests/message_activity_test.rs`, JSON oracle | Message-only recorder: flat scoped membership/keyword queries, policy winner, active-human/self exclusion, idempotent source rows, grouped followed-thread updates, unchanged read/handled state on repeated non-grouped recording. Thirty-one actual Rails callback/candidate vectors; all eleven keyword recorder titles and thirteen message-only recorder titles. Real SQLite trace checks stay flat at five versus thirty members. |
+| `db/models/activity_item/message_recorder.rs`, message callback, `tests/message_activity_test.rs`, JSON oracle | Message-only recorder: flat scoped membership/keyword queries, policy winner, active-human/self exclusion, idempotent source rows, grouped followed-thread updates, unchanged read/handled state on repeated non-grouped recording. Thirty-seven actual Rails callback/candidate vectors; all eleven keyword recorder titles and thirteen message-only recorder titles. Real SQLite trace checks stay flat at five versus thirty members. |
 | `campfire/controllers/messages/ws17_activity_tests.rs`, DB Cargo dev dependency | Full HTTP message callback records during DND; real rendered mentions win over keywords. Rejecting the activity INSERT rolls back message, FTS index and durable jobs. SQLite tracing is a test-only rusqlite feature. |
 | `db/models/calendar_dispatch.rs`, meeting cache claim methods, status broadcast batching; `campfire/jobs/periodic.rs` | Register meeting/OOO sweeps every minute. Match active scopes (including bots), inclusive 15-minute stale threshold, missing-cache handling, steady-state no-UPDATE/no-writer path and OOO-only refresh gating. Per-member refresh enqueue and claim share a writer transaction; an enqueue failure rolls back only that member and the sweep continues. Preserve expired-already-false manual columns as the pin does. All badges precede all notices, with one lease query. |
 | `db/tests/calendar_dispatch_test.rs`, `statuses/calendar_tests.rs`, calendar oracle | Twenty-five actual Rails two-tick vectors; all 11 meeting and 12 OOO named scenarios pass. Compare stored claims/manual columns, durable refresh rows, exact signed-stream HTML and actual SQLite UPDATE counts. Two independent database handles prove one winning boundary/one broadcast; corrupt cached timestamps isolate the bad member. Twelve of 13 cache titles pass; validated duplicate creation belongs to WS14 and remains deferred. |
@@ -33,13 +33,13 @@ Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pus
 | `campfire/integrations/web_push/tests.rs` | Close five deferred subscription sequences against the real Guard/model composition and delivery transport: loopback, link-local, empty DNS, deferred construction lookup and fresh private DNS refusal with no dial. The sixth case sets all four proxy keys in an isolated child process and proves actual TLS delivery still dials the pinned public address and decrypts the expected JSON. No unsafe global test environment mutation. |
 | `db/models/notification_push.rs`, `jobs/notifications.rs`, `web_push/ws17_delivery_tests.rs` | Final WS13 wire DTO and registered Notifications::HuddlePushJob bridge; actual owner JSON and single claim/durable delivery transaction. Standalone source vectors restore every row behind the captured unread badge. Existing event/board and direct huddle APIs remain final and unchanged. |
 | `db/tests/named_push_gating_test.rs`, room pool handoff, pinned gating declarations | Eight exact message/thread/reminder push-gating sequences plus the forwarded-note case use real persisted messages, followed/unfollowed reply sequences, activity recording, reminder membership scopes and the actual forwarder. The original nine Ruby bodies pass 34 original assertions using unchanged mention/DNS helpers and nonjoinable isolated transactions so model commit callbacks execute before rollback. Room delivery now hands the distinct union to the pool once, in subscription ID order, matching the pin. Full encrypted transport regressions pass. |
-| `views/templates/layouts/application.html`, `vectors/auth_full_pages.json`, six core application-layout goldens; `reference-tools/ws17_regenerate_auth_reference.py`, verifier | Add the exact approved #163 user-status:changed listener and regenerate actual source layout/assets through the unchanged WS9/WS6 exporters. Strict source checks cover 60 pinned files, the approved board blob and 10 approved status/layout blobs. All 15 complete auth pages and all 28 core view tests pass. Only foundation/layout/public/preload captures are copied; new popup page composition remains WS8b-r2-owned. |
+| `views/templates/layouts/application.html`, `vectors/auth_full_pages.json`, six core application-layout goldens; `reference-tools/ws17_regenerate_auth_reference.py`, verifier | Add the exact approved #163 user-status:changed listener and regenerate actual source layout/assets through the unchanged WS9/WS6 exporters. Strict source checks cover the pinned source, the approved board blob and ten approved status/layout blobs. All 15 complete auth pages and all 28 core view tests pass. Only foundation/layout/public/preload captures are copied; new popup page composition remains WS8b-r2-owned. |
 | `assets/tests/reference/compiled_sha256.json`, `manifest.json`, `javascript_importmap_tags.html`, `stylesheet_link_tag_all.html`, `static_responses.json` | Original Propshaft/Rack exports match the approved two changed asset sources. All 8 reference tests pass, retaining complete compiled-byte, manifest, helper-tag and static-response checks. The gem vendor tree and asset implementation are unchanged. |
 | `reference-tools/ws17_profile_ui.rb`, regeneration script, verifier and injection runner | Actual pinned source/output verification; no Rails changes, output masks, allowlist changes or new ignores. |
 
 WS9 auth is now integrated: the same writer saves appearance, calls `authentication::update_profile`, records security audits/email rollback markers, revokes remembered devices when required, and assigns staged attachments. Rejected current-password checks render submitted public/appearance values without saving; a rejected security audit rolls back the earlier appearance save. Two new integration regressions cover those interactions. Live security/profile-session panels mount together with the settings forms. GitHub/inbox/voice/agent/Google sections still belong to WS15/WS12/WS13/WS11/WS14; whole-profile parity remains partial.
 
-The pin's invalid status/notification render on a seeded confirmed-2FA user still produces HTTP 500 because Rails omits `@two_factor_devices`. Separate tests preserve that observed behavior; the named fixture replays explicitly use unconfirmed-credential fixture state and expect 422. Profile PATCH initializes those devices in Rails and its owned validation response is 422. This is baseline-pin status-controller evidence; #163 popup authorization/error rendering is explicitly pending WS8b-r2 integration and is not established by that old status golden. This is baseline-pin status-controller evidence; #163 popup authorization/error rendering is explicitly pending WS8b-r2 integration and is not established by that old status golden. This is baseline-pin status-controller evidence; #163 popup authorization/error rendering is explicitly pending WS8b-r2 integration and is not established by that old status golden. This is baseline-pin status-controller evidence; #163 popup authorization/error rendering is explicitly pending WS8b-r2 integration and is not established by that old status golden.
+The pin's invalid status/notification render on a seeded confirmed-2FA user still produces HTTP 500 because Rails omits `@two_factor_devices`. Separate tests preserve that observed behavior; the named fixture replays explicitly use unconfirmed-credential fixture state and expect 422. Profile PATCH initializes those devices in Rails and its owned validation response is 422. This is baseline-pin status-controller evidence; #163 popup authorization/error rendering is explicitly pending WS8b-r2 integration and is not established by that old status golden.
 
 `Calendar::MeetingRefreshJob { user_id: i64 }` is durable on the default queue, version 1, JSON `{ "user_id": ... }`. WS14 must register its fetch handler; until then it fails visibly as an unknown handler. Status PATCH enqueues both opt-ins separately; a due tick refreshes both-opt-in members through the meeting sweep only. An overdue cache refreshes again on a later tick until WS14 updates it, matching Rails rather than adding queue deduplication. No Google refresh success is faked. Typed status badge/OOO facts are emitted after commit and rendered in the cable sink. Rails emits events in order, but its worker pool delivers independent stream callbacks asynchronously; socket tests compare exact bytes/counts/order within each signed stream, while a separate domain test checks actual cross-stream event emission order.
 
@@ -119,228 +119,186 @@ pub fn announce_ooo_notice(&self, tx: &mut Tx);
 
 WS14 supplies/validates cache creation and fetch/update execution. A follow-up claim winner must enqueue on the same supplied writer transaction. Completed fetches clear `refresh_pending_at`. Due sweeps commit each member's claim/job first and then broadcast the collected winning snapshots, matching Rails' claims-before-broadcast batch order. No Google call or successful refresh handler is stubbed.
 
+## Independent-review fixes and design notes
+
+| Finding / files | Final behavior and actual reference evidence |
+| --- | --- |
+| Keyword writes: `db/src/models/user_status_settings/writes.rs`, `db/src/models/keyword_alert.rs` | Use captured Ruby UTF-8 `downcase` for list deduplication and the bound uniqueness value. Keep Rails' SQLite `LOWER(phrase)` comparison, original spelling, row order and asymmetric non-ASCII SQL behavior. `οσ` then `ΟΣ` produces one row. Full case folding is a separate operation and does not replace the saved-list rule; `ß`/`ss` and ligature/ASCII pairs retain the pin's actual distinctions. Nine real replacement cases and seven real validations also exercise create/update rollback. |
+| Matcher: `rails_compat/src/unicode.rs`, `unicode_tables.json`, `keyword_regex.rs`, `native/keyword_regex.c`, `vendor/onigmo/*`, `build.rs`; workspace/crate dependencies; `keyword_alert.rs` | Tables come from every Unicode scalar in the pinned Ruby 3.4.10 / Unicode 15.0.0 runtime: 1,433 lowercase, 1,530 full-fold and 1,525 uppercase mappings. The actual matcher corpus has 12,223 pairs, including ß, ligatures, final sigma, dotted/dotless Turkish I, decomposed accents and boundary/search cases. An ordinary full-fold plus original-character-boundary implementation still differed on four corpus pairs, including Ruby's search behavior for `s` in `ß s` and `ⱥ` in `Ⱥ`. Use that runtime's exact Onigmo core and Unicode tables through a narrow escaped-literal UTF-8 bridge, compiled into the Rust application; no Ruby runtime is required. Calls are serialized for engine-global initialization/caches, buffers have explicit lengths, and allocated regexes are freed. Eighteen upstream files are byte-identical; the only upstream-header adaptation namespaces hash-table symbols. Platform glue and licenses/provenance are committed. |
+| Recording: `db/src/models/activity_item/message_recorder.rs`, `db/src/tests/message_activity_test.rs`, `ws17_message_activity.rb`, generated vectors | Preserve the real SQL/candidate insertion order. Thirty-seven complete Rails callback cases now include six Unicode recording cases beyond the prior 31. The same actual message callback path records Straße/STRASSE, ligature, sigma and dotted-I alerts and retains the reference's combining/Turkish exclusions. |
+| Endpoint writes: `db/src/models/push_subscription.rs`, `db/src/tests/ws17_endpoint_review_test.rs`, subscription HTTP and notification-settings tests, `ws17_endpoint_urls.rb`, regeneration and vectors | Parse endpoint syntax like the pinned `URI` 1.1.1 before host/DNS checks. Reject `%zz`, `{invalid}` and raw Unicode paths with the exact Rails error. Capture 682 real `Push::Subscription.valid?`/resolution cases, including every ASCII byte in path/query/fragment/host/userinfo, malformed and mixed escapes, relative/opaque URIs, IPv6, arbitrary-size ports, userinfo and host suffixes. Preserve Rails' query-setter quirks rather than inventing stricter rules. Shared validation covers model creation, new HTTP registration, existing-endpoint HTTP revalidation/touch, resolution and transport guard use. HTTP regressions cover all three bad endpoints in both new and persisted-row paths and prove rejected writes leave stored state unchanged. |
+| Board tag and oracle: `db/src/models/notification_push.rs`, `db/src/tests/ws17_review_test.rs`, `ws17_notification_push.rb`, generated vectors, `ws17_verify_oracle_payload.py` | Send `board-nudge-#{thread.id}`, captured from the approved a6 Rails pusher. The existing `f21f1108` implementation fix is now independently replayed against 1021. Remove `reverse_merge(tag:nil)` from both payload capture and constructor input. The current oracle forwards the actual payload to `WebPush::Notification` and propagates missing-tag `ArgumentError`; restoring the real pool in `ensure` also prevents shutdown cleanup from masking that exception. Fifty complete raw source/policy payload states and real encrypted delivery tests pass. |
+| Nearby casing audit: `notification_push.rs`, `channel_thread.rs`, `user.rs`; `db/src/tests/ws17_review_test.rs`, `ws17_case_guard_test.rs` | Board `humanize` now follows captured Ruby casing, alphabetic runs, configured HTTP/OAuth acronyms and suffix handling (nine captures). Tag normalization uses Ruby strip/downcase/blank semantics, preserving NBSP as Rails does. WS9's profile email-change guard uses captured Ruby full folding instead of Unicode 16 `caseless`: 174 real profile-controller comparisons cover ordinary cases plus Unicode 16 characters that pinned Ruby intentionally leaves distinct. These are cross-owner WS12/WS8a/WS9 helper touches; final transport/controller seam signatures below are unchanged. |
+
+## Failing-first evidence against the reviewed SHA
+
+Run in the assigned worktree: `python3 rust/reference-tools/ws17_replay_review_baseline.py`. It archives immutable `1021be6a150c9c8ab6c04482108d6e9ad9606f6d` to `.scratch/review-baseline-1021`, adds only the committed regression test modules/vectors and verifies all four affected production files against Git before testing. It does not mutate the old implementation. Its locked cargo command used Rust 1.98.1, `-j4`, `-p campfire_db ws17_review_ -- --test-threads=4`. This is the failing-first run; its completed target directory was removed after evidence capture.
+
+```text
+Reviewed implementation verified: 1021be6a150c9c8ab6c04482108d6e9ad9606f6d; 4 affected production files unchanged
+test result: FAILED. 0 passed; 7 failed; 0 ignored; 0 measured; 548 filtered out; finished in 103.98s
+Failing-first gate: 7 real assertion failures against 1021be6a; no production-code mutation
+```
+
+All seven fail real assertions: replacement persists `["οσ", "ΟΣ"]` instead of `["οσ"]`; create/update misses `Phrase is already in your list`; the matcher has **528 differences** including Straße/STRASSE and ligatures; endpoints have **191 differences**, beginning with all three review reproductions; board tag is null instead of `board-nudge-9`; board humanize is `Ος` instead of `Οσ`; tag normalization changes final sigma and incorrectly strips NBSP. Detailed raw assertions: `.scratch/review-baseline-1021-final.log`. The same seven tests pass in the final DB suite below.
+
+Additional WS9 guard regression was shown failing before its fix on the integrated WS9 implementation (that method did not exist at 1021). Command: `mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_db ws17_review_email_change_guard -- --nocapture`. Raw `.scratch/review-email-before.log` shows a real assertion: U+1C89/U+1C8A email strings are unequal in pinned Ruby, while the old Unicode-16 fold incorrectly says no email change.
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 615 filtered out; finished in 0.11s
+```
+
+Actual oracle property test, rerun after the final source change: `python3 rust/reference-tools/ws17_verify_oracle_payload.py`. It executes the unchanged 1021 oracle and current oracle on the real **untagged d7** board pusher/constructor, using isolated seeded databases. It captures raw stdout/stderr and checks that the current run rejects the malformed source payload. Production vectors instead use the explicitly approved **tagged a6** source.
+
+```text
+pinned Rails source verified: 54 files match d7c7de92
+1021be6a oracle: FAIL property; accepted board payload without required tag (50 rows emitted)
+current oracle: PASS property; actual WebPush::Notification raises ArgumentError: missing keyword: :tag
+```
+
+## Unicode and reference-tool audit
+
+Audit searched all production Rust casing/folding calls and all reference-tool replacements, sorting, transformations, validation bypasses and exception handling; checked the branch delta and inspected the relevant Ruby methods. All WS17-owned persisted/matched Unicode casing now uses the pinned tables/engine. The nearby board-label, tag and profile-comparison gaps above are fixed with actual Rails captures. ASCII scheme/host/header names, generated hexadecimal/base32 values, finite status/command names and HTTP method comparisons were distinguished from arbitrary user text.
+
+Inherited arbitrary-text sites below are **owner follow-ups, not claimed fixed or corpus-verified** by this task. They predate 1021 except WS9's merged backup-code module. Avoiding unrelated owner implementations follows the common brief. Owners can reuse the captured Unicode tables but must generate their own complete observable vectors; regex matching cannot automatically be replaced with simple folded strings.
+
+| Owner | Exact inherited site and Ruby seam to verify |
+| --- | --- |
+| WS8a / WS8b-r2 | `db/models/direct_room.rs:25`: preloaded DM names sort with Rust `str::to_lowercase` where `Rooms::Direct#display_name` uses Ruby `name.downcase`; retain the separate SQL `LOWER(name)` path. `db/models/search_query.rs:53,89`: `SearchQuery` from/in cleaned names use Ruby downcase before bound SQL matching; preserve the database's own ASCII LOWER semantics. |
+| WS8a / WS9 | `db/models/audit_log.rs:180,310`: login labels and known-email bound values use Ruby downcase. `secret_key` at 233–242 uses Unicode-16 full folding plus a Rust regex in place of Ruby's `SECRET_KEY_PATTERN /i`; it needs an actual secret-key regex corpus, including engine search quirks. This is inherited code, not a WS17 oracle result. |
+| WS9 / WS1 | `db/models/two_factor.rs:290` and `rails_compat/totp.rs:106`: arbitrary submitted backup/secret strings are normalized with standard character casing; verify Ruby normalization and invalid-input behavior against pinned scalars, even though generated credentials use ASCII. |
+| WS6 / WS11-ui | `views/helpers/application.rs:232–233` implements Ruby `capitalize` with Rust character casing (including titlecase/version subtleties); `views/messages/parts.rs:21` applies Rust string lowercase to agent-step labels. Generate actual rendered/helper vectors before changing these owner views. |
+| WS14g / WS1 | `rails_compat/jwt/google.rs:131,261,262`: hosted-domain and email strings use standard lowercase where the pinned Ruby helper normalizes with downcase; validate the owner's actual accepted Unicode inputs. |
+| WS10 | `mail/inbound.rs:198` and `mail/parse.rs:18`: inbound address SQL bindings and domains use standard lowercase; preserve actual Mail parsing and SQLite lookup behavior. |
+
+Within WS17 capture tools, the repaired board tag was the critical oracle defect. The audit also removed `.order(:id)` from subscription capture and `.sort` from message candidate outputs so Rails' actual order remains observable. Rust event-subscription reading now preserves that same query order. `ws17_profile_ui.rb` now saves its valid fixture through `save!` instead of `save!(validate:false)` using an explicit public-DNS fixture seam; it no longer falls back to an untracked local Rails file for time-zone choices. These fixture inputs are explicit and outputs remain raw.
+
+Remaining WS17 transformations are JSON serialization of times/symbols, deterministic fixture CSRF/clock/network inputs, test-title enumeration, removal of the Rails test-host `require`, the original assertion's own sort, and union/sort of the accepted zone-name catalogue. None repairs production payloads or masks emitted HTML. The named-test hosts still invoke the original pinned assertion bodies and original helpers. The keyword-input oracle explicitly runs **ActionDispatch's actual parameter normalization**, which is itself the behavior being captured, rather than a Rust reconstruction.
+
+Repository-wide scan also identified inherited `campfire/controllers_a/replay.py:122–132`: `normalize_body` masks CSRF/transfer/UUID/QR/bot/join values **and changes inter-tag/trailing whitespace** before HTTP comparison. This older WS8b-a harness is not used by the WS17 byte-identical assertions and was not altered here; the lead should treat its whitespace normalization as an owner audit item. `kit/security_vectors.rb:92` canonicalizes response header names/list values, and richtext/mail generators expand explicit fixture token placeholders before calling Rails. Those input/representation seams are visible; their outputs are not evidence of raw full-page parity. No additional `reverse_merge` or `validate:false` repair remains in WS17 capture code. Mutation runners deliberately alter isolated Rust sources as defect tests, not oracle outputs.
+
 ## Current verification
 
-Fresh clone: `.scratch/fresh-20260930-ws17`, cloned from GitHub, with its own `rust/target`. Its default and first-run seeds were independently built from `triage-reference-d7c7de92:latest`; no database or target directory was copied from the working checkout. The full workspace suite (1,751 passed, 0 failed, 11 existing ignores), strict clippy and Chromium runs below execute in that clone. Reference regenerations and restored-source defect injections execute in the assigned worktree, on its own target. Cargo uses Rust 1.98.1 and four jobs.
+Fresh clone `.scratch/review-fresh-20260930` was cloned from the pushed GitHub branch, with an initially empty private `rust/target` and independently constructed **default and first_run** seeds. It initially checked runtime slice `ebccec8d`, then fast-forwarded to `03c4475c` and reran the complete workspace, clippy and browser suite below. No database, seed or target was copied from the assigned checkout. All seeded app tests ran under the required-seed gate; there were zero failures. Final workspace totals from the raw lines below: **1,761 passed, 0 failed, 11 existing ignores**. No ignore, output mask or allowlist entry was added. The suite excludes the unchanged vendored html5ever test package per rust/AGENTS.md; clippy checks every workspace target.
 
-No new ignore, output mask, or allowlist entry was added. DB retains main's three external differential/export ignores and WS9's Rails rollback-readback ignore. The app retains main's cable recording/latency ignores and WS11's `manages_bots` ignore. Other pre-existing workspace ignores are visible in the full log. All seeded app tests ran, with zero failures. The workspace command follows rust/AGENTS.md in excluding the unchanged vendored html5ever test package; clippy checks all workspace targets.
+First empty-target compilation hit `error[E0463]: can't find crate for test` before any tests. A retry passed without source or toolchain changes; no root cause is claimed. The final complete run below also passes. Initial failure log `.scratch/review-fresh-workspace.log`, successful initial retry `.scratch/review-fresh-workspace-retry.log`; final logs are `.scratch/review-fresh-final-{workspace,clippy,browser}.log`.
 
-Both the merge and final fresh clone ran `mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 >/dev/null` from `rust/`: exit 0, no output. Strict workspace TOML parsing was rerun with this exact command; duplicate keys fail before the summary can print:
+Reference regeneration/proof commands below ran in the assigned worktree after final source changes; generated bytes were unchanged. Fresh-clone environment:
 
 ```bash
-python3 - <<'PY'
+export PARITY_NAMESPACE=ws17 PARITY_OWNER=ws17 PARITY_IMAGE=triage-reference-d7c7de92:latest
+export CI=1 CAMPFIRE_TEST_REQUIRE_SEED=1
+export CABLE_TEST_PORT_RANGE=52450-52499 MAIL_TEST_PORT_RANGE=52450-52499
+export CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
+export CARGO_BUILD_JOBS=2
+```
+
+Fresh clone: `rust/parity/bin/seed build default first_run`
+
+```text
+seed: building default
+seed: default -> parity/.seed/default (6.1M)
+seed: building first_run
+seed: first_run -> parity/.seed/first_run (1.5M)
+```
+
+Assigned worktree: `CARGO_BUILD_JOBS=2 mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 >/dev/null` — exit 0, no output. Duplicate workspace keys were checked by this strict TOML command (duplicate keys fail before printing):
+
+```bash
+python3 - <<'PYTHON'
 import tomllib
 from pathlib import Path
 v = tomllib.loads(Path('rust/Cargo.toml').read_text())
 print(f"workspace dependency keys: {len(v['workspace']['dependencies'])} unique; 0 duplicates (strict TOML parse)")
-PY
+PYTHON
 ```
 
 ```text
-workspace dependency keys: 75 unique; 0 duplicates (strict TOML parse)
+workspace dependency keys: 76 unique; 0 duplicates (strict TOML parse)
 ```
 
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_profile_ui.py`
+Assigned worktree: `python3 rust/reference-tools/ws17_regenerate_unicode.py`
 
 ```text
-pinned Rails source verified: 53 files match d7c7de92
-Rails profile UI: 6 complete appearance forms; 6 raw metadata snapshots; 1 complete subscription content; 135 zone choices
+pinned Rails source verified: 54 files match d7c7de92
+Rails Unicode: 1433 lowercase mappings; 1530 full folds; 748 word ranges; 12223 matcher cases; 9 replacements; 7 validations
 ```
 
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_message_activity.py`
+Assigned worktree: `python3 rust/reference-tools/ws17_regenerate_endpoint_urls.py`
 
 ```text
-pinned Rails source verified: 53 files match d7c7de92
-Rails message activity: 31 complete callback/candidate cases
+pinned Rails source verified: 54 files match d7c7de92
+Rails endpoint URLs: 682 real model validation and resolution cases; URI 1.1.1
 ```
 
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_calendar_dispatch.py`
+Assigned worktree: `python3 rust/reference-tools/ws17_regenerate_message_activity.py`
 
 ```text
-pinned Rails source verified: 53 files match d7c7de92
-Rails calendar dispatch: 25 complete two-tick cases
+pinned Rails source verified: 54 files match d7c7de92
+Rails message activity: 37 complete callback/candidate cases
 ```
 
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_notification_push.py`
+Assigned worktree: `python3 rust/reference-tools/ws17_regenerate_notification_push.py`
 
 ```text
-Rails source verified: 52 files match d7c7de92; 1 board pusher matches a6f10a25
+Rails source verified: 53 files match d7c7de92; 1 board pusher matches a6f10a25
 Rails notification push: 50 complete source/policy payload cases; board tag reference a6f10a25
 ```
 
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_named_policy.py`
+Assigned worktree: `python3 rust/reference-tools/ws17_regenerate_profile_ui.py`
 
 ```text
-pinned Rails source verified: 53 files match d7c7de92
-pinned policy test declarations verified: byte-identical to d7c7de92
-Rails named policy: 52 passed cases; 133 original Rails assertions; 82 constructor observations
+pinned Rails source verified: 54 files match d7c7de92
+Rails profile UI: 6 complete appearance forms; 6 raw metadata snapshots; 1 complete subscription content; 135 zone choices
 ```
 
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_named_calendar_status.py`
+Assigned worktree: `python3 rust/reference-tools/ws17_verify_unicode_engine.py .scratch/ruby-3.4.10` (official Ruby source at the exact pinned runtime revision)
 
 ```text
-pinned Rails source verified: 53 files match d7c7de92
-pinned calendar status declarations verified: 2 files byte-identical to d7c7de92
-Rails named out_of_office: 22 passed cases; 71 original Rails assertions; 129 operations
-Rails named meeting_status: 14 passed cases; 27 original Rails assertions; 70 operations
+Pinned Ruby engine: 18 byte-identical files; 1 hash-table symbol adaptation; revision 2b0b7728dc7f0561c35c3d8c4489945c94b783ad; no matching changes
 ```
 
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_dm_profile.py`
+
+Fresh clone: `mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path rust/Cargo.toml --workspace --exclude html5ever -- --test-threads=4`
 
 ```text
-pinned Rails source verified: 53 files match d7c7de92
-Rails DM/profile: 9 complete DM wrappers; 3 profile badges; 2 allowance controls
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_named_readers.py`
-
-```text
-pinned Rails source verified: 53 files match d7c7de92
-pinned reader/matcher declarations verified: 2 files byte-identical to d7c7de92
-Rails named readers: test/models/notifications/keyword_matcher_test.rb: 10 passed cases; 18 original Rails assertions
-Rails named readers: test/models/user/status_settings_test.rb: 4 passed cases; 17 original Rails assertions
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_named_gating.py`
-
-```text
-pinned Rails source verified: 53 files match d7c7de92
-pinned gating declarations verified: 4 files byte-identical to d7c7de92
-Rails named gating: test/models/notifications/push_gating_test.rb: 8 passed cases; 28 original Rails assertions
-Rails named gating: test/models/room/push_test.rb: 1 passed cases; 6 original Rails assertions
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_injections.py profile`
-
-```text
-profile-auth-atomic: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 1.47s
-profile-layout-snapshot: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 2.36s
-profile-timezone-auth: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 4.75s
-profile-save-theme: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 1.02s
-profile-private-endpoint: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 0.68s
-profile-unique-loser: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 0.62s
-profile-sound-metadata: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 1.15s
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_injections.py keyword`
-
-```text
-keyword-priority: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 2.02s
-keyword-read-state: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 1.07s
-keyword-atomic: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 523 filtered out; finished in 2.17s
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_injections.py calendar`
-
-```text
-calendar-steady-write: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 0.37s
-calendar-racing-claim: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 0.29s
-calendar-duplicate-refresh: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 523 filtered out; finished in 0.67s
-calendar-atomic: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 523 filtered out; finished in 0.93s
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_injections.py push-`
-
-```text
-push-board-tag: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 3.18s
-push-reminder-dnd: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 2.21s
-push-event-stale: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 2.49s
-push-huddle-boundary: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 3.80s
-push-huddle-atomic: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 0.12s
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_injections.py named-policy`
-
-```text
-named-policy-quiet: detected
-test result: FAILED. 35 passed; 17 failed; 0 ignored; 0 measured; 556 filtered out; finished in 6.83s
-named-policy-bot-inbox: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 0.24s
-named-policy-query-ceiling: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 0.31s
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_injections.py named-status`
-
-```text
-named-status-deactivate: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 0.32s
-named-status-expired-note: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 0.27s
-named-status-meeting-dnd: detected
-test result: FAILED. 33 passed; 3 failed; 0 ignored; 0 measured; 572 filtered out; finished in 3.99s
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_injections.py dm-`
-
-```text
-dm-viewer-scope: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 523 filtered out; finished in 0.48s
-dm-streams-for-future-ooo: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 523 filtered out; finished in 0.27s
-dm-profile-live-presence: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 523 filtered out; finished in 1.24s
-```
-
-fresh clone: `CI=1 CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52450-52499 MAIL_TEST_PORT_RANGE=52450-52499 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml --workspace --exclude html5ever -- --test-threads=4`
-
-```text
-test result: ok. 523 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 85.63s
+test result: ok. 525 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 100.92s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.73s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.37s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.17s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
-test result: ok. 604 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 56.17s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.88s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.02s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 612 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 61.78s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.92s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.06s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.87s
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.14s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.63s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.26s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.05s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.48s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.63s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.47s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.99s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.95s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.16s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.31s
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.47s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.80s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.88s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -354,16 +312,15 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-fresh clone: `mise exec rust@1.98.1 -- cargo clippy --locked -j4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
+Fresh clone: `mise exec rust@1.98.1 -- cargo clippy --locked -j2 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.80s
+    Finished `dev` profile [unoptimized] target(s) in 40.47s
 ```
 
-fresh clone: `python3 rust/reference-tools/ws17_browser.py`
+Fresh clone: `python3 rust/reference-tools/ws17_browser.py` (owned browser server port 52471)
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.29s
 test/system/status_notifications_test.rb: 7 passed; 0 failed
 test/system/meeting_status_test.rb: 1 passed; 0 failed
 test/system/out_of_office_test.rb: 1 passed; 0 failed
@@ -371,113 +328,11 @@ test/system/service_worker_test.rb: 2 passed; 0 failed
 WS17 Chromium: 11 passed; 0 failed
 ```
 
-assigned worktree: `CI=1 CABLE_TEST_PORT_RANGE=52400-52449 MAIL_TEST_PORT_RANGE=52400-52449 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire profiles::ws17_tests -- --test-threads=4`
-
-```text
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 515 filtered out; finished in 3.45s
-```
-
-assigned worktree before implementing the approved tag: `mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_db ws17_event_board_and_huddle_pushers_match_50_actual_rails_source_cases -- --test-threads=4`
-
-```text
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 607 filtered out; finished in 1.37s
-```
-
-assigned worktree after implementing the approved tag: `mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_db ws17_event_board_and_huddle_pushers_match_50_actual_rails_source_cases -- --test-threads=4`
-
-```text
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 607 filtered out; finished in 2.20s
-```
-
-assigned worktree: `CI=1 CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52449 MAIL_TEST_PORT_RANGE=52400-52449 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire ws17_delivery:: -- --test-threads=4`
-
-```text
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 523 filtered out; finished in 0.23s
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_regenerate_auth_reference.py`
-
-```text
-Rails source verified: 60 files match d7c7de92; 1 board pusher matches a6f10a25; 10 status/layout files match 2e20b24c
-WS9 full-page goldens: 15 complete Rails auth pages rendered from the parity seed
-Rails message icon registry: 1948 names
-Rails message states: 17 complete message trees
-Rails WS6 review: 13 notification states, 41 helper groups, 2 frame layouts, 2 token-free message viewers
-Rails core goldens: 12 layouts, 8 partials, 5 pages
-Exported 20 vendored files and 463 compiled assets to /work/assets
-Approved layout goldens: 15 complete foundation cases; reference 2e20b24c
-```
-
-assigned worktree before the approved layout listener: `CI=1 CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52449 MAIL_TEST_PORT_RANGE=52400-52449 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks -- --test-threads=4`
-
-```text
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 0.30s
-```
-
-assigned worktree after the approved layout listener: `CI=1 CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52449 MAIL_TEST_PORT_RANGE=52400-52449 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks -- --test-threads=4`
-
-```text
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 525 filtered out; finished in 0.43s
-```
-
-assigned worktree: `mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_views --test core -- --test-threads=4`
-
-```text
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
-```
-
-assigned worktree: `python3 rust/reference-tools/ws17_injections.py auth-approved-layout`
-
-```text
-auth-approved-layout: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 525 filtered out; finished in 0.24s
-```
-
-assigned worktree: `mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_assets --test reference -- --test-threads=4`
-
-```text
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
-```
-
-The notification-source fixture also ran twice with identical captured JSON after explicitly setting the board-membership fixture timestamps to the frozen clock. Database bulk creation otherwise stamps those setup rows with the actual database clock. Only fixture timestamps were fixed; complete captured payloads, subscription scopes and unread badge bytes remain unmodified.
-
-## Failing assertions and restored-source checks
-
-Every cited injection command was rerun in this continuation, including seven profile and five push injections on the final owned fixes; the raw failing summary lines above are actual assertion failures, not compiler errors. The runner restores the original source in `finally` before advancing. Seven profile injections now include WS9 integration and unsaved layout state: commit appearance before its security audit, discard the request layout snapshot, mark a blank zone explicit before the password guard, erase the saved theme, accept private DNS, remove concurrent unique-index rescue, or erase sound metadata. Three DM injections leak the viewer, omit future-OOO stream mounts, or force live profile presence offline. Keyword injections remove mention priority, erase read/handled state, or commit before recording. Calendar injections restore needless steady-state writes, remove the concurrent claim guard, duplicate both-opt-in refreshes, or commit before claim/refresh enqueue. Push injections erase the approved board tag, bypass senderless reminder DND, ignore stale events, admit exactly-ten-minute joins, or commit before delivery enqueue. Named-policy/status injections cover quietness, bot/inactive inbox eligibility, query ceilings, loaded deactivation, expired OOO notes and meeting/DND precedence. All fail real assertions. Final clippy and complete fresh-clone tests use restored source.
-
-Original declarations remain byte-verified against `d7c7de92`. Unchanged policy bodies pass 52 cases/133 assertions; unchanged OOO/meeting bodies pass 22+14 cases/98 assertions; selected reader/matcher bodies pass 4+10 cases/35 assertions; unchanged push-gating/forwarding bodies pass 8+1 cases/34 assertions. Capture hosts supply fixtures, clock, and original helpers; assertion bodies are not rewritten into invented expected tables.
-
-The initial final workspace run exposed a worker-fixture race: quote refresh had finished, but an automatically started `Retention::PruneJob` was still running when the test asserted the entire queue was empty. Its actual raw failure was:
-
-```text
-test result: FAILED. 520 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 248.94s
-```
-
-`jobs/tests.rs::app_in` now boots the real worker registry with automatic periodic loops disabled. Dedicated periodic-host tests explicitly construct/start their own loops and still run. No handler, assertion, or production scheduler behavior was removed. The worker-focused suite then passed, and the full fresh-clone suite above was rerun on the pushed fix.
-
-The next main-reference integration exposed stale complete-auth assets/layout bytes in the fresh clone:
-
-```text
-test result: FAILED. 522 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 91.11s
-```
-
-The existing exporters were rerun against the approved post-change layout/assets. With those actual goldens, the focused test still failed on the missing 57-byte event listener before the Rust template changed. The listener port makes all 15 full pages match; removing it again fails the full-page assertion. The final fresh run above uses restored source and post-change captures. No comparison or expected string was masked.
-
-After those page fixes, the fresh clone passed all 523 seeded app tests but then caught the asset crate's stale CSS/JavaScript precompile exports:
-
-```text
-test result: FAILED. 3 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.87s
-```
-
-The existing Propshaft/ActionDispatch exporter now runs from the same strictly verified approved image. Only its actual manifest, compiled hashes, importmap/CSS tags and static response fixtures are copied; the pinned gem vendor tree and all asset test comparisons stay unchanged. The focused 8 tests pass and the complete fresh suite is rerun afterward.
-
-Strict clippy initially rejected a new test's boolean equality assertion under `clippy::bool_assert_comparison`. The test now uses the equivalent boolean assertion without an exemption. The full fresh-clone workspace/clippy/browser run above was rerun on that pushed follow-up.
-
-The first fresh Chromium attempt after the additional case failed the immediate icon check with actual `invert(1)` versus expected `none`. The harness now uses its existing bounded CSS-state observation before retaining both exact filter assertions. Fresh Chromium passes all 11 afterward; source assets and expected values were unchanged.
+The retained fresh-clone and completed baseline target directories are removed after capturing results, as the latest common resource rule requires. Logs/probe sources remain in owned scratch; no WS17 test/server/container process is left running. This claims parity verification, not production deployment or cutover rehearsal.
 
 ## Precisely remaining
 
-1. **15 exact cases:** WS12 owns 7 generic/work/caller-authorized recorder cases; WS13/WS13b owns 6 invitation-source/missed-call cases; WS14g owns 2 validated-cache/Google-fetch browser cases. These source owners have not landed on this branch or the merged main. Every exact title and seam is below. All 43 formerly deferred cases whose owned prerequisites were present are ported.
+1. **15 exact cases:** WS12 owns 7 generic/work/caller-authorized recorder cases; WS13/WS13b owns 6 invitation-source/missed-call cases; WS14g owns 2 validated-cache/Google-fetch browser cases. These source owners have not landed on this branch or the merged main; the read-only main eaba80d5 fetch also contains no new prerequisite from those owners. Every exact title and seam is below. All 43 formerly deferred cases whose owned prerequisites were present are ported.
 2. **Whole-profile/sidebar/room composition:** owned settings, security integration, profile badge/allowance controls and uncached DM OOO wrapper are delivered. WS8b-r/WS8b-r2 provide complete sidebar presence/DM polling composition; WS11 supplies agent profile settings, WS12 inbox, WS13 voice/huddles, WS14 Google/Event, WS15 GitHub. Eleven owned Chromium scenarios pass; full-page/pixel comparison across all source sections remains pending. The adopted #163 status-popup controllers, edit/_fields views, remaining profile/card/sidebar popup composition and new scenario file are WS8b-r2-owned and remain unported here; the common layout listener/assets integration is delivered. Existing status/presence writers stay available through UserStatusSettings::save_status and the documented broadcast methods.
 3. **WS12 board and WS14e event source callbacks:** final `BoardNudgeJob { nudge_id }` and `EventReminderJob { event_id }` APIs, registry handlers, recipient policy and transport adapters are implemented. The approved board tag, real constructor payload and registered encrypted delivery are verified. WS12 still owns the source-claim callback. Source owners enqueue them on the same writer transaction that claims the reminder/nudge. `ActivityItem::record_message(&mut Tx, &Message) -> Result<Vec<ActivityItem>>` is final; WS11 must call it on streaming finalization, and WS16 must gate it during imports. Generic source authorization/grouping remains WS12.
 4. **WS13 invitation/join lifecycle:** final `Notifications::HuddlePushJob` JSON and registered `enqueue_huddle_request(&mut Tx, HuddlePushRequest) -> Result<bool>` are delivered. Owner JSON was checked against `origin/rust/ws13-huddles` at `6f498b9f`; its source emitter remains `enqueue_huddle_push(&mut Tx, &PushRequest)`. WS13 integrates actual grant/activity item/source jobs and payload construction. The WS17 writer owns the single throttle claim; also calling `prepare_push` would double-claim. Group fan-out batching/performance needs the real owner notifier.
@@ -486,7 +341,7 @@ The first fresh Chromium attempt after the additional case failed the immediate 
 
 ## Approved Rails drift and owner integration
 
-The shared brief explicitly adopts #162 (`a6f10a25`) for board tags. The notification capture builds `ws17-reference-board-a6f10a25:latest` from the immutable d7 image with a single COPY of the exact Git blob for `app/models/board_automations/nudge_pusher.rb`. Strict SHA256 verification checks that pusher against a6 and the other 52 owned files against d7. The raw Rails payload now carries `board-nudge-#{thread.id}`; no nullable-tag augmentation remains. The 50-state replay failed first with actual null versus captured board-nudge-9, then passed after the Rust change. Registered jobs decrypt to the complete source JSON. The final source-claim ID-job API is unchanged.
+The shared brief explicitly adopts #162 (`a6f10a25`) for board tags. The notification capture builds `ws17-reference-board-a6f10a25:latest` from the immutable d7 image with a single COPY of the exact Git blob for `app/models/board_automations/nudge_pusher.rb`. Strict SHA256 verification checks that pusher against a6 and the other 53 owned files against d7. The raw Rails payload now carries `board-nudge-#{thread.id}`; no nullable-tag augmentation remains. The 50-state replay failed first with actual null versus captured board-nudge-9, then passed after the Rust change. Registered jobs decrypt to the complete source JSON. The final source-claim ID-job API is unchanged.
 
 The shared brief also adopts #163 (`2e20b24c`), which is now merged as reference source. The common application-layout listener and source asset/auth/foundation golden integration are now delivered. WS8b-r2 still owns popup authorization, GET /users/:user_id/status/edit, PATCH /users/:user_id/status, the edit/_fields views, profile/card/sidebar popup mounts and the remaining client/page integration. The corresponding new Rails controller/system titles are outside the original 347-title selection and must be replayed by that owner against the post-change reference. This worker retains the current validated status writer/broadcast seam and explicitly leaves that page composition partial; no old golden is claimed as evidence for the new popup.
 
