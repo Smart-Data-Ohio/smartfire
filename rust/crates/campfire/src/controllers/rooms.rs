@@ -300,6 +300,20 @@ pub(crate) async fn render_shared_room(c: &Ctx, room: &Room) -> Result<Rendered>
     Ok(Rendered { shared_room: Some(html), ..Rendered::default() })
 }
 
+/// Open/closed update callbacks render this identity once outside the request, then send it
+/// globally (open) or to every retained member (closed). No per-viewer or session input.
+pub(crate) async fn render_shared_header(c: &Ctx, room: &Room) -> Result<String> {
+    let app = c.app().clone();
+    let base_url = page::renderer_base_url(c);
+    let room = room.clone();
+    c.app().db.read(move |conn| {
+        let creator = User::find(conn, room.creator_id)?;
+        let header = super::presenters::rooms_directory::header(conn, &room, &creator)?;
+        let account = Account::first(conn)?;
+        Ok(page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| campfire_views::rooms::header_identity(ctx, &header).0))
+    }).await.map_err(db_error)
+}
+
 /// The involvement callback's row carries its recipient's membership and menu facts.
 pub(crate) async fn render_membership_sidebar(c:&Ctx, room:&Room, membership:&campfire_db::Membership, unread:Option<bool>)->Result<Rendered> {
     let app=c.app().clone();let base_url=page::renderer_base_url(c);let room=room.clone();let membership=membership.clone();
@@ -362,3 +376,6 @@ mod reads_tests;
 
 #[cfg(test)]
 mod join_tests;
+
+#[cfg(test)]
+mod channel_audits_tests;

@@ -45,6 +45,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         .write(move |tx| Room::create_for(tx, RoomType::Open, name.as_deref(), user_id, &[user_id]))
         .await
         .map_err(db_error)?;
+    super::audit_room(c, &room, "room.create", serde_json::json!({"name":room.name})).await?;
     let partials = render_shared_room(c, &room).await?;
     c.app().broadcasts.open_room_create(&room, &partials);
     redirect_to_room(c, room.id)
@@ -79,7 +80,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     let partials = render_shared_room(c, &room).await?;
-    c.app().broadcasts.open_room_update(&room, &partials, None);
+    let header = super::render_shared_header(c, &room).await?;
+    c.app().broadcasts.open_room_update(&room, &partials, Some(&header));
     redirect_to_room(c, room.id)
 }
 

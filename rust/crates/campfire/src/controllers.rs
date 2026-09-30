@@ -538,6 +538,7 @@ mod tests {
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
         "switchers#show",
+        "rooms#join", "rooms/reads#create", "rooms/reads#destroy",
         "rooms#leave", "rooms/directs#update", "rooms/directs#add_members", "rooms/directs#leave",
         "room_categories#index", "room_categories#create", "room_categories#update", "room_categories#destroy",
         "rooms/categories#update", "rooms/favorites#create", "rooms/favorites#update", "rooms/favorites#destroy", "rooms/inbound_email_addresses#create",

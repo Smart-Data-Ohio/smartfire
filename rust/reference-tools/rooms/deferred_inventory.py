@@ -20,6 +20,7 @@ files = [
     'test/controllers/rooms/favorites_controller_test.rb',
     'test/controllers/rooms/inbound_email_addresses_controller_test.rb',
     'test/controllers/room_categories_controller_test.rb',
+    'test/controllers/audit_log/rooms_audit_test.rb',
     'test/controllers/public_pages_controller_test.rb',
     'test/controllers/first_runs_controller_test.rb',
     'test/controllers/welcome_controller_test.rb',
@@ -69,6 +70,7 @@ files = [
 handoff_controllers={'public_pages','first_runs','welcome','users','accounts','workspace_icons','pwa','qr_code'}
 handoff_systems={'audit_log','first_run_tour','icons','service_worker','timezone_detection','workspace_icons'}
 def owner(file):
+    if file=='test/controllers/audit_log/rooms_audit_test.rb': return 'WS8br room cases; WS8br2 account cases'
     if file.startswith('test/controllers/users/') and '/sidebars_' not in file: return 'WS8br2'
     if file.startswith('test/controllers/accounts/'): return 'WS8br2'
     base=Path(file).stem.removesuffix('_controller_test').removesuffix('_test')

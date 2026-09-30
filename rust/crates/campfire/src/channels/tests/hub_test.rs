@@ -25,6 +25,9 @@ mod reads;
 #[path = "join_test.rs"]
 mod join;
 
+#[path = "channel_audits_test.rs"]
+mod channel_audits;
+
 struct Hub {
     app: TestApp,
     url: String,

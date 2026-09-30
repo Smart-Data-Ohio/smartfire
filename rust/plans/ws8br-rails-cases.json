@@ -715,6 +715,86 @@
       "status": "full-file acceptance deferred"
     },
     {
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "owner": "WS8br room cases; WS8br2 account cases",
+      "reference_file_present": true,
+      "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
+      "declared_cases": [
+        {
+          "name": "room create is recorded",
+          "line": 8
+        },
+        {
+          "name": "failed room create writes no row",
+          "line": 21
+        },
+        {
+          "name": "opening an existing direct room writes no row",
+          "line": 29
+        },
+        {
+          "name": "room destroy is recorded with the room name",
+          "line": 41
+        },
+        {
+          "name": "admin membership changes are recorded with names",
+          "line": 54
+        },
+        {
+          "name": "re-saving unchanged membership writes no row",
+          "line": 73
+        },
+        {
+          "name": "adding group members is recorded with the added users",
+          "line": 81
+        },
+        {
+          "name": "adding no new members writes no row",
+          "line": 94
+        },
+        {
+          "name": "the last member out destroys the group and records it",
+          "line": 102
+        },
+        {
+          "name": "leaving without destroying the group writes no row",
+          "line": 120
+        },
+        {
+          "name": "leaving a channel is recorded with the leaver as actor",
+          "line": 128
+        },
+        {
+          "name": "leaving a group without destroying it is recorded",
+          "line": 143
+        },
+        {
+          "name": "account settings changes are recorded",
+          "line": 156
+        },
+        {
+          "name": "logo removal is recorded",
+          "line": 173
+        },
+        {
+          "name": "custom styles changes are recorded as size and digest",
+          "line": 183
+        },
+        {
+          "name": "unchanged custom styles write no row",
+          "line": 199
+        },
+        {
+          "name": "workspace icon create and destroy are recorded",
+          "line": 207
+        }
+      ],
+      "declared_count": 17,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
       "file": "test/controllers/public_pages_controller_test.rb",
       "owner": "WS8br2",
       "reference_file_present": true,

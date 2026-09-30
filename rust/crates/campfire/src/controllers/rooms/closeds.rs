@@ -56,6 +56,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
+    super::audit_room(c, &room, "room.create", serde_json::json!({"name":room.name})).await?;
     broadcast_to_members(c, &room, false).await?;
     redirect_to_room(c, room.id)
 }
@@ -108,16 +109,24 @@ pub async fn update(c: &mut Ctx) -> Result {
         .map_err(db_error)?;
     // `@room.memberships.revise(granted: grantees, revoked: revokees)`
     let revised = room.clone();
-    c.app()
+    let changes = c.app()
         .db
         .write(move |tx| {
+            let before = revised.user_ids(tx.conn())?;
             let granted = existing_user_ids(tx.conn(), &grantee_ids)?;
             let revoked: Vec<i64> =
-                revised.user_ids(tx.conn())?.into_iter().filter(|id| !grantee_ids.contains(id)).collect();
-            revised.revise(tx, &granted, &revoked)
+                before.iter().copied().filter(|id| !grantee_ids.contains(id)).collect();
+            revised.revise(tx, &granted, &revoked)?;
+            let after = revised.user_ids(tx.conn())?;
+            let granted: Vec<_> = after.into_iter().filter(|id| !before.contains(id)).collect();
+            if granted.is_empty() && revoked.is_empty() { return Ok(None); }
+            let users = User::where_ids(tx.conn(), &granted.iter().chain(&revoked).copied().collect::<Vec<_>>())?;
+            let names = |ids: &[i64]| ids.iter().filter_map(|id| users.iter().find(|user| user.id == *id).map(|user| user.name.clone())).collect::<Vec<_>>();
+            Ok(Some(serde_json::json!({"granted":names(&granted),"revoked":names(&revoked)})))
         })
         .await
         .map_err(db_error)?;
+    if let Some(changes) = changes { super::audit_room(c, &room, "room.membership.change", changes).await?; }
     broadcast_to_members(c, &room, true).await?;
     redirect_to_room(c, room.id)
 }
@@ -126,12 +135,13 @@ pub async fn update(c: &mut Ctx) -> Result {
 /// every member's own rooms stream.
 async fn broadcast_to_members(c: &Ctx, room: &Room, update: bool) -> Result<()> {
     let partials = render_shared_room(c, room).await?;
+    let header = if update { Some(super::render_shared_header(c, room).await?) } else { None };
     let (broadcasts, room) = (c.app().broadcasts.clone(), room.clone());
     c.app()
         .db
         .read(move |conn| {
             if update {
-                broadcasts.closed_room_update(conn, &room, &partials, None)
+                broadcasts.closed_room_update(conn, &room, &partials, header.as_deref())
             } else {
                 broadcasts.closed_room_create(conn, &room, &partials)
             }
