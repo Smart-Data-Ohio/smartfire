@@ -51,7 +51,7 @@ pub const MAX_PAYLOAD_TITLE_BYTES: usize = 256;
 pub const MAX_PAYLOAD_BODY_BYTES: usize = 3072;
 
 /// What `Room::MessagePusher#build_payload` sends.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PushPayload {
     pub title: String,
     pub body: String,
@@ -130,6 +130,19 @@ impl PushSubscription {
             [user_id],
             Self::from_row,
         )
+    }
+
+    pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
+        if user_ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn,
+            &format!("SELECT * FROM push_subscriptions WHERE user_id IN ({}) ORDER BY id",placeholders(user_ids.len())),
+            rusqlite::params_from_iter(user_ids),Self::from_row)
+    }
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn,
+            &format!("SELECT * FROM push_subscriptions WHERE id IN ({}) ORDER BY id",placeholders(ids.len())),
+            rusqlite::params_from_iter(ids),Self::from_row)
     }
 
     /// `user.push_subscriptions.find_by(endpoint:, p256dh_key:, auth_key:)`

@@ -18,6 +18,7 @@ pub mod message_reference;
 pub mod message;
 pub mod poll;
 pub mod push_subscription;
+pub mod notification_push;
 pub mod rich_text_record;
 pub mod saved_item;
 pub mod scheduled_message;

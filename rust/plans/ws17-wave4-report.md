@@ -6,7 +6,7 @@ Reference Rails `d7c7de92`; merged main `21a7332f` with merge commit `56aa9f62`.
 
 Earlier pushed slices (`7b9267a3`, `32b49aa4`, `76c34826`, `0adcae95`, `12c448d7`) provide typed notification policy, tagged Web Push with Smartfire subject and IP pinning, durable room/thread/saved/test push transport, presence leases/HTTP/pruner, validated dirty-tracked settings writes, status and notification PATCH, DND allowances, keyword-list replacement, cache reconciliation, manual OOO claims, and complete badge/OOO broadcast HTML. PWA worker/offline bytes are pinned. Existing Rails oracle vectors remain exercised by the full suites below.
 
-Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pushed at `fd411985`; current calendar dispatch slice:
+Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pushed at `fd411985`; calendar dispatch pushed at `9dff8776`; current notification push slice:
 
 | Files | Change and verification |
 | --- | --- |
@@ -21,6 +21,8 @@ Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pus
 | `db/models/calendar_dispatch.rs`, meeting cache claim methods, status broadcast batching; `campfire/jobs/periodic.rs` | Register meeting/OOO sweeps every minute. Match active scopes (including bots), inclusive 15-minute stale threshold, missing-cache handling, steady-state no-UPDATE/no-writer path and OOO-only refresh gating. Per-member refresh enqueue and claim share a writer transaction; an enqueue failure rolls back only that member and the sweep continues. Preserve expired-already-false manual columns as the pin does. All badges precede all notices, with one lease query. |
 | `db/tests/calendar_dispatch_test.rs`, `statuses/calendar_tests.rs`, calendar oracle | Twenty-five actual Rails two-tick vectors; all 11 meeting and 12 OOO named scenarios pass. Compare stored claims/manual columns, durable refresh rows, exact signed-stream HTML and actual SQLite UPDATE counts. Two independent database handles prove one winning boundary/one broadcast; corrupt cached timestamps isolate the bad member. Twelve of 13 cache titles pass; validated duplicate creation belongs to WS14 and remains deferred. |
 | `app.rs`, seeded HTTP test support | Inject periodic host intervals explicitly. Production reads the same environment intervals; seeded HTTP tests run no background periodic host, matching Rails' reference server. Durable queue and broadcasts remain real. This removes the observed race with an unrequested first periodic tick. Registration itself is tested and the sweeps are invoked explicitly. |
+| `db/models/notification_push.rs`, subscription batches; `campfire/jobs/notifications.rs` | Live event/board source readers until WS14/WS12 land. Durable event/board jobs re-read memberships and current reminder policy with no sender exception. Match event rounding/staleness, venue/direct title/tag, board status/escalation/path and membership recheck. WS13 huddle adapter keeps supplied payload bytes, SQL disconnected/visible scope, actual caller allowances, huddle inbox switch, strict older-than-ten-minutes throttle, and atomic throttle/delivery-job enqueue. Four new registered handlers. |
+| `db/tests/notification_push_test.rs`, notification push oracle; `web_push/ws17_delivery_tests.rs` | Fifty actual Rails source/policy states including all 10 event, 4 board and 13 join-pusher titles. Claims run on real SQLite and across two database handles; repeat/eleven-minute replay. Registered handlers run against private seeded app DB and local TLS, comparing complete decrypted JSON with actual Rails strings (no output masks). Rejecting a delivery INSERT rolls back both throttle and triggering source write. |
 | `reference-tools/ws17_profile_ui.rb`, regeneration script, verifier and injection runner | Actual pinned source/output verification; no Rails changes, output masks, allowlist changes or new ignores. |
 
 User/profile security, GitHub/inbox/voice settings and connected-service UI belong to WS9/WS11/WS12/WS13/WS14/WS15. The existing basic profile update path still needs those owners' callbacks. This slice adds only the owned appearance attributes, without claiming whole-profile parity.
@@ -50,10 +52,29 @@ pub fn push(&self) -> bool;
 
 WS13 builds invitation/join `PushPayload` and candidate room-membership facts. WS17's shared transport is available now. Before `Pool::queue`, preload settings once and evaluate `NotificationPolicy` with current time and the actual sender's DND allowances. Invitation uses `NotificationKind::Huddle`; join uses **`NotificationKind::HuddleJoin` with the recipient's actual `room_involvement`** (missing membership is `None`, a present SQL-null involvement is `Some(None)`). Other unused policy inputs are false/None. Join with missing, invisible, nothing or muted membership is suppressed. `Pool::queue` itself applies no policy or recipient-scope filtering.
 
-Keep Rails' pusher scopes before delivery: visible/disconnected memberships, invitations exclude `nothing`, joins exclude `nothing` and `muted`; SQL-null exclusions follow Rails SQL rather than adding eligibility. Join also checks the huddle inbox preference and claims its ten-minute throttle only after policy and subscriptions permit an actual push. The dedicated durable huddle adapter/DTO and throttle-claim seam are **still outstanding**; the signatures above are the shared transport, not a claim that huddle push jobs are finished. WS13 owns payload/source construction, WS17 the gate/transport. `PushPayload::new` preserves supplied strings/tag without automatic truncation. Pool reads fresh badges and delivers through current VAPID and stored pinned endpoint IP. Preserve transactional claim/enqueue when connecting the source.
+Keep Rails' pusher scopes before delivery: visible/disconnected memberships, invitations exclude `nothing`, joins exclude `nothing` and `muted`; SQL-null exclusions follow Rails SQL rather than adding eligibility. Join also checks the huddle inbox preference and claims its ten-minute throttle only after policy and subscriptions permit an actual push. The dedicated durable huddle gate/delivery adapter is now available below; the shared transport signatures remain unchanged. WS13 still connects its source jobs/lifecycle and payload construction to this adapter. WS13 owns payload/source construction, WS17 the gate/transport. `PushPayload::new` preserves supplied strings/tag without automatic truncation. Pool reads fresh badges and delivers through current VAPID and stored pinned endpoint IP. Preserve transactional claim/enqueue when connecting the source.
 
 
 
+
+
+## WS12/WS14 source jobs and WS13 durable adapter
+
+```rust
+// campfire_db::models::notification_push; emit on the triggering source Tx
+EventReminderJob { event_id: i64 } // CLASS Event::ReminderPushJob; default queue/version 1
+BoardNudgeJob { nudge_id: i64 }    // CLASS BoardAutomations::NudgePushJob; default/version 1
+pub fn event_reminder_push(conn: &Connection, id: i64, now: Timestamp) -> Result<Option<PushDelivery>>;
+pub fn board_nudge_push(conn: &Connection, id: i64, now: Timestamp) -> Result<Option<PushDelivery>>;
+pub fn enqueue_huddle_invitation(tx: &mut Tx, room_id: i64, recipient_id: i64,
+                                  sender_id: i64, payload: PushPayload) -> Result<bool>;
+pub fn enqueue_huddle_join(tx: &mut Tx, room_id: i64, recipient_id: i64,
+                            sender_id: i64, payload: PushPayload) -> Result<bool>;
+```
+
+WS12/14 own reminder/nudge claims and source writes; emit the ID job with `tx.emit_after_commit(Event::job(&args))` before committing that write. Minimal live readers touch existing schema only. Missing source records discard through the existing queue error mapper. Event push intentionally ignores inbox switch and membership notification involvement, and permits the first five minutes after start; board push rechecks active-human membership even if hidden/connected. Reminder DND has no sender allowance.
+
+WS13 validates its activity item/grant, invitation/join lifecycle eligibility and sender/recipient IDs and builds `PushPayload` at the point Rails invokes its pusher, then calls this adapter on the source writer transaction. Payload bytes are captured there, preserving source ownership. `Huddle::InvitationDeliveryJob` and `Huddle::JoinDeliveryJob` are Rust durable adapters, default queue/version 1, JSON `{payload,subscription_ids}`. Join stamps the membership only after policy and actual subscriptions allow delivery; exactly ten minutes remains throttled. On enqueue failure, the entire source write and throttle roll back. Invitation retains the pin's empty scoped queue handoff. The handlers preserve that already-made decision/payload, re-read surviving subscription IDs, and use existing `Pool::queue` for current unread badge, VAPID/IP guard/encryption. Deleted subscriptions are skipped. Source callbacks and `Huddle::PushInvitationJob`/`JoinNoticeJob` integration remain WS13 seams; no grant or notifier lifecycle is faked.
 
 ## WS14 cache and dispatch seams
 
@@ -134,14 +155,34 @@ calendar-atomic: detected
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 409 filtered out; finished in 0.65s
 ```
 
+`python3 rust/reference-tools/ws17_regenerate_notification_push.py`
+
+```text
+pinned Rails source verified: 50 files match d7c7de92
+Rails notification push: 50 complete source/policy payload cases
+```
+
+`python3 rust/reference-tools/ws17_injections.py push-`
+
+```text
+push-reminder-dnd: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 459 filtered out; finished in 1.81s
+push-event-stale: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 459 filtered out; finished in 1.48s
+push-huddle-boundary: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 459 filtered out; finished in 3.22s
+push-huddle-atomic: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.11s
+```
+
 `CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -p campfire_views -- --test-threads=4`
 
 ```text
-test result: ok. 455 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 38.10s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.83s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 457 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 39.96s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.82s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -151,28 +192,28 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 `CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire -- --test-threads=4`
 
 ```text
-test result: ok. 407 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 37.48s
+test result: ok. 409 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 34.58s
 ```
 
 `mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 25.52s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.79s
 ```
 
-The pre-change periodic registration test failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 385 filtered out; finished in 0.00s`. Four calendar injections restore steady-state claim writes, remove the concurrent claim guard, duplicate both-opt-in refreshes, and commit before the refresh/claim; all produce actual failed tests. The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 439 filtered out; finished in 0.04s`. Three keyword injections remove mention priority, reset read/handled state on conflict, and commit before the callback write; all produce real failed tests. The pre-change appearance HTTP test failed on persisted `system` versus submitted `dark`: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.48s`. Complete form comparison also failed before correcting dynamic zone labels; subscription content failed before correcting its exact leading/collection whitespace. The four committed injections remove the theme save, accept private DNS, remove unique-index rescue, and erase sound metadata; each must produce an actual failed test, not a compiler error. Sources are restored by the runner before final suites.
+Four new push injections bypass senderless reminder DND, skip event staleness, make the huddle throttle boundary inclusive, and commit before enqueue. Every injection fails a real test and sources are restored. The pre-change periodic registration test failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 385 filtered out; finished in 0.00s`. Four calendar injections restore steady-state claim writes, remove the concurrent claim guard, duplicate both-opt-in refreshes, and commit before the refresh/claim; all produce actual failed tests. The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 439 filtered out; finished in 0.04s`. Three keyword injections remove mention priority, reset read/handled state on conflict, and commit before the callback write; all produce real failed tests. The pre-change appearance HTTP test failed on persisted `system` versus submitted `dark`: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.48s`. Complete form comparison also failed before correcting dynamic zone labels; subscription content failed before correcting its exact leading/collection whitespace. The four committed injections remove the theme save, accept private DNS, remove unique-index rescue, and erase sound metadata; each must produce an actual failed test, not a compiler error. Sources are restored by the runner before final suites.
 
 ## Precisely remaining
 
 1. Profile/UI integration stays partial: Smartfire's complete profile contains other owners' sections; sidebar/DM presence composition must connect to WS8b/WS13's full room templates and request-free broadcasts. Badge and OOO notice-line bytes and transport are already ported. Full page/browser/pixel parity and Rails rollback/readback rehearsal have not run. Appearance, subscription and allowance gaps above are closed.
 2. Message keyword recording is delivered. WS12 still owns generic/caller-authorized recording, work events, inbox queries/controllers/source rendering and access rules. `ActivityItem::record_message(tx: &mut Tx, message: &Message) -> Result<Vec<ActivityItem>>` is the minimal shared seam. WS11 must call it on a live stream finalize; WS16 must gate it for importing together with the existing message callback chain. This slice gates normal creation on non-streaming/non-system-note state; edits do not re-record.
 3. Meeting/OOO due sweeps and conditional claims/broadcasts are delivered. WS14 owns validated cache creation (the one remaining cache title), Google fetch execution and refresh completion at the documented job seam.
-4. Event, board and huddle pushers/jobs, durable huddle DTO/throttle claim, recipient/source payload vectors and atomic claim/enqueue tests remain. WS12/14/13 supply sources/payloads; WS17 supplies policy and transport. Room handler audit remains.
+4. Event/board pushers, registered durable jobs and the huddle policy/throttle/durable-delivery adapter are delivered. WS12/14 must connect their source claims/callbacks to the documented ID jobs; WS13 must connect invitation/join source jobs and payloads to the adapter. Four named invitation-source job titles remain deferred to WS13. Room handler audit remains. Huddle fan-out batching against the eventual WS13 notifier still needs owner integration/performance verification.
 5. Remaining exact named scenarios below, largest files first; pure vector coverage is not claimed as a replay of every named sequence.
 
 ## Named scenario coverage by file
 
-347 selected exact Rails titles: **174 passed equivalent; 173 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
+347 selected exact Rails titles: **201 passed equivalent; 146 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
 
 | Rails file | Passed equivalent | Deferred |
 | --- | ---: | ---: |
@@ -185,13 +226,13 @@ The pre-change periodic registration test failed with `test result: FAILED. 0 pa
 | `test/models/user/status_settings_test.rb` | 10 | 4 |
 | `test/models/workspace_presence_lease_test.rb` | 14 | 0 |
 | `test/models/calendar/meeting_cache_test.rb` | 12 | 1 |
-| `test/models/huddle/join_pusher_test.rb` | 0 | 13 |
+| `test/models/huddle/join_pusher_test.rb` | 13 | 0 |
 | `test/models/calendar/ooo_dispatcher_test.rb` | 12 | 0 |
 | `test/models/calendar/meeting_dispatcher_test.rb` | 11 | 0 |
 | `test/services/activity_items/recorder_keyword_test.rb` | 11 | 0 |
 | `test/controllers/users/notification_settings_controller_test.rb` | 10 | 0 |
 | `test/integration/ooo_dm_notice_test.rb` | 0 | 10 |
-| `test/models/event/reminder_pusher_test.rb` | 0 | 10 |
+| `test/models/event/reminder_pusher_test.rb` | 10 | 0 |
 | `test/models/notifications/keyword_matcher_test.rb` | 7 | 3 |
 | `test/models/notifications/push_gating_test.rb` | 0 | 10 |
 | `test/models/room/push_test.rb` | 7 | 1 |
@@ -201,7 +242,7 @@ The pre-change periodic registration test failed with `test result: FAILED. 0 pa
 | `test/controllers/users/push_subscriptions_controller_test.rb` | 6 | 0 |
 | `test/controllers/users/dnd_allowances_controller_test.rb` | 5 | 0 |
 | `test/jobs/huddle/push_invitation_job_test.rb` | 0 | 4 |
-| `test/models/board_automations/nudge_pusher_test.rb` | 0 | 4 |
+| `test/models/board_automations/nudge_pusher_test.rb` | 4 | 0 |
 | `test/models/saved_item/reminder_pusher_test.rb` | 4 | 0 |
 | `test/lib/web_push/persistent_request_test.rb` | 1 | 1 |
 | `test/models/dnd_allowed_user_test.rb` | 2 | 0 |
@@ -323,33 +364,6 @@ The pre-change periodic registration test failed with `test result: FAILED. 0 pa
 | `test/models/user/out_of_office_test.rb` | OOO quiets notifications unless the member keeps them on | WS17 continuation |
 | `test/models/user/out_of_office_test.rb` | deactivating clears the manual OOO columns | WS17 continuation |
 | `test/models/calendar/meeting_cache_test.rb` | one cache per user | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/event/reminder_pusher_test.rb` | pushes the reminder to going and maybe attendees who are still members | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | push reminders ignore the event_reminders inbox switch | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | the push body names the venue | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | a direct room reminder is titled by the organizer | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | the push body counts down the actual minutes | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | the push body uses the singular minute | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | an event starting now says so | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | a recently started event still says starting now | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | an event that already ended is skipped | WS17 continuation (push); WS14 (event source) |
-| `test/models/event/reminder_pusher_test.rb` | an event that started long ago is skipped | WS17 continuation (push); WS14 (event source) |
-| `test/models/board_automations/nudge_pusher_test.rb` | pushes the nudge payload to the recipient subscriptions | WS17 continuation (push); WS12 (board source) |
-| `test/models/board_automations/nudge_pusher_test.rb` | escalations push with the escalated prefix | WS17 continuation (push); WS12 (board source) |
-| `test/models/board_automations/nudge_pusher_test.rb` | skips a recipient who left the board | WS17 continuation (push); WS12 (board source) |
-| `test/models/board_automations/nudge_pusher_test.rb` | dnd silences the push like other reminders | WS17 continuation (push); WS12 (board source) |
-| `test/models/huddle/join_pusher_test.rb` | pushes the join to the recipient's subscriptions and stamps the throttle | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a second push inside ten minutes is throttled | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a push ten minutes later goes out again | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a DND recipient gets no push and burns no throttle window | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a starred joiner still pushes through DND | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a recipient in quiet hours gets no push | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a recipient quiet in a meeting gets no push | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | an out-of-office recipient gets no push unless they keep notifications on | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a connected recipient gets no push and burns no throttle window | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a switched-off or hidden room gets no push | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a muted room gets no push and burns no throttle window | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a recipient with huddle invitations switched off gets no push and burns no throttle window | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
-| `test/models/huddle/join_pusher_test.rb` | a recipient with no subscriptions burns no throttle window | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
 | `test/jobs/huddle/push_invitation_job_test.rb` | pushes the invitation to the recipient only | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
 | `test/jobs/huddle/push_invitation_job_test.rb` | an opted-out recipient gets no push subscriptions | WS17 continuation (transport/policy/claims); WS13 (payload/source) |
 | `test/jobs/huddle/push_invitation_job_test.rb` | a connected recipient gets no push | WS17 continuation (transport/policy/claims); WS13 (payload/source) |

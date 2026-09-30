@@ -500,3 +500,6 @@ async fn the_pool_drops_deliveries_past_its_queue() {
     }
     assert_eq!(pool.pending(), 10_050);
 }
+
+#[path = "ws17_delivery_tests.rs"]
+mod ws17_delivery;

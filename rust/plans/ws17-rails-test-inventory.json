@@ -1460,191 +1460,191 @@
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "pushes the reminder to going and maybe attendees who are still members",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "push reminders ignore the event_reminders inbox switch",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "the push body names the venue",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "a direct room reminder is titled by the organizer",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "the push body counts down the actual minutes",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "the push body uses the singular minute",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "an event starting now says so",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "a recently started event still says starting now",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "an event that already ended is skipped",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/event/reminder_pusher_test.rb",
       "test": "an event that started long ago is skipped",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS14 (event source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
       "test": "pushes the nudge payload to the recipient subscriptions",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS12 (board source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
       "test": "escalations push with the escalated prefix",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS12 (board source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
       "test": "skips a recipient who left the board",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS12 (board source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/board_automations/nudge_pusher_test.rb",
       "test": "dnd silences the push like other reminders",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (push); WS12 (board source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "pushes the join to the recipient's subscriptions and stamps the throttle",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a second push inside ten minutes is throttled",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a push ten minutes later goes out again",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a DND recipient gets no push and burns no throttle window",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a starred joiner still pushes through DND",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a recipient in quiet hours gets no push",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a recipient quiet in a meeting gets no push",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "an out-of-office recipient gets no push unless they keep notifications on",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a connected recipient gets no push and burns no throttle window",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a switched-off or hidden room gets no push",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a muted room gets no push and burns no throttle window",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a recipient with huddle invitations switched off gets no push and burns no throttle window",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/models/huddle/join_pusher_test.rb",
       "test": "a recipient with no subscriptions burns no throttle window",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "evidence": "campfire_db: notification_push_test (50 actual Rails source states; sequential/concurrent throttle claims); campfire: ws17_delivery (durable complete decrypted JSON and rejecting enqueue)"
     },
     {
       "file": "test/jobs/huddle/push_invitation_job_test.rb",

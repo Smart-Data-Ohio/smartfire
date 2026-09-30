@@ -35,6 +35,10 @@ pub(super) fn register(registry: &mut Registry) {
     registry.register(thread_message);
     registry.register(saved_reminder);
     registry.register(test_notification);
+    registry.register(event_reminder);
+    registry.register(board_nudge);
+    registry.register(huddle_invitation_delivery);
+    registry.register(huddle_join_delivery);
 }
 
 async fn test_notification(app: App, job: TestNotification, _: Execution) -> JobResult {
@@ -103,4 +107,98 @@ async fn saved_reminder(app: App, job: SavedReminder, _: Execution) -> JobResult
         })
         .await?;
     Ok(Outcome::Done)
+}
+
+macro_rules! source_job {
+    ($name:ident,$source:ty) => {
+        #[derive(Serialize, Deserialize)]
+        #[serde(transparent)]
+        struct $name($source);
+        impl campfire_db::Job for $name {
+            const CLASS: &'static str = <$source as campfire_db::Job>::CLASS;
+        }
+        impl JobKind for $name {}
+    };
+}
+source_job!(
+    EventReminder,
+    campfire_db::models::notification_push::EventReminderJob
+);
+source_job!(
+    BoardNudge,
+    campfire_db::models::notification_push::BoardNudgeJob
+);
+source_job!(
+    HuddleInvitationDelivery,
+    campfire_db::models::notification_push::HuddleInvitationDeliveryJob
+);
+source_job!(
+    HuddleJoinDelivery,
+    campfire_db::models::notification_push::HuddleJoinDeliveryJob
+);
+
+async fn event_reminder(app: App, job: EventReminder, _: Execution) -> JobResult {
+    let Some(pool) = app.web_push.clone() else {
+        return Ok(Outcome::Done);
+    };
+    let now = app.db.env().now();
+    app.db
+        .read(move |conn| {
+            if let Some(push) = campfire_db::models::notification_push::event_reminder_push(
+                conn,
+                job.0.event_id,
+                now,
+            )? {
+                pool.queue(conn, &push.payload, push.subscriptions)?;
+            }
+            Ok(())
+        })
+        .await
+        .map_err(super::discard_missing)?;
+    Ok(Outcome::Done)
+}
+async fn board_nudge(app: App, job: BoardNudge, _: Execution) -> JobResult {
+    let Some(pool) = app.web_push.clone() else {
+        return Ok(Outcome::Done);
+    };
+    let now = app.db.env().now();
+    app.db
+        .read(move |conn| {
+            if let Some(push) =
+                campfire_db::models::notification_push::board_nudge_push(conn, job.0.nudge_id, now)?
+            {
+                pool.queue(conn, &push.payload, push.subscriptions)?;
+            }
+            Ok(())
+        })
+        .await
+        .map_err(super::discard_missing)?;
+    Ok(Outcome::Done)
+}
+async fn huddle_delivery(app: App, payload: campfire_db::PushPayload, ids: Vec<i64>) -> JobResult {
+    let Some(pool) = app.web_push.clone() else {
+        return Ok(Outcome::Done);
+    };
+    // The source adapter already checked policy and, for joins, committed its throttle with
+    // this job. Preserve that decision/payload; Pool builds the current unread badge at run.
+    app.db
+        .read(move |conn| {
+            pool.queue(
+                conn,
+                &payload,
+                campfire_db::PushSubscription::for_ids(conn, &ids)?,
+            )
+        })
+        .await?;
+    Ok(Outcome::Done)
+}
+async fn huddle_invitation_delivery(
+    app: App,
+    job: HuddleInvitationDelivery,
+    _: Execution,
+) -> JobResult {
+    huddle_delivery(app, job.0.payload, job.0.subscription_ids).await
+}
+async fn huddle_join_delivery(app: App, job: HuddleJoinDelivery, _: Execution) -> JobResult {
+    huddle_delivery(app, job.0.payload, job.0.subscription_ids).await
 }
