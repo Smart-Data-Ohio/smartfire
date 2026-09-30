@@ -30,6 +30,8 @@ FILES = [
     "app/controllers/concerns/room_scoped.rb",
     "app/controllers/concerns/set_current_request.rb",
     "app/helpers/messages_helper.rb",
+    "app/helpers/messages/attachment_presentation.rb",
+    "app/models/sound.rb",
     "app/controllers/rooms_controller.rb",
     "app/views/rooms/show.html.erb",
     "app/views/messages/_unread_divider.html.erb",

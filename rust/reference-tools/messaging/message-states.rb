@@ -26,10 +26,18 @@ inputs = [
   ["system_note", { markdown_source: "closed a thread", system_note: true }],
   ["forward_note", { body: "<h2>Snapshot</h2><table><tbody><tr><td>kept</td></tr></tbody></table>", forwarded_markdown: true,
     forwarded_at: Time.current, forwarded_from_message_id: source.id, forward_note: "@[David]\n<note> & safe" }],
+  ["legacy_forward", { body: "<h2>Snapshot</h2><table><tbody><tr><td>kept</td></tr></tbody></table>", forwarded_markdown: false, forwarded_at: Time.current, forwarded_from_message_id: source.id, forward_note: "Inherited\n<&>" }],
   ["reply", { markdown_source: "Reply", reply_to_message_id: source.id }],
   ["deleted_reply", { markdown_source: "Deleted reply", reply_to_message_id: source.id }],
   ["steps", { markdown_source: "Agent steps", creator_id: bot.id }],
-  ["drive_only", { drive_file_ids: ["abcdefghij"] }]
+  ["drive_only", { drive_file_ids: ["abcdefghij"] }],
+  ["image_square", { attachment_blob_id: 1 }],
+  ["image_wide", { attachment_blob_id: 7 }],
+  ["video", { attachment_blob_id: 9 }],
+  ["file", { attachment_blob_id: 13 }],
+  ["unrepresentable_image", { attachment_blob_id: 14 }],
+  ["sound_text", { markdown_source: "/play bell" }],
+  ["sound_image", { markdown_source: "/play 56k" }]
 ]
 steps = [
   { name: "<pending>", status: "pending", duration_ms: 0, input_summary: " ", output_summary: nil },
@@ -39,7 +47,8 @@ steps = [
 ]
 renderer = ApplicationController.renderer.new(http_host: "campfire.test", https: false)
 rows = inputs.map do |name, attributes|
-  message = room.root_messages.build(attributes.except(:drive_file_ids).merge(creator_id: attributes.fetch(:creator_id, user.id), client_message_id: "states-#{name}"))
+  message = room.root_messages.build(attributes.except(:drive_file_ids, :attachment_blob_id).merge(creator_id: attributes.fetch(:creator_id, user.id), client_message_id: "states-#{name}"))
+  message.attachment = ActiveStorage::Blob.find(attributes[:attachment_blob_id]) if attributes[:attachment_blob_id]
   Array(attributes[:drive_file_ids]).each { |file_id| message.drive_attachments.build(file_id:) }
   message.save!
   source.destroy! if name == "deleted_reply"
