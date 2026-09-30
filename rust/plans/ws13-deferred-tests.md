@@ -1,12 +1,12 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 197 declarations now have complete assertion coverage mapped below. The other 351 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 224 declarations now have complete assertion coverage mapped below. The other 324 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; new request tests close 27/29 internal controller declarations. Both SQL statement-count assertions remain open. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
 Historical domain coverage predates the WS13b split and is retained below. WS13b now owns the model/job/service files; WS13 owns controllers, integration and system files. WS17 retains transport and Notifications::Policy.
 
-- `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Running every protocol shape through HTTP and completing presence/notice assertions remain open.
+- `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Every protocol shape now also executes through HTTP; liveness and disconnect presence assertions are complete. SQL statement/transaction count assertions remain open.
 - `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations now have 49 exact Rails issuance scenarios; Stream callbacks now run; committed presence and leave/call-ended notices now have the coverage below.
 - `huddle_gateway_node.mjs`: all 16 existing gateway tests run through real Rust endpoints. Ordinary responses are not fabricated; denial injections revoke SQLite rows. Only the original explicit outage/stall/malformed-response injections remain at the proxy. The test-only Rust launcher is ignored by default because it needs Node and the pinned ws package; it was explicitly run successfully in this slice.
 
@@ -28,7 +28,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
 | `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
-| `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
+| `test/controllers/internal/huddle_controller_test.rb` | 29 | 27 | 2 |
 | `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
 | `test/models/stream_test.rb` | 27 | 14 | 13 |
 | `test/controllers/rooms/stages_controller_test.rb` | 24 | 15 | 9 |
@@ -55,41 +55,41 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **197** | **351** |
+| **Total** | **548** | **224** | **324** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 27/29 declarations passed. `internal_huddle_declaration_tests.rs` runs all 98 signed Rails shapes through the actual HTTP endpoint, plus both explicit refreshed-listener omissions, and verifies exact payload/liveness/throttle/cleanup and a real Cable disconnect refresh. Existing request tests cover gateway authentication, configuration and lookup denials. Both SQL statement/transaction count assertions remain open.
 
-- authorizes an exact active grant from an original token
-- authorizes a server-refreshed token that omits false permissions
-- rejects invalid signatures, missing time claims, and expired tokens
-- rejects admin, data, metadata, and unknown privileges
-- rejects any publish source set other than the exact camera grant
-- authorizes a stage listener token that cannot publish
-- authorizes a listener token in server-refreshed shape
-- rejects mismatched publish permission and sources
-- rejects a publisher token missing its publish sources
-- authorizes a refreshed listener token that omits sources and the publish flag
-- malformed signed video grants receive a controlled denial
-- a valid token without an exact database grant is forbidden
-- a stale database link revokes the grant and is forbidden
-- grant lookup rechecks current access without requiring or rechecking the original token
-- grant lookup returns not found after revocation
-- a successful authorization records liveness without changing the response
-- grant lookup records liveness at most once per ten seconds
-- an enforcement-only grant lookup authorizes without recording liveness
-- an enforcement-only lookup still revokes a stale grant
+- **Passed:** authorizes an exact active grant from an original token
+- **Passed:** authorizes a server-refreshed token that omits false permissions
+- **Passed:** rejects invalid signatures, missing time claims, and expired tokens
+- **Passed:** rejects admin, data, metadata, and unknown privileges
+- **Passed:** rejects any publish source set other than the exact camera grant
+- **Passed:** authorizes a stage listener token that cannot publish
+- **Passed:** authorizes a listener token in server-refreshed shape
+- **Passed:** rejects mismatched publish permission and sources
+- **Passed:** rejects a publisher token missing its publish sources
+- **Passed:** authorizes a refreshed listener token that omits sources and the publish flag
+- **Passed:** malformed signed video grants receive a controlled denial
+- **Passed:** a valid token without an exact database grant is forbidden
+- **Passed:** a stale database link revokes the grant and is forbidden
+- **Passed:** grant lookup rechecks current access without requiring or rechecking the original token
+- **Passed:** grant lookup returns not found after revocation
+- **Passed:** a successful authorization records liveness without changing the response
+- **Passed:** grant lookup records liveness at most once per ten seconds
+- **Passed:** an enforcement-only grant lookup authorizes without recording liveness
+- **Passed:** an enforcement-only lookup still revokes a stale grant
 - a steady-state grant check runs no transaction and writes nothing
 - a denied lookup takes the lock and revokes exactly once
-- a denied lookup does not record liveness
-- a disconnect event marks the grant out of the call and refreshes presence
-- a stale disconnect event keeps a newer sighting
-- a disconnect event with no timestamp clears liveness
-- a disconnect event with a malformed timestamp is unprocessable
-- a disconnect event for an unknown grant is not found
-- gateway authentication is required for every endpoint
-- internal endpoints fail closed when huddles are not fully configured
+- **Passed:** a denied lookup does not record liveness
+- **Passed:** a disconnect event marks the grant out of the call and refreshes presence
+- **Passed:** a stale disconnect event keeps a newer sighting
+- **Passed:** a disconnect event with no timestamp clears liveness
+- **Passed:** a disconnect event with a malformed timestamp is unprocessable
+- **Passed:** a disconnect event for an unknown grant is not found
+- **Passed:** gateway authentication is required for every endpoint
+- **Passed:** internal endpoints fail closed when huddles are not fully configured
 
 ## test/controllers/rooms/call_moderation_controller_test.rb
 

@@ -54,6 +54,8 @@ pub mod welcome;
 pub mod internal_huddle;
 #[cfg(test)]
 mod internal_huddle_tests;
+#[cfg(test)]
+mod internal_huddle_declaration_tests;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {

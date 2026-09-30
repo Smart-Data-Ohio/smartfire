@@ -56,6 +56,8 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("internal-first-sighting-bypassed", I, lambda s: replace_once(s, "let seen_due = record_seen", "let seen_due = false && record_seen"), "campfire", "huddle_gateway_liveness_is_exact_throttled_and_independent_of_expired_tokens"),
+    ("internal-authorization-payload-corrupted", I, lambda s: replace_once(s, "c.json(StatusCode::OK, &grant.authorization_payload())", 'c.json(StatusCode::OK, &serde_json::json!({"grant_id":grant.id + 1}))'), "campfire", "huddle_gateway_all_ninety_eight_recorded_token_shapes_execute_through_http"),
     ("public-huddle-returned-grant-id-corrupted", F, lambda s: replace_once(s, '"grant_id":grant.id', '"grant_id":grant.id + 1'), "campfire", "huddle_controller_reuses_the_actual_opaque_grant_across_post_requests"),
     ("public-huddle-leave-effects-bypassed", F, lambda s: replace_once(s, "for id in ids {", "for id in ids.into_iter().take(0) {"), "campfire", "huddle_controller_leave_keeps_the_other_device_and_sends_one_room_refresh"),
     ("composed-sidebar-call-sections-bypassed", ROOT / "rust/crates/views/templates/users/sidebars/show.html", lambda s: replace_once(s, "{{ self.call_sections()|safe }}", ""), "campfire", "stage_sidebar_live_dot_and_call_sections_follow_current_stream_state"),

@@ -6,9 +6,9 @@ use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest};
-pub(super) type Socket =
+pub(in crate::controllers) type Socket =
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
-pub(super) async fn next(socket: &mut Socket) -> Value {
+pub(in crate::controllers) async fn next(socket: &mut Socket) -> Value {
     tokio::time::timeout(Duration::from_secs(3), async {
         loop {
             if let Message::Text(text) = socket.next().await.expect("closed socket").unwrap() {
@@ -22,7 +22,7 @@ pub(super) async fn next(socket: &mut Socket) -> Value {
     .await
     .expect("missing controller broadcast")
 }
-pub(super) async fn socket(test: &TestApp, addr: std::net::SocketAddr, user: i64) -> Socket {
+pub(in crate::controllers) async fn socket(test: &TestApp, addr: std::net::SocketAddr, user: i64) -> Socket {
     let session = test
         .db()
         .write(move |tx| {
