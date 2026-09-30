@@ -6,9 +6,10 @@
 //! Loading is lazy. Unlike Rails, the cookie is only written when the session changed during the
 //! request, and deleted when that left it empty. Rails' `commit_session` rewrites it on every
 //! request that loads or carries one (`expire_after` forces the update), which made a session
-//! cookie, re-encrypted, part of nearly every response. Without CSRF tokens the session holds only
-//! the flash and a return-to URL, so an unchanged session needs no cookie traffic and an empty one
-//! no cookie. Cookies Rails wrote are read the same way.
+//! cookie, re-encrypted, part of nearly every response. (An inherited divergence, kept: the
+//! session holds the CSRF token, the flash and a few sign-in keys, and an unchanged one needs no
+//! cookie traffic. Its contents are the same either way.) Cookies Rails wrote are read the same
+//! way.
 
 use serde_json::{Map, Value};
 
@@ -37,6 +38,9 @@ pub struct Session {
     loaded: bool,
     /// Whether the data changed during this request, and so the cookie needs writing.
     changed: bool,
+    /// Whether this request wrote, deleted or reset (Rails' `load_for_write!`/`load_for_delete!`),
+    /// which is what gives a session without a cookie its id (see [`Session::public_id`]).
+    written: bool,
     data: Map<String, Value>,
     /// The cookie's decoded contents, read once (`action_dispatch.request.unsigned_session_cookie`).
     cookie_data: Option<Map<String, Value>>,
@@ -44,7 +48,7 @@ pub struct Session {
 
 impl Session {
     pub fn new(config: SessionConfig) -> Self {
-        Self { config, loaded: false, changed: false, data: Map::new(), cookie_data: None }
+        Self { config, loaded: false, changed: false, written: false, data: Map::new(), cookie_data: None }
     }
 
     pub fn is_loaded(&self) -> bool {
@@ -81,6 +85,17 @@ impl Session {
         self.data.get("session_id").and_then(Value::as_str)
     }
 
+    /// `request.session.id` as Rails answers it before the session commits: the cookie's session
+    /// id, or the one generated for a session this request wrote to (or reset). A visitor without
+    /// a session cookie whose session was only read has none yet, which is why their first page's
+    /// CSP nonce is random (`config/initializers/content_security_policy.rb`).
+    pub fn public_id(&mut self, jar: &CookieJar) -> Option<String> {
+        if self.written {
+            return self.data.get("session_id").and_then(Value::as_str).map(str::to_string);
+        }
+        self.cookie_data(jar).get("session_id").and_then(Value::as_str).map(str::to_string)
+    }
+
     pub fn get(&self, key: &str) -> Option<&Value> {
         self.assert_loaded();
         self.data.get(key).filter(|v| !v.is_null())
@@ -99,6 +114,7 @@ impl Session {
         self.assert_loaded();
         let value = value.into();
         let key = key.into();
+        self.written = true;
         if self.data.get(&key) != Some(&value) {
             self.data.insert(key, value);
             self.changed = true;
@@ -107,6 +123,7 @@ impl Session {
 
     pub fn remove(&mut self, key: &str) -> Option<Value> {
         self.assert_loaded();
+        self.written = true;
         let removed = self.data.remove(key);
         self.changed |= removed.is_some();
         removed
@@ -119,6 +136,7 @@ impl Session {
         self.cookie_data = Some(self.data.clone());
         self.loaded = true;
         self.changed = true;
+        self.written = true;
     }
 
     /// Writes the cookie into `jar` if the session changed, or deletes it if that left nothing but

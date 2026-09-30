@@ -16,6 +16,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use super::html::{Html, Safe, escape};
+use super::request_forgery::token_tag;
 use super::tag::{Attrs, Value, attrs, content_tag, legacy_tag, value_to_string};
 
 /// The hidden `_method` field (`method_tag`).
@@ -97,9 +98,9 @@ impl FormWith {
         }
     }
 
-    /// `<form ...>` plus the `_method` hidden field (`html_options_for_form_with` +
-    /// `extra_tags_for_form`). No `authenticity_token`: forgery protection is by `Sec-Fetch-Site`.
-    /// (See `campfire_kit::Ctx::verify_authenticity_token`.)
+    /// `<form ...>` plus the `_method` and `authenticity_token` hidden fields
+    /// (`html_options_for_form_with` + `extra_tags_for_form`). The token is the per-form one for
+    /// this action and method (see [`super::request_forgery`]).
     pub fn open(&self) -> Html {
         let mut html = attrs().attr_opt("id", self.id.as_deref()).attr_opt("class", self.class.as_deref());
         html = html.merge(self.data.clone());
@@ -116,11 +117,11 @@ impl FormWith {
             }
             "post" | "" => {
                 html = html.method("post");
-                String::new()
+                token_tag(&self.action, "post").0
             }
             other => {
                 html = html.method("post");
-                method_tag(other).0
+                method_tag(other).0 + &token_tag(&self.action, other).0
             }
         };
         Safe(format!("<form{}>{extra}", html.render()))
@@ -289,11 +290,18 @@ pub fn button_to(url: &str, mut options: Attrs, content: &str) -> Html {
     let method_field = if matches!(method.as_str(), "delete" | "patch" | "put") { method_tag(&method).0 } else { String::new() };
     let form_method = if method == "get" { "get" } else { "post" };
 
+    // `request_token_tag`: the per-form token for the method the form really submits.
+    let token = if form_method == "post" {
+        token_tag(url, if method_field.is_empty() { "post" } else { &method }).0
+    } else {
+        String::new()
+    };
+
     options.set("type", Some("submit".into()));
     let button = content_tag("button", &options, content).0;
 
     let form = attrs().class(form_class).method(form_method).attr("action", url);
-    Safe(format!("<form{}>{method_field}{button}</form>", form.render()))
+    Safe(format!("<form{}>{method_field}{button}{token}</form>", form.render()))
 }
 
 #[cfg(test)]
