@@ -9,7 +9,7 @@ use campfire_db::{
         room_delete::RemoteDeleteJob,
     },
 };
-use campfire_jobs::{Execution, JobKind, JobResult, Outcome, RetryPolicy};
+use campfire_jobs::{Execution, JobError, JobKind, JobResult, Outcome, RetryPolicy};
 use hyper::Method;
 use rails_compat::{
     ar_encryption::ArEncryption,
@@ -67,10 +67,50 @@ pub async fn usable(app: &App, user_id: i64) -> api::Result<bool> {
         })
         .await?)
 }
-async fn cleanup_job(app: App, job: Cleanup, _: Execution) -> JobResult {
+async fn cleanup_job(app: App, job: Cleanup, execution: Execution) -> JobResult {
     let (ids, blob, id) = job.0.0;
-    cleanup(&app, ids, blob, id).await?;
-    Ok(Outcome::Done)
+    finish_cleanup(cleanup(&app, ids, blob, id).await, &execution, id)
+}
+/// Rails' retry_on block reports exhausted cleanup failures and completes the job.
+pub(crate) fn finish_cleanup(
+    result: api::Result<()>,
+    execution: &Execution,
+    account_id: Option<i64>,
+) -> JobResult {
+    if let Err(error) = &result
+        && error.unavailable()
+        && execution.executions >= 8
+    {
+        tracing::error!(
+            ?account_id,
+            "Calendar::DisconnectCleanupJob failed after retries: {}",
+            error.class()
+        );
+        return Ok(Outcome::Done);
+    }
+    job_result(result, execution)
+}
+/// Keep the inherited five-attempt SQLite/timeout policy beside the eight-attempt Google policy.
+pub(crate) fn job_result(result: api::Result<()>, execution: &Execution) -> JobResult {
+    match result {
+        Ok(()) => Ok(Outcome::Done),
+        Err(error) => {
+            let error = match error {
+                api::Error::Storage(e) => anyhow::Error::new(e),
+                e => anyhow::Error::new(e),
+            };
+            let inherited = RetryPolicy::application_job();
+            if (inherited.retry_on)(&error) {
+                if execution.executions >= inherited.attempts {
+                    Err(JobError::fail(error))
+                } else {
+                    Err(JobError::retry(error))
+                }
+            } else {
+                Err(error.into())
+            }
+        }
+    }
 }
 pub async fn cleanup(
     app: &App,
@@ -145,10 +185,9 @@ pub async fn cleanup(
     }
     Ok(())
 }
-async fn remote_job(app: App, job: Remote, _: Execution) -> JobResult {
+async fn remote_job(app: App, job: Remote, execution: Execution) -> JobResult {
     let (user_id, id) = job.0.0;
-    remote_delete(&app, user_id, &id).await?;
-    Ok(Outcome::Done)
+    job_result(remote_delete(&app, user_id, &id).await, &execution)
 }
 pub async fn remote_delete(app: &App, user_id: i64, id: &str) -> api::Result<()> {
     if !usable(app, user_id).await? {
@@ -181,9 +220,8 @@ pub async fn remote_delete(app: &App, user_id: i64, id: &str) -> api::Result<()>
         }
     }
 }
-async fn watch_job(app: App, job: Watch, _: Execution) -> JobResult {
-    watch(&app, job.0.0.0).await?;
-    Ok(Outcome::Done)
+async fn watch_job(app: App, job: Watch, execution: Execution) -> JobResult {
+    job_result(watch(&app, job.0.0.0).await, &execution)
 }
 pub async fn watch(app: &App, user_id: i64) -> api::Result<()> {
     let api = app.google.api();
@@ -354,6 +392,58 @@ pub async fn renew(app: &App) -> api::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn execution(count: u32) -> Execution {
+        Execution {
+            id: 1,
+            executions: count,
+            enqueued_at: Timestamp::from_second(1),
+            scheduled_at: Timestamp::from_second(1),
+        }
+    }
+    #[test]
+    fn google_calendar_cleanup_retry_exhaustion_completes_after_report() {
+        assert!(matches!(
+            finish_cleanup(
+                Err(api::Error::Unavailable("timeout".into())),
+                &execution(7),
+                Some(1)
+            ),
+            Err(JobError::Error(_))
+        ));
+        assert!(matches!(
+            finish_cleanup(
+                Err(api::Error::Unavailable("timeout".into())),
+                &execution(8),
+                Some(1)
+            ),
+            Ok(Outcome::Done)
+        ));
+        assert!(matches!(
+            finish_cleanup(
+                Err(api::Error::Forbidden("permanent".into())),
+                &execution(8),
+                None
+            ),
+            Err(JobError::Error(_))
+        ));
+    }
+    #[test]
+    fn google_calendar_inherits_five_attempt_sqlite_retry_policy() {
+        let busy = || {
+            api::Error::Storage(campfire_db::Error::Sqlite(rusqlite::Error::SqliteFailure(
+                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_BUSY),
+                None,
+            )))
+        };
+        assert!(matches!(
+            job_result(Err(busy()), &execution(4)),
+            Err(JobError::Retry { .. })
+        ));
+        assert!(matches!(
+            job_result(Err(busy()), &execution(5)),
+            Err(JobError::Fail(_))
+        ));
+    }
     #[test]
     fn google_calendar_retry_policy_matches_eight_polynomial_attempts() {
         for policy in [

@@ -10,7 +10,7 @@ use campfire_db::{
         google_account::GoogleAccount, google_calendar::SyncEntryJob, google_entry as entries,
     },
 };
-use campfire_jobs::{Execution, JobKind, JobResult, Outcome, RetryPolicy};
+use campfire_jobs::{Execution, JobKind, JobResult, RetryPolicy};
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -31,9 +31,8 @@ impl JobKind for Sync {
 pub fn register(registry: &mut Registry) {
     registry.register(perform);
 }
-async fn perform(app: App, job: Sync, _: Execution) -> JobResult {
-    sync(&app, job.0.event_id, job.0.user_id).await?;
-    Ok(Outcome::Done)
+async fn perform(app: App, job: Sync, execution: Execution) -> JobResult {
+    calendar::job_result(sync(&app, job.0.event_id, job.0.user_id).await, &execution)
 }
 pub async fn sync(app: &App, event_id: i64, user_id: i64) -> api::Result<()> {
     let event = app

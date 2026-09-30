@@ -5,7 +5,7 @@ use campfire_db::{
     Timestamp,
     models::{google_calendar::MeetingRefreshJob, google_meeting_cache as cache},
 };
-use campfire_jobs::{Execution, JobKind, JobResult, Outcome};
+use campfire_jobs::{Execution, JobKind, JobResult};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 #[derive(Serialize, Deserialize)]
@@ -18,9 +18,13 @@ impl JobKind for Refresh {}
 pub fn register(registry: &mut Registry) {
     registry.register(perform);
 }
-async fn perform(app: App, job: Refresh, _: Execution) -> JobResult {
-    refresh(&app, job.0.user_id, Timestamp::from_jiff(app.clock.now())).await?;
-    Ok(Outcome::Done)
+async fn perform(app: App, job: Refresh, execution: Execution) -> JobResult {
+    calendar::job_result(
+        refresh(&app, job.0.user_id, Timestamp::from_jiff(app.clock.now()))
+            .await
+            .map(|_| ()),
+        &execution,
+    )
 }
 #[derive(Debug, PartialEq, Eq)]
 pub enum Result {
