@@ -2,7 +2,6 @@
 use super::huddle_grant::HuddleGrant;
 use super::room_delete::HuddleConfig;
 use super::stream::Stream;
-use crate::broadcasts::{Broadcast, Partial, room_dom_id, room_messages};
 use crate::sql::{self, query_all};
 use crate::{Event, Membership, Message, NewMessage, Result, Room, StageRole, Tx, User};
 
@@ -12,7 +11,7 @@ pub fn host_departed(
     departed_host: i64,
     config: &HuddleConfig,
 ) -> Result<()> {
-    let Some(room) = Room::find_by_id(tx.conn(), room_id)?.filter(Room::stage) else {
+    let Some(_room) = Room::find_by_id(tx.conn(), room_id)?.filter(Room::stage) else {
         return Ok(());
     };
     // The immediate writer transaction is the room lock used by Rails.
@@ -44,13 +43,9 @@ pub fn host_departed(
             ..Default::default()
         },
     )?;
-    tx.emit_after_commit(Event::broadcast(&Broadcast::append(
-        room_messages(&room),
-        room_dom_id(&room, Some("messages")),
-        Partial::Message {
-            message_id: note.id,
-        },
-    )));
+    tx.emit_after_commit(Event::broadcast(&super::huddle_effects::StageEndedNote {
+        message_id: note.id,
+    }));
     let mut successor = remaining[0];
     for id in remaining {
         let member = Membership::find(tx.conn(), id)?;

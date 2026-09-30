@@ -52,6 +52,7 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("stage-note-delivery-bypassed", B, lambda s: replace_body(s,"pub(crate) fn stage_ended_note(","Ok(())"),"campfire","last_host_departure_delivers_a_quiet_note_to_the_room_socket"),
     ("role-rank-bypassed", Q, lambda s: replace_once(s,"&& !administrator\n    {","&& false && !administrator\n    {"),"campfire","stage_role_and_hand_security_keep_grants_and_imported_hands_on_denial"),
     ("role-demotion-without-grant-left-live", Q, lambda s: replace_once(s,"Stream::end_for_membership(tx, room_id, target.id)?;",""),"campfire_db","stage_roles_and_hands_match_thirty_four_rails_controller_scenarios"),
     ("role-personal-panel-bypassed", Q, lambda s: replace_once(s,"tx.emit_after_commit(Event::broadcast(&StagePanel {","let _ = Event::broadcast(&StagePanel {").replace("membership_id: target.id,\n    }));","membership_id: target.id,\n    });",1),"campfire","stage_role_roster_panel_and_single_rejoin_reach_real_sockets_after_commit"),

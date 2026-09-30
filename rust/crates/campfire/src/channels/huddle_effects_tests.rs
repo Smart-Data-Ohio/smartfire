@@ -512,3 +512,118 @@ async fn stage_role_roster_panel_and_single_rejoin_reach_real_sockets_after_comm
         .unwrap()
         .unwrap();
 }
+
+#[tokio::test]
+async fn last_host_departure_delivers_a_quiet_note_to_the_room_socket() {
+    use campfire_db::{CachedStatements, Room};
+    let Some(test) = TestApp::boot().await else {
+        return;
+    };
+    let app = test.booted.app.clone();
+    let _membership=app.db.write(|tx| {
+        tx.conn().execute_cached("UPDATE rooms SET type='Rooms::Stage' WHERE id=?",[ALL_TALK])?;
+        tx.conn().execute_cached("UPDATE memberships SET stage_role=CASE WHEN user_id=? THEN 'host' ELSE 'listener' END WHERE room_id=?",rusqlite::params![campfire_db::fixtures::identify("jason"),ALL_TALK])?;
+        Ok(Membership::find_by_room_and_user(tx.conn(),ALL_TALK,DAVID)?.unwrap().id)
+    }).await.unwrap();
+    let listener = super::tests::support::bind_listener().await;
+    let addr = listener.local_addr().unwrap();
+    let (stop, stopping) = tokio::sync::oneshot::channel::<()>();
+    let router = test.booted.router.clone();
+    let serving = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async {
+                let _ = stopping.await;
+            })
+            .await
+            .unwrap()
+    });
+    let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
+    request
+        .headers_mut()
+        .insert("origin", format!("http://{addr}").parse().unwrap());
+    request
+        .headers_mut()
+        .insert("cookie", david_cookie().parse().unwrap());
+    request.headers_mut().insert(
+        "sec-websocket-protocol",
+        "actioncable-v1-json".parse().unwrap(),
+    );
+    let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+    assert_eq!(next(&mut socket).await["type"], "welcome");
+    let room = app
+        .db
+        .read(|conn| Room::find(conn, ALL_TALK))
+        .await
+        .unwrap();
+    subscribe(
+        &mut socket,
+        "RoomMessagesChannel",
+        rails_compat::turbo::signed_stream_name(
+            &app.secrets,
+            &super::broadcasts::Stream::room_messages(&room).streamables(),
+        ),
+    )
+    .await;
+    app.db
+        .write(|tx| {
+            let host = Membership::find_by_room_and_user(
+                tx.conn(),
+                ALL_TALK,
+                campfire_db::fixtures::identify("jason"),
+            )?
+            .unwrap();
+            host.destroy(tx)
+        })
+        .await
+        .unwrap();
+    let frame = next(&mut socket).await;
+    let html = frame["message"].as_str().unwrap();
+    assert!(html.contains("message--system-note"), "{html}");
+    assert!(html.contains("The stage ended because the last host left."));
+    assert!(html.contains("<strong>Jason</strong>"));
+    assert!(!html.contains("data-actions-url"));
+    assert!(campfire_cable::turbo::session_bound(html).is_none());
+    assert!(
+        tokio::time::timeout(Duration::from_millis(150), socket.next())
+            .await
+            .is_err()
+    );
+    socket.close(None).await.unwrap();
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    let _ = stop.send(());
+    tokio::time::timeout(Duration::from_secs(3), serving)
+        .await
+        .unwrap()
+        .unwrap();
+}
+
+#[tokio::test]
+async fn stage_quiet_note_html_matches_rails_bytes() {
+    use campfire_db::{CachedStatements, NewMessage};
+    let vector: Value =
+        serde_json::from_str(include_str!("huddle_stage_note_vectors.json")).unwrap();
+    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+        jiff::Timestamp::from_second(vector["now"].as_i64().unwrap()).unwrap(),
+    ));
+    let Some(test) =
+        TestApp::boot_with_huddle_and_clock(crate::huddle::Config::default(), clock).await
+    else {
+        return;
+    };
+    test.db().write(|tx| {
+        tx.conn().execute_cached("INSERT INTO rooms(id,name,type,creator_id,created_at,updated_at) VALUES(9001,'WS13 Stage','Rooms::Stage',?,?,?)",rusqlite::params![DAVID,tx.now(),tx.now()])?;
+        tx.conn().execute_cached("UPDATE sqlite_sequence SET seq=1200000000 WHERE name='messages'",[])?;
+        let note=campfire_db::Message::create(tx,NewMessage{room_id:9001,creator_id:DAVID,client_message_id:Some("ws13-stage-note-fixture".into()),system_note:true,body:Some("The stage ended because the last host left.".into()),..Default::default()})?;
+        assert_eq!(note.id,1200000001);
+        Ok(())
+    }).await.unwrap();
+    let app = test.booted.app.clone();
+    let presenter = app.clone();
+    let (_, html) = app
+        .db
+        .read(move |conn| super::huddle_effects::stage_note_html(&presenter, conn, 1200000001))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(html, vector["html"].as_str().unwrap());
+}

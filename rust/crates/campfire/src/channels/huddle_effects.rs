@@ -188,3 +188,20 @@ pub(crate) fn stage_panel(app:&App,room_id:i64,membership_id:i64)->anyhow::Resul
     }
     Ok(())
 }
+
+// Stage owns this quiet note; the general WS8b message descriptor remains its own seam.
+pub(crate) fn stage_note_html(app:&App,conn:&campfire_db::Connection,message_id:i64)->campfire_db::Result<Option<(Room,String)>> {
+    let Some(message)=campfire_db::Message::find_by_id(conn,message_id)? else {return Ok(None);};
+    let Some(room)=Room::find_by_id(conn,message.room_id)?.filter(|r|r.stage() && r.deleted_at.is_none()) else {return Ok(None);};
+    if !message.system_note {return Ok(None);}
+    let presenter=crate::controllers::presenters::Presenter::new(conn,app,None);
+    let view=presenter.message(&message)?;
+    let html=crate::controllers::presenters::page::render_detached(app,None,|ctx|campfire_views::messages::message(ctx,&view));
+    Ok(Some((room,html)))
+}
+pub(crate) fn stage_ended_note(app:&App,message_id:i64)->anyhow::Result<()> {
+    if let Some((room,html))=app.db.read_blocking(|conn|stage_note_html(app,conn,message_id))? {
+        app.broadcasts.append(&Stream::room_messages(&room),&room_dom_id(&room,"messages"),&html);
+    }
+    Ok(())
+}
