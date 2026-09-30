@@ -1,0 +1,97 @@
+  {{ self.identity()|safe }}
+
+  <div class="room-header__actions">
+    <button type="button"
+            class="btn room-header__action member-panel-toggle"
+            aria-controls="channel-members"
+            aria-expanded="false"
+            aria-label="Show members"
+            title="Show members"
+            data-member-panel-target="toggle"
+            data-action="member-panel#toggle">
+      {{ h::image_tag(ctx,"everyone.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="member-panel-toggle__count" data-member-panel-target="toggleCount" aria-hidden="true"></span>
+    </button>
+
+    <button type="button" class="btn room-header__action room-header__action--switcher" aria-label="Quick switcher (Control K)" title="Quick switcher (Ctrl+K)"
+            data-action="click->keyboard-shortcuts#openSwitcher">
+      {{ h::image_tag(ctx,"transfer.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="room-header__action-label quick-switcher-key" aria-hidden="true"><kbd>Ctrl</kbd> <kbd>K</kbd></span>
+    </button>
+
+{% if !room.is_direct() %}      {% filter tag("button",self.threads_attrs()) %}
+        {{ h::image_tag(ctx,"messages-outlined.svg",h::attrs().size(20).aria_hidden()) }}
+        <span class="room-header__action-label">Threads</span>
+        <span class="room-header__thread-unread" data-thread-panel-unread hidden></span>
+{% endfilter %}{% endif %}
+    {% filter link_to(self.events_path(), self.action_attrs("events", "Show events")) %}
+      {{ h::image_tag(ctx,"calendar.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="room-header__action-label">Events</span>
+{% endfilter %}
+    {% filter link_to(self.files_path(), self.action_attrs("files", "Show files")) %}
+      {{ h::image_tag(ctx,"attachment.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="room-header__action-label">Files</span>
+{% endfilter %}
+    {% include "rooms/show/_pins_panel.html" %}
+
+{% if ctx.chrome.huddle_configured %}      {{ self.live_badge()|safe }}
+      {% filter tag("button",self.share_attrs()) %}
+        {{ h::image_tag(ctx,"laptop.svg",h::attrs().size(20).aria_hidden()) }}
+        <span data-huddle-share-indicator-target="label">Screen shared</span>
+{% endfilter %}
+      {{ self.participants()|safe }}
+
+      {% filter tag("button",self.launcher_attrs()) %}
+        {{ h::image_tag(ctx,"headphones.svg",h::attrs().size(20).aria_hidden()) }}
+        <span data-huddle-launcher-target="label">{{ self.join_label() }}</span>
+{% endfilter %}{% endif %}
+{% if let Some(stage) = nav.stage.as_ref() %}      <div class="stage-panel-wrap" data-controller="stage-panel">
+        <p class="for-screen-reader" role="status" data-stage-panel-target="handAnnouncement"></p>
+        <button type="button" class="btn room-header__action room-header__action--stage"
+                aria-controls="{{ room.dom_id("stage_panel_dialog") }}"
+                aria-expanded="false"
+                aria-label="Show stage"
+                title="Show stage"
+                data-stage-panel-target="toggle"
+                data-action="stage-panel#toggle">
+          <span class="stage-panel__glyph" aria-hidden="true">◉</span>
+          <span class="room-header__action-label">Stage</span>
+        </button>
+
+        <dialog id="{{ room.dom_id("stage_panel_dialog") }}"
+                class="stage-panel"
+                aria-labelledby="{{ room.dom_id("stage_panel_title") }}"
+                data-stage-panel-target="panel"
+                data-action="click->stage-panel#backdropClicked close->stage-panel#wasClosed">
+          <section class="stage-panel__surface" aria-labelledby="{{ room.dom_id("stage_panel_title") }}">
+            <header class="stage-panel__header">
+              <div class="min-width">
+                <h2 id="{{ room.dom_id("stage_panel_title") }}">Stage</h2>
+                <p>Hosts, speakers, and listeners</p>
+              </div>
+
+              <button type="button"
+                      class="btn stage-panel__close"
+                      aria-label="Close stage"
+                      title="Close stage"
+                      data-action="stage-panel#close">
+                {{ h::image_tag(ctx,"remove.svg",h::attrs().size(16).aria_hidden()) }}
+              </button>
+            </header>
+
+            <div class="stage-panel__content">
+              {{ stage.panel(false)|safe }}
+            </div>
+          </section>
+        </dialog>
+      </div>
+{% endif %}
+    {% filter link_to(room.edit_path(),self.settings_attrs()) %}
+      {{ h::image_tag(ctx,"settings.svg",h::attrs().size(20).aria_hidden()) }}
+      <span class="for-screen-reader">Settings for this {{ room.noun() }}</span>
+{% endfilter %}
+    {% include "rooms/involvements/_bell.html" %}
+
+
+    {% include "rooms/show/_header_overflow.html" %}
+  </div>{{ "\n" }}

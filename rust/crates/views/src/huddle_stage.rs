@@ -3,7 +3,7 @@ use crate::helpers as h;
 use askama::Template;
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Member {
     pub id: i64,
     pub user_id: i64,
@@ -14,14 +14,14 @@ pub struct Member {
     pub hand: Option<i64>,
     pub muted: bool,
 }
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Live {
     pub id: i64,
     pub membership_id: i64,
     pub name: String,
     pub identity: Option<String>,
 }
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Stage {
     pub room_id: i64,
     pub viewer_id: i64,

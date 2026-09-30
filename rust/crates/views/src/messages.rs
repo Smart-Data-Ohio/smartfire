@@ -55,6 +55,8 @@ pub enum RoomKind {
     Open,
     Closed,
     Direct,
+    Voice,
+    Stage,
 }
 
 impl RoomKind {
@@ -64,6 +66,8 @@ impl RoomKind {
             RoomKind::Open => "rooms_open",
             RoomKind::Closed => "rooms_closed",
             RoomKind::Direct => "rooms_direct",
+            RoomKind::Voice => "rooms_voice",
+            RoomKind::Stage => "rooms_stage",
         }
     }
 

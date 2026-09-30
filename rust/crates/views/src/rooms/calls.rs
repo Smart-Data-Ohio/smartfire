@@ -14,8 +14,21 @@ pub struct CallForm {
     pub icon_name: Option<String>,
     pub icon: Option<h::AvatarIcon>,
     pub errors: Vec<String>,
+    pub settings: Option<super::edit_sections::EditSections>,
 }
 impl CallForm {
+    fn github_section(&self, ctx: &ViewContext) -> String {
+        self.settings
+            .as_ref()
+            .map(|s| s.github(ctx))
+            .unwrap_or_default()
+    }
+    fn inbound_section(&self) -> String {
+        self.settings
+            .as_ref()
+            .map(|s| s.inbound())
+            .unwrap_or_default()
+    }
     pub fn action(&self) -> String {
         match (self.stage, self.room.id) {
             (true, Some(id)) => campfire_routes::rooms_stage(id),

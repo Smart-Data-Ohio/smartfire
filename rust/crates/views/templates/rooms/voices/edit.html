@@ -1,3 +1,3 @@
 {#- app/views/rooms/voices/edit.html.erb -#}
-{% extends "rooms/layouts/_edit.html" %}
-{%- block room_form %}{% include "rooms/voices/_form.html" %}{% endblock %}
+{% extends "rooms/calls/_edit.html" %}
+{%- block room_form %}{{ "\n  "|safe }}{% include "rooms/voices/_form.html" %}{% endblock %}

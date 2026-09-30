@@ -28,12 +28,14 @@ outputs={
  'stage_note':'rust/crates/campfire/src/channels/huddle_stage_note_vectors.json',
  'call_channels':'rust/crates/campfire/src/controllers/rooms/call_channel_vectors.json',
  'call_views':'rust/crates/campfire/src/controllers/rooms/call_view_vectors.json',
+ 'form_pages':'rust/crates/campfire/src/controllers/rooms/form_page_vectors.json',
+ 'page_views':'rust/crates/campfire/src/controllers/rooms/page_view_vectors.json',
  'public':'rust/crates/campfire/src/controllers/rooms/public_huddle_vectors.json',
 }
 for name,path in outputs.items():
  output_path=scratch/f'{name}.json'
  with output_path.open('wb') as output,(scratch/f'{name}.log').open('wb') as error:
-  subprocess.run([str(root/'rust/parity/bin/reference'),'runner',*(['--seed','default','--time','2026-03-02T16:00:00Z','--freeze'] if name in ('call_channels','call_views') else []),'-e','RAILS_LOG_LEVEL=fatal',f'rust/reference-tools/huddle_{name}.rb'],cwd=root,env=env,stdout=output,stderr=error,check=True)
+  subprocess.run([str(root/'rust/parity/bin/reference'),'runner',*(['--seed','default','--time','2026-03-02T16:00:00Z','--freeze'] if name in ('call_channels','call_views','page_views','form_pages') else []),'-e','RAILS_LOG_LEVEL=fatal',f'rust/reference-tools/huddle_{name}.rb'],cwd=root,env=env,stdout=output,stderr=error,check=True)
  assert output_path.read_bytes()==(root/path).read_bytes(),f'{name}: golden differs; inspect {output_path}'
  data=json.loads(output_path.read_bytes())
  count=len(data['cases']) if 'cases' in data else None

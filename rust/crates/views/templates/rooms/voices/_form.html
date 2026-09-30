@@ -43,5 +43,7 @@
   </section>
 {% if form.can_administer %}
   <button name="button" type="submit" class="btn btn--reversed txt-large center"><img aria-hidden="true" src="{{ ctx.asset("check.svg") }}" width="20" height="20" /><span class="for-screen-reader">Save</span></button>
+  {%- else %}
+{{ "  "|safe }}
   {%- endif %}
 {% endfilter %}

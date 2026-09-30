@@ -2,6 +2,8 @@
 //! the `MessagesHelper` tags the room screen uses.
 
 pub mod calls;
+pub mod navigation;
+pub mod edit_sections;
 
 use askama::Template;
 use jiff::Timestamp;
@@ -55,6 +57,8 @@ impl RoomView {
             RoomKind::Open => campfire_routes::edit_rooms_open(self.id),
             RoomKind::Closed => campfire_routes::edit_rooms_closed(self.id),
             RoomKind::Direct => campfire_routes::edit_rooms_direct(self.id),
+            RoomKind::Voice => campfire_routes::edit_rooms_voice(self.id),
+            RoomKind::Stage => campfire_routes::edit_rooms_stage(self.id),
         }
     }
 
@@ -80,6 +84,8 @@ pub struct ShowView {
     pub join_code: String,
     /// `Turbo::StreamsChannel.signed_stream_name([room, :messages])`.
     pub messages_stream_name: String,
+    #[serde(default)]
+    pub navigation: Option<navigation::Navigation>,
 }
 
 /// `rooms/show`.
@@ -91,12 +97,13 @@ pub struct Show<'a> {
 }
 
 impl Page for Show<'_> {
+    fn has_sidebar(&self) -> bool { true }
     fn page_title(&self) -> Option<String> {
         Some(self.show.room.display_name.clone())
     }
 
     fn body_class(&self) -> Option<&str> {
-        Some("sidebar")
+        Some("sidebar room-workspace")
     }
 }
 

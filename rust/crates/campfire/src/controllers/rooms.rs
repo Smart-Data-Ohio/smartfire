@@ -231,6 +231,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 invitation: original && !Message::paged(conn, Timeline::Room(room.id))?,
                 join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
                 messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
+                navigation: Some(call_navigation::model(&app, conn, &room, &user)?),
             })
         })
         .await
@@ -242,3 +243,8 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod call_page_tests;
+
+mod call_navigation;

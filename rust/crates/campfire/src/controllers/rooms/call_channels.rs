@@ -101,6 +101,7 @@ pub async fn new(c: &mut Ctx) -> Result {
         icon_name: None,
         icon: None,
         errors: Vec::new(),
+        settings: None,
     };
     render(c, form, StatusCode::OK).await
 }
@@ -175,6 +176,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 icon_name,
                 icon,
                 errors: vec!["Icon name is not a known icon".into()],
+                settings: None,
             };
             return render(c, form, StatusCode::UNPROCESSABLE_ENTITY).await;
         }
@@ -266,7 +268,10 @@ async fn form(c: &Ctx, room: Room, errors: Vec<String>) -> Result<CallForm> {
                     .icon_name
                     .as_deref()
                     .and_then(|n| Presenter::new(conn, &app, None).resolve_avatar_icon(n)),
-                icon_name: room.icon_name,
+                icon_name: room.icon_name.clone(),
+                settings: Some(super::call_navigation::edit_sections(
+                    &app, conn, &room, &current,
+                )?),
                 errors,
             })
         })

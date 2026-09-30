@@ -49,7 +49,7 @@ impl Layout {
         let secrets = app.secrets.clone();
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
-        let (account, has_logo, preferences) = app
+        let (account, has_logo, preferences, brand_icon_names) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
@@ -61,7 +61,7 @@ impl Layout {
                     Some(user_id) => user_preferences(conn, user_id)?,
                     None => UserPreferences::default(),
                 };
-                Ok((account, has_logo, preferences))
+                Ok((account, has_logo, preferences, super::client_icon_names(conn)?))
             })
             .await
             .map_err(Error::internal)?;
@@ -71,7 +71,7 @@ impl Layout {
         let current_user = user.as_ref().map(|user| CurrentUser { preferences, ..current_user(&secrets, user) });
         let chrome = Chrome {
             service_worker_auto_register: true,
-            brand_icon_names: Vec::new(),
+            brand_icon_names,
             google_picker: None,
             huddle_configured: app.config.huddle.configured(),
             global_search_query: None,
@@ -181,7 +181,7 @@ pub fn current_user(secrets: &rails_compat::Secrets, user: &User) -> CurrentUser
 /// The `users` columns the layout reads straight off `Current.user` (theme, text size, time zone,
 /// tour, voice settings). The settings other domains derive (notification sounds, Google Drive)
 /// stay at their defaults until their owners fill them in.
-fn user_preferences(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<UserPreferences> {
+pub(crate) fn user_preferences(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<UserPreferences> {
     Ok(conn.query_row(
         "SELECT theme, text_size, time_zone, time_zone_explicit, tour_completed_at IS NOT NULL, voice_mode, push_to_talk_key \
          FROM users WHERE id = ?",

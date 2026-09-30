@@ -192,6 +192,7 @@ async fn call_forms_rows_and_huddle_layouts_match_parity_seed_rails_bytes() {
                         icon_name: None,
                         icon: None,
                         errors: Vec::new(),
+                        settings: None,
                     };
                     rendering_with(
                         RequestSecrets {

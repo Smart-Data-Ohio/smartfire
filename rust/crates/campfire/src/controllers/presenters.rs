@@ -70,9 +70,9 @@ pub fn room_kind(room_type: RoomType) -> RoomKind {
         RoomType::Open => RoomKind::Open,
         RoomType::Closed => RoomKind::Closed,
         RoomType::Direct => RoomKind::Direct,
-        // The views' RoomKind has no voice, stage or board rooms yet (their screens aren't
-        // ported); they're explicit-membership rooms like closed ones.
-        RoomType::Voice | RoomType::Stage | RoomType::Board => RoomKind::Closed,
+        RoomType::Voice => RoomKind::Voice,
+        RoomType::Stage => RoomKind::Stage,
+        RoomType::Board => RoomKind::Closed,
     }
 }
 
@@ -533,6 +533,35 @@ fn dimension(blob: &campfire_storage::Blob, name: &str) -> Option<RubyNumber> {
 
 pub fn storage_error(error: campfire_storage::Error) -> campfire_db::Error {
     campfire_db::Error::Other(error.to_string())
+}
+
+/// `Icons.client_icon_names`: canonical brands/aliases followed by ordered workspace icons.
+pub fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> {
+    #[derive(serde::Deserialize)]
+    struct Brand {
+        name: String,
+        #[serde(default)]
+        aliases: Vec<String>,
+    }
+    static NAMES: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
+        let brands: Vec<Brand> = serde_yaml::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../config/icons.yml"
+        )))
+        .expect("brand icon registry");
+        brands
+            .into_iter()
+            .flat_map(|b| std::iter::once(b.name).chain(b.aliases))
+            .collect()
+    });
+    let mut names = NAMES.clone();
+    let mut statement = conn.prepare_cached("SELECT name FROM workspace_icons ORDER BY name")?;
+    names.extend(
+        statement
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?,
+    );
+    Ok(names)
 }
 
 #[cfg(test)]
