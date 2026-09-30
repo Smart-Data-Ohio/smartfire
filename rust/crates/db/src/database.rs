@@ -327,6 +327,12 @@ impl Database {
     }
 
     /// Runs `f` as one immediate transaction on the writer thread.
+    /// Work queued behind the SQLite writer, excluding its currently running transaction.
+    /// Allows runtime tests and diagnostics to observe a real blocked critical section.
+    pub fn queued_writes(&self) -> usize {
+        self.writer.max_capacity() - self.writer.capacity()
+    }
+
     pub async fn write<T, F>(&self, f: F) -> Result<T>
     where
         T: Send + 'static,

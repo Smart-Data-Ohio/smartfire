@@ -30,18 +30,25 @@ pub(crate) fn deliver(
     let Some(partial) = &frame.partial else {
         return Ok(false);
     };
-    // The general message/threads/quotes adapter remains owned by WS8b-m. Only the quiet pin
-    // note is consumed here, using that worker's unchanged message presenter/partial.
+    // The general message/threads/quotes adapter remains owned by WS8b-m. The quiet pin note and
+    // scheduled sends are consumed here, using that worker's unchanged message presenter/partial.
     if let Partial::Message { message_id } = partial {
         let note = app
             .db
             .read_blocking(|conn| campfire_db::Message::find(conn, *message_id))?;
-        if !note.system_note
-            || !note
+        let pin_note = note.system_note
+            && note
                 .markdown_source
                 .as_deref()
-                .is_some_and(|source| source.starts_with("pinned a message: [jump to message]("))
-        {
+                .is_some_and(|source| source.starts_with("pinned a message: [jump to message]("));
+        let scheduled = app.db.read_blocking(|conn| {
+            Ok(conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM scheduled_messages WHERE sent_message_id = ?)",
+                [note.id],
+                |row| row.get::<_, bool>(0),
+            )?)
+        })?;
+        if !pin_note && !scheduled {
             return Ok(false);
         }
     } else if !matches!(

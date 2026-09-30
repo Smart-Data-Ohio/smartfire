@@ -49,6 +49,7 @@ pub mod qr_code;
 pub mod rooms;
 pub mod searches;
 pub mod saved_items;
+pub mod scheduled_messages;
 pub mod sessions;
 pub mod unfurl_links;
 pub mod users;
@@ -179,6 +180,11 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),
         "users/push_subscriptions#destroy" => arc(users::push_subscriptions::destroy),
         "autocompletable/users#index" => arc(autocompletable::users::index),
+        "scheduled_messages#index" => arc(scheduled_messages::index),
+        "scheduled_messages#create" => arc(scheduled_messages::create),
+        "scheduled_messages#update" => arc(scheduled_messages::update),
+        "scheduled_messages#destroy" => arc(scheduled_messages::destroy),
+        "scheduled_messages#send_now" => arc(scheduled_messages::send_now),
         "saved_items#index" => arc(saved_items::index),
         "saved_items#create" => arc(saved_items::create),
         "saved_items#update" => arc(saved_items::update),
@@ -543,6 +549,7 @@ mod tests {
         "users/avatars#destroy", "users/bans#create", "users/bans#destroy", "users/sidebars#show",
         "users/profiles#show", "users/profiles#update", "users/push_subscriptions/test_notifications#create",
         "users/push_subscriptions#index", "users/push_subscriptions#create", "users/push_subscriptions#destroy",
+        "scheduled_messages#index", "scheduled_messages#create", "scheduled_messages#update", "scheduled_messages#destroy", "scheduled_messages#send_now",
         "saved_items#index", "saved_items#create", "saved_items#update", "saved_items#destroy",
         "rooms/polls#create", "rooms/polls#show", "rooms/polls#vote",
         "messages/pins#create", "messages/pins#destroy", "rooms/pins#index",

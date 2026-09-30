@@ -21,6 +21,7 @@ pub mod messages;
 pub mod searches;
 pub mod pins;
 pub mod saved_items;
+pub mod scheduled_messages;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the
 /// helpers read from `Current`, `request`, `flash` and the session.
