@@ -353,6 +353,19 @@ impl FormRoom {
 #[template(path = "rooms/directs/new.html", blocks = ["head", "content"])]
 pub struct DirectsNew<'a> {
     pub ctx: &'a ViewContext<'a>,
+    pub users: &'a [DirectPickerUser],
+}
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct DirectPickerUser {
+    pub user: UserView,
+    pub bot: bool,
+    pub agent: bool,
+    pub starred: bool,
+}
+impl DirectsNew<'_> {
+    fn multi_select_bar(&self)->h::Html {
+        h::raw(crate::shared::MultiSelectBar{exit_button:false}.render().expect("picker selection bar renders"))
+    }
 }
 
 impl Page for DirectsNew<'_> {}
@@ -361,6 +374,16 @@ impl Page for DirectsNew<'_> {}
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct DirectEditView {
     pub room_id: i64,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub group_capable: bool,
+    #[serde(default)]
+    pub administrator: bool,
+    #[serde(default)]
+    pub candidates: Vec<UserView>,
+    #[serde(default)]
+    pub error_attributes: Vec<String>,
     /// `room_display_name(@room)` for `Current.user`.
     pub display_name: String,
     /// `@room.users.many? ? @room.users.without(Current.user) : @room.users`.
@@ -374,6 +397,15 @@ pub struct DirectsEdit<'a> {
     pub edit: &'a DirectEditView,
 }
 
+impl DirectsEdit<'_> {
+    fn leave_label(&self)->&str {if self.edit.group_capable {"Leave group"} else {"Leave ping"}}
+    fn candidate_image(&self,user:&UserView)->h::Html {
+        match &user.icon {
+            Some(icon)=>h::icon_avatar_tag(self.ctx,Some(icon),24,h::attrs()),
+            None=>h::image_tag(self.ctx,&user.avatar_url,h::attrs().size(24)),
+        }
+    }
+}
 impl Page for DirectsEdit<'_> {
     fn page_title(&self) -> Option<String> {
         Some(format!("Edit settings for {}", self.edit.display_name))

@@ -1,15 +1,15 @@
 //! `app/controllers/rooms/directs_controller.rb`: active capped selection and group writes.
-//! Group notes and directory events come from WS8a; settings/picker markup still needs parity.
+//! Group notes and directory events come from WS8a; templates consume per-viewer facts.
 
-use campfire_db::{Account, Membership, Room, User};
+use campfire_db::{Account, CachedStatements, Membership, Room, User};
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode};
-use campfire_views::rooms::{DirectEditView, DirectsEdit, DirectsNew};
+use campfire_views::rooms::{DirectEditView, DirectPickerUser, DirectsEdit, DirectsNew};
 
 use super::{Scope, audit_room, destroy_room, redirect_to_room, set_room};
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, require_current_user};
 use crate::controllers::presenters::page::{self, Rendered, db_error};
-use crate::controllers::presenters::{Presenter, user_view};
+use crate::controllers::presenters::{Presenter};
 
 /// The pinned namespace inherits show without setting `@room`, so the last-room callback
 /// raises. The working, membership-scoped page route is `/rooms/:id`.
@@ -20,7 +20,21 @@ pub async fn show(c: &mut Ctx) -> Result {
 
 pub async fn new(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    page::framed_page!(c, StatusCode::OK, |ctx| DirectsNew { ctx }).await
+    let viewer=require_current_user(c)?.id;
+    let app=c.app().clone();
+    let users=c.app().db.read(move|conn| {
+        let presenter=Presenter::new(conn,&app,None);
+        let mut users=User::active_ordered(conn)?.into_iter().filter(|u|u.id!=viewer).map(|user| {
+            // WS12/WS11 read seams: persisted viewer stars and associated agent existence.
+            // No star policy, agent liveness or agent lifecycle is implemented here.
+            let starred=conn.query_row_cached("SELECT EXISTS(SELECT 1 FROM user_stars WHERE user_id=? AND starred_user_id=?)",[viewer,user.id],|r|r.get(0))?;
+            let agent=conn.query_row_cached("SELECT EXISTS(SELECT 1 FROM agents WHERE user_id=?)",[user.id],|r|r.get(0))?;
+            Ok(DirectPickerUser{user:presenter.user_view(user.id)?,bot:user.is_bot(),agent,starred})
+        }).collect::<campfire_db::Result<Vec<_>>>()?;
+        users.sort_by_key(|u|!u.starred); // stable partition preserves User.ordered within each half.
+        Ok(users)
+    }).await.map_err(db_error)?;
+    page::framed_page!(c, StatusCode::OK, |ctx| DirectsNew { ctx,users:&users }).await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -71,10 +85,10 @@ pub async fn create(c: &mut Ctx) -> Result {
 pub async fn edit(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::Directs).await?;
-    render_edit(c, room, StatusCode::OK).await
+    render_edit(c, room, Vec::new(), StatusCode::OK).await
 }
 
-async fn render_edit(c: &mut Ctx, room: Room, status: StatusCode) -> Result {
+async fn render_edit(c: &mut Ctx, room: Room, error_attributes: Vec<String>, status: StatusCode) -> Result {
     let current_user = require_current_user(c)?.clone();
     let app = c.app().clone();
     let edit = c
@@ -83,6 +97,10 @@ async fn render_edit(c: &mut Ctx, room: Room, status: StatusCode) -> Result {
         .read(move |conn| {
             let presenter = Presenter::new(conn, &app, None);
             // `@room.users.many? ? @room.users.without(Current.user) : @room.users`
+            let member_ids=room.user_ids(conn)?;
+            // The form reflects an attempted invalid name; capabilities still use persisted rows.
+            let group_capable=room.direct_group_capable(conn)?;
+            let candidates=User::active_ordered(conn)?.iter().filter(|u|!member_ids.contains(&u.id)).map(|u|presenter.user_view(u.id)).collect::<campfire_db::Result<Vec<_>>>()?;
             let users = room.users(conn)?;
             let users: Vec<User> = if users.len() > 1 {
                 users
@@ -94,11 +112,16 @@ async fn render_edit(c: &mut Ctx, room: Room, status: StatusCode) -> Result {
             };
             Ok(DirectEditView {
                 room_id: room.id,
+                name:room.name.clone(),
+                group_capable,
+                administrator:current_user.is_administrator(),
+                candidates,
+                error_attributes,
                 display_name: presenter.room_display_name(&room, Some(&current_user))?,
                 users: users
                     .iter()
-                    .map(|user| user_view(&app.secrets, user))
-                    .collect(),
+                    .map(|user| presenter.user_view(user.id))
+                    .collect::<campfire_db::Result<Vec<_>>>()?,
             })
         })
         .await
@@ -118,6 +141,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         .get("name")
         .and_then(Param::to_s)
         .unwrap_or_default();
+    let clean=campfire_richtext::ruby::strip(&name).to_owned();
+    let attempted=(!campfire_richtext::ruby::is_blank(&clean)).then_some(clean);
     let mut updated = room.clone();
     match c
         .app()
@@ -132,8 +157,9 @@ pub async fn update(c: &mut Ctx) -> Result {
             None,
             Some("Only group direct messages can be renamed.".into()),
         ),
-        Err(campfire_db::Error::RecordInvalid(_)) => {
-            render_edit(c, room, StatusCode::UNPROCESSABLE_ENTITY).await
+        Err(campfire_db::Error::RecordInvalid(errors)) => {
+            let mut invalid=room;invalid.name=attempted;
+            render_edit(c, invalid, errors.0.iter().map(|(attribute,_)| (*attribute).to_owned()).collect(), StatusCode::UNPROCESSABLE_ENTITY).await
         }
         Err(error) => Err(db_error(error)),
     }
