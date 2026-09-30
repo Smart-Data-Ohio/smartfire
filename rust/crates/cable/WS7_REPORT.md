@@ -1,13 +1,15 @@
 # WS7: cable, channels and broadcasts
 
-Status: **review fixes complete; full brief acceptance remains partial for domain and HTML/pixel parity**. Branch `rust/ws7-cable`. Earlier review implementation commits `5f56e8aa` and `e1d041e6`; this follow-up closes Astra's foreign-content finding against `ef1f21d7`. Merged `origin/main` (`d2b21210`, including WS3, final WS4 #150, WS5 and Rails #148) in `a8ec54aef7dea0596b524df2fb6272c31a474bc9`. Reference pin `fec615be`; the private image is `ws7-reference:fec615be`. Push authorized by the user; no PR.
+Status: **review fixes complete; full brief acceptance remains partial for domain and HTML/pixel parity**. Branch `rust/ws7-cable`. Earlier review implementation commits `5f56e8aa` and `e1d041e6`; the foreign-content fix was `da75e109`. This follow-up implements the lead's conservative-backstop decision after Astra's round-four probes against that commit. Merged `origin/main` (`d2b21210`, including WS3, final WS4 #150, WS5 and Rails #148) in `a8ec54aef7dea0596b524df2fb6272c31a474bc9`. Reference pin `fec615be`; the private image is `ws7-reference:fec615be`. Push authorized by the user; no PR.
 
 ## Review corrections
 
 1. The only merge conflict was `crates/campfire/src/jobs.rs`. Kept WS3's durable job queue, atomic persistence, registry, workers, periodic loops and shutdown, plus WS7's weak app reference and synchronous ordered Broadcast/DisconnectUser sink. The request-warmed-message regression GETs an existing message, renders it detached through the same fragment cache, verifies no CSRF field/token slot/nonce, and requires real socket delivery. WS4's merged tokenless cached forms and token-slot mechanism fix the contamination.
-2. `crates/cable/src/turbo.rs` now uses html5ever's fragment tree builder in an HTML `<body>` context and examines DOM element attributes, including single/unquoted and entity-encoded attributes. It traverses SVG, MathML and template contents. HTML textarea/title/script text, comments and escaped message text do not trigger the guard. Real authenticity fields, CSRF meta tags, CSP nonce attributes/meta still fail closed. `channels/broadcasts.rs` additionally rejects actual unresolved WS4 token slots using the renderer's process-specific marker. The reviewer's exact HTTP body `<div>nonce="example"</div>` now reaches a real authorized socket.
+2. `crates/cable/src/turbo.rs` uses html5ever's fragment tree builder in an HTML `<body>` context and examines DOM element attributes in both scripting modes. It traverses SVG, MathML and template contents, then applies a conservative raw-source attribute backstop if neither tree flags a value. HTML textarea/title/script text, comments and escaped message text do not trigger the guard. The existing field/meta/nonce checks are retained; the raw backstop also refuses suspicious name/nonce attributes that the tree builder discards. `channels/broadcasts.rs` additionally rejects actual unresolved WS4 token slots using the renderer's process-specific marker. The reviewer's exact HTTP body `<div>nonce="example"</div>` now reaches a real authorized socket.
 3. `controllers/rooms/involvements.rs` supplies the real membership-specific direct-room partial on direct mute transitions. HTTP/socket tests require the actual row id and non-empty template. The broader HTTP test exercises real message, presentation, boost, shared-room and direct-room partial wiring. FakePartials remains a transport test double, not proof that controllers supply their partials. The audit found inherited shared membership/unread-local gaps, missing stage/voice/board rows, and inherited direct-row markup without the fork's muted class/profile controls. Contract entries 61–63 are corrected to API ready with explicit HTML limits; direct mute no longer deletes the row. Full fork sidebar markup remains WS6/WS8/WS12/WS13 work.
 4. Repeated public `subscribed` actions are bounded to two receivers per subscription/stream. The Rails golden explicitly records a second delivery after one repeated action, so idempotence would break that evidence. A real-socket test sends 32 repeated actions, consumes exactly two frames and requires silence afterwards. The first two receivers preserve recorded Rails behavior; further duplicates are ignored.
+
+5. Per the lead decision, this guard is our own conservative addition, with no Rails equivalent. Both scripting modes and a raw-source backstop now reject the `noscript`, select/style nonce and both select/CSRF-meta probes. The select/title input is deliberately refused, pinned by `session_bound_select_title_is_an_intentional_conservative_refusal`. No claim of exact browser-parser conformance.
 
 The contract contains all **115** source primitives. The lead and independent reviewer confirmed the brief's 140 figure was incorrect. Current states: 15 ported envelopes/call paths, 18 API ready, 80 waiting on their domain, 2 dead. No parity masks or allowlists changed.
 
@@ -25,10 +27,10 @@ Workspace presence establishes a server-owned UUID lease, refreshes expiry (acti
 
 Paths below are relative to `rust/`; this lists the full WS7 slice, including inherited commits.
 
-- `crates/cable/src/turbo.rs`: replace the tokenizer-only guard with browser fragment parsing and an iterative DOM walk, including template contents. Four failing-first SVG/MathML self-closing-style cases check both bare fragments and Turbo templates; further cases check HTML integration points and foreign nonce scripts. Controls preserve ordinary text, textarea/title/script text and escaped entities.
+- `crates/cable/src/turbo.rs`: preserve the iterative DOM walk in two scripting modes and add an independent source-tag/attribute scan. Four prior SVG/MathML regressions remain; six new tests cover noscript, both CSRF meta names within select, select/style nonce, an intentional select/title refusal, and raw attributes on arbitrary tags (including duplicates, case, quotes, slash separators and character references). Regressions check bare fragments and Turbo templates. Existing text controls remain green.
 - `Cargo.toml`, `crates/cable/Cargo.toml`, `Cargo.lock`: add `markup5ever_rcdom` 0.35 (resolved to `0.35.0+unofficial`), matching the existing html5ever 0.35. The DOM exists only during the guard check; broadcasts still send the original bytes.
 - `crates/cable/src/channel.rs`: cap duplicate stream receivers at two.
-- `crates/cable/tests/protocol.rs`: real-socket refusal of SVG/MathML token and nonce payloads, with exact delivery assertions for ordinary text and textarea/title controls.
+- `crates/cable/tests/protocol.rs`: real-socket refusal of SVG/MathML, noscript and select token/nonce payloads, including the intentional select/title refusal. Existing exact-delivery assertions for ordinary text and textarea/title controls remain.
 - `crates/cable/tests/support/mod.rs`: optional worker-specific listening-port range.
 - `crates/cable/tests/golden.rs`: replay/record harness, worker port support and recording instructions.
 - `crates/cable/tests/golden/fixtures.rb`: mark the recording session verified before connecting.
@@ -94,21 +96,29 @@ The seeded hub tests now boot the merged WS3 app and exercise its actual router,
 
 ## Cross-workstream touches and remaining scope
 
-Small existing controller/presenter hooks remain in WS8/WS6 paths; the direct involvement renderer was the only production domain change in the earlier review follow-up. This parser follow-up touches only cable, shared dependency declarations/lockfile and the report. `jobs.rs` is a conflict resolution preserving WS3's queue and WS7's event sink, not a queue redesign. Broadcast events are still after commit; the durable job persistence path remains transactional. No new validators or production row-write paths in these review fixes.
+Small existing controller/presenter hooks remain in WS8/WS6 paths; the direct involvement renderer was the only production domain change in the earlier review follow-up. The previous parser follow-up added shared dependency declarations/lockfile. This round changes only cable and the report; no new dependency or cross-workstream production change. `jobs.rs` is a conflict resolution preserving WS3's queue and WS7's event sink, not a queue redesign. Broadcast events are still after commit; the durable job persistence path remains transactional. No new validators or production row-write paths in these review fixes.
 
 Partial: full fork message/reaction/sidebar HTML (WS6/WS8); shared membership/unread locals and direct muted/profile/huddle markup (WS6/WS8); stage/voice rows (WS13), board rows (WS12); 80 remaining domain primitives and 18 API-ready entries with owners in BROADCASTS.md; periodic/reconciler socket delivery (WS3/WS13), WorkspacePresence prune/endpoint (WS17); WS9's verified-session flows; prior stage/grant/calendar model validations/callbacks listed above. The inherited `manages_bots` controller assertion is outside WS7. The involvement controller also still lacks Rails' mute-time persisted-unread clearing and JSON response behavior (WS8); no claim of full controller parity. No open question about the primitive count remains.
 
-## Foreign-content design notes
+## Conservative guard design notes
 
-The tokenizer-only guard incorrectly entered HTML raw-text mode for a self-closing foreign `<style/>`. The tree builder decides namespaces, self-closing behavior, integration points and text modes. The guard inspects HTML input/meta fields and non-empty nonce attributes on elements in every namespace. Actual HTML fields inside SVG `foreignObject` and MathML `mtext` are rejected too. HTML templates store their contents in separate document fragments, so the iterative walk explicitly visits those fragments. Parsing does not rewrite broadcast markup. No new production row writes, Rails validations or callbacks in this follow-up; the existing deferrals above remain partial.
+This guard is port-owned; Rails has no equivalent. It is a conservative backstop rather than a promise of exact browser parsing. `session_bound` returns the first reason found by the existing tree walk with scripting enabled, the same walk with scripting disabled, or the source scan. Disabling scripting exposes noscript children. Both walks explicitly visit template contents and foreign elements.
+
+The independent source scan inspects literal `<` followed by an ASCII letter up to the next `>`. It refuses any tag's `name` equal to `authenticity_token`, `csrf-token` or `csrf-param`, or any non-empty `nonce`. Attribute names are case-insensitive; quoted/unquoted values and duplicate attributes are inspected directly. Only character-reference decoding uses html5ever's attribute lexer, with one synthetic value: element insertion rules, duplicate filtering and EOF recovery cannot discard source attributes first.
+
+To satisfy the lead's requirement to keep the existing text controls green, clearly terminated comments and ordinary HTML textarea/title/script text are exempted from the raw backstop. Text exemptions do not apply within select or foreign content, or for self-closing text tags; ambiguous markup stays eligible for refusal. This is a deliberate conservative boundary, not another browser-conformance implementation. Escaped `&lt;input...` and text `name=&quot;authenticity_token&quot;` remain safe, as do words inside attribute values and empty nonce attributes.
+
+`<select><title><input name=authenticity_token></title></select>` is an intentional over-refusal: current browsers treat it as title text, but our templates never emit it. The named test checks both the public guard and source backstop so this refusal does not depend on html5ever's obsolete select rules. The old guard already refused this probe; it was not a missing detection and is not claimed as failing-first evidence.
+
+Broadcasts still send the original HTML bytes. Both Rails golden JSON files are byte-for-byte unchanged from `da75e109` and both replays pass. No new row writes, Rails validations/callbacks, schema migration, parity masks or allowlists. The existing domain deferrals above remain partial.
 
 ## Checks and raw summaries
 
-These commands were rerun for the foreign-content fix. They ran from this worktree's `rust/` directory, with its own target and scratch directories and assigned socket ports. Seeds were present; all ten seeded hub tests ran and no seed-dependent tests silently skipped. The earlier takeover/merge verification (Rails recording/assertions, DB/jobs, contract injection and nineteen mutations) is preserved in the report at commit `ef1f21d7` and its cache evidence. Those broader commands were not rerun for this parser-only change; both committed Rails goldens were replayed below. No reference regeneration, schema migration, parity mask or allowlist change in this follow-up.
+All commands below ran in this worktree's `rust/` directory with its own target/cache and the assigned socket ports. Seeds were present, all ten seeded hub tests ran and no seed-dependent tests silently skipped. The previous broader takeover/merge verification is preserved in report history at `ef1f21d7`; the prior foreign-content verification is preserved at `da75e109`. Rails recording/assertions, DB/jobs, contract injection and nineteen mutations were not rerun for this guard-only follow-up; the committed Rails goldens were replayed without regenerating them. Raw logs are in `/home/riels/.cache/rust-port/ws7/evidence/`.
 
 ### Failing-first evidence
 
-The four required SVG/MathML self-closing-style cases were added before changing production code. Each returned `None` rather than the required token/nonce reason. The ordinary text and textarea/title/script/escaped-entity controls passed. The socket regression returned one recipient instead of refusing the fragment.
+Before production changes, the noscript input, select/style nonce and both select/CSRF-meta probes returned `None`. The arbitrary-tag attribute backstop test also returned `None`: five failing detection tests. The deliberate select/title refusal and all existing controls passed. The real socket test accepted the noscript token fragment with one recipient instead of refusing it. All reviewer probes are covered by the committed tests; the known intentional over-refusal is explicitly documented rather than represented as a new failure.
 
 ### Before the fix: unit regressions
 
@@ -117,10 +127,10 @@ TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Project
 ```
 
 ```text
-test result: FAILED. 3 passed; 4 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+test result: FAILED. 8 passed; 5 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
 ```
 
-Exit 101. All four new foreign-content detection tests failed; the two existing guard tests and new text-control test passed. Seventeen unrelated units were filtered. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/foreign-fragment-failing-first-unit.log`.
+Exit 101: five failed, eight passed, seventeen unrelated units filtered. The intentional select/title refusal already passed; both prior text-control tests passed. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-failing-first-unit.log`.
 
 ### Before the fix: real socket
 
@@ -132,7 +142,7 @@ TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Project
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 19 filtered out; finished in 0.00s
 ```
 
-Exit 101. The SVG token fragment was accepted by the broadcaster with an actual subscribed socket; expected zero recipients, got one. Nineteen unrelated protocol tests were filtered. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/foreign-fragment-failing-first-socket.log`.
+Exit 101. A real subscriber was registered; the noscript fragment returned one recipient, expected zero. Nineteen unrelated protocol tests filtered. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-failing-first-socket.log`.
 
 ### After the fix: complete cable suite
 
@@ -141,13 +151,13 @@ TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Project
 ```
 
 ```text
-test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.03s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-Exit 0, no warnings. In order: 24 units, 1 Rails protocol golden replay, 20 real-socket protocol tests and zero doc tests. The protocol recorder alone is ignored; the stored reference is replayed. All four new unit regressions and safe-text controls pass, both bare and template-wrapped. The socket test proves all four foreign payloads are refused and safe controls deliver exact original HTML. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/foreign-fragment-cable.log`.
+Exit 0, no warnings. In order: 30 units, one protocol golden replay (recorder ignored), 20 real-socket protocol tests, zero doc tests. All six new units and existing text controls passed. The socket test proves refusal of every reviewer payload, with the previous exact delivery assertions still passing. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-cable.log`.
 
 ### After the fix: full application binary
 
@@ -156,10 +166,10 @@ TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Project
 ```
 
 ```text
-test result: FAILED. 272 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 22.11s
+test result: FAILED. 272 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 22.18s
 ```
 
-Exit 101, no warnings. Only `controllers::presenters::accounts::tests::manages_bots` fails on its inherited bot-key assertion (WS11). `channels::tests::golden::replays_reference_frames` passes, including revoke A. All 96 channel tests pass. Two ignored tests are the Rails recorder and optional job latency measurement; no filtered tests or seed skips. Full application acceptance remains partial because of the known bot test. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/foreign-fragment-campfire-bin.log`.
+Exit 101, no warnings. Only `controllers::presenters::accounts::tests::manages_bots` fails on the inherited bot-key assertion (WS11). `channels::tests::golden::replays_reference_frames` passes, including revoke A; all 96 channel tests pass. Two ignored tests are the Rails recorder and optional job latency measurement. No filtered tests or seed skips. Full application acceptance remains partial because of the known bot test. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-campfire-bin.log`.
 
 ### Strict workspace clippy
 
@@ -168,10 +178,10 @@ TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Project
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.82s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.45s
 ```
 
-Exit 0, no warnings. The excluded workspace html5ever is the vendored dependency, per rust/AGENTS.md. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/foreign-fragment-clippy.log`.
+Exit 0, no warnings. Excluded workspace html5ever is the vendored dependency, per rust/AGENTS.md. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-clippy.log`.
 
 ### Explicit application binary clippy
 
@@ -180,7 +190,7 @@ TMPDIR=/home/riels/.cache/rust-port/ws7/tmp CARGO_TARGET_DIR=/home/riels/Project
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.79s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.20s
 ```
 
-Exit 0, no warnings. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/foreign-fragment-clippy-bin.log`.
+Exit 0, no warnings. Raw log: `/home/riels/.cache/rust-port/ws7/evidence/conservative-guard-clippy-bin.log`.

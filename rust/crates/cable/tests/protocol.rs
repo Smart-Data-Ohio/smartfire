@@ -343,6 +343,11 @@ async fn broadcasts_carrying_session_bound_markup_are_refused() {
         "<svg><style/></svg><script nonce=secret></script>",
         "<math><style/></math><input name=authenticity_token value=secret>",
         "<math><style/></math><script nonce=secret></script>",
+        "<noscript><input name=authenticity_token></noscript>",
+        "<select><meta name=csrf-token content=secret></select>",
+        "<select><meta name=csrf-param content=authenticity_token></select>",
+        "<select><style nonce=secret></style></select>",
+        "<select><title><input name=authenticity_token></title></select>",
     ] {
         assert_eq!(app.server.broadcast_append_to(&["rooms"], "rooms", html), 0, "{html}");
     }

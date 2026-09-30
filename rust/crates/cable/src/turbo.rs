@@ -179,17 +179,23 @@ pub fn html_escape(value: &str) -> String {
 }
 
 /// Markup that belongs to a browser session and must never be shared by a broadcast.
-/// Inspect parsed HTML attributes, not text such as `<div>nonce="example"</div>`.
-/// Token fields and meta tags are forbidden; an empty nonce attribute is harmless.
+/// This is a conservative backstop, not a browser-conformance check. Inspect both
+/// scripting modes and raw tag attributes; an empty nonce attribute is harmless.
 pub fn session_bound(html: &str) -> Option<&'static str> {
-    use html5ever::{QualName, local_name, ns, parse_fragment, tendril::TendrilSink};
+    session_bound_tree(html, true)
+        .or_else(|| session_bound_tree(html, false))
+        .or_else(|| session_bound_source(html))
+}
+
+fn session_bound_tree(html: &str, scripting_enabled: bool) -> Option<&'static str> {
+    use html5ever::{ParseOpts, QualName, local_name, ns, parse_fragment, tendril::TendrilSink};
     use markup5ever_rcdom::{NodeData, RcDom};
 
-    // The tree builder handles namespaces, self-closing foreign elements and HTML raw text
-    // as a browser does. A tokenizer alone cannot determine which tags create elements.
+    let mut opts = ParseOpts::default();
+    opts.tree_builder.scripting_enabled = scripting_enabled;
     let dom = parse_fragment(
         RcDom::default(),
-        Default::default(),
+        opts,
         QualName::new(None, ns!(html), local_name!("body")),
         vec![],
         false,
@@ -224,6 +230,157 @@ pub fn session_bound(html: &str) -> Option<&'static str> {
         nodes.extend(node.children.borrow().iter().rev().cloned());
     }
     None
+}
+
+fn session_bound_source(html: &str) -> Option<&'static str> {
+    let lower = html.to_ascii_lowercase();
+    let mut cursor = 0;
+    let mut selects = 0_usize;
+    let mut foreign = 0_usize;
+    while let Some(offset) = lower[cursor..].find('<') {
+        let start = cursor + offset;
+        cursor = start + 1;
+
+        // Preserve clear comment/text controls. Ambiguous markup is scanned, not exempted.
+        if let Some(comment) = lower[start..].strip_prefix("<!--")
+            && !comment.starts_with('>')
+            && !comment.starts_with("->")
+            && let Some(end) = comment.find("-->")
+            && !comment[..end].contains("--!>")
+        {
+            cursor = start + 4 + end + 3;
+            continue;
+        }
+        let closing = lower[start..].starts_with("</");
+        let name_start = start + if closing { 2 } else { 1 };
+        if !lower.as_bytes().get(name_start).is_some_and(u8::is_ascii_alphabetic) {
+            continue;
+        }
+        let Some(end) = lower[start..].find('>').map(|offset| start + offset) else {
+            break;
+        };
+        let name = lower[name_start..=end]
+            .split(|c: char| c.is_ascii_whitespace() || matches!(c, '/' | '>'))
+            .next()
+            .unwrap();
+        let tag = &html[start..=end];
+        cursor = end + 1;
+        if closing {
+            match name {
+                "select" => selects = selects.saturating_sub(1),
+                "svg" | "math" => foreign = foreign.saturating_sub(1),
+                _ => {}
+            }
+            continue;
+        }
+
+        // Inspect every literal '<' followed by a letter, including one inside another tag.
+        // Attribute tokenization decodes entities but never applies tree-builder filtering.
+        for (offset, _) in tag.match_indices('<') {
+            if tag.as_bytes().get(offset + 1).is_some_and(u8::is_ascii_alphabetic)
+                && let Some(reason) = session_bound_source_tag(&tag[offset..])
+            {
+                return Some(reason);
+            }
+        }
+        let self_closing = tag[..tag.len() - 1].trim_end().ends_with('/');
+        match name {
+            "select" => selects += 1,
+            "svg" | "math" if !self_closing => foreign += 1,
+            _ => {}
+        }
+        // Select's obsolete insertion rules must never hide a source tag. In particular,
+        // <select><title><input ...> is intentionally refused, even if a browser treats it as text.
+        if selects == 0 && foreign == 0 && !self_closing && matches!(name, "textarea" | "title" | "script") {
+            let close = format!("</{name}");
+            cursor = lower[cursor..]
+                .match_indices(&close)
+                .find(|(offset, _)| {
+                    lower.as_bytes().get(cursor + offset + close.len())
+                        .is_some_and(|c| c.is_ascii_whitespace() || matches!(c, b'/' | b'>'))
+                })
+                .map_or(html.len(), |(offset, _)| cursor + offset);
+        }
+    }
+    None
+}
+
+fn session_bound_source_tag(tag: &str) -> Option<&'static str> {
+    // Read source attributes independently: no tree insertion rules, duplicate-attribute
+    // filtering or EOF recovery can discard a suspicious value before we inspect it.
+    let mut attrs = tag[1..tag.len() - 1].trim_start_matches(|c: char| !c.is_ascii_whitespace() && c != '/');
+    while !attrs.is_empty() {
+        attrs = attrs.trim_start_matches(|c: char| c.is_ascii_whitespace() || c == '/');
+        if attrs.is_empty() {
+            break;
+        }
+        let end = attrs.find(|c: char| c.is_ascii_whitespace() || matches!(c, '=' | '/' | '>' | '<')).unwrap_or(attrs.len());
+        let name = &attrs[..end];
+        if end == 0 {
+            attrs = &attrs[1..];
+            continue;
+        }
+        attrs = attrs[end..].trim_start_matches(|c: char| c.is_ascii_whitespace());
+        let Some(value) = attrs.strip_prefix('=') else {
+            continue;
+        };
+        attrs = value.trim_start_matches(|c: char| c.is_ascii_whitespace());
+        let value = if attrs.starts_with(['\'', '"']) {
+            let quote = attrs.as_bytes()[0] as char;
+            attrs = &attrs[1..];
+            let end = attrs.find(quote).unwrap_or(attrs.len());
+            let value = &attrs[..end];
+            attrs = attrs.get(end + 1..).unwrap_or("");
+            value
+        } else {
+            let end = attrs.find(|c: char| c.is_ascii_whitespace() || c == '>').unwrap_or(attrs.len());
+            let value = &attrs[..end];
+            attrs = &attrs[end..];
+            value
+        };
+        if name.eq_ignore_ascii_case("nonce") && !value.is_empty() {
+            return Some("a CSP nonce");
+        }
+        if name.eq_ignore_ascii_case("name") {
+            let value = if value.contains('&') { source_attribute_value(value) } else { value.to_string() };
+            match value.as_str() {
+                "authenticity_token" => return Some("a CSRF token"),
+                "csrf-token" | "csrf-param" => return Some("a CSRF meta tag"),
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
+fn source_attribute_value(value: &str) -> String {
+    use html5ever::tendril::StrTendril;
+    use html5ever::tokenizer::{BufferQueue, StartTag, TagToken, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts};
+    use std::cell::RefCell;
+
+    #[derive(Default)]
+    struct Value(RefCell<String>);
+    impl TokenSink for Value {
+        type Handle = ();
+
+        fn process_token(&self, token: Token, _: u64) -> TokenSinkResult<()> {
+            if let TagToken(tag) = token
+                && tag.kind == StartTag
+                && let Some(attr) = tag.attrs.iter().find(|a| a.name.local.as_ref() == "value")
+            {
+                *self.0.borrow_mut() = attr.value.to_string();
+            }
+            TokenSinkResult::Continue
+        }
+    }
+
+    // Use only the attribute lexer for character references, never its element structure.
+    let tokenizer = Tokenizer::new(Value::default(), TokenizerOpts::default());
+    let input = BufferQueue::default();
+    input.push_back(StrTendril::from_slice(&format!("<x value=\"{}\">", value.replace('"', "&quot;"))));
+    let _ = tokenizer.feed(&input);
+    tokenizer.end();
+    tokenizer.sink.0.into_inner()
 }
 
 /// `Turbo::StreamsChannel.broadcast_*_to`. Streamables are the stream name parts (GID params
@@ -385,6 +542,52 @@ mod tests {
     }
 
     #[test]
+    fn session_bound_noscript_token() {
+        assert_session_bound_fragment("<noscript><input name=authenticity_token></noscript>", "a CSRF token");
+    }
+
+    #[test]
+    fn session_bound_select_csrf_token_meta() {
+        assert_session_bound_fragment("<select><meta name=csrf-token content=secret></select>", "a CSRF meta tag");
+    }
+
+    #[test]
+    fn session_bound_select_csrf_param_meta() {
+        assert_session_bound_fragment("<select><meta name=csrf-param content=authenticity_token></select>", "a CSRF meta tag");
+    }
+
+    #[test]
+    fn session_bound_select_nonce_style() {
+        assert_session_bound_fragment("<select><style nonce=secret></style></select>", "a CSP nonce");
+    }
+
+    #[test]
+    fn session_bound_select_title_is_an_intentional_conservative_refusal() {
+        // This is text in current browsers. Our templates never emit it; refusing it is
+        // intentional rather than relying on the parser's changing select insertion rules.
+        let html = "<select><title><input name=authenticity_token></title></select>";
+        assert_session_bound_fragment(html, "a CSRF token");
+        assert_eq!(session_bound_source(html), Some("a CSRF token"));
+    }
+
+    #[test]
+    fn session_bound_raw_backstop_checks_any_tag_attributes() {
+        for (html, reason) in [
+            ("<div name=authenticity_token>", "a CSRF token"),
+            ("<select><span NAME='csrf-token'></span></select>", "a CSRF meta tag"),
+            ("<select><span name=csrf-param></span></select>", "a CSRF meta tag"),
+            ("<select><style NONCE='secret'></style></select>", "a CSP nonce"),
+            ("<select><style nonce='' nonce=secret></style></select>", "a CSP nonce"),
+            ("<select><span name=ignored name=csrf-token></span></select>", "a CSRF meta tag"),
+            ("<select><span name=csrf&#45;param></span></select>", "a CSRF meta tag"),
+            ("<select><style nonce=secret title='>'></style></select>", "a CSP nonce"),
+            ("<select><x/name=authenticity_token></select>", "a CSRF token"),
+        ] {
+            assert_session_bound_fragment(html, reason);
+        }
+    }
+
+    #[test]
     fn session_bound_svg_self_closing_style_token() {
         for html in [
             "<svg><style/></svg><input name=authenticity_token value=secret>",
@@ -432,6 +635,10 @@ mod tests {
             "<title><input name=authenticity_token><script nonce=example></script></title>",
             "<script>const example = '<input name=authenticity_token><script nonce=example>';</script>",
             "<p>&lt;input name=authenticity_token&gt;&lt;script nonce=example&gt;</p>",
+            "<p>&lt;input name=&quot;authenticity_token&quot;&gt; name=&quot;authenticity_token&quot;</p>",
+            "<select><span data-name=csrf-token data-nonce=secret></span></select>",
+            "<select><style nonce=''></style></select>",
+            "<input /> <svg/> <math/> <div title='words nonce=secret name=authenticity_token'></div>",
         ] {
             assert_eq!(session_bound(html), None, "{html}");
             let broadcast = action_tag(Action::Append, Target::Target("messages"), Some(html), &[]);
