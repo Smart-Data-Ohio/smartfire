@@ -257,10 +257,20 @@ image_runtime() {
 
 # Runtime metadata is validated before freeze, never queried during later phases.
 recorded_runtime() {
-  local field="$1" runtime
+  local field="$1" runtime preflight target_image
+  preflight="$(state_path preflight-result.json)"
+  if [ "$(read_json_field "$preflight" 'has("target_runtime")')" = true ]; then
+    target_image="$(read_json_field "$preflight" '.target_image')"
+    # deploy-gcp.yml resolves repository@digest once and passes the same output
+    # string to preflight, freeze and cutover via sudo env IMAGE_REF on the VM.
+    # Exact equality binds the metadata without a new Docker lookup; callers
+    # must keep that reference unchanged across phases, including manual runs.
+    [ "$target_image" = "$IMAGE_REF" ] \
+      || die "preflight target image '$target_image' does not match IMAGE_REF '$IMAGE_REF'; refusing recorded runtime (run preflight for this candidate)"
+  fi
   # Records without runtime fields came from the pre-change script, which only
   # supported Rails releases. Their runtime is therefore Rails, not a guess.
-  runtime="$(read_json_field "$(state_path preflight-result.json)" \
+  runtime="$(read_json_field "$preflight" \
     "if has(\"$field\") then .${field} else \"rails\" end")"
   case "$runtime" in
     rails|rust) printf '%s' "$runtime" ;;

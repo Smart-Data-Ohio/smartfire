@@ -50,6 +50,17 @@ def plan(document, runtime):
 
 
 class WorkflowTest(unittest.TestCase):
+    def test_vm_phases_receive_the_same_resolved_digest_reference(self):
+        workflow = yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())
+        steps = {step["id"]: step for step in workflow["jobs"]["deploy"]["steps"] if "id" in step}
+        self.assertIn('echo "reference=${GCP_IMAGE}@${digest}"', steps["image"]["run"])
+        for phase in ["preflight", "freeze", "cutover"]:
+            with self.subTest(phase=phase):
+                self.assertEqual(steps[phase]["env"]["IMAGE_REF"], "${{ steps.image.outputs.reference }}")
+                self.assertIn("IMAGE_REF='${IMAGE_REF}'", steps[phase]["run"])
+                self.assertIn("campfire-release.sh " + phase, steps[phase]["run"])
+        print("WORKFLOW REFERENCE: preflight/freeze/cutover use the same resolved repository@digest string")
+
     def test_default_rails_plan_is_identical_and_rust_uses_a_separate_sha_tag(self):
         old = subprocess.check_output(["git", "show", f"{REVISION}:.github/workflows/deploy-gcp.yml"], cwd=ROOT, text=True)
         old = yaml_json(old)

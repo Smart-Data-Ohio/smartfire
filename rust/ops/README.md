@@ -81,8 +81,15 @@ complete backup and return nonzero.
 `net.smartdata.campfire.runtime=rust` identifies a Rust image. Preflight validates
 the candidate and current image labels once and records both runtimes. Freeze,
 rehearsal and cutover use that record without inspecting image metadata again.
+For records carrying `target_runtime`, every runtime read first requires the
+recorded `target_image` to equal `IMAGE_REF`. The deploy workflow resolves the
+tag once to `${GCP_IMAGE}@${digest}` and passes that same string through the VM's
+`sudo env IMAGE_REF=...` invocation for preflight, freeze and cutover, so the
+comparison is exact, without another Docker lookup. Manual runs must likewise
+keep the reference identical across phases; a mismatch requires fresh preflight.
 Legacy preflight records without runtime fields were written by the script
-that only supported Rails and therefore mean Rails. Unlabelled images retain
+that only supported Rails and therefore mean Rails, with no new image-reference
+check. Unlabelled images retain
 the original Rails rehearsal and process checks; unknown labels fail preflight.
 The unchanged committed Rails traces match with the dispatcher included.
 A Rust candidate must read the exact

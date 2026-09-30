@@ -103,7 +103,7 @@ def run_decision(source, decision, **overrides):
         before = {"app_host": "fixture.invalid", "volume": "fixture-volume",
                   "volume_mountpoint": str(volume), "current_image": PREVIOUS,
                   "envKeys": ["SECRET_KEY_BASE"]}
-        preflight = {**before, "target_image": CANDIDATE}
+        preflight = {**before, "target_image": overrides.pop("RECORDED_IMAGE", CANDIDATE)}
         if not overrides.pop("LEGACY_RECORD", False):
             preflight.update(target_runtime=overrides.pop("RECORDED_RUNTIME", "rails"),
                              current_runtime=overrides.pop("RECORDED_PREVIOUS_RUNTIME", "rails"))
@@ -219,6 +219,61 @@ class ReleaseDecisionsTest(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertIn(f"RUNTIME={runtime}", result.stdout)
                     self.assertEqual(trace, [])
+
+    def test_stale_runtime_record_refuses_both_candidate_runtime_changes(self):
+        candidate = "fixture/other@sha256:" + "3" * 64
+        for recorded, processes in [("rust", "puma resque-pool"),
+                                    ("rails", "/usr/local/bin/campfire server")]:
+            for decision in ["dispatcher_freeze", "dispatcher_cutover",
+                             "rehearse_migration", "phase_cutover"]:
+                with self.subTest(recorded=recorded, decision=decision):
+                    result, trace, record = run_decision(
+                        SCRIPT.read_text(), decision, RECORDED_RUNTIME=recorded,
+                        IMAGE_REF=candidate, PROCESSES=processes)
+                    self.assertNotEqual(record["target_image"], candidate)
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertIn("preflight target image", result.stderr)
+                    self.assertIn(CANDIDATE, result.stderr)
+                    self.assertIn(candidate, result.stderr)
+                    self.assertEqual(trace, [], "refuse before Docker or ONCE runs")
+
+    def test_matching_runtime_record_accepts_the_same_candidate_reference(self):
+        for runtime in ["rails", "rust"]:
+            for decision in ["dispatcher_freeze", "dispatcher_cutover"]:
+                with self.subTest(runtime=runtime, decision=decision):
+                    result, trace, _ = run_decision(
+                        SCRIPT.read_text(), decision, RECORDED_RUNTIME=runtime,
+                        RECORDED_IMAGE=CANDIDATE, IMAGE_REF=CANDIDATE,
+                        FAIL_FIRST_RUNTIME_INSPECT="1")
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn(f"RUNTIME={runtime}", result.stdout)
+                    self.assertEqual(trace, [])
+
+    def test_runtime_record_requires_a_usable_candidate_reference(self):
+        for image in [None, ""]:
+            with self.subTest(image=image):
+                result, trace, _ = run_decision(
+                    SCRIPT.read_text(), "dispatcher_cutover", RECORDED_IMAGE=image)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("target_image", result.stderr)
+                self.assertEqual(trace, [])
+
+    def test_legacy_records_do_not_gain_a_candidate_binding_check(self):
+        baseline = json.loads(BASELINE.read_text())
+        original = subprocess.check_output(
+            ["git", "show", baseline["source_sha"] + ":deploy/gcp/campfire-release.sh"],
+            cwd=ROOT, text=True)
+        candidate = "fixture/other@sha256:" + "3" * 64
+        for image in [CANDIDATE, None]:
+            for decision in baseline["decisions"]:
+                with self.subTest(image=image, decision=decision):
+                    args = dict(LEGACY_RECORD=True, RECORDED_IMAGE=image,
+                                IMAGE_REF=candidate, FAIL_FIRST_RUNTIME_INSPECT="1")
+                    before, expected, _ = run_decision(original, decision, **args)
+                    after, trace, _ = run_decision(SCRIPT.read_text(), decision, **args)
+                    self.assertEqual(before.returncode, 0, before.stdout + before.stderr)
+                    self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
+                    self.assertEqual(trace, expected)
 
     def test_legacy_preflight_record_means_rails_without_inspection(self):
         baseline = json.loads(BASELINE.read_text())
