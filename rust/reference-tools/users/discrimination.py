@@ -11,12 +11,18 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("public-date", "crates/campfire/src/public_policy.rs", r"\p{Decimal_Number}", r"\p{Number}", "policy_matches_rails_environment_vectors"),
     ("public-cookie", "crates/campfire/src/controllers/public_pages.rs", "let formats = c.formats()?;", "let _ = c.form_authenticity_token();\n    let formats = c.formats()?;", "public_pages_bypass_authentication_browser_and_private_state"),
     ("public-escaping", "crates/views/templates/public_pages/about.html", "{{ operator_name }}", "{{ operator_name|safe }}", "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"),
     ("public-bytes", "crates/views/templates/public_pages/about.html", "<h1>About Smartfire</h1>", "<h1>About  Smartfire</h1>", "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"),
     ("avatar-boundary", "crates/db/src/models/user.rs", r"\p{Mark}", "", "default_initials_svg_matches_rails_bytes_and_cache_validation"),
     ("qr-capacity", "crates/campfire/src/controllers/qr_code.rs", 'ok_or_else(|| Error::internal(anyhow::anyhow!("Data length exceed maximum capacity of version 40")))?', "ok_or(Error::Status(StatusCode::UNPROCESSABLE_ENTITY))?", "qr_http_matches_rails_bytes_cache_and_capacity_errors"),
     ("pwa-bytes", "crates/views/templates/pwa/service_worker.js", 'const STATIC_CACHE = "smartfire-static-v1"', 'const STATIC_CACHE = "smartfire-static-v2"', "pwa_http_bodies_match_rails_before_and_after_first_run"),
+    ("preference-csrf", "crates/campfire/src/controllers/users/time_zones.rs", "Before::default()", "Before::default().skip_forgery_protection()", "preference_writes_require_session_and_csrf_and_scope_to_current_user"),
+    ("preference-scope", "crates/campfire/src/controllers/users/time_zones.rs", "let user_id = concerns::require_current_user(c)?.id;", 'let user_id = c.param_str("user_id").and_then(|value| value.parse().ok()).unwrap_or(concerns::require_current_user(c)?.id);', "preference_writes_require_session_and_csrf_and_scope_to_current_user"),
+    ("preference-explicit", "crates/db/src/models/user.rs", "&& !explicit &&", "&& (explicit || !explicit) &&", "time_zone_detection_matches_rails_validation_and_saved_choice_vectors"),
+    ("preference-zone-case", "crates/db/src/slash_commands/time_parser.rs", "identifiers.binary_search_by(|value| value.as_str().cmp(identifier)).ok()?;", "let _ = identifiers;", "time_zone_detection_matches_rails_validation_and_saved_choice_vectors"),
+    ("tour-stamp", "crates/db/src/models/user.rs", "SET tour_completed_at=?,updated_at=?", "SET created_at=?,updated_at=?", "tour_touch_matches_rails_and_refreshes_on_repeated_completion"),
 ]
 selected = set(sys.argv[1:])
 count = 0

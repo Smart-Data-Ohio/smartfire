@@ -9,7 +9,7 @@ use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 pub mod time_parser;
-mod user_settings;
+pub(crate) mod user_settings;
 use time_parser::{WEEKDAYS, date_end_of_day, end_of_day, present, re, strip, zone};
 
 pub const SHRUG: &str = "¯\\_(ツ)_/¯";

@@ -178,6 +178,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/sidebars#show" => arc(users::sidebars::show),
         "users/profiles#show" => arc(users::profiles::show),
         "users/profiles#update" => arc(users::profiles::update),
+        "users/time_zones#update" => arc(users::time_zones::update),
+        "users/tours#update" => arc(users::tours::update),
         "users/push_subscriptions/test_notifications#create" => arc(users::push_subscriptions::test_notifications::create),
         "users/push_subscriptions#index" => arc(users::push_subscriptions::index),
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),

@@ -386,6 +386,29 @@ impl User {
 
     // Updating
 
+    /// `Users::TimeZonesController`: auto-detection only fills an unset, non-explicit choice.
+    /// Use the same User validations as the other settings writes, including persisted fields.
+    pub fn detect_browser_time_zone(tx: &Tx<'_>, user_id: i64, zone: &str) -> Result<Option<String>> {
+        let (saved, explicit): (Option<String>, bool) = tx.conn().query_row(
+            "SELECT time_zone,time_zone_explicit FROM users WHERE id=?", [user_id], |row| Ok((row.get(0)?,row.get(1)?)),
+        )?;
+        if crate::slash_commands::time_parser::known_zone(zone).is_some()
+            && !explicit && saved.as_deref().is_none_or(|zone| zone.chars().all(char::is_whitespace)) {
+            crate::slash_commands::user_settings::update(tx, user_id, serde_json::json!({"time_zone":zone}))?;
+        }
+        Self::saved_time_zone(tx.conn(), user_id)
+    }
+
+    pub fn saved_time_zone(conn: &Connection, user_id: i64) -> Result<Option<String>> {
+        Ok(conn.query_row("SELECT time_zone FROM users WHERE id=?", [user_id], |row| row.get(0))?)
+    }
+
+    /// `Current.user.touch(:tour_completed_at)`: refresh both stamps, skipping validations.
+    pub fn complete_tour(tx: &Tx<'_>, user_id: i64) -> Result<()> {
+        tx.conn().execute("UPDATE users SET tour_completed_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),user_id])?;
+        Ok(())
+    }
+
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {

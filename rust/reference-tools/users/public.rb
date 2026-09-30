@@ -40,6 +40,10 @@ qr = ["http://example.com", "http://campfire.test", "こんにちは", "x" * 300
   { input: value, id: id, status: session.response.status, body: session.response.status == 200 ? session.response.body : nil, cache_control: session.response.headers["Cache-Control"] }
 end
 policy_inputs = [nil, "", "\t \r\n", "\u00a0Name\u00a0", "\u2003Name\u2003", "Jan 2, 2027", "日本 2027", "𝒜 2027", "x" * 40, "x" * 41, "a\nb", "a\tb"]
+policy_inputs += ["  Acme Widgets  ", " privacy@example.test ", "not-an-email", "a@b", "@example.test", "a b@example.test",
+  "privacy@example.test\nBcc: evil@example.test", "privacy@example.test\r\nSubject: hi", '"><script>alert(1)</script>',
+  "privacy@example.test,other@example.test", "privacy@example.test;other@example.test", "<privacy@example.test>",
+  "January 2, 2027", "  ", "<script>alert(1)</script>", "\u00a0", "² 2027", "Ⅰ 2027", "A\u0301 2027"]
 policy = policy_inputs.map do |value|
   keys.each { |key| value.nil? ? ENV.delete(key) : ENV[key] = value }
   { input: value, operator_name: PublicPolicy.operator_name, contact_email: PublicPolicy.contact_email, effective_date: PublicPolicy.effective_date }

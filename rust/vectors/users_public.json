@@ -159,6 +159,120 @@
       "operator_name": "a\tb",
       "contact_email": null,
       "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "  Acme Widgets  ",
+      "operator_name": "Acme Widgets",
+      "contact_email": null,
+      "effective_date": "Acme Widgets"
+    },
+    {
+      "input": " privacy@example.test ",
+      "operator_name": "privacy@example.test",
+      "contact_email": "privacy@example.test",
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "not-an-email",
+      "operator_name": "not-an-email",
+      "contact_email": null,
+      "effective_date": "not-an-email"
+    },
+    {
+      "input": "a@b",
+      "operator_name": "a@b",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "@example.test",
+      "operator_name": "@example.test",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "a b@example.test",
+      "operator_name": "a b@example.test",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "privacy@example.test\nBcc: evil@example.test",
+      "operator_name": "privacy@example.test\nBcc: evil@example.test",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "privacy@example.test\r\nSubject: hi",
+      "operator_name": "privacy@example.test\r\nSubject: hi",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "\"><script>alert(1)</script>",
+      "operator_name": "\"><script>alert(1)</script>",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "privacy@example.test,other@example.test",
+      "operator_name": "privacy@example.test,other@example.test",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "privacy@example.test;other@example.test",
+      "operator_name": "privacy@example.test;other@example.test",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "<privacy@example.test>",
+      "operator_name": "<privacy@example.test>",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "January 2, 2027",
+      "operator_name": "January 2, 2027",
+      "contact_email": null,
+      "effective_date": "January 2, 2027"
+    },
+    {
+      "input": "  ",
+      "operator_name": null,
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "<script>alert(1)</script>",
+      "operator_name": "<script>alert(1)</script>",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": " ",
+      "operator_name": null,
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "² 2027",
+      "operator_name": "² 2027",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
+    },
+    {
+      "input": "Ⅰ 2027",
+      "operator_name": "Ⅰ 2027",
+      "contact_email": null,
+      "effective_date": "Ⅰ 2027"
+    },
+    {
+      "input": "Á 2027",
+      "operator_name": "Á 2027",
+      "contact_email": null,
+      "effective_date": "September 18, 2026"
     }
   ],
   "qr": [

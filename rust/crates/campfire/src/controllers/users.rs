@@ -6,6 +6,11 @@ pub mod bans;
 pub mod profiles;
 pub mod push_subscriptions;
 pub mod sidebars;
+pub mod time_zones;
+pub mod tours;
+
+#[cfg(test)]
+mod preferences_tests;
 
 use askama::Template;
 use campfire_db::{Account, NewUser, User};
