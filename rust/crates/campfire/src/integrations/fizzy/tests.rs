@@ -335,10 +335,10 @@ fn ws15e_fizzy_reads_rails_encrypted_token_and_sweep_constants() {
 }
 
 #[tokio::test]
-async fn ws15e_fizzy_real_read_timeout_is_ten_seconds_and_redacts_credentials() {
+async fn ws15e_fizzy_real_read_timeout_retries_once_and_redacts_credentials() {
     let mut route = Route::new("GET", "app.fizzy.do", "/my/identity.json", 200).body("{}");
     route.delay = std::time::Duration::from_secs(30);
-    let (_server, net, _, _) = fake(vec![route]).await;
+    let (server, net, resolver, _) = fake(vec![route]).await;
     let client = client::Client::new(
         net,
         "fixture-secret-timeout-token".into(),
@@ -347,7 +347,90 @@ async fn ws15e_fizzy_real_read_timeout_is_ten_seconds_and_redacts_credentials() 
     let before = tokio::time::Instant::now();
     let error = client.identity().await.unwrap_err();
     assert_eq!(error.message, "Could not reach Fizzy (Read Timeout)");
-    assert!(before.elapsed() >= std::time::Duration::from_millis(9500));
-    assert!(before.elapsed() < std::time::Duration::from_secs(15));
+    assert!(before.elapsed() >= std::time::Duration::from_millis(19500));
+    assert!(before.elapsed() < std::time::Duration::from_secs(25));
     assert!(!error.message.contains("fixture-secret-timeout-token"));
+    assert_eq!(server.received.lock().unwrap().len(), 2);
+    assert_eq!(resolver.lookups().len(), 2);
+}
+
+#[tokio::test]
+async fn ws15e_fizzy_transport_retries_match_real_pinned_rails() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    let v: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/ws15e_fizzy_retries.json"
+    ))
+    .unwrap();
+    for row in v["cases"].as_array().unwrap() {
+        let listener = ws15e_listener().await;
+        let addr = listener.local_addr().unwrap();
+        let count = Arc::new(AtomicUsize::new(0));
+        let observed = count.clone();
+        let task = tokio::spawn(async move {
+            loop {
+                let (socket, _) = listener.accept().await.unwrap();
+                let mut reader = BufReader::new(socket);
+                let mut line = String::new();
+                reader.read_line(&mut line).await.unwrap();
+                let method = line.split_whitespace().next().unwrap().to_string();
+                loop {
+                    line.clear();
+                    reader.read_line(&mut line).await.unwrap();
+                    if line == "\r\n" {
+                        break;
+                    }
+                }
+                let attempt = observed.fetch_add(1, Ordering::SeqCst) + 1;
+                if attempt > 1 {
+                    reader
+                        .get_mut()
+                        .write_all(
+                            b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}",
+                        )
+                        .await
+                        .unwrap();
+                } else {
+                    // Drain POST's body so closing is a clean EOF, not ECONNRESET.
+                    if method == "POST" {
+                        use tokio::io::AsyncReadExt;
+                        let mut body = [0; 30];
+                        reader.read_exact(&mut body).await.unwrap();
+                    }
+                }
+            }
+        });
+        let resolver = Arc::new(FakeResolver::new([("app.fizzy.do", vec!["93.184.216.34"])]));
+        let dialer = Arc::new(MappingDialer {
+            public: ["93.184.216.34".parse().unwrap()].into(),
+            to: addr,
+            dialed: Default::default(),
+        });
+        let client = client::Client::new(
+            network(resolver.clone(), dialer.clone()),
+            "fixture-fizzy-retry".into(),
+            "http://app.fizzy.do",
+        );
+        let result = match row["method"].as_str().unwrap() {
+            "GET" => client.identity().await,
+            "DELETE" => client.reopen_card("acc", "12").await.map(Value::Bool),
+            "POST" => {
+                client
+                    .create_comment("acc", "12", Value::String("Comment".into()))
+                    .await
+            }
+            _ => unreachable!(),
+        };
+        if let Some(error) = row.get("error") {
+            assert_eq!(result.unwrap_err().message, error.as_str().unwrap());
+        } else {
+            assert_eq!(result.unwrap(), row["value"]);
+        }
+        assert_eq!(
+            count.load(Ordering::SeqCst),
+            row["requests"].as_u64().unwrap() as usize
+        );
+        assert_eq!(resolver.lookups().len(), count.load(Ordering::SeqCst));
+        task.abort();
+    }
 }

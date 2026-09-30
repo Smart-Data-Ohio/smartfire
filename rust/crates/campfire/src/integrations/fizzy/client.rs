@@ -236,46 +236,54 @@ impl Client {
             .filter(|h| !h.is_empty())
             .ok_or_else(|| Error::unreachable("Argument Error"))?;
         let https = parsed.scheme.as_deref() == Some("https");
-        let ip = self
-            .network
-            .resolver
-            .lookup(host.trim_matches(['[', ']']))
-            .await
-            .map_err(|_| Error::unreachable("Socket Error"))?
-            .into_iter()
-            .next()
-            .ok_or_else(|| Error::unreachable("Socket Error"))?;
-        let endpoint = Endpoint {
-            https,
-            host,
-            port: parsed
-                .port
-                .unwrap_or(if https { 443 } else { 80 })
-                .try_into()
-                .map_err(|_| Error::unreachable("Argument Error"))?,
-            pinned_ip: Some(ip),
-        };
-        let headers = vec![
-            ("Accept".into(), "application/json".into()),
-            ("Content-Type".into(), "application/json".into()),
-            ("User-Agent".into(), "Smartfire-Fizzy".into()),
-            ("Authorization".into(), format!("Bearer {}", self.token)),
-        ];
-        let mut request =
-            Request::net_http(method, path, None, headers).transport(false, &endpoint);
-        request.body = body.unwrap_or_default();
-        let response = http::exchange(&self.network, &endpoint, request, &TIMEOUTS)
-            .await
-            .map_err(Error::transport)?;
-        let status = response.status;
-        let Body::Complete(body) = response
-            .read_body(usize::MAX)
-            .await
-            .map_err(Error::transport)?
-        else {
-            unreachable!("Rails has no Fizzy body cap")
-        };
-        decode(status, &body)
+        let port = parsed
+            .port
+            .unwrap_or(if https { 443 } else { 80 })
+            .try_into()
+            .map_err(|_| Error::unreachable("Argument Error"))?;
+        let idempotent = matches!(method, Method::GET | Method::DELETE);
+        let body = body.unwrap_or_default();
+        for attempt in 0..=1 {
+            let result = async {
+                let ip = self
+                    .network
+                    .resolver
+                    .lookup(host.trim_matches(['[', ']']))
+                    .await
+                    .map_err(|_| HttpError::Unresolvable(host.clone()))?
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| HttpError::Unresolvable(host.clone()))?;
+                let endpoint = Endpoint {
+                    https,
+                    host: host.clone(),
+                    port,
+                    pinned_ip: Some(ip),
+                };
+                let headers = vec![
+                    ("Accept".into(), "application/json".into()),
+                    ("Content-Type".into(), "application/json".into()),
+                    ("User-Agent".into(), "Smartfire-Fizzy".into()),
+                    ("Authorization".into(), format!("Bearer {}", self.token)),
+                ];
+                let mut request = Request::net_http(method.clone(), path.clone(), None, headers)
+                    .transport(false, &endpoint);
+                request.body = body.clone();
+                let response = http::exchange(&self.network, &endpoint, request, &TIMEOUTS).await?;
+                let status = response.status;
+                let Body::Complete(body) = response.read_body(usize::MAX).await? else {
+                    unreachable!("Rails has no Fizzy body cap")
+                };
+                Ok::<_, HttpError>((status, body))
+            }
+            .await;
+            match result {
+                Ok((status, body)) => return decode(status, &body),
+                Err(error) if attempt == 0 && idempotent && retryable(&error) => (),
+                Err(error) => return Err(Error::transport(error)),
+            }
+        }
+        unreachable!("the last attempt returns")
     }
 }
 fn checked_id(id: &str) -> Result<&str, Error> {
@@ -336,5 +344,21 @@ pub fn decode(status: u16, body: &[u8]) -> Result<Value, Error> {
             ErrorKind::Other,
             format!("Fizzy returned {status}"),
         )),
+    }
+}
+
+/// Net::HTTP's default max_retries=1 only replays interrupted idempotent requests.
+/// Open/connect failures and HTTP status errors are not transport retries.
+fn retryable(error: &HttpError) -> bool {
+    match error {
+        HttpError::ReadTimeout | HttpError::ConnectionClosed => true,
+        HttpError::Io(error) => matches!(
+            error.kind(),
+            std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::ConnectionAborted
+                | std::io::ErrorKind::BrokenPipe
+                | std::io::ErrorKind::TimedOut
+        ),
+        _ => false,
     }
 }
