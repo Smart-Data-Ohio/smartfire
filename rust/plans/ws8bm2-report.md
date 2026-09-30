@@ -1,6 +1,6 @@
 # WS8bm2 report — partial message-features delivery
 
-**PARTIAL.** Polls/pins, saved-item HTTP plus reminder claim/rearm, scheduled-message HTTP/rows/sends, and search HTTP/chips/sections/tuple paging/date operators are implemented. Full shared-message preloads, composer/panel mounting, remaining feature controllers, broad coercion/auth gaps and browser/pixel parity remain. This branch is not cutover-ready.
+**PARTIAL.** Polls/pins, saved-item HTTP plus reminder claim/rearm, scheduled-message HTTP/rows/sends, and search HTTP/chips/sections/tuple paging/date operators are implemented. Populated provider cards, composer/panel mounting, remaining feature controllers, broad coercion/auth gaps and browser/pixel parity remain. This branch is not cutover-ready.
 
 Worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm2`, branch `rust/ws8bm2-message-features`. Base `9c8efaef6a4fd11e7b290db77dd524ed2ab0e5f9`, including main `21a7332f2d3c324f0862cdf448baf17a84395aa0`. Rails pin `d7c7de9264c63015be398001d7a1094e7695a6db`. Pushed slices: polls/pins `a036f6e6dcb696ba36d4ff64a9a4806bc9c65e3c`; saved/reminders `90bb304a3092fad869469ed7f8f729980c4abdc1`; scheduled `f39afa8bd28c368bf4c9f80c317ea037b2047539`; search is the branch HEAD accompanying this report (the report cannot contain its own SHA). No PR or deployment.
 
@@ -49,7 +49,7 @@ Search preserves human-readable operators for history/display/redirects; quotes 
 
 Date selections cover UTC, Hawaii, New York 23/25-hour days, São Paulo midnight gap and Apia's missing day. `on:` derives the day range after local conversion, so Apia's 2011-12-30 resolves to the valid following day as Rails does. Generic Jiff disambiguation alone does not match Rails' hourly gap advancement. A newly accepted Unicode character exposed Regex/Ruby word-class drift; all 771 word ranges were regenerated/verified against the pinned Ruby runtime and the active parser now uses them.
 
-**Search remains partial:** the inherited root `Presenter::messages` still lazily reads bodies, boosts, attachments, pins/replies/polls/steps and richtext resolver facts. The bounded message load and joined side sections do not establish full `with_rendering_details`/mention preloads or constant total rendering queries. That is the immediate next slice, through a small coordinated WS8b-m presenter seam. Populated complete-page/older-message byte parity and browser/pixel parity also remain unproven.
+Search now batches the facts consumed by this branch's shared presenter: bodies (including reply sources), creators/boosters/mentioned users and avatar presence, rooms/direct names/icons, boosts, uploaded blobs, pins, thread counts, Drive IDs, steps, polls/options/voter names and the Markdown icon catalog. Domain DTO reads are in `models/message_rendering.rs`; `searches/preloads.rs` adapts them through small flagged presenter/storage/richtext seams. Rendering four and sixteen mixed Markdown/mention/boost/poll messages has constant SQLite SELECT authorization events; the old path failed with `(55, 199)`. Six complete populated message fragments match pinned Rails and the lazy presenter exactly, using committed SQL-row fixtures, with no local-state reads. Compiled lazy-query and missing-pin mutations fail. **Full search parity remains partial:** populated GitHub/Fizzy/X/LinkedIn/event/embed/quote providers are absent from the inherited root composition (WS8b-m/WS14/WS15), and browser/pixel coverage remains unproven.
 
 The image `ws8bm2-reference:d7c7de92` was tagged from the installed `ws19b-ci-reference:latest`; 41 consumed app source files match the pin, with injected digest/file-set differences rejected. This is bounded source verification, not a whole-image source claim. Oracles use private copies of the fresh default seed, real Rails renderers/IntegrationSession, frozen time and test-only forgery disabling. Mutations/security tests exercise the real Rust middleware. JSON and HTML are compared directly, with no normalization/masks.
 
@@ -270,3 +270,23 @@ The WS8bm2 owner retains `/play` presentation parity and any matching play tests
 5. **Deferred Rails/system verification:** file-grouped cases/counts are listed above; browser/pixel matrix, populated cards, constant query proof for poll/pin lists, periodic-close runtime socket test, full workspace tests and Rust Docker image build remain. All deferred feature cases remain WS8bm2's responsibility, coordinating the named integration owners.
 
 Restart at search message preloads, retaining the pushed saved/scheduled/search slices. No schema, dependencies, lockfile, Rails source, parity masks or allowlists changed. No root message partial changed. External report is synchronized with this tracked copy.
+
+## Preload continuation slice
+
+New files: `crates/db/src/models/message_rendering.rs`, `controllers/searches/preloads.rs`, `reference-tools/messaging/preloads.rb`, `vectors/messaging/preloads.json`. The last fixture holds six complete Rails message fragments and nine row tables. Added two search checks, now 45. Source verification now covers 44 files. `searches/preloads.rs` owns the adapter; WS8b-m retains the root partial and ordinary rendering path. `DbResolver::mention_user` and `rich_text::icons` are exposed without changing their algorithms; Boost/Poll row decoders are crate-visible; Storage provides one bounded, ordered attachment/blob read. No schema, dependencies, masks or allowlists changed.
+
+This slice's command results (final clean-clone verification will supersede these):
+
+```text
+test result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 385 filtered out; finished in 1.96s
+preload-lazy: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 429 filtered out; finished in 0.32s
+preload-pin: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 429 filtered out; finished in 0.15s
+WS8bm2 discrimination: 2 compiled regressions detected; sources restored
+WS8bm2 preload Rails oracle: 6 complete message fragments; 9 committed fixture tables
+WS8bm2 reference source check: 44 controller, model, helper and template files match d7c7de92
+WS8bm2 reference check self-test: 2 injected source-byte/file-set differences rejected
+```
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.03s
+```

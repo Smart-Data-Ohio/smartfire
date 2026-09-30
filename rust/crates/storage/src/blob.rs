@@ -149,6 +149,14 @@ impl Blob {
         Ok(conn.prepare_cached(&SQL)?.query_row(params![record_type, record_id, name], Blob::from_row).optional()?)
     }
 
+    /// WS8bm2 read seam: the same first attachment/blob lookup for a bounded message window.
+    pub fn attached_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Blob>> {
+        if ids.is_empty() { return Ok(Default::default()); }
+        let columns = BLOB_COLUMNS.split(", ").map(|c| format!("b.{c}")).collect::<Vec<_>>().join(", ");
+        let sql = format!("SELECT {columns},a.record_id FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.record_type='Message' AND a.name='attachment' AND a.record_id IN ({}) ORDER BY a.id DESC", vec!["?"; ids.len()].join(","));
+        Ok(conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(ids), |r| Ok((r.get(9)?, Self::from_row(r)?)))?.collect::<rusqlite::Result<_>>()?)
+    }
+
     pub fn content_type(&self) -> &str {
         self.content_type.as_deref().unwrap_or("")
     }

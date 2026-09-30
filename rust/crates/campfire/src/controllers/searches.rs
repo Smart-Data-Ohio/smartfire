@@ -1,4 +1,5 @@
 //! `app/controllers/searches_controller.rb`.
+pub(crate) mod preloads;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::messages::present;
@@ -164,31 +165,11 @@ fn search_messages(
     messages: &[campfire_db::Message],
 ) -> campfire_db::Result<Vec<campfire_views::messages::MessageItem>> {
     use campfire_views::{helpers::IconSource, messages::MessageItem};
+    if messages.is_empty() { return Ok(vec![]); }
+    let p = p.preload_search(messages)?;
     let mut items = p.messages(messages)?;
-    if messages.is_empty() {
-        return Ok(items);
-    }
-    let ids = messages.iter().map(|m| m.id).collect::<Vec<_>>();
-    let sql = format!(
-        "SELECT DISTINCT r.id,r.icon_name FROM rooms r JOIN messages m ON m.room_id=r.id WHERE m.id IN ({})",
-        vec!["?"; ids.len()].join(",")
-    );
-    let names = p
-        .conn
-        .prepare(&sql)?
-        .query_map(rusqlite::params_from_iter(ids), |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, Option<String>>(1)?))
-        })?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
-    let icons = names
-        .into_iter()
-        .map(|(id, name)| {
-            (
-                id,
-                name.as_deref().and_then(|name| p.resolve_avatar_icon(name)),
-            )
-        })
-        .collect::<std::collections::HashMap<_, _>>();
+    let data = p.search_preloads.as_ref().expect("search preload installed");
+    let icons = data.records.room_icons.iter().map(|(id,name)|(*id,name.as_deref().and_then(|n|p.resolve_avatar_icon(n)))).collect::<std::collections::HashMap<_,_>>();
     for item in &mut items {
         if let MessageItem::View(view) = item {
             view.details.room_icon = icons.get(&view.room_id).cloned().flatten();

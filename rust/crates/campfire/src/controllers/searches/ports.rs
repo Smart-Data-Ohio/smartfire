@@ -925,3 +925,182 @@ async fn search_supplies_the_room_icon_only_on_shared_fragment_misses() {
     let r = find(&mut app.david(), "needleicon alpha").await;
     assert!(!r.text().contains("message__room--custom"));
 }
+
+#[tokio::test]
+async fn full_message_preloads_keep_queries_constant() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    let app = app().await;
+    let mut messages = vec![];
+    for _ in 0..16 {
+        let m = message(&app, DAVID, "preload @[Jason] :github:").await;
+        app.db()
+            .write({
+                let m = m.clone();
+                move |tx| {
+                    campfire_db::Boost::create(tx, m.id, JASON, ":github:")?;
+                    campfire_db::Poll::create_for_message(
+                        tx,
+                        &m,
+                        campfire_db::NewPoll {
+                            labels: vec!["One".into(), "Two".into()],
+                            ..Default::default()
+                        },
+                    )?;
+                    Ok(())
+                }
+            })
+            .await
+            .unwrap();
+        messages.push(m);
+    }
+    let state = app.booted.app.clone();
+    let counts = app
+        .db()
+        .read(move |conn| {
+            let count = |rows: &[Message]| {
+                conn.flush_prepared_statement_cache();
+                let counter = Arc::new(AtomicUsize::new(0));
+                let observed = counter.clone();
+                conn.authorizer(Some(move |ctx: rusqlite::hooks::AuthContext<'_>| {
+                    if matches!(ctx.action, rusqlite::hooks::AuthAction::Select) {
+                        observed.fetch_add(1, Ordering::SeqCst);
+                    }
+                    rusqlite::hooks::Authorization::Allow
+                }));
+                let p = crate::controllers::presenters::Presenter::new(conn, &state, None);
+                let rendered = super::search_messages(&p, rows);
+                conn.authorizer(
+                    None::<fn(rusqlite::hooks::AuthContext<'_>) -> rusqlite::hooks::Authorization>,
+                );
+                assert_eq!(rendered.unwrap().len(), rows.len());
+                counter.load(Ordering::SeqCst)
+            };
+            Ok((count(&messages[..4]), count(&messages)))
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        counts.0, counts.1,
+        "four and sixteen mixed message renders: {counts:?}"
+    );
+}
+
+#[tokio::test]
+async fn preloaded_complete_messages_match_rails_and_lazy_presenter() {
+    use askama::Template;
+    use campfire_views::{
+        helpers::IconSource,
+        messages::{MessageItem, MessagePartial},
+    };
+    let app = app().await;
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/preloads.json"
+    ))
+    .unwrap();
+    let rows = fixture["rows"].clone();
+    let room = fixture["room_id"].as_i64().unwrap();
+    let bot = fixture["bot_id"].as_i64().unwrap();
+    app.db()
+        .write(move |tx| {
+            for table in [
+                "messages",
+                "action_text_rich_texts",
+                "boosts",
+                "polls",
+                "poll_options",
+                "poll_votes",
+                "message_pins",
+                "active_storage_blobs",
+                "active_storage_attachments",
+            ] {
+                for row in rows[table].as_array().unwrap() {
+                    let row = row.as_object().unwrap();
+                    let columns = row
+                        .keys()
+                        .map(|k| format!("\"{k}\""))
+                        .collect::<Vec<_>>()
+                        .join(",");
+                    let placeholders = vec!["?"; row.len()].join(",");
+                    let values = row.values().map(|v| match v {
+                        serde_json::Value::Null => rusqlite::types::Value::Null,
+                        serde_json::Value::Number(n) if n.is_i64() => {
+                            rusqlite::types::Value::Integer(n.as_i64().unwrap())
+                        }
+                        serde_json::Value::Number(n) => {
+                            rusqlite::types::Value::Real(n.as_f64().unwrap())
+                        }
+                        serde_json::Value::String(s) => rusqlite::types::Value::Text(s.clone()),
+                        _ => panic!("SQL fixture value {v}"),
+                    });
+                    tx.conn().execute(
+                        &format!("INSERT INTO {table} ({columns}) VALUES ({placeholders})"),
+                        rusqlite::params_from_iter(values),
+                    )?;
+                }
+            }
+            tx.conn()
+                .execute("UPDATE rooms SET icon_name='github' WHERE id=?", [room])?;
+            tx.conn()
+                .execute("UPDATE users SET icon_name='github' WHERE id=?", [bot])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let state = app.booted.app.clone();
+    app.db()
+        .read(move |conn| {
+            let messages = fixture["html"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| Message::find(conn, r["id"].as_i64().unwrap()))
+                .collect::<campfire_db::Result<Vec<_>>>()?;
+            let p = crate::controllers::presenters::Presenter::new(
+                conn,
+                &state,
+                Some("campfire.test".into()),
+            );
+            let items = super::search_messages(&p, &messages)?;
+            for ((m, item), expected) in messages
+                .iter()
+                .zip(items)
+                .zip(fixture["html"].as_array().unwrap())
+            {
+                let MessageItem::View(view) = item else {
+                    panic!("no shared cache was installed")
+                };
+                let mut lazy = p.message(m)?;
+                lazy.details.room_icon = p.resolve_avatar_icon("github");
+                assert_eq!(
+                    *view, lazy,
+                    "preloaded facts differ for {}",
+                    m.client_message_id
+                );
+                let actual = crate::controllers::presenters::page::render_detached_at(
+                    &state,
+                    None,
+                    "http://campfire.test",
+                    |ctx| {
+                        MessagePartial {
+                            ctx,
+                            message: &view,
+                        }
+                        .render()
+                        .unwrap()
+                    },
+                );
+                assert_eq!(
+                    actual,
+                    expected["html"].as_str().unwrap(),
+                    "{}",
+                    m.client_message_id
+                );
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+}

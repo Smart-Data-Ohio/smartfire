@@ -85,6 +85,9 @@ impl campfire_views::helpers::IconSource for Presenter<'_> {
         use campfire_views::{helpers::AvatarIcon, messages::reactions::static_icon};
         let icon = static_icon(name);
         if matches!(icon, Some(AvatarIcon::Image { brand: true, .. })) { return icon; }
+        if let Some(data) = &self.search_preloads {
+            return data.custom_icons.get(name).map(|title|AvatarIcon::Image { title:title.clone(),url:format!("/icons/{name}"),brand:false }).or(icon);
+        }
         let custom: Option<String> = self.conn.query_row("SELECT title FROM workspace_icons WHERE name = ?1", [name], |row| row.get(0)).optional().ok().flatten();
         custom.map(|title| AvatarIcon::Image { title, url: format!("/icons/{name}"), brand: false }).or(icon)
     }
@@ -128,6 +131,8 @@ pub struct Presenter<'a> {
     pub cache_base_url: Option<String>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
+    // WS8bm2 search-only read adapter; ordinary root rendering stays with WS8b-m.
+    pub(crate) search_preloads: Option<super::searches::preloads::Preloads>,
 }
 
 impl<'a> Presenter<'a> {
@@ -142,16 +147,30 @@ impl<'a> Presenter<'a> {
             cache_base_url: None,
             users: RefCell::default(),
             room_names: RefCell::default(),
+            search_preloads: None,
         }
     }
 
-    pub fn resolver(&self) -> DbResolver<'_> {
-        DbResolver { conn: self.conn, secrets: self.secrets, now: self.now }
+    pub(crate) fn resolver(&self) -> super::searches::preloads::PageResolver<'_> {
+        super::searches::preloads::PageResolver { db: DbResolver { conn: self.conn, secrets: self.secrets, now: self.now }, preloads: self.search_preloads.as_ref() }
+    }
+    pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
+        let data = super::searches::preloads::Preloads::load(self, messages)?;
+        Ok(Self { conn:self.conn,secrets:self.secrets,storage:self.storage,rich_text:self.rich_text,now:self.now,
+            request_host:self.request_host.clone(),cache_base_url:self.cache_base_url.clone(),
+            users:RefCell::default(),room_names:RefCell::default(),search_preloads:Some(data) })
+    }
+    fn stored_body(&self, message: &Message) -> Result<Option<String>> {
+        if let Some(data) = &self.search_preloads { return Ok(data.records.bodies.get(&message.id).cloned().flatten()); }
+        message.body_html(self.conn)
     }
 
     pub fn user(&self, id: i64) -> Result<User> {
         if let Some(user) = self.users.borrow().get(&id) {
             return Ok(user.clone());
+        }
+        if let Some(data) = &self.search_preloads {
+            return data.users.get(&id).map(|u|u.user.clone()).ok_or(campfire_db::Error::RecordNotFound("User"));
         }
         let user = User::find(self.conn, id)?;
         self.users.borrow_mut().insert(id, user.clone());
@@ -161,6 +180,12 @@ impl<'a> Presenter<'a> {
     pub fn user_view(&self, id: i64) -> Result<UserView> {
         let user = self.user(id)?;
         let mut view = user_view(self.secrets, &user);
+        if let Some(data) = &self.search_preloads {
+            if let Some(row) = data.users.get(&id) && user.is_bot() && !row.uploaded_avatar {
+                view.icon = row.icon_name.as_deref().and_then(|n|campfire_views::helpers::IconSource::resolve_avatar_icon(self,n));
+            }
+            return Ok(view);
+        }
         let uploaded: bool = self.conn.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type = 'User' AND record_id = ?1 AND name = 'avatar')", [id], |row| row.get(0))?;
         if user.is_bot() && !uploaded {
             let icon_name: Option<String> = self.conn.query_row("SELECT icon_name FROM users WHERE id = ?1", [id], |row| row.get(0))?;
@@ -197,6 +222,12 @@ impl<'a> Presenter<'a> {
         if let Some(entry) = self.room_names.borrow().get(&room_id) {
             return Ok(entry.clone());
         }
+        if let Some(data) = &self.search_preloads {
+            let room = data.records.rooms.get(&room_id).cloned().ok_or(campfire_db::Error::RecordNotFound("Room"))?;
+            let names = data.records.direct_names.get(&room_id).cloned().unwrap_or_default();
+            let name = room_display_name(room.name.as_deref(),room.direct(),&names,None);
+            return Ok((room,name));
+        }
         let room = Room::find(self.conn, room_id)?;
         let name = self.room_display_name(&room, None)?;
         self.room_names.borrow_mut().insert(room_id, (room.clone(), name.clone()));
@@ -204,6 +235,7 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn plain_text_body(&self, message: &Message) -> Result<String> {
+        if let Some(data) = &self.search_preloads { return data.plain_text(self,message); }
         message.plain_text_body(self.conn, self.rich_text)
     }
 
@@ -265,6 +297,7 @@ impl<'a> Presenter<'a> {
     }
 
     fn message_details(&self, message: &Message) -> Result<campfire_views::messages::MessageDetails> {
+        if let Some(data) = &self.search_preloads { return data.details(self,message); }
         use campfire_views::messages::{MessageDetails, ReplyPreview, ReplySource};
         let pinned = self.conn.query_row("SELECT EXISTS(SELECT 1 FROM message_pins WHERE message_id = ?1)", [message.id], |row| row.get(0))?;
         let reply_count: u64 = self.conn.query_row("SELECT messages_count FROM channel_threads WHERE parent_message_id = ?1", [message.id], |row| row.get(0)).optional()?.unwrap_or(0);
@@ -310,6 +343,7 @@ impl<'a> Presenter<'a> {
 
     /// `message.boosts.ordered`.
     pub fn boosts(&self, message: &Message) -> Result<Vec<BoostView>> {
+        if let Some(data) = &self.search_preloads { return data.records.boosts.get(&message.id).into_iter().flatten().map(|b|self.boost(b)).collect(); }
         Boost::for_message_ordered(self.conn, message.id)?.iter().map(|boost| self.boost(boost)).collect()
     }
 
@@ -327,7 +361,7 @@ impl<'a> Presenter<'a> {
 
     /// `message.content_type`, with what `message_presentation` shows for it.
     fn content(&self, message: &Message, plain_text: &str) -> Result<MessageContent> {
-        let body = message.body_html(self.conn)?.unwrap_or_default();
+        let body = self.stored_body(message)?.unwrap_or_default();
         let resolver = self.resolver();
         let ctx = resolver.render_context(self.request_host.clone());
         // `message_tag` evaluates `message.plain_text_body` first; where that raises, it rescues
@@ -355,7 +389,9 @@ impl<'a> Presenter<'a> {
             }));
         }
         if message.markdown() || message.forwarded_markdown {
-            return Ok(match crate::rich_text::markdown_presentation(self.conn, &body, &ctx) {
+            let html = if let Some(data) = &self.search_preloads { campfire_richtext::markdown::presentation(&body,&ctx,&data.icons,None).map_err(|e|e.to_string()) }
+                else { crate::rich_text::markdown_presentation(self.conn,&body,&ctx) };
+            return Ok(match html {
                 Ok(html) => MessageContent::Text { html },
                 Err(_) => MessageContent::Unrenderable,
             });
@@ -368,7 +404,8 @@ impl<'a> Presenter<'a> {
 
     /// `message.attachment` as `Messages::AttachmentPresentation` needs it.
     fn attachment(&self, message: &Message) -> Result<Option<AttachmentView>> {
-        let blob = campfire_storage::Blob::attached(self.conn, "Message", message.id, "attachment").map_err(storage_error)?;
+        let blob = if let Some(data) = &self.search_preloads { data.attachments.get(&message.id).cloned() }
+            else { campfire_storage::Blob::attached(self.conn, "Message", message.id, "attachment").map_err(storage_error)? };
         let Some(blob) = blob else { return Ok(None) };
         let verifier = &*self.storage.verifier;
         let preview = if blob.is_previewable() || blob.is_variable() {
@@ -413,13 +450,13 @@ impl<'a> Presenter<'a> {
 
     /// `message.body.to_s`: the stored rich text rendered inside its layout.
     pub fn body_html(&self, message: &Message) -> Result<String> {
-        let Some(body) = message.body_html(self.conn)? else { return Ok(String::new()) };
+        let Some(body) = self.stored_body(message)? else { return Ok(String::new()) };
         Ok(self.render_body_html(&body).unwrap_or_default())
     }
 
     /// Fallible ActionText::Content#to_s for human payloads and legacy conversion.
     pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
-        let Some(body) = message.body_html(self.conn)? else { return Ok(String::new()) };
+        let Some(body) = self.stored_body(message)? else { return Ok(String::new()) };
         self.render_body_html(&body)
     }
 

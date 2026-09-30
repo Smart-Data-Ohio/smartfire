@@ -62,3 +62,6 @@ pub mod room_delete;
 
 pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
+
+// WS8bm2 read-only rendering preload seam.
+pub mod message_rendering;
