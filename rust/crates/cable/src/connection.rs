@@ -4,13 +4,15 @@
 //! from the hub's per-broadcasting ring buffers, so there's no per-connection queue: a client
 //! that stops reading falls behind by the ring's capacity, which closes the connection with
 //! `reconnect: true`. Frames that are ready together go out in one socket write.
+//! A remote disconnect drains earlier hub publications before sending its disconnect and close,
+//! preserving the room-removal order from `Membership#broadcast_room_removal_to_user`.
 //!
 //! The socket's read half lives in a task of its own that hands incoming messages over in order,
 //! so it's only polled when the socket is readable, not every time a delivery wakes the
 //! connection.
 use std::sync::Arc;
 
-use futures_util::stream::{AbortRegistration, Abortable, SelectAll};
+use futures_util::stream::{AbortRegistration, Abortable, BoxStream, SelectAll};
 use futures_util::{FutureExt, StreamExt};
 use tokio::io::{ReadHalf, WriteHalf};
 use serde_json::Value;
@@ -19,7 +21,7 @@ use tokio::task::JoinHandle;
 
 use crate::channel::{Channel, Params, Subscription};
 use crate::protocol::{self, DisconnectReason};
-use crate::pubsub::{Deliveries, Frame, Subscriber};
+use crate::pubsub::{Deliveries, Delivery, Frame, RecvError, Subscriber};
 use crate::server::{ConnectRequest, Identified, internal_channel};
 use crate::socket::{Incoming, Reader, Writer};
 use crate::{Server, json};
@@ -35,6 +37,40 @@ struct Close {
     reconnect: Value,
 }
 
+enum Event {
+    Internal(Result<Delivery, RecvError>),
+    Incoming(Option<Incoming>),
+    Delivery(Result<Delivery, RecvError>),
+    Heartbeat,
+    Restart,
+}
+
+type InternalMessages = SelectAll<BoxStream<'static, Result<Delivery, RecvError>>>;
+
+/// Keep a publication's sequence until the final write; ordinary batches also race disconnect.
+struct PendingFrame {
+    sequence: Option<u64>,
+    frame: Frame,
+}
+
+impl From<Delivery> for PendingFrame {
+    fn from(delivery: Delivery) -> Self {
+        Self { sequence: Some(delivery.sequence), frame: delivery.frame }
+    }
+}
+
+impl From<Frame> for PendingFrame {
+    fn from(frame: Frame) -> Self {
+        Self { sequence: None, frame }
+    }
+}
+
+impl From<String> for PendingFrame {
+    fn from(frame: String) -> Self {
+        Self::from(Frame::from(frame))
+    }
+}
+
 impl Close {
     /// A stream fell behind (`reason: nil`, as `Connection::Base#close` without one).
     fn lagged() -> Self {
@@ -47,7 +83,7 @@ struct Connection<U: Send + Sync + 'static> {
     user: Arc<U>,
     /// Keyed by the raw identifier string, in subscription order (a Ruby hash).
     subscriptions: Vec<Entry<U>>,
-    pending: Vec<Frame>,
+    pending: Vec<PendingFrame>,
     /// Streams the last command's callbacks started, to read from once its frames are queued.
     started: Vec<(Subscriber, AbortRegistration)>,
 }
@@ -77,10 +113,10 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
     };
 
     // The internal channel carries raw payloads; every subscription stream carries frames.
-    let mut internal = SelectAll::new();
+    let mut internal = InternalMessages::new();
     let identifier = user.connection_identifier();
     if !identifier.is_empty() {
-        internal.push(server.hub().subscribe(&internal_channel(&identifier), None).deliveries());
+        internal.push(server.hub().subscribe(&internal_channel(&identifier), None).ordered_deliveries());
         // A ban or sign-out that disconnected this user between the check above and that
         // subscription went unheard, so check again now that it would be heard (Rails has this
         // gap).
@@ -107,9 +143,33 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
         return;
     }
 
+    let mut disconnect_sequence = None;
     loop {
-        tokio::select! {
-            message = incoming.recv() => match message {
+        let event = tokio::select! {
+            // Revocation wins ties, but the ordinary events retain select!'s fairness.
+            biased;
+            Some(message) = internal.next() => Event::Internal(message),
+            event = async {
+                tokio::select! {
+                    message = incoming.recv() => Event::Incoming(message),
+                    Some(delivery) = deliveries.next() => Event::Delivery(delivery),
+                    Ok(()) = heartbeat.changed() => Event::Heartbeat,
+                    Ok(()) = restarts.recv() => Event::Restart,
+                }
+            } => event,
+        };
+        match event {
+            Event::Internal(message) => match message {
+                Ok(message) => match process_internal_message(message.frame.as_str()) {
+                    Some(remote) => {
+                        disconnect_sequence = Some(message.sequence);
+                        close = Some(remote);
+                    }
+                    None => continue,
+                },
+                Err(_) => continue,
+            },
+            Event::Incoming(message) => match message {
                 Some(Incoming::Text(text)) => connection.dispatch(&text).await,
                 Some(Incoming::Binary) => tracing::error!("Couldn't handle non-string message: Array"),
                 Some(Incoming::Ping(payload)) => {
@@ -129,12 +189,12 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
                 }
                 None => break,
             },
-            Some(delivery) = deliveries.next() => {
+            Event::Delivery(delivery) => {
                 // Whatever else is ready already goes out in the same write.
                 let mut delivery = Some(delivery);
                 while let Some(result) = delivery.take() {
                     match result {
-                        Ok(frame) => connection.pending.push(frame),
+                        Ok(delivery) => connection.pending.push(delivery.into()),
                         Err(_) => {
                             close = Some(Close::lagged());
                             break;
@@ -145,25 +205,39 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
                     }
                 }
             }
-            Some(message) = internal.next() => match message {
-                Ok(message) => match process_internal_message(message.as_str()) {
-                    Some(remote) => close = Some(remote),
-                    None => continue,
-                },
-                Err(_) => continue,
-            },
-            Ok(()) = heartbeat.changed() => {
+            Event::Heartbeat => {
                 // One frame per beat, shared by every connection.
                 let ping = heartbeat.borrow_and_update().clone();
-                connection.pending.push(ping);
+                connection.pending.push(ping.into());
             }
-            Ok(()) = restarts.recv() => {
+            Event::Restart => {
                 close = Some(Close { reason: Some(DisconnectReason::ServerRestart), reconnect: Value::Bool(true) });
             }
         }
 
-        deliveries.extend(connection.started.drain(..).map(|(subscriber, registration)| Abortable::new(subscriber.deliveries(), registration)));
-        if !connection.flush(&mut sink).await {
+        deliveries.extend(connection.started.drain(..).map(|(subscriber, registration)| Abortable::new(subscriber.ordered_deliveries(), registration)));
+        // A disconnect can be published after select chose an ordinary event, but before
+        // batching finished. All queued frames predate this poll, so a disconnect published
+        // after it cannot have a cutoff earlier than any frame we're about to write.
+        if disconnect_sequence.is_none()
+            && let Some((sequence, remote)) = poll_remote_disconnect(&mut internal, config.stream_capacity)
+        {
+            disconnect_sequence = Some(sequence);
+            if close.is_none() {
+                close = Some(remote);
+            }
+        }
+        if let Some(sequence) = disconnect_sequence {
+            // Every earlier publication is already in its ring: broadcasting and sequence
+            // assignment share the hub lock. Drain each stream only up to this disconnect,
+            // so later producers cannot keep the socket open, then merge publication order.
+            let (prior, lagged) = drain_before_disconnect(std::mem::take(&mut deliveries), sequence);
+            connection.pending.extend(prior.into_iter().map(PendingFrame::from));
+            if lagged {
+                close = Some(Close::lagged());
+            }
+        }
+        if !connection.flush(&mut sink, disconnect_sequence, config.max_write_batch).await {
             break;
         }
         if let Some(Close { reason, reconnect }) = close.take() {
@@ -175,6 +249,44 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
 
     reader.abort();
     connection.handle_close().await;
+}
+
+/// Check the internal ring again at the write boundary, without mistaking a budget yield for
+/// an empty ring. Bound malformed-message scanning by the ring's rounded capacity plus a lag
+/// notification; concurrent publishers cannot keep this poll running indefinitely.
+fn poll_remote_disconnect(internal: &mut InternalMessages, capacity: usize) -> Option<(u64, Close)> {
+    for _ in 0..=capacity.next_power_of_two() {
+        let message = tokio::task::unconstrained(internal.next()).now_or_never().flatten()?;
+        if let Ok(message) = message
+            && let Some(remote) = process_internal_message(message.frame.as_str())
+        {
+            return Some((message.sequence, remote));
+        }
+    }
+    None
+}
+
+/// The rings and the drain are bounded. Stop at the first later publication on each stream,
+/// rather than draining a SelectAll that concurrent producers could keep ready indefinitely.
+fn drain_before_disconnect(deliveries: SelectAll<Deliveries>, sequence: u64) -> (Vec<Delivery>, bool) {
+    let mut prior = Vec::new();
+    let mut lagged = false;
+    for mut stream in deliveries {
+        // This finite drain must distinguish an empty ring from Tokio's cooperative-budget
+        // yield, which otherwise looks Pending even with earlier frames still queued.
+        while let Some(result) = tokio::task::unconstrained(stream.next()).now_or_never().flatten() {
+            match result {
+                Ok(delivery) if delivery.sequence < sequence => prior.push(delivery),
+                Ok(_) => break,
+                Err(RecvError::Lagged) => {
+                    lagged = true;
+                    break;
+                }
+                Err(RecvError::Closed) => break,
+            }
+        }
+    }
+    (prior, lagged)
 }
 
 /// `InternalChannel#process_internal_message`.
@@ -233,11 +345,23 @@ async fn close_socket(sink: &mut Sink, incoming: &mut mpsc::Receiver<Incoming>, 
 
 impl<U: Send + Sync + 'static> Connection<U> {
     /// Writes the pending frames in order, in one vectored write where the socket takes it.
-    async fn flush(&mut self, sink: &mut Sink) -> bool {
+    async fn flush(&mut self, sink: &mut Sink, cutoff: Option<u64>, max_batch: usize) -> bool {
+        if let Some(sequence) = cutoff {
+            self.pending.retain(|pending| pending.sequence.is_none_or(|published| published < sequence));
+            // The ordinary batch may contain earlier publications from different streams.
+            // Merge it with the drain before any part of either batch reaches the socket.
+            self.pending.sort_by_key(|pending| pending.sequence);
+        }
         if self.pending.is_empty() {
             return true;
         }
-        let written = sink.send(&self.pending).await.is_ok();
+        let mut written = true;
+        for batch in self.pending.chunks(max_batch.max(1)) {
+            if sink.send_frames(batch.iter().map(|pending| &pending.frame)).await.is_err() {
+                written = false;
+                break;
+            }
+        }
         self.pending.clear();
         written
     }
@@ -300,7 +424,7 @@ impl<U: Send + Sync + 'static> Connection<U> {
         let index = self.position(identifier).expect("just added");
         let Entry { channel, sub } = &mut self.subscriptions[index];
         let result = channel.subscribed(sub).await;
-        self.pending.extend(sub.transmissions.drain(..).map(Frame::from));
+        self.pending.extend(sub.transmissions.drain(..).map(PendingFrame::from));
         self.started.append(&mut sub.started);
 
         if let Err(error) = result {
@@ -330,7 +454,7 @@ impl<U: Send + Sync + 'static> Connection<U> {
             tracing::error!(error = error.0, "Could not execute command");
         }
         sub.stop_all_streams();
-        self.pending.extend(sub.transmissions.drain(..).map(Frame::from));
+        self.pending.extend(sub.transmissions.drain(..).map(PendingFrame::from));
         self.started.append(&mut sub.started);
     }
 
@@ -352,7 +476,7 @@ impl<U: Send + Sync + 'static> Connection<U> {
 
         let Entry { channel, sub } = &mut self.subscriptions[index];
         let result = channel.perform(&action, &payload, sub).await;
-        self.pending.extend(sub.transmissions.drain(..).map(Frame::from));
+        self.pending.extend(sub.transmissions.drain(..).map(PendingFrame::from));
         self.started.append(&mut sub.started);
         match result {
             Ok(true) => {}
