@@ -383,10 +383,10 @@ impl Message {
     /// attachment and Drive attachments, the room touch, and a thread reply's counter refresh
     /// (`after_create :refresh_thread_messages_count`).
     ///
-    /// After commit, in Rails' order: the search index (unless streaming; never for a system
-    /// note), `receive_in_conversation` (unless streaming), `close_stale_sibling_threads` (for a
-    /// thread message), `sync_message_references` (unless streaming), then the thread indicator
-    /// broadcast when the counter moved. Not ported here, for their owners: agent deliveries
+    /// Rails' index, unread, reference and stale-thread bookkeeping runs here in the same
+    /// SQLite transaction as the write, so failure rolls it all back. Broadcasts and job wakes
+    /// run after commit in Rails' order: unread, push, then the final thread indicator.
+    /// Not ported here, for their owners: agent deliveries
     /// (WS11), activity items (WS12), the GitHub, Fizzy, Twitter, event and link-embed reference
     /// syncs (WS14, WS15), and the Slack importer's `importing` flag (WS16).
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
@@ -449,29 +449,22 @@ impl Message {
         }
         Room::touch(tx, message.room_id)?;
 
-        let committed = message.clone();
-        tx.after_commit(move |tx| committed.after_create_commit(tx, &indicator_threads));
         if !message.streaming {
-            // Persist jobs now, then wake the runner after the receive/indicator hook.
+            // Bookkeeping commits with the message (lead decision, round 2). Receive only
+            // queues its broadcasts here; push persistence stays in this same transaction.
+            message.create_in_index(tx)?;
+            message.receive_in_conversation(tx)?;
+            crate::models::message_reference::sync(tx, &message)?;
             message.push_later_in_conversation(tx);
         }
-        Ok(message)
-    }
-
-    /// The `after_create_commit` chain, in definition order (`load_defaults` runs after-commit
-    /// callbacks in the order they're defined).
-    fn after_create_commit(&self, tx: &mut Tx<'_>, indicator_threads: &[i64]) -> Result<()> {
-        if !self.streaming {
-            self.create_in_index(tx)?;
-            self.receive_in_conversation(tx)?;
-            crate::models::message_reference::sync(tx, self)?;
-        }
-        if self.thread_id.is_some() {
+        if message.thread_id.is_some() {
             // `close_stale_sibling_threads`: with no scheduled sweep, thread writes persist the
             // room's archive state.
-            ChannelThread::close_stale_in(tx, Some(self.room_id))?;
+            ChannelThread::close_stale_in(tx, Some(message.room_id))?;
         }
-        ChannelThread::broadcast_thread_indicators(tx, indicator_threads)
+        // Read the final counter after commit. Rails sends unread, push, then indicator.
+        tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
+        Ok(message)
     }
 
     /// `render_markdown_body`: the body a Markdown source renders to, when it's within the
@@ -696,7 +689,8 @@ impl Message {
     /// `save!` of assigned changes. A changed Markdown source re-renders the body
     /// (`render_markdown_body`); the validations run as for an update; the message and its room
     /// are touched when anything changed (or always while streaming); the search index follows
-    /// after commit (`after_update_commit :update_in_index, unless: :streaming?`).
+    /// in this transaction (Rails' `after_update_commit :update_in_index` is moved here so a
+    /// failed renderer cannot leave a partially processed write).
     fn save_changes(&mut self, tx: &mut Tx<'_>, changes: MessageChanges, stamp_edited: bool) -> Result<()> {
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
@@ -786,17 +780,10 @@ impl Message {
         if references_changed {
             tx.emit_after_commit(Event::job(&crate::models::message_reference::QuoteCardsRefreshJob { source_message_id: self.id }));
         }
-        let id = self.id;
-        tx.after_commit(move |tx| {
-            // Destroyed later in the same transaction: only its destroy callbacks run.
-            let Some(message) = Message::find_by_id(tx.conn(), id)? else { return Ok(()) };
-            if message.streaming {
-                return Ok(());
-            }
-            message.update_in_index(tx)?;
-            if references_changed { crate::models::message_reference::sync(tx, &message)?; }
-            Ok(())
-        });
+        if !self.streaming {
+            self.update_in_index(tx)?;
+            if references_changed { crate::models::message_reference::sync(tx, self)?; }
+        }
         Ok(())
     }
 
@@ -805,20 +792,11 @@ impl Message {
         drive_file_ids(conn, self.id)
     }
 
-    /// `touch` (from a boost, or the body): the message, then its room, then a reindex
-    /// after commit.
+    /// `touch` (from a boost, or the body): the message, its room and its index atomically.
     pub fn touch(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         self.updated_at = Self::touch_row(tx, self.id)?;
         Room::touch(tx, self.room_id)?;
-        let id = self.id;
-        tx.after_commit(move |tx| {
-            // Destroyed later in the same transaction: only its destroy callbacks run.
-            let Some(message) = Message::find_by_id(tx.conn(), id)? else { return Ok(()) };
-            if message.streaming {
-                return Ok(());
-            }
-            message.update_in_index(tx)
-        });
+        if !self.streaming { self.update_in_index(tx)?; }
         Ok(())
     }
 
@@ -862,8 +840,8 @@ impl Message {
     /// refreshes its thread's counter unless the room is being torn down
     /// (`destroyed_with_conversation?`).
     ///
-    /// After commit: the search index entry goes, quoting messages are bumped and their quote
-    /// cards replaced (`broadcast_quote_cards_removal`), and the thread indicator re-broadcast.
+    /// The index entry and quoting-message timestamps change in this transaction. After
+    /// commit their quote cards are replaced and the thread indicator is re-broadcast.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         let with_conversation = Room::find(tx.conn(), self.room_id)?.deleted();
         self.destroy_inner(tx, with_conversation)
@@ -932,12 +910,9 @@ impl Message {
             indicator_threads.push(thread_id);
         }
         Room::touch(tx, self.room_id)?;
-        let id = self.id;
-        tx.after_commit(move |tx| {
-            remove_from_index(tx, id)?;
-            crate::models::message_reference::removed_source(tx, quoting_ids)?;
-            ChannelThread::broadcast_thread_indicators(tx, &indicator_threads)
-        });
+        remove_from_index(tx, self.id)?;
+        crate::models::message_reference::removed_source(tx, quoting_ids)?;
+        tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(())
     }
 
@@ -1216,4 +1191,3 @@ fn reversed<T>(mut rows: Vec<T>) -> Vec<T> {
     rows.reverse();
     rows
 }
-

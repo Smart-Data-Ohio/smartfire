@@ -21,6 +21,7 @@ mod room_test;
 mod room_delete_test;
 mod retention_test;
 mod rich_text_failure_test;
+mod round2_test;
 mod room_category_test;
 mod saved_item_test;
 mod scheduled_message_test;

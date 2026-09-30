@@ -294,16 +294,12 @@ pub async fn perform_with_config(db: &Database, room_id: i64, config: HuddleConf
     .await
 }
 
-/// The synchronous Room#destroy path, also used by hard user/content removal. The job has
-/// already emptied these collections in separate transactions before it reaches this path.
+/// Room#destroy's declared dependencies, distinct from DestroyJob's preliminary deletes.
+/// Huddle grants are only revoked by before_destroy; their cleanup links survive. Scheduled
+/// messages use dependent:delete_all, so their dropped-message inbox items survive too.
 pub(crate) fn destroy(tx: &mut Tx<'_>, room: &Room) -> Result<()> {
-    revoke_huddle_grants(tx, room.id, &HuddleConfig::from_env())?;
-    tx.conn().execute_cached(
-        "UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE room_id=? AND revoked_at IS NULL",
-        params![tx.now(), tx.now(), room.id],
-    )?;
-    tx.conn().execute_cached("UPDATE huddle_cleanups SET huddle_grant_id=NULL WHERE huddle_grant_id IN (SELECT id FROM huddle_grants WHERE room_id=?)",[room.id])?;
-    for table in CHILDREN {
+    tx.conn().execute_cached("DELETE FROM memberships WHERE room_id=?", [room.id])?;
+    for table in ["messages", "channel_threads", "events"] {
         loop {
             let batch = ids(tx, table, room.id, BATCH_SIZE)?;
             if batch.is_empty() {

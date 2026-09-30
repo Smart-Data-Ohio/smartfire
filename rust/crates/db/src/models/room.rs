@@ -563,7 +563,7 @@ impl Room {
         )
     }
 
-    /// `room.receive(message)`, from the message's `after_create_commit`: marks members
+    /// `room.receive(message)`, in the message's transaction: marks members
     /// unread. A system note doesn't. Its `push_later` is [`Room::push_later`], called in the
     /// message's transaction.
     pub(crate) fn receive(tx: &mut Tx<'_>, room_id: i64, message: &Message) -> Result<()> {
