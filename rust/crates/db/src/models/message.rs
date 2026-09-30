@@ -88,6 +88,8 @@ pub struct NewMessage {
 /// Attributes assigned to a saved message (`message.update!(...)`); `None` leaves one alone.
 #[derive(Debug, Clone, Default)]
 pub struct MessageChanges {
+    /// Explicit nil assignment used by the raw bot edit endpoint.
+    pub clear_markdown_source: bool,
     /// Rendered into the body before validation, like a new message's.
     pub markdown_source: Option<String>,
     /// A legacy (Action Text) body.
@@ -695,7 +697,7 @@ impl Message {
     }
 
     fn markdown_source_will_change(&self, changes: &MessageChanges) -> bool {
-        changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
+        (changes.clear_markdown_source && self.markdown_source.is_some()) || changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
     }
 
     /// `save!` of assigned changes. A changed Markdown source re-renders the body
@@ -707,7 +709,7 @@ impl Message {
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
         let markdown_source =
-            if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() } else { self.markdown_source.clone() };
+            if changes.clear_markdown_source { None } else if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() } else { self.markdown_source.clone() };
         let body = match &changes.markdown_source {
             Some(source) if self.markdown_source_will_change(&changes) => {
                 if source.chars().count() <= SOURCE_LIMIT {

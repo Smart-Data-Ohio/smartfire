@@ -1,5 +1,7 @@
 //! Shared posting preflight from Agents::Posting and Agents::Budgets. Upload staging and
 //! rendering stay in the app; idempotency, usage and the budget notice are domain policy.
+pub mod client_ids;
+
 use jiff::tz::TimeZone;
 use rusqlite::params;
 use serde_json::{Value, json};
@@ -100,6 +102,25 @@ pub fn prepare_for_user(
     agent_id
         .map(|agent_id| prepare(tx, agent_id, room_id, client_message_id))
         .transpose()
+}
+
+/// Explicit request lookup preserves AR's IN/blank binding policy separately from the
+/// string that is assigned to the saved row. Legacy bots ignore the client id entirely.
+pub fn prepare_for_user_with_lookup(tx:&mut Tx<'_>,user_id:i64,room_id:i64,stored:Option<&str>,lookup:&client_ids::Lookup)->Result<Option<PostingCheck>> {
+    let Some(agent_id)=query_one(tx.conn(),"SELECT id FROM agents WHERE user_id=? LIMIT 1",[user_id],|r|r.get::<_,i64>(0))? else {return Ok(None);};
+    match lookup {
+        client_ids::Lookup::Attribute=>return prepare(tx,agent_id,room_id,stored).map(Some),
+        client_ids::Lookup::InvalidParameters=>return Err(Error::Other("can't cast ActionController::Parameters".into())),
+        client_ids::Lookup::Values(values)=>{
+            if !values.is_empty() {
+                let mut binds=vec![rusqlite::types::Value::Integer(room_id),rusqlite::types::Value::Integer(user_id)];
+                binds.extend(values.iter().cloned().map(rusqlite::types::Value::Text));
+                let sql=format!("SELECT * FROM messages WHERE room_id=? AND creator_id=? AND client_message_id IN ({}) LIMIT 1",crate::sql::placeholders(values.len()));
+                if let Some(message)=query_one(tx.conn(),&sql,rusqlite::params_from_iter(binds),Message::from_row)? {return Ok(Some(PostingCheck::Replay(Box::new(message))));}
+            }
+        }
+    }
+    Ok(Some(if let Some(payload)=check_budget(tx,agent_id,Cap::Messages)? {PostingCheck::Budget(payload)} else {PostingCheck::Allowed}))
 }
 
 /// Check an existing client id before budget. The caller saves in the same writer transaction.

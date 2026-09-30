@@ -613,3 +613,51 @@ async fn ws11_agent_delivery_enqueue_failure_rolls_the_http_message_back() {
         assert_eq!(n,0);Ok(())
     }).await.unwrap();
 }
+
+#[tokio::test]
+async fn ws11_bot_raw_edit_clears_existing_markdown_source() {
+    let app=TestApp::boot().await.expect("default seed");
+    let message=app.db().write(|tx|Message::create(tx,campfire_db::NewMessage {room_id:ALL_TALK,creator_id:BENDER,markdown_source:Some("**Old**".into()),..Default::default()})).await.unwrap();
+    let mut client=app.anonymous();
+    let response=client.send(Req::new(Method::PUT,&format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{}",message.id)).body("Fresh raw body")).await;
+    assert_eq!(response.status,StatusCode::OK);
+    let id=message.id;
+    let actual=app.db().read(move |c|Message::find(c,id)).await.unwrap();
+    assert!(actual.markdown_source.is_none(),"Bot raw edits explicitly assign markdown_source: nil");
+
+}
+
+#[tokio::test]
+async fn ws11_bot_boost_content_matches_rails_shortcodes_and_strip() {
+    let vectors:serde_json::Value=serde_json::from_str(include_str!("../../../../../vectors/agents_bot_gaps_contract.json")).unwrap();
+    let app=TestApp::boot().await.expect("default seed");
+    let mut client=app.anonymous();
+    for case in vectors["boosts"].as_array().unwrap() {
+        let response=client.send(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/136976342/boosts")).body(case["input"].as_str().unwrap())).await;
+        assert_eq!(response.status.as_u16(),case["status"].as_u64().unwrap() as u16);
+        if response.status==StatusCode::CREATED {
+            let content=app.db().read(|c|Ok(c.query_row("SELECT content FROM boosts WHERE message_id=136976342 ORDER BY id DESC LIMIT 1",[],|r|r.get::<_,String>(0))?)).await.unwrap();
+            assert_eq!(content,case["stored"].as_str().unwrap());
+        }
+    }
+}
+
+#[tokio::test]
+async fn ws11_bot_client_id_coercion_matches_rails_lookup_and_storage() {
+    let vectors:serde_json::Value=serde_json::from_str(include_str!("../../../../../vectors/agents_bot_gaps_contract.json")).unwrap();
+    let app=TestApp::boot().await.expect("default seed");let mut client=app.anonymous();
+    for case in vectors["client_ids"].as_array().unwrap() {
+        let mut locations=vec![];
+        for status in case["statuses"].as_array().unwrap() {
+            let raw=serde_json::json!({"message":{"client_message_id":case["input"]}}).to_string();
+            let response=client.send(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages")).header("content-type","application/json").body(raw)).await;
+            assert_eq!(response.status.as_u16(),status.as_u64().unwrap() as u16,"input={}",case["input"]);
+            locations.push(response.location().map(str::to_string));
+        }
+        if let Some(expected)=case["replayed"].as_bool() {assert_eq!(locations[0]==locations[1],expected,"input={}",case["input"]);}
+        if let Some(id)=locations[1].as_deref().and_then(|s|s.rsplit('/').next()).and_then(|s|s.parse::<i64>().ok()) {
+            let actual=app.db().read(move |c|Message::find(c,id)).await.unwrap();
+            assert_eq!(actual.client_message_id,case["stored"].as_str().unwrap());
+        }
+    }
+}

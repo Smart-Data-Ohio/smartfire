@@ -162,6 +162,8 @@ pub(crate) fn ensure_can_administer(c: &mut Ctx, message: &Message) -> Result<()
 /// What `create_with_attachment!`/`update!` receive.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct MessageParams {
+    pub clear_markdown_source: bool,
+    pub client_message_lookup: campfire_db::models::agent_posting::client_ids::Lookup,
     pub body: Option<String>,
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
@@ -177,6 +179,8 @@ fn message_params(c: &Ctx) -> Result<MessageParams> {
         body: text("body"),
         attachment: attachment_assignment(&permitted)?,
         client_message_id: text("client_message_id"),
+        clear_markdown_source: false,
+        client_message_lookup: Default::default(),
     })
 }
 
@@ -244,7 +248,7 @@ pub(crate) async fn create_message_with_agent_policy(c: &Ctx, room: &Room, mut a
         .db
         .write(move |tx| {
             if agent_policy {
-                match campfire_db::models::agent_posting::prepare_for_user(tx, creator_id, room_id, attributes.client_message_id.as_deref())? {
+                match campfire_db::models::agent_posting::prepare_for_user_with_lookup(tx, creator_id, room_id, attributes.client_message_id.as_deref(), &attributes.client_message_lookup)? {
                     Some(PostingCheck::Replay(message)) => return Ok((PostingOutcome::Replay(*message), None)),
                     Some(PostingCheck::Budget(payload)) => return Ok((PostingOutcome::Budget(payload), None)),
                     Some(PostingCheck::Allowed) => {},
@@ -366,7 +370,9 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
         .db
         .write(move |tx| {
             let mut message = message;
-            if let Some(body) = body {
+            if attributes.clear_markdown_source {
+                message.edit(tx, campfire_db::MessageChanges { clear_markdown_source: true, body, ..Default::default() })?;
+            } else if let Some(body) = body {
                 message.update_body(tx, &body)?;
             }
             let attachment_given = attachment.is_some();

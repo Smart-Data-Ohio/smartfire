@@ -43,11 +43,14 @@ pub async fn create(c: &mut Ctx) -> Result {
     if room.board() {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    let client_message_id = c.params.get("message").and_then(|p| p.get("client_message_id")).filter(|p| !p.is_null()).and_then(Param::to_s);
+    let input=c.params.get("message").and_then(|p|p.get("client_message_id")).map(Param::to_json);
+    let client_id=campfire_db::models::agent_posting::client_ids::ClientId::from_json(input.as_ref());
+    let client_message_id=client_id.stored;
     // Posting's replay/budget checks precede attachment validation and staging. The final
     // write repeats the check in its transaction so concurrent posts cannot overrun a cap.
     let (user_id, room_id, replay_id) = (require_current_user(c)?.id, room.id, client_message_id.clone());
-    let preflight = c.app().db.write(move |tx| campfire_db::models::agent_posting::prepare_for_user(tx, user_id, room_id, replay_id.as_deref())).await.map_err(db_error)?;
+    let lookup=client_id.lookup.clone();
+    let preflight = c.app().db.write(move |tx| campfire_db::models::agent_posting::prepare_for_user_with_lookup(tx, user_id, room_id, replay_id.as_deref(), &lookup)).await.map_err(db_error)?;
     match preflight {
         Some(campfire_db::models::agent_posting::PostingCheck::Replay(message)) => {
             let location = c.url_for(&campfire_routes::message(message.id));
@@ -58,6 +61,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     }
     let mut attributes = message_params(c)?;
     attributes.client_message_id = client_message_id;
+    attributes.client_message_lookup = client_id.lookup;
     let message = match create_message_with_agent_policy(c, &room, attributes, true).await? {
         campfire_db::models::agent_posting::PostingOutcome::Created(message) => {
             broadcast_create(c, &room, &message).await?;
@@ -144,9 +148,9 @@ fn ensure_body_or_attachment_present(c: &mut Ctx) -> Result<()> {
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     if c.params.get("attachment").is_some_and(|p| !p.is_null()) {
         let permitted = c.params.permit(&permit_keys(&["attachment"]));
-        Ok(MessageParams { attachment: attachment_assignment(&permitted)?, ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, ..MessageParams::default() })
     } else {
-        Ok(MessageParams { body: Some(raw_request_body(c)), ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), ..MessageParams::default() })
     }
 }
 
