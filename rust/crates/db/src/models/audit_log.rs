@@ -116,7 +116,7 @@ impl AuditLog {
             [id],
             Self::from_row,
         )?
-        .ok_or_else(|| crate::Error::RecordNotFound("AuditLog".into()))
+        .ok_or_else(|| crate::Error::RecordNotFound("AuditLog"))
     }
     pub fn snapshot(&self) -> Value {
         json!({"action":self.action,"actor_id":self.actor_id,"actor_label":self.actor_label,"target_type":self.target_type,"target_id":self.target_id,"target_label":self.target_label,"details":self.details,"ip_address":self.ip_address,"user_agent":self.user_agent})

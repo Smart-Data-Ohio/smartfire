@@ -1,0 +1,96 @@
+{
+  "markdown": [
+    {
+      "source": "# Title\n\n**bold** _emphasis_ ~~gone~~",
+      "body": "<h1>Title</h1>\n<p><strong>bold</strong> <em>emphasis</em> <del>gone</del></p>\n",
+      "plain": "Title\n\nbold emphasis gone"
+    },
+    {
+      "source": "Hello @[David] and @[Jason] and @[Missing]",
+      "body": "<p>Hello <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment> and <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTQ5MDg3NjU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--2d7e85bc60af2ffd9f0bcdef54c409b3a50e3726\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment> and @[Missing]</p>\n",
+      "plain": "Hello @David and @Jason and @[Missing]"
+    },
+    {
+      "source": "`@[David] :openai:` and :gpt: :ws8custom: :smile:",
+      "body": "<p><code>@[David] :openai:</code> and <img class=\"icon icon--brand\" src=\"/assets/icons/brands/openai-a0bb8578.svg\" alt=\":openai:\" title=\"OpenAI\" draggable=\"false\"> <img class=\"icon icon--custom\" src=\"/icons/ws8custom\" alt=\":ws8custom:\" title=\"WS8 custom\" draggable=\"false\"> 😄</p>\n",
+      "plain": "@[David] :openai: and :openai: :ws8custom: 😄"
+    },
+    {
+      "source": "| one | two |\n| --- | --- |\n| alpha | beta |",
+      "body": "<table>\n<thead>\n<tr>\n<th>one</th>\n<th>two</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>alpha</td>\n<td>beta</td>\n</tr>\n</tbody>\n</table>\n",
+      "plain": "one\ntwo\n\nalpha\nbeta"
+    },
+    {
+      "source": "- [x] Done\n- [ ] Later",
+      "body": "<ul>\n<li><input type=\"checkbox\" checked=\"\" disabled=\"disabled\"> Done</li>\n<li><input type=\"checkbox\" disabled=\"disabled\"> Later</li>\n</ul>\n",
+      "plain": "Done\n\n Later"
+    },
+    {
+      "source": "[room](/rooms/1/@2) and https://example.com",
+      "body": "<p><a href=\"/rooms/1/@2\">room</a> and <a href=\"https://example.com\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://example.com</a></p>\n",
+      "plain": "room and https://example.com"
+    },
+    {
+      "source": "<script>alert(1)</script> **safe**",
+      "body": "\n",
+      "plain": ""
+    },
+    {
+      "source": "@[Kevin] escaped \\@[David]",
+      "body": "<p><action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvNzEyMDY0NTQ4P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--5be8d80808e2c78021c7d87a5bf44e86facab2e4\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment> escaped @[David]</p>\n",
+      "plain": "@Kevin escaped @[David]"
+    }
+  ],
+  "canonical": [
+    {
+      "input": "<p>Hello</p>",
+      "output": "<p>Hello</p>"
+    },
+    {
+      "input": "<action-text-attachment content-type=\"application/vnd.campfire.mention\" sgid=\"bad\" bad=\"drop\"></action-text-attachment>",
+      "output": "<action-text-attachment content-type=\"application/vnd.campfire.mention\" sgid=\"bad\" bad=\"drop\"></action-text-attachment>"
+    },
+    {
+      "input": "<figure data-trix-attachment='{\"content\":\"<b>x</b>\",\"contentType\":\"text/html\"}' data-trix-attributes='{\"caption\":\"caption\"}'></figure>",
+      "output": "<action-text-attachment content-type=\"text/html\" caption=\"caption\" content=\"<b>x</b>\"></action-text-attachment>"
+    },
+    {
+      "input": "<p>broken<div>markup</p></div>",
+      "output": "<p>broken</p><div>markup<p></p></div>"
+    }
+  ],
+  "tasks": [
+    {
+      "name": "saved item reminders",
+      "seconds": 17
+    },
+    {
+      "name": "scheduled messages",
+      "seconds": 17
+    },
+    {
+      "name": "poll closing",
+      "seconds": 17
+    }
+  ],
+  "broadcasts": [
+    {
+      "kind": "remove",
+      "stream": "gid://campfire/User/1:rooms",
+      "target": "list_rooms_direct_4",
+      "payload": "<turbo-stream action=\"remove\" target=\"list_rooms_direct_4\"></turbo-stream>"
+    },
+    {
+      "kind": "cable",
+      "stream": "user_1_unread_threads",
+      "payload": {
+        "threadId": 4
+      }
+    }
+  ],
+  "custom": {
+    "id": 1,
+    "name": "ws8custom",
+    "title": "WS8 custom"
+  }
+}

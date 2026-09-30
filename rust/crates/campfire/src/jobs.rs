@@ -146,6 +146,7 @@ pub fn registry() -> Registry {
     let mut registry = Registry::new();
     registry.register(remove_banned_content);
     registry.register(purge_blob);
+    registry.register(quote_cards_refresh);
     // Room::PushMessageJob and Bot::WebhookJob
     crate::integrations::register_jobs(&mut registry);
     registry
@@ -225,6 +226,15 @@ impl EventSink for Jobs {
             (None, Event::DisconnectUser { user_id, reconnect }) => {
                 if let Some(cable) = self.cable.get() {
                     crate::channels::revocation::disconnect_user(cable, user_id, reconnect);
+                }
+            }
+            (None, Event::Broadcast(broadcast)) => {
+                if let Some((stream, payload)) = template_free_broadcast(&broadcast) {
+                    if let Some(cable) = self.cable.get() {
+                        cable.broadcast(&stream, &payload);
+                    }
+                } else {
+                    tracing::warn!(?broadcast, "WS8b partial rendering is not registered");
                 }
             }
             (None, event) => tracing::warn!(?event, "not a job, dropping event"),
@@ -342,6 +352,49 @@ async fn remove_banned_content(app: App, job: RemoveBannedContentJob, _: Executi
 async fn purge_blob(app: App, job: PurgeJob, _: Execution) -> JobResult {
     crate::active_storage::purge(&app, job.blob_id).await?;
     Ok(Outcome::Done)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+struct QuoteCardsRefresh(campfire_db::models::message_reference::QuoteCardsRefreshJob);
+impl Job for QuoteCardsRefresh {
+    const CLASS: &'static str =
+        <campfire_db::models::message_reference::QuoteCardsRefreshJob as Job>::CLASS;
+}
+impl JobKind for QuoteCardsRefresh {}
+async fn quote_cards_refresh(app: App, job: QuoteCardsRefresh, _: Execution) -> JobResult {
+    app.db
+        .write(move |tx| {
+            campfire_db::models::message_reference::refresh_quote_cards(
+                tx,
+                job.0.source_message_id,
+                campfire_db::models::message_reference::REFRESH_MAXIMUM,
+                campfire_db::models::message_reference::REFRESH_BATCH,
+            )
+        })
+        .await?;
+    Ok(Outcome::Done)
+}
+
+fn template_free_broadcast(
+    broadcast: &campfire_db::broadcasts::Broadcast,
+) -> Option<(String, serde_json::Value)> {
+    use campfire_db::broadcasts::{Broadcast, TurboAction};
+    match broadcast {
+        Broadcast::Cable { stream, payload } => Some((stream.clone(), payload.clone())),
+        Broadcast::Turbo(frame)
+            if frame.action == TurboAction::Remove && frame.partial.is_none() =>
+        {
+            let html = campfire_cable::turbo::action_tag(
+                campfire_cable::turbo::Action::Remove,
+                campfire_cable::turbo::Target::Target(&frame.target),
+                None,
+                &[],
+            );
+            Some((broadcast.stream_name(), serde_json::Value::String(html)))
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]

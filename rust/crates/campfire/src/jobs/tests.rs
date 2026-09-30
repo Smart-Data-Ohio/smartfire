@@ -692,3 +692,62 @@ async fn push_latency() {
     let percentile = |p: usize| latencies[(latencies.len() * p / 100).min(latencies.len() - 1)];
     println!("push enqueue-to-start over {} jobs: p50 {:?} p95 {:?} p99 {:?} max {:?}", latencies.len(), percentile(50), percentile(95), percentile(99), latencies.last().unwrap());
 }
+
+#[test]
+fn ws8_periodic_tasks_match_rails_names_and_intervals() {
+    let golden: serde_json::Value =
+        serde_json::from_str(include_str!("../ws8_runtime_vectors.json")).unwrap();
+    let periodic = periodic::periodic(periodic::PeriodicIntervals {
+        reminders: Duration::from_secs(17),
+        retention: Duration::from_secs(123),
+    });
+    let tasks: Vec<_> = periodic
+        .tasks()
+        .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
+        .collect();
+    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+}
+
+#[tokio::test]
+async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    app.db.write(|tx|{tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob{source_message_id:999}));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
+    let rows = wait_for(&app, "quote refresh execution", |rows| {
+        rows.iter()
+            .all(|row| row.class != "Message::QuoteCardsRefreshJob")
+            || rows
+                .iter()
+                .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
+    })
+    .await;
+    assert!(rows.is_empty(), "{rows:?}");
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+}
+
+#[test]
+fn ws8_template_free_broadcast_payloads_match_rails() {
+    use campfire_db::broadcasts::{Broadcast, Streamable};
+    let golden: serde_json::Value =
+        serde_json::from_str(include_str!("../ws8_runtime_vectors.json")).unwrap();
+    for row in golden["broadcasts"].as_array().unwrap() {
+        let event = if row["kind"] == "remove" {
+            Broadcast::remove(
+                vec![Streamable::User(1), Streamable::Name("rooms")],
+                row["target"].as_str().unwrap().into(),
+            )
+        } else {
+            Broadcast::Cable {
+                stream: row["stream"].as_str().unwrap().into(),
+                payload: row["payload"].clone(),
+            }
+        };
+        assert_eq!(
+            template_free_broadcast(&event),
+            Some((
+                row["stream"].as_str().unwrap().into(),
+                row["payload"].clone()
+            ))
+        );
+    }
+}

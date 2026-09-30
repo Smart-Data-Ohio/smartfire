@@ -134,7 +134,7 @@ impl Room {
     }
     pub fn leave_direct(&self, tx: &mut Tx<'_>, user: i64) -> Result<LeaveOutcome> {
         let member = Membership::find_by_room_and_user(tx.conn(), self.id, user)?
-            .ok_or_else(|| crate::Error::RecordNotFound("Membership".into()))?;
+            .ok_or_else(|| crate::Error::RecordNotFound("Membership"))?;
         member.destroy(tx)?;
         if self.user_ids(tx.conn())?.is_empty() {
             self.begin_destroy(tx)?;
