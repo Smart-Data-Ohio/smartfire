@@ -39,6 +39,7 @@ pub struct AppState {
     pub jobs: jobs::Jobs,
     pub mail: crate::mail::State,
     pub sudo: crate::concerns::sudo::State,
+    pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
@@ -50,7 +51,9 @@ impl AppState {
     /// The key pages offer browsers to subscribe with: none while Web Push is off, so that browsers
     /// don't subscribe to notifications that would never be sent.
     pub fn vapid_public_key(&self) -> Option<String> {
-        self.web_push.as_ref().and(self.config.vapid_public_key.clone())
+        self.web_push
+            .as_ref()
+            .and(self.config.vapid_public_key.clone())
     }
 }
 
@@ -105,14 +108,21 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
 
     // config/puma.rb: `Membership.disconnect_all` when the server boots.
-    db.write(|tx| campfire_db::Membership::disconnect_all(tx).map(|_| ())).await?;
+    db.write(|tx| campfire_db::Membership::disconnect_all(tx).map(|_| ()))
+        .await?;
 
     let storage = Arc::new(Storage::new(
         DiskService::new(&config.storage.files, "local"),
-        Arc::new(ActiveStorageVerifier(rails_compat::app_verifier(&secrets, "ActiveStorage"))),
+        Arc::new(ActiveStorageVerifier(rails_compat::app_verifier(
+            &secrets,
+            "ActiveStorage",
+        ))),
     ));
 
-    let cable_config = campfire_cable::Config { assume_ssl: !config.disable_ssl, ..campfire_cable::Config::default() };
+    let cable_config = campfire_cable::Config {
+        assume_ssl: !config.disable_ssl,
+        ..campfire_cable::Config::default()
+    };
     let deps = channels::Deps {
         db: db.clone(),
         secrets: secrets.clone(),
@@ -125,7 +135,9 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
     let mut kit_config = KitConfig::production(config.disable_ssl);
     kit_config.error_pages = error_pages();
     kit_config.default_headers = crate::security::default_headers();
-    kit_config.content_security_policy = Some(Arc::new(crate::security::content_security_policy(config.livekit_url.clone())));
+    kit_config.content_security_policy = Some(Arc::new(crate::security::content_security_policy(
+        config.livekit_url.clone(),
+    )));
     campfire_kit::param_filter::install(crate::security::parameter_filter());
 
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
@@ -141,6 +153,7 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
         jobs,
         mail,
         sudo: crate::concerns::sudo::State::default(),
+        two_factor: crate::concerns::two_factor::State::default(),
         web_push,
         fragment_cache,
     });
@@ -149,10 +162,19 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
 
     let kit = Kit::new(kit_config, crypto, clock, app.clone());
     let router = router(&app, kit);
-    Ok(Booted { app, router, jobs: runner })
+    Ok(Booted {
+        app,
+        router,
+        jobs: runner,
+    })
 }
 
-async fn open_database(config: &Config, clock: SharedClock, jobs: jobs::Jobs, rich_text: Arc<AppRichText>) -> anyhow::Result<Database> {
+async fn open_database(
+    config: &Config,
+    clock: SharedClock,
+    jobs: jobs::Jobs,
+    rich_text: Arc<AppRichText>,
+) -> anyhow::Result<Database> {
     let mut db_config = campfire_db::Config::new(&config.storage.database);
     db_config.readers = config.db_readers;
     db_config.environment = config.environment.clone();
@@ -169,16 +191,30 @@ async fn open_database(config: &Config, clock: SharedClock, jobs: jobs::Jobs, ri
 fn router(app: &App, kit: Kit) -> Router {
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
-        .merge(app.cable.router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH))
+        .merge(
+            app.cable
+                .router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH),
+        )
         // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController
         // routes, which reads its own body after its rate limit.
-        .route("/csp_reports", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
-        .route("/csp_reports.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
+        .route(
+            "/csp_reports",
+            axum::routing::post(campfire_kit::unparsed_action(
+                controllers::csp_reports::create,
+            )),
+        )
+        .route(
+            "/csp_reports.{format}",
+            axum::routing::post(campfire_kit::unparsed_action(
+                controllers::csp_reports::create,
+            )),
+        )
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
     // config.ru: `use Rack::Deflater` around the whole app.
-    campfire_kit::app(routes, kit).layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
+    campfire_kit::app(routes, kit)
+        .layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
 }
 
 /// The Rails route table, with the app's fragment cache current while the action runs.
@@ -205,18 +241,26 @@ fn static_response(request: &axum::extract::Request) -> Option<axum::response::R
         if_modified_since: header(axum::http::header::IF_MODIFIED_SINCE),
     })?;
     let immutable = immutable_asset(request.uri().path(), served.status);
-    let mut response = axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));
-    *response.status_mut() = axum::http::StatusCode::from_u16(served.status).unwrap_or(axum::http::StatusCode::OK);
-    response.extensions_mut().insert(campfire_kit::deflater::StaticFile);
+    let mut response =
+        axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));
+    *response.status_mut() =
+        axum::http::StatusCode::from_u16(served.status).unwrap_or(axum::http::StatusCode::OK);
+    response
+        .extensions_mut()
+        .insert(campfire_kit::deflater::StaticFile);
     for (name, value) in served.headers {
-        if let (Ok(name), Ok(value)) =
-            (axum::http::HeaderName::from_bytes(name.as_bytes()), axum::http::HeaderValue::from_str(&value))
-        {
+        if let (Ok(name), Ok(value)) = (
+            axum::http::HeaderName::from_bytes(name.as_bytes()),
+            axum::http::HeaderValue::from_str(&value),
+        ) {
             response.headers_mut().append(name, value);
         }
     }
     if immutable {
-        response.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static(IMMUTABLE_CACHE_CONTROL));
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static(IMMUTABLE_CACHE_CONTROL),
+        );
     }
     Some(response)
 }
@@ -236,7 +280,11 @@ fn immutable_asset(path: &str, status: u16) -> bool {
 fn error_pages() -> ErrorPages {
     ErrorPages::new([404, 422, 500, 502].into_iter().filter_map(|status| {
         let path = format!("/{status}.html");
-        let request = campfire_assets::StaticRequest { method: "GET", path: &path, ..Default::default() };
+        let request = campfire_assets::StaticRequest {
+            method: "GET",
+            path: &path,
+            ..Default::default()
+        };
         campfire_assets::serve(&request).map(|page| (status, page.body.into_owned().into()))
     }))
 }
@@ -245,7 +293,12 @@ fn error_pages() -> ErrorPages {
 struct ActiveStorageVerifier(MessageVerifier);
 
 impl campfire_storage::Verifier for ActiveStorageVerifier {
-    fn generate(&self, data_json: &str, purpose: &str, expires_at: Option<jiff::Timestamp>) -> String {
+    fn generate(
+        &self,
+        data_json: &str,
+        purpose: &str,
+        expires_at: Option<jiff::Timestamp>,
+    ) -> String {
         self.0.generate_raw(data_json, Some(purpose), expires_at)
     }
 
@@ -306,11 +359,19 @@ fn init_logging(config: &Config) {
         _ => "info",
     };
     // The front server logs on its own terms, as Thruster did: requests at info, more with DEBUG.
-    let front = if campfire_kit::front::FrontConfig::from_env().debug { "debug" } else { "info" };
+    let front = if campfire_kit::front::FrontConfig::from_env().debug {
+        "debug"
+    } else {
+        "info"
+    };
     let default = format!("{level},thruster={front},campfire_kit::front={front}");
-    let filter = tracing_subscriber::EnvFilter::try_from_env("CAMPFIRE_LOG").unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default));
+    let filter = tracing_subscriber::EnvFilter::try_from_env("CAMPFIRE_LOG")
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default));
     // `LogScrubbingFormatter`: bot keys in paths never reach the log.
-    let _ = tracing_subscriber::fmt().with_env_filter(filter).with_writer(crate::security::ScrubbingStdout).try_init();
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_writer(crate::security::ScrubbingStdout)
+        .try_init();
 }
 
 /// How long in-flight requests and running jobs get after SIGTERM/SIGINT. Jobs still waiting
@@ -362,7 +423,10 @@ pub fn backup(config: &Config) -> anyhow::Result<()> {
     // interrupted or concurrent backup never leaves a torn file where ONCE (and `post-restore`)
     // expect the last good one. A failed one's file is deleted when `partial` drops.
     let dir = destination.parent().unwrap_or(std::path::Path::new("."));
-    let partial = tempfile::Builder::new().prefix(".backup-").suffix(".sqlite3").tempfile_in(dir)?;
+    let partial = tempfile::Builder::new()
+        .prefix(".backup-")
+        .suffix(".sqlite3")
+        .tempfile_in(dir)?;
     copy_database(&config.storage.database, partial.path())?;
     partial.persist(&destination)?;
     tracing::info!(path = %destination.display(), "backup written");
@@ -371,7 +435,8 @@ pub fn backup(config: &Config) -> anyhow::Result<()> {
 
 /// SQLite's online backup of the live database at `source` into a new file at `target`.
 fn copy_database(source: &std::path::Path, target: &std::path::Path) -> anyhow::Result<()> {
-    let source = rusqlite::Connection::open_with_flags(source, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let source =
+        rusqlite::Connection::open_with_flags(source, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     source.busy_timeout(Duration::from_secs(5))?;
     let mut target = rusqlite::Connection::open(target)?;
     let backup = rusqlite::backup::Backup::new(&source, &mut target)?;
@@ -397,5 +462,8 @@ mod sudo_tests;
 
 #[cfg(test)]
 mod two_factor_tests;
+
+#[cfg(test)]
+mod challenge_tests;
 #[cfg(test)]
 mod tests;

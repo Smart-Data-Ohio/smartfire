@@ -217,7 +217,15 @@ async fn two_factor_views_match_rails_seed_bytes_including_inline_qr() {
         serde_json::from_str(include_str!("../../../../vectors/two_factor_views.json")).unwrap();
     let qr = crate::controllers::qr_code::two_factor_svg(goldens["uri"].as_str().unwrap()).unwrap();
     same_bytes("qr", &qr, goldens["qr"].as_str().unwrap());
-    for name in ["setup", "challenge", "backups", "backups_signed_out"] {
+    for name in [
+        "setup",
+        "challenge",
+        "backups",
+        "backups_signed_out",
+        "profile",
+        "profile_devices",
+        "profile_disabled",
+    ] {
         let actual = h::request_forgery::rendering_with(
             h::request_forgery::RequestSecrets {
                 tokens: Box::new(Tokens),
@@ -238,6 +246,38 @@ async fn two_factor_views_match_rails_seed_bytes_including_inline_qr() {
                         .render()
                         .unwrap(),
                         "challenge" => two_factor::Challenge { ctx }.as_content().render().unwrap(),
+                        "profile" | "profile_devices" | "profile_disabled" => two_factor::Profile {
+                            ctx,
+                            now: "2026-03-02T16:00:00Z".parse().unwrap(),
+                            data: two_factor::ProfileData {
+                                confirmed_at: (name != "profile_disabled").then(|| {
+                                    goldens["profile_data"]["confirmed_at"]
+                                        .as_str()
+                                        .unwrap()
+                                        .parse()
+                                        .unwrap()
+                                }),
+                                devices: if name == "profile_devices" {
+                                    vec![two_factor::Device {
+                                        id: 777,
+                                        user_agent: Some("TestBrowser <&>".into()),
+                                        ip_address: Some("1.2.3.4".into()),
+                                        last_used_at: Some(
+                                            goldens["profile_data"]["last_used_at"]
+                                                .as_str()
+                                                .unwrap()
+                                                .parse()
+                                                .unwrap(),
+                                        ),
+                                    }]
+                                } else {
+                                    vec![]
+                                },
+                                google: false,
+                            },
+                        }
+                        .render()
+                        .unwrap(),
                         _ => two_factor::BackupCodes {
                             ctx,
                             codes: goldens["codes"]

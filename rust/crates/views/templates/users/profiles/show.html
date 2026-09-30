@@ -87,6 +87,8 @@
       {% for membership in direct_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}    </menu>
   </div>
 
+  {{ self.security_panel() }}
+
   {% include "users/profiles/_transfer.html" %}
 </section>
 {% endblock %}

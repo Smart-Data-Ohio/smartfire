@@ -49,3 +49,66 @@ impl Page for Challenge<'_> {
         Some("Two-step sign-in".into())
     }
 }
+
+#[derive(Clone, Default)]
+pub struct ProfileData {
+    pub confirmed_at: Option<jiff::Timestamp>,
+    pub devices: Vec<Device>,
+    pub google: bool,
+}
+#[derive(Clone)]
+pub struct Device {
+    pub id: i64,
+    pub user_agent: Option<String>,
+    pub ip_address: Option<String>,
+    pub last_used_at: Option<jiff::Timestamp>,
+}
+#[derive(Template)]
+#[template(path = "users/profiles/_two_factor.html")]
+pub struct Profile<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub data: ProfileData,
+    pub now: jiff::Timestamp,
+}
+impl Profile<'_> {
+    fn submit(&self, label: &str, class: &str) -> h::Html {
+        submit(label, class)
+    }
+    fn confirmed_date(&self) -> String {
+        self.ctx
+            .time_zone
+            .format(self.data.confirmed_at.unwrap(), "%B %d, %Y")
+    }
+    fn agent(&self, device: &Device) -> String {
+        device
+            .user_agent
+            .as_deref()
+            .filter(|s| !s.chars().all(char::is_whitespace))
+            .unwrap_or("Unknown browser")
+            .into()
+    }
+    fn last_used(&self, device: &Device) -> String {
+        let mut parts = Vec::new();
+        if let Some(ip) = &device.ip_address {
+            parts.push(ip.clone());
+        }
+        if let Some(at) = device.last_used_at {
+            parts.push(format!(
+                "last used {} ago",
+                crate::time::distance_of_time_in_words(&self.ctx.time_zone, at, self.now, false)
+            ));
+        }
+        parts.join(" · ")
+    }
+}
+pub fn submit(label: &str, class: &str) -> h::Html {
+    h::legacy_tag(
+        "input",
+        h::attrs()
+            .type_("submit")
+            .name("commit")
+            .attr("value", label)
+            .class(class)
+            .data("disable_with", label),
+    )
+}

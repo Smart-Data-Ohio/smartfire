@@ -5,14 +5,15 @@ import os, re, subprocess
 ROOT=Path(__file__).resolve().parents[2]
 OUT=ROOT.parent/'.scratch/enrollment-mutations'; OUT.mkdir(parents=True,exist_ok=True)
 ctrl='crates/campfire/src/controllers/two_factor.rs'
+domain='crates/campfire/src/authentication.rs'
 cases=[
- ('session-left-unverified',ctrl,'session.mark_two_factor_verified(tx)?;','// deliberately omitted','enrollment_confirms'),
+ ('session-left-unverified',domain,'session.mark_two_factor_verified(tx)?;','// deliberately omitted','enrollment_confirms'),
  ('user-limit-not-enforced',ctrl,'RateLimit::new(scope, 10, SignedDuration::from_mins(15))','RateLimit::new(scope, 100, SignedDuration::from_mins(15))','enrollment_user_limit'),
- ('accept-wrong-code',ctrl,'if !credential.confirm_with_setup_secret(\n                tx,\n                &ArEncryption::new(&secrets),\n                &setup,\n                &code,\n            )?','if { let _ = (&mut credential, &setup, &code); false }','enrollment_is_bound'),
+ ('accept-wrong-code',domain,'if !credential.confirm_with_setup_secret(tx, encryption, &setup, code)?','if { let _ = (&mut credential, &setup, code); false }','enrollment_is_bound'),
  ('expired-setup-accepted','crates/db/src/models/two_factor.rs','self.expires_at <= now','{ let _ = now; false }','enrollment_is_bound'),
- ('old-sessions-survive',ctrl,'.filter(|s| s.id != session_id)','.filter(|_| false)','enrollment_confirms'),
+ ('old-sessions-survive',domain,'.filter(|s| s.id != session_id)','.filter(|_| false)','enrollment_confirms'),
  ('no-cache-protection',ctrl,'    c.no_store();','    // deliberately omitted','enrollment_reuses'),
- ('setup-not-session-bound',ctrl,'TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())? else','TwoFactorSetupSecret::valid_for(tx.conn(), tx.conn().query_row("SELECT t.session_id FROM two_factor_setup_secrets t JOIN sessions s ON s.id=t.session_id WHERE s.user_id=? AND t.expires_at > ? ORDER BY t.id LIMIT 1", rusqlite::params![user.id,tx.now()], |r| r.get(0))?, tx.now())? else','enrollment_is_bound'),
+ ('setup-not-session-bound',domain,'TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())? else','TwoFactorSetupSecret::valid_for(tx.conn(), tx.conn().query_row("SELECT t.session_id FROM two_factor_setup_secrets t JOIN sessions s ON s.id=t.session_id WHERE s.user_id=? AND t.expires_at > ? ORDER BY t.id LIMIT 1", rusqlite::params![user.id,tx.now()], |r| r.get(0))?, tx.now())? else','enrollment_is_bound'),
 ]
 for name,path,needle,replacement,test in cases:
  source=ROOT/path; original=source.read_text()

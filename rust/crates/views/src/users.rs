@@ -20,8 +20,12 @@ pub struct New<'a> {
 }
 
 impl Page for New<'_> {
-    fn page_title(&self) -> Option<String> { Some("Sign up".into()) }
-    fn body_class(&self) -> Option<&str> { Some("signup") }
+    fn page_title(&self) -> Option<String> {
+        Some("Sign up".into())
+    }
+    fn body_class(&self) -> Option<&str> {
+        Some("signup")
+    }
 }
 
 /// `users/show.html.erb`.
@@ -35,7 +39,9 @@ pub struct Show<'a> {
 }
 
 impl Page for Show<'_> {
-    fn page_title(&self) -> Option<String> { Some(self.user.name.clone()) }
+    fn page_title(&self) -> Option<String> {
+        Some(self.user.name.clone())
+    }
 }
 
 /// `users/_ban_button.html.erb` on its own.
@@ -56,7 +62,9 @@ pub struct MentionUser {
 
 impl std::ops::Deref for MentionUser {
     type Target = UserSummary;
-    fn deref(&self) -> &UserSummary { &self.user }
+    fn deref(&self) -> &UserSummary {
+        &self.user
+    }
 }
 
 /// `users/_mention.html.erb`: the mention attachment's HTML.
@@ -97,7 +105,11 @@ pub struct ProfileMembership {
 
 impl ProfileMembership {
     pub fn involvement_room(&self) -> h::InvolvementRoom<'_> {
-        h::InvolvementRoom { id: self.room_id, param_key: &self.room_param_key, direct: self.direct }
+        h::InvolvementRoom {
+            id: self.room_id,
+            param_key: &self.room_param_key,
+            direct: self.direct,
+        }
     }
 }
 
@@ -105,6 +117,8 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
+    pub security: crate::two_factor::ProfileData,
+    pub now: jiff::Timestamp,
     pub ctx: &'a ViewContext<'a>,
     pub user: UserSummary,
     pub avatar_attached: bool,
@@ -114,14 +128,30 @@ pub struct ProfileShow<'a> {
 }
 
 impl<'a> ProfileShow<'a> {
+    fn security_panel(&self) -> h::Html {
+        h::raw(
+            crate::two_factor::Profile {
+                ctx: self.ctx,
+                data: self.security.clone(),
+                now: self.now,
+            }
+            .render()
+            .unwrap(),
+        )
+    }
     /// `profile_form_with(@user, **params)`.
     fn profile_form(&self) -> h::FormWith {
-        h::form_with(h::routes::user_profile()).model("user").method("patch").data("controller", "form")
+        h::form_with(h::routes::user_profile())
+            .model("user")
+            .method("patch")
+            .data("controller", "form")
     }
 }
 
 impl Page for ProfileShow<'_> {
-    fn page_title(&self) -> Option<String> { Some(self.user.name.clone()) }
+    fn page_title(&self) -> Option<String> {
+        Some(self.user.name.clone())
+    }
 }
 
 /// `users/profiles/_transfer.html.erb` on its own.
@@ -152,7 +182,9 @@ pub struct PushSubscriptionsIndex<'a> {
 }
 
 impl Page for PushSubscriptionsIndex<'_> {
-    fn page_title(&self) -> Option<String> { Some("Push notification subscriptions".into()) }
+    fn page_title(&self) -> Option<String> {
+        Some("Push notification subscriptions".into())
+    }
 }
 
 /// A direct room in the sidebar (`users/sidebars/rooms/_direct`).
@@ -190,21 +222,38 @@ impl From<SidebarDirect> for SidebarDirectItem {
 pub fn direct_room(ctx: &ViewContext, membership: &SidebarDirect) -> String {
     crate::fragment_cache::fetch(
         || direct_room_fragment_key(membership.membership_id, membership.membership_updated_at),
-        || SidebarDirectPartial { ctx, membership: membership.clone() }.render().expect("users/sidebars/rooms/_direct renders"),
+        || {
+            SidebarDirectPartial {
+                ctx,
+                membership: membership.clone(),
+            }
+            .render()
+            .expect("users/sidebars/rooms/_direct renders")
+        },
     )
 }
 
 /// [`direct_room`] where a template renders the partial.
-pub fn cached_direct_room<'a>(ctx: &ViewContext, item: &'a SidebarDirectItem) -> askama::filters::Safe<std::borrow::Cow<'a, str>> {
+pub fn cached_direct_room<'a>(
+    ctx: &ViewContext,
+    item: &'a SidebarDirectItem,
+) -> askama::filters::Safe<std::borrow::Cow<'a, str>> {
     askama::filters::Safe(match item {
-        SidebarDirectItem::Fragment(html) => crate::helpers::request_forgery::fill_token_slots(html),
-        SidebarDirectItem::View(membership) => std::borrow::Cow::Owned(direct_room(ctx, membership)),
+        SidebarDirectItem::Fragment(html) => {
+            crate::helpers::request_forgery::fill_token_slots(html)
+        }
+        SidebarDirectItem::View(membership) => {
+            std::borrow::Cow::Owned(direct_room(ctx, membership))
+        }
     })
 }
 
 /// The `users/sidebars/rooms/_direct` fragment for this membership version, if the current store
 /// holds it.
-pub fn cached_direct_room_fragment(membership_id: i64, updated_at: jiff::Timestamp) -> Option<crate::fragment_cache::Fragment> {
+pub fn cached_direct_room_fragment(
+    membership_id: i64,
+    updated_at: jiff::Timestamp,
+) -> Option<crate::fragment_cache::Fragment> {
     crate::fragment_cache::read(&direct_room_fragment_key(membership_id, updated_at))
 }
 
@@ -217,14 +266,21 @@ fn direct_room_fragment_key(membership_id: i64, updated_at: jiff::Timestamp) -> 
 }
 
 fn direct_room_digest() -> &'static str {
-    static DIGEST: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| crate::fragment_cache::digest(&[include_str!("../templates/users/sidebars/rooms/_direct.html")]));
+    static DIGEST: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        crate::fragment_cache::digest(&[include_str!(
+            "../templates/users/sidebars/rooms/_direct.html"
+        )])
+    });
     &DIGEST
 }
 
 impl SidebarDirect {
     fn class_names(&self) -> &'static str {
-        if self.unread { "direct unread" } else { "direct" }
+        if self.unread {
+            "direct unread"
+        } else {
+            "direct"
+        }
     }
 
     /// `members.map { |m| m.name.split(' ')[0, 3].map { |s| s[0].capitalize }.join }.to_sentence(two_words_connector: '+')`.
@@ -232,7 +288,13 @@ impl SidebarDirect {
         let initials: Vec<String> = self
             .members
             .iter()
-            .map(|member| member.name_parts().take(3).map(|part| h::capitalize(&part.chars().take(1).collect::<String>())).collect())
+            .map(|member| {
+                member
+                    .name_parts()
+                    .take(3)
+                    .map(|part| h::capitalize(&part.chars().take(1).collect::<String>()))
+                    .collect()
+            })
             .collect();
         h::to_sentence(&initials, "+")
     }
@@ -250,7 +312,11 @@ pub struct SidebarRoom {
 
 impl SidebarRoom {
     fn class_names(&self) -> &'static str {
-        if self.unread { "align-center gap room btn txt-nowrap unread" } else { "align-center gap room btn txt-nowrap" }
+        if self.unread {
+            "align-center gap room btn txt-nowrap unread"
+        } else {
+            "align-center gap room btn txt-nowrap"
+        }
     }
 }
 
