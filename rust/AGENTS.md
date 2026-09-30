@@ -59,7 +59,8 @@ for anything that walks directories.
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
 
 CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on changes under
-`rust/**` (and by hand, for a Rails change the port reads), in the `toolchain` stage of
+`rust/**` and the Rails inputs the port reads (assets, JavaScript, public files, importmap,
+asset/icon config, fixtures, schema, migrations and the sound catalog), in the `toolchain` stage of
 `Dockerfile`. Pinned Rails seed construction/validation, clippy, the normal binary build,
 `campfire_db` tests/doctests and the seed-dependent `campfire` tests are gates.
 Nextest runs unit/integration tests once each; `cargo test --doc` retains doctest coverage. The
