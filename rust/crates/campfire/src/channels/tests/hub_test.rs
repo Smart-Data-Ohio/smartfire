@@ -3,7 +3,7 @@
 //! work on the job runner), plus sign-out through the real controller. Over a copy of the
 //! `default` parity seed; skipped (with a note) when it isn't built.
 use axum::http::Method;
-use campfire_db::{Room, User};
+use campfire_db::{Message, Room, User};
 use serde_json::json;
 
 use super::support::{Client, delivery, html_json, identifier};
@@ -494,10 +494,18 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
             .await
             .contains("Real presentation partial")
     );
-    // WS8bm2 owning-container seam: even an edit with no references replaces the
-    // empty quote container. Consume and verify that frame before testing boosts.
-    let quotes = broadcast_html(&mut client).await;
-    assert!(quotes.contains("class=\"message-link-cards\"></div>"), "{quotes}");
+    // Rails replaces metadata and every card container, including empty ones,
+    // in this order. Verify each frame before testing the subsequent boost.
+    let edited = hub.app.db().read(move |conn| Message::find(conn, id)).await.unwrap();
+    for part in ["meta", "github_pr_cards", "twitter_cards", "message_link_cards",
+        "fizzy_cards", "linkedin_cards", "link_embed_cards"] {
+        let html = broadcast_html(&mut client).await;
+        let target = campfire_db::broadcasts::message_dom_id(&edited, Some(part));
+        assert!(html.contains(&format!("target=\"{target}\"")), "{html}");
+        if part == "message_link_cards" {
+            assert!(html.contains("class=\"message-link-cards\"></div>"), "{html}");
+        }
+    }
     let response = browser
         .write(
             Req::new(Method::POST, &format!("/messages/{id}/boosts"))
