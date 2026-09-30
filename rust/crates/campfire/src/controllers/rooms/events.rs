@@ -2,11 +2,20 @@
 mod input;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::presenters::page::{self, db_error};
+use crate::controllers::presenters::page::{self, db_error as default_db_error};
 use askama::Template;
 use campfire_db::{CalendarEvent, Error as DbError};
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 use campfire_views::events::{Attendance, AttendanceView};
+
+// Both Rails controllers rescue RecordNotFound with head :not_found, even for
+// JSON requests; this is a callback response, before format selection.
+fn db_error(error: DbError) -> Error {
+    match error {
+        DbError::RecordNotFound(_) => Error::Halt(Box::new(concerns::head(StatusCode::NOT_FOUND))),
+        other => default_db_error(other),
+    }
+}
 
 async fn set_event(c: &mut Ctx) -> Result<CalendarEvent> {
     let room = scheduled_room(c).await?;
@@ -16,7 +25,7 @@ async fn set_event(c: &mut Ctx) -> Result<CalendarEvent> {
         .or_else(|| c.param_str("id"))
         .and_then(cast_integer)
     else {
-        return Err(Error::NotFound);
+        return halt(concerns::head(StatusCode::NOT_FOUND));
     };
     c.app()
         .db
@@ -27,10 +36,13 @@ async fn set_event(c: &mut Ctx) -> Result<CalendarEvent> {
 
 async fn scheduled_room(c: &mut Ctx) -> Result<campfire_db::Room> {
     before_actions(c, Before::default()).await?;
-    let (_, room) = concerns::set_room(c).await?;
+    let (_, room) = match concerns::set_room(c).await {
+        Err(Error::NotFound) => return halt(concerns::head(StatusCode::NOT_FOUND)),
+        result => result?,
+    };
     // The shared RoomScoped adapter on this base predates soft deletion.
     if room.deleted_at.is_some() {
-        return Err(Error::NotFound);
+        return halt(concerns::head(StatusCode::NOT_FOUND));
     }
     let user = require_current_user(c)?;
     if !user.is_active() || user.is_bot() {

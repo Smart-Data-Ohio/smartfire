@@ -316,3 +316,5 @@ Total named Rails tests inventoried: 221. Includes the Calendar entry model (WS1
 - WS13 live stream reader is implemented for currently-live streams. Ended-stream full-layout bytes are covered; further WS13 HTTP/system integration remains for the end-to-end phase. WS17 production delivery/policy stays behind the live source and durable job seam. Streamed-message finalization still requires the WS11 lifecycle hook.
 
 - Rendering edge differentials additionally cover 0/2/3 going counts (Rails prints goings), 0/2 maybe counts, three single-character description lines, safe description HTML, an invalid Meet URI, viewer-private Calendar copies, ended-stage dots, and an empty index.
+
+- `rescued_not_found_matches_rails_empty_bodies_and_headers` compares 10 actual pinned Rails HTTP states, including malformed/missing IDs, wrong rooms, missing attendance events, and nonmember access with HTML/JSON Accept headers. Both controllers return an empty text/html 404 through their rescue, rather than the generic public error page.

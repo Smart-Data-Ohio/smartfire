@@ -552,3 +552,41 @@ async fn descriptions_and_private_calendar_copies_match_rails() {
     assert_eq!(hidden.status, StatusCode::OK);
     assert!(!hidden.text().contains("Added to your Google Calendar"));
 }
+
+#[tokio::test]
+async fn rescued_not_found_matches_rails_empty_bodies_and_headers() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    let vectors: serde_json::Value =
+        serde_json::from_str(include_str!("http_errors.json")).unwrap();
+    for v in vectors.as_array().unwrap() {
+        let mut browser = app.sign_in(v["user_id"].as_i64().unwrap()).await;
+        let response = browser
+            .send(
+                Req::new(Method::GET, v["path"].as_str().unwrap())
+                    .header("accept", v["accept"].as_str().unwrap()),
+            )
+            .await;
+        assert_eq!(
+            response.status.as_u16(),
+            v["status"].as_u64().unwrap() as u16
+        );
+        assert_eq!(
+            response.text(),
+            v["body"].as_str().unwrap(),
+            "{} {}",
+            v["path"],
+            v["accept"]
+        );
+        assert_eq!(
+            response
+                .headers
+                .get("content-type")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            v["content_type"].as_str().unwrap()
+        );
+    }
+}
