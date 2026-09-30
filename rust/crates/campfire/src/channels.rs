@@ -25,7 +25,7 @@ mod unread_rooms;
 mod workspace_presence;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 use std::sync::Arc;
 
