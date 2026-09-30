@@ -332,10 +332,25 @@ impl Database {
         T: Send + 'static,
         F: FnOnce(&mut Tx<'_>) -> Result<T> + Send + 'static,
     {
+        self.write_scoped(|| (), f).await
+    }
+
+    /// Holds a caller-owned runtime guard across the write AND its ordered after-commit
+    /// callbacks. Models remain unaware of request/rendering context.
+    pub async fn write_scoped<T, F, G>(&self, scope: impl FnOnce() -> G + Send + 'static, f: F) -> Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut Tx<'_>) -> Result<T> + Send + 'static,
+        G: 'static,
+    {
         let (reply, response) = oneshot::channel();
         self.writer
             .send(Box::new(move |conn, env| {
-                let _ = reply.send(run_write(conn, env, f));
+                let result = {
+                    let _scope = scope();
+                    run_write(conn, env, f)
+                };
+                let _ = reply.send(result);
             }))
             .await
             .map_err(|_| Error::WriterGone)?;

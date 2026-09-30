@@ -12,6 +12,8 @@ pub mod directs;
 pub mod involvements;
 pub mod opens;
 pub mod refreshes;
+pub mod polls;
+pub mod pins;
 
 use askama::Template;
 use campfire_db::{Account, Message, Room, RoomType, Timeline, User};

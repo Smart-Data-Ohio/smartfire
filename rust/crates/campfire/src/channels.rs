@@ -10,6 +10,7 @@
 pub mod activity;
 pub mod agents;
 pub mod broadcasts;
+pub(crate) mod message_features;
 mod connection;
 pub mod huddle_notice;
 mod presence;

@@ -42,6 +42,7 @@ pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
 pub mod messages;
+pub(crate) mod message_features;
 pub mod presenters;
 pub mod pwa;
 pub mod qr_code;
@@ -177,6 +178,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),
         "users/push_subscriptions#destroy" => arc(users::push_subscriptions::destroy),
         "autocompletable/users#index" => arc(autocompletable::users::index),
+        "rooms/polls#create" => arc(rooms::polls::create),
+        "rooms/polls#show" => arc(rooms::polls::show),
+        "rooms/polls#vote" => arc(rooms::polls::vote),
+        "messages/pins#create" => arc(messages::pins::create),
+        "messages/pins#destroy" => arc(messages::pins::destroy),
+        "rooms/pins#index" => arc(rooms::pins::index),
         "messages#index" => arc(messages::index),
         "messages#create" => arc(messages::create),
         "messages#preview" => arc(messages::preview),
@@ -531,6 +538,8 @@ mod tests {
         "users/avatars#destroy", "users/bans#create", "users/bans#destroy", "users/sidebars#show",
         "users/profiles#show", "users/profiles#update", "users/push_subscriptions/test_notifications#create",
         "users/push_subscriptions#index", "users/push_subscriptions#create", "users/push_subscriptions#destroy",
+        "rooms/polls#create", "rooms/polls#show", "rooms/polls#vote",
+        "messages/pins#create", "messages/pins#destroy", "rooms/pins#index",
         "autocompletable/users#index", "messages#index", "messages#create", "messages#edit", "messages#show",
         "messages#update", "messages#destroy", "messages/boosts/by_bots#create",
         "messages/boosts/by_bots#destroy", "messages/by_bots#index", "messages/by_bots#create",

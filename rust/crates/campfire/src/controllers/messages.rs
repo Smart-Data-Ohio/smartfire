@@ -4,6 +4,7 @@
 //! delivering webhooks and the broadcasts.
 
 pub mod boosts;
+pub mod pins;
 pub mod by_bots;
 mod payload;
 #[cfg(test)]
@@ -646,7 +647,7 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
 /// rows commit, or roll back, with the message; each is held for [`WEBHOOK_HOLD`] so a bot can't
 /// be told (and reply) before the room sees the message, and [`release_webhooks`] makes them due
 /// once it has been broadcast.
-fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
+pub(crate) fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
     let candidates = if room.direct() { room.active_bots(tx.conn())? } else { message.mentionees(tx.conn(), tx.rich_text())? };
     for bot in candidates.into_iter().filter(|user| user.role == Role::Bot && user.status == Status::Active && user.id != message.creator_id) {
         if bot.webhook(tx.conn())?.is_some() {

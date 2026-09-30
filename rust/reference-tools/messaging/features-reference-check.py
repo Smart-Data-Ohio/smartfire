@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Check the Rails files this slice reads against the accepted source pin."""
+import hashlib
+import os
+from pathlib import Path
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[3]
+FILES = [
+    "app/controllers/rooms/polls_controller.rb", "app/controllers/messages/pins_controller.rb",
+    "app/controllers/rooms/pins_controller.rb", "app/controllers/concerns/room_scoped.rb",
+    "app/models/poll.rb", "app/models/poll_option.rb", "app/models/poll_vote.rb", "app/models/message_pin.rb",
+    "app/views/polls/_poll.html.erb", "app/views/messages/_pin_badge.html.erb",
+    "app/views/rooms/pins/_count.html.erb", "app/views/rooms/pins/_list.html.erb", "app/views/rooms/pins/index.html.erb",
+    "app/helpers/messages_helper.rb", "app/helpers/time_helper.rb",
+]
+image = os.environ.get("PARITY_IMAGE", "ws8bm2-reference:d7c7de92")
+output = subprocess.check_output(["docker", "run", "--rm", "--name", f"ws8bm2-reference-check-{os.getpid()}",
+                                  "--entrypoint", "sha256sum", image, *[f"/rails/{p}" for p in FILES]], text=True)
+expected = {p: hashlib.sha256(subprocess.check_output(["git", "show", f"d7c7de92:{p}"], cwd=ROOT)).hexdigest() for p in FILES}
+
+
+def verify(rows):
+    actual = {}
+    for row in rows:
+        digest, path = row.split(maxsplit=1)
+        relative = path.removeprefix("/rails/")
+        assert relative not in actual, relative
+        actual[relative] = digest
+    assert actual == expected, "Reference source bytes or file set differ"
+
+
+rows = output.splitlines()
+verify(rows)
+changed = list(rows)
+changed[0] = "0" * 64 + " " + changed[0].split(maxsplit=1)[1]
+for mutation in [changed, rows[:-1]]:
+    try:
+        verify(mutation)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("Source verification accepted injected drift")
+print(f"WS8bm2 reference source check: {len(FILES)} controller, model, helper and template files match d7c7de92")
+print("WS8bm2 reference check self-test: 2 injected source-byte/file-set differences rejected")

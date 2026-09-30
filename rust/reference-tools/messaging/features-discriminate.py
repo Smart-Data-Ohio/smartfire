@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Require named compiled tests to reject regressions; always restore each source."""
+import os
+from pathlib import Path
+import re
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[3]
+SCRATCH = ROOT / ".scratch/features-discrimination"
+SCRATCH.mkdir(parents=True, exist_ok=True)
+ENV = dict(os.environ, CI="1", TMPDIR=str(ROOT / ".scratch/tmp"), CARGO_TARGET_DIR=str(ROOT / "rust/target"),
+           CABLE_TEST_PORT_RANGE="52500-52549", MAIL_TEST_PORT_RANGE="52550-52599")
+
+
+def check(name, relative, old, new, test):
+    source = ROOT / relative
+    original = source.read_text()
+    assert old in original, f"missing mutation anchor: {name}"
+    full_test = test if test.startswith("channels::") else f"controllers::message_features::tests::{test}"
+    try:
+        source.write_text(original.replace(old, new, 1))
+        run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+                              "-p", "campfire", "--bin", "campfire", full_test, "--", "--exact", "--nocapture"],
+                             cwd=ROOT / "rust", env=ENV, capture_output=True, text=True)
+        output = run.stdout + run.stderr
+        (SCRATCH / f"{name}.log").write_text(output)
+        summary = re.findall(r"^test result: FAILED\..*$", output, re.M)
+        assert run.returncode != 0 and summary, f"{name}: no compiled test failure"
+        assert f"test {full_test} ... FAILED" in output, f"{name}: wrong failing test"
+        print(f"{name}: {summary[0]}", flush=True)
+    finally:
+        source.write_text(original)
+
+
+check("membership", "rust/crates/campfire/src/controllers/message_features.rs",
+      "let (_, room) = concerns::set_room(c).await?;",
+      'let id = c.param_str("room_id").and_then(cast_integer).ok_or(Error::NotFound)?;\n'
+      '    let room = c.app().db.read(move |conn| Room::find(conn, id)).await.map_err(db_error)?;',
+      "poll_membership_and_human_gates")
+check("pin-reachability", "rust/crates/campfire/src/controllers/message_features.rs",
+      "Message::find_reachable(conn, user_id, id)",
+      "{ let _ = user_id; Message::find(conn, id) }", "pins_require_reachable_messages_and_rooms")
+check("csrf", "rust/crates/campfire/src/controllers/rooms/polls.rs",
+      "before_actions(c, Before::default()).await?;", "before_actions(c, Before::default().skip_forgery_protection()).await?;",
+      "poll_and_pin_writes_require_csrf_and_reject_bot_keys")
+check("anonymous-voters", "rust/crates/views/src/messages/parts.rs",
+      "if self.anonymous {", "if false {", "poll_partials_match_rails_open_voted_anonymous_closed_and_error_bytes")
+check("pin-list-bytes", "rust/crates/views/templates/rooms/pins/_list.html",
+      'class="pins-panel__excerpt"', 'class="pins-panel__excerpt-broken"', "pin_partials_match_rails_list_count_badge_frame_and_empty_bytes")
+check("broadcast-origin", "rust/crates/campfire/src/channels/message_features.rs",
+      ".with(|value| value.borrow().clone())", ".with(|_| None::<String>)", "poll_and_pin_frames_reach_a_real_websocket_without_session_values")
+check("dst-gap", "rust/crates/db/src/slash_commands/time_parser.rs",
+      "dt.checked_add(Span::new().hours(1))", "dt.checked_add(Span::new().minutes(30))", "builder_dates_match_rails_zones_and_dst_gap_fold")
+check("pin-cap", "rust/crates/db/src/models/message_pin.rs",
+      "MAX_PER_ROOM: i64 = 50", "MAX_PER_ROOM: i64 = 51", "pins_enforce_the_cap_but_repinning_a_full_room_succeeds")
+check("poll-json-order", "rust/crates/db/src/models/poll.rs",
+      '"id": self.id,\n            "message_id": self.message_id,',
+      '"message_id": self.message_id,\n            "id": self.id,', "poll_http_matches_real_rails_responses_and_transactional_create_errors")
+check("pin-note", "rust/crates/db/src/models/message_pin.rs",
+      "if let Some(note) = pin.post_pin_note(tx, message)? {", "if let Some(note) = None::<Message> {",
+      "pin_requests_match_rails_and_keep_the_note_quiet_and_idempotent")
+check("atomic-job", "rust/crates/campfire/src/jobs.rs",
+      "let id = self.queue.enqueue(tx, &request)?;", "let id = 0;",
+      "poll_creation_rolls_back_when_the_durable_job_insert_is_rejected")
+check("turbo-vote", "rust/crates/campfire/src/controllers/rooms/polls.rs",
+      "campfire_cable::turbo::Action::Replace", "campfire_cable::turbo::Action::Append",
+      "ballots_replace_and_retract_in_turbo_and_reject_foreign_rooms_and_odd_shapes")
+check("sti-pin-list", "rust/crates/campfire/src/controllers/rooms/pins.rs",
+      "campfire_db::broadcasts::room_param_key(room.room_type)", '"rooms_closed".to_owned()',
+      "boards_reject_root_polls_and_pin_lists_keep_their_sti_dom_identity")
+check("request-zone", "rust/crates/campfire/src/controllers/message_features.rs",
+      "campfire_views::time::Zone::for_user(name.as_deref())", '{ let _ = name; campfire_views::time::Zone::utc() }',
+      "a_zone_local_multiple_anonymous_poll_shows_only_each_viewers_ballot")
+check("pin-order", "rust/crates/db/src/models/message_pin.rs",
+      '\"message_pins\".\"created_at\" DESC, \"message_pins\".\"id\" DESC',
+      '\"message_pins\".\"created_at\" ASC, \"message_pins\".\"id\" ASC',
+      "pins_list_orders_newest_first_and_keeps_thread_jump_links")
+check("origin-restoration", "rust/crates/campfire/src/channels/message_features.rs",
+      "ORIGIN.with(|origin| origin.replace(self.0.take()));", "let _ = &self.0;",
+      "channels::message_features::tests::origin_is_present_for_commit_callbacks_and_restored_after_errors_and_panics")
+print("WS8bm2 discrimination: 16 compiled regressions detected; sources restored", flush=True)

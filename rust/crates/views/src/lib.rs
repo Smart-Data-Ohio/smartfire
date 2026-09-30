@@ -19,6 +19,7 @@ pub mod autocompletable;
 pub mod rooms;
 pub mod messages;
 pub mod searches;
+pub mod pins;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the
 /// helpers read from `Current`, `request`, `flash` and the session.
