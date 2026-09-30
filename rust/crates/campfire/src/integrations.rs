@@ -14,6 +14,7 @@
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
 pub mod fizzy;
+pub mod twitter;
 pub mod image_proxy;
 mod jobs;
 pub mod action_claims;

@@ -1,5 +1,5 @@
 //! `LinkEmbed::UrlClassifier` and `LinkEmbed.normalize_url`, from our fork.
-use crate::integrations::linkedin;
+use crate::integrations::{linkedin,twitter};
 use campfire_richtext::uri;
 use regex::Regex;
 use std::sync::LazyLock;
@@ -9,10 +9,6 @@ static SUPPRESSED_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)<
 static INTERNAL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)/rooms/[0-9]+").unwrap());
 static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https://github\.com/(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)/(?:pull|pulls)/[0-9]+\b").unwrap()
-});
-static TWITTER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"https?://(?:www\.|mobile\.)?(?:twitter\.com|x\.com)/(?:i/(?:web/)?status/|[A-Za-z0-9_]{1,15}/status(?:es)?/)[0-9]{1,25}\b")
-        .unwrap()
 });
 static DRIVE: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     [
@@ -69,7 +65,7 @@ pub fn fizzy_card_url(url: &str, base: &str) -> bool {
 
 pub fn special_url(url: &str) -> bool {
     github_pr_url(url)
-        || TWITTER.is_match(url)
+        || twitter::urls::is_post_url(url)
         || linkedin::is_post_url(url)
         || DRIVE.iter().any(|r| r.is_match(url))
         || uri::parse(url).ok().and_then(|u| u.host).is_some_and(|h| h.to_ascii_lowercase().contains("fizzy"))

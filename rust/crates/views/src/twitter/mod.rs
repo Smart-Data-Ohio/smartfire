@@ -1,0 +1,2 @@
+//! X card rendering helpers; inputs are plain facts, and no SQL/HTTP runs here.
+pub mod formatter;
