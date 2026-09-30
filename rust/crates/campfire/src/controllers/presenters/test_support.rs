@@ -111,8 +111,14 @@ pub fn david_cookie() -> String {
         .to_string()
 }
 
+pub struct TestBooted {
+    pub app: crate::app::App,
+    pub router: axum::Router,
+    jobs: Option<crate::jobs::Runner>,
+}
+
 pub struct TestApp {
-    pub booted: Booted,
+    pub booted: TestBooted,
     _dir: tempfile::TempDir,
 }
 
@@ -138,7 +144,15 @@ impl TestApp {
             _ => None,
         })
         .unwrap();
-        Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap(), _dir: dir })
+        let Booted { app, router, jobs } = boot_with_clock(config, clock).await.unwrap();
+        Some(TestApp { booted: TestBooted { app, router, jobs: Some(jobs) }, _dir: dir })
+    }
+
+    /// Match a Rails request oracle without a background worker consuming queued jobs.
+    pub async fn shutdown_jobs(&mut self) {
+        if let Some(jobs) = self.booted.jobs.take() {
+            jobs.shutdown(std::time::Duration::from_secs(5)).await;
+        }
     }
 
     pub fn db(&self) -> &campfire_db::Database {

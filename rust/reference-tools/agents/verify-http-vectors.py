@@ -23,6 +23,12 @@ def main():
         actual = (scratch / filename).read_bytes()
         compare_vectors(actual, expected, filename)
         print(f'WS11-api fresh {kind} oracle: {len(json.loads(actual)["cases"])} request/response pairs; byte-identical committed vectors')
+    periodic = (root / 'vectors/agent_periodic.json').read_bytes()
+    compare_vectors((scratch / 'agent_periodic.json').read_bytes(), periodic, 'agent_periodic.json')
+    periodic = json.loads(periodic)
+    runtime = json.loads((root / 'crates/campfire/src/ws8_runtime_vectors.json').read_text())
+    assert runtime['tasks'] == periodic['implemented_tasks'], 'scheduler tasks differ from Rails'
+    print(f"WS11-api fresh scheduler oracle: {len(periodic['all_tasks'])} Rails tasks captured; all {len(periodic['implemented_tasks'])} implemented Rust tasks asserted in Rails order")
     metadata = json.loads((root / 'crates/campfire/src/controllers/agents/mcp_metadata.json').read_text())
     names = {tool['name'] for tool in metadata['tools']}
     check_dispatch(names, (root / 'crates/campfire/src/controllers/agents/mcp.rs').read_text())

@@ -1,0 +1,115 @@
+{
+  "reference_pin": "d7c7de92",
+  "all_tasks": [
+    {
+      "name": "delayed jobs",
+      "seconds": 30
+    },
+    {
+      "name": "event reminders",
+      "seconds": 17
+    },
+    {
+      "name": "saved item reminders",
+      "seconds": 17
+    },
+    {
+      "name": "scheduled messages",
+      "seconds": 17
+    },
+    {
+      "name": "poll closing",
+      "seconds": 17
+    },
+    {
+      "name": "stuck rooms",
+      "seconds": 300
+    },
+    {
+      "name": "stranded agent webhooks",
+      "seconds": 30
+    },
+    {
+      "name": "stuck GitHub claims",
+      "seconds": 30
+    },
+    {
+      "name": "stuck Fizzy claims",
+      "seconds": 30
+    },
+    {
+      "name": "calendar push channels",
+      "seconds": 3600
+    },
+    {
+      "name": "clear plaintext bot tokens",
+      "seconds": 86400
+    },
+    {
+      "name": "retention prune",
+      "seconds": 123
+    },
+    {
+      "name": "presence leases",
+      "seconds": 60
+    },
+    {
+      "name": "meeting status",
+      "seconds": 60
+    },
+    {
+      "name": "out of office",
+      "seconds": 60
+    },
+    {
+      "name": "board sla nudges",
+      "seconds": 300
+    },
+    {
+      "name": "board stale digests",
+      "seconds": 3600
+    },
+    {
+      "name": "streaming messages",
+      "seconds": 30
+    },
+    {
+      "name": "slack imports",
+      "seconds": 30
+    }
+  ],
+  "implemented_tasks": [
+    {
+      "name": "saved item reminders",
+      "seconds": 17
+    },
+    {
+      "name": "scheduled messages",
+      "seconds": 17
+    },
+    {
+      "name": "poll closing",
+      "seconds": 17
+    },
+    {
+      "name": "stuck rooms",
+      "seconds": 300
+    },
+    {
+      "name": "stranded agent webhooks",
+      "seconds": 30
+    },
+    {
+      "name": "clear plaintext bot tokens",
+      "seconds": 86400
+    },
+    {
+      "name": "retention prune",
+      "seconds": 123
+    },
+    {
+      "name": "streaming messages",
+      "seconds": 30
+    }
+  ]
+}

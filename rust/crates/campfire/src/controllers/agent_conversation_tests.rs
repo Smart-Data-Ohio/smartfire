@@ -6,8 +6,13 @@ use campfire_kit::Method;
 use serde_json::{Value, json};
 
 async fn check(case: &Value) {
-    let app = setup().await;
+    let mut app = setup().await;
     let config = case["setup"].clone();
+    if config["owner_action"].is_string() {
+        // The Rails oracle enqueues ban cleanup without a worker consuming it.
+        // Keep that durable job pending while comparing the synchronous request.
+        app.shutdown_jobs().await;
+    }
     app.db().write(move |tx| {
         tx.conn().execute("UPDATE agents SET daily_message_cap=?,owner_id=127326141 WHERE id=?",rusqlite::params![config["cap"].as_i64(),AGENT])?;
         tx.conn().execute("UPDATE sqlite_sequence SET seq=1900600000 WHERE name='messages'",[])?;
@@ -26,7 +31,11 @@ async fn check(case: &Value) {
         if let Some(action)=config["owner_action"].as_str() {
             let mut user=campfire_db::User::find(tx.conn(),if config["different_target"].as_bool()==Some(true) {712064548} else {127326141})?;
             tx.conn().execute("UPDATE sessions SET ip_address='203.0.113.31' WHERE user_id=?",[user.id])?;
-            if action=="ban" {user.ban(tx)?;} else {user.deactivate(tx)?;}
+            if action=="ban" {
+                user.ban(tx)?;
+                let queued:i64=tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='RemoveBannedContentJob'",[],|r|r.get(0))?;
+                assert_eq!(queued,1,"ban cleanup remains durably queued like the Rails oracle");
+            } else {user.deactivate(tx)?;}
         }
         Ok(())
     }).await.unwrap();

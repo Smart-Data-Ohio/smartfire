@@ -716,7 +716,6 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     });
     let tasks: Vec<_> = periodic
         .tasks()
-        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     assert_eq!(serde_json::json!(tasks), golden["tasks"]);

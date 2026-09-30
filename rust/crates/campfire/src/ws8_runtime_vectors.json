@@ -77,8 +77,20 @@
       "seconds": 300
     },
     {
+      "name": "stranded agent webhooks",
+      "seconds": 30
+    },
+    {
+      "name": "clear plaintext bot tokens",
+      "seconds": 86400
+    },
+    {
       "name": "retention prune",
       "seconds": 123
+    },
+    {
+      "name": "streaming messages",
+      "seconds": 30
     }
   ],
   "broadcasts": [

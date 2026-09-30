@@ -21,7 +21,7 @@ def main():
     "app/services/agents/mcp_server.rb", "app/services/agents/event_polling.rb",
     "app/services/agents/steps.rb", "app/services/agents/slash_commands.rb",
     "app/models/user.rb", "app/models/user/bannable.rb",
-    "app/services/agents/streaming.rb", "app/models/message.rb", "app/models/message/broadcasts.rb",
+    "app/services/periodic/runner.rb", "app/services/agents/streaming.rb", "app/models/message.rb", "app/models/message/broadcasts.rb",
     "app/services/agents/context_builder.rb", "app/services/agents/posting.rb", "app/services/agents/direct_messages.rb",
     "app/services/agents/working_presence.rb", "app/services/agents/service_result.rb",
     "app/models/agent.rb", "app/models/agent_credential.rb", "app/models/agent_grant.rb",
