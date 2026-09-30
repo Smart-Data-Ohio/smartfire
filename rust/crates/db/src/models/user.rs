@@ -141,6 +141,9 @@ pub struct UserChanges {
     pub role: Option<Role>,
     pub status: Option<Status>,
     pub bio: Option<Option<String>>,
+    pub time_zone: Option<Option<String>>,
+    /// A submitted zone key is an explicit choice even when its value is filtered or nil.
+    pub time_zone_explicit: Option<bool>,
     /// `Users::ProfilesController`: blocks Google email auto-linking after a self-change.
     pub email_self_changed_at: Option<Timestamp>,
 }
@@ -391,6 +394,16 @@ impl User {
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {
+        // `User::StatusSettings`: blank Not set normalizes to nil; unknown zones fail save.
+        let zone = changes.time_zone
+            .map(|zone| zone.filter(|value| !campfire_richtext::ruby::is_blank(value)));
+        if zone.as_ref().and_then(|zone| zone.as_deref())
+            .is_some_and(|name| crate::slash_commands::time_parser::known_zone(name).is_none())
+        {
+            let mut errors = crate::Errors::default();
+            errors.add("time_zone", "is not a valid time zone");
+            return Err(crate::Error::RecordInvalid(errors));
+        }
         let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql>)> = Vec::new();
         if let Some(name) = changes.name.filter(|n| *n != self.name) {
             self.name = name.clone();
@@ -418,6 +431,28 @@ impl User {
         }
         if let Some(at) = changes.email_self_changed_at {
             sets.push(("email_self_changed_at", Box::new(at)));
+        }
+        // These profile preferences are not part of the compact User projection. Compare
+        // stored values so an unchanged assignment doesn't touch updated_at (Rails dirty tracking).
+        if let Some(zone) = zone {
+            let current: Option<String> = tx.conn().query_row(
+                "SELECT time_zone FROM users WHERE id=?",
+                [self.id],
+                |r| r.get(0),
+            )?;
+            if zone != current {
+                sets.push(("time_zone", Box::new(zone)));
+            }
+        }
+        if let Some(explicit) = changes.time_zone_explicit {
+            let current: Option<bool> = tx.conn().query_row(
+                "SELECT time_zone_explicit FROM users WHERE id=?",
+                [self.id],
+                |r| r.get(0),
+            )?;
+            if current != Some(explicit) {
+                sets.push(("time_zone_explicit", Box::new(explicit)));
+            }
         }
         if sets.is_empty() {
             return Ok(());

@@ -14,6 +14,8 @@ FILES = [
     "rust/crates/campfire/src/controllers/users/profiles.rs",
     "rust/crates/campfire/src/controllers/sessions.rs",
     "rust/crates/campfire/src/controllers/sessions/transfers.rs",
+    "rust/crates/campfire/src/controllers/accounts/users.rs",
+    "rust/crates/campfire/src/controllers/users/bans.rs",
     "rust/crates/views/src/users.rs",
     "rust/crates/views/templates/users/profiles/show.html",
 ]
@@ -52,4 +54,4 @@ try:
 finally:
     for name, content in fixed.items():
         (ROOT / name).write_bytes(content)
-    print("Restored all seven fixed production files")
+    print(f"Restored all {len(FILES)} fixed production files")
