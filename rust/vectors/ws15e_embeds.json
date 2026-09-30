@@ -1,0 +1,1028 @@
+{
+  "reference": "d7c7de92",
+  "addresses": [
+    {
+      "address": "0.0.0.0",
+      "blocked": true
+    },
+    {
+      "address": "0.255.255.255",
+      "blocked": true
+    },
+    {
+      "address": "127.0.0.0",
+      "blocked": true
+    },
+    {
+      "address": "127.0.0.1",
+      "blocked": true
+    },
+    {
+      "address": "127.255.255.255",
+      "blocked": true
+    },
+    {
+      "address": "10.0.0.0",
+      "blocked": true
+    },
+    {
+      "address": "10.255.255.255",
+      "blocked": true
+    },
+    {
+      "address": "172.16.0.0",
+      "blocked": true
+    },
+    {
+      "address": "172.31.255.255",
+      "blocked": true
+    },
+    {
+      "address": "192.168.0.0",
+      "blocked": true
+    },
+    {
+      "address": "192.168.255.255",
+      "blocked": true
+    },
+    {
+      "address": "169.254.0.1",
+      "blocked": true
+    },
+    {
+      "address": "169.254.169.254",
+      "blocked": true
+    },
+    {
+      "address": "169.254.255.255",
+      "blocked": true
+    },
+    {
+      "address": "93.184.216.34",
+      "blocked": false
+    },
+    {
+      "address": "8.8.8.8",
+      "blocked": false
+    },
+    {
+      "address": "::ffff:192.168.1.1",
+      "blocked": true
+    },
+    {
+      "address": "::ffff:10.0.0.1",
+      "blocked": true
+    },
+    {
+      "address": "::ffff:172.16.0.1",
+      "blocked": true
+    },
+    {
+      "address": "::ffff:169.254.169.254",
+      "blocked": true
+    },
+    {
+      "address": "::ffff:93.184.216.34",
+      "blocked": true
+    },
+    {
+      "address": "::192.168.1.1",
+      "blocked": true
+    },
+    {
+      "address": "::10.0.0.1",
+      "blocked": true
+    },
+    {
+      "address": "::169.254.169.254",
+      "blocked": true
+    },
+    {
+      "address": "::93.184.216.34",
+      "blocked": true
+    },
+    {
+      "address": "100.64.0.1",
+      "blocked": true
+    },
+    {
+      "address": "100.127.255.255",
+      "blocked": true
+    },
+    {
+      "address": "64:ff9b::a9fe:a9fe",
+      "blocked": true
+    },
+    {
+      "address": "64:ff9b::a00:5",
+      "blocked": true
+    },
+    {
+      "address": "64:ff9b:1::a00:1",
+      "blocked": true
+    },
+    {
+      "address": "64:ff9b:1::808:808",
+      "blocked": true
+    },
+    {
+      "address": "64:ff9b:1:ffff::1",
+      "blocked": true
+    },
+    {
+      "address": "::ffff:0:169.254.169.254",
+      "blocked": true
+    },
+    {
+      "address": "::ffff:0:a9fe:a9fe",
+      "blocked": true
+    },
+    {
+      "address": "::ffff:0:127.0.0.1",
+      "blocked": true
+    },
+    {
+      "address": "::ffff:0:192.168.0.1",
+      "blocked": true
+    },
+    {
+      "address": "64:ff9b::808:808",
+      "blocked": false
+    },
+    {
+      "address": "2002:a9fe:a9fe::",
+      "blocked": true
+    },
+    {
+      "address": "2001::1",
+      "blocked": true
+    },
+    {
+      "address": "::1",
+      "blocked": true
+    },
+    {
+      "address": "fd00:ec2::254",
+      "blocked": true
+    },
+    {
+      "address": "fe80::1",
+      "blocked": true
+    },
+    {
+      "address": "ff02::1",
+      "blocked": true
+    },
+    {
+      "address": "2001:db8::1",
+      "blocked": true
+    },
+    {
+      "address": "2001:2::1",
+      "blocked": true
+    },
+    {
+      "address": "2606:4700:4700::1111",
+      "blocked": false
+    },
+    {
+      "address": "not-an-ip",
+      "blocked": true
+    },
+    {
+      "address": "",
+      "blocked": true
+    },
+    {
+      "address": "168.63.129.16",
+      "blocked": false
+    },
+    {
+      "address": "192.0.0.9",
+      "blocked": true
+    },
+    {
+      "address": "2001:3::1",
+      "blocked": false
+    },
+    {
+      "address": "2001:4:112::1",
+      "blocked": false
+    },
+    {
+      "address": "4000::1",
+      "blocked": false
+    },
+    {
+      "address": "3fff::1",
+      "blocked": false
+    },
+    {
+      "address": "5f00::1",
+      "blocked": false
+    }
+  ],
+  "hosts": [
+    {
+      "host": "private.example.com",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "private.example.com"
+      ]
+    },
+    {
+      "host": "example.com",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "example.com"
+      ]
+    },
+    {
+      "host": "images.example.com",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "images.example.com"
+      ]
+    },
+    {
+      "host": "nxdomain.example.com",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "nxdomain.example.com"
+      ]
+    },
+    {
+      "host": "2130706433",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": []
+    },
+    {
+      "host": "0x7f000001",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": []
+    },
+    {
+      "host": "017700000001",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": []
+    },
+    {
+      "host": "127.1",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": []
+    },
+    {
+      "host": "3232235521",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": []
+    },
+    {
+      "host": "134744072",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "8.8.8.8"
+      },
+      "lookups": []
+    },
+    {
+      "host": "8.8.8.8",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "8.8.8.8"
+      },
+      "lookups": []
+    },
+    {
+      "host": "[::1]",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": []
+    },
+    {
+      "host": "[8.8.8.8]",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "8.8.8.8"
+      },
+      "lookups": []
+    },
+    {
+      "host": "[2606:4700:4700::1111]",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "2606:4700:4700::1111"
+      },
+      "lookups": []
+    },
+    {
+      "host": "0x08080808",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "8.8.8.8"
+      },
+      "lookups": []
+    },
+    {
+      "host": "010.010.010.010",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "8.8.8.8"
+      },
+      "lookups": []
+    },
+    {
+      "host": "8.8.2056",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "8.8.8.8"
+      },
+      "lookups": []
+    },
+    {
+      "host": "under_score.example",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "under_score.example"
+      ]
+    },
+    {
+      "host": "-lead.example",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "-lead.example"
+      ]
+    },
+    {
+      "host": "example.com.",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "example.com."
+      ]
+    },
+    {
+      "host": "09.1.1.1",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "09.1.1.1"
+      ]
+    },
+    {
+      "host": "1.2.3.4.",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "1.2.3.4."
+      ]
+    },
+    {
+      "host": "",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": []
+    },
+    {
+      "host": "a..b",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "a..b"
+      ]
+    },
+    {
+      "host": "host%eth0",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "host%eth0"
+      ]
+    },
+    {
+      "host": "exämple.com",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "exämple.com"
+      ]
+    },
+    {
+      "host": "[v1.x]",
+      "answers": [
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "[v1.x]"
+      ]
+    },
+    {
+      "host": "images.example.com",
+      "answers": [
+        "::1"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": [
+        "images.example.com"
+      ]
+    },
+    {
+      "host": "images.example.com",
+      "answers": [
+        "fd00::1"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": [
+        "images.example.com"
+      ]
+    },
+    {
+      "host": "images.example.com",
+      "answers": [
+        "fe80::1"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": [
+        "images.example.com"
+      ]
+    },
+    {
+      "host": "images.example.com",
+      "answers": [
+        "::ffff:127.0.0.1"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": [
+        "images.example.com"
+      ]
+    },
+    {
+      "host": "private.example.com",
+      "answers": [
+        "192.168.1.1"
+      ],
+      "result": {
+        "error": "violation"
+      },
+      "lookups": [
+        "private.example.com"
+      ]
+    },
+    {
+      "host": "nxdomain.example.com",
+      "answers": [],
+      "result": {
+        "error": "unresolvable"
+      },
+      "lookups": [
+        "nxdomain.example.com"
+      ]
+    },
+    {
+      "host": "mixed.example",
+      "answers": [
+        "::1",
+        "2606:4700:4700::1111",
+        "10.0.0.1",
+        "93.184.216.34"
+      ],
+      "result": {
+        "ip": "93.184.216.34"
+      },
+      "lookups": [
+        "mixed.example"
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": null,
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": " ",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "/other",
+      "result": {
+        "url": "https://example.com/other"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "../next",
+      "result": {
+        "url": "https://example.com/next"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "./",
+      "result": {
+        "url": "https://example.com/a/"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "../../../../next",
+      "result": {
+        "url": "https://example.com/next"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "?new=2",
+      "result": {
+        "url": "https://example.com/a/b?new=2"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "#frag",
+      "result": {
+        "url": "https://example.com/a/b?old=1#frag"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "//cdn.example.com/x",
+      "result": {
+        "url": "https://cdn.example.com/x"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "//cdn.example.com:51550/x",
+      "result": {
+        "url": "https://cdn.example.com:51550/x"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "/a//b/../c",
+      "result": {
+        "url": "https://example.com/a//c"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "https://cdn.example.com/a/../x",
+      "result": {
+        "url": "https://cdn.example.com/a/../x"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "http://bad host/",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "javascript:alert(1)",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "/%2e%2e/x",
+      "result": {
+        "url": "https://example.com/%2e%2e/x"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "/bad%zz",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/b?old=1#old",
+      "location": "?q=hello world",
+      "result": {
+        "url": "https://example.com/a/b?q=hello%20world"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": null,
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": " ",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "/other",
+      "result": {
+        "url": "http://example.com/other"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "../next",
+      "result": {
+        "url": "http://example.com/next"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "./",
+      "result": {
+        "url": "http://example.com/"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "../../../../next",
+      "result": {
+        "url": "http://example.com/next"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "?new=2",
+      "result": {
+        "url": "http://example.com?new=2"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "#frag",
+      "result": {
+        "url": "http://example.com#frag"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "//cdn.example.com/x",
+      "result": {
+        "url": "http://cdn.example.com/x"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "//cdn.example.com:51550/x",
+      "result": {
+        "url": "http://cdn.example.com:51550/x"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "/a//b/../c",
+      "result": {
+        "url": "http://example.com/a//c"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "https://cdn.example.com/a/../x",
+      "result": {
+        "url": "https://cdn.example.com/a/../x"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "http://bad host/",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "javascript:alert(1)",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "/%2e%2e/x",
+      "result": {
+        "url": "http://example.com/%2e%2e/x"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "/bad%zz",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "http://example.com",
+      "location": "?q=hello world",
+      "result": {
+        "url": "http://example.com?q=hello%20world"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": null,
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": " ",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "/other",
+      "result": {
+        "url": "https://example.com/other"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "../next",
+      "result": {
+        "url": "https://example.com/next"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "./",
+      "result": {
+        "url": "https://example.com/b/"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "../../../../next",
+      "result": {
+        "url": "https://example.com/next"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "?new=2",
+      "result": {
+        "url": "https://example.com/b/c?new=2"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "#frag",
+      "result": {
+        "url": "https://example.com/a/../b/c#frag"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "//cdn.example.com/x",
+      "result": {
+        "url": "https://cdn.example.com/x"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "//cdn.example.com:51550/x",
+      "result": {
+        "url": "https://cdn.example.com:51550/x"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "/a//b/../c",
+      "result": {
+        "url": "https://example.com/a//c"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "https://cdn.example.com/a/../x",
+      "result": {
+        "url": "https://cdn.example.com/a/../x"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "http://bad host/",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "javascript:alert(1)",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "/%2e%2e/x",
+      "result": {
+        "url": "https://example.com/%2e%2e/x"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "/bad%zz",
+      "result": {
+        "error": "denied"
+      }
+    },
+    {
+      "base": "https://example.com/a/../b/c",
+      "location": "?q=hello world",
+      "result": {
+        "url": "https://example.com/b/c?q=hello%20world"
+      }
+    }
+  ],
+  "signed": [
+    {
+      "url": "https://images.example.com/photo.png",
+      "signed": "Imh0dHBzOi8vaW1hZ2VzLmV4YW1wbGUuY29tL3Bob3RvLnBuZyI=--a11208a6ecdd522a281ab76f9d7a7d8e7f5fbbd5",
+      "path": "/embeds/image/Imh0dHBzOi8vaW1hZ2VzLmV4YW1wbGUuY29tL3Bob3RvLnBuZyI=--a11208a6ecdd522a281ab76f9d7a7d8e7f5fbbd5",
+      "verified_url": "https://images.example.com/photo.png"
+    },
+    {
+      "url": "http://example.com/a?b=1&c=2",
+      "signed": "Imh0dHA6Ly9leGFtcGxlLmNvbS9hP2I9MVx1MDAyNmM9MiI=--52bba9b8336f3a01faa8febc1f80f2bb24cbd7ab",
+      "path": "/embeds/image/Imh0dHA6Ly9leGFtcGxlLmNvbS9hP2I9MVx1MDAyNmM9MiI=--52bba9b8336f3a01faa8febc1f80f2bb24cbd7ab",
+      "verified_url": "http://example.com/a?b=1&c=2"
+    },
+    {
+      "url": "https://example.com/%20.png",
+      "signed": "Imh0dHBzOi8vZXhhbXBsZS5jb20vJTIwLnBuZyI=--e7c065b542713fb88abb7ebf639c830262b2a92c",
+      "path": "/embeds/image/Imh0dHBzOi8vZXhhbXBsZS5jb20vJTIwLnBuZyI=--e7c065b542713fb88abb7ebf639c830262b2a92c",
+      "verified_url": "https://example.com/%20.png"
+    },
+    {
+      "url": "javascript:alert(1)",
+      "signed": "ImphdmFzY3JpcHQ6YWxlcnQoMSki--abd7795f6878a8ca6fa8c2da7ec3e9ee008a5ceb",
+      "path": "/embeds/image/ImphdmFzY3JpcHQ6YWxlcnQoMSki--abd7795f6878a8ca6fa8c2da7ec3e9ee008a5ceb",
+      "verified_url": null
+    },
+    {
+      "url": "//images.example.com/x.png",
+      "signed": "Ii8vaW1hZ2VzLmV4YW1wbGUuY29tL3gucG5nIg==--c4e478f8d5750c215f96cfe57cc49e74fcd37dcb",
+      "path": "/embeds/image/Ii8vaW1hZ2VzLmV4YW1wbGUuY29tL3gucG5nIg==--c4e478f8d5750c215f96cfe57cc49e74fcd37dcb",
+      "verified_url": null
+    }
+  ],
+  "embed_html": "<figure class=\"attachment attachment--content attachment--og\">\n  <actiontext-opengraph-embed>\n    <div class=\"og-embed gap\">\n      <div class=\"og-embed__content\">\n        <div class=\"og-embed__title\">\n          <a rel=\"noreferrer\" target=\"_blank\" href=\"https://example.com/page\">Title</a>\n        </div>\n        <div class=\"og-embed__description\">Description</div>\n      </div>\n        <div class=\"og-embed__image\">\n          <img src=\"/embeds/image/Imh0dHBzOi8vZXhhbXBsZS5jb20vaW1hZ2UucG5nIg==--0c2ef8222aaba4b18cf7de4b96db60cbfd40ee7a\" class=\"image center\" alt=\"\">\n        </div>\n    </div>\n  </actiontext-opengraph-embed>\n</figure>\n",
+  "image_response": {
+    "status": 200,
+    "cache_control": "max-age=3600, private",
+    "content_type": "image/png",
+    "content_disposition": "inline",
+    "content_transfer_encoding": "binary"
+  }
+}

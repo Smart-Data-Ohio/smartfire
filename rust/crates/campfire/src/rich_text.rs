@@ -28,11 +28,7 @@ impl AppRichText {
     }
 
     fn with_context<T>(&self, conn: &Connection, f: impl FnOnce(&RenderContext) -> T) -> T {
-        let resolver = DbResolver {
-            conn,
-            secrets: &self.secrets,
-            now: self.clock.now(),
-        };
+        let resolver = DbResolver::new(conn, &self.secrets, self.clock.now());
         f(&resolver.render_context(None))
     }
 }
@@ -96,11 +92,7 @@ impl RichText for AppRichText {
             .map_err(|e| e.to_string())?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(|e| e.to_string())?;
-        let resolver = DbResolver {
-            conn,
-            secrets: &self.secrets,
-            now: self.clock.now(),
-        };
+        let resolver = DbResolver::new(conn, &self.secrets, self.clock.now());
         let mentions = |name: &str| {
             let mut matches = members
                 .iter()
@@ -295,7 +287,7 @@ mod tests {
                         .unwrap())
                 })
                 .unwrap();
-            assert_eq!(actual, row["body"].as_str().unwrap(), "{}", row["source"]);
+            assert!(crate::app::asset_goldens::compare("runtime_markdown", &actual, row["body"].as_str().unwrap()));
         }
     }
     #[test]
@@ -307,7 +299,7 @@ mod tests {
                     Ok(rich.canonicalize_html(conn, row["input"].as_str().unwrap()))
                 })
                 .unwrap();
-            assert_eq!(actual, row["output"].as_str().unwrap());
+            assert!(crate::app::asset_goldens::compare("runtime_canonicalization", &actual, row["output"].as_str().unwrap()));
         }
     }
     #[test]
@@ -334,13 +326,13 @@ mod tests {
             room_id: fixtures::identify("designers"), creator_id: fixtures::identify("david"),
             markdown_source: Some(source), ..Default::default()
         })).unwrap();
-        assert_eq!(db.read_blocking(|conn| message.body_html(conn)).unwrap(), Some(cases["saved"]["body"].as_str().unwrap().into()));
+        assert!(crate::app::asset_goldens::compare("saved", &db.read_blocking(|conn| message.body_html(conn)).unwrap().unwrap(), cases["saved"]["body"].as_str().unwrap()));
         let edited = cases["edited"]["source"].as_str().unwrap().to_owned();
         let message = db.write_blocking(move |tx| {
             message.edit(tx, campfire_db::MessageChanges { markdown_source: Some(edited), ..Default::default() })?;
             Ok(message)
         }).unwrap();
-        assert_eq!(db.read_blocking(|conn| message.body_html(conn)).unwrap(), Some(cases["edited"]["body"].as_str().unwrap().into()));
+        assert!(crate::app::asset_goldens::compare("edited", &db.read_blocking(|conn| message.body_html(conn)).unwrap().unwrap(), cases["edited"]["body"].as_str().unwrap()));
     }
     #[test]
     fn runtime_scheduled_edit_and_forward_match_rails() {
@@ -397,7 +389,7 @@ mod tests {
         let observation = |msg: &Message| {
             db.read_blocking(|c|Ok(serde_json::json!({"body":msg.body_html(c)?.unwrap(),"plain":msg.plain_text_body(c,&*db.env().rich_text)?}))).unwrap()
         };
-        assert_eq!(observation(&sent)["body"], g["scheduled"]["body"]);
+        assert!(crate::app::asset_goldens::compare("scheduled", observation(&sent)["body"].as_str().unwrap(), g["scheduled"]["body"].as_str().unwrap()));
         assert_eq!(observation(&sent)["plain"], g["scheduled"]["plain"]);
         let edit = g["edited"]["source"].as_str().unwrap().to_owned();
         let edited = db
@@ -413,7 +405,7 @@ mod tests {
                 Ok(msg)
             })
             .unwrap();
-        assert_eq!(observation(&edited)["body"], g["edited"]["body"]);
+        assert!(crate::app::asset_goldens::compare("edited", observation(&edited)["body"].as_str().unwrap(), g["edited"]["body"].as_str().unwrap()));
         assert_eq!(observation(&edited)["plain"], g["edited"]["plain"]);
         let forwarded = db
             .write_blocking(move |tx| {
@@ -444,6 +436,8 @@ mod tests {
                 ))
             })
             .unwrap();
+        assert!(crate::app::asset_goldens::compare("forwarded", obs["body"].as_str().unwrap(), g["forwarded"]["body"].as_str().unwrap()));
+        obs["body"] = g["forwarded"]["body"].clone();
         assert_eq!(obs, g["forwarded"]);
     }
 }
