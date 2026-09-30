@@ -1,46 +1,18 @@
-//! Read-only Agent association seam for the management pages. Lifecycle writes remain WS11.
+//! Remaining directory/secret read adapters. Bot profile and cap fields use WS11 Agent.
 mod downcase_table;
 
-use crate::sql::query_one;
 use crate::{Connection, Result, Timestamp};
 
-#[derive(Clone, Debug)]
-pub struct AgentProfile {
-    pub id: i64,
-    pub owner_id: Option<i64>,
-    pub kind: String,
-    pub provider: Option<String>,
-    pub runtime: Option<String>,
-    pub description: Option<String>,
-    pub daily_message_cap: Option<i64>,
-    pub daily_board_post_cap: Option<i64>,
-    pub daily_external_action_cap: Option<i64>,
-    pub suspended_at: Option<Timestamp>,
-    pub encrypted_webhook_signing_secret: Option<String>,
-}
-impl AgentProfile {
-    pub fn for_user(conn: &Connection, user_id: i64) -> Result<Option<Self>> {
-        query_one(
-            conn,
-            "SELECT * FROM agents WHERE user_id=? LIMIT 1",
-            [user_id],
-            |r| {
-                Ok(Self {
-                    id: r.get("id")?,
-                    owner_id: r.get("owner_id")?,
-                    kind: r.get("kind")?,
-                    provider: r.get("provider")?,
-                    runtime: r.get("runtime")?,
-                    description: r.get("description")?,
-                    daily_message_cap: r.get("daily_message_cap")?,
-                    daily_board_post_cap: r.get("daily_board_post_cap")?,
-                    daily_external_action_cap: r.get("daily_external_action_cap")?,
-                    suspended_at: r.get("suspended_at")?,
-                    encrypted_webhook_signing_secret: r.get("webhook_signing_secret")?,
-                })
-            },
-        )
-    }
+/// FLAGGED WS11 read seam: Agent does not expose a read-only signing-secret getter.
+/// Its ensure/reset operations write and must never run while rendering GET /edit.
+/// Preserve Some("") because Rails' `agent.secret || webhook.secret` only falls back for nil.
+pub fn webhook_signing_secret(
+    conn: &Connection,
+    encryption: &rails_compat::ar_encryption::ArEncryption,
+    agent_id: i64,
+) -> Result<Option<String>> {
+    let encrypted: Option<String> = conn.query_row("SELECT webhook_signing_secret FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
+    encrypted.map(|value| encryption.decrypt(&value).map_err(|error| crate::Error::Other(error.to_string()))).transpose()
 }
 
 /// Public directory facts only. Suspension and banned-user activity are distinct.
@@ -58,7 +30,9 @@ pub struct DirectoryRecord {
     pub last_seen_at: Option<Timestamp>,
 }
 
-/// Agent.for_directory: no deactivated users; active first, Ruby Unicode downcase order.
+/// FLAGGED WS11 directory adapter: preserve the pinned Ruby downcase table until
+/// Agent::for_directory uses it instead of Rust's contextual Unicode lowercase.
+/// No deactivated users; active first, Ruby Unicode downcase order.
 pub fn for_directory(conn: &Connection) -> Result<Vec<DirectoryRecord>> {
     let mut records = crate::sql::query_all(conn,
         "SELECT a.id, a.user_id, a.owner_id, a.kind, a.status, a.status_note, a.suspended_at, a.created_at, a.status_changed_at, a.last_seen_at FROM agents a JOIN users u ON u.id=a.user_id WHERE u.status != 1", [], |r| {

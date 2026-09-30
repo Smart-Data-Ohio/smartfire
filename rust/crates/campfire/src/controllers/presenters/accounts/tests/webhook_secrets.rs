@@ -1,5 +1,46 @@
 //! Rails agent and legacy webhook secret controllers through the seeded HTTP stack.
 use super::*;
+
+#[tokio::test]
+async fn bot_edit_reads_ws11_profile_and_secret_without_creating_or_rotating_secrets() {
+    // Rails Accounts::BotsController#edit uses Agent.secret || Webhook.secret:
+    // an encrypted empty string hides the display and does not use the fallback.
+    for (agent_value, webhook_value, displayed) in [
+        (None, None, None),
+        (None, Some("legacy display fixture"), Some("legacy display fixture")),
+        (Some(""), Some("legacy display fixture"), None),
+        (Some("agent display fixture"), Some("legacy display fixture"), Some("agent display fixture")),
+    ] {
+        let test = boot_seed("default").await.expect("default seed");
+        let bot: i64 = test.label("users.bender").parse().unwrap();
+        let crypto = test.booted.app.ar_encryption.clone();
+        let before = test.booted.app.db.write(move |tx| {
+            let agent = campfire_db::Agent::for_user(tx.conn(), bot)?.unwrap();
+            let agent_cipher = agent_value.map(|value| crypto.encrypt(value));
+            let webhook_cipher = webhook_value.map(|value| crypto.encrypt(value));
+            tx.conn().execute("UPDATE agents SET webhook_signing_secret=? WHERE id=?", rusqlite::params![agent_cipher,agent.id])?;
+            tx.conn().execute("UPDATE webhooks SET signing_secret=? WHERE user_id=?", rusqlite::params![webhook_cipher,bot])?;
+            Ok((agent.id,agent_cipher,agent.updated_at))
+        }).await.unwrap();
+        let mut browser = test.browser("198.51.100.168");
+        browser.cookies.insert("session_token".into(), test.label("session_cookies.david"));
+        for _ in 0..2 {
+            let page = browser.get(&format!("/account/bots/{bot}/edit")).await;
+            assert_eq!(page.status, StatusCode::OK);
+            let html = page.text();
+            assert_eq!(html.contains("Copy this secret into the receiving service"), displayed.is_some());
+            if let Some(value) = displayed { assert!(html.contains(value)); }
+            if displayed != Some("legacy display fixture") { assert!(!html.contains("legacy display fixture")); }
+        }
+        let after = test.booted.app.db.read(move |conn| {
+            let agent = campfire_db::Agent::for_user(conn, bot)?.unwrap();
+            let cipher: Option<String> = conn.query_row("SELECT webhook_signing_secret FROM agents WHERE id=?", [agent.id], |r| r.get(0))?;
+            Ok((agent.id,cipher,agent.updated_at))
+        }).await.unwrap();
+        assert_eq!(after,before,"edit GET must not ensure or reset an agent secret");
+        assert_eq!(secret(&test,bot).await.as_deref(),webhook_value);
+    }
+}
 async fn legacy(test: &Test, url: Option<&str>) -> i64 {
     let url = url.map(str::to_owned);
     test.booted

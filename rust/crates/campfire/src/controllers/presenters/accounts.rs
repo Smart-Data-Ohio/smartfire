@@ -244,7 +244,7 @@ pub fn account_users(conn: &Connection, can_administer: bool) -> campfire_db::Re
 pub fn bot(conn: &Connection, secrets: &Secrets, bot: &User) -> campfire_db::Result<Bot> {
     let mut rooms = Room::for_user_without_directs(conn, bot.id)?;
     sort_by_lower_name(&mut rooms, |room| room.name.as_deref().unwrap_or(""));
-    let agent = campfire_db::models::agent_profile::AgentProfile::for_user(conn, bot.id)?;
+    let agent = campfire_db::Agent::for_user(conn, bot.id)?;
     let owner_name = agent.as_ref().and_then(|agent| agent.owner_id)
         .map(|id| User::find_by_id(conn, id)).transpose()?.flatten().map(|user| user.name);
     let icon_name: Option<String> = conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| row.get(0))?;
@@ -253,22 +253,23 @@ pub fn bot(conn: &Connection, secrets: &Secrets, bot: &User) -> campfire_db::Res
     } else { None };
     Ok(Bot {
         user: user_summary(secrets, bot),
-        kind: agent.map(|agent| agent.kind), owner_name, icon,
+        kind: agent.map(|agent| agent.kind.name().into()), owner_name, icon,
         rooms: rooms.into_iter().map(|room| BotRoom { id: room.id, name: room.name.unwrap_or_default() }).collect(),
     })
 }
 
 /// Read-only facts for the bot edit form. Reading a legacy bot never creates an Agent.
 pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, bot: &User, zone: &campfire_views::time::Zone) -> campfire_db::Result<BotForm> {
-    use campfire_db::models::{agent_posting::{self, Cap}, agent_profile::AgentProfile, webhook::Webhook};
+    use campfire_db::models::{agent_posting::{self, Cap}, agent_profile, webhook::Webhook};
     use rusqlite::OptionalExtension;
     let avatar = attachments::attached_blob(conn, "User", bot.id, "avatar")?;
     let icon_name: Option<String> = conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| row.get(0))?;
-    let profile = AgentProfile::for_user(conn, bot.id)?;
+    let profile = campfire_db::Agent::for_user(conn, bot.id)?;
     let webhook = Webhook::find_by_user(conn, bot.id)?;
     // Ruby's || falls back only for nil, not for an empty agent secret.
-    let signing_secret = match profile.as_ref().and_then(|agent| agent.encrypted_webhook_signing_secret.as_deref()) {
-        Some(value) => Some(app.ar_encryption.decrypt(value).map_err(|error| campfire_db::Error::Other(error.to_string()))?),
+    let agent_secret = profile.as_ref().map(|agent| agent_profile::webhook_signing_secret(conn, &app.ar_encryption, agent.id)).transpose()?.flatten();
+    let signing_secret = match agent_secret {
+        Some(value) => Some(value),
         None => webhook.as_ref().map(|webhook| webhook.signing_secret(&app.ar_encryption)).transpose()?.flatten(),
     };
     let budget_usage_line = profile.as_ref().map(|agent| -> campfire_db::Result<String> {

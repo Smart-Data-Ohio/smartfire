@@ -19,3 +19,21 @@ Expiry number/true inputs remain uncast non-time model values in Rails. The
 corpus records their types; a Timestamp-only Rust seam cannot represent them.
 The selected date/string HTTP assertions do not establish parity for these
 values, Rails multiparameter assignment, or the whole Date._parse grammar.
+
+WS11 API inspection at `bee976336a5e1f9be689103dc5bb3d5ffb07e75c`:
+
+- Bot profile and typed cap reads now call `Agent::for_user`, including the
+  edit form and bot list. The duplicate `AgentProfile` struct was removed.
+- Secret reset calls the real `agent_access::reset_webhook_signing_secret`.
+  A flagged read-only getter remains: `ensure_webhook_signing_secret` writes
+  on nil/blank and cannot be called while rendering an edit GET. Rails' nil
+  fallback to a legacy webhook secret also differs from blank fallback.
+- `UserChanges`, `NewUser` and `create_bot` still expose no icon setter.
+  `AgentChanges` still accepts `Option<Option<i64>>` caps, without raw inputs.
+  The icon/raw-cap write flags remain until those owner APIs exist; the
+  reference corpus is not reclassified as passing mutation coverage.
+- The existing directory adapter remains because its pinned Ruby Unicode
+  downcase table differs from `Agent::for_directory`'s Rust lowercase.
+  WS11 owns resolving that policy before the directory seam can be removed.
+- GitHub and Fizzy fragments remain the named WS15g/WS15e call sites with
+  their Rails partial names. Their PRs and main are not merged here.
