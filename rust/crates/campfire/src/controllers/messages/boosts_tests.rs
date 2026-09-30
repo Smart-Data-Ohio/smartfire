@@ -79,3 +79,64 @@ async fn duplicate_toggle_rolls_back_on_touch_failure_and_concurrent_toggles_ser
     assert_eq!(first.status,StatusCode::FOUND);assert_eq!(second.status,StatusCode::FOUND);
     assert!(app.db().read(move |conn|Boost::for_message(conn,id)).await.unwrap().is_empty());
 }
+
+fn pages_oracle() -> Value {serde_json::from_str(include_str!("../../../../../vectors/messaging/boost-pages.json")).unwrap()}
+
+#[tokio::test]
+async fn boost_pages_match_complete_rails_forms_distinct_counts_and_escaped_reactors() {
+    use askama::Template;
+    use campfire_views::helpers::request_forgery::{self, AuthenticityTokens, RequestSecrets};
+    use crate::controllers::presenters::{Presenter, page};
+    struct FixedTokens;
+    impl AuthenticityTokens for FixedTokens {
+        fn global(&self) -> String {"GLOBAL".into()}
+        fn for_form(&self, action: &str, method: &str) -> String {format!("{method}:{action}")}
+    }
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    let id = app.db().write(|tx| {
+        let m = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("Boost pages".into()), client_message_id: Some("boost-pages".into()), ..Default::default()})?;
+        assert_eq!(pages_oracle()["message_id"],m.id);
+        Ok(m.id)
+    }).await.unwrap();
+    for row in pages_oracle()["rows"].as_array().unwrap() {
+        if row["setup"] == "boosts" {
+            app.db().write(move |tx| {
+                for b in pages_oracle()["boosts"].as_array().unwrap() {Boost::create(tx,id,b[0].as_i64().unwrap(),b[1].as_str().unwrap())?;}
+                Ok(())
+            }).await.unwrap();
+        } else if row["setup"] == "name" {
+            app.db().write(|tx| {tx.conn().execute("UPDATE users SET name=? WHERE id=?", ("<a href=\"/unsafe\">Jason & \"quoted\"</a>",JASON))?;Ok(())}).await.unwrap();
+        }
+        let name = row["name"].as_str().unwrap();
+        let user_id = row["user_id"].as_i64().unwrap();
+        let mut browser = app.sign_in(user_id).await;
+        let response = browser.send(Req::new(Method::GET,row["path"].as_str().unwrap()).header("turbo-frame","boosting")).await;
+        assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{name}: {}",response.text());
+        assert_eq!(response.content_type(),row["content_type"].as_str(),"{name}");
+        if row["action"] == "actions" {
+            assert_eq!(response.text(),row["body"].as_str().unwrap(),"{name}");
+            continue;
+        }
+        let runtime = app.booted.app.clone();
+        let new = row["action"] == "new";
+        let html = app.db().read(move |conn| {
+            let p = Presenter::new(conn,&runtime,None);
+            let message = p.message(&Message::find(conn,id)?)?;
+            let user = p.user_view(user_id)?;
+            page::render_detached_at(&runtime,None,"http://campfire.test",|ctx| request_forgery::rendering_with(RequestSecrets {tokens: Box::new(FixedTokens),csp_nonce: None}, || {
+                if new {campfire_views::messages::NewBoost {ctx,message: &message,user: &user}.render()}
+                else {campfire_views::messages::BoostsIndex {ctx,message: &message}.render()}
+            })).map_err(|e| campfire_db::Error::Other(e.to_string()))
+        }).await.unwrap();
+        if html != row["body"].as_str().unwrap() {rails_mismatch(&html,row["body"].as_str().unwrap(),name);}
+        // The actual HTTP form uses its session's live token; the complete detached form above
+        // gives Rails and Rust identical token inputs rather than masking generated HTML.
+        let text = response.text();
+        if new {
+            assert!(text.contains("data-controller=\"markdown-autocomplete\""),"{name}");
+            assert!(text.contains("data-profile-card-url="),"{name}");
+            let token = text.split("name=\"authenticity_token\" value=\"").nth(1).unwrap().split('"').next().unwrap();
+            assert!(browser.real_authenticity_token().unwrap().is_valid(token,&format!("/messages/{id}/boosts"),"post"),"{name}");
+        }
+    }
+}

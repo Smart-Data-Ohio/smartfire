@@ -61,6 +61,8 @@ FILES = [
     "app/views/messages/destroy.turbo_stream.erb",
     "app/views/messages/create.turbo_stream.erb",
     "app/views/messages/boosts/_reactions.html.erb",
+    "app/views/messages/boosts/index.html.erb",
+    "app/views/messages/boosts/new.html.erb",
     "app/views/layouts/application.html.erb",
     "app/views/messages/_system_note.html.erb",
     "app/views/messages/_context.html.erb",
