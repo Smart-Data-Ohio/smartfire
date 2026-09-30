@@ -11,6 +11,579 @@
       "html": "<a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000\" width=\"32\" height=\"32\" /></a>"
     }
   ],
+  "review": {
+    "sidebar_empty": "<turbo-frame data-turbo-permanent=\"true\" data-controller=\"rooms-list read-rooms turbo-frame\" data-rooms-list-unread-class=\"unread\" data-action=\"presence:present@window->rooms-list#read room:mark-unread@window->rooms-list#markUnread read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload\" id=\"user_sidebar\" target=\"_top\"></turbo-frame>",
+    "sidebar_src": "<turbo-frame data-turbo-permanent=\"true\" data-controller=\"rooms-list read-rooms turbo-frame\" data-rooms-list-unread-class=\"unread\" data-action=\"presence:present@window->rooms-list#read room:mark-unread@window->rooms-list#markUnread read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload\" id=\"user_sidebar\" src=\"/users/me/sidebar?x=1&amp;y=2\" target=\"_top\"><b>Body</b></turbo-frame>",
+    "involvements": [
+      {
+        "direct": false,
+        "param_key": "rooms_open",
+        "level": "mentions",
+        "next": "everything",
+        "label": "Mentions",
+        "description": "Notifying about @ mentions",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=everything\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_open_1\" tabindex=\"0\" class=\"btn mentions\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-mentions-945d1b91.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_open_1\">Notifying about @ mentions</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=everything\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_open",
+        "level": "everything",
+        "next": "muted",
+        "label": "Everything",
+        "description": "Notifying about all messages",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=muted\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_open_1\" tabindex=\"0\" class=\"btn everything\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-everything-cde41b14.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_open_1\">Notifying about all messages</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=muted\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_open",
+        "level": "muted",
+        "next": "nothing",
+        "label": "Muted",
+        "description": "Muted, notifying only about @ mentions",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=nothing\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_open_1\" tabindex=\"0\" class=\"btn muted\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-muted-7e9f1f4a.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_open_1\">Muted, notifying only about @ mentions</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=nothing\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_open",
+        "level": "nothing",
+        "next": "invisible",
+        "label": "Off",
+        "description": "Notifications are off",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=invisible\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_open_1\" tabindex=\"0\" class=\"btn nothing\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-nothing-d8096c76.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_open_1\">Notifications are off</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=invisible\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_open",
+        "level": "invisible",
+        "next": "mentions",
+        "label": "Invisible",
+        "description": "Notifications are off and room invisible in sidebar",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=mentions\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_open_1\" tabindex=\"0\" class=\"btn invisible\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-invisible-8b495073.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_open_1\">Notifications are off and room invisible in sidebar</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=mentions\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_closed",
+        "level": "mentions",
+        "next": "everything",
+        "label": "Mentions",
+        "description": "Notifying about @ mentions",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=everything\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_closed_1\" tabindex=\"0\" class=\"btn mentions\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-mentions-945d1b91.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_closed_1\">Notifying about @ mentions</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=everything\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_closed",
+        "level": "everything",
+        "next": "muted",
+        "label": "Everything",
+        "description": "Notifying about all messages",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=muted\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_closed_1\" tabindex=\"0\" class=\"btn everything\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-everything-cde41b14.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_closed_1\">Notifying about all messages</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=muted\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_closed",
+        "level": "muted",
+        "next": "nothing",
+        "label": "Muted",
+        "description": "Muted, notifying only about @ mentions",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=nothing\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_closed_1\" tabindex=\"0\" class=\"btn muted\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-muted-7e9f1f4a.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_closed_1\">Muted, notifying only about @ mentions</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=nothing\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_closed",
+        "level": "nothing",
+        "next": "invisible",
+        "label": "Off",
+        "description": "Notifications are off",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=invisible\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_closed_1\" tabindex=\"0\" class=\"btn nothing\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-nothing-d8096c76.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_closed_1\">Notifications are off</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=invisible\" /></form>"
+      },
+      {
+        "direct": false,
+        "param_key": "rooms_closed",
+        "level": "invisible",
+        "next": "mentions",
+        "label": "Invisible",
+        "description": "Notifications are off and room invisible in sidebar",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=mentions\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_closed_1\" tabindex=\"0\" class=\"btn invisible\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-invisible-8b495073.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_closed_1\">Notifications are off and room invisible in sidebar</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=mentions\" /></form>"
+      },
+      {
+        "direct": true,
+        "param_key": "rooms_direct",
+        "level": "everything",
+        "next": "muted",
+        "label": "Everything",
+        "description": "Notifying about all messages",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=muted\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_direct_1\" tabindex=\"0\" class=\"btn everything\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-everything-cde41b14.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_direct_1\">Notifying about all messages</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=muted\" /></form>"
+      },
+      {
+        "direct": true,
+        "param_key": "rooms_direct",
+        "level": "muted",
+        "next": "nothing",
+        "label": "Muted",
+        "description": "Muted, notifying only about @ mentions",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=nothing\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_direct_1\" tabindex=\"0\" class=\"btn muted\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-muted-7e9f1f4a.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_direct_1\">Muted, notifying only about @ mentions</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=nothing\" /></form>"
+      },
+      {
+        "direct": true,
+        "param_key": "rooms_direct",
+        "level": "nothing",
+        "next": "everything",
+        "label": "Off",
+        "description": "Notifications are off",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/1/involvement?involvement=everything\"><input type=\"hidden\" name=\"_method\" value=\"put\" /><button role=\"checkbox\" aria-checked=\"true\" aria-labelledby=\"involvement_label_rooms_direct_1\" tabindex=\"0\" class=\"btn nothing\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/notification-bell-nothing-d8096c76.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\" id=\"involvement_label_rooms_direct_1\">Notifications are off</span></button><input type=\"hidden\" name=\"authenticity_token\" value=\"put:/rooms/1/involvement?involvement=everything\" /></form>"
+      }
+    ],
+    "direct_buttons": [
+      {
+        "name": "Jane",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/directs?user_ids%5B%5D=2\"><button class=\"btn btn--primary full-width txt--large\" aria-label=\"Message Jane\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/messages-9395d503.svg\" /></button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/directs?user_ids%5B%5D=2\" /></form>"
+      },
+      {
+        "name": "Jane <&> \"Doe\"",
+        "html": "<form class=\"button_to\" method=\"post\" action=\"/rooms/directs?user_ids%5B%5D=2\"><button class=\"btn btn--primary full-width txt--large\" aria-label=\"Message Jane &lt;&amp;&gt; &quot;Doe&quot;\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/messages-9395d503.svg\" /></button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/directs?user_ids%5B%5D=2\" /></form>"
+      }
+    ],
+    "link_room": "<a class=\"btn\" data-rooms-list-target=\"room\" data-room-id=\"9\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-action=\"click-&gt;test#open\" href=\"/rooms/1\"><b>Room</b></a>",
+    "link_back": "<a class=\"btn\" href=\"/rooms/1\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>",
+    "link_back_referrers": [
+      "<a class=\"btn\" href=\"/\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>",
+      "<a class=\"btn\" href=\"/\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>",
+      "<a class=\"btn\" href=\"http://campfire.test/rooms/1\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>"
+    ],
+    "link_back_visited": [
+      "<a class=\"btn\" href=\"/\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>",
+      "<a class=\"btn\" href=\"/rooms/1\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>"
+    ],
+    "clipboard": "<button class=\"btn\" data-controller=\"copy-to-clipboard\" data-action=\"copy-to-clipboard#copy\" data-copy-to-clipboard-success-class=\"btn--success\" data-copy-to-clipboard-content-value=\"a &lt;&amp;&gt; b\">Copy</button>",
+    "qr": "<a class=\"btn\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/qr_code/aHR0cHM6Ly9jYW1wZmlyZS50ZXN0Lz9hPTEmYj0y\" href=\"/qr_code/aHR0cHM6Ly9jYW1wZmlyZS50ZXN0Lz9hPTEmYj0y\">QR</a>",
+    "web_share": "<button class=\"btn\" hidden=\"hidden\" data-controller=\"web-share\" data-action=\"web-share#share\" data-web-share-url-value=\"/session\" data-web-share-text-value=\"Text\" data-web-share-title-value=\"Title &lt;&amp;&gt;\">Share</button>",
+    "filter_menu": "<menu class=\"flex flex-column gap margin-none pad overflow-y constrain-height\" data-controller=\"filter\" data-filter-active-class=\"filter--active\" data-filter-selected-class=\"selected\"><b>User</b></menu>",
+    "filter_search": "<input type=\"search\" id=\"search\" autocorrect=\"off\" autocomplete=\"off\" data-1p-ignore=\"true\" class=\"input input--transparent full-width\" placeholder=\"Filter…\" data-action=\"input-&gt;filter#filter\">",
+    "profile_submit": "<button class=\"btn btn--reversed center txt-large\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save changes</span></button>",
+    "profile_trigger": [
+      "<span data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/2/card\">Jane</span>",
+      "<span data-action=\"click-&gt;profile-card#open keydown-&gt;profile-card#open\" data-profile-card-url=\"/users/2/card\">Jane</span>"
+    ],
+    "turbo_frame": "<turbo-frame data-action=\"turbo:frame-load-&gt;test#loaded\" id=\"custom\" src=\"/frame?a=1&amp;b=2\" target=\"_top\">Body</turbo-frame>",
+    "turbo_reload": "<meta name=\"turbo-visit-control\" content=\"reload\">",
+    "cable_meta": "<meta name=\"action-cable-url\" content=\"/cable\">",
+    "current_user_nil": "",
+    "current_user": "<meta name=\"current-user-id\" content=\"2\" /><meta name=\"current-user-name\" content=\"Jane &lt;&amp;&gt;\" />",
+    "title_default": "<title>Smartfire</title>",
+    "title_escaped": "<title>Title &lt;&amp;&gt;</title>",
+    "version_badge": "<span class=\"version-badge\">parity</span>",
+    "custom_styles": [
+      "",
+      "<style data-turbo-track=\"reload\"></style>",
+      "<style data-turbo-track=\"reload\">.card { color: red; }</style>"
+    ],
+    "settings": [
+      {
+        "theme": null,
+        "text_size": null,
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": null,
+        "text_size": "smaller",
+        "user_theme": "system",
+        "user_text_size": "smaller",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": null,
+        "text_size": "small",
+        "user_theme": "system",
+        "user_text_size": "small",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": null,
+        "text_size": "default",
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": null,
+        "text_size": "large",
+        "user_theme": "system",
+        "user_text_size": "large",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": null,
+        "text_size": "larger",
+        "user_theme": "system",
+        "user_text_size": "larger",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": null,
+        "text_size": "invalid",
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "light",
+        "text_size": null,
+        "user_theme": "light",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light\">"
+      },
+      {
+        "theme": "light",
+        "text_size": "smaller",
+        "user_theme": "light",
+        "user_text_size": "smaller",
+        "html": "<meta name=\"color-scheme\" content=\"light\">"
+      },
+      {
+        "theme": "light",
+        "text_size": "small",
+        "user_theme": "light",
+        "user_text_size": "small",
+        "html": "<meta name=\"color-scheme\" content=\"light\">"
+      },
+      {
+        "theme": "light",
+        "text_size": "default",
+        "user_theme": "light",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light\">"
+      },
+      {
+        "theme": "light",
+        "text_size": "large",
+        "user_theme": "light",
+        "user_text_size": "large",
+        "html": "<meta name=\"color-scheme\" content=\"light\">"
+      },
+      {
+        "theme": "light",
+        "text_size": "larger",
+        "user_theme": "light",
+        "user_text_size": "larger",
+        "html": "<meta name=\"color-scheme\" content=\"light\">"
+      },
+      {
+        "theme": "light",
+        "text_size": "invalid",
+        "user_theme": "light",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light\">"
+      },
+      {
+        "theme": "dark",
+        "text_size": null,
+        "user_theme": "dark",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"dark\">"
+      },
+      {
+        "theme": "dark",
+        "text_size": "smaller",
+        "user_theme": "dark",
+        "user_text_size": "smaller",
+        "html": "<meta name=\"color-scheme\" content=\"dark\">"
+      },
+      {
+        "theme": "dark",
+        "text_size": "small",
+        "user_theme": "dark",
+        "user_text_size": "small",
+        "html": "<meta name=\"color-scheme\" content=\"dark\">"
+      },
+      {
+        "theme": "dark",
+        "text_size": "default",
+        "user_theme": "dark",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"dark\">"
+      },
+      {
+        "theme": "dark",
+        "text_size": "large",
+        "user_theme": "dark",
+        "user_text_size": "large",
+        "html": "<meta name=\"color-scheme\" content=\"dark\">"
+      },
+      {
+        "theme": "dark",
+        "text_size": "larger",
+        "user_theme": "dark",
+        "user_text_size": "larger",
+        "html": "<meta name=\"color-scheme\" content=\"dark\">"
+      },
+      {
+        "theme": "dark",
+        "text_size": "invalid",
+        "user_theme": "dark",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"dark\">"
+      },
+      {
+        "theme": "system",
+        "text_size": null,
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "system",
+        "text_size": "smaller",
+        "user_theme": "system",
+        "user_text_size": "smaller",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "system",
+        "text_size": "small",
+        "user_theme": "system",
+        "user_text_size": "small",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "system",
+        "text_size": "default",
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "system",
+        "text_size": "large",
+        "user_theme": "system",
+        "user_text_size": "large",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "system",
+        "text_size": "larger",
+        "user_theme": "system",
+        "user_text_size": "larger",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "system",
+        "text_size": "invalid",
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "invalid",
+        "text_size": null,
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "invalid",
+        "text_size": "smaller",
+        "user_theme": "system",
+        "user_text_size": "smaller",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "invalid",
+        "text_size": "small",
+        "user_theme": "system",
+        "user_text_size": "small",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "invalid",
+        "text_size": "default",
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "invalid",
+        "text_size": "large",
+        "user_theme": "system",
+        "user_text_size": "large",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "invalid",
+        "text_size": "larger",
+        "user_theme": "system",
+        "user_text_size": "larger",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      },
+      {
+        "theme": "invalid",
+        "text_size": "invalid",
+        "user_theme": "system",
+        "user_text_size": "default",
+        "html": "<meta name=\"color-scheme\" content=\"light dark\">"
+      }
+    ],
+    "zones_meta": [
+      {
+        "zone": null,
+        "explicit": false,
+        "html": "<meta name=\"time-zone\">"
+      },
+      {
+        "zone": null,
+        "explicit": true,
+        "html": "<meta name=\"time-zone\" content=\"\">"
+      },
+      {
+        "zone": "Eastern Time (US & Canada)",
+        "explicit": false,
+        "html": "<meta name=\"time-zone\" content=\"Eastern Time (US &amp; Canada)\">"
+      },
+      {
+        "zone": "",
+        "explicit": false,
+        "html": "<meta name=\"time-zone\">"
+      },
+      {
+        "zone": "",
+        "explicit": true,
+        "html": "<meta name=\"time-zone\" content=\"\">"
+      }
+    ],
+    "body_classes": [
+      {
+        "admin": false,
+        "logo": false,
+        "body": null,
+        "result": ""
+      },
+      {
+        "admin": false,
+        "logo": false,
+        "body": "custom",
+        "result": "custom"
+      },
+      {
+        "admin": false,
+        "logo": true,
+        "body": null,
+        "result": "account-has-logo"
+      },
+      {
+        "admin": false,
+        "logo": true,
+        "body": "custom",
+        "result": "custom account-has-logo"
+      },
+      {
+        "admin": true,
+        "logo": false,
+        "body": null,
+        "result": "admin"
+      },
+      {
+        "admin": true,
+        "logo": false,
+        "body": "custom",
+        "result": "custom admin"
+      },
+      {
+        "admin": true,
+        "logo": true,
+        "body": null,
+        "result": "admin account-has-logo"
+      },
+      {
+        "admin": true,
+        "logo": true,
+        "body": "custom",
+        "result": "custom admin account-has-logo"
+      }
+    ],
+    "account_logo": [
+      "<figure class=\"account-logo avatar \"><img alt=\"Account logo\" src=\"/account/logo?v=20260210120000\" width=\"300\" height=\"300\" /></figure>",
+      "<figure class=\"account-logo avatar small\"><img alt=\"Account logo\" src=\"/account/logo?v=20260210120000\" width=\"300\" height=\"300\" /></figure>"
+    ],
+    "avatars": [
+      {
+        "icon": "github",
+        "uploaded": false,
+        "id": 394959859,
+        "title": "Bender Bot",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000",
+        "html": "<a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img alt=\"GitHub\" class=\"icon-avatar icon-avatar--brand extra\" src=\"/assets/icons/brands/github-07b84d6c.svg\" width=\"32\" height=\"32\" /></a>"
+      },
+      {
+        "icon": "tada",
+        "uploaded": false,
+        "id": 394959859,
+        "title": "Bender Bot",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000",
+        "html": "<a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><span role=\"img\" aria-label=\"Tada\" class=\"icon-avatar icon-avatar--emoji extra\" style=\"font-size: 32px\">🎉</span></a>"
+      },
+      {
+        "icon": "no_such_icon",
+        "uploaded": false,
+        "id": 394959859,
+        "title": "Bender Bot",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000",
+        "html": "<a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" class=\"extra\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000\" width=\"32\" height=\"32\" /></a>"
+      },
+      {
+        "icon": "github",
+        "uploaded": true,
+        "id": 394959859,
+        "title": "Bender Bot",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000",
+        "html": "<a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" class=\"extra\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000\" width=\"32\" height=\"32\" /></a>"
+      }
+    ],
+    "icons": [
+      {
+        "name": "github",
+        "html": "<img alt=\"GitHub\" class=\"icon-avatar icon-avatar--brand extra\" style=\"color: red\" aria-label=\"Override\" src=\"/assets/icons/brands/github-07b84d6c.svg\" width=\"24\" height=\"24\" />"
+      },
+      {
+        "name": "tada",
+        "html": "<span role=\"img\" aria-label=\"Override\" class=\"icon-avatar icon-avatar--emoji extra\" style=\"font-size: 24px; color: red\">🎉</span>"
+      },
+      {
+        "name": "no_such_icon",
+        "html": ""
+      }
+    ],
+    "textarea": "<form action=\"/x\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/x\" /><textarea name=\"room[description]\" id=\"room_description\">\n\nhi</textarea></form>",
+    "search_label": "<form action=\"/x\" accept-charset=\"UTF-8\" method=\"get\"><label class=\"label\" for=\"room_q\">Find &lt;&amp;&gt;</label><input value=\"a &lt;&amp;&gt;\" data-action=\"input-&gt;search#query\" type=\"search\" name=\"room[q]\" id=\"room_q\" /></form>",
+    "button_form": "<form data-action=\"submit-&gt;test#send\" class=\"button_to\" method=\"post\" action=\"/x\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button aria-label=\"Delete\" type=\"submit\">Delete</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/x\" /></form>",
+    "tokenless_form": "<form action=\"/x\" accept-charset=\"UTF-8\" method=\"post\">Body</form>",
+    "radio": "<input type=\"radio\" name=\"mode\" id=\"radio-id\" value=\"on\" data-action=\"change-&gt;test#choose\" aria-label=\"On\" checked=\"checked\" />",
+    "datetime": "<input type=\"datetime-local\" name=\"dt\" id=\"dt\" value=\"2026-01-01T09:00\" data-action=\"change-&gt;test#choose\" aria-label=\"Date\" />",
+    "message_html": {
+      "david@37signals.com": "\n<div id=\"message_0001\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"309456473\" data-room-id=\"654632876\" data-message-timestamp=\"1770721200000\" data-message-updated-at=\"1770724800000\" data-sort-value=\"1770721200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"149087659\" data-actions-url=\"http://campfire.test/rooms/654632876/messages/309456473/actions\" data-message-url=\"http://campfire.test/rooms/654632876/messages/309456473\" data-boost-url=\"http://campfire.test/messages/309456473/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-02-10T11:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260210120000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_0001\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_0001\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_0001\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Jason\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n        <strong data-reply-target=\"author\">Jason</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/654632876/@309456473\"><time class=\"message__timestamp\" datetime=\"2026-02-10T11:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/654632876/@309456473\">Designers</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_0001\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"trix-content\">\n  First post!\n</div>\n\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_0001\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_0001\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_0001\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_0001\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_0001\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_0001\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_0001\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_0001\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_0001\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_309456473\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"127326141\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-label=\"David boosted Hello\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260210120000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">Hello</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/309456473/boosts/309456473\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_0001\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/309456473/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_0001\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>",
+      "jz@37signals.com": "\n<div id=\"message_0001\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"309456473\" data-room-id=\"654632876\" data-message-timestamp=\"1770721200000\" data-message-updated-at=\"1770724800000\" data-sort-value=\"1770721200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"149087659\" data-actions-url=\"http://campfire.test/rooms/654632876/messages/309456473/actions\" data-message-url=\"http://campfire.test/rooms/654632876/messages/309456473\" data-boost-url=\"http://campfire.test/messages/309456473/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-02-10T11:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"Jason\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\" href=\"/users/149087659\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260210120000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_0001\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_0001\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_0001\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"Jason\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n        <strong data-reply-target=\"author\">Jason</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/654632876/@309456473\"><time class=\"message__timestamp\" datetime=\"2026-02-10T11:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/654632876/@309456473\">Designers</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_0001\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"trix-content\">\n  First post!\n</div>\n\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_0001\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_0001\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_0001\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_0001\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_0001\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_0001\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_0001\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_0001\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_0001\" class=\"flex-inline flex-wrap gap\">\n\n    <div class=\"boosts__legacy flex-inline flex-wrap gap\">\n      <div id=\"boost_309456473\"\n    class=\"boost boost-item flex-inline postion--relative max-width align-center fill-white gap\"\n    data-controller=\"boost-delete\" data-boost-delete-perform-class=\"boost--deleting\" data-boost-delete-reveal-class=\"expanded\" data-boost-delete-booster-id-value=\"127326141\">\n  <figure class=\"avatar boost__avatar flex-item-no-shrink\">\n    <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-label=\"David boosted Hello\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260210120000\" width=\"48\" height=\"48\" /></a>\n  </figure>\n\n  <span role=\"button\" class=\"txt-small\" data-action=\"click-&gt;boost-delete#reveal keydown.enter-&gt;boost-delete#reveal:prevent\" data-boost-delete-target=\"content\">Hello</span>\n\n  <form class=\"button_to\" method=\"post\" action=\"/messages/309456473/boosts/309456473\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button data-action=\"boost-delete#perform\" data-boost-delete-target=\"button\" class=\"btn btn--negative flex-item-justify-end boost__delete\" type=\"submit\">\n    <img aria-hidden=\"true\" src=\"/assets/minus-b31a1093.svg\" width=\"20\" height=\"20\" />\n    <span class=\"for-screen-reader\">Delete this boost</span>\n</button></form></div>\n<span id=\"delete_boost_accessible_label\" class=\"for-screen-reader\">Press enter to delete this boost</span>\n\n    </div>\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_0001\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/309456473/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_0001\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div>"
+    },
+    "message": {
+      "id": 309456473,
+      "client_message_id": "0001",
+      "room_id": 654632876,
+      "room_name": "Designers",
+      "creator": {
+        "id": 149087659,
+        "name": "Jason",
+        "title": "Jason",
+        "avatar_url": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260210120000"
+      },
+      "created_at": "2026-02-10T11:00:00.000000Z",
+      "updated_at": "2026-02-10T12:00:00.000000Z",
+      "all_emoji": false,
+      "content": {
+        "type": "text",
+        "html": "<div class=\"trix-content\">\n  First post!\n</div>\n"
+      },
+      "boosts": []
+    }
+  },
   "zones": [
     [
       "International Date Line West",

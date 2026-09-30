@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 use crate::ViewContext;
 use crate::fragment_cache;
-use support::{epoch_ms, iso8601, RubyNumber};
+use support::{RubyNumber, epoch_ms, iso8601};
 
 /// What the message views show of a user: `avatar_tag` and the author heading.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -88,7 +88,9 @@ pub struct MessageView {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageContent {
     /// The presentation filters' output after `auto_link`, from the richtext crate.
-    Text { html: String },
+    Text {
+        html: String,
+    },
     Sound(SoundView),
     Attachment(AttachmentView),
     /// Rendering raised past `message_presentation`'s own rescue (or `plain_text_body` raised):
@@ -159,7 +161,11 @@ pub struct BoostView {
 /// and build a [`MessageView`] only on a miss.
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageItem {
-    Fragment { client_message_id: String, room_id: i64, html: fragment_cache::Fragment },
+    Fragment {
+        client_message_id: String,
+        room_id: i64,
+        html: fragment_cache::Fragment,
+    },
     View(Box<MessageView>),
 }
 
@@ -167,8 +173,12 @@ impl MessageItem {
     /// `dom_id(message)` / `dom_id(message, prefix)`.
     pub fn dom_id(&self, prefix: &str) -> String {
         match self {
-            MessageItem::Fragment { client_message_id, .. } if prefix.is_empty() => format!("message_{client_message_id}"),
-            MessageItem::Fragment { client_message_id, .. } => format!("{prefix}_message_{client_message_id}"),
+            MessageItem::Fragment {
+                client_message_id, ..
+            } if prefix.is_empty() => format!("message_{client_message_id}"),
+            MessageItem::Fragment {
+                client_message_id, ..
+            } => format!("{prefix}_message_{client_message_id}"),
             MessageItem::View(message) => message.dom_id(prefix),
         }
     }
@@ -184,12 +194,17 @@ impl MessageItem {
     /// order, including those this render just stored in `cache`. Call it after rendering, so the
     /// page's parts (and its ETag) don't depend on which messages happened to be cached before.
     /// A fragment with forms isn't: the page has this render's tokens where it has slots.
-    pub fn cached_fragments(cache: &fragment_cache::FragmentCache, items: &[MessageItem]) -> Vec<fragment_cache::Fragment> {
+    pub fn cached_fragments(
+        cache: &fragment_cache::FragmentCache,
+        items: &[MessageItem],
+    ) -> Vec<fragment_cache::Fragment> {
         items
             .iter()
             .filter_map(|item| match item {
                 MessageItem::Fragment { html, .. } => Some(html.clone()),
-                MessageItem::View(message) => cache.get(&message_fragment_key(message.id, message.updated_at)),
+                MessageItem::View(message) => {
+                    cache.get(&message_fragment_key(message.id, message.updated_at))
+                }
             })
             .filter(|html| !crate::helpers::request_forgery::has_token_slots(html))
             .collect()
@@ -289,7 +304,11 @@ pub struct MessagePartial<'a> {
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
         || message_fragment_key(message.id, message.updated_at),
-        || MessagePartial { ctx, message }.render().expect("messages/_message renders"),
+        || {
+            MessagePartial { ctx, message }
+                .render()
+                .expect("messages/_message renders")
+        },
     )
 }
 
@@ -300,9 +319,14 @@ pub fn cached_message(ctx: &ViewContext, message: &MessageView) -> crate::helper
 
 /// [`cached_message`] for a [`MessageItem`]: a fragment found up front goes out as it is, with
 /// this render's tokens in its slots.
-pub fn cached_message_item<'a>(ctx: &ViewContext, item: &'a MessageItem) -> askama::filters::Safe<std::borrow::Cow<'a, str>> {
+pub fn cached_message_item<'a>(
+    ctx: &ViewContext,
+    item: &'a MessageItem,
+) -> askama::filters::Safe<std::borrow::Cow<'a, str>> {
     askama::filters::Safe(match item {
-        MessageItem::Fragment { html, .. } => crate::helpers::request_forgery::fill_token_slots(html),
+        MessageItem::Fragment { html, .. } => {
+            crate::helpers::request_forgery::fill_token_slots(html)
+        }
         MessageItem::View(message) => std::borrow::Cow::Owned(self::message(ctx, message)),
     })
 }
@@ -315,9 +339,10 @@ pub fn cached_message_fragment(id: i64, updated_at: Timestamp) -> Option<fragmen
 
 fn message_fragment_key(id: i64, updated_at: Timestamp) -> String {
     format!(
-        "views/messages/_message:{}/{}/presentation-v3",
+        "views/messages/_message:{}/{}/presentation-v{}",
         message_digest(),
-        fragment_cache::cache_key_with_version("messages", id, updated_at)
+        fragment_cache::cache_key_with_version("messages", id, updated_at),
+        fragment_cache::keys::PRESENTATION_CACHE_VERSION,
     )
 }
 
@@ -331,7 +356,11 @@ pub fn boost(ctx: &ViewContext, boost: &BoostView) -> String {
                 fragment_cache::cache_key_with_version("boosts", boost.id, boost.updated_at)
             )
         },
-        || BoostPartial { ctx, boost }.render().expect("messages/boosts/_boost renders"),
+        || {
+            BoostPartial { ctx, boost }
+                .render()
+                .expect("messages/boosts/_boost renders")
+        },
     )
 }
 
@@ -345,7 +374,6 @@ fn message_digest() -> &'static str {
     static DIGEST: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         fragment_cache::digest(&[
             include_str!("../templates/messages/_message.html"),
-            include_str!("../templates/messages/_actions.html"),
             include_str!("../templates/messages/_presentation.html"),
             include_str!("../templates/messages/_unrenderable.html"),
             include_str!("../templates/messages/boosts/_boosts.html"),
@@ -356,8 +384,9 @@ fn message_digest() -> &'static str {
 }
 
 fn boost_digest() -> &'static str {
-    static DIGEST: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| fragment_cache::digest(&[include_str!("../templates/messages/boosts/_boost.html")]));
+    static DIGEST: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        fragment_cache::digest(&[include_str!("../templates/messages/boosts/_boost.html")])
+    });
     &DIGEST
 }
 

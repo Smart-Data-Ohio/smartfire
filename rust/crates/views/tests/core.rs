@@ -3,6 +3,8 @@ use askama::Template;
 use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext, helpers as h, layouts};
 use serde_json::Value;
 
+mod review;
+
 fn fixture(path: &str) -> String {
     std::fs::read_to_string(format!(
         "{}/tests/golden/core/{path}",

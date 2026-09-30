@@ -142,12 +142,15 @@ pub fn profile_card_trigger(user_id: i64, keyboard: bool) -> Attrs {
 pub fn button_to_direct_room_with(
     ctx: &ViewContext,
     user_id: impl std::borrow::Borrow<i64>,
+    name: &str,
 ) -> Html {
     let user_id = *user_id.borrow();
     button_to(
         &rooms_directs_with_users(&[user_id]),
-        attrs().class("btn btn--primary full-width txt--large"),
-        &image_tag(ctx, "messages.svg", attrs()).0,
+        attrs()
+            .class("btn btn--primary full-width txt--large")
+            .aria("label", format!("Message {name}")),
+        &image_tag(ctx, "messages.svg", attrs().aria_hidden()).0,
     )
 }
 
@@ -200,7 +203,7 @@ pub fn sidebar_turbo_frame_tag(src: Option<&str>, content: &str) -> Html {
         .data(
             "action",
             Safe(
-                "presence:present@window->rooms-list#read read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload"
+                "presence:present@window->rooms-list#read room:mark-unread@window->rooms-list#markUnread read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload"
                     .to_string(),
             ),
         );

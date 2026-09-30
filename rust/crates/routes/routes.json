@@ -5029,6 +5029,28 @@
             "gone": null
           },
           "path": "/agents/events/2/ack?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/events/2/ack.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/events/2/ack.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5451,6 +5473,24 @@
             "gone": null
           },
           "path": "/agents/approvals?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/approvals.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/approvals.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5488,6 +5528,24 @@
             "gone": null
           },
           "path": "/agents/context?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/context.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/context.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5525,6 +5583,24 @@
             "gone": null
           },
           "path": "/agents/dms?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/dms.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/dms.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5562,6 +5638,24 @@
             "gone": null
           },
           "path": "/agents/events?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/events.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/events.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5599,6 +5693,24 @@
             "gone": null
           },
           "path": "/agents/fizzy/boards?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/fizzy/boards.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/fizzy/boards.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5636,6 +5748,24 @@
             "gone": null
           },
           "path": "/agents/fizzy/card_actions?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/fizzy/card_actions.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/fizzy/card_actions.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5673,6 +5803,24 @@
             "gone": null
           },
           "path": "/agents/fizzy/cards/search?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/fizzy/cards/search.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/fizzy/cards/search.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5710,6 +5858,24 @@
             "gone": null
           },
           "path": "/agents/mcp?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/mcp.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/mcp.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5747,6 +5913,24 @@
             "gone": null
           },
           "path": "/agents/me?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/me.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/me.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5799,6 +5983,28 @@
             "gone": null
           },
           "path": "/agents/messages/2/pin?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/messages/2/pin.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/messages/2/pin.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5851,6 +6057,28 @@
             "gone": null
           },
           "path": "/agents/steps/2?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/steps/2.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/steps/2.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5888,6 +6116,24 @@
             "gone": null
           },
           "path": "/agents/steps?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/steps.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/steps.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5940,6 +6186,28 @@
             "gone": null
           },
           "path": "/agents/streaming_messages/2?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/streaming_messages/2.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/streaming_messages/2.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -5977,6 +6245,24 @@
             "gone": null
           },
           "path": "/agents/work?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/work.7?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/work.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -6029,6 +6315,28 @@
             "gone": null
           },
           "path": "/agents/work/2?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/work/2.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/work/2.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -7511,6 +7819,24 @@
             "gone": null
           },
           "path": "/users/me/profile/edit?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/profile/edit?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/profile/edit?q=kept"
         }
       ]
     },
@@ -7563,6 +7889,28 @@
             "gone": null
           },
           "path": "/users/me/push_subscriptions/2/edit?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/push_subscriptions/2/edit?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/push_subscriptions/2/edit?q=kept"
         }
       ]
     },
@@ -7665,6 +8013,28 @@
             "gone": null
           },
           "path": "/agents/streaming_messages/2/finalize?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/streaming_messages/2/finalize.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/agents/streaming_messages/2/finalize.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -10197,6 +10567,24 @@
             "gone": null
           },
           "path": "/users/me/profile/new?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/profile/new?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/profile/new?q=kept"
         }
       ]
     },
@@ -10234,6 +10622,24 @@
             "gone": null
           },
           "path": "/users/me/push_subscriptions/new?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/push_subscriptions/new?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/push_subscriptions/new?q=kept"
         }
       ]
     },
@@ -11481,6 +11887,24 @@
             "gone": null
           },
           "path": "/users/me/sessions/revoke_others?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/sessions/revoke_others?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/sessions/revoke_others?q=kept"
         }
       ]
     },
@@ -11583,6 +12007,28 @@
             "gone": null
           },
           "path": "/rooms/2/agents/github/pull_request_actions?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/agents/github/pull_request_actions.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/agents/github/pull_request_actions.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -11635,6 +12081,28 @@
             "gone": null
           },
           "path": "/rooms/2/agents/messages?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/agents/messages.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/agents/messages.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -11687,6 +12155,28 @@
             "gone": null
           },
           "path": "/rooms/2/agents/posts?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/agents/posts.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/agents/posts.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -11739,6 +12229,28 @@
             "gone": null
           },
           "path": "/rooms/2/agents/streaming_messages?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/agents/streaming_messages.7?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/agents/streaming_messages.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -11856,6 +12368,32 @@
             "gone": null
           },
           "path": "/rooms/2/2/messages/2?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2",
+            "2",
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/2/messages/2.7?q=kept"
+        },
+        {
+          "args": [
+            "2",
+            "2",
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/2/messages/2.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -11923,6 +12461,34 @@
             "gone": null
           },
           "path": "/rooms/2/2/messages/2/boosts/2?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2",
+            "2",
+            "2",
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/2/messages/2/boosts/2.7?q=kept"
+        },
+        {
+          "args": [
+            "2",
+            "2",
+            "2",
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/2/messages/2/boosts/2.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -11985,6 +12551,32 @@
             "gone": null
           },
           "path": "/rooms/2/2/messages/2/boosts?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2",
+            "2",
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/2/messages/2/boosts.7?q=kept"
+        },
+        {
+          "args": [
+            "2",
+            "2",
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/2/messages/2/boosts.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -12042,6 +12634,30 @@
             "gone": null
           },
           "path": "/rooms/2/2/messages?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2",
+            "2"
+          ],
+          "options": {
+            "format": "7",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/2/messages.7?q=kept"
+        },
+        {
+          "args": [
+            "2",
+            "2"
+          ],
+          "options": {
+            "format": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "format",
+          "path": "/rooms/2/2/messages.a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9?q=kept"
         }
       ]
     },
@@ -17245,6 +17861,24 @@
             "gone": null
           },
           "path": "/users/me/notification_settings?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/notification_settings?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/notification_settings?q=kept"
         }
       ]
     },
@@ -17282,6 +17916,24 @@
             "gone": null
           },
           "path": "/users/me/profile?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/profile?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/profile?q=kept"
         }
       ]
     },
@@ -17334,6 +17986,28 @@
             "gone": null
           },
           "path": "/users/me/push_subscriptions/2?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/push_subscriptions/2?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/push_subscriptions/2?q=kept"
         }
       ]
     },
@@ -17386,6 +18060,28 @@
             "gone": null
           },
           "path": "/users/me/push_subscriptions/2/test_notifications?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/push_subscriptions/2/test_notifications?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/push_subscriptions/2/test_notifications?q=kept"
         }
       ]
     },
@@ -17423,6 +18119,24 @@
             "gone": null
           },
           "path": "/users/me/push_subscriptions?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/push_subscriptions?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/push_subscriptions?q=kept"
         }
       ]
     },
@@ -17475,6 +18189,28 @@
             "gone": null
           },
           "path": "/users/me/sessions/2?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/sessions/2?q=kept"
+        },
+        {
+          "args": [
+            "2"
+          ],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/sessions/2?q=kept"
         }
       ]
     },
@@ -17512,6 +18248,24 @@
             "gone": null
           },
           "path": "/users/me/sessions?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/sessions?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/sessions?q=kept"
         }
       ]
     },
@@ -17549,6 +18303,24 @@
             "gone": null
           },
           "path": "/users/me/sidebar?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/sidebar?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/sidebar?q=kept"
         }
       ]
     },
@@ -17636,6 +18408,24 @@
             "gone": null
           },
           "path": "/users/me/status?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/status?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/status?q=kept"
         }
       ]
     },
@@ -17673,6 +18463,24 @@
             "gone": null
           },
           "path": "/users/me/time_zone?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/time_zone?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/time_zone?q=kept"
         }
       ]
     },
@@ -17710,6 +18518,24 @@
             "gone": null
           },
           "path": "/users/me/tour?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/tour?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/tour?q=kept"
         }
       ]
     },

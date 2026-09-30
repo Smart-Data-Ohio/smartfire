@@ -53,34 +53,62 @@ pub struct NamedRoute {
 pub enum Segment {
     Literal(&'static str),
     /// `:param`, escaped as a path segment (`/` becomes `%2F`).
-    Param,
+    Param {
+        name: &'static str,
+        default: Option<&'static str>,
+    },
     /// `*glob`, escaped as a path (`/` stays).
-    Glob,
+    Glob {
+        name: &'static str,
+        default: Option<&'static str>,
+    },
 }
 
 impl NamedRoute {
     /// The path for these arguments, in the order the Rails helper takes them positionally.
     pub fn path(&self, args: &[&dyn Display]) -> String {
+        self.build_path(args, &[])
+    }
+
+    fn build_path(&self, args: &[&dyn Display], options: &[(&str, Option<&str>)]) -> String {
         let mut args = args.iter();
         let mut path = String::new();
         for segment in self.segments {
             match segment {
                 Segment::Literal(literal) => path.push_str(literal),
-                Segment::Param | Segment::Glob => {
-                    let arg = args.next().unwrap_or_else(|| panic!("{}_path: missing argument", self.name));
-                    let value = arg.to_string();
-                    path.push_str(&escape(&value, matches!(segment, Segment::Glob)));
+                Segment::Param { name, default } | Segment::Glob { name, default } => {
+                    // Only required parameters consume positional arguments. Named options
+                    // override both positional values and defaults (Journey::Formatter).
+                    let positional = default.is_none().then(|| args.next()).flatten();
+                    let value = options
+                        .iter()
+                        .find(|(key, _)| key == name)
+                        .and_then(|(_, value)| *value)
+                        .map(str::to_string)
+                        .or_else(|| positional.map(ToString::to_string))
+                        .or_else(|| default.map(str::to_string))
+                        .unwrap_or_else(|| panic!("{}_path: missing {name}", self.name));
+                    path.push_str(&escape(&value, matches!(segment, Segment::Glob { .. })));
                 }
             }
         }
-        assert!(args.next().is_none(), "{}_path: too many arguments", self.name);
+        assert!(
+            args.next().is_none(),
+            "{}_path: too many arguments",
+            self.name
+        );
         path
     }
 
     /// `name_path(*args, format: format, **query)`. `None` query values are dropped, as Rails
     /// drops nil options.
-    pub fn path_with(&self, args: &[&dyn Display], format: Option<&str>, query: &[(&str, Option<&str>)]) -> String {
-        let mut path = self.path(args);
+    pub fn path_with(
+        &self,
+        args: &[&dyn Display],
+        format: Option<&str>,
+        query: &[(&str, Option<&str>)],
+    ) -> String {
+        let mut path = self.build_path(args, query);
         if let Some(format) = format
             && self.spec.ends_with("(.:format)")
             && Some(format) != self.default_format
@@ -88,7 +116,10 @@ impl NamedRoute {
             path.push('.');
             path.push_str(&escape(format, false));
         }
-        with_query(path, query)
+        let unused: Vec<_> = query.iter().copied().filter(|(key, _)| !self.segments.iter().any(|segment| {
+            matches!(segment, Segment::Param { name, .. } | Segment::Glob { name, .. } if name == key)
+        })).collect();
+        with_query(path, &unused)
     }
 }
 
@@ -140,7 +171,11 @@ pub fn cgi_escape(value: &str) -> String {
 
 /// `direct :fresh_user_avatar`: `user_avatar_path(user.avatar_token, v: user.updated_at.to_fs(:number))`.
 pub fn fresh_user_avatar(avatar_token: impl Display, updated_at_number: impl Display) -> String {
-    USER_AVATAR.path_with(&[&avatar_token], None, &[("v", Some(&updated_at_number.to_string()))])
+    USER_AVATAR.path_with(
+        &[&avatar_token],
+        None,
+        &[("v", Some(&updated_at_number.to_string()))],
+    )
 }
 
 /// `direct :fresh_account_logo`: `account_logo_path(v: Current.account&.updated_at&.to_fs(:number),

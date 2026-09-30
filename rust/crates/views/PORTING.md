@@ -7,10 +7,10 @@ keep an upstream Campfire template because it compiles.
 ## Reference and ownership
 
 Read the matching `app/views/**/*.erb` and `app/helpers/**/*.rb` first. The pin is recorded in
-`.claude/delegation/rust-port/decisions.md`. For cached message forms use Rails PR #148,
-`fix/cached-fragment-csrf`, and `PRESENTATION_CACHE_VERSION = 3`. WS6's reference image for those
-goldens is `ws6-reference-pr148`: the existing reference runtime with that branch's actual
-`app`, `config` and `lib` trees. The generator refuses an older presentation version.
+`.claude/delegation/rust-port/decisions.md`. The current pin is `fec615be`, including Rails PR #148
+and `PRESENTATION_CACHE_VERSION = 3`. WS6's image is `ws6-reference-fec615be`: the existing reference
+runtime with the pin's actual `app`, `config`, `lib`, `db`, `test`, `vendor` and `public` trees.
+The generator refuses an older presentation version.
 
 Domain owners port their own templates and queries. WS6 owns the layout, helpers and shared
 partials. Templates consume plain view models, never database rows. A controller gathers data
@@ -101,8 +101,8 @@ Run from `rust/`, with the worker's own target and named image:
 
 ```sh
 bash reference-tools/views/core/build_reference.sh
-PARITY_IMAGE=ws6-reference-pr148 PARITY_OWNER=ws6 STORE=target/ws6-core-reference reference-tools/views/core/run.sh
-WS6_VIEW_DIFF_DIR="$PWD/../.scratch/view-diffs" mise exec rust@1.98.1 -- cargo test -j 4 -p campfire_views --test core
+PARITY_IMAGE=ws6-reference-fec615be PARITY_OWNER=ws6 STORE=/home/riels/.cache/rust-port/ws6/core-reference reference-tools/views/core/run.sh
+TMPDIR=/home/riels/.cache/rust-port/ws6/tmp WS6_VIEW_DIFF_DIR=/home/riels/.cache/rust-port/ws6/view-diffs mise exec rust@1.98.1 -- cargo test -j 4 -p campfire_views --test core
 ```
 
 `tests/core.rs` compares complete strings and reports the first differing byte. The optional
@@ -135,7 +135,11 @@ reaction chip, legacy boost delete, poll vote/retract and PR Discuss. Use
 `form.authenticity_token(false)` or `attrs().attr("authenticity_token", false)` for `button_to`.
 The page's CSRF meta token supplies Turbo's header. Never cache current-user state, a CSRF
 token or a CSP nonce. The layout's quick-reaction forms are request forms outside the cache and
-retain their tokens. The two-user legacy-boost test renders through the actual fragment cache.
+retain their tokens. `messages/_actions.html` is rendered once in the application layout, never
+inside a message. The two-viewer message and legacy-boost tests exercise the actual fragment cache,
+including cache hits, pre-read fragments, nested boosts and request-free broadcasts. No message
+fragment may contain token fields, token slots or session nonces. WS4's single token-slot mechanism
+remains defence in depth for other cacheable forms; do not add a second token mechanism.
 
 `fragment_cache::keys::MessageKey` ports `message_with_pr_cards_cache_key`: record version,
 newest cards, optional embed references/PR thread stamp, pins, thread count, poll, note/stream

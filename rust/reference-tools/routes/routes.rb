@@ -28,6 +28,13 @@ named = routes.named_routes.names.sort_by(&:to_s).map do |name|
   samples << { args: required.each_with_index.map { |_, i| "#{AWKWARD}#{i}" }, options: {} } if required.any?
   samples << { args: required.map { "7" }, options: { format: "json" } } if route.path.spec.to_s.include?("(.:format)")
   samples << { args: required.map { "2" }, options: { "q" => "x y&z", "a" => "1", "empty" => "", "gone" => nil } }
+  route.defaults.except(:controller, :action).each_key do |key|
+    # Defaults are overridable keyword options, not immutable path literals.
+    next unless route.parts.include?(key)
+    [ "7", AWKWARD ].each do |value|
+      samples << { args: required.map { "2" }, options: { key => value, q: "kept" }, default_override: key.to_s }
+    end
+  end
   samples.each { |sample| sample[:path] = call.(sample[:args], sample[:options].transform_keys(&:to_sym)) }
 
 

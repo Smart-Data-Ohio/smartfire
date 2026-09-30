@@ -117,7 +117,7 @@
     {% include "layouts/_lightbox.html" %}
 
     {% if ctx.current_user.is_some() %}{% include "users/cards/_popover.html" %}{% endif %}
-    {% include "messages/_actions_menu.html" %}
+    {% include "messages/_actions.html" %}
     {% include "messages/_emoji_picker.html" %}
 
 {% if let Some(user) = ctx.current_user.as_ref() %}      {% include "layouts/_quick_switcher.html" %}

@@ -511,7 +511,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "comrak",
- "html5ever 0.35.0",
+ "html5ever",
  "rand 0.9.5",
  "regex",
  "serde",

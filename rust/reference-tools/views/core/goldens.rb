@@ -223,6 +223,9 @@ end
 # ---------------------------------------------------------------------------------------------
 # Worked-example pages, as real responses
 
+require "/work/reference-tools/views/core/review.rb"
+generate_review_goldens(goldens)
+
 session = ActionDispatch::Integration::Session.new(Rails.application)
 session.host! HOST
 session.https!

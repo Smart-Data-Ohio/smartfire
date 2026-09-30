@@ -29,8 +29,8 @@ pub fn icon_avatar_tag(
         return Safe(String::new());
     };
     let existing_class = options
-        .remove("class")
-        .map(|value| value_to_string(&value))
+        .get("class")
+        .map(value_to_string)
         .unwrap_or_default();
     let kind = match icon {
         AvatarIcon::Emoji { .. } => "emoji",
@@ -49,8 +49,8 @@ pub fn icon_avatar_tag(
     match icon {
         AvatarIcon::Emoji { title, character } => {
             let existing_style = options
-                .remove("style")
-                .map(|value| value_to_string(&value))
+                .get("style")
+                .map(value_to_string)
                 .unwrap_or_default();
             options = options.attr(
                 "style",
