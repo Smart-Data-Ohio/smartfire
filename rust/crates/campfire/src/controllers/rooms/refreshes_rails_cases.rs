@@ -57,6 +57,7 @@ async fn pin_only_refresh_matches_rails_bytes_and_request_token_ownership() {
  let(app,clock)=setup().await;
  let mut browser=app.sign_in(DAVID).await;
  let oracle:Value=serde_json::from_str(include_str!("../../../../views/tests/golden/rooms/pin_refresh.json")).unwrap();
+ let tokens=regex::Regex::new(r#"name="authenticity_token" value="([^"]+)""#).unwrap();
  for row in oracle["rows"].as_array().unwrap() {
   if row["pinned"]==true {let id=row["message_id"].as_i64().unwrap();app.db().write(move|tx|{let message=Message::find(tx.conn(),id)?;MessagePin::pin(tx,&message,DAVID)?.unwrap();Ok(())}).await.unwrap();}
   app.db().write(|tx|{tx.conn().execute_cached("UPDATE rooms SET pins_changed_at=? WHERE id=?",rusqlite::params![Timestamp::from_jiff(tx.now().jiff().checked_add(jiff::SignedDuration::from_mins(1)).unwrap()),ALL_TALK])?;Ok(())}).await.unwrap();
@@ -64,7 +65,7 @@ async fn pin_only_refresh_matches_rails_bytes_and_request_token_ownership() {
   if row["pinned"]==false {assert_eq!(reply.text(),row["body"].as_str().unwrap());}
   else {
    let html=reply.text();
-   let token=regex::Regex::new(r#"name="authenticity_token" value="([^"]+)""#).unwrap().captures(&html).unwrap()[1].to_string();
+   let token=tokens.captures(&html).unwrap()[1].to_string();
    let path=format!("/messages/{}/pin",row["message_id"].as_i64().unwrap());
    assert!(browser.real_authenticity_token().unwrap().is_valid(&token,&path,"delete"));
    let mut other=app.sign_in(JASON).await;other.get("/rooms/654632876").await;
