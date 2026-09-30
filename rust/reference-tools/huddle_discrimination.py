@@ -56,6 +56,7 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("composed-sidebar-call-sections-bypassed", ROOT / "rust/crates/views/templates/users/sidebars/show.html", lambda s: replace_once(s, "{{ self.call_sections()|safe }}", ""), "campfire", "stage_sidebar_live_dot_and_call_sections_follow_current_stream_state"),
     ("composed-stage-publish-hint-bypassed", ROOT / "rust/crates/views/src/rooms/navigation.rs", lambda s: replace_once(s,'.map(|s| s.viewer().role != "listener"),','.map(|_| true),'),"campfire","stage_page_composes_listener_permissions_and_sti_targets"),
     ("composed-edit-github-section-bypassed", ROOT / "rust/crates/views/templates/rooms/calls/_edit.html", lambda s: replace_once(s,'{{ form.github_section(ctx)|safe }}','{{ "" }}'),"campfire","complete_voice_and_stage_form_pages_match_fourteen_rails_renders"),
     ("stream-controller-id-header-bypassed", ROOT / "rust/crates/campfire/src/controllers/rooms/stage_streams.rs", lambda s: replace_once(s,'"X-Stream-Id"','"X-Broken-Stream-Id"'),"campfire","stream_controller_start_stop_and_silent_noop_deliver_exact_rails_fanout"),

@@ -199,3 +199,79 @@ async fn stage_page_live_identity_stop_permissions_and_stream_id_follow_the_pres
         assert!(response.text().contains("Stop stream"));
     }
 }
+
+#[tokio::test]
+async fn stage_sidebar_live_dot_and_call_sections_follow_current_stream_state() {
+    let Some(test) = TestApp::boot_with_huddle(configured()).await else {
+        return;
+    };
+    let room = fixture(&test, DAVID, KEVIN).await;
+    let room_id = room.id;
+    let host = membership(&test, room_id, DAVID).await.id;
+    let mut browser = test.sign_in(KEVIN).await;
+    let response = browser.get(&campfire_routes::user_sidebar()).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(response.text().contains("id=\"voice_rooms\""));
+    assert!(response.text().contains("id=\"stage_rooms\""));
+    assert!(
+        response
+            .text()
+            .contains(&format!("id=\"list_rooms_stage_{room_id}\""))
+    );
+    assert!(!response.text().contains("stage-live-dot__pip"));
+    test.db()
+        .write(move |tx| {
+            Stream::create(tx, room_id, host, DAVID, "1080p15", None)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let response = browser.get(&campfire_routes::user_sidebar()).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(response.text().contains("stage-live-dot__pip"));
+    assert!(response.text().contains("Live now: David"));
+}
+
+#[tokio::test]
+async fn complete_sidebar_call_sections_match_eight_rails_renders() {
+    use crate::controllers::presenters::page;
+    use askama::Template;
+    use campfire_views::{rooms::calls::CallRow, users::SidebarCalls};
+    let Some(test) = TestApp::boot().await else {
+        return;
+    };
+    let vectors: serde_json::Value =
+        serde_json::from_str(include_str!("sidebar_view_vectors.json")).unwrap();
+    assert_eq!(vectors["cases"].as_array().unwrap().len(), 8);
+    for case in vectors["cases"].as_array().unwrap() {
+        let rows: Vec<CallRow> = serde_json::from_value(case["input"]["rows"].clone()).unwrap();
+        let actual =
+            page::render_detached_at(&test.booted.app, None, "http://campfire.test", |ctx| {
+                SidebarCalls {
+                    ctx,
+                    rows: &rows,
+                    can_create: case["input"]["can_create"].as_bool().unwrap(),
+                }
+                .render()
+                .unwrap()
+            });
+        let expected = case["html"].as_str().unwrap();
+        if actual != expected {
+            let scratch =
+                std::path::PathBuf::from(std::env::var_os("TMPDIR").expect("worker scratch"));
+            std::fs::write(scratch.join("sidebar-actual.html"), &actual).unwrap();
+            std::fs::write(scratch.join("sidebar-expected.html"), expected).unwrap();
+            let offset = actual
+                .bytes()
+                .zip(expected.bytes())
+                .position(|(a, b)| a != b)
+                .unwrap_or(actual.len().min(expected.len()));
+            panic!(
+                "{} first difference {offset}: actual {:?} expected {:?}",
+                case["name"],
+                actual.get(offset.saturating_sub(40)..(offset + 100).min(actual.len())),
+                expected.get(offset.saturating_sub(40)..(offset + 100).min(expected.len()))
+            );
+        }
+    }
+}

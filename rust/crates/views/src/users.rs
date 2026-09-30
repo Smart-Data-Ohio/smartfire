@@ -267,8 +267,25 @@ pub struct SidebarShow<'a> {
     pub direct_memberships: Vec<SidebarDirectItem>,
     pub direct_placeholder_users: Vec<UserSummary>,
     pub other_memberships: Vec<SidebarRoom>,
+    /// Viewer-specific Voice and Stage rows, supplied without changing the shared sidebar presenter.
+    pub call_memberships: Vec<crate::rooms::calls::CallRow>,
     /// `Current.user.administrator? || !Current.account.settings.restrict_room_creation_to_administrators?`.
     pub can_create_rooms: bool,
+}
+
+impl SidebarShow<'_> {
+    fn call_sections(&self) -> String {
+        SidebarCalls { ctx: self.ctx, rows: &self.call_memberships, can_create: self.can_create_rooms }.render().expect("sidebar call sections render")
+    }
+}
+
+/// The complete Voice and Stage sections of `users/sidebars/show`.
+#[derive(Template)]
+#[template(path = "users/sidebars/_call_sections.html")]
+pub struct SidebarCalls<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub rows: &'a [crate::rooms::calls::CallRow],
+    pub can_create: bool,
 }
 
 impl Page for SidebarShow<'_> {}

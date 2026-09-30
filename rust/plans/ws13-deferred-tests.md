@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 184 declarations now have complete assertion coverage mapped below. The other 364 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 185 declarations now have complete assertion coverage mapped below. The other 363 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -14,7 +14,7 @@ The presence slice adds 50 exact pinned Rails participant renders (sidebar/heade
 
 The process task now runs invitations, stale streams and cleanups in Rails order with per-row commits and isolated failures. Stream create/end callbacks, explicit stopped events, last-host succession and quiet timeline delivery, role/mute grant revocation, and role/hand/moderation controllers are implemented. The stream/lifecycle corpus has 20 production Rails cases, moderation has 29 real requests, roles/hands has 34 real requests plus a real minute-bucket throttle probe, and Stage fragments have 400 byte-identical renders. Real socket tests prove committed changes, personal delivery, single rejoin behavior and silent rollback.
 
-Passed titles are backed jointly by those differential tests, the real HTTP/Cable tests in `call_lifecycle_tests.rs` and `huddle_effects_tests.rs`, and the existing WS8a `room_test.rs` and grant tests. Counts are original declarations, not vector counts. Whole per-viewer fan-out declarations, combinations not explicitly exercised (for example another administrator as moderation target), preload/query assertions and full page composition remain open even where the underlying method is implemented. Public huddles and aggregate presence now have 65 production Rails HTTP vectors; voice/stage CRUD has 47 request vectors, two deletion vectors and real ordered Cable delivery. Component goldens cover both form partials in new/edit states, both sidebar rows, three huddle panels and both new-page content blocks. The complete header region now has 28 byte-identical Rails renders across five room types, configuration states and Stage viewers. Complete voice/Stage new/edit pages have 14 byte-identical parity-seed renders, including GitHub and inbound-email sections, with explicit shared chrome inputs. Whole room content and sidebar composition remain open. Runtime recent-search, Drive and notification-policy chrome adapters remain with their owners; the page goldens supply their plain Rails-rendered inputs and do not claim those integrations. The stream controller file now has 38/38 complete original declarations; Stage view requests have 15/16, with the sidebar live-dot declaration open. No WS13b model/job/service cases were newly ported in this continuation. The extra event venue dot is verified with Stage fragments. WS17 retains policy/transport; real LiveKit system tests retain LIVEKIT_SYSTEM_TESTS=1 with a real server as the reason.
+Passed titles are backed jointly by those differential tests, the real HTTP/Cable tests in `call_lifecycle_tests.rs` and `huddle_effects_tests.rs`, and the existing WS8a `room_test.rs` and grant tests. Counts are original declarations, not vector counts. Whole per-viewer fan-out declarations, combinations not explicitly exercised (for example another administrator as moderation target), preload/query assertions and full page composition remain open even where the underlying method is implemented. Public huddles and aggregate presence now have 65 production Rails HTTP vectors; voice/stage CRUD has 47 request vectors, two deletion vectors and real ordered Cable delivery. Component goldens cover both form partials in new/edit states, both sidebar rows, three huddle panels and both new-page content blocks. The complete header region now has 28 byte-identical Rails renders across five room types, configuration states and Stage viewers. Complete voice/Stage new/edit pages have 14 byte-identical parity-seed renders, including GitHub and inbound-email sections, with explicit shared chrome inputs. Whole room content and sidebar composition remain open. Runtime recent-search, Drive and notification-policy chrome adapters remain with their owners; the page goldens supply their plain Rails-rendered inputs and do not claim those integrations. The stream controller file now has 38/38 complete original declarations; Stage view requests have 16/16, including the sidebar live dot. Voice/Stage sidebar sections have eight byte-identical production Rails region renders; request rows carry live state and per-viewer membership/menu flags. Parent workspace shell, shared/direct/Board rows, favourites and categories remain open and are not covered by these call-section goldens. No WS13b model/job/service cases were newly ported in this continuation. The extra event venue dot is verified with Stage fragments. WS17 retains policy/transport; real LiveKit system tests retain LIVEKIT_SYSTEM_TESTS=1 with a real server as the reason.
 
 ## Rails declaration coverage by file
 
@@ -35,7 +35,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
 | `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
 | `test/controllers/rooms/voices_controller_test.rb` | 18 | 13 | 5 |
-| `test/controllers/rooms/stage_view_test.rb` | 16 | 15 | 1 |
+| `test/controllers/rooms/stage_view_test.rb` | 16 | 16 | 0 |
 | `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
 | `test/system/stage_test.rb` | 15 | 0 | 15 |
@@ -55,7 +55,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **184** | **364** |
+| **Total** | **548** | **185** | **363** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -246,7 +246,7 @@ Owner: WS13. Complete: 38/38 declarations passed.
 
 ## test/controllers/rooms/stage_view_test.rb
 
-Owner: WS13. Partial: 15/16 declarations passed; the other 1 remains open.
+Owner: WS13. Passed: all 16 declarations; actual seeded page and sidebar requests plus eight exact Voice/Stage sidebar-section renders.
 
 - **Passed:** a listener's join control hints that publishing is unavailable
 - **Passed:** a host's join control hints that publishing is available
@@ -259,7 +259,7 @@ Owner: WS13. Partial: 15/16 declarations passed; the other 1 remains open.
 - **Passed:** a muted administrator sees an unmute control on their own row
 - **Passed:** an administrator sees moderation controls on every other row
 - **Passed:** the header Live badge renders only while live
-- the sidebar live dot renders only while live
+- **Passed:** the sidebar live dot renders only while live
 - **Passed:** the Go live form renders for hosts and speakers
 - **Passed:** the Go live form renders for no listener and never while live
 - **Passed:** Stop stream renders for the presenter but not for listeners

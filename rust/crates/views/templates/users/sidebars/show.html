@@ -36,6 +36,7 @@
           {{ h::image_tag(ctx, "add.svg", h::attrs().size(20).aria_hidden().style("view-transition-name: new-room")) }}
 {% endfilter %}{% endif %}    </div>
 
+    {{ self.call_sections()|safe }}
     <button class="btn sidebar__toggle" data-action="toggle-class#toggle">
       {{ h::image_tag(ctx, "menu.svg", h::attrs().size(20).aria_hidden()) }}
       <span class="for-screen-reader">Open menu</span>

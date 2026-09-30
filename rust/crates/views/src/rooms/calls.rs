@@ -147,7 +147,7 @@ mod filters {
     pub use crate::helpers::filters::*;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct CallRow {
     pub id: i64,
     pub name: String,
