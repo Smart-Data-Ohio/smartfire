@@ -10,6 +10,10 @@ pub async fn require_token(c: &mut Ctx, rescue_forgery: bool) -> Result<CurrentA
         Err(Error::InvalidAuthenticityToken(_)) if rescue_forgery => return reject_session(c),
         result => result?,
     }
+    token(c)
+}
+
+pub fn token(c: &mut Ctx) -> Result<CurrentAgent> {
     if authenticated_by(c) == AuthenticatedBy::AgentToken
         && let Some(identity) = c.current::<CurrentAgent>()
     {

@@ -3,6 +3,7 @@
 pub mod account;
 pub mod agent;
 pub mod agent_access;
+pub mod agent_api_pending;
 pub mod agent_approval;
 pub mod agent_approvals;
 pub mod agent_service;
