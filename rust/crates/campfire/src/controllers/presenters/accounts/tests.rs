@@ -163,7 +163,7 @@ impl Browser<'_> {
         for cookie in reply.set_cookies() {
             let pair = cookie.split(';').next().unwrap();
             let (name, value) = pair.split_once('=').unwrap();
-            let deleted = cookie.to_ascii_lowercase().contains("max-age=0") || cookie.contains("1970");
+            let deleted = cookie_tombstone(&cookie);
             if deleted || value.is_empty() {
                 self.cookies.remove(name);
             } else {
@@ -558,4 +558,32 @@ async fn qr_codes_and_the_pwa() {
     assert_eq!((manifest.status, manifest.header("content-type")), (StatusCode::OK, Some("application/json; charset=utf-8")));
     let worker = browser.get("/service-worker.js").await;
     assert_eq!((worker.status, worker.header("content-type")), (StatusCode::OK, Some("text/javascript; charset=utf-8")));
+}
+
+// Set-Cookie values are opaque; only attributes determine deletion.
+fn cookie_tombstone(cookie: &str) -> bool {
+    cookie.split(';').skip(1).any(|attribute| {
+        let Some((name,value))=attribute.trim().split_once('=') else {return false};
+        (name.eq_ignore_ascii_case("max-age") && value.trim().parse::<i64>().is_ok_and(|seconds|seconds<=0))
+            || (name.eq_ignore_ascii_case("expires") && value.trim().eq_ignore_ascii_case("Thu, 01 Jan 1970 00:00:00 GMT"))
+    })
+}
+
+#[tokio::test]
+async fn browser_cookie_value_1970_is_not_an_expiry_attribute() {
+    let mut test = boot_seed("default").await.expect("pinned seed required");
+    test.booted.router = axum::Router::new().route("/cookie-probe", axum::routing::get(|| async {
+        ([(header::SET_COOKIE, "session_token=signed1970value; path=/; expires=Tue, 02 Mar 2027 16:00:00 GMT; httponly")], StatusCode::NO_CONTENT)
+    }));
+    let mut browser = test.browser("198.51.100.14");
+    browser.get("/cookie-probe").await;
+    assert_eq!(browser.cookies.get("session_token").map(String::as_str), Some("signed1970value"));
+}
+
+#[test]
+fn browser_cookie_deletion_requires_real_attribute() {
+    assert!(!cookie_tombstone("session_token=opaque1970value; expires=Tue, 02 Mar 2027 16:00:00 GMT"));
+    assert!(!cookie_tombstone("session_token=signed; max-age=01"));
+    assert!(cookie_tombstone("session_token=signed; Max-Age=0"));
+    assert!(cookie_tombstone("session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT"));
 }

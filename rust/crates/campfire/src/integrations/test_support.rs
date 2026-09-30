@@ -156,6 +156,20 @@ impl FakeServer {
         Self::start_tls_on(routes, true).await
     }
 
+    /// Verify real TLS hostnames for integrations outside the static fixture's SAN list.
+    pub async fn start_named_tls_ws15e(routes: Vec<Route>, names: Vec<String>) -> (Self, rustls::RootCertStore) {
+        use rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
+        let rcgen::CertifiedKey { cert, signing_key } = rcgen::generate_simple_self_signed(names).unwrap();
+        let der = cert.der().clone();
+        let mut roots = rustls::RootCertStore::empty();
+        roots.add(der.clone()).unwrap();
+        let config = rustls::ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+            .with_safe_default_protocol_versions().unwrap().with_no_client_auth()
+            .with_single_cert(vec![der], PrivateKeyDer::from(PrivatePkcs8KeyDer::from(signing_key.serialize_der()))).unwrap();
+        let server = Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), true).await;
+        (server, roots)
+    }
+
     async fn start_tls_on(routes: Vec<Route>, ws15e: bool) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};

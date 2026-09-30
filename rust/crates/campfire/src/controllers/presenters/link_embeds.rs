@@ -12,7 +12,20 @@ pub fn components(presenter: &super::Presenter<'_>, message: &Message) -> campfi
     if !message.embeds_suppressed {
         for reference in Reference::for_message(presenter.conn, message)? {
             presenter.request_link_fetch(&reference.embed);
-            if !reference.embed.linkedin() && reference.embed.usable() {
+            if reference.embed.linkedin() {
+                let embed = &reference.embed;
+                let card = campfire_views::linkedin_cards::Card {
+                    embed: campfire_views::link_embeds::Card {
+                        url: reference.display_url().into(),
+                        title: embed.title.clone(),
+                        description: embed.description.clone(),
+                        image_url: embed.image_url.clone(),
+                        ..Default::default()
+                    },
+                    player_url: crate::integrations::linkedin::embed_url_for(reference.display_url()),
+                };
+                components.linkedin_cards.push(format!("\n    {}\n  ", card.render()));
+            } else if reference.embed.usable() {
                 let embed = &reference.embed;
                 let card = campfire_views::link_embeds::Card {
                     url: reference.display_url().into(),
@@ -113,3 +126,6 @@ pub fn broadcast_message(app: &App, conn: &Connection, message: &Message, linked
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod linkedin_tests;
