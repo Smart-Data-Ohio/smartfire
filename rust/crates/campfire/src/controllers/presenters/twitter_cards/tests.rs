@@ -94,7 +94,11 @@ async fn ws15e_x_containers_match_pinned_rails_and_index_uses_card_facts() {
             .read(move |c| container(&app2, c, &copy))
             .await
             .unwrap();
-        assert_eq!(html, case["html"].as_str().unwrap());
+        assert!(crate::app::asset_goldens::compare(
+            "ws15e_x_container",
+            &html,
+            case["html"].as_str().unwrap()
+        ));
         let mut browser = app.david();
         let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
         assert_eq!(page.status, axum::http::StatusCode::OK);
