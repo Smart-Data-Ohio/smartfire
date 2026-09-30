@@ -1,3 +1,234 @@
+# Review follow-up: Rails NullAnalyzer (2026-09-30)
+
+Verified source/merge commit: `1760c69c90223c2fd646caafec532b0d19e1eb3e`.
+Fix commit: `3b0e4350ee0ed4cbc03e3895b9024d9f8cf17f2e`.
+Failing-first base: `3ac47dd0f8cc1a3f0761dd3581023a208c90dc75`.
+Merged `origin/main` at `b66199b7e2364e4bc4a8fda7fda3193cec112f98` (#166, WS15e), with a merge commit.
+Rails oracle: `d7c7de9264c63015be398001d7a1094e7695a6db`.
+
+## Change
+
+`controllers/presenters/attachments.rs::enqueue_analysis` now uses the existing Rails-compatible
+`Analyzer::for_content_type(...).analyze_later()` selector after identification. Image, video and
+audio still persist `ActiveStorage::AnalyzeJob` inside the triggering write. Text and PDF select
+`NullAnalyzer`: the attachment commits first, then an after-commit hook runs a separate writer
+transaction, merges `analyzed: true` into current metadata and touches the attached records.
+It queues no analysis job and needs no storage read or media process. Already-analyzed and deleted
+blobs are no-ops. A failure in that separate write propagates the production 500 while preserving
+the primary attachment and parent fields, as Rails does.
+
+The pinned gem's `ActiveStorage::Attachment#analyze_blob_later`,
+`Blob::Analyzable#analyze_later`, and `Analyzer::NullAnalyzer.analyze_later?` were read directly
+from the reference image. This keeps inline after-commit work after commit, per decisions.md,
+while preserving the durable-job atomicity exception. All existing callers use this helper.
+No Rails source, schema, masks, test timing thresholds or unrelated jobs were changed.
+
+Merge resolution in `controllers/messages.rs` preserves signed assignment and transactional
+analysis while retaining main's `Message::edit` path and `markdown_source`. An initial fresh
+build caught two missed conflict regions; they were resolved and the unpublished merge amended
+before successful verification. No conflict markers remain.
+
+## Failing first and regressions
+
+Before changing production code, on `3ac47dd0`, with fresh test-created databases, admin sessions
+and real CSRF, ran (both commands used `CARGO_BUILD_JOBS=2`, dev/test debug 0,
+incremental 0, `CI=true` and disk-backed worktree `TMPDIR`):
+
+```sh
+mise exec rust@1.98.1 -- cargo test --locked -p campfire null_analyzer -- --test-threads=8
+mise exec rust@1.98.1 -- cargo test --locked -p campfire attachment_analyzers_match_pinned_rails -- --test-threads=8
+```
+
+```text
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 424 filtered out; finished in 0.53s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.53s
+```
+
+- Rejecting durable AnalyzeJob inserts: signed text logo assignment returned 500 rather than 302.
+- Commit boundary: text inserted one durable analysis job instead of zero. The retained test also
+  verifies metadata is unset inside the attachment transaction and in an earlier after-commit hook.
+- Failing inline metadata update: old code returned 302 instead of Rails' 500. The fixed regression
+  checks that the parent fields and attachment remain committed, identified stays true, analyzed
+  stays unset, and no analysis job exists.
+- Five-type differential: text metadata lacked `analyzed: true`. The fixed test checks all five
+  identified MIME types, response statuses, analyzer timing, metadata and job counts, and rejects
+  job inserts for image, video and audio to verify their assignments still roll back atomically.
+
+After the fix, all original eight attachment regressions and four new regressions passed:
+
+```sh
+mise exec rust@1.98.1 -- cargo test --locked -p campfire attachments::tests -- --test-threads=8
+```
+
+```text
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 415 filtered out; finished in 2.40s
+```
+
+Real durable jobs are held by a SQLite AFTER INSERT trigger for inspection; no queue/analyzer mock
+is used. Fixtures and expected data are committed; optional readback output is created by the test,
+not read as a dependency. Fixture SHA256 checks verify identical inputs.
+
+## Pinned Rails differentials and readback
+
+`reference-tools/attachments/generate_analyzers.rb` uses direct-upload blobs, authenticated admin
+requests, forgery protection, real uploaded bytes and Rails' test job adapter. It generated
+`vectors/attachment_analyzers.json`; regeneration in the independent fresh clone is byte-identical.
+The tiny valid WAV/PDF inputs are committed in `reference-tools/attachments/fixtures/`.
+
+| Input | Identified MIME | Rails analyzer | HTTP | AnalyzeJobs | Metadata immediately after request |
+| --- | --- | --- | --- | --- | --- |
+| text | text/plain | NullAnalyzer | 302 | 0 | identified, analyzed |
+| image | image/png | ImageAnalyzer::Vips | 302 | 1 | identified |
+| video | video/quicktime | VideoAnalyzer | 302 | 1 | identified |
+| audio | audio/x-wav | AudioAnalyzer | 302 | 1 | identified |
+| PDF | application/pdf | NullAnalyzer | 302 | 0 | identified, analyzed |
+
+The same generator injects a failing null metadata-update trigger. Rails returns 500 with the
+new parent name and attachment committed, only identified metadata, and zero AnalyzeJobs.
+Rust matches those vector fields.
+
+`ATTACHMENT_ANALYZER_READBACK_DIR` exports per-type Rust snapshots during the differential test.
+Pinned Rails `verify_analyzers.rb` validates the rows, signed lookup, bytes, MIME, analyzer,
+metadata, job count and attachment foreign keys:
+
+```text
+Rails text readback: valid account/blob/attachment; bytes, MIME, analyzer, metadata and 0 analysis jobs match
+Rails image readback: valid account/blob/attachment; bytes, MIME, analyzer, metadata and 1 analysis jobs match
+Rails video readback: valid account/blob/attachment; bytes, MIME, analyzer, metadata and 1 analysis jobs match
+Rails audio readback: valid account/blob/attachment; bytes, MIME, analyzer, metadata and 1 analysis jobs match
+Rails pdf readback: valid account/blob/attachment; bytes, MIME, analyzer, metadata and 0 analysis jobs match
+```
+
+Commands for generation and each readback (from `rust/`, with `PARITY_NAMESPACE=attach`,
+`PARITY_OWNER=attach`, `PARITY_IMAGE=attach-reference:d7c7de92`):
+
+```sh
+parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze reference-tools/attachments/generate_analyzers.rb
+parity/bin/reference runner --storage ../.scratch/null-analyzer-readback/text --time 2026-03-02T16:00:00Z --freeze reference-tools/attachments/verify_analyzers.rb text
+# The readback command was also run for image, video, audio and pdf, with each matching directory.
+```
+
+## Fresh-clone verification after main
+
+Independent clone under `.scratch/fresh-null-analyzer`, created with `git clone --no-local`,
+checked out at the verified merge commit. Both seeds were built from the pinned Rails image:
+`parity/bin/seed build default first_run`. Rails seed verification passed 29 default checks and
+4 first-run checks, with zero failures. Locked metadata passed in the worktree, clone and CI image.
+Strict TOML parsing passed all 13 workspace manifests: 75 unique workspace dependency keys,
+zero duplicates. No lockfile repair was necessary after the merge.
+
+The first host run passed every target except the new main storage guard, which correctly rejects
+host libvips 8.18.6 / ffmpeg 9.0.2 when `CI=true`. This was resolved by rebuilding and rerunning the
+**entire** workspace in the pinned CI toolchain image, rather than skipping or disabling the gate.
+Its libvips 8.16.1 / ffmpeg 7.1.5 execute all storage byte/row/metadata comparisons.
+
+CI image: `attach-toolchain-ci:1.98.1`, image ID
+`sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2`.
+The container wrapper retains the host rustc slot/lock protocol and always joins that shared pool;
+its lock directory and slot configuration are mounted. No global cargo configuration was changed,
+no compiler-throttle bypass was used. Build jobs were 2 and test threads 8 throughout this follow-up.
+
+Exact container invocation used for the checks, expressed as the scratch helper:
+
+```sh
+#!/usr/bin/env bash
+set -euo pipefail
+attach_root=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-attach
+attach_container=$1
+shift
+exec docker run --rm --name "$attach_container" --user 1000:1000 \
+  --volume "$attach_root/.scratch/fresh-null-analyzer:/src" \
+  --volume /home/riels/.cargo:/cargo \
+  --volume /home/riels/.cache/rust-port:/home/riels/.cache/rust-port:ro \
+  --volume "$attach_root/.scratch/container-rustc-throttle.sh:/home/riels/.cache/rust-port/rustc-throttle.sh:ro" \
+  --volume /tmp/rust-port-rustc-slots:/tmp/rust-port-rustc-slots \
+  --workdir /src/rust --env TMPDIR=/src/.scratch/tmp --env CI=true \
+  --env CARGO_HOME=/cargo --env CARGO_BUILD_JOBS=2 \
+  --env CARGO_PROFILE_DEV_DEBUG=0 --env CARGO_PROFILE_TEST_DEBUG=0 \
+  --env CARGO_INCREMENTAL=0 --env RUSTFLAGS=-Clink-arg=-fuse-ld=mold \
+  attach-toolchain-ci:1.98.1 "$@"
+```
+
+Check arguments:
+
+```sh
+cargo test --locked --workspace --exclude html5ever --no-fail-fast -- --test-threads=8
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+cargo build --locked --workspace --bins
+cargo metadata --locked --format-version 1
+```
+
+Full fresh-clone workspace and doctests: **1771 passed, 0 failed, 12 ignored**.
+The existing ignores are reported, with no extra ignore added by this branch. All requested
+app/db/assets/views/storage targets passed. Main's scoped asset golden helper already covers the
+affected goldens; no golden, normalization or allowlist change was needed.
+
+Raw workspace summaries, in execution order:
+
+```text
+test result: ok. 681 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 75.60s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.47s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.73s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
+test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 42.92s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.43s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.04s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.41s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.29s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.16s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.49s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.17s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.87s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.69s
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.40s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Clippy and normal binary build, respectively:
+
+```text
+    Finished `dev` profile [unoptimized] target(s) in 55.99s
+    Finished `dev` profile [unoptimized] target(s) in 48.40s
+```
+
+The 2.8 GB fresh-clone target was deleted after the checks. Old fresh/baseline target directories
+were also removed/confirmed absent; zero extra target directories and zero task test containers
+remain. The report is the only change after the verified source commit. No PR opened.
+
+---
+
+# Original implementation and initial verification (historical)
+
 # Durable attachment analysis and signed blob assignment
 
 Verified implementation commit: `116f0d27428097704a76fa5c6e849ad9b70d6b6d`.
