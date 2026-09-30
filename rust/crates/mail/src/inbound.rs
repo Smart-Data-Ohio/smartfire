@@ -181,7 +181,8 @@ fn already_routed(conn: &Connection, id: i64) -> campfire_db::Result<bool> {
         )
         .optional()?
         .ok_or(campfire_db::Error::RecordNotFound(RECORD_TYPE))?;
-    Ok(matches!(status, 2..=4))
+    // Failed describes an attempt, not a committed route. The durable job may retry it.
+    Ok(matches!(status, 2 | 4))
 }
 fn find_room(conn: &Connection, token: &str) -> campfire_db::Result<Option<Room>> {
     let id = conn.query_row("SELECT id FROM rooms WHERE inbound_email_token = ? AND deleted_at IS NULL AND type NOT IN ('Rooms::Direct', 'Rooms::Board') LIMIT 1", [token], |r| r.get::<_, i64>(0)).optional()?;
@@ -303,7 +304,7 @@ pub async fn route(
     };
     let raw_storage = storage.clone();
     let parsed = tokio::task::spawn_blocking(move || {
-        Email::parse(&std::fs::read(raw_storage.service.path_for(&key))?)
+        Email::parse_for_routing(&std::fs::read(raw_storage.service.path_for(&key))?)
     })
     .await?;
     let result = async {
@@ -370,11 +371,16 @@ pub async fn route(
         Ok::<_, anyhow::Error>(routed)
     }
     .await;
-    if result.is_err() {
+    if let Err(error) = &result {
+        let status = if campfire_jobs::is_transient(error) {
+            Status::Pending
+        } else {
+            Status::Failed
+        };
         db.write(move |tx| {
             // An after-commit callback error must not reset a successfully committed route.
             if !already_routed(tx.conn(), id)? {
-                set_status(tx, id, Status::Failed)?;
+                set_status(tx, id, status)?;
             }
             Ok(())
         })

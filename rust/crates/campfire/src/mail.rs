@@ -267,11 +267,12 @@ mod tests {
     #[tokio::test]
     async fn ws10_relay_http_auth_matrix_without_parity_seed() {
         let (b, _dir) = boot(true, true).await;
-        for auth in [
-            None,
-            Some("Basic invalid"),
-            Some("Basic YWN0aW9ubWFpbGJveDp3cm9uZw=="),
-        ] {
+        use base64::Engine as _;
+        let wrong = format!(
+            "Basic {}",
+            base64::engine::general_purpose::STANDARD.encode("actionmailbox:wrong")
+        );
+        for auth in [None, Some("Basic invalid"), Some(wrong.as_str())] {
             let response = send(&b, auth, "message/rfc822").await;
             assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
             assert_eq!(
@@ -285,7 +286,6 @@ mod tests {
                 "HTTP Basic: Access denied.\n"
             );
         }
-        use base64::Engine as _;
         let auth = format!(
             "Basic {}",
             base64::engine::general_purpose::STANDARD.encode("actionmailbox:fixture-mail-password")

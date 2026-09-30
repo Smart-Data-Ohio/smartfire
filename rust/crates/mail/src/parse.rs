@@ -203,6 +203,10 @@ fn authentication_values(raw: &[u8]) -> Vec<String> {
         .collect()
 }
 
+#[cfg(test)]
+thread_local! {
+    static BOUNDARY_SCAN_BYTES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
 /// Mail 2.9.1 splits multipart bodies lazily and has no numeric depth limit. Mailparse's
 /// eager recursive tree can exhaust the process stack before Action Mailbox routes a bounce.
 /// Keep the same delimiter traversal on an explicit stack; only leaves enter parse_mail.
@@ -212,14 +216,23 @@ fn mime_leaves(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, Vec<ParsedMail<'_>
         Ok((mailparse::parse_mail(&raw[..body])?, body))
     }
     fn boundary_at(raw: &[u8], start: usize, boundary: &[u8]) -> Option<usize> {
-        raw[start..]
-            .windows(boundary.len())
-            .enumerate()
-            .find_map(|(offset, candidate)| {
-                let index = start + offset;
-                (candidate == boundary && (index == start || raw[index - 1] == b'\n'))
-                    .then_some(index)
-            })
+        let found =
+            raw[start..]
+                .windows(boundary.len())
+                .enumerate()
+                .find_map(|(offset, candidate)| {
+                    let index = start + offset;
+                    (candidate == boundary && (index == start || raw[index - 1] == b'\n'))
+                        .then_some(index)
+                });
+        #[cfg(test)]
+        BOUNDARY_SCAN_BYTES.with(|count| {
+            count.set(
+                count.get()
+                    + found.map_or(raw.len() - start, |index| index - start + boundary.len()),
+            )
+        });
+        found
     }
     fn part_ranges<'a>(raw: &'a [u8], body: usize, boundary: &str) -> Vec<&'a [u8]> {
         let boundary = format!("--{boundary}");
@@ -283,6 +296,16 @@ fn mime_leaves(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, Vec<ParsedMail<'_>
     Ok((root, leaves, multipart))
 }
 impl Email {
+    /// Action Mailbox routes recipients before splitting the body. Non-room mail goes
+    /// straight to BounceMailbox, even when its body contains deeply nested MIME.
+    pub fn parse_for_routing(raw: &[u8]) -> anyhow::Result<Self> {
+        let (_, body) = mailparse::parse_headers(raw)?;
+        let headers = Self::parse(&raw[..body])?;
+        if headers.room_token().is_none() {
+            return Ok(headers);
+        }
+        Self::parse(raw)
+    }
     pub fn parse(raw: &[u8]) -> anyhow::Result<Self> {
         let (mail, leaves, multipart) = mime_leaves(raw)?;
         let recipients = ["To", "Cc", "Bcc"]
@@ -418,5 +441,37 @@ impl Email {
         } else {
             source
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn review_deep_bounce_has_linear_boundary_work() {
+        let corpus: serde_json::Value =
+            serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
+        let raw = corpus["review"]["deep_fixed_width_raw"]
+            .as_str()
+            .unwrap()
+            .as_bytes();
+        assert_eq!(raw.len(), 324_084);
+        BOUNDARY_SCAN_BYTES.with(|count| count.set(0));
+        let email = Email::parse_for_routing(raw).unwrap();
+        let scanned = BOUNDARY_SCAN_BYTES.with(std::cell::Cell::get);
+        println!(
+            "fixture bytes={} boundary bytes scanned={scanned}",
+            raw.len()
+        );
+        assert!(
+            scanned <= raw.len(),
+            "quadratic boundary traversal: scanned {scanned} bytes for {} input bytes",
+            raw.len()
+        );
+        assert_eq!(scanned, 0, "BounceMailbox must not split the body");
+        assert!(email.room_token().is_none());
+        assert!(email.body.is_empty());
+        assert!(email.files.is_empty());
     }
 }

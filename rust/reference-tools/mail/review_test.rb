@@ -3,8 +3,8 @@ require_relative 'review_fixtures'
 
 class Ws10ReviewRegressionTest < ActionMailbox::TestCase
   test 'review deep MIME bounces before the body is split' do
-    [64, 128, 2000].each do |depth|
-      raw = Ws10ReviewFixtures.nested_mail(depth)
+    [64, 128, 2000, 4000].each do |depth|
+      raw = Ws10ReviewFixtures.nested_mail(depth, fixed_width: depth == 4000)
       split_calls = 0
       trace = TracePoint.new(:call) { |event| split_calls += 1 if event.defined_class == Mail::Body && event.method_id == :split! }
       inbound = nil

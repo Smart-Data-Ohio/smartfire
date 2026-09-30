@@ -18,6 +18,189 @@ fn review_fixture(key: &str) -> String {
     corpus["review"][key].as_str().unwrap().to_owned()
 }
 
+fn busy(_: &campfire_db::Connection, _: &Room, _: &str) -> campfire_db::Result<String> {
+    Err(campfire_db::Error::Sqlite(rusqlite::Error::SqliteFailure(
+        rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_BUSY),
+        None,
+    )))
+}
+
+#[tokio::test]
+async fn review_transient_failure_remains_retryable() {
+    let h = Harness::new().await;
+    let raw = review_fixture("retry_raw").replace(
+        "room-token@mail.test",
+        &format!("room-{}@mail.test", h.token),
+    );
+    let id = inbound::accept(&h.db, h.storage.clone(), raw.into_bytes())
+        .await
+        .unwrap()
+        .unwrap();
+    let error = inbound::route(
+        &h.db,
+        h.storage.clone(),
+        h.config.clone(),
+        h.throttle.clone(),
+        Some(Arc::new(busy)),
+        id,
+    )
+    .await
+    .unwrap_err();
+    assert!(campfire_jobs::is_transient(&error));
+    let (status, incinerations) = h.db.read(move |c| Ok((
+        c.query_row("SELECT status FROM action_mailbox_inbound_emails WHERE id = ?", [id], |r| r.get::<_, i64>(0))?,
+        c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class = 'ActionMailbox::IncinerationJob'", [], |r| r.get::<_, i64>(0))?,
+    ))).await.unwrap();
+    assert_eq!((status, incinerations), (Status::Pending as i64, 0));
+    let retry = inbound::route(
+        &h.db,
+        h.storage.clone(),
+        h.config.clone(),
+        h.throttle.clone(),
+        Some(Arc::new(render)),
+        id,
+    )
+    .await
+    .unwrap();
+    println!("retry result: {retry:?}");
+    assert!(
+        matches!(retry, Routed::Posted(_)),
+        "transient retry returned {retry:?}"
+    );
+    let count =
+        h.db.read(|c| {
+            Ok(c.query_row(
+                "SELECT COUNT(*) FROM messages WHERE markdown_source LIKE '%Retry body%'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+}
+
+#[derive(Clone)]
+struct RoutingContext {
+    db: Database,
+    storage: Arc<Storage>,
+    config: Config,
+    throttle: Throttle,
+}
+
+#[tokio::test]
+async fn durable_routing_retries_sqlite_busy_then_posts_once() {
+    let h = Harness::new().await;
+    let raw = review_fixture("retry_raw").replace(
+        "room-token@mail.test",
+        &format!("room-{}@mail.test", h.token),
+    );
+    let id = inbound::accept(&h.db, h.storage.clone(), raw.into_bytes())
+        .await
+        .unwrap()
+        .unwrap();
+    let mut registry = Registry::<RoutingContext>::new();
+    registry.register::<RoutingJob, _, _>(|context, job, execution| async move {
+        let renderer: Arc<dyn inbound::Renderer> = if execution.executions == 1 {
+            Arc::new(busy)
+        } else {
+            Arc::new(render)
+        };
+        inbound::route(
+            &context.db,
+            context.storage,
+            context.config,
+            context.throttle,
+            Some(renderer),
+            job.inbound_email_id,
+        )
+        .await?;
+        Ok(Outcome::Done)
+    });
+    registry.register::<IncinerationJob, _, _>(|_, _, _| async { Ok(Outcome::Done) });
+    registry.register::<MessageCreated, _, _>(|_, _, _| async { Ok(Outcome::Done) });
+    let mut config = RunnerConfig::new(vec![QueueConfig::new("default", 1)]);
+    config.poll = Duration::from_millis(10);
+    let runner = campfire_jobs::start(
+        h.db.clone(),
+        h.sink.queue.clone(),
+        registry,
+        RoutingContext {
+            db: h.db.clone(),
+            storage: h.storage.clone(),
+            config: h.config.clone(),
+            throttle: h.throttle.clone(),
+        },
+        config,
+    );
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let retry_ready = h.db.read(|c| Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class = 'ActionMailbox::RoutingJob' AND status = 'ready' AND attempts = 1", [], |r| r.get::<_, i64>(0))?)).await.unwrap();
+            if retry_ready == 1 { break; }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }).await.unwrap();
+    let status =
+        h.db.read(move |c| {
+            Ok(c.query_row(
+                "SELECT status FROM action_mailbox_inbound_emails WHERE id = ?",
+                [id],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(status, Status::Pending as i64);
+    h.clock.travel(jiff::SignedDuration::from_secs(4));
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let routes = h.db.read(|c| Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class = 'ActionMailbox::RoutingJob'", [], |r| r.get::<_, i64>(0))?)).await.unwrap();
+            if routes == 0 { break; }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }).await.unwrap();
+    runner.shutdown(Duration::from_secs(1)).await;
+    let (status, posts, failed_jobs) =
+        h.db.read(move |c| {
+            Ok((
+                c.query_row(
+                    "SELECT status FROM action_mailbox_inbound_emails WHERE id = ?",
+                    [id],
+                    |r| r.get::<_, i64>(0),
+                )?,
+                c.query_row(
+                    "SELECT COUNT(*) FROM messages WHERE markdown_source LIKE '%Retry body%'",
+                    [],
+                    |r| r.get::<_, i64>(0),
+                )?,
+                c.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE status = 'failed'",
+                    [],
+                    |r| r.get::<_, i64>(0),
+                )?,
+            ))
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        (status, posts, failed_jobs),
+        (Status::Delivered as i64, 1, 0)
+    );
+    assert_eq!(
+        inbound::route(
+            &h.db,
+            h.storage.clone(),
+            h.config.clone(),
+            h.throttle.clone(),
+            Some(Arc::new(render)),
+            id
+        )
+        .await
+        .unwrap(),
+        Routed::AlreadyRouted
+    );
+}
+
 #[tokio::test]
 async fn review_deep_mime_parses_without_abort() {
     let raw = review_fixture("deep_mime_raw");

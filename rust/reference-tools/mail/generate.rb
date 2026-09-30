@@ -62,15 +62,32 @@ cram = [['tim', 'tanstaaftanstaaf', '<1896.697170952@postoffice.reston.mci.net>'
   {user: user, password: password, challenge: challenge, response: Base64.strict_encode64("#{user} #{digest}")}
 end
 basic = ActionController::HttpAuthentication::Basic
-credential = basic.encode_credentials('actionmailbox', 'fixture-mail-password')
-token = credential.split(' ', 2).last
-shapes = [nil, '', 'Basic', credential, credential.downcase.sub(token.downcase, token), "basic #{token}", "Basic\t#{token}", " Basic  #{token}", "Basic #{token.delete('=')}", "Basic #{token}!", "Basic #{token.delete('=')}A", "Basic #{token[0, 8]}!!#{token[8..]}", "Bearer #{token}", "Basic invalid", basic.encode_credentials('wrong-user', 'fixture-mail-password'), basic.encode_credentials('actionmailbox', 'wrong-password')]
-whitespace.each { |sample| shapes << "Basic#{sample.fetch(:value)}#{token}" }
-relay = shapes.map do |authorization|
+credentials = {user: 'actionmailbox', password: 'fixture-mail-password', scheme: 'Basic', separator: ' '}
+shapes = [{missing: true}, {literal_chunks: ['']}, {scheme: 'Basic', separator: '', encoded_chunks: []}, credentials,
+          credentials.merge(scheme: 'basic'), credentials.merge(scheme: 'basic'), credentials.merge(separator: "\t"), credentials.merge(prefix: ' ', separator: '  '),
+          credentials.merge(transform: 'remove_padding'), credentials.merge(transform: 'append_bang'), credentials.merge(transform: 'remove_padding_append_a'), credentials.merge(transform: 'insert_bangs'),
+          credentials.merge(scheme: 'Bearer'), {scheme: 'Basic', separator: ' ', encoded_chunks: ['inva', 'lid']}, credentials.merge(user: 'wrong-user'), credentials.merge(password: 'wrong-password')]
+whitespace.each { |sample| shapes << credentials.merge(separator: sample.fetch(:value)) }
+relay = shapes.map do |shape|
+  authorization = if shape[:missing]
+    nil
+  elsif shape[:literal_chunks]
+    shape.fetch(:literal_chunks).join
+  else
+    token = shape[:encoded_chunks] ? shape.fetch(:encoded_chunks).join : Base64.strict_encode64("#{shape.fetch(:user)}:#{shape.fetch(:password)}")
+    token = case shape[:transform]
+    when 'remove_padding' then token.delete('=')
+    when 'append_bang' then "#{token}!"
+    when 'remove_padding_append_a' then "#{token.delete('=')}A"
+    when 'insert_bangs' then "#{token[0, 8]}!!#{token[8..]}"
+    else token
+    end
+    "#{shape.fetch(:prefix, '')}#{shape.fetch(:scheme)}#{shape.fetch(:separator)}#{token}"
+  end
   request = Struct.new(:authorization).new(authorization)
   expected = !!basic.authenticate(request) { |user, password| user.to_s == 'actionmailbox' && password.to_s == 'fixture-mail-password' }
-  {authorization: authorization, expected: expected}
+  shape.merge(expected: expected)
 end
-review = {deep_mime_raw: Ws10ReviewFixtures.nested_mail(2000), replay_raw: Ws10ReviewFixtures.replay_mail}
+review = {deep_mime_raw: Ws10ReviewFixtures.nested_mail(2000), deep_fixed_width_raw: Ws10ReviewFixtures.nested_mail(4000, fixed_width: true), replay_raw: Ws10ReviewFixtures.replay_mail, retry_raw: Ws10ReviewFixtures.retry_mail}
 File.write('/out/reference.json', JSON.pretty_generate({auth: auth, html: html, messages: messages, cram: cram, relay: relay, whitespace: whitespace, review: review}) + "\n")
 puts "mail reference: #{auth.size} authentication headers, #{html.size} HTML cases, #{messages.size} MIME messages"

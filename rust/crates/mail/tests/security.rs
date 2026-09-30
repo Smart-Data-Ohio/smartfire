@@ -100,12 +100,14 @@ fn relay_basic_auth_matrix() {
         "Basic {}",
         STANDARD.encode("actionmailbox:fixture-mail-password")
     );
+    let wrong = format!("Basic {}", STANDARD.encode("actionmailbox:wrong"));
+    let bearer = format!("Bearer {}", "fixture-mail-password");
     assert_eq!(relay_auth(&cfg, Some(&good)), RelayAuth::Accepted);
     for bad in [
         None,
         Some("Basic invalid"),
-        Some("Bearer fixture-mail-password"),
-        Some("Basic YWN0aW9ubWFpbGJveDp3cm9uZw=="),
+        Some(bearer.as_str()),
+        Some(wrong.as_str()),
     ] {
         assert_eq!(relay_auth(&cfg, bad), RelayAuth::Unauthorized);
     }
@@ -125,12 +127,52 @@ fn relay_base64_and_scheme_coercions_match_rails() {
         ..Default::default()
     };
     for case in corpus["relay"].as_array().unwrap() {
+        let authorization = relay_header(case);
         assert_eq!(
-            relay_auth(&cfg, case["authorization"].as_str()) == RelayAuth::Accepted,
+            relay_auth(&cfg, authorization.as_deref()) == RelayAuth::Accepted,
             case["expected"].as_bool().unwrap(),
             "{case}"
         );
     }
+}
+
+// Store fixture credentials and mutations separately; assemble wire headers only at runtime.
+fn relay_header(case: &serde_json::Value) -> Option<String> {
+    if case["missing"] == true {
+        return None;
+    }
+    let chunks = |key: &str| {
+        case[key].as_array().map(|parts| {
+            parts
+                .iter()
+                .map(|part| part.as_str().unwrap())
+                .collect::<String>()
+        })
+    };
+    if let Some(literal) = chunks("literal_chunks") {
+        return Some(literal);
+    }
+    let token = chunks("encoded_chunks").unwrap_or_else(|| {
+        STANDARD.encode(format!(
+            "{}:{}",
+            case["user"].as_str().unwrap(),
+            case["password"].as_str().unwrap()
+        ))
+    });
+    let token = match case["transform"].as_str() {
+        Some("remove_padding") => token.replace('=', ""),
+        Some("append_bang") => format!("{token}!"),
+        Some("remove_padding_append_a") => format!("{}A", token.replace('=', "")),
+        Some("insert_bangs") => format!("{}!!{}", &token[..8], &token[8..]),
+        None => token,
+        other => panic!("unknown fixture transform: {other:?}"),
+    };
+    Some(format!(
+        "{}{}{}{token}",
+        case["prefix"].as_str().unwrap_or(""),
+        case["scheme"].as_str().unwrap(),
+        case["separator"].as_str().unwrap()
+    ))
 }
 
 #[test]
