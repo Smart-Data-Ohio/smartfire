@@ -226,13 +226,13 @@ pub fn repository_owner_and_repo(payload: &Value) -> anyhow::Result<Option<(Stri
 fn shape_error() -> anyhow::Error {
     anyhow::anyhow!("Malformed GitHub webhook payload shape")
 }
-fn truthy(value: &Value) -> bool {
+pub(super) fn truthy(value: &Value) -> bool {
     !matches!(value, Value::Null | Value::Bool(false))
 }
-fn get<'a>(value: &'a Value, key: &str) -> anyhow::Result<Option<&'a Value>> {
+pub(super) fn get<'a>(value: &'a Value, key: &str) -> anyhow::Result<Option<&'a Value>> {
     Ok(value.as_object().ok_or_else(shape_error)?.get(key))
 }
-fn dig<'a>(value: &'a Value, keys: &[&str]) -> anyhow::Result<Option<&'a Value>> {
+pub(super) fn dig<'a>(value: &'a Value, keys: &[&str]) -> anyhow::Result<Option<&'a Value>> {
     let Some((key, rest)) = keys.split_first() else {
         return Ok(Some(value));
     };
@@ -251,7 +251,7 @@ fn owner_and_repo(value: &Value) -> anyhow::Result<Option<(String, String)>> {
         .split_once('/')
         .map(|(owner, repo)| (owner.to_lowercase(), repo.to_lowercase())))
 }
-fn integer_for_query(value: &Value) -> Option<i64> {
+pub(super) fn integer_for_query(value: &Value) -> Option<i64> {
     match value {
         Value::Number(number) => number
             .as_i64()

@@ -7,6 +7,8 @@ pub mod agent_actions;
 pub mod client;
 pub mod fetcher;
 pub mod jobs;
+pub mod notifier;
+pub mod references;
 pub mod oauth;
 pub mod webhooks;
 

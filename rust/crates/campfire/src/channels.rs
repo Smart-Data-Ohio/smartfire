@@ -10,6 +10,7 @@
 pub mod activity;
 pub mod agents;
 pub mod broadcasts;
+mod github_notifier;
 mod connection;
 pub mod huddle_notice;
 mod presence;

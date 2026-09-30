@@ -7,6 +7,19 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 repo = root.parent
 names = {
+    'test/jobs/github/deliver_subscription_event_job_test.rb': [
+        'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
+    ] * 2 + ['github_notifier_security_redacts_per_subscription_and_neutralizes_mentions'] + [
+        'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
+    ] * 3 + [None] + ['github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails'] + [None] + [
+        'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
+    ] * 10 + ['github_notifier_durable_handler_publishes_real_room_and_thread_frames'] + [
+        'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
+    ] * 3 + [None] + ['github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails'] * 5 + [
+        'github_notifier_durable_handler_publishes_real_room_and_thread_frames',
+    ] + ['github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails'] * 2 + [
+        'github_notifier_security_redacts_per_subscription_and_neutralizes_mentions',
+    ] * 5,
     'test/jobs/github/fetch_pull_request_job_test.rb': [
         'github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails',
     ] * 13 + [
@@ -113,13 +126,15 @@ names = {
 }
 paths = sorted(p for p in subprocess.check_output(['git', '-C', str(repo), 'ls-tree', '-r', '--name-only', 'd7c7de92', 'test'], text=True).splitlines() if 'github' in p and p.endswith('_test.rb'))
 rows = []
+file_counts = []
 covered = 0
-rust_tests = (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/agent_actions/tests.rs').read_text()
+rust_tests = (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/agent_actions/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/notifier/tests.rs').read_text()
 for path in paths:
     content = subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True)
     tests = re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', content, re.M)
     mapped = names.get(path, [None] * len(tests))
     assert len(mapped) == len(tests), path
+    file_counts.append((path,len(tests),sum(target is not None for target in mapped)))
     rows.append(f'## `{path}` ({len(tests)} tests)\n\n| Rails test | Status and owner | Rust coverage |\n|---|---|---|')
     for name, target in zip(tests, mapped):
         if target:
@@ -130,10 +145,15 @@ for path in paths:
             status += '; WS11 owns authentication middleware'
         if not target and path.endswith('write_client_test.rb'):
             status += ' (warning-log assertion; error/privacy assertions already covered)'
+        if not target and path.endswith('deliver_subscription_event_job_test.rb'):
+            status += ' (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder)'
         rows.append(f'| {name.replace(chr(124), chr(92)+chr(124))} | {status} | {"`" + target + "`" if target else "—"} |')
     rows.append('')
 count = sum(len(re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True), re.M)) for path in paths)
 summary = f'{count} Rails cases in {len(paths)} files: {covered} mapped to Rust assertions; {count-covered} explicitly deferred.'
-header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier job handler, card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.\n\n'
-(root / 'plans/ws15g-rails-tests.md').write_text((header + '\n'.join(rows)).rstrip() + '\n')
+header = '# WS15g Rails test coverage — partial\n\nReference: `d7c7de92`. ' + summary + '\n\nThese are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. PR card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.\n\n'
+groups = '| Rails file | Cases passing grouped assertions | Deferred |\n|---|---:|---:|\n' + '\n'.join(f'| `{path}` | {passed}/{total} | {total-passed} |' for path,total,passed in sorted(file_counts,key=lambda entry:entry[1]-entry[2],reverse=True)) + '\n\n'
+(root / 'plans/ws15g-rails-tests.md').write_text((header + groups + '\n'.join(rows)).rstrip() + '\n')
 print('GitHub Rails inventory: ' + summary)
+for path,total,passed in sorted(file_counts,key=lambda entry:entry[1]-entry[2],reverse=True):
+    print(f'{path}: {passed}/{total} mapped case groups passing; {total-passed} deferred')

@@ -1,8 +1,42 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 126 mapped to Rust assertions; 300 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 160 mapped to Rust assertions; 266 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier job handler, card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. PR card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+
+| Rails file | Cases passing grouped assertions | Deferred |
+|---|---:|---:|
+| `test/controllers/agents/github/pull_request_actions_controller_test.rb` | 0/21 | 21 |
+| `test/helpers/github_pull_requests_helper_test.rb` | 0/20 | 20 |
+| `test/controllers/rooms/github_subscriptions_controller_test.rb` | 0/17 | 17 |
+| `test/models/github/pull_request_test.rb` | 0/17 | 17 |
+| `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
+| `test/controllers/github/pull_request_review_requests_controller_test.rb` | 0/15 | 15 |
+| `test/controllers/rooms/github/pull_request_cards_controller_test.rb` | 0/15 | 15 |
+| `test/controllers/github/app_connections_controller_test.rb` | 0/13 | 13 |
+| `test/controllers/github/connections_controller_test.rb` | 0/13 | 13 |
+| `test/controllers/github/pull_request_comments_controller_test.rb` | 0/11 | 11 |
+| `test/models/github/pull_request_thread_test.rb` | 0/11 | 11 |
+| `test/controllers/accounts/bots/github_connections_controller_test.rb` | 0/10 | 10 |
+| `test/models/github/pull_request_url_test.rb` | 0/10 | 10 |
+| `test/models/github/repository_subscription_test.rb` | 0/10 | 10 |
+| `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
+| `test/controllers/github/pull_request_reviews_controller_test.rb` | 0/9 | 9 |
+| `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
+| `test/controllers/github/pull_request_threads_controller_test.rb` | 0/7 | 7 |
+| `test/jobs/audit_log_github_execution_test.rb` | 0/6 | 6 |
+| `test/controllers/github/pull_request_write_actions_controller_test.rb` | 0/5 | 5 |
+| `test/models/github/review_logins_test.rb` | 0/5 | 5 |
+| `test/controllers/github/webhooks_controller_test.rb` | 18/21 | 3 |
+| `test/jobs/github/deliver_subscription_event_job_test.rb` | 34/37 | 3 |
+| `test/models/github/notification_test.rb` | 0/3 | 3 |
+| `test/system/github_pr_write_actions_test.rb` | 0/3 | 3 |
+| `test/jobs/github/fetch_pull_request_job_test.rb` | 20/22 | 2 |
+| `test/jobs/github/perform_agent_action_job_test.rb` | 34/36 | 2 |
+| `test/models/github/write_client_test.rb` | 12/13 | 1 |
+| `test/models/github/agent_pull_request_action_test.rb` | 11/11 | 0 |
+| `test/models/github/app_test.rb` | 11/11 | 0 |
+| `test/models/github_connected_account_test.rb` | 20/20 | 0 |
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
 
@@ -310,43 +344,43 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| opened posts one bot message with the pr url and reference | Deferred; WS15g continuation | — |
-| the posted url is built from the subscribed repository, not the payload | Deferred; WS15g continuation | — |
-| webhook text cannot smuggle a mention token into the post | Deferred; WS15g continuation | — |
-| reopened, ready for review, and synchronize post nothing after opened | Deferred; WS15g continuation | — |
-| reopened posts when the pr opened before the subscription | Deferred; WS15g continuation | — |
-| closed with merged true posts merged, merged false posts closed | Deferred; WS15g continuation | — |
-| review_requested posts and records an inbox item for the linked member | Deferred; WS15g continuation | — |
-| review_requested records nothing for non-members or unlinked logins | Deferred; WS15g continuation | — |
-| review_requested skips the item when the reviewer switched them off | Deferred; WS15g continuation | — |
-| review_requested still notifies a member with notifications off but not an invisible one | Deferred; WS15g continuation | — |
-| team review requests post nothing | Deferred; WS15g continuation | — |
-| review_submitted posts each review once | Deferred; WS15g continuation | — |
-| three check failures on one sha post once, a new sha posts again | Deferred; WS15g continuation | — |
-| successful checks post nothing | Deferred; WS15g continuation | — |
-| failed status posts for the stored pr on that branch | Deferred; WS15g continuation | — |
-| failed status without a stored pr posts nothing | Deferred; WS15g continuation | — |
-| unsubscribed event keys post nothing | Deferred; WS15g continuation | — |
-| unsubscribed repositories post nothing and create no bot user | Deferred; WS15g continuation | — |
-| unhandled events post nothing | Deferred; WS15g continuation | — |
-| posted messages broadcast to the room like any other message | Deferred; WS15g continuation | — |
-| claimed notifications record their message | Deferred; WS15g continuation | — |
-| an event posts a thread reply where the PR has a thread and a room message elsewhere | Deferred; WS15g continuation | — |
-| thread updates dedupe like room messages | Deferred; WS15g continuation | — |
-| review_requested in a PR thread points the inbox item at the thread message | Deferred; WS15g continuation | — |
-| an update for a locked PR thread falls back to a root room message | Deferred; WS15g continuation | — |
-| an update for a closed PR thread still lands in the thread | Deferred; WS15g continuation | — |
-| subscription events find the PR thread regardless of payload case | Deferred; WS15g continuation | — |
-| failed checks use the stored title regardless of payload case | Deferred; WS15g continuation | — |
-| failed status matches stored PRs regardless of payload case | Deferred; WS15g continuation | — |
-| thread updates broadcast to the thread stream | Deferred; WS15g continuation | — |
-| posts nothing to a soft-deleted room | Deferred; WS15g continuation | — |
-| records no inbox item for a soft-deleted room | Deferred; WS15g continuation | — |
-| a private repository posts without the title to a subscription with no verified reader | Deferred; WS15g continuation | — |
-| a repository whose privacy the payload omits is treated as private | Deferred; WS15g continuation | — |
-| a private repository keeps the title for a verified reader's subscription | Deferred; WS15g continuation | — |
-| failed checks on a private repository omit the stored title for an unverified subscription | Deferred; WS15g continuation | — |
-| one webhook redacts per subscription | Deferred; WS15g continuation | — |
+| opened posts one bot message with the pr url and reference | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| the posted url is built from the subscribed repository, not the payload | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| webhook text cannot smuggle a mention token into the post | Mapped to grouped Rust assertions; WS15g | `github_notifier_security_redacts_per_subscription_and_neutralizes_mentions` |
+| reopened, ready for review, and synchronize post nothing after opened | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| reopened posts when the pr opened before the subscription | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| closed with merged true posts merged, merged false posts closed | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| review_requested posts and records an inbox item for the linked member | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — |
+| review_requested records nothing for non-members or unlinked logins | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| review_requested skips the item when the reviewer switched them off | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — |
+| review_requested still notifies a member with notifications off but not an invisible one | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| team review requests post nothing | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| review_submitted posts each review once | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| three check failures on one sha post once, a new sha posts again | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| successful checks post nothing | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| failed status posts for the stored pr on that branch | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| failed status without a stored pr posts nothing | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| unsubscribed event keys post nothing | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| unsubscribed repositories post nothing and create no bot user | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| unhandled events post nothing | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| posted messages broadcast to the room like any other message | Mapped to grouped Rust assertions; WS15g | `github_notifier_durable_handler_publishes_real_room_and_thread_frames` |
+| claimed notifications record their message | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| an event posts a thread reply where the PR has a thread and a room message elsewhere | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| thread updates dedupe like room messages | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| review_requested in a PR thread points the inbox item at the thread message | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — |
+| an update for a locked PR thread falls back to a root room message | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| an update for a closed PR thread still lands in the thread | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| subscription events find the PR thread regardless of payload case | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| failed checks use the stored title regardless of payload case | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| failed status matches stored PRs regardless of payload case | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| thread updates broadcast to the thread stream | Mapped to grouped Rust assertions; WS15g | `github_notifier_durable_handler_publishes_real_room_and_thread_frames` |
+| posts nothing to a soft-deleted room | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| records no inbox item for a soft-deleted room | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
+| a private repository posts without the title to a subscription with no verified reader | Mapped to grouped Rust assertions; WS15g | `github_notifier_security_redacts_per_subscription_and_neutralizes_mentions` |
+| a repository whose privacy the payload omits is treated as private | Mapped to grouped Rust assertions; WS15g | `github_notifier_security_redacts_per_subscription_and_neutralizes_mentions` |
+| a private repository keeps the title for a verified reader's subscription | Mapped to grouped Rust assertions; WS15g | `github_notifier_security_redacts_per_subscription_and_neutralizes_mentions` |
+| failed checks on a private repository omit the stored title for an unverified subscription | Mapped to grouped Rust assertions; WS15g | `github_notifier_security_redacts_per_subscription_and_neutralizes_mentions` |
+| one webhook redacts per subscription | Mapped to grouped Rust assertions; WS15g | `github_notifier_security_redacts_per_subscription_and_neutralizes_mentions` |
 
 ## `test/jobs/github/fetch_pull_request_job_test.rb` (22 tests)
 
