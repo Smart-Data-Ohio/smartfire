@@ -317,3 +317,229 @@ async fn google_drive_recipients_exclude_agents_inactive_and_bad_email_without_d
     let mut agent = a.sign_in(JASON).await;
     assert_eq!(agent.get(&path).await.status, StatusCode::FORBIDDEN);
 }
+
+#[tokio::test]
+async fn google_drive_file_json_and_all_mime_kinds_match_rails() {
+    let (a, r) = app().await;
+    grant(&a, DAVID).await;
+    let mut b = a.sign_in(DAVID).await;
+    let file = support::vectors()["drive_file"].clone();
+    for (index, (mime, kind)) in [
+        ("application/vnd.google-apps.document", "document"),
+        ("application/vnd.google-apps.spreadsheet", "spreadsheet"),
+        ("application/vnd.google-apps.presentation", "presentation"),
+        ("application/vnd.google-apps.form", "form"),
+        ("application/vnd.google-apps.folder", "folder"),
+        ("application/pdf", "pdf"),
+        ("image/png", "file"),
+        ("application/vnd.google-apps.unknown", "file"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let id = format!("kind-mapping-{index}1");
+        let mut payload = file.clone();
+        payload["id"] = json!(id);
+        payload["mimeType"] = json!(mime);
+        r.answer(200, payload.clone());
+        let reply = b.get(&format!("/google/drive/files/{id}")).await;
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_eq!(
+            reply.json(),
+            json!({"id":id,"name":payload["name"],"kind":kind,"modified_at":payload["modifiedTime"],"owner":payload["owners"][0]["displayName"],"url":payload["webViewLink"]})
+        );
+    }
+    let mut payload = file;
+    payload["mimeType"] = json!("image/png");
+    r.answer(200, json!({"files":[payload]}));
+    assert_eq!(
+        b.get("/google/drive/files").await.json()["files"][0]["kind"],
+        "file"
+    );
+}
+#[tokio::test]
+async fn google_drive_transport_quota_and_forbidden_fail_with_rails_statuses() {
+    let (a, r) = app().await;
+    grant(&a, DAVID).await;
+    let mut b = a.sign_in(DAVID).await;
+    let show = format!("/google/drive/files/{FILE}");
+    r.fail_next();
+    assert_eq!(b.get(&show).await.status, StatusCode::SERVICE_UNAVAILABLE);
+    r.answer(429, json!({}));
+    assert_eq!(b.get(&show).await.status, StatusCode::SERVICE_UNAVAILABLE);
+    for status in [403, 404] {
+        r.answer(status, json!({}));
+        let denied = b.get(&show).await;
+        assert_eq!(denied.status, StatusCode::NOT_FOUND);
+        assert!(denied.body.is_empty());
+    }
+    r.fail_next();
+    let failed = b.get("/google/drive/files").await;
+    assert_eq!(failed.status, StatusCode::BAD_GATEWAY);
+    assert_eq!(failed.json(), json!({"error":"drive_unavailable"}));
+    r.answer(403, json!({}));
+    let denied = b.get("/google/drive/files").await;
+    assert_eq!(denied.status, StatusCode::NOT_FOUND);
+    assert!(denied.body.is_empty());
+}
+#[tokio::test]
+async fn google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google() {
+    let (a, r) = app().await;
+    let mut b = a.sign_in(DAVID).await;
+    for mode in ["disconnected", "unreadable", "calendar-only"] {
+        grant(&a, DAVID).await;
+        a.db().write(move|tx| {match mode {"disconnected"=>{tx.conn().execute("UPDATE google_accounts SET disconnected_reason='rejected' WHERE user_id=?",[DAVID])?;},"unreadable"=>{tx.conn().execute("UPDATE google_accounts SET refresh_token='tampered-ciphertext' WHERE user_id=?",[DAVID])?;},_=>{tx.conn().execute("UPDATE google_accounts SET scopes=NULL WHERE user_id=?",[DAVID])?;}}Ok(())}).await.unwrap();
+        for path in [
+            "/google/drive/files".to_owned(),
+            format!("/google/drive/files/{FILE}"),
+        ] {
+            let reply = b.get(&path).await;
+            assert_eq!(reply.status, StatusCode::NOT_FOUND, "{mode}");
+            assert!(reply.body.is_empty());
+        }
+        if mode == "unreadable" {
+            let reason = a
+                .db()
+                .read(|c| {
+                    Ok(
+                        campfire_db::models::google_account::GoogleAccount::for_user(c, DAVID)?
+                            .unwrap()
+                            .disconnected_reason,
+                    )
+                })
+                .await
+                .unwrap();
+            assert_eq!(
+                reason.as_deref(),
+                Some(campfire_db::models::google_account::UNREADABLE_TOKEN_REASON)
+            );
+        }
+    }
+    assert!(r.calls.lock().unwrap().is_empty());
+}
+#[tokio::test]
+async fn google_drive_index_refreshes_expired_access_and_invalid_grant_disconnects() {
+    let (a, r) = app().await;
+    let mut b = a.sign_in(DAVID).await;
+    let v = support::vectors();
+    let old =
+        Timestamp::from_jiff(a.booted.app.clock.now()).ago(jiff::SignedDuration::from_hours(1));
+    support::grant(&a, DAVID, old, true).await;
+    r.answer(200, v["refresh"].clone());
+    r.answer(200, v["drive_list"].clone());
+    assert_eq!(
+        b.get("/google/drive/files?q=%20%20").await.status,
+        StatusCode::OK
+    );
+    let calls = r.calls.lock().unwrap().clone();
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[0]["path"], "/token");
+    assert_eq!(calls[1]["access_token"], "refreshed-access-token");
+    let u = url::Url::parse(&format!(
+        "https://www.googleapis.com{}",
+        calls[1]["path"].as_str().unwrap()
+    ))
+    .unwrap();
+    let q = u
+        .query_pairs()
+        .collect::<std::collections::BTreeMap<_, _>>();
+    assert_eq!(q["q"], "trashed=false");
+    assert_eq!(q["pageSize"], "10");
+    assert_eq!(q["orderBy"], "modifiedTime desc");
+    assert_eq!(q["spaces"], "drive");
+    support::grant(&a, DAVID, old, true).await;
+    r.answer(400, v["invalid_grant"].clone());
+    let denied = b.get("/google/drive/files").await;
+    assert_eq!(denied.status, StatusCode::NOT_FOUND);
+    assert!(denied.body.is_empty());
+    let account = a
+        .db()
+        .read(|c| campfire_db::models::google_account::GoogleAccount::for_user(c, DAVID))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        account.disconnected_reason.as_deref(),
+        Some("Google rejected the connection")
+    );
+}
+#[tokio::test]
+async fn google_drive_index_rejects_unenrolled_and_stale_enrolled_sessions_before_http() {
+    use campfire_db::NewSession;
+    use campfire_kit::Crypto;
+    for stale in [false, true] {
+        let (a, r) = app().await;
+        grant(&a, DAVID).await;
+        a.db()
+            .write(|tx| {
+                if let Some(c) = campfire_db::TwoFactorCredential::for_user(tx.conn(), DAVID)? {
+                    c.destroy(tx)?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let token = a
+            .db()
+            .write(|tx| {
+                campfire_db::Session::start_with(
+                    tx,
+                    DAVID,
+                    NewSession {
+                        two_factor_verified: false,
+                        ..Default::default()
+                    },
+                )
+                .map(|s| s.token)
+            })
+            .await
+            .unwrap();
+        if stale {
+            let enc=rails_compat::ar_encryption::ArEncryption::new(&a.booted.app.secrets);
+            a.db()
+                .write(move |tx| {
+                    let c = campfire_db::TwoFactorCredential::create(
+                        tx,
+                        &enc,
+                        DAVID,
+                        "JBSWY3DPEHPK3PXP",
+                    )?;
+                    tx.conn().execute("UPDATE two_factor_credentials SET confirmed_at=? WHERE id=?",rusqlite::params![tx.now(),c.id])?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        }
+        let signed = campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone()).sign_cookie(
+            "session_token",
+            &token,
+            None,
+        );
+        let mut b = a.anonymous();
+        b.absorb_cookie_header(&format!(
+            "session_token={}",
+            campfire_kit::cookies::escape(&signed)
+        ));
+        let denied = b
+            .send(Req::new(Method::GET, "/google/drive/files").header("accept", "application/json"))
+            .await;
+        assert_eq!(
+            denied.status,
+            if stale {
+                StatusCode::UNAUTHORIZED
+            } else {
+                StatusCode::FORBIDDEN
+            }
+        );
+        assert!(r.calls.lock().unwrap().is_empty());
+        if stale {
+            assert!(
+                a.db()
+                    .read(move |c| campfire_db::Session::find_by_token(c, &token))
+                    .await
+                    .unwrap()
+                    .is_none()
+            );
+        }
+    }
+}

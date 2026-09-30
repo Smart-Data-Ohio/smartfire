@@ -23,13 +23,19 @@ use std::{
 pub struct Recorded {
     pub answers: Mutex<VecDeque<(u16, Vec<u8>)>>,
     pub calls: Mutex<Vec<Value>>,
+    failures: std::sync::atomic::AtomicUsize,
 }
 impl Recorded {
     pub fn new(answers: Vec<(u16, Vec<u8>)>) -> Arc<Self> {
         Arc::new(Self {
             answers: Mutex::new(answers.into()),
             calls: Mutex::new(vec![]),
+            failures: std::sync::atomic::AtomicUsize::new(0),
         })
+    }
+    pub fn fail_next(&self) {
+        self.failures
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
     pub fn answer(&self, status: u16, body: Value) {
         self.answers
@@ -59,6 +65,17 @@ impl Client for Recorded {
                     .map(|(_, v)| v.clone())
             };
             self.calls.lock().unwrap().push(json!({"method":method.to_string(),"path":target,"body":String::from_utf8(body).unwrap(),"content_type":header("Content-Type"),"access_token":header("Authorization").map(|v|v.strip_prefix("Bearer ").unwrap().to_owned())}));
+            if self
+                .failures
+                .fetch_update(
+                    std::sync::atomic::Ordering::SeqCst,
+                    std::sync::atomic::Ordering::SeqCst,
+                    |n| n.checked_sub(1),
+                )
+                .is_ok()
+            {
+                return Err(Unavailable);
+            }
             Ok(self
                 .answers
                 .lock()

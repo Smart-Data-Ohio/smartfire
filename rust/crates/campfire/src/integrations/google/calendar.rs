@@ -80,23 +80,23 @@ pub async fn cleanup(
 ) -> api::Result<()> {
     let snapshot = if let Some(s) = blob.as_str() {
         calendar_credentials::decrypt_snapshot(&app.secrets, s, app.clock.now())
-    } else if let Some(hash) = blob.as_object().filter(|h| !h.is_empty()) {
-        Some(Snapshot {
-            access_token: hash
-                .get("access_token")
-                .and_then(Value::as_str)
-                .map(str::to_owned),
-            refresh_token: hash
-                .get("refresh_token")
-                .and_then(Value::as_str)
-                .map(str::to_owned),
-            access_token_expires_at: hash
-                .get("access_token_expires_at")
-                .and_then(Value::as_str)
-                .and_then(|s| s.parse().ok()),
-        })
     } else {
-        None
+        blob.as_object()
+            .filter(|h| !h.is_empty())
+            .map(|hash| Snapshot {
+                access_token: hash
+                    .get("access_token")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                refresh_token: hash
+                    .get("refresh_token")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                access_token_expires_at: hash
+                    .get("access_token_expires_at")
+                    .and_then(Value::as_str)
+                    .and_then(|s| s.parse().ok()),
+            })
     };
     let Some(snapshot) = snapshot else {
         tracing::warn!(
@@ -254,23 +254,19 @@ pub async fn watch(app: &App, user_id: i64) -> api::Result<()> {
             return Ok(());
         }
     };
-    if let Some((_, old_channel, Some(resource_id))) = old {
-        if !api::blank(&resource_id) {
-            let payload = json!({"id":old_channel,"resourceId":resource_id});
-            let _ = api
-                .request(
-                    &app.db,
-                    &app.secrets,
-                    user_id,
-                    ApiRequest::calendar(
-                        Method::POST,
-                        "/calendar/v3/channels/stop",
-                        Some(&payload),
-                    ),
-                    now(app),
-                )
-                .await;
-        }
+    if let Some((_, old_channel, Some(resource_id))) = old
+        && !api::blank(&resource_id)
+    {
+        let payload = json!({"id":old_channel,"resourceId":resource_id});
+        let _ = api
+            .request(
+                &app.db,
+                &app.secrets,
+                user_id,
+                ApiRequest::calendar(Method::POST, "/calendar/v3/channels/stop", Some(&payload)),
+                now(app),
+            )
+            .await;
     }
     let digest = campfire_db::models::google_calendar::PushChannel::digest(&token);
     let resource = response["resourceId"].as_str().map(str::to_owned);

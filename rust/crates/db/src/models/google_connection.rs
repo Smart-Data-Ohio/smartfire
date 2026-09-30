@@ -67,7 +67,7 @@ pub fn disconnect(
         .prepare("SELECT google_event_id FROM event_calendar_entries WHERE user_id=?")?
         .query_map([id], |r| r.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    let snapshot = account.cleanup_snapshot(&secrets, tx.now().jiff());
+    let snapshot = account.cleanup_snapshot(secrets, tx.now().jiff());
     tx.conn()
         .execute("DELETE FROM event_calendar_entries WHERE user_id=?", [id])?;
     tx.conn()
