@@ -203,6 +203,33 @@ fn blob_filenames_match_pinned_rails() {
     }
 }
 
+#[test]
+fn forwarded_filenames_match_pinned_rails() {
+    let vectors: J = serde_json::from_str(include_str!("../../../vectors/attachment_filenames.json")).unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    let mut checked = 0;
+    for case in vectors["cases"].as_array().unwrap() {
+        // Ruby Blob#open rejects the raw filename containing NUL, before a copy is possible.
+        let Some(expected_name) = case["copied_filename"].as_str() else { continue };
+        let name = case["filename"].as_str().unwrap();
+        let label = format!("{name:?} {}", case["kind"]);
+        let bytes = base64::engine::general_purpose::STANDARD.decode(case["data_base64"].as_str().unwrap()).unwrap();
+        let source = storage.create_and_upload(&conn, &bytes, Filename::new(name), case["content_type"].as_str(), now()).unwrap();
+        let staged = storage.stage_copy(&source).unwrap();
+        let copied = staged.insert(&conn, now()).unwrap();
+        assert_eq!(copied.filename.raw(), expected_name, "{label} stored copy filename");
+        assert_eq!(Blob::find(&conn, copied.id).unwrap().unwrap().filename.raw(), expected_name, "{label} persisted filename");
+        assert_eq!(copied.content_type(), case["identified_content_type"], "{label} retained MIME");
+        assert_eq!(serde_json::from_str::<J>(&copied.metadata.encode()).unwrap(), case["copied_metadata"], "{label}");
+        assert_eq!(std::fs::read(storage.path_for(&copied)).unwrap(), bytes, "{label} copied bytes");
+        checked += 1;
+    }
+    assert_eq!(checked, 560);
+}
+
 fn blob_from(row: &J) -> Blob {
     Blob {
         id: row["id"].as_i64().unwrap(),

@@ -102,7 +102,8 @@ async fn filename_assignment(index: usize, reject_jobs: bool) {
         reply.text()
     );
     let kind = expected["kind"].as_str().unwrap().to_string();
-    app.db()
+    let source = app
+        .db()
         .read(move |conn| {
             let account = campfire_db::Account::first(conn)?.unwrap();
             let attached = attached_blob(conn, "Account", account.id, "logo")?.unwrap();
@@ -118,10 +119,20 @@ async fn filename_assignment(index: usize, reject_jobs: bool) {
                 analysis_jobs(conn)?,
                 expected["analysis_jobs"].as_i64().unwrap()
             );
-            Ok(())
+            Ok(attached)
         })
         .await
         .unwrap();
+    let staged = app.booted.app.storage.stage_copy(&source).unwrap();
+    let copied = app
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    assert_ne!(copied.key, source.key);
+    assert_eq!(copied.filename.raw(), source.filename.sanitized());
+    assert_eq!(copied.content_type, source.content_type);
+    assert_eq!(copied.metadata, source.metadata);
     export_analyzer_readback(&app, &kind).await;
 }
 

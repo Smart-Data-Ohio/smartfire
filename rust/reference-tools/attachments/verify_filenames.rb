@@ -17,7 +17,12 @@ raise "metadata mismatch" unless blob.metadata == expected.fetch("metadata")
 raise "bytes mismatch" unless Digest::SHA256.hexdigest(blob.download) == expected.fetch("sha256")
 raise "analyzer mismatch" unless blob.send(:analyzer_class).name == expected.fetch("analyzer")
 raise "signed lookup mismatch" unless ActiveStorage::Blob.find_signed!(blob.signed_id).id == blob.id
+copied = ActiveStorage::Blob.order(:id).last
+raise "invalid copied blob" unless copied.id != blob.id && copied.valid?
+raise "copied filename mismatch" unless copied[:filename] == expected.fetch("sanitized")
+raise "copied MIME/metadata mismatch" unless copied.content_type == blob.content_type && copied.metadata == blob.metadata
+raise "copied bytes mismatch" unless Digest::SHA256.hexdigest(copied.download) == expected.fetch("sha256")
 jobs = ActiveRecord::Base.connection.select_value("SELECT count(*) FROM background_jobs WHERE job_class = 'ActiveStorage::AnalyzeJob'")
 raise "analysis jobs mismatch" unless jobs == expected.fetch("analysis_jobs")
 raise "attachment foreign keys" unless ActiveRecord::Base.connection.select_rows("PRAGMA foreign_key_check(active_storage_attachments)").empty?
-puts "Rails #{kind} readback: valid account/blob/attachment; raw and sanitized names, bytes, MIME, analyzer, metadata and #{jobs} analysis jobs match"
+puts "Rails #{kind} readback: valid account/blob/attachment and copied blob; raw and sanitized names, bytes, MIME, analyzer, metadata and #{jobs} analysis jobs match"

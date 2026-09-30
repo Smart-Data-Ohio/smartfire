@@ -46,8 +46,19 @@ cases = names.flat_map do |name|
     blob.reload
     uploaded = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(bytes), filename: name, content_type: "application/octet-stream")
     raise "identification differs from unfurl" unless blob.content_type == uploaded.content_type
+    # Messages::Forwarder#copy_attachment_to explicitly assigns filename.to_s to its new blob.
+    copied = begin
+      blob.open do |io|
+        ActiveStorage::Blob.create_and_upload!(io: io, filename: blob.filename.to_s,
+          content_type: blob.content_type, identify: false, metadata: blob.metadata)
+      end
+    rescue ArgumentError
+      raise unless name.include?("\0") # Ruby File.extname rejects NUL in Blob#open.
+      nil
+    end
     input.merge(filename: name, sanitized: blob.filename.sanitized, stored_before: stored_before,
       stored_after: blob[:filename], uploaded_filename: uploaded.reload[:filename],
+      copied_filename: copied&.reload&.[](:filename), copied_metadata: copied&.metadata,
       content_type: "application/octet-stream", identified_content_type: blob.content_type,
       metadata: blob.metadata, uploaded_metadata: uploaded.metadata, analyzer: blob.send(:analyzer_class).name,
       analyze_later: blob.send(:analyzer_class).analyze_later?)

@@ -106,7 +106,8 @@ impl Storage {
     /// fresh key with identify:false, and retain its content type and metadata.
     pub fn stage_copy(&self, source: &Blob) -> Result<Staged> {
         let file = self.open(source)?;
-        let mut blob = NewBlob::unfurl_file(file.path(), source.filename.clone(), source.content_type.as_deref(), self.service.name(), false)?;
+        // Messages::Forwarder#copy_attachment_to stores filename.to_s, not the raw name.
+        let mut blob = NewBlob::unfurl_file(file.path(), Filename::new(source.filename.sanitized()), source.content_type.as_deref(), self.service.name(), false)?;
         blob.metadata = source.metadata.clone();
         blob.metadata.set("identified", Json::Bool(true));
         self.stage(blob, std::fs::File::open(file.path())?)
