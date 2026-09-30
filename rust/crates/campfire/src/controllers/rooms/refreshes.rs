@@ -34,6 +34,7 @@ pub async fn show(c: &mut Ctx) -> Result {
                     room_kind: room_kind(room.room_type),
                     new_messages: presenter.messages(&new_messages)?,
                     updated_messages: presenter.messages(&updated_messages)?,
+                    pins: pins_changed.then(|| super::pins::list(conn,&app,&room)).transpose()?,
                 }))
             })
         })

@@ -193,6 +193,8 @@ pub struct RefreshView {
     pub room_kind: RoomKind,
     pub new_messages: Vec<MessageItem>,
     pub updated_messages: Vec<MessageItem>,
+    #[serde(default)]
+    pub pins: Option<crate::pins::List>,
 }
 
 /// `rooms/refreshes/show.turbo_stream`.
@@ -201,6 +203,15 @@ pub struct RefreshView {
 pub struct RefreshShow<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub refresh: &'a RefreshView,
+}
+
+impl RefreshShow<'_> {
+    fn pins_count(&self, list: &crate::pins::List) -> h::Html {
+        h::raw(crate::pins::CountPartial {room_id:list.room_id,room_param_key:list.room_param_key.clone(),count:list.pins.len() as i64}.render().expect("owner pin count renders"))
+    }
+    fn pins_list(&self, list: &crate::pins::List) -> h::Html {
+        h::raw(crate::pins::ListPartial {ctx:self.ctx,list}.render().expect("owner pin list renders"))
+    }
 }
 
 /// The room being created or edited by the open and closed room forms. `id` is `None` for a
