@@ -183,9 +183,10 @@ For deterministic request coverage, the harness fetches each declared same-origi
 through its authenticated API request context at navigation and interaction boundaries,
 without changing image attributes or rendered DOM.
 Otherwise WebKit opportunistically fetching an offscreen timeline image races a thread-panel
-transition. Their actual response headers and bytes remain compared. `realtime/thread_reply` explicitly
-scrolls the background timeline to the bottom after panel reflow so WebKit scroll anchoring
-cannot choose two viewport positions for the same DOM. Non-GET bodies retain
+transition. Their actual response headers and bytes remain compared. `channels/timeline` and
+`realtime/thread_reply` explicitly scroll the timeline to the bottom after card/image or panel
+reflow so WebKit scroll anchoring cannot choose two viewport positions for the same DOM.
+Deep-link and unread-divider states retain their own initial positions. Non-GET bodies retain
 the inherited boundary: their status/headers and resulting rendered state are compared,
 but a submission is never replayed to recover a discarded response body.
 

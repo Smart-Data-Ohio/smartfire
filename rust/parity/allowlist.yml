@@ -44,7 +44,8 @@
 # - Animated WebP/GIF pixels: freeze to the first frame; actual original asset bytes (all
 #   frames) are independently hashed before transformation. No asset byte normalization.
 # - Offscreen lazy image requests: deterministically fetch declared sources at step boundaries;
-#   no DOM/pixel/header/body mask. realtime/thread_reply declares a bottom scroll after panel
-#   reflow to remove WebKit scroll-anchor ambiguity, with all visible pixels still compared.
+#   no DOM/pixel/header/body mask. channels/timeline and realtime/thread_reply declare a bottom
+#   scroll after card/image or panel reflow to remove WebKit scroll-anchor ambiguity, with all
+#   visible pixels still compared. Deep-link/unread-divider states keep their initial positions.
 # No state-specific values/pixels or asset/PWA bodies are hidden to force agreement.
 []

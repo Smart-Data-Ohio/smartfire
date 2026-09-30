@@ -4,6 +4,9 @@ states:
     area: channels
     path: /rooms/{{rooms.designers}}
     as: david
+    steps:
+      # Capture the latest messages after card/image reflow, with an explicit viewport.
+      - scroll: { selector: '.messages', to: bottom }
     smoke: true
     covers:
       - rooms/show
