@@ -7,8 +7,7 @@ use std::collections::BTreeMap;
 use campfire_richtext::dom::Dom;
 use campfire_richtext::sanitizer::SafeList;
 use campfire_richtext::{
-    AttachableResolver, GidLookup, MentionUser, Presentation, RenderContext, SignedLookup, editable_value,
-    mentioned_users, present_message, to_plain_text,
+    AttachableResolver, GidLookup, MentionUser, Presentation, RenderContext, SignedLookup, mentioned_users, present_message, to_plain_text,
 };
 use serde_json::Value;
 
@@ -48,12 +47,14 @@ struct TestResolver {
     users: Vec<MentionUser>,
     rooms: Vec<i64>,
     signed: Vec<(String, String, i64, bool)>,
+    images: BTreeMap<String, String>,
 }
 
 impl TestResolver {
     fn from(corpus: &Corpus) -> Self {
         TestResolver {
             users: corpus.users(),
+            images: serde_json::from_value(corpus.json["embed_images"].clone()).unwrap(),
             rooms: corpus.json["rooms"].as_array().unwrap().iter().map(|r| r.as_i64().unwrap()).collect(),
             signed: corpus.json["signed"]
                 .as_array()
@@ -75,24 +76,34 @@ impl TestResolver {
 impl AttachableResolver for TestResolver {
     fn locate_signed(&self, sgid: &str) -> SignedLookup {
         match self.signed.iter().find(|(s, ..)| s == sgid) {
-            Some((_, model, id, true)) if model == "User" => {
-                SignedLookup::User(self.users.iter().find(|u| u.id == *id).unwrap().clone())
-            }
+            Some((_, model, id, true)) if model == "User" => SignedLookup::User(self.users.iter().find(|u| u.id == *id).unwrap().clone()),
             Some((_, model, _, _)) => SignedLookup::MissingRecord { model_name: model.clone() },
             None => SignedLookup::Invalid,
         }
     }
 
+    fn embed_image_path(&self, url: &str) -> Result<String, campfire_richtext::Error> {
+        Ok(self.images.get(url).expect("generated image signature").clone())
+    }
+
     fn find_gid(&self, gid: &str) -> GidLookup {
         // GlobalID's default locator ignores the app name
-        let Some(rest) = gid.strip_prefix("gid://") else { return GidLookup::NotFound };
+        let Some(rest) = gid.strip_prefix("gid://") else {
+            return GidLookup::NotFound;
+        };
         if !gid.is_ascii() {
             return GidLookup::NotFound;
         }
-        let Some((_app, rest)) = rest.split_once('/') else { return GidLookup::NotFound };
+        let Some((_app, rest)) = rest.split_once('/') else {
+            return GidLookup::NotFound;
+        };
         let rest = rest.split('?').next().unwrap();
-        let Some((model, id)) = rest.split_once('/') else { return GidLookup::NotFound };
-        let Ok(id) = id.parse::<i64>() else { return GidLookup::NotFound };
+        let Some((model, id)) = rest.split_once('/') else {
+            return GidLookup::NotFound;
+        };
+        let Ok(id) = id.parse::<i64>() else {
+            return GidLookup::NotFound;
+        };
         match model {
             "User" => self.users.iter().find(|u| u.id == id).cloned().map_or(GidLookup::NotFound, GidLookup::User),
             "Room" if self.rooms.contains(&id) => GidLookup::OtherModel,
@@ -104,7 +115,9 @@ impl AttachableResolver for TestResolver {
 /// A DOM normalization for reporting near misses: parse, drop whitespace-only text, sort attributes.
 fn normalized_dom(html: &str) -> String {
     let mut dom = Dom::new();
-    let Ok(root) = dom.parse_fragment(html) else { return format!("unparseable: {html}") };
+    let Ok(root) = dom.parse_fragment(html) else {
+        return format!("unparseable: {html}");
+    };
     let mut out = String::new();
     normalize_into(&dom, root, &mut out);
     out
@@ -127,65 +140,32 @@ fn normalize_into(dom: &Dom, node: usize, out: &mut String) {
     }
 }
 
-// --- Deliberate differences ----------------------------------------------------------------------
-
-/// Rails' presentation as the port renders it on purpose (see "Known differences" in README.md):
-/// `<` and `>` are escaped in attribute values, and the links rails_autolink inserted inside an
-/// attribute value (its stored XSS) are left as the text they replaced; `name` attributes are dropped.
-fn with_port_divergences(rails: &str) -> String {
-    const INSERTED_LINK: &str = "<a target=\"_blank\" href=\"";
-    enum State {
-        Text,
-        Tag,
-        Value,
-    }
-    let mut out = String::with_capacity(rails.len());
-    let mut state = State::Text;
-    let mut rest = rails;
-    while let Some(c) = rest.chars().next() {
-        if matches!(state, State::Value) && rest.starts_with(INSERTED_LINK) {
-            let text_start = rest.find("\">").unwrap() + 2;
-            let text_end = text_start + rest[text_start..].find("</a>").unwrap();
-            out.push_str(&rest[text_start..text_end].replace('>', "&gt;"));
-            rest = &rest[text_end + 4..];
-            continue;
-        }
-        if matches!(state, State::Tag) && rest.starts_with(" name=\"") {
-            let value_end = " name=\"".len() + rest[" name=\"".len()..].find('"').unwrap();
-            rest = &rest[value_end + 1..];
-            continue;
-        }
-        match (&state, c) {
-            (State::Text, '<') => state = State::Tag,
-            (State::Tag, '>') => state = State::Text,
-            (State::Tag, '"') => state = State::Value,
-            (State::Value, '"') => state = State::Tag,
-            _ => {}
-        }
-        match (&state, c) {
-            (State::Value, '<') => out.push_str("&lt;"),
-            (State::Value, '>') => out.push_str("&gt;"),
-            _ => out.push(c),
-        }
-        rest = &rest[c.len_utf8()..];
-    }
-    out
-}
-
-#[test]
-fn port_divergences_apply_to_attribute_values_only() {
-    assert_eq!(
-        with_port_divergences("<p title=\"a>b <a target=\"_blank\" href=\"http://x.test/\">http://x.test/</a>\">c > <a target=\"_blank\" href=\"http://y.test/\">y</a></p>"),
-        "<p title=\"a&gt;b http://x.test/\">c > <a target=\"_blank\" href=\"http://y.test/\">y</a></p>"
-    );
-    assert_eq!(with_port_divergences("<a name=\"x y\" title=\"name=\">n</a>"), "<a title=\"name=\">n</a>");
-}
-
 // --- Security assertions -------------------------------------------------------------------------
 
 const DANGEROUS_ELEMENTS: &[&str] = &[
-    "script", "style", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "meta", "link", "form",
-    "input", "button", "textarea", "select", "svg", "math", "template", "noscript", "xmp", "plaintext", "noembed",
+    "script",
+    "style",
+    "iframe",
+    "frame",
+    "frameset",
+    "object",
+    "embed",
+    "applet",
+    "base",
+    "meta",
+    "link",
+    "form",
+    "input",
+    "button",
+    "textarea",
+    "select",
+    "svg",
+    "math",
+    "template",
+    "noscript",
+    "xmp",
+    "plaintext",
+    "noembed",
 ];
 
 const URL_ATTRIBUTES: &[&str] = &["href", "src", "action", "formaction", "poster", "cite", "background", "xlink:href", "srcset", "data"];
@@ -209,10 +189,14 @@ fn dangerous_url(value: &str) -> bool {
 /// Parses rendered output the way a browser would and returns the security violations in it.
 fn security_violations(html: &str, allow_style: bool) -> Vec<String> {
     let mut dom = Dom::new();
-    let Ok(root) = dom.parse_fragment(html) else { return vec!["unparseable output".into()] };
+    let Ok(root) = dom.parse_fragment(html) else {
+        return vec!["unparseable output".into()];
+    };
     let mut violations = Vec::new();
     for node in dom.descendants(root) {
-        let Some(name) = dom.local_name(node) else { continue };
+        let Some(name) = dom.local_name(node) else {
+            continue;
+        };
         if DANGEROUS_ELEMENTS.contains(&name) {
             violations.push(format!("<{name}> element"));
         }
@@ -226,6 +210,9 @@ fn security_violations(html: &str, allow_style: bool) -> Vec<String> {
                 violations.push(format!("{attr} on <{name}> not in the allowlist"));
             }
             let lower = attr.to_lowercase();
+            if lower == "name" && name != "a" {
+                violations.push(format!("name on <{name}> can create DOM globals"));
+            }
             if lower.starts_with("on") {
                 violations.push(format!("{attr} attribute on <{name}>"));
             }
@@ -282,6 +269,7 @@ fn corpus_matches_rails() {
     let resolver = TestResolver::from(&corpus);
     let mut tallies: BTreeMap<&str, Tally> = BTreeMap::new();
     let mut security = Vec::new();
+    let mut raw_diffs = Vec::new();
     let cases = corpus.json["cases"].as_array().unwrap();
 
     for case in cases {
@@ -291,19 +279,15 @@ fn corpus_matches_rails() {
 
         // presentation
         let expected = match outcome_str(&case["presentation"]) {
-            Ok(html) => Presentation::Html(with_port_divergences(&html.unwrap_or_default())),
+            Ok(html) => Presentation::Html(html.unwrap_or_default()),
             Err(_) => Presentation::Unrenderable,
         };
         let actual = present_message(body, &ctx);
+        if actual != expected {
+            raw_diffs.push(serde_json::json!({ "name": name, "body": body, "rails": format!("{expected:?}"), "rust": format!("{actual:?}") }));
+        }
         let label = format!("[presentation] {name}");
-        // Deliberate: a missing attachable Rails can't find a partial for (a deleted user's
-        // mention) renders ☒ instead of raising and blanking the message.
-        let missing_partial = case["presentation_raised_message"].as_str().is_some_and(|m| m.contains("to_missing_attachable_partial_path"));
         match (&expected, &actual) {
-            (Presentation::Html(_), Presentation::Html(a)) if missing_partial => {
-                assert!(a.contains('☒'), "{label}: {a}");
-                tallies.entry("presentation").or_default().exact += 1;
-            }
             (Presentation::Html(e), Presentation::Html(a)) => tallies.entry("presentation").or_default().record(label, e, a),
             _ => tallies.entry("presentation").or_default().record(label, &format!("{expected:?}"), &format!("{actual:?}")),
         }
@@ -323,13 +307,11 @@ fn corpus_matches_rails() {
         }
 
         // editable value
-        let actual = editable_value(body, &ctx);
+        let actual =
+            campfire_richtext::Content::load(body, &ctx).and_then(|c| campfire_richtext::legacy_markdown::render(&c.to_html(), &ctx));
         let label = format!("[editable] {name}");
-        // Deliberate: missing attachables leave the editor, where Rails raises.
-        let missing_in_editor = case["editable"]["message"].as_str().is_some_and(|m| m.contains("MissingAttachable"));
         match (outcome_str(&case["editable"]), &actual) {
-            (Err(_), Ok(_)) if missing_in_editor => tallies.entry("editable").or_default().exact += 1,
-            (Ok(e), Ok(a)) => tallies.entry("editable").or_default().record(label, &format!("{e:?}"), &format!("{a:?}")),
+            (Ok(e), Ok(a)) => tallies.entry("editable").or_default().record(label, &e.unwrap_or_default(), a),
             (Err(_), Err(_)) => tallies.entry("editable").or_default().exact += 1,
             (e, _) => tallies.entry("editable").or_default().record(label, &format!("{e:?}"), &render(&actual)),
         }
@@ -361,10 +343,27 @@ fn corpus_matches_rails() {
         }
     }
 
+    println!(
+        "Raw legacy presentation: {} cases, {} byte-identical, {} raw differences",
+        cases.len(),
+        cases.len() - raw_diffs.len(),
+        raw_diffs.len()
+    );
+    for diff in &raw_diffs {
+        println!("  RAW DIFF {}", diff["name"].as_str().unwrap());
+    }
+    if let Ok(path) = std::env::var("RICHTEXT_RAW_DIFF_OUTPUT") {
+        std::fs::write(path, serde_json::to_string_pretty(&raw_diffs).unwrap()).unwrap();
+    }
     let mut failed = false;
     for (kind, tally) in &tallies {
         let total = tally.exact + tally.mismatched.len();
-        println!("{kind}: {total} cases, {} byte-identical, {} DOM-equal only, {} different", tally.exact, tally.dom_equal, tally.mismatched.len() - tally.dom_equal);
+        println!(
+            "{kind}: {total} cases, {} byte-identical, {} DOM-equal only, {} different",
+            tally.exact,
+            tally.dom_equal,
+            tally.mismatched.len() - tally.dom_equal
+        );
         for m in &tally.mismatched {
             println!("  MISMATCH {m}");
             failed = true;
@@ -378,16 +377,14 @@ fn corpus_matches_rails() {
     assert!(!failed, "differences from the Rails pipeline");
 }
 
-/// The oracle's own outputs must pass the security assertions too: two implementations can agree
-/// on something unsafe. (They do: rails_autolink breaks out of attribute values, which is why the
-/// port diverges there, so the assertions run on the output as the port means to render it.)
+/// Check the reference outputs directly, without changing their bytes.
 #[test]
 fn rails_outputs_pass_security_assertions() {
     let corpus = Corpus::load();
     let mut violations = Vec::new();
     for case in corpus.json["cases"].as_array().unwrap() {
         if let Ok(Some(html)) = outcome_str(&case["presentation"]) {
-            for v in security_violations(&with_port_divergences(&html), false) {
+            for v in security_violations(&html, false) {
                 violations.push(format!("{}: {v}", case["name"].as_str().unwrap()));
             }
         }

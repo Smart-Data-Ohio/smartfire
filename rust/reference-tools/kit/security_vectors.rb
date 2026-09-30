@@ -337,8 +337,17 @@ class KitSecurityVectors
     def csp_report_rate_limit
       ContentSecurityPolicyReportsController::RATE_LIMIT_STORE.clear
       statuses = 22.times.map { perform(:post, "/csp_reports", headers: csp_report_env(CSP_REPORT).merge("REMOTE_ADDR" => "10.4.0.1")).first }
+      # Nothing asks for params, so a malformed JSON body is never parsed: it's no report, and
+      # it counts toward the limit like any other.
+      malformed = 21.times.map { perform(:post, "/csp_reports", headers: csp_report_env("{", type: "application/json").merge("REMOTE_ADDR" => "10.4.0.3")).first }
+      # The controller reads at most MAX_BODY + 1 bytes of a body of any size.
+      oversized = [ "application/csp-report", "application/json" ].to_h do |type|
+        body = JSON.generate(CSP_REPORT).ljust(17.megabytes)
+        [ type, perform(:post, "/csp_reports", headers: csp_report_env(body, type: type).merge("REMOTE_ADDR" => "10.4.0.4")).first ]
+      end
       { "statuses" => statuses, "limit" => ContentSecurityPolicyReportsController::RATE_LIMIT,
-        "max_body" => ContentSecurityPolicyReportsController::MAX_BODY }
+        "max_body" => ContentSecurityPolicyReportsController::MAX_BODY,
+        "malformed_json_statuses" => malformed, "seventeen_mib_statuses" => oversized }
     end
 
     # --- Session keys ------------------------------------------------------------------------

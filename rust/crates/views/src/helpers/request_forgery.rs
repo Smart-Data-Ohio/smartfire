@@ -55,11 +55,59 @@ fn current() -> Option<Rc<RequestSecrets>> {
 pub const PARAM: &str = "authenticity_token";
 
 /// `token_tag(nil, form_options: { action:, method: })`: the hidden per-form token field.
+///
+/// A fragment rendered for the cache is shown to whoever renders it next, so there the field is
+/// a slot instead ([`fill_token_slots`] puts each render's own field in it). Rails #148 omits
+/// tokens from the five cached message-tree forms; slots remain as defence in depth for any
+/// other form rendered inside a cached fragment.
 pub fn token_tag(action: &str, method: &str) -> Html {
+    if crate::fragment_cache::rendering_fragment() {
+        return Safe(format!("{}{method} {action}{SLOT_END}", slot_start()));
+    }
     match current() {
         Some(secrets) => legacy_tag("input", attrs().type_("hidden").name(PARAM).value(secrets.tokens.for_form(action, method))),
         None => Safe(String::new()),
     }
+}
+
+/// Ends a token slot. Slots begin with [`slot_start`]; both are noncharacters that HTML escaping
+/// leaves alone, so the start carries a key of the process's own that no content can guess.
+const SLOT_END: char = '\u{FDD1}';
+
+fn slot_start() -> &'static str {
+    static START: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        use std::hash::{BuildHasher, Hasher};
+        let key = std::collections::hash_map::RandomState::new().build_hasher().finish();
+        format!("\u{FDD0}csrf-{key:016x} ")
+    });
+    &START
+}
+
+/// Whether `html` (a cached fragment) has token slots, so it isn't in a page as it's stored.
+pub fn has_token_slots(html: &str) -> bool {
+    html.contains(slot_start())
+}
+
+/// `html` with each token slot replaced by this render's [`token_tag`] for it: the viewer's own
+/// token, or nothing for a render without a request. Slots stay while a fragment that holds this
+/// one is being rendered for the cache.
+pub fn fill_token_slots(html: &str) -> std::borrow::Cow<'_, str> {
+    let start = slot_start();
+    if crate::fragment_cache::rendering_fragment() || !html.contains(start) {
+        return std::borrow::Cow::Borrowed(html);
+    }
+    let mut out = String::with_capacity(html.len() + 64);
+    let mut rest = html;
+    while let Some(at) = rest.find(start) {
+        out.push_str(&rest[..at]);
+        let slot = &rest[at + start.len()..];
+        let Some(end) = slot.find(SLOT_END) else { break };
+        let (method, action) = slot[..end].split_once(' ').unwrap_or(("post", &slot[..end]));
+        out.push_str(&token_tag(action, method).0);
+        rest = &slot[end + SLOT_END.len_utf8()..];
+    }
+    out.push_str(rest);
+    std::borrow::Cow::Owned(out)
 }
 
 /// `csrf_meta_tags`
@@ -185,5 +233,46 @@ mod tests {
             with_nonce,
             "<script type=\"importmap\" data-turbo-track=\"reload\" nonce=\"N\">{}</script>\n<link rel=\"modulepreload\" href=\"/a.js\" nonce=\"N\">\n<link rel=\"modulepreload\" href=\"/b.js\" nonce=\"N\">\n<script type=\"module\" nonce=\"N\">import \"application\"</script>"
         );
+    }
+
+    /// Whose render it is, in the tokens it gives out.
+    struct Viewer(&'static str);
+
+    impl AuthenticityTokens for Viewer {
+        fn global(&self) -> String {
+            format!("{}:global", self.0)
+        }
+
+        fn for_form(&self, action: &str, method: &str) -> String {
+            format!("{}:{method}:{action}", self.0)
+        }
+    }
+
+    fn as_viewer<R>(name: &'static str, render: impl FnOnce() -> R) -> R {
+        rendering_with(RequestSecrets { tokens: Box::new(Viewer(name)), csp_nonce: None }, render)
+    }
+
+    #[test]
+    fn a_cached_fragment_has_each_renders_own_tokens() {
+        let cache = crate::fragment_cache::FragmentCache::new(1 << 20);
+        let boost = || format!("<form>{}</form>", token_tag("/messages/1/boosts", "post").0);
+        let message = || cache.fetch("message", || format!("<div>{}</div>", cache.fetch("boost", boost)));
+        let field = |value: &str| format!("<div><form><input type=\"hidden\" name=\"authenticity_token\" value=\"{value}\" /></form></div>");
+        assert_eq!(as_viewer("david", message), field("david:post:/messages/1/boosts"), "cold");
+        assert_eq!(as_viewer("jason", message), field("jason:post:/messages/1/boosts"), "warm, for someone else");
+        assert_eq!(message(), "<div><form></form></div>", "a broadcast's render has none");
+        for key in ["message", "boost"] {
+            let stored: crate::fragment_cache::Fragment = cache.get(key).unwrap();
+            assert!(has_token_slots(&stored) && !stored.contains("david"), "{key}: {stored}");
+        }
+        let stored: crate::fragment_cache::Fragment = cache.get("message").unwrap();
+        assert_eq!(as_viewer("kevin", || fill_token_slots(&stored).into_owned()), field("kevin:post:/messages/1/boosts"), "read up front");
+    }
+
+    #[test]
+    fn content_cant_forge_a_token_slot() {
+        let forged = "\u{FDD0}csrf-0000000000000000 post /session\u{FDD1}";
+        assert!(!has_token_slots(forged));
+        assert_eq!(as_viewer("david", || fill_token_slots(forged).into_owned()), forged);
     }
 }

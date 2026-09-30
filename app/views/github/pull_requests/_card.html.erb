@@ -53,10 +53,11 @@
         <%= link_to "Discuss", room_thread_path(card_message.room_id, pr_thread_mapping.channel_thread_id),
               class: "github-pr-card__discuss", data: { turbo_frame: "_top" } %>
       <% else %>
+        <%# Cached in the shared message fragment: no session-bound token, Turbo sends the csrf-token meta. %>
         <%= button_to "Discuss", room_github_pull_request_threads_path(card_message.room_id),
               params: { pull_request_id: pull_request.id, message_id: card_message.id },
               class: "github-pr-card__discuss", form_class: "github-pr-card__discuss-form",
-              form: { data: { turbo_frame: "_top" } } %>
+              form: { data: { turbo_frame: "_top" } }, authenticity_token: false %>
       <% end %>
     <% end %>
   </footer>

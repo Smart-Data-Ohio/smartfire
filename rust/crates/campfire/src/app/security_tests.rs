@@ -409,7 +409,158 @@ async fn csp_reports_are_rate_limited_per_ip() {
     assert_eq!(app.send(report("10.4.0.2")).await.status, StatusCode::NO_CONTENT);
 }
 
+/// The rate limit comes before anything parses the validated body: a malformed JSON
+/// report is no report, and it counts toward the limit.
+#[tokio::test]
+async fn malformed_json_csp_reports_are_rate_limited_not_refused() {
+    let vectors = vectors();
+    let expected = &vectors["rate_limit"]["csp_reports"]["malformed_json_statuses"];
+    let app = boot_fresh(false).await;
+    let mut statuses = Vec::new();
+    for _ in 0..expected.as_array().unwrap().len() {
+        let report = request("POST", "/csp_reports")
+            .header("x-forwarded-for", "10.4.0.3")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from("{"))
+            .unwrap();
+        statuses.push(json!(app.send(report).await.status.as_u16()));
+    }
+    assert_eq!(&Value::Array(statuses), expected);
+}
+
+/// A report of any size is read only as far as `MAX_BODY + 1` bytes, never refused for its size.
+#[tokio::test]
+async fn csp_reports_read_a_bounded_prefix_of_any_body() {
+    let vectors = vectors();
+    let expected = &vectors["rate_limit"]["csp_reports"]["seventeen_mib_statuses"];
+    let app = boot_fresh(false).await;
+    let mut body = br#"{"csp-report":{"violated-directive":"img-src"}}"#.to_vec();
+    body.resize(17 * 1024 * 1024, b' ');
+    for (content_type, status) in expected.as_object().unwrap() {
+        let report = request("POST", "/csp_reports")
+            .header("x-forwarded-for", "10.4.0.4")
+            .header(header::CONTENT_TYPE, content_type.as_str())
+            .body(Body::from(body.clone()))
+            .unwrap();
+        assert_eq!(json!(app.send(report).await.status.as_u16()), *status, "{content_type}");
+    }
+}
+
 // --- Session plumbing --------------------------------------------------------------------------
+
+/// The multipart closing boundary is not the HTTP body's end. A delayed epilogue must be
+/// counted before sessions#create can insert a session, on either listener.
+async fn delayed_multipart_sign_in_is_bounded(target: bool) {
+    use campfire_kit::front::{self, FrontConfig};
+    use std::time::Duration;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpStream;
+
+    let app = boot_fresh(false).await;
+    app.seed().await;
+    let free_port = || std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+    let (http, upstream) = (free_port(), free_port());
+    let config = FrontConfig::from_lookup(|name| match name {
+        "HTTP_PORT" => Some(http.to_string()),
+        "TARGET_PORT" => Some(upstream.to_string()),
+        "MAX_REQUEST_BODY" => Some("4096".into()),
+        "LOG_REQUESTS" => Some("false".into()),
+        _ => None,
+    });
+    let (stop, stopped) = tokio::sync::oneshot::channel();
+    let (ready, started) = tokio::sync::oneshot::channel();
+    let server = tokio::spawn(front::serve_with_ready(
+        config,
+        app.booted.router.clone(),
+        None,
+        move || {
+            let _ = ready.send(());
+        },
+        async move {
+            let _ = stopped.await;
+        },
+    ));
+    tokio::time::timeout(Duration::from_secs(5), started)
+        .await
+        .expect("startup notification")
+        .expect("our server bound both ports");
+    let port = if target { upstream } else { http };
+    async fn read_reply(stream: &mut TcpStream) -> Reply {
+        let mut raw = Vec::new();
+        tokio::time::timeout(Duration::from_secs(10), stream.read_to_end(&mut raw)).await.unwrap().unwrap();
+        let split = raw.windows(4).position(|w| w == b"\r\n\r\n").unwrap();
+        let head = std::str::from_utf8(&raw[..split]).unwrap();
+        let mut lines = head.split("\r\n");
+        let status = StatusCode::from_u16(lines.next().unwrap().split(' ').nth(1).unwrap().parse().unwrap()).unwrap();
+        let mut headers = axum::http::HeaderMap::new();
+        for line in lines {
+            let (name, value) = line.split_once(':').unwrap();
+            headers.append(axum::http::HeaderName::from_bytes(name.as_bytes()).unwrap(), value.trim().parse().unwrap());
+        }
+        Reply { status, headers, body: raw[split + 4..].to_vec() }
+    }
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+    stream.write_all(b"GET /session/new HTTP/1.1\r\nHost: campfire.test\r\nConnection: close\r\n\r\n").await.unwrap();
+    let page = read_reply(&mut stream).await;
+    assert_eq!(page.status, StatusCode::OK);
+    let cookies = page.set_cookies().iter().map(|c| c.split(';').next().unwrap()).collect::<Vec<_>>().join("; ");
+    let html = page.text();
+    let token = html.split("<meta name=\"csrf-token\" content=\"").nth(1).unwrap().split('"').next().unwrap();
+    let fields = [("email_address", "david@example.com"), ("password", PASSWORD), ("authenticity_token", token)];
+    let prefix = fields
+        .iter()
+        .map(|(key, value)| format!("--B\r\nContent-Disposition: form-data; name=\"{key}\"\r\n\r\n{value}\r\n"))
+        .collect::<String>()
+        + "--B--\r\n";
+    assert!(prefix.len() < 4096);
+    let sessions = || {
+        app.booted
+            .app
+            .db
+            .read(|conn| Ok(conn.query_row("SELECT count(*) FROM sessions", [], |row| row.get::<_, i64>(0))?))
+    };
+    let before = sessions().await.unwrap();
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+    let head = format!(
+        "POST /session HTTP/1.1\r\nHost: campfire.test\r\nContent-Type: multipart/form-data; boundary=B\r\nCookie: {cookies}\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"
+    );
+    stream.write_all(head.as_bytes()).await.unwrap();
+    stream.write_all(format!("{:x}\r\n{prefix}\r\n", prefix.len()).as_bytes()).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let early_sessions = sessions().await.unwrap() - before;
+    let epilogue = vec![b'x'; 64 * 1024];
+    let suffix = [format!("{:x}\r\n", epilogue.len()).as_bytes(), &epilogue, b"\r\n0\r\n\r\n"].concat();
+    // A broken implementation may already have replied and closed after the MIME boundary.
+    let _ = stream.write_all(&suffix).await;
+    let reply = read_reply(&mut stream).await;
+    let added = sessions().await.unwrap() - before;
+    let cookie = reply.set_cookies().iter().any(|c| c.starts_with("session_token="));
+    eprintln!(
+        "delayed multipart: target={target} body_bytes={} limit=4096 status={} early_sessions={early_sessions} added_sessions={added} session_cookie={cookie}",
+        prefix.len() + epilogue.len(),
+        reply.status.as_u16()
+    );
+
+    // The identical credentials/token with an in-limit epilogue must still create a session.
+    let mut control = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+    control.write_all(head.as_bytes()).await.unwrap();
+    control.write_all(format!("{:x}\r\n{prefix}\r\n1\r\nx\r\n0\r\n\r\n", prefix.len()).as_bytes()).await.unwrap();
+    assert_eq!(read_reply(&mut control).await.status, StatusCode::FOUND, "valid sign-in control");
+    assert_eq!(sessions().await.unwrap() - before, added + 1);
+    let _ = stop.send(());
+    tokio::time::timeout(Duration::from_secs(10), server).await.unwrap().unwrap().unwrap();
+    assert_eq!((reply.status, early_sessions, added, cookie), (StatusCode::PAYLOAD_TOO_LARGE, 0, 0, false));
+}
+
+#[tokio::test]
+async fn delayed_multipart_sign_in_is_bounded_on_front() {
+    delayed_multipart_sign_in_is_bounded(false).await;
+}
+
+#[tokio::test]
+async fn delayed_multipart_sign_in_is_bounded_on_target() {
+    delayed_multipart_sign_in_is_bounded(true).await;
+}
 
 #[tokio::test]
 async fn idle_administrator_sessions_expire_when_restored() {

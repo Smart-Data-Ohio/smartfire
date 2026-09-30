@@ -6,7 +6,10 @@
     poll Stimulus controller fetches the viewer's own ballot from the
     poll endpoint instead. The controller checks the viewer's own inputs,
     marks voted options, and reveals the retract control from the
-    current-user meta, the same way reaction chips mark themselves. %>
+    current-user meta, the same way reaction chips mark themselves.
+    For the same reason the forms carry no authenticity token (it is bound
+    to the session that rendered it); Turbo submits them with the page's
+    csrf-token meta in the X-CSRF-Token header. %>
 <% votes = poll.poll_votes.to_a %>
 <% total = votes.size %>
 <% closed = poll.closed? %>
@@ -55,7 +58,7 @@
 
   <% unless closed %>
     <div class="poll__actions">
-      <%= form_with url: vote_room_poll_path(poll.message.room, poll), method: :post, class: "poll__form" do %>
+      <%= form_with url: vote_room_poll_path(poll.message.room, poll), method: :post, class: "poll__form", authenticity_token: false do %>
         <fieldset class="poll__fieldset">
           <legend class="for-screen-reader">Cast your vote</legend>
           <% poll.poll_options.each do |option| %>
@@ -75,7 +78,7 @@
         </fieldset>
         <%= submit_tag "Vote", class: "btn btn--primary btn--small", data: { poll_target: "submit" } %>
       <% end %>
-      <%= form_with url: vote_room_poll_path(poll.message.room, poll), method: :post, class: "poll__retract-form" do %>
+      <%= form_with url: vote_room_poll_path(poll.message.room, poll), method: :post, class: "poll__retract-form", authenticity_token: false do %>
         <%= submit_tag "Retract vote", class: "btn btn--plain btn--small", data: { poll_target: "retract" }, hidden: true %>
       <% end %>
     </div>

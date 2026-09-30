@@ -5,6 +5,7 @@
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::task::{Context, Poll};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
@@ -13,7 +14,6 @@ use axum::body::Body;
 use axum::extract::ConnectInfo;
 use axum::http::{HeaderValue, Method, Request, Response, StatusCode, header};
 use bytes::{Bytes, BytesMut};
-use http_body_util::BodyExt;
 use hyper::body::{Body as _, Frame, SizeHint};
 use tower::ServiceExt;
 
@@ -132,15 +132,16 @@ impl Handler {
     }
 
     /// The proxy (`internal/proxy_handler.go`): the request size limit Thruster's
-    /// `http.MaxBytesHandler` enforces (an oversized body never reaches the app and gets an empty
-    /// 413), the `X-Forwarded-*` headers `httputil.ReverseProxy` sets, then the app.
+    /// `http.MaxBytesHandler` enforces (an oversized body gets an empty 413, and the app never
+    /// sees the part past the limit), the `X-Forwarded-*` headers `httputil.ReverseProxy` sets,
+    /// then the app.
     async fn proxy(&self, request: Request<Body>, conn: ConnInfo) -> Response<Body> {
-        let Ok(mut request) = within_limit(request, self.max_request_body).await else { return too_large() };
+        let Ok((mut request, limit)) = within_limit(request, self.max_request_body) else { return too_large() };
         as_proxied_http1(&mut request);
         set_forwarded_headers(&mut request, &conn, self.forward_headers);
         request.extensions_mut().insert(ConnectInfo(conn.remote));
         match self.app.clone().oneshot(request).await {
-            Ok(response) => response,
+            Ok(response) => limit.checked(response),
             Err(infallible) => match infallible {},
         }
     }
@@ -305,9 +306,37 @@ fn set_forwarded_headers(request: &mut Request<Body>, conn: &ConnInfo, forward_h
     }
 }
 
-/// MAX_REQUEST_BODY, 0 for none.
-pub(super) async fn within_limit(request: Request<Body>, limit: u64) -> Result<Request<Body>, ()> {
-    if limit == 0 { Ok(request) } else { limit_body(request, limit).await }
+/// MAX_REQUEST_BODY, 0 for none: the request with its body limited, and what tells whether the
+/// body crossed the limit while the app read it. A body that declares more than the limit fails
+/// here, before the app sees it.
+pub(super) fn within_limit(request: Request<Body>, limit: u64) -> Result<(Request<Body>, BodyLimit), ()> {
+    if limit == 0 {
+        return Ok((request, BodyLimit(None)));
+    }
+    let declared = request.headers().get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok());
+    if declared.is_some_and(|length| length > limit) {
+        return Err(());
+    }
+    let crossed = Arc::new(AtomicBool::new(false));
+    let (parts, body) = request.into_parts();
+    let body = LimitedBody { inner: http_body_util::Limited::new(body, usize::try_from(limit).unwrap_or(usize::MAX)), crossed: crossed.clone() };
+    Ok((Request::from_parts(parts, Body::new(body)), BodyLimit(Some(crossed))))
+}
+
+/// Whether a request's body crossed MAX_REQUEST_BODY.
+pub(super) struct BodyLimit(Option<Arc<AtomicBool>>);
+
+impl BodyLimit {
+    /// The app's response, or the empty 413 when the body crossed the limit while the app read it.
+    /// That's `http.MaxBytesHandler`'s: the read past the limit fails, and Thruster's proxy
+    /// answers 413 for it, whatever the app was going to say. Kit parsers and raw-body validation
+    /// read through EOF before entering an action, as Puma does before calling Rails.
+    pub(super) fn checked(&self, response: Response<Body>) -> Response<Body> {
+        match &self.0 {
+            Some(crossed) if crossed.load(Ordering::Acquire) => too_large(),
+            _ => response,
+        }
+    }
 }
 
 /// The empty 413 for a body over MAX_REQUEST_BODY.
@@ -317,28 +346,35 @@ pub(super) fn too_large() -> Response<Body> {
     response
 }
 
-/// `http.MaxBytesHandler`: a body over the limit fails the proxied request with 413 before the
-/// app sees it (Puma reads the whole body before calling Rails).
-async fn limit_body(request: Request<Body>, limit: u64) -> Result<Request<Body>, ()> {
-    let declared = request.headers().get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok());
-    if declared.is_some_and(|length| length > limit) {
-        return Err(());
-    }
-    if declared.is_some() || request.body().is_end_stream() {
-        return Ok(request);
-    }
-    let (parts, mut body) = request.into_parts();
-    let mut buffered = BytesMut::new();
-    while let Some(frame) = body.frame().await {
-        let Ok(frame) = frame else { return Err(()) };
-        if let Some(data) = frame.data_ref() {
-            buffered.extend_from_slice(data);
-            if buffered.len() as u64 > limit {
-                return Err(());
-            }
+/// `http.MaxBytesReader`: the body as it arrives, frame by frame, failing at the frame that takes
+/// it past the limit (which the app never sees). Nothing is buffered here, so an upload is only
+/// held in memory as far as the app keeps it.
+struct LimitedBody {
+    inner: http_body_util::Limited<Body>,
+    crossed: Arc<AtomicBool>,
+}
+
+impl hyper::body::Body for LimitedBody {
+    type Data = Bytes;
+    type Error = axum::BoxError;
+
+    fn poll_frame(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Frame<Bytes>, Self::Error>>> {
+        let polled = Pin::new(&mut self.inner).poll_frame(cx);
+        if let Poll::Ready(Some(Err(error))) = &polled
+            && error.is::<http_body_util::LengthLimitError>()
+        {
+            self.crossed.store(true, Ordering::Release);
         }
+        polled
     }
-    Ok(Request::from_parts(parts, Body::from(buffered.freeze())))
+
+    fn is_end_stream(&self) -> bool {
+        self.inner.is_end_stream()
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        self.inner.size_hint()
+    }
 }
 
 /// Thruster's request log line (`internal/logging_handler.go`), written when the response ends.

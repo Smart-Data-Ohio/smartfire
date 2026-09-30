@@ -13,27 +13,70 @@ use crate::dom::{Dom, NodeId, ParseError};
 
 /// `Rails::HTML::Concern::Scrubber::SafeList::DEFAULT_ALLOWED_TAGS`
 pub const DEFAULT_ALLOWED_TAGS: &[&str] = &[
-    "a", "abbr", "acronym", "address", "b", "big", "blockquote", "br", "cite", "code", "dd", "del", "dfn", "div",
-    "dl", "dt", "em", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "ins", "kbd", "li", "mark", "ol", "p",
-    "pre", "samp", "small", "span", "strong", "sub", "sup", "time", "tt", "ul", "var",
+    "a",
+    "abbr",
+    "acronym",
+    "address",
+    "b",
+    "big",
+    "blockquote",
+    "br",
+    "cite",
+    "code",
+    "dd",
+    "del",
+    "dfn",
+    "div",
+    "dl",
+    "dt",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "i",
+    "img",
+    "ins",
+    "kbd",
+    "li",
+    "mark",
+    "ol",
+    "p",
+    "pre",
+    "samp",
+    "small",
+    "span",
+    "strong",
+    "sub",
+    "sup",
+    "time",
+    "tt",
+    "ul",
+    "var",
 ];
 
-/// `Rails::HTML::Concern::Scrubber::SafeList::DEFAULT_ALLOWED_ATTRIBUTES` without `name`, which let
-/// a message clobber the page's DOM globals (`<img name="body">` shadows `document.body`). Nothing
-/// Campfire's composer writes has one.
+/// Rails' default attributes. `name` is retained only on anchors; image names can create
+/// Window/Document globals, including when the image was rendered from an attachment.
 pub const DEFAULT_ALLOWED_ATTRIBUTES: &[&str] =
-    &["abbr", "alt", "cite", "class", "datetime", "height", "href", "lang", "src", "title", "width", "xml:lang"];
-
-/// `ContentFilters::EDITOR_FORMATTING_TAGS` (reference/app/helpers/content_filters.rb)
-pub const EDITOR_FORMATTING_TAGS: &[&str] = &["s", "u", "mark", "table", "thead", "tbody", "tfoot", "tr", "th", "td"];
-
-/// `ContentFilters::EDITOR_FORMATTING_ATTRIBUTES`
-pub const EDITOR_FORMATTING_ATTRIBUTES: &[&str] = &["data-language"];
+    &["abbr", "alt", "cite", "class", "datetime", "height", "href", "lang", "name", "src", "title", "width", "xml:lang"];
 
 /// `ActionText::Attachment::ATTRIBUTES`
 pub const ATTACHMENT_ATTRIBUTES: &[&str] = &[
-    "sgid", "content-type", "url", "href", "filename", "filesize", "width", "height", "previewable", "presentation",
-    "caption", "content",
+    "sgid",
+    "content-type",
+    "url",
+    "href",
+    "filename",
+    "filesize",
+    "width",
+    "height",
+    "previewable",
+    "presentation",
+    "caption",
+    "content",
 ];
 
 /// A tag and attribute allowlist, as passed to `sanitize(html, tags:, attributes:)`.
@@ -57,26 +100,12 @@ impl SafeList {
         SafeList { tags: DEFAULT_ALLOWED_TAGS.to_vec(), attributes: DEFAULT_ALLOWED_ATTRIBUTES.to_vec() }
     }
 
-    /// `ActionText::ContentHelper.allowed_tags`/`allowed_attributes` as configured at boot: Action
-    /// Text's defaults, then Lexxy's additions (lexxy/engine.rb, "lexxy.sanitization"), then
-    /// Campfire's (reference/lib/rails_ext/action_text_allowed_tags.rb).
+    /// The fork has no Lexxy sanitizer initializer. Action Text uses its standard set.
     pub fn action_text() -> Self {
         let mut tags = DEFAULT_ALLOWED_TAGS.to_vec();
         tags.extend(["action-text-attachment", "figure", "figcaption"]);
-        tags.extend(["video", "audio", "source", "embed", "table", "tbody", "tr", "th", "td"]);
-        for tag in EDITOR_FORMATTING_TAGS {
-            if !tags.contains(tag) {
-                tags.push(tag);
-            }
-        }
         let mut attributes = DEFAULT_ALLOWED_ATTRIBUTES.to_vec();
         attributes.extend(ATTACHMENT_ATTRIBUTES);
-        attributes.extend(["controls", "poster", "data-language", "style", "value", "start"]);
-        for attribute in EDITOR_FORMATTING_ATTRIBUTES {
-            if !attributes.contains(attribute) {
-                attributes.push(attribute);
-            }
-        }
         SafeList { tags, attributes }
     }
 
@@ -89,28 +118,57 @@ impl SafeList {
         SafeList { tags: sanitize_tags_allowed_tags(), attributes }
     }
 
-    /// `MessagesHelper::AUTO_LINK_ALLOWED_TAGS`/`AUTO_LINK_ALLOWED_ATTRIBUTES`.
+    /// Our helper calls rails_autolink with its default sanitizer options.
     pub fn auto_link() -> Self {
-        let mut tags = DEFAULT_ALLOWED_TAGS.to_vec();
-        for tag in EDITOR_FORMATTING_TAGS {
-            if !tags.contains(tag) {
-                tags.push(tag);
-            }
-        }
-        let mut attributes = DEFAULT_ALLOWED_ATTRIBUTES.to_vec();
-        attributes.extend(EDITOR_FORMATTING_ATTRIBUTES);
-        SafeList { tags, attributes }
+        Self::defaults()
     }
 }
 
 /// `ContentFilters::SanitizeTags::ALLOWED_TAGS`
 pub fn sanitize_tags_allowed_tags() -> Vec<&'static str> {
     let mut tags = vec![
-        "a", "abbr", "acronym", "address", "b", "big", "blockquote", "br", "cite", "code", "dd", "del", "dfn", "div",
-        "dl", "dt", "em", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "ins", "kbd", "li", "ol", "p", "pre", "samp",
-        "small", "span", "strong", "sub", "sup", "time", "tt", "ul", "var",
+        "a",
+        "abbr",
+        "acronym",
+        "address",
+        "b",
+        "big",
+        "blockquote",
+        "br",
+        "cite",
+        "code",
+        "dd",
+        "del",
+        "dfn",
+        "div",
+        "dl",
+        "dt",
+        "em",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "hr",
+        "i",
+        "ins",
+        "kbd",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "samp",
+        "small",
+        "span",
+        "strong",
+        "sub",
+        "sup",
+        "time",
+        "tt",
+        "ul",
+        "var",
     ];
-    tags.extend(EDITOR_FORMATTING_TAGS);
     tags.extend(["action-text-attachment", "figure", "figcaption"]);
     tags
 }
@@ -180,8 +238,10 @@ fn scrub(dom: &mut Dom, node: NodeId, list: &SafeList) {
 fn scrub_attributes(dom: &mut Dom, node: NodeId, list: &SafeList) {
     let names: Vec<String> = dom.attrs(node).into_iter().map(|(name, _)| name).collect();
     for name in names {
-        let Some(value) = dom.attr(node, &name).map(str::to_string) else { continue };
-        if !list.allows_attribute(&name) {
+        let Some(value) = dom.attr(node, &name).map(str::to_string) else {
+            continue;
+        };
+        if !list.allows_attribute(&name) || (name == "name" && dom.local_name(node) != Some("a")) {
             dom.remove_attr(node, &name);
             continue;
         }
@@ -202,7 +262,9 @@ fn scrub_attributes(dom: &mut Dom, node: NodeId, list: &SafeList) {
 /// also limits `style` to) with plain color values. A message's presentation drops `style` in
 /// auto_link anyway, but the HTML body bots and webhooks get (`Presenter::body_html`) keeps it.
 fn scrub_style(dom: &mut Dom, node: NodeId) {
-    let Some(style) = dom.attr(node, "style") else { return };
+    let Some(style) = dom.attr(node, "style") else {
+        return;
+    };
     let declarations: Vec<(String, &str)> = style
         .split(';')
         .filter(|declaration| !declaration.trim().is_empty())
@@ -265,8 +327,8 @@ fn force_correct_attribute_escaping(dom: &mut Dom, node: NodeId) {
 }
 
 const ALLOWED_PROTOCOLS: &[&str] = &[
-    "afs", "aim", "callto", "data", "ed2k", "fax", "ftp", "gopher", "http", "https", "irc", "line", "mailto", "modem",
-    "news", "nntp", "rsync", "rtsp", "sftp", "sms", "ssh", "tag", "tel", "telnet", "urn", "webcal", "xmpp",
+    "afs", "aim", "callto", "data", "ed2k", "fax", "ftp", "gopher", "http", "https", "irc", "line", "mailto", "modem", "news", "nntp",
+    "rsync", "rtsp", "sftp", "sms", "ssh", "tag", "tel", "telnet", "urn", "webcal", "xmpp",
 ];
 
 const ALLOWED_URI_DATA_MEDIATYPES: &[&str] = &["image/gif", "image/jpeg", "image/png", "text/css", "text/plain"];
@@ -284,7 +346,9 @@ pub fn allowed_uri(uri: &str) -> bool {
     s = s.replace("&Tab;", "").replace("&NewLine;", "");
     s = s.replace("&colon;", ":");
     s = s.to_lowercase();
-    let Some(protocol) = protocol_before_separator(&s) else { return true };
+    let Some(protocol) = protocol_before_separator(&s) else {
+        return true;
+    };
     if !ALLOWED_PROTOCOLS.contains(&protocol) {
         return false;
     }
@@ -302,7 +366,8 @@ fn protocol_before_separator(s: &str) -> Option<&str> {
         return None;
     }
     let mut end = 1;
-    while end < bytes.len() && (bytes[end].is_ascii_lowercase() || bytes[end].is_ascii_digit() || matches!(bytes[end], b'+' | b'-' | b'.')) {
+    while end < bytes.len() && (bytes[end].is_ascii_lowercase() || bytes[end].is_ascii_digit() || matches!(bytes[end], b'+' | b'-' | b'.'))
+    {
         end += 1;
     }
     // The class can't contain the start of a separator, so the scheme is the longest run.
@@ -340,7 +405,8 @@ fn data_uri_mediatype(s: &str) -> Option<String> {
     let rest = s.strip_prefix("data:").unwrap_or(s);
     let (metadata, _) = rest.split_once(',')?;
     let metadata = metadata.strip_suffix(";base64").unwrap_or(metadata);
-    let mediatype = metadata.split(';').next().unwrap_or("").trim_matches(|c: char| matches!(c, ' ' | '\t' | '\n' | '\u{0b}' | '\u{0c}' | '\r' | '\0'));
+    let mediatype =
+        metadata.split(';').next().unwrap_or("").trim_matches(|c: char| matches!(c, ' ' | '\t' | '\n' | '\u{0b}' | '\u{0c}' | '\r' | '\0'));
     let tchar = |c: char| c.is_ascii_alphanumeric() || "!#$%&'*+-.^_`|~".contains(c);
     let valid = mediatype
         .split_once('/')
@@ -377,10 +443,14 @@ fn unescape_one(s: &str) -> (Option<String>, usize) {
             return (Some(value.to_string()), name.len());
         }
     }
-    let Some(end) = s.find(';') else { return (None, 0) };
+    let Some(end) = s.find(';') else {
+        return (None, 0);
+    };
     let body = &s[1..end];
     let code = if let Some(hex) = body.strip_prefix("#x").or_else(|| body.strip_prefix("#X")) {
-        (!hex.is_empty() && hex.len() <= 8 && hex.bytes().all(|b| b.is_ascii_hexdigit())).then(|| u32::from_str_radix(hex, 16).ok()).flatten()
+        (!hex.is_empty() && hex.len() <= 8 && hex.bytes().all(|b| b.is_ascii_hexdigit()))
+            .then(|| u32::from_str_radix(hex, 16).ok())
+            .flatten()
     } else if let Some(dec) = body.strip_prefix('#') {
         (!dec.is_empty() && dec.len() <= 10 && dec.bytes().all(|b| b.is_ascii_digit())).then(|| dec.parse::<u32>().ok()).flatten()
     } else {
@@ -448,16 +518,13 @@ mod tests {
     }
 
     #[test]
-    fn keeps_only_lexxys_highlight_colors_in_style() {
+    fn action_text_drops_lexxy_style_allowances() {
         let list = SafeList::action_text();
         let highlight = "<mark style=\"color: var(--highlight-1);background-color: var(--highlight-bg-2);\">x</mark>";
-        assert_eq!(sanitize(highlight, &list).unwrap(), highlight);
-        assert_eq!(
-            sanitize("<span style=\"color: #f00; position: fixed; top: 0\">x</span>", &list).unwrap(),
-            "<span style=\"color: #f00;\">x</span>"
-        );
+        assert_eq!(sanitize(highlight, &list).unwrap(), "<mark>x</mark>");
+        assert_eq!(sanitize("<span style=\"color: #f00; position: fixed; top: 0\">x</span>", &list).unwrap(), "<span>x</span>");
         let rgb = "<span style=\"COLOR: rgb(1 2 3 / 50%)\">x</span>";
-        assert_eq!(sanitize(rgb, &list).unwrap(), rgb);
+        assert_eq!(sanitize(rgb, &list).unwrap(), "<span>x</span>");
         for hostile in [
             "background-color: url(https://evil.test/beacon)",
             "color: expression(alert(1))",
@@ -468,7 +535,10 @@ mod tests {
             "",
         ] {
             let html = sanitize(&format!("<span style=\"{hostile}\">x</span>"), &list).unwrap();
-            assert!(!html.contains("url") && !html.contains("expression") && !html.contains('\\') && !html.contains("width"), "{hostile}: {html}");
+            assert!(
+                !html.contains("url") && !html.contains("expression") && !html.contains('\\') && !html.contains("width"),
+                "{hostile}: {html}"
+            );
         }
         assert_eq!(sanitize("<span style=\"position: fixed\">x</span>", &list).unwrap(), "<span>x</span>");
     }

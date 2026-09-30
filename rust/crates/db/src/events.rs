@@ -10,9 +10,13 @@
 //! edited per domain, and parallel workstreams don't collide here.
 
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+
+use crate::database::Tx;
+use crate::error::Result;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
@@ -55,14 +59,32 @@ pub trait Job: Serialize + DeserializeOwned {
     const CLASS: &'static str;
 }
 
-/// A [`Job`] ready to enqueue: its class and its serialized arguments.
+/// A [`Job`] ready to enqueue: its class, its serialized arguments, and how long to wait before
+/// performing it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JobRequest {
     pub class: &'static str,
     pub arguments: serde_json::Value,
+    /// `set(wait:)`: performed no sooner than this long after the enqueueing write.
+    pub wait: Option<Duration>,
 }
 
 impl JobRequest {
+    /// `J.perform_later(arguments)`
+    pub fn new<J: Job>(arguments: &J) -> Self {
+        Self {
+            class: J::CLASS,
+            arguments: serde_json::to_value(arguments).expect("job arguments serialize to JSON"),
+            wait: None,
+        }
+    }
+
+    /// `J.set(wait:)`
+    pub fn wait(mut self, wait: Duration) -> Self {
+        self.wait = Some(wait);
+        self
+    }
+
     /// The arguments as `J`, or `None` if this is another class's job.
     pub fn decode<J: Job>(&self) -> Option<serde_json::Result<J>> {
         (self.class == J::CLASS).then(|| serde_json::from_value(self.arguments.clone()))
@@ -102,15 +124,27 @@ impl Event {
 
     /// `J.perform_later(arguments)`
     pub fn job<J: Job>(arguments: &J) -> Self {
-        Event::Job(JobRequest {
-            class: J::CLASS,
-            arguments: serde_json::to_value(arguments).expect("job arguments serialize to JSON"),
-        })
+        Event::Job(JobRequest::new(arguments))
+    }
+
+    /// `J.set(wait:).perform_later(arguments)`
+    pub fn job_in<J: Job>(wait: Duration, arguments: &J) -> Self {
+        Event::Job(JobRequest::new(arguments).wait(wait))
     }
 }
 
 pub trait EventSink: Send + Sync {
+    /// Hands the event off, once its write has committed (or right away, for [`Tx::emit_now`]).
     fn emit(&self, event: Event);
+
+    /// Writes what the event needs in the database, on the emitting write's connection, when it's
+    /// emitted: a sink backed by the durable job queue inserts a job's row here, so the job
+    /// commits or rolls back with the write that enqueued it (and its runner, woken by
+    /// [`EventSink::emit`] after the commit, can't see it before). An error fails that write. The
+    /// default writes nothing.
+    fn persist(&self, _tx: &Tx<'_>, _event: &Event) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// Drops every event.
@@ -150,6 +184,10 @@ impl EventSink for RecordingSink {
 impl<T: EventSink + ?Sized> EventSink for Arc<T> {
     fn emit(&self, event: Event) {
         (**self).emit(event)
+    }
+
+    fn persist(&self, tx: &Tx<'_>, event: &Event) -> Result<()> {
+        (**self).persist(tx, event)
     }
 }
 

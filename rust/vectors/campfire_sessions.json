@@ -5,8 +5,8 @@
       "user_id": 127326141,
       "user_name": "David",
       "token": "AxJs94fteQ5Autv2VrKsH68c",
-      "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrRjRTbk01TkdaMFpWRTFRWFYwZGpKV2NrdHpTRFk0WXlJPSIsImV4cCI6IjIwNDYtMDktMjlUMjA6MjE6MjUuMjc4WiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--a5c9cf92d39f6aae4aa851e4d7d37de7c195c661",
-      "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrRjRTbk01TkdaMFpWRTFRWFYwZGpKV2NrdHpTRFk0WXlJPSIsImV4cCI6IjIwNDYtMDktMjlUMjA6MjE6MjUuMjc4WiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--a5c9cf92d39f6aae4aa851e4d7d37de7c195c661"
+      "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrRjRTbk01TkdaMFpWRTFRWFYwZGpKV2NrdHpTRFk0WXlJPSIsImV4cCI6IjIwNDYtMDktMjlUMjI6Mzc6MzYuNzM3WiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--f92b299928d0fdb60fc6ca79ed27d1449c399f00",
+      "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrRjRTbk01TkdaMFpWRTFRWFYwZGpKV2NrdHpTRFk0WXlJPSIsImV4cCI6IjIwNDYtMDktMjlUMjI6Mzc6MzYuNzM3WiIsInB1ciI6ImNvb2tpZS5zZXNzaW9uX3Rva2VuIn19--f92b299928d0fdb60fc6ca79ed27d1449c399f00"
     }
   ],
   "blobs": [
@@ -17,7 +17,7 @@
     }
   ],
   "forged": {
-    "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltNXZkQzFoTFhObGMzTnBiMjR0ZEc5clpXNGkiLCJleHAiOiIyMDQ2LTA5LTI5VDIwOjIxOjI1LjI5MFoiLCJwdXIiOiJjb29raWUuc2Vzc2lvbl90b2tlbiJ9fQ==--ed48f256462c19034f380cb86c3bfc4123356243",
-    "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltNXZkQzFoTFhObGMzTnBiMjR0ZEc5clpXNGkiLCJleHAiOiIyMDQ2LTA5LTI5VDIwOjIxOjI1LjI5MFoiLCJwdXIiOiJjb29raWUuc2Vzc2lvbl90b2tlbiJ9fQ%3D%3D--ed48f256462c19034f380cb86c3bfc4123356243"
+    "cookie_value": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltNXZkQzFoTFhObGMzTnBiMjR0ZEc5clpXNGkiLCJleHAiOiIyMDQ2LTA5LTI5VDIyOjM3OjM2Ljc0OVoiLCJwdXIiOiJjb29raWUuc2Vzc2lvbl90b2tlbiJ9fQ==--6dcad70a81e22e5059ea6f4e908b0e907ae268dc",
+    "cookie_header": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltNXZkQzFoTFhObGMzTnBiMjR0ZEc5clpXNGkiLCJleHAiOiIyMDQ2LTA5LTI5VDIyOjM3OjM2Ljc0OVoiLCJwdXIiOiJjb29raWUuc2Vzc2lvbl90b2tlbiJ9fQ%3D%3D--6dcad70a81e22e5059ea6f4e908b0e907ae268dc"
   }
 }

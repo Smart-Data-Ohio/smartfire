@@ -805,11 +805,15 @@ where
                 }
 
                 // 13.5.
+                // Nokogiri 1.19.4 Gumbo's parser.c, adoption_agency_algorithm step 14.5:
+                // after removing an active formatting entry past the third node, it continues
+                // without removing that node from the open stack. Preserve this older parser's
+                // behavior for the Rails oracle; tests/markdown/parser.json covers the difference.
                 if inner_counter > 3 {
-                    self.position_in_active_formatting(&node)
-                        .map(|position| self.active_formatting.borrow_mut().remove(position));
-                    self.open_elems.borrow_mut().remove(node_index);
-                    continue;
+                    if let Some(position) = self.position_in_active_formatting(&node) {
+                        self.active_formatting.borrow_mut().remove(position);
+                        continue;
+                    }
                 }
 
                 let Some(node_formatting_index) = self.position_in_active_formatting(&node) else {

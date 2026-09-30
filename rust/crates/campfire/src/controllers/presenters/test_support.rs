@@ -123,6 +123,19 @@ impl TestApp {
     pub fn anonymous(&self) -> Browser<'_> {
         Browser { app: self, cookies: BTreeMap::new() }
     }
+
+    /// A browser signed in as `user_id` with a new session of its own (two-factor verified, as
+    /// the seed's are), for anyone the session vectors don't cover.
+    pub async fn sign_in(&self, user_id: i64) -> Browser<'_> {
+        use campfire_kit::Crypto;
+
+        let attributes = campfire_db::NewSession { user_agent: None, ip_address: Some("127.0.0.1"), device_id: None, two_factor_verified: true };
+        let session = self.db().write(move |tx| campfire_db::Session::start_with(tx, user_id, attributes)).await.unwrap();
+        let signed = campfire_kit::RailsCrypto::new(self.booted.app.secrets.clone()).sign_cookie("session_token", &session.token, None);
+        let mut browser = self.anonymous();
+        browser.cookies.insert("session_token".into(), campfire_kit::cookies::escape(&signed));
+        browser
+    }
 }
 
 fn copy_dir(from: &Path, to: &Path) {
@@ -300,6 +313,18 @@ impl Browser<'_> {
 
     fn session_token(&self) -> Option<String> {
         masked_session_token(&self.app.booted.app.secrets, self.cookies.get(campfire_kit::session::SESSION_KEY)?)
+    }
+
+    /// The real (unmasked) authenticity token in this browser's session, which every token its
+    /// pages carry must verify against, or `None` before a page has given it one.
+    pub fn real_authenticity_token(&self) -> Option<campfire_kit::csrf::RealToken> {
+        use campfire_kit::Crypto;
+
+        let raw = self.cookies.get(campfire_kit::session::SESSION_KEY)?;
+        let raw = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
+        let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
+        let session = crypto.decrypt_cookie(campfire_kit::session::SESSION_KEY, &raw, jiff::Timestamp::now())?;
+        campfire_kit::csrf::RealToken::decode(session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?)
     }
 }
 

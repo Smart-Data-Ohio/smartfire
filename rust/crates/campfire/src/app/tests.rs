@@ -335,8 +335,6 @@ async fn backup_snapshots_the_live_database() {
 
 #[tokio::test]
 async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
-    use campfire_db::EventSink;
-
     let Some(test) = boot_seeded().await else { return };
     let app = test.booted.app.clone();
 
@@ -362,9 +360,15 @@ async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
     assert!(path.exists());
 
     // Blob 5 is attached to a message: purging it is refused (`InvalidForeignKey`).
-    app.jobs.emit(campfire_db::Event::PurgeBlob { blob_id: 5 });
-    app.jobs.emit(campfire_db::Event::PurgeBlob { blob_id: blob.id });
     let blob_id = blob.id;
+    app.db
+        .write(move |tx| {
+            tx.emit_after_commit(campfire_db::Event::PurgeBlob { blob_id: 5 });
+            tx.emit_after_commit(campfire_db::Event::PurgeBlob { blob_id });
+            Ok(())
+        })
+        .await
+        .unwrap();
     for _ in 0..50 {
         let gone = app.db.read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().is_none())).await.unwrap();
         if gone && !path.exists() {

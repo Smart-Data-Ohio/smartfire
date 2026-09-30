@@ -197,7 +197,7 @@ pub fn direct_room(ctx: &ViewContext, membership: &SidebarDirect) -> String {
 /// [`direct_room`] where a template renders the partial.
 pub fn cached_direct_room<'a>(ctx: &ViewContext, item: &'a SidebarDirectItem) -> askama::filters::Safe<std::borrow::Cow<'a, str>> {
     askama::filters::Safe(match item {
-        SidebarDirectItem::Fragment(html) => std::borrow::Cow::Borrowed(html.as_str()),
+        SidebarDirectItem::Fragment(html) => crate::helpers::request_forgery::fill_token_slots(html),
         SidebarDirectItem::View(membership) => std::borrow::Cow::Owned(direct_room(ctx, membership)),
     })
 }
