@@ -5,6 +5,7 @@ use tokio::sync::Notify;
 
 use super::*;
 use crate::app::{Booted, boot_with_services};
+use crate::test_support::{WAIT, eventually, wait};
 
 /// An app booted over an empty storage directory.
 async fn app_in(dir: &std::path::Path) -> Booted {
@@ -36,15 +37,18 @@ fn jobs(app: &App) -> Vec<JobRow> {
 }
 
 async fn wait_for(app: &App, what: &str, condition: impl Fn(&[JobRow]) -> bool) -> Vec<JobRow> {
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
-    loop {
-        let jobs = jobs(app);
-        if condition(&jobs) {
-            return jobs;
+    let mut rows = Vec::new();
+    let result = tokio::time::timeout(WAIT, async {
+        loop {
+            rows = app.db.read(inspect::all).await.unwrap();
+            if condition(&rows) {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
         }
-        assert!(tokio::time::Instant::now() < deadline, "timed out waiting for {what}: {jobs:#?}");
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
+    }).await;
+    assert!(result.is_ok(), "timed out after {WAIT:?} waiting for {what}: {rows:#?}");
+    rows
 }
 
 /// Log lines written while `f` runs on this thread (the test runtime's only thread).
@@ -94,7 +98,7 @@ fn job_events_ask_for_their_rails_job_classes() {
 async fn job_events_are_enqueued_with_their_write() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await; // leave the rows be
+    booted.jobs.shutdown(WAIT).await; // leave the rows be
 
     let rolled_back = app
         .db
@@ -154,7 +158,7 @@ async fn a_job_that_cant_be_enqueued_fails_the_write_that_asks_for_it() {
 
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await; // leave the rows be
+    booted.jobs.shutdown(WAIT).await; // leave the rows be
     let (storage, now) = (app.storage.clone(), app.clock.now());
     let (author, bot, room, blob) = app
         .db
@@ -261,7 +265,7 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
 
     let (booted, _dir) = app().await;
     let (app, router) = (booted.app.clone(), booted.router.clone());
-    booted.jobs.shutdown(Duration::from_secs(5)).await; // leave the rows be
+    booted.jobs.shutdown(WAIT).await; // leave the rows be
     let digest = PasswordDigest::create("secret123456", 4).unwrap();
     let room = app
         .db
@@ -337,7 +341,7 @@ async fn jobs_whose_records_are_gone_are_discarded() {
         .await
         .unwrap();
     wait_for(&app, "the jobs to go", |jobs| jobs.is_empty()).await;
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
     let logs = logs.text();
     assert!(logs.contains(r#"discarded job="Bot::WebhookJob""#), "{logs}");
     assert!(logs.contains(r#"discarded job="RemoveBannedContentJob""#), "{logs}");
@@ -361,15 +365,11 @@ async fn purging_a_blob_later_deletes_it_and_its_file() {
         .unwrap();
     let path = app.storage.path_for(&blob);
     wait_for(&app, "the purge", |jobs| jobs.is_empty()).await;
-    let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    while path.exists() {
-        assert!(std::time::Instant::now() < deadline, "the file is still there");
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
+    eventually("purged blob file to disappear", || async { !path.exists() }).await;
     let id = blob.id;
     let found = app.db.read(move |conn| Ok(conn.query_row("SELECT count(*) FROM active_storage_blobs WHERE id = ?", [id], |row| row.get::<_, i64>(0))?)).await.unwrap();
     assert_eq!(found, 0);
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
 }
 
 // --- Queues ---------------------------------------------------------------------------------------------
@@ -389,7 +389,7 @@ fn reporting<J: Send + 'static>(performed: mpsc::UnboundedSender<String>, gate: 
 }
 
 async fn next_performed(performed: &mut mpsc::UnboundedReceiver<String>) -> String {
-    tokio::time::timeout(Duration::from_secs(5), performed.recv()).await.expect("a job was performed").unwrap()
+    wait("a job to report execution", performed.recv()).await.unwrap()
 }
 
 /// Webhooks to a slow bot fill their own queue's workers, not the ones notifications and the
@@ -398,7 +398,7 @@ async fn next_performed(performed: &mut mpsc::UnboundedReceiver<String>) -> Stri
 async fn a_busy_queue_doesnt_hold_up_the_others() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
 
     let (performed, mut performed_rx) = mpsc::unbounded_channel();
     let slow_bot = Arc::new(Notify::new());
@@ -445,8 +445,8 @@ async fn a_panicking_ad_hoc_job_is_logged_and_its_worker_carries_on() {
         let _ = done.send(());
         Ok(())
     });
-    tokio::time::timeout(Duration::from_secs(5), finished).await.unwrap().unwrap();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    wait("the ad hoc job after the panic", finished).await.unwrap();
+    booted.jobs.shutdown(WAIT).await;
 
     let logs = logs.text();
     assert!(logs.contains("job panicked job=\"Exploding\" panic=\"kaboom\""), "{logs}");
@@ -464,7 +464,7 @@ async fn shutdown_performs_the_queued_ad_hoc_jobs_and_then_takes_no_more() {
             Ok(())
         });
     }
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
     app.jobs.perform_later("Late", async move {
         let _ = performed.send(6);
         Ok(())
@@ -479,6 +479,7 @@ async fn shutdown_performs_the_queued_ad_hoc_jobs_and_then_takes_no_more() {
 struct Fate {
     finished: Arc<std::sync::atomic::AtomicBool>,
     dropped: Arc<std::sync::atomic::AtomicBool>,
+    release: Arc<Notify>,
 }
 
 struct DropFlag(Arc<std::sync::atomic::AtomicBool>);
@@ -490,13 +491,16 @@ impl Drop for DropFlag {
 }
 
 impl Fate {
-    /// Sleeps 250 ms, after reporting it started.
+    /// Reports readiness, then waits for an explicit release instead of racing a fixed sleep.
     fn work(&self, started: mpsc::UnboundedSender<()>) -> impl Future<Output = anyhow::Result<()>> + Send + use<> {
-        let (finished, guard) = (self.finished.clone(), DropFlag(self.dropped.clone()));
+        let (finished, guard, release) = (self.finished.clone(), DropFlag(self.dropped.clone()), self.release.clone());
         async move {
             let _guard = guard;
+            let released = release.notified();
+            tokio::pin!(released);
+            released.as_mut().enable();
             let _ = started.send(());
-            tokio::time::sleep(Duration::from_millis(250)).await;
+            released.await;
             finished.store(true, std::sync::atomic::Ordering::SeqCst);
             Ok(())
         }
@@ -513,7 +517,7 @@ impl Fate {
 async fn shutdown_aborts_what_outlasts_the_grace_period() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
 
     let (periodic_fate, ad_hoc_fate) = (Fate::default(), Fate::default());
     let (started, mut starts) = mpsc::unbounded_channel();
@@ -525,13 +529,15 @@ async fn shutdown_aborts_what_outlasts_the_grace_period() {
     let runner = start(app.clone(), registry(), ad_hoc, config, loops);
     jobs.perform_later("Slow", ad_hoc_fate.work(started));
     for _ in 0..2 {
-        tokio::time::timeout(Duration::from_secs(5), starts.recv()).await.expect("started").unwrap();
+        wait("slow shutdown task to start", starts.recv()).await.unwrap();
     }
 
     runner.shutdown(Duration::from_millis(20)).await;
     assert_eq!(periodic_fate.get(), (false, true), "the periodic task was aborted");
     assert_eq!(ad_hoc_fate.get(), (false, true), "the ad hoc job was aborted");
-    tokio::time::sleep(Duration::from_millis(400)).await;
+    // The futures have been dropped by shutdown, so releasing them cannot resume work.
+    periodic_fate.release.notify_waiters();
+    ad_hoc_fate.release.notify_waiters();
     assert_eq!(periodic_fate.get(), (false, true), "and didn't carry on");
     assert_eq!(ad_hoc_fate.get(), (false, true), "and didn't carry on");
 }
@@ -562,7 +568,7 @@ async fn tokens(app: &App, id: i64) -> (Option<String>, Option<String>) {
 async fn clearing_plaintext_bot_tokens_heals_their_digests() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
     let stale = insert_user(&app, "Stale", Some("BenderToken1"), Some("stale digest")).await;
     let current = insert_user(&app, "Current", None, Some("kept digest")).await;
 
@@ -578,7 +584,7 @@ async fn clearing_plaintext_bot_tokens_heals_their_digests() {
 async fn the_periodic_loops_run_with_the_jobs() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
     let stale = insert_user(&app, "Stale", Some("BenderToken1"), None).await;
 
     let (ticked, mut ticks) = mpsc::unbounded_channel();
@@ -594,17 +600,12 @@ async fn the_periodic_loops_run_with_the_jobs() {
     let (_, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
     let runner = start(app.clone(), registry(), ad_hoc, config, loops);
     for _ in 0..3 {
-        tokio::time::timeout(Duration::from_secs(5), ticks.recv()).await.expect("the huddle loop ticks").unwrap();
+        wait("the huddle loop to tick", ticks.recv()).await.unwrap();
     }
-    let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    while tokens(&app, stale).await.0.is_some() {
-        assert!(std::time::Instant::now() < deadline, "not cleared");
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-    runner.shutdown(Duration::from_secs(5)).await;
+    eventually("periodic plaintext-token cleanup", || async { tokens(&app, stale).await.0.is_none() }).await;
+    runner.shutdown(WAIT).await;
     while ticks.try_recv().is_ok() {}
-    tokio::time::sleep(Duration::from_millis(100)).await;
-    assert!(ticks.try_recv().is_err(), "stopped with the runner");
+    assert_eq!(wait("huddle sender to close with the runner", ticks.recv()).await, None);
 }
 
 #[test]
@@ -627,7 +628,7 @@ fn periodic_intervals_come_from_the_environment() {
 async fn an_invalid_interval_disables_only_its_loop() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
     let (logs, _guard) = Logs::capture();
 
     for (name, value) in [("EVENT_REMINDERS_INTERVAL", "0"), ("RETENTION_PRUNE_INTERVAL", "daily"), ("RETENTION_PRUNE_INTERVAL", "inf")] {
@@ -657,7 +658,7 @@ async fn an_invalid_interval_disables_only_its_loop() {
     let config = runner_config(&app.config);
     let (_, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
     let runner = start(app.clone(), registry(), ad_hoc, config, loops);
-    tokio::time::timeout(Duration::from_secs(5), ticks.recv()).await.expect("the huddle loop ticks").unwrap();
+    wait("the huddle loop to tick", ticks.recv()).await.unwrap();
     app.db
         .write(|tx| {
             tx.emit_after_commit(Event::RemoveBannedContent { user_id: 404 });
@@ -666,7 +667,7 @@ async fn an_invalid_interval_disables_only_its_loop() {
         .await
         .unwrap();
     wait_for(&app, "the job to run", |jobs| jobs.is_empty()).await;
-    runner.shutdown(Duration::from_secs(5)).await;
+    runner.shutdown(WAIT).await;
     let logs = logs.text();
     assert!(logs.contains(r#"discarded job="RemoveBannedContentJob""#), "{logs}");
 }
@@ -681,7 +682,7 @@ async fn an_invalid_interval_disables_only_its_loop() {
 async fn push_latency() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
 
     let (started, mut started_rx) = mpsc::unbounded_channel();
     let mut registry = Registry::new();
@@ -714,11 +715,11 @@ async fn push_latency() {
             })
             .await
             .unwrap();
-        let (performed, at) = tokio::time::timeout(Duration::from_secs(5), started_rx.recv()).await.unwrap().unwrap();
+        let (performed, at) = wait("push job handler to start", started_rx.recv()).await.unwrap();
         assert_eq!(performed, message_id);
         latencies.push(at - asked);
     }
-    runner.shutdown(Duration::from_secs(5)).await;
+    runner.shutdown(WAIT).await;
     latencies.sort();
     let percentile = |p: usize| latencies[(latencies.len() * p / 100).min(latencies.len() - 1)];
     println!("push enqueue-to-start over {} jobs: p50 {:?} p95 {:?} p99 {:?} max {:?}", latencies.len(), percentile(50), percentile(95), percentile(99), latencies.last().unwrap());
@@ -779,7 +780,7 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     .await;
     assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
     assert!(rows.iter().any(|row| row.class == "Retention::PruneJob" && row.run_at > campfire_db::Timestamp::from_jiff(app.clock.now())), "{rows:?}");
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
 }
 
 #[test]
@@ -851,7 +852,7 @@ async fn ws8_room_and_retention_workers_run_in_the_real_app() {
     })
     .await;
     assert!(rows.is_empty(), "{rows:?}");
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
 }
 
 #[tokio::test]
@@ -860,7 +861,7 @@ async fn ws8_storage_copies_match_rails_and_rollback_on_durable_enqueue_failure(
     use campfire_db::{Message, NewMessage, NewUser, Room, RoomType, User};
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
     let g: serde_json::Value =
         serde_json::from_str(include_str!("../ws8_runtime_vectors.json")).unwrap();
     let storage = app.storage.clone();
@@ -1002,7 +1003,7 @@ async fn ws8_storage_copies_match_rails_and_rollback_on_durable_enqueue_failure(
 async fn ws8_periodic_row_failures_continue_like_rails() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    booted.jobs.shutdown(WAIT).await;
     let g: serde_json::Value =
         serde_json::from_str(include_str!("../ws8_loop_vectors.json")).unwrap();
     let now = campfire_db::Timestamp::parse_db(g["now"].as_str().unwrap()).unwrap();

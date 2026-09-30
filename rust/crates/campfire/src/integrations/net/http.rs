@@ -491,12 +491,17 @@ mod tests {
     /// A gigabyte packed into a megabyte stops inflating just past the limit, in one chunk.
     #[test]
     fn stops_inflating_a_gzip_bomb_at_the_limit() {
+        let body = gzip_bomb(1024);
         let mut inflater = Inflater::new();
-        let started = std::time::Instant::now();
-        assert_eq!(inflater.inflate(&gzip_bomb(1024), LIMIT).unwrap(), None);
+        let started = crate::test_support::cpu_time();
+        assert_eq!(inflater.inflate(&body, LIMIT).unwrap(), None);
         // Inflating the whole gigabyte would take minutes; stopping at the limit takes about a
         // second in an unoptimized build on a CI runner.
-        assert!(started.elapsed() < Duration::from_secs(10), "{:?}", started.elapsed());
+        let elapsed = crate::test_support::cpu_time() - started;
+        assert!(
+            elapsed < Duration::from_secs(2),
+            "inflating to the size limit used {elapsed:?} CPU"
+        );
         let inflated = inflater.decoder.as_mut().unwrap().output().len();
         assert!(inflated <= LIMIT + 64 * 1024, "{inflated}");
     }
@@ -517,14 +522,21 @@ mod tests {
 mod ws15e_tests {
     use super::*;
     use tokio::io::AsyncWriteExt;
-    #[tokio::test]
-    async fn ws15e_write_timeout_bounds_a_stalled_transport() {
-        let (writer, _reader) = tokio::io::duplex(8);
-        let mut writer = WriteIo { io: writer, duration: Duration::from_millis(50), waiting: None };
-        let result = tokio::time::timeout(Duration::from_millis(300), writer.write_all(&[0; 16])).await;
-        assert!(result.is_ok(), "transport ignored its write timeout");
-        let error = result.unwrap().unwrap_err();
-        assert!(error.get_ref().unwrap().downcast_ref::<WriteExpired>().is_some());
+    #[test]
+    fn ws15e_write_timeout_bounds_a_stalled_transport() {
+        use futures_util::FutureExt;
+        crate::integrations::test_support::with_paused_time("stalled transport write deadline", async {
+            let (writer, _reader) = tokio::io::duplex(8);
+            let mut writer = WriteIo { io: writer, duration: Duration::from_millis(50), waiting: None };
+            let writing = writer.write_all(&[0; 16]);
+            tokio::pin!(writing);
+            assert!(writing.as_mut().now_or_never().is_none(), "stalled write completed before its deadline");
+            tokio::time::advance(Duration::from_millis(49)).await;
+            assert!(writing.as_mut().now_or_never().is_none(), "write expired before 50 ms");
+            tokio::time::advance(Duration::from_millis(1)).await;
+            let error = writing.as_mut().now_or_never().expect("write ignored its 50 ms deadline").unwrap_err();
+            assert!(error.get_ref().unwrap().downcast_ref::<WriteExpired>().is_some());
+        });
     }
 }
 

@@ -368,6 +368,27 @@ fn expected_endpoint_suffix(_t: &TestDb, id: i64) -> String {
     format!("/fcm/send/{label}")
 }
 
+// A shutdown grace period bounds cleanup; it does not prove that delivery finished.
+// Keep the existing five-second test deadline, and wait for both handoffs to complete.
+async fn wait_for_jobs_and_deliveries(db: &campfire_db::Database, pool: &Pool, classes: &[&str]) {
+    let deadline = Duration::from_secs(5);
+    let mut rows = Vec::new();
+    let mut pending = pool.pending();
+    let result = tokio::time::timeout(deadline, async {
+        loop {
+            rows = db.read(campfire_jobs::inspect::all).await.unwrap();
+            rows.retain(|row| classes.contains(&row.class.as_str()));
+            pending = pool.pending();
+            assert!(!rows.iter().any(|row| row.status == "failed"), "push jobs failed: {rows:#?}");
+            if rows.is_empty() && pending == 0 {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }).await;
+    assert!(result.is_ok(), "timed out after {deadline:?} waiting for {classes:?}: {pending} pending deliveries; jobs {rows:#?}");
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() {
     use crate::app::AppState;
@@ -414,9 +435,7 @@ async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() 
     };
     assert_eq!(count_jobs(db.clone()).await,2);
     let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::jobs::runner_config(&app.config));
-    let wait = || async {
-        tokio::time::timeout(Duration::from_secs(5),async { while count_jobs(db.clone()).await != 0 { tokio::time::sleep(Duration::from_millis(10)).await; } }).await.unwrap();
-    };
+    let wait = || wait_for_jobs_and_deliveries(&db, &pool, &["ChannelThread::PushMessageJob", "SavedItem::ReminderPushJob"]);
     wait().await;
     assert!(service.server.received().is_empty(),"DND must suppress both jobs");
     db.write(|tx| {tx.conn().execute("UPDATE users SET dnd_enabled=0 WHERE id=?",[JASON])?;Ok(())}).await.unwrap();
@@ -482,12 +501,7 @@ async fn ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_
         jobs:original.jobs.clone(),mail:crate::mail::State::new(original.mail.config.clone()),web_push:Some(pool.clone()),fragment_cache:original.fragment_cache.clone(),
     });
     let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::jobs::runner_config(&app.config));
-    tokio::time::timeout(Duration::from_secs(5),async {
-        loop {
-            let count=db.read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Push::Subscription::TestNotificationJob'",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
-            if count==0 {break;}tokio::time::sleep(Duration::from_millis(10)).await;
-        }
-    }).await.unwrap();
+    wait_for_jobs_and_deliveries(&db, &pool, &["Push::Subscription::TestNotificationJob"]).await;
     runner.shutdown(Duration::from_secs(5)).await;pool.shutdown().await;
     let requests=service.server.received();assert_eq!(requests.len(),1);
     let payload: serde_json::Value=serde_json::from_str(&receiver.open(&requests[0].body)).unwrap();
