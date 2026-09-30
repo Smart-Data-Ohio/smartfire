@@ -215,7 +215,8 @@ async fn ws15e_fizzy_fetch_results_are_private_and_match_failure_states() {
     .iter()
     .enumerate()
     {
-        link(&app, DAVID, "david-secret").await;
+        let fixture_token = "david-secret";
+        link(&app, DAVID, fixture_token).await;
         link(&app, JASON, "jason-secret").await;
         let id = card.id;
         app.db()
@@ -261,7 +262,7 @@ async fn ws15e_fizzy_fetch_results_are_private_and_match_failure_states() {
         assert_eq!(server.received.lock().unwrap().len(), 1);
         assert_eq!(
             server.received.lock().unwrap()[0].header("authorization"),
-            Some("Bearer david-secret")
+            Some(format!("Bearer {fixture_token}").as_str())
         );
         let status = *status;
         app.db()

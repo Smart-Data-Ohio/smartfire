@@ -8,6 +8,7 @@ use crate::{
 };
 use rusqlite::params;
 use std::sync::Arc;
+const OWNER_TOKEN: &str = "fixture-owner";
 async fn fixture(case: &str) -> (TestApp, i64) {
     let mut app = TestApp::boot().await.expect("pinned seeds required");
     app.booted
@@ -23,7 +24,7 @@ async fn fixture(case: &str) -> (TestApp, i64) {
         if case!="forbidden" {tx.conn().execute("INSERT INTO agent_grants (agent_id,capability,granted_by_id,created_at,updated_at) VALUES (?,'fizzy',?,?,?)",params![agent,DAVID,tx.now(),tx.now()])?;}
         Account::disconnect(tx,DAVID)?;
         if case!="no_account" {
-            let account=Account::relink(tx,&crypto,&Input{user_id:DAVID,account_id:"897362094",account_name:None,fizzy_user_id:Some("owner-id"),fizzy_user_name:None,token:"fixture-owner"})?;
+            let account=Account::relink(tx,&crypto,&Input{user_id:DAVID,account_id:"897362094",account_name:None,fizzy_user_id:Some("owner-id"),fizzy_user_name:None,token:OWNER_TOKEN})?;
             if case=="disconnected" {account.mark_disconnected(tx,"Disconnected")?;}
         }
         Ok(agent)
@@ -125,7 +126,7 @@ async fn ws15e_fizzy_agent_reads_match_pinned_service_results() {
                     call.headers
                         .iter()
                         .any(|(k, v)| k.eq_ignore_ascii_case("authorization")
-                            && v == "Bearer fixture-owner")
+                            && v == &format!("Bearer {OWNER_TOKEN}"))
                 );
             }
             assert_eq!(resolver.lookups().len(), received.len());

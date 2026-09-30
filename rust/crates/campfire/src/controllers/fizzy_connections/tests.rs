@@ -220,7 +220,7 @@ async fn run(case: &str) {
                 .find(|(k, _)| k.eq_ignore_ascii_case("authorization"))
                 .unwrap()
                 .1,
-            "Bearer new-token"
+            format!("Bearer {}", token.trim())
         );
     }
 }
