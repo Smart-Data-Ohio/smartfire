@@ -73,9 +73,13 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
     let Broadcast::Turbo(frame) = broadcast else { unreachable!() };
     let app = app.ok_or_else(|| anyhow::anyhow!("app is not booted for partial rendering"))?;
     let html = match &frame.partial {
-        Some(partial) => super::rooms_directory::render(app, partial)?,
+        Some(partial) => match super::rooms_directory::render(app, partial)? {
+            Some(html) => Some(html),
+            None => crate::controllers::messages::rendered::domain_partial(app, partial)?,
+        },
         None => None,
     }.ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
+    if campfire_views::helpers::request_forgery::has_token_slots(&html) { return Err(anyhow::anyhow!("unresolved CSRF token slot")); }
     let action = match frame.action {
         TurboAction::Append => Action::Append,
         TurboAction::Prepend => Action::Prepend,

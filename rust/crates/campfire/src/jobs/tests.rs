@@ -756,7 +756,13 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
 async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    app.db.write(|tx|{tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob{source_message_id:999}));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
+    app.db.write(|tx| {
+        // Other periodic work can remain queued while the quote job completes.
+        tx.emit_after_commit(Event::job_in(Duration::from_secs(3600), &campfire_db::models::retention::PruneJob {}));
+        tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob { source_message_id: 999 }));
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'", [], |row| row.get::<_, i64>(0))?, 1);
+        Ok(())
+    }).await.unwrap();
     let rows = wait_for(&app, "quote refresh execution", |rows| {
         // The periodic runner may enqueue retention alongside this job. Wait for
         // that work too before asserting an empty queue, rather than racing it.
@@ -766,7 +772,8 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
     })
     .await;
-    assert!(rows.is_empty(), "{rows:?}");
+    assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
+    assert!(rows.iter().any(|row| row.class == "Retention::PruneJob" && row.run_at > campfire_db::Timestamp::from_jiff(app.clock.now())), "{rows:?}");
     booted.jobs.shutdown(Duration::from_secs(5)).await;
 }
 

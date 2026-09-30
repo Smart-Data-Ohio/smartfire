@@ -38,6 +38,11 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
+pub mod channel_threads;
+mod message_forwards;
+#[cfg(test)]
+pub(crate) mod message_forwards_tests;
+pub mod channel_thread_messages;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
@@ -218,10 +223,31 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "autocompletable/users#index" => arc(autocompletable::users::index),
         "messages#index" => arc(messages::index),
         "messages#create" => arc(messages::create),
+        "messages#preview" => arc(messages::preview),
+        "messages#actions" => arc(messages::actions),
         "messages#edit" => arc(messages::edit),
         "messages#show" => arc(messages::show),
         "messages#update" => arc(messages::update),
         "messages#destroy" => arc(messages::destroy),
+        "channel_threads#index" => arc(channel_threads::index),
+        "channel_threads#show" => arc(channel_threads::show),
+        "channel_threads#content" => arc(channel_threads::content),
+        "channel_threads#new" => arc(channel_threads::new),
+        "channel_threads#create" => arc(channel_threads::create),
+        "channel_threads#update" => arc(channel_threads::update),
+        "channel_threads#destroy" => arc(channel_threads::destroy),
+        "channel_threads#join" => arc(channel_threads::join),
+        "channel_threads#leave" => arc(channel_threads::leave),
+        "channel_threads#read" => arc(channel_threads::read),
+        "message_forwards#create" => arc(message_forwards::create),
+        "message_forwards#destinations" => arc(message_forwards::destinations),
+        "message_forward_sources#forward_source" => arc(message_forwards::forward_source),
+        "channel_thread_messages#index" => arc(channel_thread_messages::index),
+        "channel_thread_messages#show" => arc(channel_thread_messages::show),
+        "channel_thread_messages#actions" => arc(channel_thread_messages::actions),
+        "channel_thread_messages#create" => arc(channel_thread_messages::create),
+        "channel_thread_messages#update" => arc(channel_thread_messages::update),
+        "channel_thread_messages#destroy" => arc(channel_thread_messages::destroy),
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
         "messages/by_bots#index" => arc(messages::by_bots::index),

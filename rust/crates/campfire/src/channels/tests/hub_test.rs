@@ -38,7 +38,11 @@ struct Hub {
 /// created by Rails before two-step sign-in existed; it's marked verified here so the cable
 /// accepts it.
 async fn boot() -> Option<Hub> {
-    let app = TestApp::boot().await?;
+    boot_with_test_clock(crate::controllers::presenters::test_support::seed_clock()).await
+}
+
+async fn boot_with_test_clock(clock: campfire_kit::SharedClock) -> Option<Hub> {
+    let app = TestApp::boot_with_test_clock(clock).await?;
     app.db()
         .write(|tx| {
             tx.conn().execute(
@@ -59,6 +63,8 @@ async fn boot() -> Option<Hub> {
         origin: format!("http://{addr}"),
     })
 }
+
+mod message_parity;
 
 impl Hub {
     async fn connect(&self, cookie: &str) -> Client {
@@ -512,6 +518,10 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
             .await
             .contains("Real presentation partial")
     );
+    // Human edits replace meta and all six card containers after the presentation.
+    for part in ["meta", "github_pr_cards", "twitter_cards", "message_link_cards", "fizzy_cards", "linkedin_cards", "link_embed_cards"] {
+        assert!(broadcast_html(&mut client).await.contains(&format!("target=\"{part}_message_")));
+    }
     let response = browser
         .write(
             Req::new(Method::POST, &format!("/messages/{id}/boosts"))

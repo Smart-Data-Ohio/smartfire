@@ -98,7 +98,7 @@ async fn index_pages_with_conditional_gets() {
     assert!(!reply.text().contains("<html"), "layout false");
     let etag = reply.header("etag").unwrap().to_string();
     assert!(etag.starts_with("W/\""));
-    assert!(reply.header("last-modified").is_some());
+    assert!(reply.header("last-modified").is_none(), "Rails uses only the ETag");
 
     let cached = david
         .send(Req::new(Method::GET, &format!("/rooms/{ALL_TALK}/messages?before={}", messages[50].id)).header("if-none-match", &etag))
@@ -194,7 +194,9 @@ async fn show_edit_update_and_destroy() {
 
     let edit = david.get(&format!("{path}/edit")).await;
     assert_eq!(edit.status, StatusCode::OK);
-    assert!(edit.text().contains("<lexxy-editor"));
+    assert!(edit.text().contains("class=\"message-edit\""));
+    assert!(edit.text().contains("name=\"message[markdown_source]\""));
+    assert!(edit.text().contains("name=\"message[drive_file_ids][]\""));
 
     let updated = david.write(Req::new(Method::PATCH, &path).form(&[("message[body]", "<p>Edited</p>")])).await;
     assert_eq!(updated.status, StatusCode::FOUND, "{}", updated.text());
@@ -203,7 +205,10 @@ async fn show_edit_update_and_destroy() {
     assert_eq!(body.as_deref(), Some("<p>Edited</p>"));
 
     let json = david.write(Req::new(Method::PATCH, &format!("{path}.json")).form(&[("message[body]", "x")])).await;
-    assert_eq!(json.status, StatusCode::INTERNAL_SERVER_ERROR, "no messages/show.json");
+    assert_eq!(json.status, StatusCode::OK, "{}", json.text());
+    assert_eq!(json.json()["id"], message.id);
+    assert_eq!(json.json()["body"]["plain_text"], "x");
+    assert_eq!(json.json()["creator"]["id"], DAVID);
 
     let destroyed = david.write(Req::new(Method::DELETE, &path).header("accept", TURBO_STREAM_ACCEPT)).await;
     assert_eq!(destroyed.status, StatusCode::OK);

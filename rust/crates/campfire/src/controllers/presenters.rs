@@ -11,6 +11,8 @@ pub mod attachments;
 pub mod page;
 pub mod pagination;
 pub mod rich_text;
+mod message_cache;
+mod room_list;
 pub mod view_context;
 #[cfg(test)]
 pub mod test_support;
@@ -122,6 +124,7 @@ pub fn user_json(secrets: &Secrets, base_url: &str, user: &User) -> UserJson {
 /// Everything a page of messages needs, with the rows it looks up along the way remembered
 /// (Rails preloads them with `with_creator`, `with_boosts` and friends).
 pub struct Presenter<'a> {
+    app: &'a AppState,
     pub conn: &'a Connection,
     pub secrets: &'a Secrets,
     pub storage: &'a Storage,
@@ -137,6 +140,7 @@ pub struct Presenter<'a> {
 impl<'a> Presenter<'a> {
     pub fn new(conn: &'a Connection, app: &'a AppState, request_host: Option<String>) -> Self {
         Self {
+            app,
             conn,
             secrets: &app.secrets,
             storage: &app.storage,
@@ -194,6 +198,29 @@ impl<'a> Presenter<'a> {
         })
     }
 
+    /// Inputs to the message-owned composer; Drive availability is resolved by its owner.
+    pub fn composer_facts(&self, room: &Room, viewer: &User, thread: Option<&campfire_db::ChannelThread>, drive: campfire_views::messages::composer::DriveFlow) -> Result<campfire_views::messages::composer::Facts> {
+        let mut slash_commands = campfire_db::slash_commands::registry().into_iter().map(|command| command.name).collect::<Vec<_>>();
+        slash_commands.extend(self.conn.prepare("SELECT name FROM agent_slash_commands WHERE room_id = ? ORDER BY name, id")?
+            .query_map([room.id], |row| row.get::<_, String>(0))?.collect::<std::result::Result<Vec<_>, _>>()?);
+        Ok(campfire_views::messages::composer::Facts { room_id: room.id, room_kind: room_kind(room.room_type), room_name: self.room_display_name(room, Some(viewer))?,
+            thread: thread.map(|thread| campfire_views::messages::composer::Thread {id: thread.id, name: thread.name.clone()}), slash_commands, drive })
+    }
+
+    pub fn thread_steps(&self, id: i64) -> Result<Vec<campfire_views::messages::parts::AgentStep>> {
+        Ok(self.conn.prepare("SELECT name, status, duration_ms, input_summary, output_summary FROM agent_steps WHERE channel_thread_id = ? ORDER BY position, id")?
+            .query_map([id], |row| Ok(campfire_views::messages::parts::AgentStep {name: row.get(0)?, status: row.get(1)?, duration_ms: row.get(2)?, input_summary: row.get(3)?, output_summary: row.get(4)?}))?
+            .collect::<std::result::Result<Vec<_>, _>>()?)
+    }
+
+    /// Read the consent flag only. The Google owner supplies Picker configuration/availability.
+    pub fn composer_drive_flow(&self, viewer: &User, share_picker_available: bool) -> Result<campfire_views::messages::composer::DriveFlow> {
+        use campfire_views::messages::composer::DriveFlow;
+        if share_picker_available { return Ok(DriveFlow::Share); }
+        let scopes = self.conn.query_row("SELECT scopes FROM google_accounts WHERE user_id = ? LIMIT 1", [viewer.id], |row| row.get::<_, Option<String>>(0)).optional()?.flatten();
+        Ok(if scopes.is_some_and(|scopes| scopes.split_whitespace().any(|scope| scope == "https://www.googleapis.com/auth/drive.file")) { DriveFlow::Metadata } else { DriveFlow::None })
+    }
+
     /// `message.room` with `room_display_name(message.room, for_user: nil)`.
     fn room_and_name(&self, room_id: i64) -> Result<(Room, String)> {
         if let Some(entry) = self.room_names.borrow().get(&room_id) {
@@ -209,19 +236,26 @@ impl<'a> Presenter<'a> {
         message.plain_text_body(self.conn, self.rich_text)
     }
 
-    /// `render @messages`: each message's cached fragment when the current store has its version
-    /// (`cache [ message, "presentation-v3" ]` wraps the whole partial, so Rails evaluates none of
-    /// it on a hit), else its view.
+    /// `render @messages, cached: message_with_pr_cards_cache_key`: collection hits skip
+    /// rendering, while individual messages bypass the collection cache.
     pub fn messages(&self, messages: &[Message]) -> Result<Vec<MessageItem>> {
         messages.iter().map(|message| self.message_item(message)).collect()
     }
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff(), base)) {
-            Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
-            None => MessageItem::View(Box::new(self.message(message)?)),
-        })
+        let Some(base) = self.cache_base_url.as_deref() else { return Ok(MessageItem::View(Box::new(self.message(message)?))) };
+        let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
+        let html = fragment_cache::try_fetch_value(|| key, || {
+            let view = self.message(message)?;
+            let account = campfire_db::Account::first(self.conn)?;
+            page::render_detached_at(self.app, account.as_ref(), base, |ctx| {
+                use askama::Template;
+                campfire_views::messages::MessagePartial { ctx, message: &view }.render()
+                    .map(std::sync::Arc::new).map_err(|error| campfire_db::Error::Other(error.to_string()))
+            })
+        })?;
+        Ok(MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html })
     }
 
     /// A message as `messages/_message` shows it.
@@ -329,7 +363,9 @@ impl<'a> Presenter<'a> {
 
     /// `message.content_type`, with what `message_presentation` shows for it.
     fn content(&self, message: &Message, plain_text: &str) -> Result<MessageContent> {
-        let body = message.body_html(self.conn)?.unwrap_or_default();
+        let stored_body = message.body_html(self.conn)?;
+        let missing_body = stored_body.is_none();
+        let body = stored_body.unwrap_or_default();
         let resolver = self.resolver();
         let ctx = resolver.render_context(self.request_host.clone());
         // `message_tag` evaluates `message.plain_text_body` first; where that raises, it rescues
@@ -355,6 +391,15 @@ impl<'a> Presenter<'a> {
                 }),
                 text: sound.text.map(str::to_string),
             }));
+        }
+        // Drive-only messages can have no ActionText body. Rails' message_presentation
+        // rescues the nil content and returns an empty string, without a trix wrapper.
+        if missing_body { return Ok(MessageContent::Text { html: String::new() }); }
+        if message.markdown() || message.forwarded_markdown {
+            return Ok(match crate::rich_text::markdown_presentation(self.conn, &body, &ctx) {
+                Ok(html) => MessageContent::Text { html },
+                Err(_) => MessageContent::Unrenderable,
+            });
         }
         Ok(match campfire_richtext::present_message(&body, &ctx) {
             Presentation::Html(html) => MessageContent::Text { html },
@@ -410,22 +455,30 @@ impl<'a> Presenter<'a> {
     /// `message.body.to_s`: the stored rich text rendered inside its layout.
     pub fn body_html(&self, message: &Message) -> Result<String> {
         let Some(body) = message.body_html(self.conn)? else { return Ok(String::new()) };
-        let resolver = self.resolver();
-        let ctx = resolver.render_context(self.request_host.clone());
-        Ok(campfire_richtext::Content::load(&body, &ctx)
-            .and_then(|content| content.to_rendered_html_with_layout(&ctx))
-            .unwrap_or_default())
+        Ok(self.render_body_html(&body).unwrap_or_default())
     }
 
-    /// `editable_body(message)` as the editor's `value`.
-    pub fn editable_body(&self, message: &Message) -> Result<String> {
-        let body = message.body_html(self.conn)?.unwrap_or_default();
+    /// Fallible ActionText::Content#to_s for human payloads and legacy conversion.
+    pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
+        let Some(body) = message.body_html(self.conn)? else { return Ok(String::new()) };
+        self.render_body_html(&body)
+    }
+
+    fn render_body_html(&self, body: &str) -> Result<String> {
         let resolver = self.resolver();
         let ctx = resolver.render_context(self.request_host.clone());
-        // An `Err` is where the edit page raises in Rails (a missing attachment, say).
-        campfire_richtext::editable_value(&body, &ctx)
-            .map(Option::unwrap_or_default)
-            .map_err(|error| campfire_db::Error::Other(format!("editable_body raised: {error}")))
+        campfire_richtext::Content::load(body, &ctx)
+            .and_then(|content| content.to_rendered_html_with_layout(&ctx))
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))
+    }
+
+    /// Message#editable_markdown_source passes rendered Content, not Content#to_html.
+    pub fn editable_markdown_source(&self, message: &Message) -> Result<String> {
+        if let Some(source) = &message.markdown_source { return Ok(source.clone()) }
+        let body = self.rendered_body_html(message)?;
+        let resolver = self.resolver();
+        campfire_richtext::legacy_markdown::render(&body, &resolver.render_context(self.request_host.clone()))
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))
     }
 
     /// `messages/_message.json.jbuilder` (`json.cache! message`).
