@@ -273,125 +273,186 @@
       "declared_cases": [
         {
           "name": "new lists starred people first with a star marker",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::directs_rails_cases::new_lists_starred_people_first_with_a_star_marker",
+          "rust_result": "passed"
         },
         {
           "name": "new renders a client-side filter instead of the autocomplete picker",
-          "line": 23
+          "line": 23,
+          "rust_test": "controllers::rooms::directs_rails_cases::new_renders_a_client_side_filter_instead_of_the_autocomplete_picker",
+          "rust_result": "passed"
         },
         {
           "name": "create",
-          "line": 34
+          "line": 34,
+          "rust_test": "controllers::rooms::directs_rails_cases::create_case",
+          "rust_result": "passed"
         },
         {
           "name": "create only once per user set",
-          "line": 43
+          "line": 43,
+          "rust_test": "controllers::rooms::directs_rails_cases::create_only_once_per_user_set",
+          "rust_result": "passed"
         },
         {
           "name": "create opens a group DM for several people and reuses it",
-          "line": 50
+          "line": 50,
+          "rust_test": "controllers::rooms::directs_rails_cases::create_opens_a_group_dm_for_several_people_and_reuses_it",
+          "rust_result": "passed"
         },
         {
           "name": "create rejects more members than the cap",
-          "line": 66
+          "line": 66,
+          "rust_test": "controllers::rooms::directs_rails_cases::create_rejects_more_members_than_the_cap",
+          "rust_result": "passed"
         },
         {
           "name": "create with start_huddle lands in the room ready to ring",
-          "line": 77
+          "line": 77,
+          "rust_test": "controllers::rooms::directs_rails_cases::create_with_start_huddle_lands_in_the_room_ready_to_ring",
+          "rust_result": "passed"
         },
         {
           "name": "create ignores deactivated and banned users",
-          "line": 83
+          "line": 83,
+          "rust_test": "controllers::rooms::directs_rails_cases::create_ignores_deactivated_and_banned_users",
+          "rust_result": "passed"
         },
         {
           "name": "create caps user_ids before querying",
-          "line": 96
+          "line": 96,
+          "rust_test": "controllers::rooms::directs_rails_cases::create_caps_user_ids_before_querying",
+          "rust_result": "passed"
         },
         {
           "name": "a member can rename the group and everyone sees the compact system note",
-          "line": 107
+          "line": 107,
+          "rust_result": "deferred",
+          "deferred_to": "WS8bm message-list rendering; HTTP rename/domain covered separately"
         },
         {
           "name": "group DM notes cannot be edited or deleted",
-          "line": 126
+          "line": 126,
+          "rust_result": "deferred",
+          "deferred_to": "WS8bm message edit/delete authorization"
         },
         {
           "name": "rename is rejected for one-to-one DMs and by non-members",
-          "line": 142
+          "line": 142,
+          "rust_test": "controllers::rooms::directs_rails_cases::rename_is_rejected_for_one_to_one_dms_and_by_non_members",
+          "rust_result": "passed"
         },
         {
           "name": "a member can add people up to the cap",
-          "line": 154
+          "line": 154,
+          "rust_test": "controllers::rooms::directs_rails_cases::a_member_can_add_people_up_to_the_cap",
+          "rust_result": "passed"
         },
         {
           "name": "adding members rejects one-to-one DMs, the overflow, and non-members",
-          "line": 164
+          "line": 164,
+          "rust_test": "controllers::rooms::directs_rails_cases::adding_members_rejects_one_to_one_dms_the_overflow_and_non_members",
+          "rust_result": "passed"
         },
         {
           "name": "adding members caps user_ids before querying",
-          "line": 184
+          "line": 184,
+          "rust_test": "controllers::rooms::directs_rails_cases::adding_members_caps_user_ids_before_querying",
+          "rust_result": "passed"
         },
         {
           "name": "leaving removes only your membership and the group keeps working",
-          "line": 197
+          "line": 197,
+          "rust_test": "controllers::rooms::directs_rails_cases::leaving_removes_only_your_membership_and_the_group_keeps_working",
+          "rust_result": "passed"
         },
         {
           "name": "the last member out destroys the group",
-          "line": 215
+          "line": 215,
+          "rust_test": "controllers::rooms::directs_rails_cases::the_last_member_out_destroys_the_group",
+          "rust_result": "passed"
         },
         {
           "name": "leave is rejected for non-members",
-          "line": 227
+          "line": 227,
+          "rust_test": "controllers::rooms::directs_rails_cases::leave_is_rejected_for_non_members",
+          "rust_result": "passed"
         },
         {
           "name": "a non-member cannot read the group",
-          "line": 237
+          "line": 237,
+          "rust_test": "controllers::rooms::directs_rails_cases::a_non_member_cannot_read_the_group",
+          "rust_result": "passed"
         },
         {
           "name": "a removed member loses access to the group",
-          "line": 245
+          "line": 245,
+          "rust_test": "controllers::rooms::directs_rails_cases::a_removed_member_loses_access_to_the_group",
+          "rust_result": "passed"
         },
         {
           "name": "destroy only allowed for all room users",
-          "line": 254
+          "line": 254,
+          "rust_test": "controllers::rooms::directs_rails_cases::destroy_only_allowed_for_all_room_users",
+          "rust_result": "passed"
         },
         {
           "name": "destroy can't reach a closed room the member didn't create",
-          "line": 271
+          "line": 271,
+          "rust_test": "controllers::rooms::directs_rails_cases::destroy_cant_reach_a_closed_room_the_member_didnt_create",
+          "rust_result": "passed"
         },
         {
           "name": "destroy can't reach an open room the member didn't create",
-          "line": 281
+          "line": 281,
+          "rust_test": "controllers::rooms::directs_rails_cases::destroy_cant_reach_an_open_room_the_member_didnt_create",
+          "rust_result": "passed"
         },
         {
           "name": "destroy can't reach a room the member isn't in at all",
-          "line": 291
+          "line": 291,
+          "rust_test": "controllers::rooms::directs_rails_cases::destroy_cant_reach_a_room_the_member_isnt_in_at_all",
+          "rust_result": "passed"
         },
         {
           "name": "a member cannot delete a group DM",
-          "line": 301
+          "line": 301,
+          "rust_test": "controllers::rooms::directs_rails_cases::a_member_cannot_delete_a_group_dm",
+          "rust_result": "passed"
         },
         {
           "name": "the non-admin creator cannot delete a group DM through the generic room route",
-          "line": 312
+          "line": 312,
+          "rust_test": "controllers::rooms::directs_rails_cases::the_non_admin_creator_cannot_delete_a_group_dm_through_the_generic_room_route",
+          "rust_result": "passed"
         },
         {
           "name": "an administrator can delete a group DM",
-          "line": 323
+          "line": 323,
+          "rust_test": "controllers::rooms::directs_rails_cases::an_administrator_can_delete_a_group_dm",
+          "rust_result": "passed"
         },
         {
           "name": "the group settings hide the delete button from non-administrators",
-          "line": 334
+          "line": 334,
+          "rust_test": "controllers::rooms::directs_rails_cases::the_group_settings_hide_the_delete_button_from_non_administrators",
+          "rust_result": "passed"
         },
         {
           "name": "one-to-one DM settings still offer deletion to members",
-          "line": 348
+          "line": 348,
+          "rust_test": "controllers::rooms::directs_rails_cases::one_to_one_dm_settings_still_offer_deletion_to_members",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 29,
       "rails_tests_run": 29,
       "rails_pass_count": 29,
-      "status": "full-file acceptance deferred",
+      "status": "27 source-declared cases individually executed in Rust; 2 deferred",
+      "rust_cases_run": 27,
+      "rust_pass_count": 27,
+      "rust_cases_deferred": 2,
       "rails_assertions": 167
     },
     {
@@ -702,9 +763,10 @@
       "declared_count": 8,
       "rails_tests_run": 8,
       "rails_pass_count": 8,
-      "status": "all eight source-declared cases ported to individually executed Rust tests",
+      "status": "8 source-declared cases individually executed in Rust; 0 deferred",
       "rust_cases_run": 8,
       "rust_pass_count": 8,
+      "rust_cases_deferred": 0,
       "rails_assertions": 26
     },
     {

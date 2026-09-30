@@ -97,16 +97,31 @@ for file in files:
 output=dict(reference='d7c7de92',note='These are source declarations, not dynamically expanded Rails tests. Equivalent Rust subsets are reported separately; no full-file Rails acceptance is claimed.',files=result)
 if args.test_log:
     receipts=args.test_log.read_text()
-    file=next(row for row in result if row['file']=='test/controllers/rooms/inbound_email_addresses_controller_test.rb')
-    assert file['source_sha256']=='7f0a2071a6a696f04b5fa27a677e9d929de25abce4aec7653db43c1250ba423e', 'inbound Rails case drift'
-    passed=set(re.findall(r'^test controllers::rooms::inbound_rails_cases::(\w+) \.\.\. ok$',receipts,re.M))
-    for case in file['declared_cases']:
-        selector=re.sub(r'[^a-z0-9]+','_',case['name'].lower()).strip('_')
-        assert selector in passed, f'missing Rust pass receipt: {selector}'
-        case.update(rust_test=f'controllers::rooms::inbound_rails_cases::{selector}',rust_result='passed')
-    file.update(rust_cases_run=len(file['declared_cases']),rust_pass_count=len(file['declared_cases']),status='all eight source-declared cases ported to individually executed Rust tests')
-    print(f"Rails case port receipts: {file['file']}: {file['rust_pass_count']} Rust cases passed, 0 deferred; Rails reference executions recorded separately")
-    output['note']='Source declarations are not dynamically expanded Rails tests. The inbound-email file has one individually executed Rust test per declaration, with receipts from the supplied raw cargo log; remaining full-file case mappings are deferred. No Rails Minitest execution claimed.'
+    groups=[
+        ('test/controllers/rooms/inbound_email_addresses_controller_test.rb','inbound_rails_cases',{},{}),
+        ('test/controllers/rooms/directs_controller_test.rb','directs_rails_cases',
+         {'create':'create_case',
+          "destroy can't reach a closed room the member didn't create":'destroy_cant_reach_a_closed_room_the_member_didnt_create',
+          "destroy can't reach an open room the member didn't create":'destroy_cant_reach_an_open_room_the_member_didnt_create',
+          "destroy can't reach a room the member isn't in at all":'destroy_cant_reach_a_room_the_member_isnt_in_at_all'},
+         {'a member can rename the group and everyone sees the compact system note':'WS8bm message-list rendering; HTTP rename/domain covered separately',
+          'group DM notes cannot be edited or deleted':'WS8bm message edit/delete authorization'}),
+    ]
+    for path,module,renamed,deferred in groups:
+        file=next(row for row in result if row['file']==path)
+        passed=set(re.findall(r'^test controllers::rooms::'+module+r'::(\w+) \.\.\. ok$',receipts,re.M))
+        for case in file['declared_cases']:
+            if case['name'] in deferred:
+                case.update(rust_result='deferred',deferred_to=deferred[case['name']])
+                continue
+            selector=renamed.get(case['name'],re.sub(r'[^a-z0-9]+','_',case['name'].lower()).strip('_'))
+            assert selector in passed,f'missing Rust pass receipt: {module}::{selector}'
+            case.update(rust_test=f'controllers::rooms::{module}::{selector}',rust_result='passed')
+        expected=len(file['declared_cases'])-len(deferred)
+        assert len(passed)==expected, f'unmapped Rust case receipt: {module}'
+        file.update(rust_cases_run=expected,rust_pass_count=expected,rust_cases_deferred=len(deferred),status=f'{expected} source-declared cases individually executed in Rust; {len(deferred)} deferred')
+        print(f"Rails case port receipts: {path}: {expected} Rust cases passed, {len(deferred)} deferred; Rails reference executions recorded separately")
+    output['note']='Source declarations and named Rust ports are distinct from Rails Minitest executions. Supplied raw cargo receipts prove only the individually mapped Rust cases; remaining cases have explicit owners.'
 if args.rails_log:
     text=args.rails_log.read_text()
     receipts=re.findall(r'^(test/controllers/[^\n]+)\n([0-9]+) runs, ([0-9]+) assertions, 0 failures, 0 errors, 0 skips$',text,re.M)
