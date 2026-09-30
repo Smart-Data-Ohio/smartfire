@@ -151,3 +151,164 @@ async fn status_callback_replaces_badge_then_directory_over_live_socket_after_co
     socket.close(None).await.unwrap();
     server.abort();
 }
+
+#[tokio::test]
+async fn thread_step_callback_renders_ordered_steps_and_updates_over_live_socket() {
+    use crate::channels::broadcasts::Stream;
+    use campfire_db::models::agent_step::{self, AgentStepChanges, NewAgentStep};
+    let test = boot_seed("default").await.expect("default seed");
+    let listener = crate::channels::tests::support::bind_listener().await;
+    let address = listener.local_addr().unwrap();
+    let router = test.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let viewer: i64 = test.label("users.david").parse().unwrap();
+    let session = test
+        .booted
+        .app
+        .db
+        .write(move |tx| {
+            campfire_db::Session::start_with(
+                tx,
+                viewer,
+                campfire_db::NewSession {
+                    two_factor_verified: true,
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    use campfire_kit::Crypto;
+    let signed = campfire_kit::RailsCrypto::new(test.booted.app.secrets.clone()).sign_cookie(
+        "session_token",
+        &session.token,
+        None,
+    );
+    let mut request = format!("ws://{address}/cable")
+        .into_client_request()
+        .unwrap();
+    request.headers_mut().insert("host", HOST.parse().unwrap());
+    request
+        .headers_mut()
+        .insert("origin", format!("http://{HOST}").parse().unwrap());
+    request.headers_mut().insert(
+        "cookie",
+        format!("session_token={}", campfire_kit::cookies::escape(&signed))
+            .parse()
+            .unwrap(),
+    );
+    let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+    assert_eq!(receive(&mut socket).await["type"], "welcome");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    let room: i64 = test.label("rooms.board").parse().unwrap();
+    let (agent_id,thread_id)=test.booted.app.db.write(move |tx| {
+        let agent=campfire_db::Agent::for_user(tx.conn(),bot)?.unwrap();
+        campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id:agent.id,capability:"manage_threads".into(),room_id:Some(room),granted_by_id:viewer,..Default::default()})?;
+        let thread=tx.conn().query_row("SELECT id FROM channel_threads WHERE work_owner_id=? AND room_id=? ORDER BY id LIMIT 1",rusqlite::params![bot,room],|r|r.get::<_,i64>(0))?;
+        Ok((agent.id,thread))
+    }).await.unwrap();
+    let parts = Stream::thread_messages(thread_id);
+    let signed =
+        rails_compat::turbo::signed_stream_name(&test.booted.app.secrets, &parts.streamables());
+    let identifier =
+        json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}).to_string();
+    socket
+        .send(Message::Text(
+            json!({"command":"subscribe","identifier":identifier})
+                .to_string()
+                .into(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(receive(&mut socket).await["type"], "confirm_subscription");
+    let id = test
+        .booted
+        .app
+        .db
+        .write(move |tx| {
+            let result = agent_step::create(
+                tx,
+                agent_id,
+                NewAgentStep {
+                    channel_thread_id: Some(thread_id),
+                    name: "Inspect <work>".into(),
+                    input_summary: Some("Safe & escaped".into()),
+                    ..Default::default()
+                },
+            )?;
+            assert!(result.is_ok(), "{:?}", result.error);
+            let next = agent_step::create(
+                tx,
+                agent_id,
+                NewAgentStep {
+                    channel_thread_id: Some(thread_id),
+                    name: "Finish work".into(),
+                    ..Default::default()
+                },
+            )?;
+            assert!(next.is_ok());
+            Ok(result.payload.unwrap()["id"].as_i64().unwrap())
+        })
+        .await
+        .unwrap();
+    let frame = receive(&mut socket).await;
+    let html = frame["message"].as_str().unwrap();
+    assert!(html.starts_with(&format!(
+        "<turbo-stream action=\"replace\" target=\"agent_steps_channel_thread_{thread_id}\""
+    )));
+    assert!(html.contains("Inspect &lt;work&gt;"));
+    assert!(html.contains("Safe &amp; escaped"));
+    assert!(!html.contains("authenticity_token"));
+    assert!(html.find("Inspect &lt;work&gt;").unwrap() < html.find("Finish work").unwrap());
+    assert_eq!(receive(&mut socket).await["message"], frame["message"]);
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            let result = agent_step::update(
+                tx,
+                agent_id,
+                id,
+                AgentStepChanges {
+                    status: Some("done".into()),
+                    duration_ms: Some(Some(1050)),
+                    output_summary: Some(Some("Finished <safely>".into())),
+                    ..Default::default()
+                },
+            )?;
+            assert!(result.is_ok());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let frame = receive(&mut socket).await;
+    let html = frame["message"].as_str().unwrap();
+    assert!(html.contains("agent-steps__step--done"));
+    assert!(html.contains("1.0s"));
+    assert!(html.contains("Finished &lt;safely&gt;"));
+    let result = test
+        .booted
+        .app
+        .db
+        .write(move |tx| -> campfire_db::Result<()> {
+            agent_step::update(
+                tx,
+                agent_id,
+                id,
+                AgentStepChanges {
+                    status: Some("failed".into()),
+                    ..Default::default()
+                },
+            )?;
+            Err(campfire_db::Error::Other("rollback step test".into()))
+        })
+        .await;
+    assert!(result.is_err());
+    assert!(
+        tokio::time::timeout(std::time::Duration::from_millis(250), socket.next())
+            .await
+            .is_err()
+    );
+    socket.close(None).await.unwrap();
+    server.abort();
+}

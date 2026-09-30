@@ -46,11 +46,51 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::agent::AgentStatusChange::KIND => {
             decode(request).and_then(|broadcast| agent_status(app, &broadcast))
         }
+        campfire_db::models::agent_step::StepParentChange::KIND => {
+            decode(request).and_then(|broadcast| agent_steps(app, &broadcast))
+        }
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {
         tracing::warn!(kind = request.kind, %error, "broadcast failed");
     }
+}
+
+fn agent_steps(
+    app: Option<&App>,
+    change: &campfire_db::models::agent_step::StepParentChange,
+) -> anyhow::Result<()> {
+    use askama::Template;
+    if change.message_id.is_some() {
+        // Whole-message replacement is WS8bm's shared message broadcast renderer.
+        return Err(anyhow::anyhow!(
+            "WS8bm message rendering is not registered for agent steps"
+        ));
+    }
+    let Some(id) = change.thread_id else {
+        return Ok(());
+    };
+    let app = app.ok_or_else(|| anyhow::anyhow!("Agent step rendering requires the booted app"))?;
+    let steps=app.db.read_blocking(|conn| {
+        if campfire_db::ChannelThread::find_by_id(conn,id)?.is_none(){return Ok(None);}
+        let mut statement=conn.prepare("SELECT name,status,duration_ms,input_summary,output_summary FROM agent_steps WHERE channel_thread_id=? ORDER BY position,id")?;
+        let rows=statement.query_map([id],|r|Ok(campfire_views::messages::parts::AgentStep{name:r.get(0)?,status:r.get(1)?,duration_ms:r.get(2)?,input_summary:r.get(3)?,output_summary:r.get(4)?}))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(Some(rows))
+    })?;
+    let Some(steps) = steps else {
+        return Ok(());
+    };
+    let html = campfire_views::agents::ThreadSteps {
+        thread_id: id,
+        steps,
+    }
+    .render()?;
+    app.broadcasts.replace(
+        &super::broadcasts::Stream::thread_messages(id),
+        &format!("agent_steps_channel_thread_{id}"),
+        &html,
+    );
+    Ok(())
 }
 
 /// WS11 emits the badge followed by the directory row after commit. Render
