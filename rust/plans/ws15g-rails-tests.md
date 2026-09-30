@@ -1,6 +1,6 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 211 mapped to Rust assertions; 215 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 224 mapped to Rust assertions; 202 explicitly deferred.
 
 These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. Room-page/controller/system parity, remaining helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
@@ -11,7 +11,6 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/controllers/rooms/github_subscriptions_controller_test.rb` | 0/17 | 17 |
 | `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
 | `test/controllers/github/pull_request_review_requests_controller_test.rb` | 0/15 | 15 |
-| `test/controllers/rooms/github/pull_request_cards_controller_test.rb` | 0/15 | 15 |
 | `test/controllers/github/app_connections_controller_test.rb` | 0/13 | 13 |
 | `test/controllers/github/connections_controller_test.rb` | 0/13 | 13 |
 | `test/controllers/github/pull_request_comments_controller_test.rb` | 0/11 | 11 |
@@ -26,6 +25,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/controllers/github/webhooks_controller_test.rb` | 18/21 | 3 |
 | `test/jobs/github/deliver_subscription_event_job_test.rb` | 34/37 | 3 |
 | `test/system/github_pr_write_actions_test.rb` | 0/3 | 3 |
+| `test/controllers/rooms/github/pull_request_cards_controller_test.rb` | 13/15 | 2 |
 | `test/jobs/github/fetch_pull_request_job_test.rb` | 20/22 | 2 |
 | `test/jobs/github/perform_agent_action_job_test.rb` | 34/36 | 2 |
 | `test/models/github/pull_request_test.rb` | 16/17 | 1 |
@@ -231,21 +231,21 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| a member whose token can read the repository sees the card | Deferred; WS15g continuation | — |
-| a member without a linked account gets the empty frame and no GitHub request | Deferred; WS15g continuation | — |
-| a member with a disconnected account gets the empty frame and no GitHub request | Deferred; WS15g continuation | — |
-| GitHub 404 gives the empty frame | Deferred; WS15g continuation | — |
-| GitHub 401 marks the account disconnected and gives the empty frame | Deferred; WS15g continuation | — |
-| the decision is cached per viewer and repository | Deferred; WS15g continuation | — |
-| a cached denial no longer applies after the member relinks | Deferred; WS15g continuation | — |
-| a transport error renders the empty frame and caches nothing | Deferred; WS15g continuation | — |
-| a public PR renders the card with no GitHub request | Deferred; WS15g continuation | — |
-| a thread frame renders the card and files summary when the viewer may see it | Deferred; WS15g continuation | — |
-| a thread frame is empty when the viewer may not see it | Deferred; WS15g continuation | — |
-| non-members get not found | Deferred; WS15g continuation | — |
-| a message from another room is not found | Deferred; WS15g continuation | — |
-| a message that does not reference the PR is not found | Deferred; WS15g continuation | — |
-| missing context is not found | Deferred; WS15g continuation | — |
+| a member whose token can read the repository sees the card | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| a member without a linked account gets the empty frame and no GitHub request | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| a member with a disconnected account gets the empty frame and no GitHub request | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| GitHub 404 gives the empty frame | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| GitHub 401 marks the account disconnected and gives the empty frame | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| the decision is cached per viewer and repository | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| a cached denial no longer applies after the member relinks | Deferred; WS15g continuation (relink through Connection HTTP; transport failure followed by recovery through the same frame) | — |
+| a transport error renders the empty frame and caches nothing | Deferred; WS15g continuation (relink through Connection HTTP; transport failure followed by recovery through the same frame) | — |
+| a public PR renders the card with no GitHub request | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| a thread frame renders the card and files summary when the viewer may see it | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| a thread frame is empty when the viewer may not see it | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
+| non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_security_checks_membership_and_exact_context_before_token_access` |
+| a message from another room is not found | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_security_checks_membership_and_exact_context_before_token_access` |
+| a message that does not reference the PR is not found | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_security_checks_membership_and_exact_context_before_token_access` |
+| missing context is not found | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_security_checks_membership_and_exact_context_before_token_access` |
 
 ## `test/controllers/rooms/github_subscriptions_controller_test.rb` (17 tests)
 

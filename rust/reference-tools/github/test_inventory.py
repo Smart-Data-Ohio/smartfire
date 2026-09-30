@@ -7,6 +7,11 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 repo = root.parent
 names = {
+    'test/controllers/rooms/github/pull_request_cards_controller_test.rb': [
+        'github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails',
+    ] * 6 + [None, None] + [
+        'github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails',
+    ] * 3 + ['github_viewer_card_security_checks_membership_and_exact_context_before_token_access'] * 4,
     'test/models/github/pull_request_url_test.rb': ['github_url_extraction_and_non_code_html_match_pinned_rails'] * 10,
     'test/helpers/github_pull_requests_helper_test.rb': ['github_pr_and_thread_stamps_invalidate_message_fragments_without_touching_message'] + [None] * 19,
     'test/models/github/pull_request_thread_test.rb': [
@@ -157,6 +162,7 @@ rows = []
 file_counts = []
 covered = 0
 rust_tests = (root / 'crates/campfire/src/integrations/github/pull_requests/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/references/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/agent_actions/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/notifier/tests.rs').read_text()
+rust_tests += (root / 'crates/campfire/src/controllers/github/card_tests.rs').read_text()
 for path in paths:
     content = subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True)
     tests = re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', content, re.M)
@@ -173,6 +179,8 @@ for path in paths:
             status += '; WS11 owns authentication middleware'
         if not target and path.endswith('write_client_test.rb'):
             status += ' (warning-log assertion; error/privacy assertions already covered)'
+        if not target and path.endswith('pull_request_cards_controller_test.rb'):
+            status += ' (relink through Connection HTTP; transport failure followed by recovery through the same frame)'
         if not target and path.endswith('deliver_subscription_event_job_test.rb'):
             status += ' (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder)'
         rows.append(f'| {name.replace(chr(124), chr(92)+chr(124))} | {status} | {"`" + target + "`" if target else "—"} |')

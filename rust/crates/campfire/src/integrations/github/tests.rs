@@ -99,7 +99,7 @@ fn vectors() -> Value {
     serde_json::from_str(include_str!("../../../../../vectors/github.json")).unwrap()
 }
 
-pub(super) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
+pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
     let rcgen::CertifiedKey { cert, signing_key } =
         rcgen::generate_simple_self_signed(vec!["github.com".into(), "api.github.com".into()])
@@ -570,7 +570,7 @@ async fn test_database_with_clock(clock: Arc<campfire_db::TestClock>) -> TestDb 
     .await
     .unwrap()
 }
-pub(super) fn crypto() -> Arc<ArEncryption> {
+pub(crate) fn crypto() -> Arc<ArEncryption> {
     static CRYPTO: std::sync::OnceLock<Arc<ArEncryption>> = std::sync::OnceLock::new();
     CRYPTO
         .get_or_init(|| {

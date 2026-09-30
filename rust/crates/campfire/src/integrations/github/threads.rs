@@ -32,11 +32,10 @@ impl PullRequestThread {
         channel_thread_id: i64,
     ) -> Result<Errors> {
         let mut errors = Errors::default();
-        if matches!(
-            PullRequest::find(conn, pull_request_id),
-            Err(campfire_db::Error::RecordNotFound(_))
-        ) {
-            errors.add("pull_request", "must exist");
+        match PullRequest::find(conn, pull_request_id) {
+            Ok(_) => {}
+            Err(campfire_db::Error::RecordNotFound(_)) => errors.add("pull_request", "must exist"),
+            Err(error) => return Err(error),
         }
         if Room::find_by_id(conn, room_id)?.is_none() {
             errors.add("room", "must exist");
@@ -75,7 +74,13 @@ impl PullRequestThread {
         Self::recover_creation(tx, pull_request_id, room_id, channel_thread_id, creation)
     }
 
-    pub(super) fn recover_creation(tx: &mut Tx<'_>, pull_request_id:i64, room_id:i64, channel_thread_id:i64, creation:Result<Self>) -> Result<Self> {
+    pub(super) fn recover_creation(
+        tx: &mut Tx<'_>,
+        pull_request_id: i64,
+        room_id: i64,
+        channel_thread_id: i64,
+        creation: Result<Self>,
+    ) -> Result<Self> {
         match creation {
             Ok(mapping) => Ok(mapping),
             Err(error)

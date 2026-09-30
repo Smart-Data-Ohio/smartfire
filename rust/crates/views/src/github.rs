@@ -147,6 +147,31 @@ pub fn frame_id(pr_id: i64, message_id: Option<i64>, thread_id: Option<i64>) -> 
         ),
     }
 }
+pub fn viewer_frame(
+    ctx: &ViewContext<'_>,
+    frame_id: &str,
+    data: Option<&(Card, Option<CardMessage>, bool)>,
+) -> String {
+    let mut content = String::new();
+    if let Some((pr, message, thread)) = data {
+        content.push_str("\n    ");
+        content.push_str(&card(ctx, pr, message.as_ref()));
+        content.push('\n');
+        if *thread {
+            content.push_str("      ");
+            content.push_str(&files_summary(pr));
+            content.push('\n');
+        }
+    }
+    h::turbo_frame_tag(
+        frame_id,
+        None,
+        None,
+        h::attrs().class("github-pr-card-frame"),
+        &content,
+    )
+    .0
+}
 fn frame(pr_id: i64, room_id: i64, message_id: Option<i64>, thread_id: Option<i64>) -> String {
     let param = match message_id {
         Some(id) => format!("message_id={id}"),
@@ -261,5 +286,64 @@ pub fn thread_header(ctx: &ViewContext<'_>, room_id: i64, thread_id: i64, pr: &C
         "\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n",
     );
     html.push_str(&format!("  {}</div>\n", write.0));
+    html
+}
+
+/// GitHub section of the shared integration health page. Only its public snapshot arrives here.
+pub fn health(value: &serde_json::Value) -> String {
+    let connected = value["connected"].as_i64().expect("health count");
+    let app = value["app_tokens"].as_i64().expect("health count");
+    let token = if value["workspace_token"] == true {
+        "Set"
+    } else {
+        "Not set — private cards need per-user accounts"
+    };
+    let configured = if value["app_configured"] == true {
+        "Configured"
+    } else {
+        "Not configured — set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET (see docs/github-app.md)"
+    };
+    let secret = if value["webhook_secret"] == true {
+        "Set"
+    } else {
+        "Not set — cards refresh on render only"
+    };
+    let mut html = format!(
+        "  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>{token}</dd></div>\n      <div><dt>GitHub App</dt><dd>{configured}</dd></div>\n      <div><dt>Webhook secret</dt><dd>{secret}</dd></div>\n      <div><dt>Connected accounts</dt><dd>{connected} ({app} App, {} PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>{}</dd></div>\n    </dl>\n",
+        connected - app,
+        value["deliveries_24h"].as_i64().expect("health count")
+    );
+    for (key, title) in [
+        ("disconnected", "Disconnected accounts"),
+        ("last_errors", "Recent account errors"),
+    ] {
+        let rows = value[key].as_array().expect("health list");
+        if !rows.is_empty() {
+            html.push_str(&format!("      <h3>{title}</h3>\n      <ul>\n"));
+            for row in rows {
+                html.push_str(&format!(
+                    "          <li><strong>@{}</strong> — {}</li>\n",
+                    h::escape(row[0].as_str().expect("health login")),
+                    h::escape(row[1].as_str().expect("health error"))
+                ));
+            }
+            html.push_str("      </ul>\n");
+        }
+    }
+    let rows = value["fetch_errors"].as_array().expect("health list");
+    if !rows.is_empty() {
+        html.push_str("      <h3>PR fetch errors</h3>\n      <ul>\n");
+        for row in rows {
+            html.push_str(&format!(
+                "          <li><strong>{}/{}#{}</strong> — {}</li>\n",
+                h::escape(row[0].as_str().expect("health owner")),
+                h::escape(row[1].as_str().expect("health repo")),
+                row[2].as_i64().expect("health number"),
+                h::escape(row[3].as_str().expect("health error"))
+            ));
+        }
+        html.push_str("      </ul>\n");
+    }
+    html.push_str("  </section>\n");
     html
 }

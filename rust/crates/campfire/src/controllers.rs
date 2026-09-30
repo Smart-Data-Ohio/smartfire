@@ -145,6 +145,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
         "github/webhooks#create" => arc(github::webhooks::create),
+        "rooms/github/pull_request_cards#show" => arc(github::cards::show),
         "content_security_policy_reports#create" => arc(csp_reports::create),
         "accounts/users#index" => arc(accounts::users::index),
         "accounts/users#update" => arc(accounts::users::update),

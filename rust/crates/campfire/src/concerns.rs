@@ -699,7 +699,7 @@ pub async fn last_room_visited(c: &Ctx) -> Result<Option<Room>> {
 
 // --- RoomScoped ----------------------------------------------------------------------------------
 
-/// `RoomScoped#set_room`: `Current.user.memberships.find_by!(room_id: params[:room_id])`, 404
+/// `RoomScoped#set_room`: memberships joined to `Room.alive`, 404
 /// otherwise. Returns the membership and its room.
 pub async fn set_room(c: &mut Ctx) -> Result<(Membership, Room)> {
     let user_id = require_current_user(c)?.id;
@@ -709,6 +709,7 @@ pub async fn set_room(c: &mut Ctx) -> Result<(Membership, Room)> {
         .read(move |conn| {
             let Some(membership) = Membership::find_by_room_and_user(conn, room_id, user_id)? else { return Ok(None) };
             let room = membership.room(conn)?;
+            if room.deleted() { return Ok(None) }
             Ok(Some((membership, room)))
         })
         .await

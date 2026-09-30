@@ -12,6 +12,41 @@ use std::sync::LazyLock;
 
 pub const STALE_AFTER: jiff::SignedDuration = jiff::SignedDuration::from_mins(10);
 
+pub struct ViewerCard {
+    pub pull_request: PullRequest,
+    pub message: Option<Message>,
+    pub thread: Option<campfire_db::ChannelThread>,
+}
+pub fn viewer_card_context(
+    conn: &Connection,
+    room_id: i64,
+    id: i64,
+    message_id: Option<i64>,
+    thread_id: Option<i64>,
+) -> Result<ViewerCard> {
+    let pull_request = PullRequest::find(conn, id)?;
+    let not_found = || campfire_db::Error::RecordNotFound("Github::PullRequest context");
+    if let Some(id) = message_id {
+        let message = Message::find(conn, id)?;
+        if message.room_id!=room_id||!conn.query_row("SELECT EXISTS(SELECT 1 FROM github_pull_request_references WHERE message_id=? AND github_pull_request_id=?)",params![id,pull_request.id],|r|r.get::<_,bool>(0))? {return Err(not_found())}
+        Ok(ViewerCard {
+            pull_request,
+            message: Some(message),
+            thread: None,
+        })
+    } else if let Some(id) = thread_id {
+        let thread = campfire_db::ChannelThread::find(conn, id)?;
+        if thread.room_id!=room_id||!conn.query_row("SELECT EXISTS(SELECT 1 FROM github_pull_request_threads WHERE room_id=? AND channel_thread_id=? AND github_pull_request_id=?)",params![room_id,id,pull_request.id],|r|r.get::<_,bool>(0))? {return Err(not_found())}
+        Ok(ViewerCard {
+            pull_request,
+            message: None,
+            thread: Some(thread),
+        })
+    } else {
+        Err(not_found())
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct PullRequest {
     pub id: i64,

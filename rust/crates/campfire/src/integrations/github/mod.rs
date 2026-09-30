@@ -6,13 +6,14 @@ pub mod actions;
 pub mod agent_actions;
 pub mod client;
 pub mod fetcher;
+pub mod health;
 pub mod jobs;
 pub mod notifier;
-pub mod references;
+pub mod oauth;
 pub mod pull_requests;
+pub mod references;
 pub mod subscriptions;
 pub mod threads;
-pub mod oauth;
 pub mod webhooks;
 
 pub(crate) fn blank(value: &str) -> bool {
@@ -37,4 +38,4 @@ fn boolean(value: &serde_json::Value) -> Option<bool> {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
