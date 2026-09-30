@@ -6,6 +6,7 @@ Playwright chromium first. The target binary is CARGO_TARGET_DIR/debug/campfire.
 """
 from pathlib import Path
 import os
+import sys
 import shutil
 import subprocess
 import tempfile
@@ -17,7 +18,7 @@ rust = root / 'rust'
 scratch = root / '.scratch'
 scratch.mkdir(exist_ok=True)
 target = Path(os.environ.get('CARGO_TARGET_DIR', rust / 'target'))
-reference_port, candidate_port, target_port = 52150, 52151, 52152
+reference_port, candidate_port, target_port = 52160, 52161, 52162
 reference = rust / 'parity/bin/reference'
 env = os.environ.copy()
 for line in (rust / 'parity/.env.reference').read_text().splitlines():
@@ -70,4 +71,4 @@ def run_browser(script: str, args: tuple[str, ...] = ()):
                 subprocess.run([str(reference), 'down', '--port', str(reference_port)], cwd=root, env=env, stdout=log, stderr=log, check=True)
 
 if __name__ == "__main__":
-    run_browser("inbound_browser.mjs")
+    run_browser("inbound_browser.mjs", tuple(sys.argv[1:]))
