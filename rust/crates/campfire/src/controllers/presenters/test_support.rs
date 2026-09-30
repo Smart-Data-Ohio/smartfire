@@ -127,6 +127,10 @@ pub struct TestBooted {
 }
 pub struct TestJobs(Option<crate::jobs::Runner>);
 impl TestJobs {
+    pub async fn stop(&mut self, grace: std::time::Duration) {
+        if let Some(runner) = &mut self.0 { runner.stop(grace).await; }
+    }
+
     pub async fn shutdown(self, grace: std::time::Duration) {
         if let Some(runner) = self.0 { runner.shutdown(grace).await; }
     }

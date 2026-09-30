@@ -353,6 +353,7 @@ async fn twirp_read_timeout_is_reported_safely() {
     let service = RoomService::new(config(&server.url));
     let timeouts = Timeouts {
         open: OPEN_TIMEOUT,
+                write: READ_TIMEOUT,
         read: Duration::from_millis(40),
     };
     let error = service

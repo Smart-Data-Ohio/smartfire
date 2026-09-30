@@ -274,7 +274,7 @@ async fn complete_voice_and_stage_form_pages_match_fourteen_rails_renders() {
         );
         for (part, actual) in [("content", content), ("html", actual)] {
             let expected = case[part].as_str().unwrap();
-            if actual != expected {
+            if !crate::app::asset_goldens::compare(&format!("{} {part}",case["name"]),&actual,expected) {
                 let scratch =
                     std::path::PathBuf::from(std::env::var_os("TMPDIR").expect("worker scratch"));
                 std::fs::write(scratch.join("form-page-actual.html"), &actual).unwrap();

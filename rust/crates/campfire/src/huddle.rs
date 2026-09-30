@@ -105,6 +105,8 @@ impl ServerError {
         let code = match error {
             HttpError::OpenTimeout => "Net::OpenTimeout",
             HttpError::ReadTimeout => "Net::ReadTimeout",
+            HttpError::WriteTimeout => "Net::WriteTimeout",
+            HttpError::ConnectionClosed => "EOFError",
             HttpError::Unresolvable(_) => "SocketError",
             HttpError::Tls(_) => "OpenSSL::SSL::SSLError",
             HttpError::Io(error) => match error.raw_os_error() {
@@ -191,6 +193,7 @@ impl RoomService {
             now,
             &Timeouts {
                 open: OPEN_TIMEOUT,
+                write: READ_TIMEOUT,
                 read: READ_TIMEOUT,
             },
         )
@@ -207,6 +210,7 @@ impl RoomService {
             now,
             &Timeouts {
                 open: OPEN_TIMEOUT,
+                write: READ_TIMEOUT,
                 read: READ_TIMEOUT,
             },
         )
