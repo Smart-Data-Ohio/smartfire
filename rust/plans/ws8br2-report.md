@@ -2,58 +2,40 @@
 
 Date: 2026-09-30. Worker: GPT-6.1 Sol. Branch: `rust/ws8br2-users-accounts`.
 Worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br2`.
-Verified implementation: `b978d93cca5a433584989ca2d9f86f1c3c4e950c`. The final documentation-only commit carries this report. Implementation slices are pushed. No PR, deployment, release build or cutover.
+Verified implementation: `938fb64afde1f3931448a3ad081357ca0ded3cbf`; the final documentation-only commit carries this report. All implementation slices are pushed. No PR, deployment, release build or new main merge.
 
-The received 90 deferred criteria are now **57**: 33 additional criteria have equivalent coverage. Across the original 194-case inventory, 137 are covered and 57 remain. These are criterion mappings, not claims that the original Ruby test files ran. The complete per-file mapping and remaining names follow below.
+This continuation closes **13** more criteria: **57 → 44** deferred. Across the original 194-case inventory, **150** now have equivalent coverage and **44** remain. Relative to the previously received 90-case list, 46 have been closed. These are criterion mappings, not claims that the Ruby controller/system files ran. The complete mapping and every remaining name follow below, largest files first.
 
 ## Pushed slices this continuation
 
-| Commit | Completed slice |
+| Commit | Coherent slice |
 |---|---|
-| `f7639d50` | Remaining Google Calendar profile markup, exact WS15g GitHub fragment call-site flag, WS17 push-settings flag. |
-| `851fd507` | Approved #163 status fields/popup, edit route, Current-user update scope, card/sidebar/layout controls and frame/error response paths. |
-| `ca7424a3` | Public Google grant/configuration projection, nine complete Calendar fragments and eleven complete status/meeting/OOO fragments; 14 more profile criteria. |
-| `6295b1ce` | Real Rails/Rust directory selection, cards and three-person DM browser checks; six more original system criteria. |
-| `5f6bdcd7` | Replace obsolete DM autocomplete with the exact pinned people picker, four complete bodies and five browser criteria. |
-| `40fd8876` | Seven profile security criteria using merged WS9 code directly: devices, reauthentication, linked/unlinked Google display, setup link, password revocation and name preservation. |
-| `70ce22c7` | Merge main after PR #168 landed (`eaba80d5`); immediately run locked metadata. |
-| `18b5fc7f` | Serve exact approved CSS/JS bytes, strict asset checks, ten-file hybrid Rails oracle, regenerated shared-layout/auth/sidebar/route goldens, five popup browser scenarios per app. |
-| `a43d1936` | Fix fresh-clone verification defects: stable byte-slice assertion and the approved sidebar source hash. |
-| `31585875` | Sidebar avatar keyboard opening, Escape and returned focus in both apps; one more original system criterion. |
-| `ff3a8eff` | Use a literal character array for the same six Ruby Google scope separators; satisfy clippy without changing parsing behavior. |
-| `b978d93c` | Scope the quote-refresh runner assertion to completion of its inserted quote job; preserve failure detection while periodic retention runs independently. Flagged WS3/WS8a test touch. |
+| `ff2635f5` | Record Astra's two attachment P2s as pending the shared fix; retain behavior checks and remove screenshot-diff scope. |
+| `a2815c51` | Real worker responses, the 19 original Rails Node assertions, static-only caching, offline retry and three worker regression probes per app. Three deferred criteria closed. |
+| `cdb7d509` | Rails-produced audit fixtures; browser filters, phone scrolling and real sudo-confirmed CSV download against exact Rails bytes. Two criteria closed. |
+| `6129ae93` | Missing-token guard and real CSRF timezone detection, persisted readback and no second report after navigation. Two criteria closed. |
+| `3db7afc6` | Pending 2FA setup cleanup, atomic ban-job enqueue/rollback, real-runner message removal and unconfigured sign-in public links. Four criteria closed; four compiled regression probes detected. |
+| `938fb64a` | Actual avatar uploads, complete WebP/BMP fallback bodies and Rails' flash-dependent ETag transition. Two criteria closed; two more compiled probes detected. One tracked command rebuilds all 24 owned and shared goldens. |
 
-Previously received work remains: users/cards/preferences; account mutations and views; WS9 audit deduplication and nine exactly-once checks; icons and logo uploads; audit-log HTML/CSV; welcome/first run; public/PWA/QR/signup pages. WS9's `account_security.rs` and `authentication.rs` are byte-identical to `4278cb1e`. Role, deactivation, account-settings/join-code/custom-style/logo-removal and ban/unban audit producers remain WS9's. Per-mutation checks assert one row with Rails' actor, target, action and metadata; no duplicate producer was restored.
+Prior delivered work is retained: users/cards/preferences; account mutations and views; WS9 audit deduplication and nine exactly-once checks; icon/logo multipart uploads; audit-log HTML/CSV; welcome/first run; public/PWA/QR/signup pages; full profile rendering with owner inputs; #163 status popup and exact approved CSS/JS; directory/sidebar/picker interactions; direct WS9 profile security/session panels. Earlier profile/status slices remain at `f7639d50`, `851fd507`, `ca7424a3`, `6295b1ce`, `5f6bdcd7`, `40fd8876`, `18b5fc7f` and `31585875`. Main was merged at `70ce22c7` only after #168 landed, with locked metadata checked; there is no later main merge. Existing verification corrections `a43d1936`, `ff3a8eff` and `b978d93c` remain tested.
 
-## Changes by file
+WS9's `account_security.rs` and `authentication.rs` remain the producers from `4278cb1e`. No duplicate audit producer was restored. Nine individual mutation checks still assert exactly one row with Rails' actor, subject, action and metadata. This continuation changes tests, reference tooling and reports; production controller/domain behavior is unchanged.
+
+## Changes by file and design
 
 Paths are relative to `rust/`.
 
-| Files | Behavior and evidence |
+| Files | Change and evidence |
 |---|---|
-| `crates/views/src/users/profile_sections.rs`, profile templates `_google_calendar`, `_status`, `_inbox_calls`, `_notifications`, `_integrations`, `_github_connection`, `show` | Pure typed display inputs; complete seeded profile page, direct WS9 security/session sections, nine Calendar and eleven status fragments. Shared status fields are rendered on the profile and popup. GitHub and push seams are explicitly flagged. |
-| `crates/campfire/src/controllers/presenters/profile_sections.rs`, `controllers/users/profiles.rs`, `config.rs` | Read-only Google email/scopes/disconnection facts, separate WS9 sign-in configuration, client+secret Calendar configuration, meeting/cache notice and manual OOO return date. Ruby whitespace/scope semantics, partial grants, Drive preservation and failed-form previews are exercised. No OAuth client or token decryption added. |
-| `crates/views/src/users.rs`, `templates/users/cards/show.html`, `templates/users/statuses/{edit,_fields}.html` | Exact approved card/status-popup bytes, escaped fields, errors and cancel/clear/save controls. |
-| `crates/campfire/src/controllers/users/statuses.rs`, controller dispatch; `crates/db/src/models/user/status_form.rs` | Current-user-only four-field popup writer, existing User save validation, expiry/clear, atomic save and after-commit status event. Real auth/CSRF and failed-write rollback checks. Frame success 303/card, ordinary success 302/profile, frame errors 422/bare popup and ordinary error profile rendering. Calendar/OOO mutations remain explicitly 501 through the WS17 seam below. |
-| `crates/views/src/rooms/sidebar.rs`, `templates/users/sidebars/show.html`, `templates/layouts/application.html`; `crates/routes/routes.json`, `vectors/campfire_routes.json` | Own-card sidebar trigger, global status-change action, approved edit route and Rails recognition order. Five complete sidebar frames and 312 named-route/534 recognition entries regenerated and compared. Shared-owner touch is limited to these approved controls. |
-| `crates/assets/overrides/{people.css,controllers/profile_card_controller.js}`, `OVERRIDES.md`, `crates/assets/tests/reference.rs` | Exact `2e20b24c` source/served bytes. If an approved override equals the reference fingerprint it stays in the ordinary strict compiled-byte checks. No new asset exclusion or golden mask. Fresh-clone checks include both full bodies and all nine reference tests. |
-| `crates/views/src/rooms.rs`, `templates/rooms/directs/new.html`; `controllers/rooms/directs.rs`, `directs/picker_tests.rs` | Exact pinned people picker, shared multi-select bar and existing directory reader. Four complete bodies: seed, starred, escaped and empty. Five HTTP/render groups and five real browser flows. DM writes still use WS8b-r's existing domain. |
-| `crates/campfire/src/jobs/tests.rs` | WS3/WS8a cross-workstream test-only correction: wait for and assert quote-job completion independently of periodic retention; inserted-row and failed-job checks remain. The original fresh-clone failure is included below. |
-| `controllers/users/profile_sections_tests.rs`, `profile_security_tests.rs`, `status_popup_tests.rs` | Twelve owner-display/HTTP groups, seven direct WS9 integration groups and four popup groups covering five complete bodies and six HTTP/state cases, plus real CSRF and rollback. |
-| `reference-tools/users/{browser_people.py,browser_people.mjs,browser_picker.mjs,browser_status.mjs}` | Committed isolated browser harness and scenarios; eight directory/sidebar, five picker and five popup scenarios per app. Original Stimulus modules, real signed sessions and CSRF; no DOM/response normalization. Test-added accented picker users live only in a derived private seed. |
-| `reference-tools/users/post-pin/*`, `post_pin.rb`, `status_image.sh`, `verify_post_pin.py`, `verify_status_image.py`, `{status_core,status_auth_pages,status_routes}.rb`; updated vectors/core/sidebar goldens | Exactly ten authorized post-pin sources, Git-object and source-ledger checks, pin-based hybrid image with assets recompiled. Full engine-aware route reload. Other Rails inputs remain pinned. |
-| `reference-tools/users/{run_oracles.sh,discrimination.py,file_counts.py,deferred_inventory.py}` | Twenty-three exact oracle comparisons, six new compiled regression probes, 87 executed Rust test-group accounting and all remaining named criteria, largest Rails files first. |
+| `reference-tools/users/{browser_pwa.mjs,service_worker_harness.mjs,verify_worker_harness.py}` | The pinned Rails harness is byte-identical except its worker-source loading line: stdin receives the actual HTTP worker response. Nineteen event assertions run against Rails and Rust. Chrome checks real registration through the served initializer, app-link navigation, cache inventory and retry reload. A linked stylesheet is fetched after control to exercise caching without relying on Chrome's asset memory cache. Mutations break authenticated-cache exclusion, offline fallback and existing-tab focus; all are caught. No worker production code changed. |
+| `parity/seeds/ws8br2_browser_audit.rb`, `reference-tools/users/browser_audit.mjs` | Fresh fixture rows go through Rails `AuditLog.record!`; expected CSV comes from its actual formatter in the user's zone. Both browsers filter, follow Export CSV, confirm the real password through WS9 sudo, download and compare complete bytes. A changed download byte fails comparison. Phone checks retain controls and a keyboard-focusable scrolling region. |
+| `reference-tools/users/browser_timezone.mjs`, `browser_people.py` | A private derived seed clears only David's detected/explicit zone. Actual Stimulus sends one CSRF-authenticated PATCH, and a separate server-rendered readback proves persistence. A second navigation sends no report. The missing-token negative input removes the CSRF meta tag before the real controller connects, supplying the same absent-token DOM condition as Rails' forgery-disabled system test; it does not disable production CSRF or mask any parity output. No request lands during Rails' two-second settle window. Six browser modes use private seed/storage copies and clean up their servers. |
+| `crates/campfire/src/controllers/users/ban_lifecycle_tests.rs`, `controllers/users.rs` | Three full HTTP tests use merged WS9 and the real durable runner. Pending setup secrets/sessions disappear on ban. A SQLite trigger rejects the actual job insert and proves user, sessions, bans and audits all roll back. An observing trigger records exactly one real `RemoveBannedContentJob` insert, its queue and typed user ID despite the live runner consuming it. The real runner deletes all of the subject's messages. Test addresses are public because parity's loopback session would correctly fail Rails' private-IP ban validation. No producer, schema or runner changed. |
+| `crates/campfire/src/controllers/public_pages.rs` | Explicit unconfigured sign-in criterion uses WS9's actual page: About, Privacy and Terms links retain `_blank`/`noopener`; no Google button is invented. Configured Google remains WS14g/WS9 integration. |
+| `crates/campfire/src/controllers/users/{avatar_image_tests.rs,avatars.rs}`, `reference-tools/users/avatar_images.rb`, `vectors/users_avatar_images.json` | Two actual multipart profile uploads and avatar GETs compare complete WebP/SVG bodies, input fixture SHA256, content type, cache policy and ETags. The uploaded notice changes the first ETag: the next conditional GET is 200, followed by 304 with the stable validator, exactly as Rails. Existing committed logo fixtures supply the same JPEG/BMP bytes. The media runtime is the oracle's libvips 8.16.1. These tests do not close either shared attachment P2. |
+| `reference-tools/users/{discrimination.py,file_counts.py,deferred_inventory.py,run_oracles.sh,verify_goldens.py}` | Six new compiled regression probes, four-thread bound, 96 executed owned Rust groups, complete 194-case mapping, 24 raw oracle comparisons and shared source/core/routes/sidebar/WS9 page verification. No comparison mask or allowlist changed. |
 
-Retained earlier file changes are also exercised by the fresh-clone suite:
-
-| Files | Retained behavior |
-|---|---|
-| `crates/db/src/models/audit_log/browsing.rs`, `controllers/accounts/audit_logs.rs`, audit-log views/templates | Filters, 50-row pages, 5000-row export cap, truncated filename, CSV quoting/formula neutralization, headers and WS9 sudo. Fourteen complete HTML/nav/CSV outputs and fifteen date inputs. |
-| `crates/db/src/models/workspace_icon.rs`, `crates/storage/src/workspace_icon.rs`, account/private icon controllers and views | Normalization/uniqueness race, staged SVG/PNG validation, atomic attachments/audits, purge, exact serving bytes/cache/ETag/CSP/nosniff and authentication/enrollment gates. Thirty-nine validation inputs, nineteen committed media files and three complete view/nav cases. |
-| `controllers/accounts/logos.rs`, logo tests/vectors; `crates/kit/src/ctx.rs` | Upload/replacement/removal/no-op audit behavior; nine exact stock/JPEG/BMP PNG bodies and cache headers. Rails flash ETag expansion. Canonical vips 8.16 libraries extracted into private scratch without changing the host. |
-| `controllers/accounts/{mutation_tests,view_tests}.rs`, existing account/security models/views | Twenty-three HTTP/state/audit cases, nine individual exactly-one audit checks, settings/user rows/invites/custom-style views and authorization/sudo rollback. Agent-owner deactivation is still deferred. |
-| `crates/db/src/models/first_run.rs`, `controllers/{first_runs,welcome}.rs`, corresponding views/tests | Optional credentials, exact setup/welcome bodies, repeats and races; preserve Rails' account-save-before-room/user transaction and missing-name/empty-name distinction; seven first-run state cases plus concurrent Rust requests. |
-| `controllers/users/{joining_tests,people_tests,profile_settings_tests,profile_page_tests,avatars,time_zones,tours}.rs`, public/PWA/QR controllers/views | Signup/join grants/session state, thirteen card bodies/two directories, thirty-one profile PATCH vectors, appearance/zone preferences, initials SVG, public policy, manifest/service-worker/offline bodies and QR behavior. Uploaded avatar variants and browser cases below remain partial. |
+Retained rendering/controller files include `controllers/users/{profiles,cards,statuses,time_zones,tours}.rs`, `controllers/accounts{,/*}.rs`, `controllers/{first_runs,welcome,public_pages,pwa,qr_code,workspace_icons}.rs`, their view modules/templates and vectors. Profile owner inputs, approved status fields, direct WS9 panels and the previous exact account/icon/logo/audit/onboarding render comparisons remain exercised by the complete suite and regenerated oracles. The prior WS3/WS8a quote-runner test correction is test-only: it asserts completion of its quote job while allowing independent periodic retention; no ignore, timeout or production job code changed.
 
 ## Rails inputs and upstream re-diff
 
@@ -73,7 +55,7 @@ Approved drift: `2e20b24c3f2be9db8a646a1352c159b4afacad0e` (#163), **only** thes
 
 `ws8br2-reference:d7c7de92-status-2e20b24c` derives from the owned pin image, copies exactly those sources and recompiles its assets. Fresh-clone verification checks 2076 Rails source/fixture/gem/runtime-bin inputs: precisely ten approved changes, all others pinned. Non-runtime `bin/release` is absent from the runtime image. Render-only comparisons lend `GLOBAL`, `method:path` and `NONCE` at both renderer boundaries. Real HTTP/browser checks retain actual authentication and CSRF. No authored Rails app changes or broader post-pin overlay. The unrelated board-nudge Rails drift is not imported into this oracle. Re-diff of 31 owned/account-nested controller files between the pin and `2e20b24c` was empty; the changed/new statuses controller is handled separately.
 
-Main merge occurred only after #168 was merged; its asset-fingerprint helper is used directly. The report snapshot's merged main is `eaba80d5`; subsequently fetched `origin/main` is `b66199b7` (WS15e). That later provider integration is not merged into this snapshot. PR #167 remains open at this check.
+The last merged main remains `eaba80d5` through `70ce22c7`. Per the lead's latest instruction, main is not merged again. Board-only drift `541c0f69` (#164) and `8952bed4` (#165) belongs to WS12 and does not share this branch's changed partials; no additional overlay was added. Board-nudge drift remains outside this worker's scope. Browser screenshot/pixel diffing is excluded by the updated common rule and is not a remaining item.
 
 ## Flagged seams and remaining integration
 
@@ -91,30 +73,40 @@ Main merge occurred only after #168 was merged; its asset-fingerprint helper is 
 | WS6 / WS8b-r / WS14g / WS17 | Request-time `Layout::load` currently leaves owner chrome at defaults. Fill brand/recent-search/Drive/huddle/meeting/OOO/sound-window facts. Full profile golden supplies actual seed/render facts, as shared WS9/core goldens do; live HTTP profile HTML with all owner defaults is not claimed byte-identical. |
 | WS8b-m / WS8b-r / WS13 / WS17 | Room `show.shell.message_list` is not populated by this branch, and `/rooms/:id/members.json` remains 501. Message-author and member-panel card/focus/group/huddle/timeline cases remain deferred. Standalone directory and sidebar coverage does not close those room-specific criteria. |
 
-Other partial boundaries: broader Ruby `Date.parse` partial/relative grammar is unproved; SVG parser is Expat rather than Nokogiri/libxml2, so XML syntax/encoding beyond the committed cases is unproved; uploaded avatar variants, tours, timezone browser reporting, icon/audit browser flows and service-worker event execution remain deferred. Astra’s independent review of `a37883d6` completed: no authorization bypass; 19/19 oracle files matched; Rails read back Rust rows and both logo variants; profile sections were present; 5/5 deliberate mutations were detected. The lead relayed two P2 gaps in shared attachment code on main, pending `rust/durable-attachment-analysis`.
+The configured-Google sign-in criterion needs WS14g/WS9's sign-in view configuration/button integration. First-run tour and icon posting/removal flows require WS8b-m/WS8b-r's room/composer integration. Broader Ruby `Date.parse` partial/relative grammar and Expat versus Nokogiri XML syntax/encoding outside the committed cases remain unproved. Full profile bytes are verified at the complete render boundary with real seed/owner facts; request-time HTML with all still-default owner chrome is not claimed byte-identical. Calendar/OOO mutations, owner token usability and real call/push/status delivery are partial as listed above.
 
-## Review findings pending the shared attachment fix
+## Astra findings pending the shared attachment fix
 
-The lead relayed Astra’s two P2 findings in shared `crates/campfire/src/controllers/presenters/attachments.rs`:
+The lead relayed Astra's independent review of `a37883d6`: no authorization bypass; 19/19 oracle files byte-identical; Rails read back Rust rows and both logo variants; profile sections present; 5/5 mutations detected. That review is historical evidence for that snapshot, not an independent review of these new tests.
 
-- `ActiveStorage::AnalyzeJob` uses an in-memory queue and is not durable. Attachment analysis can be lost on process exit; the shared fix must persist its job atomically with the attachment write.
-- Assigning an existing blob by signed blob ID fails: icon upload returns 422 and logo upload returns 500, while Rails returns 302. Normal multipart-upload coverage does not prove this assignment path.
+Two P2s remain in shared `controllers/presenters/attachments.rs` on main:
 
-Both are owned by `rust/durable-attachment-analysis`; no fix is authored here. Do not merge main until the lead requests it after that fix lands. Then add icon/logo HTTP regressions on top, including signed-ID assignment and analysis-job durability/rollback. These gaps are additional review findings, not removed from the original 194-case mapping or counted as covered.
+- `ActiveStorage::AnalyzeJob` uses the in-memory queue. Analysis can be lost on exit; the shared fix must enqueue durably and atomically with the attachment write.
+- Existing-blob assignment by signed blob ID fails: icon 422 and logo 500 versus Rails 302. Ordinary multipart upload coverage does not prove this assignment path.
 
-The updated common rule excludes browser screenshot/pixel diffs. The remaining list contains interaction, HTTP/state and DOM behavior checks only; theme/visibility criteria use behavior checks without screenshot comparisons. Board-only drift `541c0f69` / `8952bed4` belongs to WS12; this branch does not share their board-page partials and keeps its existing pin/ten-file status overlay.
+Both are pending `rust/durable-attachment-analysis`. No fix is authored here, and no new main merge was performed. After the lead requests integration of that fix, merge main with a merge commit, run locked metadata, and add icon/logo HTTP regressions for signed-ID assignment and analysis durability/rollback. These are additional review findings outside the original 194-case accounting, not criteria counted as covered.
 
-## Fresh-clone verification
+## Fresh-clone verification and exact commands
 
-The branch was cloned from GitHub into `.scratch/status-final-clone` at `18b5fc7f`, with an empty target and no copied seeds, media runtime, source archive or scratch fixtures. The clone pulled pushed verification fixes `a43d1936` and browser-only `31585875`; then pulled `ff3a8eff` (equivalent separator syntax) and `b978d93c` (job-test assertion scope). The final four-thread full suite and clippy run against that pushed snapshot. DB/kit/view/asset implementation is unchanged across the final verification fixes. Both seeds and the pin archive were generated there from tracked scripts; media libraries were extracted there from the source-verified owned image. Playwright uses the committed lockfile/Dockerfile. Missing real seeds are fatal under `CI=1`. Private target/TMPDIR and ports 52610–52612; no release profile.
+A new GitHub clone was created under `.scratch/behavior-clone`, initially at `ff2635f5` with an empty target and no copied seeds, source archive, media libraries or scratch fixtures. It pulled the pushed slices through `938fb64a`. Preflight source copies were removed after byte checks; the final run uses clean tracked sources from the remote branch. Both seeds were regenerated again at this final snapshot from tracked tooling. The pin archive and media extraction were regenerated there too. No existing local seed, untracked fixture, pre-existing target fixture or output normalization is required. `CI=1` makes absent seeds fatal. Playwright uses the committed lockfile/Dockerfile and the owned source-verified image; Chrome 153.0.8010.12. Native test threads are four, never above eight. No release profile.
 
-Verification defects found by these checks were fixed and pushed: the new asset assertion used unstable slice `as_slice`, the sidebar oracle expected its pre-drift source hash, and clippy required the scope splitter character array. The repeated four-thread suite also observed the quote-refresh test asserting an entirely empty queue while a separate periodic `Retention::PruneJob` remained running. That failed log is retained. The focused retry and a serialized whole suite passed before the correction. `b978d93c` then corrected the assertion to require the enqueued quote job to be absent; a failed quote row still fails, and the initial inserted-row check remains. Periodic retention may legitimately coexist with that job. No production job code, timeout or ignore changed. The final four-thread whole suite passes after that correction. The initial failed log and raw line remain below; this is not labeled a proved inherited failure.
+Commands actually rerun for this delivery are below. Setup was invoked from the worktree and then the clone. All verification commands run from `.scratch/behavior-clone`; logs live in the owning worktree's `.scratch/behavior-*-final.log`.
 
-The obsolete earlier-clone target was removed after process checks. The final clone target is removed after completing verification, retaining raw logs and inputs. No test servers are left running.
+```sh
+git clone --single-branch --branch rust/ws8br2-users-accounts https://github.com/Smart-Data-Ohio/smartfire.git .scratch/behavior-clone
+git -C .scratch/behavior-clone pull --ff-only --no-rebase
+```
 
-Commands below were rerun for this delivery. Their raw summaries follow; paths/logs are under this worktree's `.scratch/`.
+Clone setup (Docker/host tooling runs without the native media `LD_LIBRARY_PATH`):
 
-Common environment for native Rust commands (run in `.scratch/status-final-clone`):
+```sh
+PARITY_IMAGE=ws8br2-reference:d7c7de92 bash rust/parity/bin/ci-seed prepare
+PARITY_IMAGE=ws8br2-reference:d7c7de92 bash rust/parity/bin/ci-seed check-image
+CAMPFIRE_REFERENCE="$PWD/rust/parity/.ci/reference" PARITY_IMAGE=ws8br2-reference:d7c7de92 PARITY_NAMESPACE=ws8br2-behavior-seed PARITY_OWNER=ws8br2 PARITY_RUNTIME=docker rust/parity/bin/seed build default first_run
+bash rust/reference-tools/users/media_runtime.sh
+```
+
+Common native environment:
 
 ```sh
 export CARGO_BUILD_JOBS=2
@@ -125,76 +117,58 @@ export CI=1
 export LD_LIBRARY_PATH="$PWD/.scratch/rails-media/lib/x86_64-linux-gnu:$PWD/.scratch/rails-media/usr/lib/x86_64-linux-gnu"
 ```
 
-Rust commands:
-
 ```sh
 mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 --manifest-path rust/Cargo.toml
+python3 rust/reference-tools/users/discrimination.py ban-setup-cleanup ban-job-enqueue ban-job-perform sign-in-public-link avatar-webp-size avatar-bmp-fallback
 mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -j 4 -p campfire -p campfire_db -p campfire_kit -- --nocapture --test-threads=4
 mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -j 4 -p campfire_assets -p campfire_views --test core --test reference -- --nocapture --test-threads=4
-mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -j 4 -p campfire jobs::tests::ws8_quote_refresh_jobs_execute_in_the_real_app_runner -- --exact --nocapture --test-threads=1
-mise exec rust@1.98.1 -- cargo build --locked --manifest-path rust/Cargo.toml -j 4 -p campfire
 mise exec rust@1.98.1 -- cargo clippy --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever --all-targets -j 4 -- -D warnings
+mise exec rust@1.98.1 -- cargo build --locked --manifest-path rust/Cargo.toml -j 4 -p campfire
+python3 rust/reference-tools/users/file_counts.py ../behavior-rust-tests-final.log
+python3 rust/reference-tools/users/deferred_inventory.py
 ```
 
-Oracle environment: `CAMPFIRE_REFERENCE` as above, `PARITY_RUNTIME=docker`, `PARITY_OWNER=ws8br2`, `PARITY_NAMESPACE=ws8br2-final`, `PARITY_IMAGE=ws8br2-reference:d7c7de92-status-2e20b24c`. Host media overlay is omitted from host forwarding commands. All comparisons use raw bytes; generated JSON/HTML is not normalized.
+Goldens run without the host media overlay; the browser driver removes it from Rails/host forwarding subprocesses while retaining it for Rust:
 
 ```sh
-python3 rust/reference-tools/users/verify_post_pin.py
-python3 rust/reference-tools/users/verify_status_image.py
-CAMPFIRE_REFERENCE="$PWD/rust/parity/.ci/reference" bash rust/reference-tools/users/run_oracles.sh
-rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/campfire/verify_parity_seed.rb default
-rust/parity/bin/reference runner --seed first_run --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/campfire/verify_parity_seed.rb first_run
-rust/parity/bin/reference runner --seed first_run --time 2026-02-10T12:00:00Z --freeze rust/reference-tools/users/status_core.rb > ../final-core.json
-python3 rust/reference-tools/views/core/split.py ../final-core.json .scratch/verified-core
-rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/users/status_routes.rb > ../final-routes.json
-cmp ../final-routes.json rust/crates/routes/routes.json
-rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/users/status_routes.rb campfire > ../final-recognition.json
-cmp ../final-recognition.json rust/vectors/campfire_routes.json
-rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze rust/reference-tools/rooms/sidebar_page.rb > ../final-sidebar.json
-cmp ../final-sidebar.json rust/crates/views/tests/golden/sidebar/page.json
-rust/parity/bin/reference exec --seed default --time 2026-03-02T16:00:00Z --freeze -e WS9_FULL_PAGE_GOLDENS=/rails/storage/db/auth_full_pages.json -- bin/rails runner --skip-executor 'output=$stdout; begin; $stdout=$stderr; load File.join(ENV.fetch("PARITY_WORK"),"reference-tools/users/status_auth_pages.rb"); ensure; $stdout=output; end; puts File.read("/rails/storage/db/auth_full_pages.json")' > ../final-auth-pages.json
-cmp ../final-auth-pages.json rust/vectors/auth_full_pages.json
+python3 rust/reference-tools/users/verify_goldens.py
 python3 rust/reference-tools/users/browser_people.py
 python3 rust/reference-tools/users/browser_people.py --picker
 python3 rust/reference-tools/users/browser_people.py --status
-python3 rust/reference-tools/users/discrimination.py status-prefix status-redirect status-csrf status-scope profile-calendar dm-picker-view
-python3 rust/reference-tools/users/file_counts.py ../final-rust-tests.log
-python3 rust/reference-tools/users/deferred_inventory.py
+python3 rust/reference-tools/users/browser_people.py --pwa
+python3 rust/reference-tools/users/browser_people.py --audit
+python3 rust/reference-tools/users/browser_people.py --timezone
 git diff --exit-code
 git diff --cached --exit-code
 ```
 
-Core comparison additionally checks every generated `.scratch/verified-core` file against `rust/crates/views/tests/golden/core` using `Path.read_bytes()` equality (29 files); route/helper/sidebar/auth JSON use the exact `cmp` commands above. Six compiled regression probes ran before the restored full suite, detected every inserted regression and restored sources; no historical discrimination count is carried forward as fresh proof.
+Locked metadata succeeded and Cargo.lock stayed unchanged. The final clean-tree checks succeeded. The target directory was deleted after confirming no process executed from it; raw logs and generated oracle inputs are retained. No fresh-clone target directory or owned test server remains. No new ignore, comparison exclusion, golden mask or approval exception was introduced.
 
 ## Raw verification summaries
 
-### Source verification
+### Fresh-clone setup
+
+```text
+pin=d7c7de9264c63015be398001d7a1094e7695a6db
+image_key=rust-parity-image-v1-9259468407ef675b49c8961d58752d30a197f666305cd34b0f0295c7ae2e3fd5
+seed_key=rust-parity-seed-v1-a617da9ce849701c73417e788781ebd334010a7e99fabe78672c530aa363f3a6
+seed: building default
+seed: default -> parity/.seed/default (6.1M)
+seed: building first_run
+seed: first_run -> parity/.seed/first_run (1.5M)
+WS8br2 pinned media runtime: image ws8br2-reference:d7c7de92; libraries extracted; no host libraries changed
+```
+
+### Fresh source/oracle checks
 
 ```text
 WS8br2 status asset source verification: both Rust asset inputs match the approved Rails bytes
 WS8br2 post-pin verification: all 10 approved source files match 2e20b24c byte for byte
 WS8br2 status image source verification: 2076 Rails source/fixture/gem files checked; exactly 10 approved 2e20b24c inputs, all others d7c7de92; non-runtime bin/release omitted
-```
-
-### Fresh seed validator: default
-
-```text
-  "passed": 29,
-  "failed": 0
-```
-
-### Fresh seed validator: first_run
-
-```text
-  "passed": 4,
-  "failed": 0
-```
-
-### All 23 Rails oracle comparisons
-
-```text
+WS8br2 worker harness provenance: pinned Rails assertions unchanged; only stdin source loading differs
 Rails public oracle: 15 page bodies, 31 policy inputs, 4 QR cases; reference d7c7de92
 Rails avatar oracle: 15 initials SVG bodies; reference d7c7de92
+Rails avatar images oracle: 2 real uploads, complete WebP and fallback SVG bodies with cache headers; libvips 8.16.1; reference d7c7de92
 Rails preference oracle: 17 time-zone cases, 1 tour touch; reference d7c7de92
 Rails people oracle: 13 cards, 2 directories; reference d7c7de92
 Rails profile settings oracle: 31 PATCH cases; reference d7c7de92
@@ -216,116 +190,147 @@ Rails PWA oracle: 3 endpoint bodies; reference d7c7de92
 Rails PWA oracle: 3 endpoint bodies; reference d7c7de92
 Rails zone oracle: 485 case-sensitive TZInfo identifiers; reference d7c7de92
 Rails named-zone oracle: 152 names, 2 unavailable; reference d7c7de92
-WS8br2 oracle verification: all 23 fresh files match byte for byte; no masks or normalization
+WS8br2 oracle verification: all 24 fresh files match byte for byte; no masks or normalization
+WS8br2 shared core verification: all 29 generated files match byte for byte
+WS8br2 shared routes verification: complete generated JSON matches byte for byte
+WS8br2 shared recognition verification: complete generated JSON matches byte for byte
+WS8br2 shared sidebar verification: complete generated JSON matches byte for byte
+WS8br2 shared WS9 verification: all 15 complete auth pages match byte for byte
+WS8br2 golden verification: sources, both fresh seeds, 24 owned oracles and shared core/routes/sidebar/auth pages passed; no masks or normalization
 ```
 
-### Shared core/routes/sidebar/WS9 pages
+### Both freshly generated seed validators — default, then first_run
 
 ```text
-WS8br2 core oracle verification: all 29 regenerated files match byte for byte
-WS8br2 route helpers verification: 312 regenerated entries match byte for byte
-WS8br2 route recognitions verification: 534 regenerated entries match byte for byte
-WS8br2 sidebar frames verification: 5 regenerated entries match byte for byte
-WS8br2 WS9 full pages verification: 15 regenerated entries match byte for byte
+  "passed": 29,
+  "failed": 0
+  "passed": 4,
+  "failed": 0
 ```
 
-### Full Rust suite: app, DB, kit unit/front/http/params/Rails vectors, DB/kit doctests
+### App, DB, kit units/integrations and DB/kit doctests
 
 ```text
-test result: ok. 540 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 112.10s
-test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 63.25s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.02s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 546 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 105.64s
+test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 59.71s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.01s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-### Asset reference and core view suites
+### Asset reference and core views
 
 ```text
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
-```
-
-### Focused quote-job check
-
-```text
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 542 filtered out; finished in 0.20s
-```
-
-### Debug build
-
-```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.58s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.69s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
 ```
 
 ### Workspace clippy, -D warnings
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.21s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 25s
 ```
 
-All active checks in the final run passed. Existing ignores: reference-recording opt-in, WS11 `manages_bots`, push-latency measurement; four DB external Ruby/export/rollback opt-ins; two kit example doctests. No ignored tests were added. The missing-seed guard intentionally tests a missing temporary fixture; real seeds were validated and used under `CI=1`.
-
-The initial concurrent run failed before the job-test assertion correction; its command was the same full-suite four-thread command above. Raw failure preserved from `final-rust-tests-concurrent-failure.log`:
-
-### Initial concurrent failure (resolved by b978d93c)
+### Normal debug binary
 
 ```text
-test result: FAILED. 539 passed; 1 failed; 3 ignored; 0 measured; 0 filtered out; finished in 159.38s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.30s
 ```
 
-Compiled regressions were deliberate mutations, not delivery failures. Each failed the relevant actual Rust check before restored-source validation.
-
-### Six new discrimination checks
+These suites execute **1,216 active Rust tests**, with **7 pre-existing runtime ignores and 2 ignored doctests**. No seeded case silently skipped; the local-missing-seed message belongs to its intentional guard test. The ignored entries are:
 
 ```text
-dm-picker-view: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 542 filtered out; finished in 0.16s
-status-prefix: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 542 filtered out; finished in 0.12s
-status-redirect: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 542 filtered out; finished in 0.75s
-status-csrf: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 542 filtered out; finished in 0.85s
-status-scope: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 542 filtered out; finished in 0.88s
-profile-calendar: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 542 filtered out; finished in 0.76s
+test channels::tests::golden::record_reference ... ignored, needs a running reference app; see the module docs
+test controllers::presenters::accounts::tests::manages_bots ... ignored, WS11: resetting Bender's bot key leaves the original seeded key visible in the account bot list
+test jobs::tests::push_latency ... ignored, a measurement, not a test
+test tests::differential_test::scenario_matches_ruby ... ignored, needs CAMPFIRE_RUBY_SCENARIO_DB, the reference app's database after scenario.rb
+test tests::fixtures_test::export_database_for_rails ... ignored, writes a database to CAMPFIRE_EXPORT_DB for the Rails rollback check
+test tests::fixtures_test::fixtures_match_ruby_row_for_row ... ignored, needs CAMPFIRE_RUBY_FIXTURES_DB, a database the reference app filled with `db:fixtures:load` at CAMPFIRE_FIXTURES_NOW
+test tests::two_factor_rollback_test::read_rails_rollback_changes ... ignored, requires Rails to mutate the rollback fixture; run reference-tools/auth/rollback.sh
+test crates/kit/src/error.rs - error::halt (line 91) ... ignored
+test crates/kit/src/lib.rs - (line 7) ... ignored
+```
+
+### Six compiled regression probes — expected failures, then restored full suite
+
+```text
+avatar-webp-size: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 548 filtered out; finished in 0.45s
+avatar-bmp-fallback: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 548 filtered out; finished in 0.47s
+sign-in-public-link: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 548 filtered out; finished in 0.40s
+ban-setup-cleanup: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 548 filtered out; finished in 1.57s
+ban-job-enqueue: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 548 filtered out; finished in 0.92s
+ban-job-perform: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 548 filtered out; finished in 10.87s
 WS8br2 discrimination: 6 compiled regressions detected; sources restored
 ```
 
-### Browser people: separate Rails and Rust runs
+Each deliberately broken production implementation failed its named test, not compilation. Sources were restored in `finally` and the complete restored suite passed. Preflight mistakes were corrected before delivery: ban fixtures initially retained loopback target sessions (which correctly fail Rails validation), and the public-link test initially borrowed a temporary body. The avatar conditional request initially assumed 304; the Rails oracle instead proved the flash-dependent 200 → stable 304 sequence, which the final tests assert. No such failures are dismissed as inherited.
+
+### people — Rails first, Rust second
 
 ```text
-Rails directory browser scenarios:
 WS8br2 browser people: 8 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF
-Rust directory browser scenarios:
 WS8br2 browser people: 8 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF
 ```
 
-### Browser picker: separate Rails and Rust runs
+### picker — Rails first, Rust second
 
 ```text
-Rails directory browser scenarios:
 WS8br2 browser picker: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF
-Rust directory browser scenarios:
 WS8br2 browser picker: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF
 ```
 
-### Browser status: separate Rails and Rust runs
+### status — Rails first, Rust second
 
 ```text
-Rails directory browser scenarios:
 WS8br2 browser status: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF; member-panel integration deferred
-Rust directory browser scenarios:
 WS8br2 browser status: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF; member-panel integration deferred
 ```
 
-Browser coverage is 18 scenarios per app (36 successful executions): eight directory/sidebar, five picker, five popup. It does not count message-author or member-panel flows as passing. Five popup cases are outside the original 194-case inventory. Original Rails system files were inspected and their criteria translated; the Ruby files themselves were not run.
-
-## Actual Rust per-file pass counts
-
-### Counts from the final complete app log
+### pwa — Rails first, Rust second
 
 ```text
+served-worker-event-harness: 19 passed
+worker discrimination authenticated-cache-write: detected
+worker discrimination offline-fallback: detected
+worker discrimination notification-focus: detected
+WS8br2 browser PWA: 3 passed; 0 failed; 3 worker regressions detected; Chromium 153.0.8010.12; actual served worker and offline shell
+served-worker-event-harness: 19 passed
+worker discrimination authenticated-cache-write: detected
+worker discrimination offline-fallback: detected
+worker discrimination notification-focus: detected
+WS8br2 browser PWA: 3 passed; 0 failed; 3 worker regressions detected; Chromium 153.0.8010.12; actual served worker and offline shell
+```
+
+### audit — Rails first, Rust second
+
+```text
+audit CSV: byte-identical to the pinned Rails producer after real password confirmation
+audit CSV discrimination: changed response byte detected
+WS8br2 browser audit: 2 passed; 0 failed; Chromium 153.0.8010.12; real signed session, filters, sudo and CSV download
+audit CSV: byte-identical to the pinned Rails producer after real password confirmation
+audit CSV discrimination: changed response byte detected
+WS8br2 browser audit: 2 passed; 0 failed; Chromium 153.0.8010.12; real signed session, filters, sudo and CSV download
+```
+
+### timezone — Rails first, Rust second
+
+```text
+WS8br2 browser timezone: 2 passed; 0 failed; Chromium 153.0.8010.12; missing-token guard, real CSRF PATCH and persisted-zone readback
+WS8br2 browser timezone: 2 passed; 0 failed; Chromium 153.0.8010.12; missing-token guard, real CSRF PATCH and persisted-zone readback
+```
+
+The browser runs total **25 scenarios per app**, 50 executions. Each PWA run includes the 19 original event assertions and detects three altered worker responses; each audit run rejects a changed CSV byte. The missing-token timezone scenario uses the declared negative DOM input, not altered application code. Actual call ringing, room member-panel integration and push transport are not claimed.
+
+### Actual owned Rust per-file pass counts
+
+```text
+controllers/users/avatar_image_tests.rs: 2 passed; 0 failed; 0 ignored
+controllers/users/ban_lifecycle_tests.rs: 3 passed; 0 failed; 0 ignored
+controllers/public_pages.rs: 4 passed; 0 failed; 0 ignored
 controllers/users/profile_security_tests.rs: 7 passed; 0 failed; 0 ignored
 controllers/rooms/directs/picker_tests.rs: 5 passed; 0 failed; 0 ignored
 controllers/users/status_popup_tests.rs: 4 passed; 0 failed; 0 ignored
@@ -341,36 +346,42 @@ controllers/accounts/view_tests.rs: 4 passed; 0 failed; 0 ignored
 controllers/users/people_tests.rs: 12 passed; 0 failed; 0 ignored
 controllers/users/profile_settings_tests.rs: 4 passed; 0 failed; 0 ignored
 controllers/accounts/mutation_tests.rs: 11 passed; 0 failed; 0 ignored
-WS8br2 file accounting: 87 executed Rust groups; 4 DM picker bodies; 5 popup bodies and 6 HTTP status cases; 9 Google Calendar fragments and 11 status/meeting/OOO fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 3 icon bodies/navs, 9 logo PNG responses; 13 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 23 account/ban cases, 9 individual exactly-one audit checks, 13 account rows, 2 account bodies/navs/footers, 2 invites, 2 CSS bodies; 1 agent-owner case explicitly deferred
+WS8br2 file accounting: 96 executed Rust groups; 4 DM picker bodies; 5 popup bodies and 6 HTTP status cases; 9 Google Calendar fragments and 11 status/meeting/OOO fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 3 icon bodies/navs, 9 logo PNG responses; 13 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 23 account/ban cases, 9 individual exactly-one audit checks, 13 account rows, 2 account bodies/navs/footers, 2 invites, 2 CSS bodies; 1 agent-owner case explicitly deferred
 ```
 
-## Rails criterion mapping and all deferred names
+### Cleanup
+
+```text
+WS8br2 fresh-clone target cleanup: removed 13591222527 bytes from .scratch/behavior-clone/rust/target; no executing target binaries; no fresh-clone target directories remain
+```
+
+## Rails criterion mapping and every remaining name
 
 | Rails file (largest first) | Lines | Starting deferred | Criteria covered | Still deferred |
 |---|---:|---:|---:|---:|
 | `test/controllers/users/profiles_controller_test.rb` | 573 | 57 | 45 | 12 |
 | `test/system/people_group_dms_test.rb` | 459 | 19 | 12 | 7 |
-| `test/controllers/public_pages_controller_test.rb` | 226 | 2 | 0 | 2 |
+| `test/controllers/public_pages_controller_test.rb` | 226 | 2 | 1 | 1 |
 | `test/controllers/users_controller_test.rb` | 226 | 20 | 10 | 10 |
 | `test/controllers/accounts/audit_logs_controller_test.rb` | 217 | 15 | 15 | 0 |
 | `test/system/starred_people_test.rb` | 182 | 4 | 0 | 4 |
 | `test/system/icons_test.rb` | 169 | 4 | 0 | 4 |
 | `test/controllers/accounts/icons_controller_test.rb` | 103 | 6 | 6 | 0 |
-| `test/system/service_worker_test.rb` | 102 | 2 | 0 | 2 |
-| `test/controllers/users/bans_controller_test.rb` | 99 | 8 | 5 | 3 |
+| `test/system/service_worker_test.rb` | 102 | 2 | 2 | 0 |
+| `test/controllers/users/bans_controller_test.rb` | 99 | 8 | 8 | 0 |
 | `test/controllers/users/profiles_two_factor_test.rb` | 96 | 7 | 7 | 0 |
 | `test/system/first_run_tour_test.rb` | 89 | 4 | 0 | 4 |
 | `test/controllers/users/cards_controller_test.rb` | 87 | 7 | 7 | 0 |
 | `test/controllers/workspace_icons_controller_test.rb` | 78 | 7 | 7 | 0 |
-| `test/controllers/pwa_controller_test.rb` | 66 | 1 | 0 | 1 |
-| `test/system/timezone_detection_test.rb` | 64 | 2 | 0 | 2 |
+| `test/controllers/pwa_controller_test.rb` | 66 | 1 | 1 | 0 |
+| `test/system/timezone_detection_test.rb` | 64 | 2 | 2 | 0 |
 | `test/controllers/accounts_controller_test.rb` | 61 | 4 | 4 | 0 |
 | `test/system/workspace_icons_test.rb` | 60 | 1 | 0 | 1 |
 | `test/controllers/first_runs_controller_test.rb` | 57 | 4 | 4 | 0 |
 | `test/controllers/accounts/logos_controller_test.rb` | 56 | 6 | 6 | 0 |
-| `test/system/audit_log_test.rb` | 49 | 2 | 0 | 2 |
+| `test/system/audit_log_test.rb` | 49 | 2 | 2 | 0 |
 | `test/controllers/accounts/users_controller_test.rb` | 36 | 3 | 2 | 1 |
-| `test/controllers/users/avatars_controller_test.rb` | 34 | 2 | 0 | 2 |
+| `test/controllers/users/avatars_controller_test.rb` | 34 | 2 | 2 | 0 |
 | `test/controllers/accounts/custom_styles_controller_test.rb` | 30 | 3 | 3 | 0 |
 | `test/controllers/accounts/join_codes_controller_test.rb` | 21 | 2 | 2 | 0 |
 | `test/controllers/welcome_controller_test.rb` | 21 | 2 | 2 | 0 |
@@ -399,7 +410,6 @@ WS8br2 file accounting: 87 executed Rust groups; 4 DM picker bodies; 5 popup bod
 - Tab cycles within the profile card opened from the member panel
 
 `test/controllers/public_pages_controller_test.rb` — **WS9 sign-in page integration**:
-- sign-in page links the public pages without OAuth
 - sign-in page keeps public links beside Google sign-in when configured
 
 `test/controllers/users_controller_test.rb` — **WS8br2; agent/bot presentation facts from WS11**:
@@ -426,44 +436,20 @@ WS8br2 file accounting: 87 executed Rust groups; 4 DM picker bodies; 5 popup bod
 - icon rooms suppress the search arrow marker
 - lobehub brand icons render visibly in both themes
 
-`test/system/service_worker_test.rb` — **WS8br2**:
-- the worker caches static assets and never authenticated responses
-- the offline shell renders with working retry behavior
-
-`test/controllers/users/bans_controller_test.rb` — **WS8br2; WS9 sudo, WS11/WS13 revocation seams**:
-- create succeeds when the user has a pending two-factor setup secret
-- create enqueues RemoveBannedContentJob
-- RemoveBannedContentJob deletes messages
-
 `test/system/first_run_tour_test.rb` — **WS8br2 with WS8b-m composer/room integration**:
 - a new member is walked through the tour by keyboard and finishing persists
 - escape skips the tour and it never auto-starts again
 - the tour restarts from the help menu
 - members who completed the tour never see it auto-start
 
-`test/controllers/pwa_controller_test.rb` — **WS8br2 service-worker event harness**:
-- service worker fetch and notification logic
-
-`test/system/timezone_detection_test.rb` — **WS8br2**:
-- the browser does not report its zone without a CSRF token
-- the browser reports its detected zone once
-
 `test/system/workspace_icons_test.rb` — **WS8br2**:
 - upload post in both themes then delete falls back to the shortcode
-
-`test/system/audit_log_test.rb` — **WS8br2; WS9 export sudo seam**:
-- admin browses filters and exports the audit log
-- audit log stays usable at phone width
 
 `test/controllers/accounts/users_controller_test.rb` — **WS8br2; WS9 sudo/security metadata seams**:
 - destroy
 
-`test/controllers/users/avatars_controller_test.rb` — **WS8br2**:
-- show image
-- show initials when image cannot be resized
+Deferred inventory: 44 named Rails controller/system cases remain from the original 194; 150 criteria now have equivalent Rust coverage. This is a criterion mapping, not a claim that the Ruby test files or browser system tests ran.
 
-Deferred inventory: 57 named Rails controller/system cases remain from the original 194; 137 criteria now have equivalent Rust coverage. This is a criterion mapping, not a claim that the Ruby test files or browser system tests ran.
+## Precisely what remains
 
-## Remaining work
-
-Close the 57 named criteria above and each flagged seam. Largest remaining files are profile layout projection (12 criteria) and people room/member-panel integration (7). Complete agent/owner integration, live Calendar/OOO and status delivery, avatar variants and the listed browser/PWA cases. Integration lead should replace the exact WS15g call site when #167 merges and use WS15e’s newly merged provider APIs. No broader grammar/parser parity, clean original Ruby-system run or production readiness is claimed.
+Close the 44 named criteria and flagged owner seams above: profile chrome/live windows (12), agent/user pages (10), room/member-panel people flows (7), starred people (4), icon room/name/autocomplete flows (4), first-run room/composer tour flows (4), configured Google sign-in (1), icon upload/post/delete system integration (1), and agent-owner deactivation (1). Keep the two shared attachment P2s pending the separately owned fix; only integrate it when the lead requests the main merge. Full live-owner profile composition, actual push/call/status delivery and the broader parser boundaries remain partial. No production readiness or complete original Ruby-system run is claimed.
