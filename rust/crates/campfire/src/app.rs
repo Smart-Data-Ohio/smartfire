@@ -255,7 +255,7 @@ impl campfire_db::Clock for DbClock {
 
 // --- Commands --------------------------------------------------------------------------------------
 
-const USAGE: &str = "usage: campfire [server|backup]";
+const USAGE: &str = "usage: campfire [server|backup|db-check [--immutable] DATABASE|db-migrate DATABASE MIGRATIONS_DIR|verify-additive-sqlite-migration BEFORE AFTER]";
 
 /// The binary's entry point.
 ///
@@ -264,9 +264,10 @@ const USAGE: &str = "usage: campfire [server|backup]";
 /// - `campfire backup`: the ONCE `pre-backup` hook (`script/admin/prepare-backup`): snapshot the
 ///   live database into `storage/backups/` with SQLite's online backup API.
 ///
-/// The ONCE `post-restore` hook stays the reference's shell script (`hooks/post-restore`): copy
+/// The ONCE `post-restore` hook (`ops/post-restore`) follows the reference: copy
 /// `storage/backups/<env>.sqlite3` over `storage/db/<env>.sqlite3` and delete its `-wal` and
-/// `-shm` files; the next boot's `db:prepare` picks it up.
+/// `-shm` files; the next boot checks the schema. Rust leaves Redis persistence for the lead's
+/// explicit cutover step and supports the app's storage overrides.
 pub fn run() -> anyhow::Result<()> {
     let command = std::env::args().nth(1);
     if matches!(command.as_deref(), Some("-h" | "--help")) {

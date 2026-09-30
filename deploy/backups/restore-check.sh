@@ -29,6 +29,9 @@
 #                        inside a live checkout by accident.
 #   --min-users N        fail unless the users table holds at least N rows.
 #   --min-messages N     fail unless the messages table holds at least N rows.
+#   --image REF          also check a disposable copy with this local Rails or
+#                        Rust image; runtime comes from the image label.
+#   --container-name N   name for that disposable container (default unique).
 
 set -euo pipefail
 
@@ -40,6 +43,8 @@ GPG_HOME=""
 RAILS_ROOT=""
 MIN_USERS=""
 MIN_MESSAGES=""
+APP_IMAGE=""
+CHECK_CONTAINER="campfire-restore-check-$$"
 
 log() { printf '[restore-check] %s\n' "$*"; }
 die() { printf '[restore-check] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -58,6 +63,8 @@ while [ "$#" -gt 0 ]; do
     --rails-root) RAILS_ROOT="${2:-}"; shift 2 ;;
     --min-users) MIN_USERS="${2:-}"; shift 2 ;;
     --min-messages) MIN_MESSAGES="${2:-}"; shift 2 ;;
+    --image) APP_IMAGE="${2:-}"; shift 2 ;;
+    --container-name) CHECK_CONTAINER="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown argument: $1 (see --help)" ;;
   esac
@@ -66,6 +73,7 @@ done
 [ -n "$BACKUP" ] || die "--backup is required"
 [ -n "$WORK_DIR" ] || die "--work-dir is required"
 [ -f "$BACKUP" ] || die "backup file not found: $BACKUP"
+[ -z "$APP_IMAGE" ] || [ -z "$RAILS_ROOT" ] || die "use either --image or --rails-root"
 command -v sqlite3 >/dev/null || die "sqlite3 is not installed"
 command -v tar >/dev/null || die "tar is not installed"
 command -v sha256sum >/dev/null || die "sha256sum is not installed"
@@ -156,6 +164,37 @@ if [ -n "$RAILS_ROOT" ]; then
   ( cd "$RAILS_ROOT" && SECRET_KEY_BASE_DUMMY=1 RAILS_ENV=production bin/rails runner \
     'ActiveRecord::Base.connection.execute("PRAGMA query_only = ON"); puts JSON.generate(users: User.count, rooms: Room.count, messages: Message.count)' )
   log "rails runner row count succeeded; re-verifying the extracted backup is untouched"
+  ( cd "$stage" && sha256sum -c SHA256SUMS )
+fi
+
+if [ -n "$APP_IMAGE" ]; then
+  command -v docker >/dev/null || die "docker is required for --image"
+  runtime="$(docker image inspect "$APP_IMAGE" --format '{{index .Config.Labels "net.smartdata.campfire.runtime"}}')" \
+    || die "cannot inspect local image $APP_IMAGE"
+  copy="$WORK_DIR/app-check"
+  mkdir -p "$copy/db"
+  cp "$db" "$copy/db/production.sqlite3"
+  # Container uid 1000 must be able to read this disposable snapshot.
+  chmod 0755 "$copy" "$copy/db"
+  chmod 0644 "$copy/db/production.sqlite3"
+  case "$runtime" in
+    rust)
+      docker run --rm --name "$CHECK_CONTAINER" --network none --memory 768m \
+        -v "$copy:/rails/storage:ro" "$APP_IMAGE" \
+        campfire db-check --immutable /rails/storage/db/production.sqlite3
+      ;;
+    rails|''|'<no value>')
+      # Rails' adapter writes PRAGMAs; as with --rails-root it only sees a copy.
+      chmod 0777 "$copy" "$copy/db"
+      chmod 0666 "$copy/db/production.sqlite3"
+      docker run --rm --name "$CHECK_CONTAINER" --network none --memory 768m \
+        -v "$copy:/rails/storage" -e SECRET_KEY_BASE_DUMMY=1 -e RAILS_ENV=production \
+        -e SKIP_TELEMETRY=1 -e REDIS_URL=redis://127.0.0.1:1 "$APP_IMAGE" \
+        bin/rails runner 'ActiveRecord::Base.connection.execute("PRAGMA query_only = ON"); puts JSON.generate(users: User.count, rooms: Room.count, messages: Message.count)'
+      ;;
+    *) die "unknown Campfire runtime label '$runtime'" ;;
+  esac
+  log "$runtime image read the restored database; re-verifying extracted backup"
   ( cd "$stage" && sha256sum -c SHA256SUMS )
 fi
 
