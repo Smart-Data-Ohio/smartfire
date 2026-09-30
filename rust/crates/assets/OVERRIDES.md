@@ -7,7 +7,7 @@ load path, and skips it when it doesn't exist.
 
 **There are none.** Until cutover the Rust app serves our Rails app's assets byte for byte (the
 digested paths, the import map and the modulepreload set included), so `overrides/` is absent.
-Upstream's four overrides were removed when the crate was pointed at our tree:
+Upstream's JavaScript overrides were removed when the crate was pointed at our tree:
 
 | File | Why it went |
 |---|---|
