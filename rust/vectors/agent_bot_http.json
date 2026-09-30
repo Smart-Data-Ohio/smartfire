@@ -8,8 +8,11 @@
       "body": "Hello 👋!",
       "setup": {},
       "status": 201,
+      "response_body": "",
       "response": null,
       "response_headers": {
+        "content-type": "application/json",
+        "cache-control": "no-cache",
         "location": "http://campfire.test/messages/1900300002"
       },
       "delta": {
@@ -33,8 +36,11 @@
       "body": "{\"message\":{\"markdown_source\":\"ignored\",\"drive_file_ids\":[\"1AbcDefGhIjKlMnOpQrSt\"]}}",
       "setup": {},
       "status": 201,
+      "response_body": "",
       "response": null,
       "response_headers": {
+        "content-type": "application/json",
+        "cache-control": "no-cache",
         "location": "http://campfire.test/messages/1900300002"
       },
       "delta": {
@@ -58,8 +64,12 @@
       "body": " ",
       "setup": {},
       "status": 422,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -80,8 +90,12 @@
         "board": true
       },
       "status": 422,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -102,13 +116,17 @@
         "cap": 0
       },
       "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
       "response": {
         "error": "Daily message budget exceeded (0/day)",
         "cap": "messages",
         "limit": 0,
         "retry_after": 28799
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -129,10 +147,14 @@
         "grant": "read_messages"
       },
       "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -151,8 +173,12 @@
       "body": "hi",
       "setup": {},
       "status": 404,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -171,6 +197,7 @@
       "body": "<div>Hello &amp; bye</div>",
       "setup": {},
       "status": 200,
+      "response_body": "{\"id\":1900300001,\"client_message_id\":\"bot-contract-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Hello & bye\",\"html\":\"<div class=\\\"trix-content\\\">\\n  <div>Hello &amp; bye</div>\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900300001\"}",
       "response": {
         "id": 1900300001,
         "client_message_id": "bot-contract-starter",
@@ -195,7 +222,10 @@
         "drive_attachments": [],
         "url": "http://campfire.test/rooms/486777696/@1900300001"
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -216,6 +246,7 @@
         "drive": true
       },
       "status": 200,
+      "response_body": "{\"id\":1900300001,\"client_message_id\":\"bot-contract-starter\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"{\\\"message\\\":{\\\"drive_file_ids\\\":[\\\"2BcdEfgHiJkLmNoPqRsTu\\\"]}}\",\"html\":\"<div class=\\\"trix-content\\\">\\n  {\\\"message\\\":{\\\"drive_file_ids\\\":[\\\"2BcdEfgHiJkLmNoPqRsTu\\\"]}}\\n</div>\\n\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[{\"file_id\":\"1AbcDefGhIjKlMnOpQrSt\",\"url\":\"https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt\"}],\"url\":\"http://campfire.test/rooms/486777696/@1900300001\"}",
       "response": {
         "id": 1900300001,
         "client_message_id": "bot-contract-starter",
@@ -245,7 +276,10 @@
         ],
         "url": "http://campfire.test/rooms/486777696/@1900300001"
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -268,8 +302,12 @@
         "other_creator": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -290,8 +328,12 @@
         "system": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -312,10 +354,14 @@
         "grant": "read_messages"
       },
       "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
       "response": {
         "error": "Forbidden: agent lacks post_messages capability"
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -334,8 +380,11 @@
       "body": null,
       "setup": {},
       "status": 204,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": -1,
         "boosts": -2
@@ -352,8 +401,12 @@
         "other_creator": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -374,8 +427,12 @@
         "system": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -396,6 +453,7 @@
         "index": true
       },
       "status": 200,
+      "response_body": "[{\"id\":1900300002,\"client_message_id\":\"bot-contract-next\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Next\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003e\\u003cstrong\\u003eNext\\u003c/strong\\u003e\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"**Next**\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900300002\"}]",
       "response": [
         {
           "id": 1900300002,
@@ -424,6 +482,8 @@
         }
       ],
       "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
         "x-total-count": "133"
       },
       "delta": {
@@ -447,6 +507,7 @@
         "summary": true
       },
       "status": 200,
+      "response_body": "[{\"id\":1900300002,\"client_message_id\":\"bot-contract-next\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Next\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003e\\u003cstrong\\u003eNext\\u003c/strong\\u003e\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"**Next**\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_summary\":{\"id\":1900300008,\"name\":\"Excluded\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":1900300002,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":1,\"member_count\":0,\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1900300008\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1900300008\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900300002\"}]",
       "response": [
         {
           "id": 1900300002,
@@ -521,6 +582,8 @@
         }
       ],
       "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
         "x-total-count": "133"
       },
       "delta": {
@@ -541,11 +604,14 @@
       "body": null,
       "setup": {},
       "status": 404,
+      "response_body": "{\"status\":404,\"error\":\"Not Found\"}",
       "response": {
         "status": 404,
         "error": "Not Found"
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -566,10 +632,14 @@
         "grant": "react"
       },
       "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks read_messages capability\"}",
       "response": {
         "error": "Forbidden: agent lacks read_messages capability"
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -591,6 +661,7 @@
         "details": true
       },
       "status": 200,
+      "response_body": "[{\"id\":1900300002,\"client_message_id\":\"bot-contract-next\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Forward note\\n\\nNext\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003e\\u003cstrong\\u003eNext\\u003c/strong\\u003e\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"**Next**\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"reply_to\":{\"id\":1900300001,\"url\":\"http://campfire.test/rooms/486777696/@1900300001\",\"deleted\":false,\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"body\":{\"plain_text\":\"Starter\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003eStarter\\u003c/p\\u003e\\u003c/div\\u003e\"},\"notify_author\":true},\"forwarded\":{\"label\":\"Forwarded\",\"note\":\"Forward note\"},\"drive_attachments\":[{\"file_id\":\"1AbcDefGhIjKlMnOpQrSt\",\"url\":\"https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt\"}],\"streaming\":true,\"url\":\"http://campfire.test/rooms/486777696/@1900300002\"}]",
       "response": [
         {
           "id": 1900300002,
@@ -647,6 +718,8 @@
         }
       ],
       "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
         "x-total-count": "133"
       },
       "delta": {
@@ -667,6 +740,7 @@
       "body": "👀",
       "setup": {},
       "status": 201,
+      "response_body": "{\"id\":1900300012,\"content\":\"👀\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900300001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900300001\"}}",
       "response": {
         "id": 1900300012,
         "content": "👀",
@@ -684,7 +758,10 @@
           "url": "http://campfire.test/rooms/486777696/messages/1900300001"
         }
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
       "delta": {
         "messages": 0,
         "boosts": 1
@@ -703,6 +780,7 @@
       "body": ":heart:",
       "setup": {},
       "status": 201,
+      "response_body": "{\"id\":1900300012,\"content\":\"❤️\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900300001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900300001\"}}",
       "response": {
         "id": 1900300012,
         "content": "❤️",
@@ -720,7 +798,10 @@
           "url": "http://campfire.test/rooms/486777696/messages/1900300001"
         }
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
       "delta": {
         "messages": 0,
         "boosts": 1
@@ -739,6 +820,7 @@
       "body": ":lol:",
       "setup": {},
       "status": 201,
+      "response_body": "{\"id\":1900300012,\"content\":\":lol:\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900300001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900300001\"}}",
       "response": {
         "id": 1900300012,
         "content": ":lol:",
@@ -756,7 +838,10 @@
           "url": "http://campfire.test/rooms/486777696/messages/1900300001"
         }
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
       "delta": {
         "messages": 0,
         "boosts": 1
@@ -777,6 +862,7 @@
         "icon": "openai"
       },
       "status": 201,
+      "response_body": "{\"id\":1900300012,\"content\":\"Nice!\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":\"openai\",\"icon_avatar_url\":\"/assets/icons/brands/openai-a0bb8578.svg\"},\"message\":{\"id\":1900300001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900300001\"}}",
       "response": {
         "id": 1900300012,
         "content": "Nice!",
@@ -794,7 +880,50 @@
           "url": "http://campfire.test/rooms/486777696/messages/1900300001"
         }
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
+      "delta": {
+        "messages": 0,
+        "boosts": 1
+      },
+      "state": {
+        "markdown_source": "Starter",
+        "plain_text": "Starter",
+        "drive_ids": []
+      },
+      "created": null
+    },
+    {
+      "name": "bot_boost_html",
+      "method": "post",
+      "path": "/rooms/486777696/{key}/messages/1900300001/boosts",
+      "body": "<>& α  ",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900300012,\"content\":\"\\u003c\\u003e\\u0026 α  \",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"booster\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"message\":{\"id\":1900300001,\"url\":\"http://campfire.test/rooms/486777696/messages/1900300001\"}}",
+      "response": {
+        "id": 1900300012,
+        "content": "<>& α  ",
+        "created_at": "2026-03-02T16:00:00.000Z",
+        "booster": {
+          "id": 394959859,
+          "name": "Bender Bot",
+          "role": "bot",
+          "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+          "icon_name": null,
+          "icon_avatar_url": null
+        },
+        "message": {
+          "id": 1900300001,
+          "url": "http://campfire.test/rooms/486777696/messages/1900300001"
+        }
+      },
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate"
+      },
       "delta": {
         "messages": 0,
         "boosts": 1
@@ -813,8 +942,12 @@
       "body": " ",
       "setup": {},
       "status": 422,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -835,10 +968,14 @@
         "grant": "read_messages"
       },
       "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks react capability\"}",
       "response": {
         "error": "Forbidden: agent lacks react capability"
       },
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -857,8 +994,12 @@
       "body": "👀",
       "setup": {},
       "status": 404,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -877,8 +1018,12 @@
       "body": "👀",
       "setup": {},
       "status": 404,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -897,8 +1042,11 @@
       "body": null,
       "setup": {},
       "status": 204,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": -1
@@ -917,8 +1065,12 @@
       "body": null,
       "setup": {},
       "status": 404,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -937,8 +1089,12 @@
       "body": null,
       "setup": {},
       "status": 404,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -959,8 +1115,11 @@
         "reply": true
       },
       "status": 201,
+      "response_body": "",
       "response": null,
       "response_headers": {
+        "content-type": "application/json",
+        "cache-control": "no-cache",
         "location": "http://campfire.test/messages/1900300002"
       },
       "delta": {
@@ -986,8 +1145,12 @@
         "reply": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -1008,8 +1171,12 @@
         "reply": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -1030,8 +1197,12 @@
         "reply": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -1052,8 +1223,12 @@
         "reply": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -1074,8 +1249,12 @@
         "reply": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -1096,8 +1275,12 @@
         "agent_token": true
       },
       "status": 403,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -1119,8 +1302,12 @@
         "revoked": true
       },
       "status": 401,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0
@@ -1142,8 +1329,594 @@
         "expired": true
       },
       "status": 401,
+      "response_body": "",
       "response": null,
-      "response_headers": {},
+      "response_headers": {
+        "content-type": "text/html",
+        "cache-control": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "boosts": 0
+      },
+      "state": {
+        "markdown_source": "Starter",
+        "plain_text": "Starter",
+        "drive_ids": []
+      },
+      "created": null
+    },
+    {
+      "name": "bot_index_work_human_owner",
+      "method": "get",
+      "path": "/rooms/486777696/{key}/messages?after=1900300001",
+      "body": null,
+      "setup": {
+        "index": true,
+        "summary": true,
+        "work": "in_progress",
+        "owner": 127326141
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900300002,\"client_message_id\":\"bot-contract-next\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Next\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003e\\u003cstrong\\u003eNext\\u003c/strong\\u003e\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"**Next**\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_summary\":{\"id\":1900300008,\"name\":\"Excluded\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":1900300002,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"in_progress\",\"work_owner_id\":127326141,\"work_owner\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":1,\"member_count\":0,\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1900300008\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1900300008\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900300002\"}]",
+      "response": [
+        {
+          "id": 1900300002,
+          "client_message_id": "bot-contract-next",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "body": {
+            "plain_text": "Next",
+            "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p><strong>Next</strong></p></div>",
+            "markdown_source": "**Next**"
+          },
+          "creator": {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "room": {
+            "id": 486777696,
+            "icon_name": null
+          },
+          "thread_summary": {
+            "id": 1900300008,
+            "name": "Excluded",
+            "status": "active",
+            "room_id": 486777696,
+            "parent_message_id": 1900300002,
+            "last_activity_at": "2026-03-02T16:00:00.000Z",
+            "closed_at": null,
+            "locked_at": null,
+            "auto_archive_after_minutes": 4320,
+            "work": true,
+            "work_status": "in_progress",
+            "work_owner_id": 127326141,
+            "work_owner": {
+              "id": 127326141,
+              "name": "David",
+              "role": "administrator",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+              "icon_name": null,
+              "icon_avatar_url": null,
+              "active": true,
+              "human": true,
+              "agent": false
+            },
+            "work_owner_active": true,
+            "work_history": null,
+            "work_owner_options": null,
+            "joined": false,
+            "unread": null,
+            "involvement": null,
+            "message_count": 1,
+            "member_count": 0,
+            "creator": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "role": "bot",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+              "icon_name": null,
+              "icon_avatar_url": null
+            },
+            "url": "http://campfire.test/rooms/486777696/threads/1900300008",
+            "permalink_url": "http://campfire.test/rooms/486777696?thread=1900300008",
+            "permissions": {
+              "can_rename": true,
+              "can_close": true,
+              "can_reopen": false,
+              "can_lock": false,
+              "can_unlock": false,
+              "can_delete": false,
+              "can_convert_work": false,
+              "can_manage_work": false,
+              "can_update_work_status": false,
+              "can_assign_work": false,
+              "can_remove_work": false
+            }
+          },
+          "drive_attachments": [],
+          "url": "http://campfire.test/rooms/486777696/@1900300002"
+        }
+      ],
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
+        "x-total-count": "133"
+      },
+      "delta": {
+        "messages": 0,
+        "boosts": 0
+      },
+      "state": {
+        "markdown_source": "Starter",
+        "plain_text": "Starter",
+        "drive_ids": []
+      },
+      "created": null
+    },
+    {
+      "name": "bot_index_work_unassigned",
+      "method": "get",
+      "path": "/rooms/486777696/{key}/messages?after=1900300001",
+      "body": null,
+      "setup": {
+        "index": true,
+        "summary": true,
+        "work": "planned"
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900300002,\"client_message_id\":\"bot-contract-next\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Next\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003e\\u003cstrong\\u003eNext\\u003c/strong\\u003e\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"**Next**\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_summary\":{\"id\":1900300008,\"name\":\"Excluded\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":1900300002,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"planned\",\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":1,\"member_count\":0,\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1900300008\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1900300008\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900300002\"}]",
+      "response": [
+        {
+          "id": 1900300002,
+          "client_message_id": "bot-contract-next",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "body": {
+            "plain_text": "Next",
+            "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p><strong>Next</strong></p></div>",
+            "markdown_source": "**Next**"
+          },
+          "creator": {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "room": {
+            "id": 486777696,
+            "icon_name": null
+          },
+          "thread_summary": {
+            "id": 1900300008,
+            "name": "Excluded",
+            "status": "active",
+            "room_id": 486777696,
+            "parent_message_id": 1900300002,
+            "last_activity_at": "2026-03-02T16:00:00.000Z",
+            "closed_at": null,
+            "locked_at": null,
+            "auto_archive_after_minutes": 4320,
+            "work": true,
+            "work_status": "planned",
+            "work_owner_id": null,
+            "work_owner": null,
+            "work_owner_active": false,
+            "work_history": null,
+            "work_owner_options": null,
+            "joined": false,
+            "unread": null,
+            "involvement": null,
+            "message_count": 1,
+            "member_count": 0,
+            "creator": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "role": "bot",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+              "icon_name": null,
+              "icon_avatar_url": null
+            },
+            "url": "http://campfire.test/rooms/486777696/threads/1900300008",
+            "permalink_url": "http://campfire.test/rooms/486777696?thread=1900300008",
+            "permissions": {
+              "can_rename": true,
+              "can_close": true,
+              "can_reopen": false,
+              "can_lock": false,
+              "can_unlock": false,
+              "can_delete": false,
+              "can_convert_work": false,
+              "can_manage_work": false,
+              "can_update_work_status": false,
+              "can_assign_work": false,
+              "can_remove_work": false
+            }
+          },
+          "drive_attachments": [],
+          "url": "http://campfire.test/rooms/486777696/@1900300002"
+        }
+      ],
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
+        "x-total-count": "133"
+      },
+      "delta": {
+        "messages": 0,
+        "boosts": 0
+      },
+      "state": {
+        "markdown_source": "Starter",
+        "plain_text": "Starter",
+        "drive_ids": []
+      },
+      "created": null
+    },
+    {
+      "name": "bot_index_work_bot_owner",
+      "method": "get",
+      "path": "/rooms/486777696/{key}/messages?after=1900300001",
+      "body": null,
+      "setup": {
+        "index": true,
+        "summary": true,
+        "work": "blocked",
+        "owner": 394959859
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900300002,\"client_message_id\":\"bot-contract-next\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Next\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003e\\u003cstrong\\u003eNext\\u003c/strong\\u003e\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"**Next**\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_summary\":{\"id\":1900300008,\"name\":\"Excluded\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":1900300002,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"blocked\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":true,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":1,\"member_count\":0,\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1900300008\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1900300008\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900300002\"}]",
+      "response": [
+        {
+          "id": 1900300002,
+          "client_message_id": "bot-contract-next",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "body": {
+            "plain_text": "Next",
+            "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p><strong>Next</strong></p></div>",
+            "markdown_source": "**Next**"
+          },
+          "creator": {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "room": {
+            "id": 486777696,
+            "icon_name": null
+          },
+          "thread_summary": {
+            "id": 1900300008,
+            "name": "Excluded",
+            "status": "active",
+            "room_id": 486777696,
+            "parent_message_id": 1900300002,
+            "last_activity_at": "2026-03-02T16:00:00.000Z",
+            "closed_at": null,
+            "locked_at": null,
+            "auto_archive_after_minutes": 4320,
+            "work": true,
+            "work_status": "blocked",
+            "work_owner_id": 394959859,
+            "work_owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "role": "bot",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+              "icon_name": null,
+              "icon_avatar_url": null,
+              "active": true,
+              "human": false,
+              "agent": true
+            },
+            "work_owner_active": true,
+            "work_history": null,
+            "work_owner_options": null,
+            "joined": false,
+            "unread": null,
+            "involvement": null,
+            "message_count": 1,
+            "member_count": 0,
+            "creator": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "role": "bot",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+              "icon_name": null,
+              "icon_avatar_url": null
+            },
+            "url": "http://campfire.test/rooms/486777696/threads/1900300008",
+            "permalink_url": "http://campfire.test/rooms/486777696?thread=1900300008",
+            "permissions": {
+              "can_rename": true,
+              "can_close": true,
+              "can_reopen": false,
+              "can_lock": false,
+              "can_unlock": false,
+              "can_delete": false,
+              "can_convert_work": false,
+              "can_manage_work": false,
+              "can_update_work_status": false,
+              "can_assign_work": false,
+              "can_remove_work": false
+            }
+          },
+          "drive_attachments": [],
+          "url": "http://campfire.test/rooms/486777696/@1900300002"
+        }
+      ],
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
+        "x-total-count": "133"
+      },
+      "delta": {
+        "messages": 0,
+        "boosts": 0
+      },
+      "state": {
+        "markdown_source": "Starter",
+        "plain_text": "Starter",
+        "drive_ids": []
+      },
+      "created": null
+    },
+    {
+      "name": "bot_index_work_bot_owner_without_post",
+      "method": "get",
+      "path": "/rooms/486777696/{key}/messages?after=1900300001",
+      "body": null,
+      "setup": {
+        "index": true,
+        "summary": true,
+        "work": "blocked",
+        "owner": 394959859,
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900300002,\"client_message_id\":\"bot-contract-next\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Next\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003e\\u003cstrong\\u003eNext\\u003c/strong\\u003e\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"**Next**\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_summary\":{\"id\":1900300008,\"name\":\"Excluded\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":1900300002,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"blocked\",\"work_owner_id\":394959859,\"work_owner\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":false,\"agent\":true},\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":1,\"member_count\":0,\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1900300008\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1900300008\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900300002\"}]",
+      "response": [
+        {
+          "id": 1900300002,
+          "client_message_id": "bot-contract-next",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "body": {
+            "plain_text": "Next",
+            "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p><strong>Next</strong></p></div>",
+            "markdown_source": "**Next**"
+          },
+          "creator": {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "room": {
+            "id": 486777696,
+            "icon_name": null
+          },
+          "thread_summary": {
+            "id": 1900300008,
+            "name": "Excluded",
+            "status": "active",
+            "room_id": 486777696,
+            "parent_message_id": 1900300002,
+            "last_activity_at": "2026-03-02T16:00:00.000Z",
+            "closed_at": null,
+            "locked_at": null,
+            "auto_archive_after_minutes": 4320,
+            "work": true,
+            "work_status": "blocked",
+            "work_owner_id": 394959859,
+            "work_owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "role": "bot",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+              "icon_name": null,
+              "icon_avatar_url": null,
+              "active": true,
+              "human": false,
+              "agent": true
+            },
+            "work_owner_active": false,
+            "work_history": null,
+            "work_owner_options": null,
+            "joined": false,
+            "unread": null,
+            "involvement": null,
+            "message_count": 1,
+            "member_count": 0,
+            "creator": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "role": "bot",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+              "icon_name": null,
+              "icon_avatar_url": null
+            },
+            "url": "http://campfire.test/rooms/486777696/threads/1900300008",
+            "permalink_url": "http://campfire.test/rooms/486777696?thread=1900300008",
+            "permissions": {
+              "can_rename": true,
+              "can_close": true,
+              "can_reopen": false,
+              "can_lock": false,
+              "can_unlock": false,
+              "can_delete": false,
+              "can_convert_work": false,
+              "can_manage_work": false,
+              "can_update_work_status": false,
+              "can_assign_work": false,
+              "can_remove_work": false
+            }
+          },
+          "drive_attachments": [],
+          "url": "http://campfire.test/rooms/486777696/@1900300002"
+        }
+      ],
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
+        "x-total-count": "133"
+      },
+      "delta": {
+        "messages": 0,
+        "boosts": 0
+      },
+      "state": {
+        "markdown_source": "Starter",
+        "plain_text": "Starter",
+        "drive_ids": []
+      },
+      "created": null
+    },
+    {
+      "name": "bot_index_work_suspended_owner",
+      "method": "get",
+      "path": "/rooms/486777696/{key}/messages?after=1900300001",
+      "body": null,
+      "setup": {
+        "index": true,
+        "summary": true,
+        "work": "blocked",
+        "owner": 394959859,
+        "suspended": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks read_messages capability\"}",
+      "response": {
+        "error": "Forbidden: agent lacks read_messages capability"
+      },
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-cache"
+      },
+      "delta": {
+        "messages": 0,
+        "boosts": 0
+      },
+      "state": {
+        "markdown_source": "Starter",
+        "plain_text": "Starter",
+        "drive_ids": []
+      },
+      "created": null
+    },
+    {
+      "name": "bot_index_work_nonmember_owner",
+      "method": "get",
+      "path": "/rooms/486777696/{key}/messages?after=1900300001",
+      "body": null,
+      "setup": {
+        "index": true,
+        "summary": true,
+        "work": "done",
+        "owner": 712064548
+      },
+      "status": 200,
+      "response_body": "[{\"id\":1900300002,\"client_message_id\":\"bot-contract-next\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"Next\",\"html\":\"\\u003cdiv class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"\\u003e\\u003cp\\u003e\\u003cstrong\\u003eNext\\u003c/strong\\u003e\\u003c/p\\u003e\\u003c/div\\u003e\",\"markdown_source\":\"**Next**\"},\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_summary\":{\"id\":1900300008,\"name\":\"Excluded\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":1900300002,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":true,\"work_status\":\"done\",\"work_owner_id\":712064548,\"work_owner\":{\"id\":712064548,\"name\":\"Kevin\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":1,\"member_count\":0,\"creator\":{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/1900300008\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=1900300008\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":false,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696/@1900300002\"}]",
+      "response": [
+        {
+          "id": 1900300002,
+          "client_message_id": "bot-contract-next",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "body": {
+            "plain_text": "Next",
+            "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p><strong>Next</strong></p></div>",
+            "markdown_source": "**Next**"
+          },
+          "creator": {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "room": {
+            "id": 486777696,
+            "icon_name": null
+          },
+          "thread_summary": {
+            "id": 1900300008,
+            "name": "Excluded",
+            "status": "active",
+            "room_id": 486777696,
+            "parent_message_id": 1900300002,
+            "last_activity_at": "2026-03-02T16:00:00.000Z",
+            "closed_at": null,
+            "locked_at": null,
+            "auto_archive_after_minutes": 4320,
+            "work": true,
+            "work_status": "done",
+            "work_owner_id": 712064548,
+            "work_owner": {
+              "id": 712064548,
+              "name": "Kevin",
+              "role": "member",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000",
+              "icon_name": null,
+              "icon_avatar_url": null,
+              "active": true,
+              "human": true,
+              "agent": false
+            },
+            "work_owner_active": false,
+            "work_history": null,
+            "work_owner_options": null,
+            "joined": false,
+            "unread": null,
+            "involvement": null,
+            "message_count": 1,
+            "member_count": 0,
+            "creator": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "role": "bot",
+              "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+              "icon_name": null,
+              "icon_avatar_url": null
+            },
+            "url": "http://campfire.test/rooms/486777696/threads/1900300008",
+            "permalink_url": "http://campfire.test/rooms/486777696?thread=1900300008",
+            "permissions": {
+              "can_rename": true,
+              "can_close": true,
+              "can_reopen": false,
+              "can_lock": false,
+              "can_unlock": false,
+              "can_delete": false,
+              "can_convert_work": false,
+              "can_manage_work": false,
+              "can_update_work_status": false,
+              "can_assign_work": false,
+              "can_remove_work": false
+            }
+          },
+          "drive_attachments": [],
+          "url": "http://campfire.test/rooms/486777696/@1900300002"
+        }
+      ],
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "max-age=0, private, must-revalidate",
+        "x-total-count": "133"
+      },
       "delta": {
         "messages": 0,
         "boosts": 0

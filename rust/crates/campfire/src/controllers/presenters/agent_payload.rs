@@ -120,7 +120,7 @@ impl Presenter<'_> {
         let user = self.user(self.current_user_id.ok_or_else(|| {
             campfire_db::Error::Other("MessagePayloadHelper requires the requesting user".into())
         })?)?;
-        if !user.is_bot() || thread.work_status.is_some() || thread.work_owner_id.is_some() {
+        if !user.is_bot() {
             return Err(campfire_db::Error::Other(
                 "WS8b-m/WS12 seam: MessagePayloadHelper work thread_payload".into(),
             ));
@@ -133,11 +133,54 @@ impl Presenter<'_> {
             [thread.id],
             |r| r.get(0),
         )?;
+        let owner = thread
+            .work_owner_id
+            .map(|id| campfire_db::User::find_by_id(self.conn, id))
+            .transpose()?
+            .flatten();
+        let owner_payload = owner
+            .as_ref()
+            .map(|owner| {
+                let mut value = self.user_payload(owner.id)?;
+                value["active"] = owner.is_active().into();
+                value["human"] = (!owner.is_bot()).into();
+                value["agent"] = owner.is_bot().into();
+                Ok::<_, campfire_db::Error>(value)
+            })
+            .transpose()?;
+        let owner_member = owner
+            .as_ref()
+            .map(|owner| {
+                campfire_db::Membership::find_by_room_and_user(self.conn, thread.room_id, owner.id)
+            })
+            .transpose()?
+            .flatten()
+            .is_some();
+        let owner_active = if let Some(owner) = &owner {
+            if owner.is_bot() {
+                campfire_db::Agent::for_user(self.conn, owner.id)?
+                    .map(|agent| {
+                        campfire_db::models::agent_access::capability_for_agent(
+                            self.conn,
+                            agent.id,
+                            "post_messages",
+                            Some(thread.room_id),
+                        )
+                    })
+                    .transpose()?
+                    .unwrap_or(false)
+                    && owner_member
+            } else {
+                owner.is_active() && owner_member
+            }
+        } else {
+            false
+        };
         let base = self.cache_base_url.as_deref().unwrap_or_default();
         Ok(json!({
             "id":thread.id,"name":thread.name,"status":thread.status(self.conn,campfire_db::Timestamp::from_jiff(self.now))?.name(),"room_id":thread.room_id,"parent_message_id":thread.parent_message_id,
             "last_activity_at":json_time(thread.last_activity_at.jiff()),"closed_at":thread.closed_at.map(|t|json_time(t.jiff())),"locked_at":thread.locked_at.map(|t|json_time(t.jiff())),"auto_archive_after_minutes":thread.auto_archive_after_minutes,
-            "work":false,"work_status":Value::Null,"work_owner_id":Value::Null,"work_owner":Value::Null,"work_owner_active":false,"work_history":Value::Null,"work_owner_options":Value::Null,
+            "work":thread.work(),"work_status":thread.work_status,"work_owner_id":thread.work_owner_id,"work_owner":owner_payload,"work_owner_active":owner_active,"work_history":Value::Null,"work_owner_options":Value::Null,
             "joined":membership.is_some(),"unread":membership.as_ref().map(|m|m.unread()),"involvement":membership.as_ref().map(|m|m.involvement.name()),"message_count":thread.message_count(self.conn)?,"member_count":count,"creator":self.user_payload(thread.creator_id)?,
             "url":format!("{base}/rooms/{}/threads/{}",thread.room_id,thread.id),"permalink_url":format!("{base}/rooms/{}?thread={}",thread.room_id,thread.id),
             "permissions":{"can_rename":settings,"can_close":settings,"can_reopen":if thread.locked_at.is_some(){lifecycle}else{membership.is_some()},"can_lock":lifecycle,"can_unlock":lifecycle,"can_delete":lifecycle,

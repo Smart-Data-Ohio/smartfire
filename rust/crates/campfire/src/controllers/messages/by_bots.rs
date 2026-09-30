@@ -193,6 +193,6 @@ async fn set_pagination_headers(c: &mut Ctx, room: &Room, messages: &[Message]) 
 
 /// `render :show` (`messages/by_bots/show.json.jbuilder`).
 async fn render_show(c: &mut Ctx, message: Message) -> Result<Response> {
-    let body = present(c, move |presenter| Ok(campfire_views::helpers::to_rails_json(&presenter.agent_message_payload(&message)?))).await?;
+    let body = present(c, move |presenter| Ok(presenter.agent_message_payload(&message)?.to_string())).await?;
     Ok(c.render(StatusCode::OK, &format::JSON, body))
 }

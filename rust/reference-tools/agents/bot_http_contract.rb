@@ -35,6 +35,7 @@ contract("bot_boost_create",:post,boost,"👀")
 contract("bot_boost_shortcode",:post,boost,":heart:")
 contract("bot_boost_unknown",:post,boost,":lol:")
 contract("bot_boost_icon",:post,boost,"Nice!",{icon:"openai"})
+contract("bot_boost_html",:post,boost,"<>& α\u2028\u2029")
 contract("bot_boost_empty",:post,boost," ")
 contract("bot_boost_grant",:post,boost,"👀",{grant:"read_messages"})
 contract("bot_boost_missing_message",:post,"#{root}/0/boosts","👀")
@@ -51,6 +52,12 @@ contract("bot_reply_boost_destroy",:delete,"#{boost}/1900300010",nil,{reply:true
 contract("bot_agent_boost",:post,boost,"👀",{agent_token:true})
 contract("bot_agent_revoked",:post,root,"hi",{agent_token:true,revoked:true})
 contract("bot_agent_expired",:get,root,nil,{agent_token:true,expired:true})
+contract("bot_index_work_human_owner",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"in_progress",owner:127326141})
+contract("bot_index_work_unassigned",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"planned"})
+contract("bot_index_work_bot_owner",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"blocked",owner:394959859})
+contract("bot_index_work_bot_owner_without_post",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"blocked",owner:394959859,grant:"read_messages"})
+contract("bot_index_work_suspended_owner",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"blocked",owner:394959859,suspended:true})
+contract("bot_index_work_nonmember_owner",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"done",owner:712064548})
 travel_to Time.utc(2026,3,2,16) do
   agent=Agent.find(773018776)
   bot=User.find(394959859)
@@ -58,7 +65,7 @@ travel_to Time.utc(2026,3,2,16) do
     setup=item[:setup]
     agent.agent_grants.delete_all
     agent.agent_credentials.delete_all
-    agent.update_columns(daily_message_cap:setup[:cap],owner_id:127326141)
+    agent.update_columns(daily_message_cap:setup[:cap],owner_id:127326141,suspended_at:nil)
     AgentGrant.create!(agent:agent,capability:setup[:grant],granted_by_id:127326141) if setup[:grant]
     credential=agent.agent_credentials.create!(name:"Bot contract",created_by_id:127326141,token_digest:AgentCredential.digest(SECRET),token_last_four:AgentCredential.digest(SECRET).first(4))
     credential.update_columns(revoked_at:Time.current) if setup[:revoked]
@@ -83,6 +90,8 @@ travel_to Time.utc(2026,3,2,16) do
         next_message.drive_attachments.create!(file_id:"1AbcDefGhIjKlMnOpQrSt")
       end
     end
+    thread.update_columns(work_status:setup[:work],work_owner_id:setup[:owner]) if setup[:work]
+    agent.update_columns(suspended_at:Time.current) if setup[:suspended]
     Room.find(486777696).update_columns(type:"Rooms::Board") if setup[:board]
     bot.update_columns(icon_name:setup[:icon])
     Rails.cache=ActiveSupport::Cache::MemoryStore.new
@@ -98,7 +107,7 @@ travel_to Time.utc(2026,3,2,16) do
     after={messages:Message.count,boosts:Boost.count}
     state=Message.find_by(id:BASE)
     created=Message.where("id > ?",BASE).order(:id).last unless setup[:index]
-    item.merge(status:response.status,response:response.body.blank? ? nil : JSON.parse(response.body),response_headers:response.headers.slice("X-Total-Count","Link","Location","Retry-After"),delta:after.transform_values.with_index{|v,i|v-before.values[i]},state:state && {markdown_source:state.markdown_source,plain_text:state.plain_text_body,drive_ids:state.drive_attachments.pluck(:file_id)},created:created && {plain_text:created.plain_text_body,drive_ids:created.drive_attachments.pluck(:file_id)})
+    item.merge(status:response.status,response_body:response.body,response:response.body.blank? ? nil : JSON.parse(response.body),response_headers:response.headers.slice("Content-Type","Cache-Control","Pragma","X-Total-Count","Link","Location","Retry-After"),delta:after.transform_values.with_index{|v,i|v-before.values[i]},state:state && {markdown_source:state.markdown_source,plain_text:state.plain_text_body,drive_ids:state.drive_attachments.pluck(:file_id)},created:created && {plain_text:created.plain_text_body,drive_ids:created.drive_attachments.pluck(:file_id)})
   end
   puts JSON.pretty_generate({reference_pin:"d7c7de92",cases:result})
 end

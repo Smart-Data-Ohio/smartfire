@@ -31,6 +31,8 @@ async fn check(case: &Value) {
                 tx.conn().execute("INSERT INTO drive_attachments(message_id,file_id,created_at) VALUES(?,'1AbcDefGhIjKlMnOpQrSt',?)",rusqlite::params![BASE+1,tx.now()])?;
             }
         }
+        if let Some(status)=config["work"].as_str(){tx.conn().execute("UPDATE channel_threads SET work_status=?,work_owner_id=? WHERE id=1900300008",rusqlite::params![status,config["owner"].as_i64()])?;}
+        if config["suspended"].as_bool()==Some(true){tx.conn().execute("UPDATE agents SET suspended_at=? WHERE id=?",rusqlite::params![tx.now(),AGENT])?;}
         if config["board"].as_bool()==Some(true){tx.conn().execute("UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",[])?;}
         tx.conn().execute("UPDATE users SET icon_name=? WHERE id=394959859",[config["icon"].as_str()])?;
         Ok(())
@@ -85,8 +87,9 @@ async fn check(case: &Value) {
         case["response"],
         "{name}"
     );
-    for (key, value) in case["response_headers"].as_object().unwrap() {
-        assert_eq!(reply.header(key), value.as_str(), "{name}: {key}");
+    assert_eq!(reply.text(),case["response_body"].as_str().unwrap(),"{name}: raw response bytes");
+    for key in ["Content-Type","Cache-Control","Pragma","X-Total-Count","Link","Location","Retry-After"] {
+        assert_eq!(reply.header(key),case["response_headers"][key.to_ascii_lowercase()].as_str(),"{name}: {key}");
     }
     let after = app.db().read(counts).await.unwrap();
     assert_eq!(
