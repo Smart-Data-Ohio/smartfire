@@ -28,11 +28,7 @@ impl AppRichText {
     }
 
     fn with_context<T>(&self, conn: &Connection, f: impl FnOnce(&RenderContext) -> T) -> T {
-        let resolver = DbResolver {
-            conn,
-            secrets: &self.secrets,
-            now: self.clock.now(),
-        };
+        let resolver = DbResolver::new(conn, &self.secrets, self.clock.now());
         f(&resolver.render_context(None))
     }
 }
@@ -96,11 +92,7 @@ impl RichText for AppRichText {
             .map_err(|e| e.to_string())?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(|e| e.to_string())?;
-        let resolver = DbResolver {
-            conn,
-            secrets: &self.secrets,
-            now: self.clock.now(),
-        };
+        let resolver = DbResolver::new(conn, &self.secrets, self.clock.now());
         let mentions = |name: &str| {
             let mut matches = members
                 .iter()

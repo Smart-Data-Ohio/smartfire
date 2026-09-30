@@ -6,20 +6,31 @@
 use std::net::IpAddr;
 use std::time::Duration;
 
-use campfire_richtext::uri::{self, Uri};
+use campfire_richtext::uri::Uri;
 use hyper::Method;
 
+use crate::integrations::net::Network;
 use crate::integrations::net::guard::{self, GuardError};
 use crate::integrations::net::http::{self, Body, Endpoint, HttpError, Timeouts};
-use crate::integrations::net::Network;
 
 pub const ALLOWED_DOCUMENT_CONTENT_TYPE: &str = "text/html";
 pub const MAX_BODY_SIZE: usize = 5 * 1024 * 1024;
 pub const MAX_REDIRECTS: usize = 10;
 
-/// Each connect and each read; Rails leaves `Net::HTTP`'s 60 seconds. The unfurl as a whole has
-/// `UNFURL_DEADLINE`.
-const TIMEOUTS: Timeouts = Timeouts { open: Duration::from_secs(5), read: Duration::from_secs(5) };
+#[derive(Debug, Clone, Copy)]
+pub struct FetchOptions {
+    pub max_redirects: usize,
+    pub deadline: Option<Duration>,
+}
+
+impl Default for FetchOptions {
+    fn default() -> Self {
+        Self { max_redirects: MAX_REDIRECTS, deadline: None }
+    }
+}
+
+/// Explicit operation timeouts in our fork (app/models/opengraph/fetch.rb).
+const TIMEOUTS: Timeouts = Timeouts { open: Duration::from_secs(5), read: Duration::from_secs(5), write: Duration::from_secs(5) };
 
 #[derive(Debug, thiserror::Error)]
 pub enum FetchError {
@@ -28,6 +39,8 @@ pub enum FetchError {
     #[error("Opengraph::Fetch::RedirectDeniedError")]
     RedirectDenied,
     /// `URI::InvalidURIError` (a missing or unparsable `Location`), or a URI Net::HTTP refuses.
+    #[error("fetch deadline exceeded")]
+    Deadline,
     #[error("bad URI")]
     InvalidUri,
     #[error("{0}")]
@@ -38,30 +51,66 @@ pub enum FetchError {
 
 /// `fetch_document(url, ip:)`: the body, or `None` when the response isn't acceptable.
 pub async fn fetch_document(net: &Network, url: &Uri, ip: IpAddr) -> Result<Option<Vec<u8>>, FetchError> {
-    let response = request(net, url.clone(), ip, Method::GET).await?;
-    if response.status != 200 || response.content_type().as_deref() != Some(ALLOWED_DOCUMENT_CONTENT_TYPE) {
-        return Ok(None);
-    }
-    if response.content_length()?.unwrap_or(0) > MAX_BODY_SIZE as u64 {
-        return Ok(None);
-    }
-    Ok(match response.read_body(MAX_BODY_SIZE).await? {
-        Body::Complete(body) => Some(body),
-        Body::TooLarge => None,
+    fetch_document_with(net, url, ip, FetchOptions::default()).await
+}
+
+pub async fn fetch_document_with(net: &Network, url: &Uri, ip: IpAddr, options: FetchOptions) -> Result<Option<Vec<u8>>, FetchError> {
+    within_deadline(options.deadline, async {
+        let response = request(net, url.clone(), ip, Method::GET, options).await?;
+        if response.status != 200 || response.content_type().as_deref() != Some(ALLOWED_DOCUMENT_CONTENT_TYPE) {
+            return Ok(None);
+        }
+        if response.content_length()?.unwrap_or(0) > MAX_BODY_SIZE as u64 {
+            return Ok(None);
+        }
+        Ok(match response.read_body(MAX_BODY_SIZE).await? {
+            Body::Complete(body) => Some(body),
+            Body::TooLarge => None,
+        })
     })
+    .await
 }
 
-/// `fetch_content_type(url, ip:)`: the final response's `Content-Type`, whatever its status.
+/// `fetch_content_type(url, ip:)`: the final response's header, whatever its status.
 pub async fn fetch_content_type(net: &Network, url: &Uri, ip: IpAddr) -> Result<Option<String>, FetchError> {
-    let response = request(net, url.clone(), ip, Method::HEAD).await?;
-    Ok(response.header("content-type"))
+    fetch_content_type_with(net, url, ip, FetchOptions::default()).await
 }
 
-async fn request(net: &Network, mut url: Uri, mut ip: IpAddr, method: Method) -> Result<http::Response, FetchError> {
-    for _ in 0..MAX_REDIRECTS {
-        let response = send(net, &url, ip, method.clone()).await?;
+pub async fn fetch_content_type_with(net: &Network, url: &Uri, ip: IpAddr, options: FetchOptions) -> Result<Option<String>, FetchError> {
+    within_deadline(options.deadline, async { Ok(request(net, url.clone(), ip, Method::HEAD, options).await?.header("content-type")) })
+        .await
+}
+
+async fn within_deadline<T>(
+    deadline: Option<Duration>,
+    fetch: impl std::future::Future<Output = Result<T, FetchError>>,
+) -> Result<T, FetchError> {
+    match deadline {
+        Some(duration) if !duration.is_zero() => tokio::time::timeout(duration, fetch).await.map_err(|_| FetchError::Deadline)?,
+        _ => fetch.await,
+    }
+}
+
+pub(crate) async fn request(
+    net: &Network,
+    mut url: Uri,
+    mut ip: IpAddr,
+    method: Method,
+    options: FetchOptions,
+) -> Result<http::Response, FetchError> {
+    let max_redirects = options.max_redirects;
+    // Rails performs the original request and at most max_redirects subsequent requests.
+    for _ in 0..=max_redirects {
+        let response = match send(net, &url, ip, method.clone()).await {
+            Err(FetchError::Http(error)) if options.deadline.is_none() && retryable(&error) => {
+                // Net::HTTP retries idempotent requests once before yielding the response.
+                // The Ruby block prevents retries during body reads. Armed deadlines set max_retries=0.
+                send(net, &url, ip, method.clone()).await?
+            }
+            result => result?,
+        };
         if (300..400).contains(&response.status) {
-            (url, ip) = resolve_redirect(net, response.header("location")).await?;
+            (url, ip) = resolve_redirect(net, response.header("location"), &url).await?;
         } else {
             return Ok(response);
         }
@@ -69,11 +118,23 @@ async fn request(net: &Network, mut url: Uri, mut ip: IpAddr, method: Method) ->
     Err(FetchError::TooManyRedirects)
 }
 
-async fn resolve_redirect(net: &Network, location: Option<String>) -> Result<(Uri, IpAddr), FetchError> {
-    let url = uri::parse(&location.ok_or(FetchError::InvalidUri)?).map_err(|_| FetchError::InvalidUri)?;
-    if !url.is_http() {
-        return Err(FetchError::RedirectDenied);
+fn retryable(error: &HttpError) -> bool {
+    match error {
+        HttpError::ReadTimeout | HttpError::WriteTimeout | HttpError::ConnectionClosed => true,
+        HttpError::Io(error) => matches!(
+            error.kind(),
+            std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::ConnectionAborted
+                | std::io::ErrorKind::BrokenPipe
+                | std::io::ErrorKind::TimedOut
+                | std::io::ErrorKind::UnexpectedEof
+        ),
+        _ => false,
     }
+}
+
+async fn resolve_redirect(net: &Network, location: Option<String>, base: &Uri) -> Result<(Uri, IpAddr), FetchError> {
+    let url = crate::integrations::net::redirect::resolve(base, location.as_deref()).ok_or(FetchError::RedirectDenied)?;
     let ip = guard::resolve(net.resolver.as_ref(), url.host.as_deref().unwrap_or("")).await?;
     Ok((url, ip))
 }
@@ -97,3 +158,7 @@ fn host_header(host: &str, port: u16, https: bool) -> String {
     let default_port = if https { 443 } else { 80 };
     if port == default_port { hostname.to_string() } else { format!("{hostname}:{port}") }
 }
+
+#[cfg(test)]
+#[path = "rails_fetch_tests.rs"]
+mod rails_fetch_tests;

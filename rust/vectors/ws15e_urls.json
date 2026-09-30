@@ -1,0 +1,696 @@
+{
+  "reference": "d7c7de92",
+  "normalized": [
+    {
+      "url": "https://EXAMPLE.com/page#section",
+      "expected": "https://example.com/page"
+    },
+    {
+      "url": "https://example.com/page/",
+      "expected": "https://example.com/page"
+    },
+    {
+      "url": "https://example.com",
+      "expected": "https://example.com/"
+    },
+    {
+      "url": "https://example.com:8443/page",
+      "expected": "https://example.com:8443/page"
+    },
+    {
+      "url": "http://example.com:80/page",
+      "expected": "http://example.com/page"
+    },
+    {
+      "url": " https://user:pass@EXAMPLE.com/path//?q=1#x ",
+      "expected": "https://example.com/path/?q=1"
+    },
+    {
+      "url": "https://example.com/??",
+      "expected": "https://example.com/??"
+    },
+    {
+      "url": "not a url",
+      "expected": null
+    },
+    {
+      "url": "ftp://example.com/file",
+      "expected": null
+    },
+    {
+      "url": "",
+      "expected": null
+    },
+    {
+      "url": "https://",
+      "expected": null
+    },
+    {
+      "url": "https:/rooms/1",
+      "expected": null
+    }
+  ],
+  "classifier": [
+    {
+      "text": "a https://example.com/one b https://example.com/two c https://example.com/one d https://example.com/three e https://example.com/four",
+      "extracted": [
+        "https://example.com/one",
+        "https://example.com/two",
+        "https://example.com/three"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "see https://example.com/page. Next sentence",
+      "extracted": [
+        "https://example.com/page"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "(see https://example.com/page)",
+      "extracted": [
+        "https://example.com/page"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "see https://en.wikipedia.org/wiki/Rust_(programming_language) today",
+      "extracted": [
+        "https://en.wikipedia.org/wiki/Rust_(programming_language)"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "see https://example.com/page).",
+      "extracted": [
+        "https://example.com/page"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "[see https://example.com/page]",
+      "extracted": [
+        "https://example.com/page"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "https://github.com/rails/rails/pull/123",
+      "extracted": [],
+      "special": true,
+      "github": true
+    },
+    {
+      "text": "https://github.com/./repo/pull/12",
+      "extracted": [
+        "https://github.com/./repo/pull/12"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "https://github.com/acme/../pull/12",
+      "extracted": [
+        "https://github.com/acme/../pull/12"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "https://github.com/a/b/pulls/42/files",
+      "extracted": [],
+      "special": true,
+      "github": true
+    },
+    {
+      "text": "https://x.com/jack/status/20",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://twitter.com/jack/status/20",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://mobile.x.com/i/web/status/33",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:activity:99",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://www.linkedin.com/posts/jane-doe_launch-99",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://fizzy.smartdata.example.com/boards/1",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://smartfire.example.com/rooms/12/@34",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://smartfire.example.com/rooms/12/events/5",
+      "extracted": [],
+      "special": true,
+      "github": false
+    },
+    {
+      "text": "https://example.com/fizzy-drink",
+      "extracted": [
+        "https://example.com/fizzy-drink"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "https://github.com/rails/rails/pull/1 https://example.com/one https://x.com/jack/status/20 https://example.com/two",
+      "extracted": [
+        "https://example.com/one",
+        "https://example.com/two"
+      ],
+      "special": true,
+      "github": true
+    },
+    {
+      "text": "just some text",
+      "extracted": [],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "ftp://example.com/file",
+      "extracted": [],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "",
+      "extracted": [],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "HTTP://EXAMPLE.com/a",
+      "extracted": [
+        "http://example.com/a"
+      ],
+      "special": false,
+      "github": false
+    },
+    {
+      "text": "see https://example.com/page)]!",
+      "extracted": [
+        "https://example.com/page"
+      ],
+      "special": false,
+      "github": false
+    }
+  ],
+  "suppression": {
+    "sources": [
+      "plain https://example.com/kept and <https://example.com/hidden>",
+      "note with <https://example.com/noted>",
+      "<https://EXAMPLE.com/a/#one> <https://example.com/a#two> <https://example.com/kept>"
+    ],
+    "suppressed": [
+      "https://example.com/hidden",
+      "https://example.com/noted",
+      "https://example.com/a",
+      "https://example.com/kept"
+    ],
+    "extracted": []
+  },
+  "linkedin": [
+    {
+      "text": "see https://www.linkedin.com/feed/update/urn:li:activity:7234567890123456789 please",
+      "is_post": true,
+      "embed": "https://www.linkedin.com/embed/feed/update/urn:li:activity:7234567890123456789",
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:7234567890123456789",
+          "urn": "urn:li:activity:7234567890123456789"
+        }
+      ]
+    },
+    {
+      "text": "http://linkedin.com/feed/update/urn:li:share:12345",
+      "is_post": true,
+      "embed": "https://www.linkedin.com/embed/feed/update/urn:li:share:12345",
+      "extracted": [
+        {
+          "url": "http://linkedin.com/feed/update/urn:li:share:12345",
+          "urn": "urn:li:share:12345"
+        }
+      ]
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7234567890",
+      "is_post": true,
+      "embed": "https://www.linkedin.com/embed/feed/update/urn:li:ugcPost:7234567890",
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7234567890",
+          "urn": "urn:li:ugcPost:7234567890"
+        }
+      ]
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:activity:abcDEF123",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:ugcPost:12ab34",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:share:",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "https://www.linkedin.com/posts/jane-doe_launch-day-activity-7234567890-abcd",
+      "is_post": true,
+      "embed": null,
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/posts/jane-doe_launch-day-activity-7234567890-abcd",
+          "urn": null
+        }
+      ]
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:activity:99?commentUrn=urn%3Ali%3Acomment%3A1#frag",
+      "is_post": true,
+      "embed": "https://www.linkedin.com/embed/feed/update/urn:li:activity:99",
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:99",
+          "urn": "urn:li:activity:99"
+        }
+      ]
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:activity:1 https://www.linkedin.com/feed/update/urn:li:activity:2 https://www.linkedin.com/feed/update/urn:li:activity:3 https://www.linkedin.com/feed/update/urn:li:activity:4 https://www.linkedin.com/feed/update/urn:li:activity:5 again https://www.linkedin.com/feed/update/urn:li:activity:2?trk=public_post",
+      "is_post": true,
+      "embed": "https://www.linkedin.com/embed/feed/update/urn:li:activity:1",
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:1",
+          "urn": "urn:li:activity:1"
+        },
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:2",
+          "urn": "urn:li:activity:2"
+        },
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:3",
+          "urn": "urn:li:activity:3"
+        }
+      ]
+    },
+    {
+      "text": "https://www.linkedin.com/in/janedoe",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "https://www.linkedin.com/company/acme",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "https://www.linkedin.com/feed/",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:comment:123",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "https://www.linkedin.com/posts/",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "https://example.com/feed/update/urn:li:activity:1",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "ftp://www.linkedin.com/posts/abc",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "just some text",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    },
+    {
+      "text": "<https://www.linkedin.com/posts/slug-55>",
+      "is_post": true,
+      "embed": null,
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/posts/slug-55",
+          "urn": null
+        }
+      ]
+    },
+    {
+      "text": "(see https://www.linkedin.com/feed/update/urn:li:activity:66)",
+      "is_post": true,
+      "embed": "https://www.linkedin.com/embed/feed/update/urn:li:activity:66",
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:66",
+          "urn": "urn:li:activity:66"
+        }
+      ]
+    },
+    {
+      "text": "see https://www.linkedin.com/posts/abc123. Next",
+      "is_post": true,
+      "embed": null,
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/posts/abc123",
+          "urn": null
+        }
+      ]
+    },
+    {
+      "text": "see https://www.linkedin.com/feed/update/urn:li:activity:66!",
+      "is_post": true,
+      "embed": "https://www.linkedin.com/embed/feed/update/urn:li:activity:66",
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:66",
+          "urn": "urn:li:activity:66"
+        }
+      ]
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:activity:66}",
+      "is_post": true,
+      "embed": "https://www.linkedin.com/embed/feed/update/urn:li:activity:66",
+      "extracted": [
+        {
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:66",
+          "urn": "urn:li:activity:66"
+        }
+      ]
+    },
+    {
+      "text": "https://www.linkedin.com/feed/update/urn:li:activity:66z",
+      "is_post": false,
+      "embed": null,
+      "extracted": []
+    }
+  ],
+  "references": [
+    {
+      "html": "<p>https://EXAMPLE.com/page#private https://example.com/page#other</p>",
+      "source": "",
+      "note": "",
+      "selected": [
+        {
+          "normalized_url": "https://example.com/page",
+          "url": "https://EXAMPLE.com/page#private"
+        }
+      ]
+    },
+    {
+      "html": "<p>https://www.linkedin.com/posts/abc https://example.com/a https://example.com/b https://example.com/c https://example.com/d</p>",
+      "source": "",
+      "note": "https://example.com/e",
+      "selected": [
+        {
+          "normalized_url": "https://www.linkedin.com/posts/abc",
+          "url": "https://www.linkedin.com/posts/abc"
+        },
+        {
+          "normalized_url": "https://example.com/a",
+          "url": "https://example.com/a"
+        },
+        {
+          "normalized_url": "https://example.com/b",
+          "url": "https://example.com/b"
+        },
+        {
+          "normalized_url": "https://example.com/c",
+          "url": "https://example.com/c"
+        }
+      ]
+    },
+    {
+      "html": "<p>https://example.com/hidden https://example.com/kept</p>",
+      "source": "<https://example.com/hidden>",
+      "note": "",
+      "selected": [
+        {
+          "normalized_url": "https://example.com/kept",
+          "url": "https://example.com/kept"
+        }
+      ]
+    },
+    {
+      "html": "<code>https://example.com/code</code><pre>https://example.com/pre</pre><p><a href=\"https://example.com/label#raw\">label</a></p>",
+      "source": "",
+      "note": "",
+      "selected": [
+        {
+          "normalized_url": "https://example.com/label",
+          "url": "https://example.com/label#raw"
+        }
+      ]
+    },
+    {
+      "html": "<p>https://example.com/body</p>",
+      "source": "",
+      "note": "https://example.com/forward#note <https://example.com/suppress>",
+      "selected": [
+        {
+          "normalized_url": "https://example.com/body",
+          "url": "https://example.com/body"
+        },
+        {
+          "normalized_url": "https://example.com/forward",
+          "url": "https://example.com/forward#note"
+        }
+      ]
+    },
+    {
+      "html": "<p>https://www.linkedin.com/feed/update/urn:li:share:12?trk=room#raw</p>",
+      "source": "",
+      "note": "",
+      "selected": [
+        {
+          "normalized_url": "https://www.linkedin.com/feed/update/urn:li:share:12",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:12"
+        }
+      ]
+    }
+  ],
+  "non_code": [
+    {
+      "html": "<p>see <code>https://www.linkedin.com/posts/aaa111</code> and https://www.linkedin.com/posts/bbb222</p><pre><code class=\"language-text\">https://www.linkedin.com/posts/ccc333</code></pre><p><a href=\"https://www.linkedin.com/posts/ddd444\">the post</a></p>",
+      "text": "see  and https://www.linkedin.com/posts/bbb222\nthe post\n\nhttps://www.linkedin.com/posts/ddd444"
+    },
+    {
+      "html": "<p>see <a href=\"https://www.linkedin.com/posts/abc123\">https://www.linkedin.com/posts/abc123</a>. Next</p>",
+      "text": "see https://www.linkedin.com/posts/abc123. Next\n\nhttps://www.linkedin.com/posts/abc123"
+    },
+    {
+      "html": "<p>hello<br>world</p><p>next</p><a href=\"https://example.com/a?a=1&amp;b=2\">labeled</a>",
+      "text": "hello\nworld\nnext\nlabeled\nhttps://example.com/a?a=1&b=2"
+    },
+    {
+      "html": "<p>A &amp; B</p><!--comment--><pre>gone</pre><div>x</div>",
+      "text": "A & B\nx\n"
+    }
+  ],
+  "fizzy": [
+    {
+      "base": "https://app.fizzy.do",
+      "url": "https://app.fizzy.do/account_1/cards/22",
+      "card": true
+    },
+    {
+      "base": "https://app.fizzy.do",
+      "url": "http://fizzy.example:51550/acme/cards/55#comment",
+      "card": false
+    },
+    {
+      "base": "https://app.fizzy.do",
+      "url": "https://workspace.example:456/acme/cards/99",
+      "card": false
+    },
+    {
+      "base": "https://app.fizzy.do",
+      "url": "https://app.fizzy.do/../cards/2",
+      "card": false
+    },
+    {
+      "base": "https://app.fizzy.do",
+      "url": "https://app.fizzy.do/a/cards/22abc",
+      "card": false
+    },
+    {
+      "base": "http://fizzy.example:51550/base",
+      "url": "https://app.fizzy.do/account_1/cards/22",
+      "card": false
+    },
+    {
+      "base": "http://fizzy.example:51550/base",
+      "url": "http://fizzy.example:51550/acme/cards/55#comment",
+      "card": true
+    },
+    {
+      "base": "http://fizzy.example:51550/base",
+      "url": "https://workspace.example:456/acme/cards/99",
+      "card": false
+    },
+    {
+      "base": "http://fizzy.example:51550/base",
+      "url": "https://app.fizzy.do/../cards/2",
+      "card": false
+    },
+    {
+      "base": "http://fizzy.example:51550/base",
+      "url": "https://app.fizzy.do/a/cards/22abc",
+      "card": false
+    },
+    {
+      "base": "bad URL",
+      "url": "https://app.fizzy.do/account_1/cards/22",
+      "card": true
+    },
+    {
+      "base": "bad URL",
+      "url": "http://fizzy.example:51550/acme/cards/55#comment",
+      "card": false
+    },
+    {
+      "base": "bad URL",
+      "url": "https://workspace.example:456/acme/cards/99",
+      "card": false
+    },
+    {
+      "base": "bad URL",
+      "url": "https://app.fizzy.do/../cards/2",
+      "card": false
+    },
+    {
+      "base": "bad URL",
+      "url": "https://app.fizzy.do/a/cards/22abc",
+      "card": false
+    },
+    {
+      "base": "",
+      "url": "https://app.fizzy.do/account_1/cards/22",
+      "card": true
+    },
+    {
+      "base": "",
+      "url": "http://fizzy.example:51550/acme/cards/55#comment",
+      "card": false
+    },
+    {
+      "base": "",
+      "url": "https://workspace.example:456/acme/cards/99",
+      "card": false
+    },
+    {
+      "base": "",
+      "url": "https://app.fizzy.do/../cards/2",
+      "card": false
+    },
+    {
+      "base": "",
+      "url": "https://app.fizzy.do/a/cards/22abc",
+      "card": false
+    },
+    {
+      "base": "https://workspace.example",
+      "url": "https://app.fizzy.do/account_1/cards/22",
+      "card": false
+    },
+    {
+      "base": "https://workspace.example",
+      "url": "http://fizzy.example:51550/acme/cards/55#comment",
+      "card": false
+    },
+    {
+      "base": "https://workspace.example",
+      "url": "https://workspace.example:456/acme/cards/99",
+      "card": true
+    },
+    {
+      "base": "https://workspace.example",
+      "url": "https://app.fizzy.do/../cards/2",
+      "card": false
+    },
+    {
+      "base": "https://workspace.example",
+      "url": "https://app.fizzy.do/a/cards/22abc",
+      "card": false
+    }
+  ]
+}

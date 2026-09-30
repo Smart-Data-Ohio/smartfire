@@ -68,7 +68,7 @@ ensure
   client.close
 end
 
-server = TCPServer.new("127.0.0.1", 0)
+server = TCPServer.new("127.0.0.1", 51598)
 port = server.addr[1]
 Thread.new { loop { Thread.new(server.accept) { |client| respond(client, spec["routes"]) } } }
 
