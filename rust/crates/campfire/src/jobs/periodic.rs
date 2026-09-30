@@ -118,6 +118,9 @@ impl Loops {
 pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     let mut periodic = Periodic::new("Periodic");
     periodic.task(clear_plaintext_bot_tokens_task());
+    periodic.task(Task::new("streaming messages", Duration::from_secs(30), |app: App| async move {
+        streaming_messages(&app.db).await
+    }));
     periodic.task(Task::new("stranded agent webhooks", Duration::from_secs(30), |app: App| async move {
         stranded_agent_webhooks(&app.db).await
     }));
@@ -240,6 +243,20 @@ pub(crate) async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
         if let Err(error)=db.write(move |tx|domain::recover_one(tx,candidate)).await {
             tracing::error!(%error,"Stranded agent delivery recovery failed");
         }
+    }
+    Ok(())
+}
+
+/// Each stream gets its own writer transaction; one failed finalize cannot stop the sweep.
+pub(crate) async fn streaming_messages(db:&Database)->anyhow::Result<()> {
+    let now=db.env().now();
+    let ids=db.write(move |tx|campfire_db::models::agent_streaming::overdue_ids(tx,now)).await?;
+    for id in ids {
+        if let Err(error)=db.write(move |tx| {
+            let Some(mut message)=campfire_db::Message::find_by_id(tx.conn(),id)? else {return Ok(());};
+            if message.thread_id.map(|id|campfire_db::ChannelThread::find_by_id(tx.conn(),id)).transpose()?.flatten().is_some_and(|t|t.locked_at.is_some()) {return Ok(());}
+            message.finalize_stream(tx)?;Ok(())
+        }).await {tracing::error!(message_id=id,%error,"stream finalize failed");}
     }
     Ok(())
 }

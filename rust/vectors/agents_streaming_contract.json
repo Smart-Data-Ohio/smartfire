@@ -1,0 +1,105 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "start": {
+      "status": 201,
+      "payload": {
+        "source": "",
+        "streaming": true,
+        "creator_id": 394959859,
+        "edited_at": null
+      },
+      "error": null
+    },
+    "append": {
+      "status": 200,
+      "payload": {
+        "source": "First",
+        "streaming": true,
+        "creator_id": 394959859,
+        "edited_at": null
+      },
+      "error": null
+    },
+    "replace": {
+      "status": 200,
+      "payload": {
+        "source": "Replacement",
+        "streaming": true,
+        "creator_id": 394959859,
+        "edited_at": null
+      },
+      "error": null
+    },
+    "append_wins": {
+      "status": 200,
+      "payload": {
+        "source": "Replacement!",
+        "streaming": true,
+        "creator_id": 394959859,
+        "edited_at": null
+      },
+      "error": null
+    },
+    "required": {
+      "status": 422,
+      "payload": null,
+      "error": "append or markdown_source is required"
+    },
+    "replay": {
+      "status": 201,
+      "payload": {
+        "source": "Replacement!",
+        "streaming": true,
+        "creator_id": 394959859,
+        "edited_at": null
+      },
+      "error": null
+    },
+    "locked": {
+      "status": 422,
+      "payload": null,
+      "error": "This thread is locked"
+    },
+    "locked_finalize": {
+      "status": 422,
+      "payload": null,
+      "error": "This thread is locked"
+    },
+    "revoked": {
+      "status": 403,
+      "payload": null,
+      "error": "Forbidden: agent lacks post_messages capability"
+    },
+    "nonmember": {
+      "status": 404,
+      "payload": null,
+      "error": "Message not found"
+    },
+    "finalized": {
+      "status": 200,
+      "payload": {
+        "source": "Final",
+        "streaming": false,
+        "creator_id": 394959859,
+        "edited_at": null
+      },
+      "error": null
+    },
+    "finalized_again": {
+      "status": 200,
+      "payload": {
+        "source": "Final",
+        "streaming": false,
+        "creator_id": 394959859,
+        "edited_at": null
+      },
+      "error": null
+    },
+    "final_side_effects": {
+      "posted": 1,
+      "indexed": 1,
+      "presence": null
+    }
+  }
+}
