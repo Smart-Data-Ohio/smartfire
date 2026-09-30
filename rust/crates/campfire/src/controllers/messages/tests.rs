@@ -234,8 +234,8 @@ async fn boosts_are_listed_created_and_removed() {
     assert_eq!(david.get(&format!("/messages/{}/boosts", i64::MAX)).await.status, StatusCode::NOT_FOUND);
 }
 
-/// Message fragments and the bot API's JSON are cached for every request, so a request with a
-/// forged Host mustn't leave its URLs in them for the next one.
+/// Message fragments are cached and bot JSON is request-specific; neither may carry a
+/// forged Host into the next request.
 #[tokio::test]
 async fn a_forged_host_stays_out_of_the_caches() {
     let Some(app) = TestApp::boot().await else { return };
@@ -274,7 +274,9 @@ async fn the_bot_api() {
     let first_id = page[0]["id"].as_i64().unwrap();
     assert_eq!(index.header("link"), Some(format!("<http://campfire.test{base}?before={first_id}>; rel=\"next\"").as_str()));
     let keys: Vec<&str> = page[0].as_object().unwrap().keys().map(String::as_str).collect();
-    assert_eq!(keys, ["id", "created_at", "body", "creator", "room", "url"]);
+    // Smartfire's MessagePayloadHelper adds the client ID, updated timestamp and Drive files.
+    // bot_http_tests compares these fields and their values to the pinned Rails responses.
+    assert_eq!(keys, ["id", "client_message_id", "created_at", "updated_at", "body", "creator", "room", "drive_attachments", "url"]);
 
     let created = bot.send(Req::new(Method::POST, &base).body("Beep boop")).await;
     assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
