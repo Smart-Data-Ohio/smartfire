@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 pub mod time_parser;
 mod user_settings;
-use time_parser::{WEEKDAYS, end_of_day, present, re, strip, zone};
+use time_parser::{WEEKDAYS, date_end_of_day, end_of_day, present, re, strip, zone};
 
 pub const SHRUG: &str = "¯\\_(ツ)_/¯";
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -269,9 +269,6 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
             Ok(result)
         }
         "status" => {
-            if time_parser::known_zone(&zone_name).is_none() {
-                return Err(Error::Other(format!("Invalid Timezone: {zone_name}")));
-            }
             let mut pieces = args.splitn(2, |ch: char| {
                 matches!(ch, ' ' | '\t' | '\n' | '\r' | '\x0b' | '\x0c')
             });
@@ -289,11 +286,11 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
                     "Usage: /status <emoji> <text> — for example “/status 🚂 On a train”.",
                 ));
             }
-            let expiry = end_of_day(
-                tx.now().jiff().to_zoned(zone(&zone_name)).date(),
-                &zone(&zone_name),
-            )
-            .ok_or_else(|| Error::Other("date out of range".into()))?;
+            if time_parser::known_zone(&zone_name).is_none() {
+                return Err(Error::Other(format!("Invalid Timezone: {zone_name}")));
+            }
+            let expiry = end_of_day(tx.now(), &zone(&zone_name))
+                .ok_or_else(|| Error::Other("date out of range".into()))?;
             user_settings::update(
                 tx,
                 c.user_id,
@@ -615,13 +612,13 @@ fn ooo_bare_day(
                 let month = time_parser::month(&c["month"])?;
                 let day = c["day"].parse::<i8>().ok()?;
                 let target = jiff::civil::Date::new(date.year(), month, day).ok()?;
-                if end_of_day(target, &zone)? <= now {
+                if date_end_of_day(target, &zone)? <= now {
                     jiff::civil::Date::new(date.year() + 1, month, day).ok()?
                 } else {
                     target
                 }
             };
-            return Some((end_of_day(target, &zone)?, present(rest)));
+            return Some((date_end_of_day(target, &zone)?, present(rest)));
         }
     }
     None

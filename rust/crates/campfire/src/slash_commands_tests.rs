@@ -4,7 +4,17 @@ use campfire_db::{Config, Database, Env, Message, RecordingSink, TestClock, Time
 use serde_json::{Value, json};
 use std::sync::Arc;
 fn vectors() -> Value {
-    serde_json::from_str(include_str!("../../db/src/tests/ws8_slash_vectors.json")).unwrap()
+    let mut vectors: Value =
+        serde_json::from_str(include_str!("../../db/src/tests/ws8_slash_vectors.json")).unwrap();
+    let review: Value = serde_json::from_str(include_str!(
+        "../../db/src/tests/ws8_slash_review_vectors.json"
+    ))
+    .unwrap();
+    vectors["rows"]
+        .as_array_mut()
+        .unwrap()
+        .extend(review["rows"].as_array().unwrap().iter().cloned());
+    vectors
 }
 #[test]
 fn slash_runtime_richtext_and_index_rows_match_rails() {

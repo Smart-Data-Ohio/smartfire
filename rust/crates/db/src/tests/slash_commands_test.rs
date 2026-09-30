@@ -4,6 +4,9 @@ use serde_json::{Value, json};
 fn vectors() -> Value {
     serde_json::from_str(include_str!("ws8_slash_vectors.json")).unwrap()
 }
+fn review_vectors() -> Value {
+    serde_json::from_str(include_str!("ws8_slash_review_vectors.json")).unwrap()
+}
 fn stamp(t: Option<crate::Timestamp>) -> Value {
     t.map(|t| json!(t.to_db())).unwrap_or(Value::Null)
 }
@@ -25,6 +28,40 @@ fn slash_parser_matches_rails_timezone_and_dst_vectors() {
         let (title, t) = slash::time_parser::split_trailing_time(text, zone, now);
         assert_eq!(json!([title, stamp(t)]), case["trailing"], "{case}");
     }
+}
+#[test]
+fn slash_review_parser_differential_matches_rails() {
+    let vectors = review_vectors();
+    parser_differential(&vectors["parsing"], "Review");
+    parser_differential(&vectors["supplemental_parsing"], "Supplemental");
+}
+fn parser_differential(cases: &Value, label: &str) {
+    let mut passed = 0;
+    let mut failed = 0;
+    for case in cases.as_array().unwrap() {
+        let now = crate::Timestamp::parse_db(case["now"].as_str().unwrap()).unwrap();
+        let text = case["text"].as_str().unwrap();
+        let zone = case["zone"].as_str().unwrap();
+        let leading = slash::time_parser::split_leading_time(text, zone, now)
+            .map(|(t, s)| json!([stamp(Some(t)), s]))
+            .unwrap_or(Value::Null);
+        let (title, t) = slash::time_parser::split_trailing_time(text, zone, now);
+        let actual = json!({
+            "parse": stamp(slash::time_parser::parse(text, zone, now)),
+            "leading": leading, "trailing": [title, stamp(t)]
+        });
+        if ["parse", "leading", "trailing"]
+            .iter()
+            .any(|key| actual[*key] != case[*key])
+        {
+            failed += 1;
+            eprintln!("{}", json!({"case":case,"rust":actual}));
+        } else {
+            passed += 1;
+        }
+    }
+    println!("{label} parser differential: {passed} passed; {failed} failed");
+    assert_eq!(failed, 0, "Rails review parser differential");
 }
 #[test]
 fn slash_registry_and_recognition_match_rails() {
@@ -84,30 +121,32 @@ fn run_case(case: &Value) -> (TestDb, Value) {
 fn slash_dispatch_and_rows_match_rails() {
     for case in vectors()["rows"].as_array().unwrap() {
         let (t, actual) = run_case(case);
-        if case["place"] == "root"
-            && actual["result"]["kind"] == "ephemeral"
-            && let Ok(output) = std::env::var("WS8_SLASH_EXPORT_DIR")
-        {
-            std::fs::create_dir_all(&output).unwrap();
-            let hash = crc32fast::hash(case.to_string().as_bytes());
-            let path = std::path::Path::new(&output).join(format!("case-user-{hash}.sqlite3"));
-            if path.exists() {
-                std::fs::remove_file(&path).unwrap();
-            }
-            Connection::open(t.db.path())
-                .unwrap()
-                .execute("VACUUM INTO ?", [path.to_str().unwrap()])
-                .unwrap();
-            std::fs::write(
-                path.with_extension("json"),
-                json!({"now":case["now"],"user_id":identify("david"),"user":case["user"]})
-                    .to_string(),
-            )
-            .unwrap();
-        }
+        export_user_case(&t, case, &actual);
         for key in ["result", "user", "message", "saved", "thread"] {
             assert_eq!(actual[key], case[key], "{key}: {case}");
         }
+    }
+}
+fn export_user_case(t: &TestDb, case: &Value, actual: &Value) {
+    if case["place"] == "root"
+        && actual["result"]["kind"] == "ephemeral"
+        && let Ok(output) = std::env::var("WS8_SLASH_EXPORT_DIR")
+    {
+        std::fs::create_dir_all(&output).unwrap();
+        let hash = crc32fast::hash(case.to_string().as_bytes());
+        let path = std::path::Path::new(&output).join(format!("case-user-{hash}.sqlite3"));
+        if path.exists() {
+            std::fs::remove_file(&path).unwrap();
+        }
+        Connection::open(t.db.path())
+            .unwrap()
+            .execute("VACUUM INTO ?", [path.to_str().unwrap()])
+            .unwrap();
+        std::fs::write(
+            path.with_extension("json"),
+            json!({"now":case["now"],"user_id":identify("david"),"user":case["user"]}).to_string(),
+        )
+        .unwrap();
     }
 }
 fn callback_rows(events: &[Event]) -> (Value, Value) {
@@ -147,6 +186,33 @@ fn sorted_callbacks(value: &Value) -> Value {
     let mut rows = value.as_array().unwrap().clone();
     rows.sort_by_key(Value::to_string);
     json!(rows)
+}
+#[test]
+fn slash_review_dispatch_and_rows_match_rails() {
+    let mut passed = 0;
+    let mut failed = 0;
+    for case in review_vectors()["rows"].as_array().unwrap() {
+        let (t, actual) = run_case(case);
+        export_user_case(&t, case, &actual);
+        let (jobs, broadcasts) = callback_rows(&t.events());
+        let rows_match = ["result", "user", "message", "saved", "thread"]
+            .iter()
+            .all(|key| actual[*key] == case[*key]);
+        if rows_match
+            && jobs == case["jobs"]
+            && sorted_callbacks(&broadcasts) == sorted_callbacks(&case["broadcasts"])
+        {
+            passed += 1;
+        } else {
+            failed += 1;
+            eprintln!(
+                "{}",
+                json!({"case":case,"rust":actual,"jobs":jobs,"broadcasts":broadcasts})
+            );
+        }
+    }
+    println!("Review command differential: {passed} passed; {failed} failed");
+    assert_eq!(failed, 0, "Rails review command differential");
 }
 #[test]
 fn slash_callbacks_match_rails() {

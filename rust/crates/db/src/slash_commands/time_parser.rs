@@ -1,5 +1,6 @@
 //! app/services/slash_commands/time_parser.rb. Civil days/weeks preserve local clock time;
-//! minutes/hours are elapsed time. Rails chooses DST at folds and advances through gaps.
+//! minutes/hours are elapsed time. Rails preserves periods for civil changes;
+//! fresh local parses prefer DST at folds and advance hourly through gaps.
 use crate::Timestamp;
 use jiff::{
     SignedDuration, Span,
@@ -41,18 +42,20 @@ fn patterns(trailing: bool) -> &'static Vec<Regex> {
         .map(|(i, p)| {
             // Ruby trailing patterns use a word boundary, except for ISO, and no final
             // boundary on weekdays. Preserve their precedence instead of longest-match.
+            let flags = if i == 0 { "" } else { "(?i)" };
             let p = if trailing {
-                format!(r"(?i){}{p}\s*\z", if i == 0 { "" } else { r"\b" })
+                format!(r"{flags}{}{p}\s*\z", if i == 0 { "" } else { r"\b" })
             } else {
-                format!(r"(?i)\A{p}")
+                format!(r"{flags}\A{p}")
             };
-            Regex::new(&p).unwrap()
+            re(&p)
         })
         .collect()
     })
 }
 pub(crate) fn re(pattern: &str) -> Regex {
-    Regex::new(pattern).expect("static Ruby pattern")
+    // Ruby's \s is ASCII, while its word boundaries are Unicode aware.
+    Regex::new(&pattern.replace(r"\s", r"(?-u:\s)")).expect("static Ruby pattern")
 }
 pub(crate) fn present(text: &str) -> Option<String> {
     (!text.chars().all(char::is_whitespace)).then(|| text.to_owned())
@@ -85,7 +88,7 @@ pub(crate) fn local(
 fn resolve(
     mut dt: DateTime,
     zone: &TimeZone,
-    preferred: Option<jiff::tz::Offset>,
+    preferred: Option<jiff::Timestamp>,
 ) -> Option<Timestamp> {
     // TimeWithZone retries missing local times one hour at a time. Advancing by the
     // gap size differs at Lord Howe's half-hour jump and Apia's skipped date.
@@ -95,12 +98,16 @@ fn resolve(
             jiff::tz::AmbiguousOffset::Gap { .. } => {
                 dt = dt.checked_add(Span::new().hours(1)).ok()?
             }
-            jiff::tz::AmbiguousOffset::Fold { before, after } => {
+            jiff::tz::AmbiguousOffset::Fold { .. } => {
                 let earlier = candidate.clone().earlier().ok()?;
                 let later = candidate.later().ok()?;
-                let chosen = if preferred == Some(before) {
+                let chosen = if preferred
+                    .is_some_and(|source| same_period(zone, source, earlier.timestamp()))
+                {
                     earlier
-                } else if preferred == Some(after) {
+                } else if preferred
+                    .is_some_and(|source| same_period(zone, source, later.timestamp()))
+                {
                     later
                 } else if zone.to_offset_info(earlier.timestamp()).dst().is_dst() {
                     earlier
@@ -117,6 +124,13 @@ fn resolve(
         }
     }
 }
+fn same_period(zone: &TimeZone, a: jiff::Timestamp, b: jiff::Timestamp) -> bool {
+    // TZInfo::TransitionsTimezonePeriod equality compares transition boundaries,
+    // so an identical offset from an earlier season is not a preferred period.
+    zone.following(a.min(b))
+        .next()
+        .is_none_or(|t| t.timestamp() > a.max(b))
+}
 pub(crate) fn add_days(time: Timestamp, days: i64, zone: &TimeZone) -> Option<Timestamp> {
     let original = time.jiff().to_zoned(zone.clone());
     resolve(
@@ -125,17 +139,34 @@ pub(crate) fn add_days(time: Timestamp, days: i64, zone: &TimeZone) -> Option<Ti
             .checked_add(Span::new().days(days))
             .ok()?,
         zone,
-        Some(original.offset()),
+        Some(original.timestamp()),
     )
 }
-pub(crate) fn end_of_day(date: Date, zone: &TimeZone) -> Option<Timestamp> {
-    // End of day is one microsecond before the next midnight, including skipped dates.
-    let date = local(date, 0, 0, 0, 0, zone)?
-        .jiff()
-        .to_zoned(zone.clone())
-        .date();
-    let next = date.checked_add(Span::new().days(1)).ok()?;
-    Some(local(next, 0, 0, 0, 0, zone)?.ago(SignedDuration::from_micros(1)))
+fn change_time(
+    original: Timestamp,
+    hour: i8,
+    minute: i8,
+    second: i8,
+    nanosecond: i32,
+    zone: &TimeZone,
+) -> Option<Timestamp> {
+    let original = original.jiff().to_zoned(zone.clone());
+    resolve(
+        DateTime::from_parts(
+            original.date(),
+            Time::new(hour, minute, second, nanosecond).ok()?,
+        ),
+        zone,
+        Some(original.timestamp()),
+    )
+}
+pub(crate) fn end_of_day(time: Timestamp, zone: &TimeZone) -> Option<Timestamp> {
+    // TimeWithZone#end_of_day uses change, retaining the original period at folds.
+    change_time(time, 23, 59, 59, 999_999_000, zone)
+}
+pub(crate) fn date_end_of_day(date: Date, zone: &TimeZone) -> Option<Timestamp> {
+    // OOO parses a fresh midnight before applying end_of_day; status changes now.
+    end_of_day(local(date, 0, 0, 0, 0, zone)?, zone)
 }
 pub(crate) fn normalized_date(year: i16, month: i8, day: i8) -> Option<Date> {
     // Ruby Time.new normalizes Feb 30, but rejects a day outside 1..31.
@@ -148,6 +179,9 @@ pub(crate) fn normalized_date(year: i16, month: i8, day: i8) -> Option<Date> {
         .ok()
 }
 fn clock(c: &Captures<'_>) -> Option<(i8, i8)> {
+    clock_parts(c, false)
+}
+fn clock_parts(c: &Captures<'_>, allow_midnight: bool) -> Option<(i8, i8)> {
     let Some(h) = c.name("hour") else {
         return Some((9, 0));
     };
@@ -158,7 +192,7 @@ fn clock(c: &Captures<'_>) -> Option<(i8, i8)> {
         .transpose()
         .ok()?
         .unwrap_or(0);
-    if h > 23 || m > 59 {
+    if h > if allow_midnight { 24 } else { 23 } || m > 59 || h == 24 && m != 0 {
         return None;
     }
     if let Some(meridiem) = c.name("meridiem") {
@@ -199,24 +233,25 @@ fn from_match(c: &Captures<'_>, zone: &TimeZone, now: Timestamp) -> Option<Times
         };
     }
     let (h, m) = clock(c)?;
-    let mut date = zoned.date();
     let matched = c.get(0)?.as_str().to_ascii_lowercase();
+    let mut day = change_time(now, 0, 0, 0, 0, zone)?;
     if let Some(day) = c.name("weekday") {
         let target = WEEKDAYS
             .iter()
             .position(|d| d.eq_ignore_ascii_case(day.as_str()))? as i8;
-        let mut delta = (target - date.weekday().to_sunday_zero_offset()).rem_euclid(7) as i64;
-        if matched.starts_with("next") || delta == 0 && local(date, h, m, 0, 0, zone)? <= now {
+        let mut delta =
+            (target - zoned.date().weekday().to_sunday_zero_offset()).rem_euclid(7) as i64;
+        let midnight = change_time(now, 0, 0, 0, 0, zone)?;
+        if matched.starts_with("next")
+            || delta == 0 && change_time(midnight, h, m, 0, 0, zone)? <= now
+        {
             delta += 7;
         }
-        date = add_days(local(date, 0, 0, 0, 0, zone)?, delta, zone)?
-            .jiff()
-            .to_zoned(zone.clone())
-            .date();
+        return change_time(add_days(midnight, delta, zone)?, h, m, 0, 0, zone);
     } else if matched.contains("tomorrow") {
-        date = add_days(now, 1, zone)?.jiff().to_zoned(zone.clone()).date();
+        day = change_time(add_days(now, 1, zone)?, 0, 0, 0, 0, zone)?;
     }
-    let time = local(date, h, m, 0, 0, zone)?;
+    let time = change_time(day, h, m, 0, 0, zone)?;
     if !matched.contains("tomorrow") && c.name("weekday").is_none() && time <= now {
         add_days(time, 1, zone)
     } else {
@@ -278,14 +313,30 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
     if text.is_empty() {
         return None;
     }
-    if let Ok(ts) = text.parse::<jiff::Timestamp>() {
-        return Some(Timestamp::from_jiff(ts));
-    }
+    // Date._parse removes the clock and its zone before finding calendar parts.
+    // Otherwise e.g. "17:00 MART" becomes an invalid "00 March" date.
+    let clocks = re(
+        r"(?i)(?:\b|T)(?P<hour>[0-9]{1,2})(?::(?P<minute>[0-9]{2}))?(?::(?P<second>[0-9]{2})(?:\.(?P<fraction>[0-9]+))?)?\s*(?P<meridiem>(?:am|pm)\b)?",
+    );
+    let clock_match = clocks
+        .captures_iter(text)
+        .find(|c| c.name("minute").is_some() || c.name("meridiem").is_some());
+    let date_text = if let Some(c) = &clock_match {
+        let clock = c.get(0)?;
+        let rest = strip(&text[clock.end()..]);
+        let rest = offset_pattern()
+            .find(rest)
+            .map(|m| &rest[m.end()..])
+            .unwrap_or(rest);
+        format!("{} {rest}", &text[..clock.start()])
+    } else {
+        text.to_owned()
+    };
     let zoned = now.jiff().to_zoned(zone.clone());
     let mut date = zoned.date();
     let mut found = false;
-    if let Some(c) =
-        re(r"(?P<year>[0-9]{4})[-/](?P<month>[0-9]{1,2})[-/](?P<day>[0-9]{1,2})").captures(text)
+    if let Some(c) = re(r"(?P<year>[0-9]{4})[-/](?P<month>[0-9]{1,2})[-/](?P<day>[0-9]{1,2})")
+        .captures(&date_text)
     {
         date = normalized_date(
             c["year"].parse().ok()?,
@@ -295,7 +346,7 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
         found = true;
     } else if let Some(c) =
         re(r"\b(?P<day>[0-9]{1,2})[-/](?P<month>[0-9]{1,2})[-/](?P<year>[0-9]{2,4})\b")
-            .captures(text)
+            .captures(&date_text)
     {
         let mut year = c["year"].parse::<i16>().ok()?;
         if year < 100 {
@@ -305,15 +356,21 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
         found = true;
     } else {
         let names = r"jan[a-z]*|feb[a-z]*|mar[a-z]*|apr[a-z]*|may|jun[a-z]*|jul[a-z]*|aug[a-z]*|sep[a-z]*|oct[a-z]*|nov[a-z]*|dec[a-z]*";
+        let month_year = re(&format!(
+            r"(?i)\b(?P<month>{names})\s+(?P<year>[0-9]{{4}})\b"
+        ));
         let patterns = [
             re(&format!(
                 r"(?i)\b(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?[ -]+(?P<month>{names})(?:[, -]+(?P<year>[0-9]{{4}}))?"
             )),
             re(&format!(
-                r"(?i)\b(?P<month>{names})[ -]+(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?(?:[, -]+(?P<year>[0-9]{{4}}))?"
+                r"(?i)\b(?P<month>{names})[ -]+(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?\b(?:[, -]+(?P<year>[0-9]{{4}}))?"
             )),
         ];
-        if let Some(c) = patterns.iter().find_map(|p| p.captures(text)) {
+        if let Some(c) = month_year.captures(&date_text) {
+            date = normalized_date(c["year"].parse().ok()?, month(&c["month"])?, 1)?;
+            found = true;
+        } else if let Some(c) = patterns.iter().find_map(|p| p.captures(&date_text)) {
             date = normalized_date(
                 c.name("year")
                     .map(|y| y.as_str().parse::<i16>())
@@ -326,14 +383,8 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
             found = true;
         }
     }
-    let clocks = re(
-        r"(?i)(?:\b|T)(?P<hour>[0-9]{1,2})(?::(?P<minute>[0-9]{2}))?(?::(?P<second>[0-9]{2})(?:\.(?P<fraction>[0-9]+))?)?\s*(?P<meridiem>am|pm)?",
-    );
-    let c = clocks
-        .captures_iter(text)
-        .find(|c| c.name("minute").is_some() || c.name("meridiem").is_some());
-    if let Some(c) = c {
-        let (h, m) = clock(&c)?;
+    if let Some(c) = clock_match {
+        let (h, m) = clock_parts(&c, true)?;
         let second = c
             .name("second")
             .map(|s| s.as_str().parse::<i8>())
@@ -349,34 +400,35 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
         } else {
             0
         };
+        // Time.new permits 24:00 and second 60, normalizing before zone resolution.
+        if second > 60 || h == 24 && second != 0 {
+            return None;
+        }
+        let dt = date
+            .at(0, 0, 0, nanos)
+            .checked_add(
+                Span::new().seconds(i64::from(h) * 3600 + i64::from(m) * 60 + i64::from(second)),
+            )
+            .ok()?;
         let remaining = strip(&text[c.get(0)?.end()..]);
-        if let Some(offset) =
-            re(r"(?i)\A(?P<offset>Z|UTC|GMT|[+-][0-9]{2}:?[0-9]{2})\b").captures(remaining)
-        {
-            let token = &offset["offset"];
-            let seconds = if token.eq_ignore_ascii_case("z")
-                || token.eq_ignore_ascii_case("utc")
-                || token.eq_ignore_ascii_case("gmt")
-            {
-                0
-            } else {
-                let digits = token[1..].replace(':', "");
-                let hour = digits[..2].parse::<i32>().ok()?;
-                let minute = digits[2..].parse::<i32>().ok()?;
-                if hour >= 24 || minute >= 60 {
-                    return None;
-                }
-                (hour * 3600 + minute * 60) * if token.starts_with('-') { -1 } else { 1 }
-            };
-            let time = Time::new(h, m, second, nanos).ok()?;
+        if let Some(seconds) = parsed_offset(remaining) {
             return Some(Timestamp::from_jiff(
                 jiff::tz::Offset::from_seconds(seconds)
                     .ok()?
-                    .to_timestamp(DateTime::from_parts(date, time))
+                    .to_timestamp(dt)
                     .ok()?,
             ));
         }
-        return local(date, h, m, second, nanos, zone);
+        return resolve(dt, zone, None);
+    }
+    // Date._parse's compact-number pass accepts a two-digit day even amid junk.
+    // In particular a failed documented-language regex can still reach this pass.
+    if !found
+        && let Some(c) = re(r"[0-9]{2,14}").find(text)
+        && c.as_str().len() == 2
+    {
+        date = normalized_date(date.year(), date.month(), c.as_str().parse().ok()?)?;
+        found = true;
     }
     if found
         || WEEKDAYS
@@ -387,4 +439,27 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
     } else {
         None
     }
+}
+
+fn offset_pattern() -> &'static Regex {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN.get_or_init(|| re(r"(?i)\A(?P<offset>(?:GMT|UTC?)?[+-][0-9]{2}:?[0-9]{2}|[[:alpha:].\x09-\x0d ]+(?:standard|daylight)\s+time\b|[[:alpha:]]+(?:\s+dst)?\b)"))
+}
+fn parsed_offset(text: &str) -> Option<i32> {
+    let c = offset_pattern().captures(text)?;
+    let token = c["offset"].to_ascii_lowercase();
+    if let Some(number) = re(r"[+-][0-9]{2}:?[0-9]{2}").find(&token) {
+        let number = number.as_str();
+        let digits = number[1..].replace(':', "");
+        let hour = digits[..2].parse::<i32>().ok()?;
+        let minute = digits[2..].parse::<i32>().ok()?;
+        return Some((hour * 3600 + minute * 60) * if number.starts_with('-') { -1 } else { 1 });
+    }
+    static OFFSETS: OnceLock<std::collections::HashMap<String, i32>> = OnceLock::new();
+    OFFSETS
+        .get_or_init(|| {
+            serde_json::from_str(include_str!("../tests/ws8_slash_offsets.json")).unwrap()
+        })
+        .get(&token.split_whitespace().collect::<Vec<_>>().join(" "))
+        .copied()
 }

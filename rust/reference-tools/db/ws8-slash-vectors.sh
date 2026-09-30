@@ -14,4 +14,4 @@ docker run --rm --cpus 2 --name ws8slash-oracle --entrypoint '' \
   -v "$scratch/pin/lib:/rails/lib:ro" -v "$scratch/pin/Gemfile.lock:/oracle-Gemfile.lock:ro" \
   -v "$root/rust/crates/db/ruby:/tools:ro" -v "$root/rust/crates/db/src/tests:/out" \
   -v "$scratch/tmp:/rails/tmp" "${PARITY_IMAGE:-ws8-reference-models}" \
-  sh -ec 'cmp /rails/Gemfile.lock /oracle-Gemfile.lock; bin/rails db:prepare >/dev/null; bin/rails runner /tools/ws8_slash_vectors.rb /out/ws8_slash_vectors.json /out/ws8_slash_zones.json'
+  sh -ec 'cmp /rails/Gemfile.lock /oracle-Gemfile.lock; bin/rails db:prepare >/dev/null; bin/rails runner /tools/ws8_slash_vectors.rb /out/ws8_slash_vectors.json /out/ws8_slash_zones.json; bin/rails runner /tools/ws8_slash_review_vectors.rb /out/ws8_slash_review_vectors.json /out/ws8_slash_review_zones.json /out/ws8_slash_offsets.json'
