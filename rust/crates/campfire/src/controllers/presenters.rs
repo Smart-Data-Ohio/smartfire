@@ -174,6 +174,12 @@ impl<'a> Presenter<'a> {
     }
     pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
         let data = super::searches::preloads::Preloads::load(self, messages)?;
+        let ids = data.records.body_ids(messages);
+        let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
+        for id in &ids { posts.entry(*id).or_default(); }
+        for rows in posts.values_mut() { crate::integrations::twitter::post::Post::order_cards(rows); }
+        self.twitter_existence.borrow_mut().extend(posts.values().flatten().map(|post| (post.post_id.clone(), true)));
+        self.twitter_posts.borrow_mut().extend(posts);
         Ok(Self { app:self.app,conn:self.conn,secrets:self.secrets,storage:self.storage,rich_text:self.rich_text,now:self.now,
             request_host:self.request_host.clone(),cache_base_url:self.cache_base_url.clone(),
             users:RefCell::default(),room_names:RefCell::default(),search_preloads:Some(data),
@@ -203,6 +209,14 @@ impl<'a> Presenter<'a> {
         crate::integrations::twitter::post::Post::order_cards(&mut posts);
         self.twitter_posts.borrow_mut().insert(message.id, posts.clone());
         Ok(posts)
+    }
+    pub fn link_references(&self, message: &Message) -> Result<Vec<crate::integrations::link_embed::Reference>> {
+        if let Some(data) = &self.search_preloads { return Ok(data.link_references.get(&message.id).cloned().unwrap_or_default()); }
+        crate::integrations::link_embed::Reference::for_message(self.conn, message)
+    }
+    pub fn fizzy_cards(&self, message: &Message) -> Result<Vec<crate::integrations::fizzy::cards::Card>> {
+        if let Some(data) = &self.search_preloads { return Ok(data.fizzy_cards.get(&message.id).cloned().unwrap_or_default()); }
+        crate::integrations::fizzy::cards::Card::for_message(self.conn, message.id)
     }
     pub fn request_twitter_fetch(&self, post: &crate::integrations::twitter::post::Post) {
         if post.fetch_pending() { self.twitter_fetches.borrow_mut().insert(post.id); }
@@ -308,11 +322,6 @@ impl<'a> Presenter<'a> {
     /// rendering, while individual messages bypass the collection cache.
     pub fn messages(&self, messages: &[Message]) -> Result<Vec<MessageItem>> {
         if self.search_preloads.is_none() {
-            let ids = messages.iter().map(|m| m.id).collect::<Vec<_>>();
-            let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
-            for id in &ids { posts.entry(*id).or_default(); }
-            for posts in posts.values_mut() { crate::integrations::twitter::post::Post::order_cards(posts); }
-            self.twitter_posts.borrow_mut().extend(posts);
             return self.preload_search(messages)?.messages(messages);
         }
         messages.iter().map(|message| self.message_item(message)).collect()

@@ -8,9 +8,9 @@ use campfire_db::{Connection, Message, Room};
 use campfire_views::messages::{self, MessageComponents};
 
 pub fn components(presenter: &super::Presenter<'_>, message: &Message) -> campfire_db::Result<MessageComponents> {
-    let mut components = MessageComponents { twitter_posts: super::twitter_cards::cards(presenter, message)?, fizzy_cards: super::fizzy_cards::frames(presenter.conn, message)?, ..Default::default() };
+    let mut components = MessageComponents { twitter_posts: super::twitter_cards::cards(presenter, message)?, fizzy_cards: super::fizzy_cards::frames_from_cards(message, &presenter.fizzy_cards(message)?), ..Default::default() };
     if !message.embeds_suppressed {
-        for reference in Reference::for_message(presenter.conn, message)? {
+        for reference in presenter.link_references(message)? {
             presenter.request_link_fetch(&reference.embed);
             if reference.embed.linkedin() {
                 let embed = &reference.embed;

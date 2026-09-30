@@ -15,6 +15,9 @@ pub(crate) struct Preloads {
     pub attachments: HashMap<i64, campfire_storage::Blob>,
     pub icons: IconCatalog,
     pub custom_icons: HashMap<String, String>,
+    // Shared persisted provider facts, loaded before any message/quote rendering.
+    pub fizzy_cards: HashMap<i64, Vec<crate::integrations::fizzy::cards::Card>>,
+    pub link_references: HashMap<i64, Vec<crate::integrations::link_embed::Reference>>,
 }
 impl Preloads {
     pub fn load(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
@@ -41,7 +44,11 @@ impl Preloads {
                 }
             })
             .collect();
+        let ids = records.body_ids(messages);
+        let fizzy_cards = crate::integrations::fizzy::cards::Card::for_messages(p.conn, &ids)?;
+        let link_references = crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?;
         Ok(Self {
+            fizzy_cards, link_references,
             records,
             users,
             attachments,

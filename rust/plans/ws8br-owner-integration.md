@@ -104,6 +104,11 @@ for persisted Twitter, Fizzy, generic-link and LinkedIn facts, and retains WS8bm
 `quote_references` alongside them. Its preloaded child presenters share pending fetch
 sets and Twitter facts with their parent, so the caller receives every requested ID.
 `PageResolver` delegates Twitter existence and signed image paths to main's resolver.
+The existing preload pass also batches Fizzy cards, link references and Twitter posts
+for selected messages and their quote/reply sources. Card/reference order comes from
+the owners' read-only batch seams; frame/card rendering still uses their factories.
+Empty provider facts are remembered, so preloaded quote rendering stays query-free
+and four versus sixteen complete search-message renders use the same query count.
 Root `render_show` returns pending link and Twitter IDs from its reader closure and
 calls main's `enqueue_render_fetches` on the writer before returning the page.
 A rejected enqueue clears the incomplete rendered fragment cache so a retry can
@@ -117,7 +122,11 @@ The strict native comparison checks three seeded room root collections and all n
 complete list/composer/pending-template regions. It deliberately exits nonzero on
 any difference, with no masks, allowlists, ignored app cases or substituted fragments.
 All six composer/template regions and both DM list regions now match exactly.
-The remaining populated Designers list differs only in the empty GitHub PR card slot.
+The remaining populated Designers list differs only in the empty GitHub PR card slot. WS15g's
+unmerged adapter exposes `github::message_cards(conn, app, message)` and
+`github::cache_stamp(conn, message)`, carried by `MessageComponents.github_cards_html`
+and `github_cards_stamp`. Those fields/factories are not on main yet; reconcile them
+with the merged provider and quote components rather than replacing either.
 Fizzy, generic link embed and LinkedIn now call the WS15e factories merged on main;
 their complete container bytes are also asserted through the real room-page HTTP path. `ws8br-native-residual.json` retains
 each exact Rails/Rust region; the strict checker still exits 1. The owner message
