@@ -1,10 +1,10 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 91 declarations now have complete assertion coverage mapped below. The other 457 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 147 declarations now have complete assertion coverage mapped below. The other 401 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
-The following have verified core coverage, while the original declarations remain individually listed below. Owners remain WS13 unless the original entry identifies WS17 transport or Notifications::Policy.
+Historical domain coverage predates the WS13b split and is retained below. WS13b now owns the model/job/service files; WS13 owns controllers, integration and system files. WS17 retains transport and Notifications::Policy.
 
 - `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Running every protocol shape through HTTP and completing presence/notice assertions remain open.
 - `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations now have 49 exact Rails issuance scenarios; Stream callbacks now run; committed presence and leave/call-ended notices now have the coverage below.
@@ -14,7 +14,7 @@ The presence slice adds 50 exact pinned Rails participant renders (sidebar/heade
 
 The process task now runs invitations, stale streams and cleanups in Rails order with per-row commits and isolated failures. Stream create/end callbacks, explicit stopped events, last-host succession and quiet timeline delivery, role/mute grant revocation, and role/hand/moderation controllers are implemented. The stream/lifecycle corpus has 20 production Rails cases, moderation has 29 real requests, roles/hands has 34 real requests plus a real minute-bucket throttle probe, and Stage fragments have 400 byte-identical renders. Real socket tests prove committed changes, personal delivery, single rejoin behavior and silent rollback.
 
-Passed titles are backed jointly by those differential tests, the real HTTP/Cable tests in `call_lifecycle_tests.rs` and `huddle_effects_tests.rs`, and the existing WS8a `room_test.rs` and grant tests. Counts are original declarations, not vector counts. Whole per-viewer fan-out declarations, combinations not explicitly exercised (for example another administrator as moderation target), preload/query assertions and creation/edit flows remain open even where the underlying method is implemented. Full public huddles and aggregate presence controllers, voice/stage CRUD controllers, and 11 of the original 19 owned views remain open. The extra event venue dot is verified with Stage fragments. WS17 retains policy/transport; real LiveKit system tests retain LIVEKIT_SYSTEM_TESTS=1 with a real server as the reason.
+Passed titles are backed jointly by those differential tests, the real HTTP/Cable tests in `call_lifecycle_tests.rs` and `huddle_effects_tests.rs`, and the existing WS8a `room_test.rs` and grant tests. Counts are original declarations, not vector counts. Whole per-viewer fan-out declarations, combinations not explicitly exercised (for example another administrator as moderation target), preload/query assertions and full page composition remain open even where the underlying method is implemented. Public huddles and aggregate presence now have 65 production Rails HTTP vectors; voice/stage CRUD has 47 request vectors, two deletion vectors and real ordered Cable delivery. Component goldens cover both form partials in new/edit states, both sidebar rows, three huddle panels and both new-page content blocks. Both edit templates are implemented, but their full composition (GitHub/inbound-email sections), request-wide new/edit page byte checks and room/sidebar insertion remain open. No WS13b model/job/service cases were newly ported in this continuation. The extra event venue dot is verified with Stage fragments. WS17 retains policy/transport; real LiveKit system tests retain LIVEKIT_SYSTEM_TESTS=1 with a real server as the reason.
 
 ## Rails declaration coverage by file
 
@@ -24,17 +24,17 @@ These are original declaration counts, not Rust test counts or individual vector
 | --- | ---: | ---: | ---: |
 | `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 16 | 22 |
 | `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
-| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
+| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 23 | 13 |
 | `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
 | `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
 | `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
 | `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
 | `test/models/stream_test.rb` | 27 | 14 | 13 |
-| `test/controllers/rooms/stages_controller_test.rb` | 24 | 0 | 24 |
+| `test/controllers/rooms/stages_controller_test.rb` | 24 | 15 | 9 |
 | `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
 | `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
-| `test/controllers/rooms/voices_controller_test.rb` | 18 | 0 | 18 |
+| `test/controllers/rooms/voices_controller_test.rb` | 18 | 13 | 5 |
 | `test/controllers/rooms/stage_view_test.rb` | 16 | 0 | 16 |
 | `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
@@ -47,7 +47,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
 | `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
 | `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
-| `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 0 | 6 |
+| `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 5 | 1 |
 | `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
 | `test/integration/huddle_presence_test.rb` | 5 | 0 | 5 |
 | `test/models/rooms/voice_test.rb` | 5 | 2 | 3 |
@@ -55,7 +55,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **91** | **457** |
+| **Total** | **548** | **147** | **401** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -117,44 +117,44 @@ Owner: WS13. Partial: 13/19 declarations passed; the other 6 remain WS13 work.
 
 ## test/controllers/rooms/huddles_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 23/36 declarations passed; the other 13 remain open.
 
-- an authorized room member receives a narrowly scoped join token
+- **Passed:** an authorized room member receives a narrowly scoped join token
 - the active grant is reused while its random participant identity remains opaque
-- direct rooms use their participant-based display name
+- **Passed:** direct rooms use their participant-based display name
 - starting a one-to-one DM huddle invites only the other participant
 - starting a channel huddle creates no invitation
 - group direct rooms can start a huddle
 - a nonmember cannot get a grant in a group DM and a removed member loses theirs
-- GET confirms ongoing access without returning credentials
-- GET denies access after room membership is revoked
-- GET denies access to a soft-deleted room
-- participants lists the room's in-call members without caching
-- participants reflects only in-call grants
+- **Passed:** GET confirms ongoing access without returning credentials
+- **Passed:** GET denies access after room membership is revoked
+- **Passed:** GET denies access to a soft-deleted room
+- **Passed:** participants lists the room's in-call members without caching
+- **Passed:** participants reflects only in-call grants
 - a member removed mid-call is revoked and disappears from participants
-- participants is reported for group direct rooms
+- **Passed:** participants is reported for group direct rooms
 - participants denies non-members, outsiders, and unauthenticated requests
-- participants denies bots and inactive users
-- participants requires LiveKit configuration
+- **Passed:** participants denies bots and inactive users
+- **Passed:** participants requires LiveKit configuration
 - GET denies access after sign out
 - a nonmember cannot join a closed room
-- a nonmember cannot mint voice credentials
-- participants denies a member after removal
+- **Passed:** a nonmember cannot mint voice credentials
+- **Passed:** participants denies a member after removal
 - an outsider cannot join a direct room
-- an unauthenticated request receives JSON instead of a redirect
-- bots cannot join
-- bots cannot join through an ordinary session
-- banned users cannot join
-- missing LiveKit configuration is reported without minting a token
+- **Passed:** an unauthenticated request receives JSON instead of a redirect
+- **Passed:** bots cannot join
+- **Passed:** bots cannot join through an ordinary session
+- **Passed:** banned users cannot join
+- **Passed:** missing LiveKit configuration is reported without minting a token
 - a concurrent membership revocation receives a controlled denial
-- a stage listener's token cannot publish anything
-- stage speakers and hosts publish like any other participant
-- voice and direct room tokens still publish
+- **Passed:** a stage listener's token cannot publish anything
+- **Passed:** stage speakers and hosts publish like any other participant
+- **Passed:** voice and direct room tokens still publish
 - a public URL pointing directly at the internal LiveKit address is rejected
 - leaving drops the session's grants out of the call without revoking
-- leaving works for voice rooms and group directs, like participants
-- leaving twice, or without ever joining, still answers no content
-- leaving denies non-members, bots, and unauthenticated requests
+- **Passed:** leaving works for voice rooms and group directs, like participants
+- **Passed:** leaving twice, or without ever joining, still answers no content
+- **Passed:** leaving denies non-members, bots, and unauthenticated requests
 
 ## test/controllers/rooms/stage/hands_controller_test.rb
 
@@ -267,66 +267,66 @@ Owner: WS13. Deferred.
 
 ## test/controllers/rooms/stages_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 15/24 declarations passed; the other 9 remain open.
 
-- show redirects to get general show
-- new
-- create makes the creator host and the rest listeners
-- create prepends the stage row into the stage section
-- create forbidden by non-admin when account restricts creation to admins
+- **Passed:** show redirects to get general show
+- **Passed:** new
+- **Passed:** create makes the creator host and the rest listeners
+- **Passed:** create prepends the stage row into the stage section
+- **Passed:** create forbidden by non-admin when account restricts creation to admins
 - update with membership revisions makes new members listeners
-- removing a member tells them to drop the sidebar row and header stack
-- a non-administrator creator can manage members of their own stage room
+- **Passed:** removing a member tells them to drop the sidebar row and header stack
+- **Passed:** a non-administrator creator can manage members of their own stage room
 - only admins or creators can update
-- the sole host cannot remove themselves while others remain
+- **Passed:** the sole host cannot remove themselves while others remain
 - create with an unknown icon re-renders the new form
-- update with an unknown icon re-renders the edit form without revising members
-- update with an icon normalizes the shortcode
-- update clears the icon with a blank shortcode
+- **Passed:** update with an unknown icon re-renders the edit form without revising members
+- **Passed:** update with an icon normalizes the shortcode
+- **Passed:** update clears the icon with a blank shortcode
 - updating the icon replaces sidebar rows and headers for members only
-- a host removes themselves once another host exists
+- **Passed:** a host removes themselves once another host exists
 - the sole-host check and revision run in one locked transaction
 - removing everyone including the last host empties the room
 - the room page and the members edit render with zero hosts
 - non-members cannot see the room page or its messages
 - non-members cannot reach the stage namespace
-- open, closed, and voice rooms cannot be converted to stage
-- stage rooms cannot be converted through the open, closed, or voice namespaces
-- a direct room can't be converted to stage and have its participants revised
+- **Passed:** open, closed, and voice rooms cannot be converted to stage
+- **Passed:** stage rooms cannot be converted through the open, closed, or voice namespaces
+- **Passed:** a direct room can't be converted to stage and have its participants revised
 
 ## test/controllers/rooms/voices_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 13/18 declarations passed; the other 5 remain open.
 
-- show redirects to get general show
-- new
-- create
-- create prepends the voice row into the voice section
-- create forbidden by non-admin when account restricts creation to admins
-- update with an icon normalizes the shortcode
+- **Passed:** show redirects to get general show
+- **Passed:** new
+- **Passed:** create
+- **Passed:** create prepends the voice row into the voice section
+- **Passed:** create forbidden by non-admin when account restricts creation to admins
+- **Passed:** update with an icon normalizes the shortcode
 - create with an unknown icon re-renders the new form
-- update with an unknown icon re-renders the edit form
-- update with membership revisions
-- removing a member tells them to drop the sidebar row and header stack
-- a non-administrator creator can manage members of their own voice room
+- **Passed:** update with an unknown icon re-renders the edit form
+- **Passed:** update with membership revisions
+- **Passed:** removing a member tells them to drop the sidebar row and header stack
+- **Passed:** a non-administrator creator can manage members of their own voice room
 - only admins or creators can update
 - remove yourself
 - non-members cannot see the room page or its messages
 - non-members cannot reach the voice namespace
-- open and closed rooms cannot be converted to voice
-- voice rooms cannot be converted through the open or closed namespaces
-- a direct room can't be converted to voice and have its participants revised
+- **Passed:** open and closed rooms cannot be converted to voice
+- **Passed:** voice rooms cannot be converted through the open or closed namespaces
+- **Passed:** a direct room can't be converted to voice and have its participants revised
 
 ## test/controllers/users/huddle_presence_controller_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Partial: 5/6 declarations passed; the other 1 remain open.
 
-- returns only the current user's rooms with at least one participant
+- **Passed:** returns only the current user's rooms with at least one participant
 - the response runs one grants query no matter how many rooms are live
-- returns an empty list when nobody is in any call
-- an unauthenticated request receives JSON instead of a redirect
-- bots and inactive users are denied like the huddle controller
-- missing LiveKit configuration is reported
+- **Passed:** returns an empty list when nobody is in any call
+- **Passed:** an unauthenticated request receives JSON instead of a redirect
+- **Passed:** bots and inactive users are denied like the huddle controller
+- **Passed:** missing LiveKit configuration is reported
 
 ## test/integration/huddle_presence_test.rb
 
@@ -340,14 +340,14 @@ Owner: WS13. Deferred.
 
 ## test/jobs/huddle/broadcast_presence_job_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - broadcasts the room's current stacks
 - missing grants and rooms stay silent
 
 ## test/jobs/huddle/join_notice_job_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - a first sighting enqueues the join notice alongside the presence broadcast
 - a repeat sighting enqueues no join notice
@@ -356,7 +356,7 @@ Owner: WS13. Deferred.
 
 ## test/jobs/huddle/push_invitation_job_test.rb
 
-Owner: WS13 with WS17 for transport/policy integration. Deferred.
+Owner: WS13b with WS17 for transport/policy integration. Deferred.
 
 - pushes the invitation to the recipient only
 - an opted-out recipient gets no push subscriptions
@@ -365,7 +365,7 @@ Owner: WS13 with WS17 for transport/policy integration. Deferred.
 
 ## test/models/huddle/invitation_resolver_test.rb
 
-Owner: WS13. Passed: all nine declarations, mapped to the 29-case Rails resolver corpus and `overdue_invitations_match_twenty_nine_rails_scenarios_and_are_idempotent`. Complete row snapshots cover state, unread/read/handled stamps and item counts; group and per-user cases cover both recipients; a second pass proves idempotence.
+Owner: WS13b. Passed: all nine declarations, mapped to the 29-case Rails resolver corpus and `overdue_invitations_match_twenty_nine_rails_scenarios_and_are_idempotent`. Complete row snapshots cover state, unread/read/handled stamps and item counts; group and per-user cases cover both recipients; a second pass proves idempotence.
 
 - **Passed:** an unanswered invitation becomes a missed call and stays unread
 - **Passed:** unanswered group invitations each become missed calls
@@ -379,7 +379,7 @@ Owner: WS13. Passed: all nine declarations, mapped to the 29-case Rails resolver
 
 ## test/models/huddle/join_notifier_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - an in-call DM member is told when the peer joins, and the joiner is not
 - a member with no access to the room is told nothing
@@ -417,7 +417,7 @@ Owner: WS13. Deferred.
 
 ## test/models/huddle/join_pusher_test.rb
 
-Owner: WS13 with WS17 for transport/policy integration. Deferred.
+Owner: WS13b with WS17 for transport/policy integration. Deferred.
 
 - pushes the join to the recipient's subscriptions and stamps the throttle
 - a second push inside ten minutes is throttled
@@ -435,7 +435,7 @@ Owner: WS13 with WS17 for transport/policy integration. Deferred.
 
 ## test/models/huddle/ring_policy_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - an invitation rings a member who is not in do-not-disturb
 - do-not-disturb silences the ring
@@ -448,7 +448,7 @@ Owner: WS13. Deferred.
 
 ## test/models/huddle_grant_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - an active session and membership reuse one random grant
 - revoking and restoring room membership never resurrects the old grant
@@ -486,7 +486,7 @@ Owner: WS13. Deferred.
 
 ## test/models/huddle_invitation_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - issuing a grant in a one-to-one DM invites only the other participant
 - issuing a grant never schedules a delayed job
@@ -529,7 +529,7 @@ Owner: WS13. Deferred.
 
 ## test/models/huddle_revocation_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - membership revocation persists cleanup for only that grant
 - session removal revokes its grants in every room and leaves another session active
@@ -543,7 +543,7 @@ Owner: WS13. Deferred.
 
 ## test/models/rooms/stage_test.rb
 
-Owner: WS13. Partial: 12/27 declarations passed against the hand, lifecycle and participation corpora plus existing WS8a room tests; the other 15 remain open.
+Owner: WS13b. Partial: 12/27 declarations passed against the hand, lifecycle and participation corpora plus existing WS8a room tests; the other 15 remain open.
 
 - **Passed:** type predicate
 - stage rooms are listed without directs but outside the voice scope
@@ -575,7 +575,7 @@ Owner: WS13. Partial: 12/27 declarations passed against the hand, lifecycle and 
 
 ## test/models/rooms/voice_test.rb
 
-Owner: WS13. Partial: 2/5 declarations passed; the other 3 remain WS13 work.
+Owner: WS13b. Partial: 2/5 declarations passed; the other 3 remain WS13b work.
 
 - **Passed:** type predicate
 - voices scope and channel queries include voice rooms
@@ -585,7 +585,7 @@ Owner: WS13. Partial: 2/5 declarations passed; the other 3 remain WS13 work.
 
 ## test/models/stream_test.rb
 
-Owner: WS13. Partial: 14/27 declarations passed; the other 13 remain WS13 work.
+Owner: WS13b. Partial: 14/27 declarations passed; the other 13 remain WS13b work.
 
 - **Passed:** quality must be a known preset
 - **Passed:** started_at defaults to now
@@ -617,7 +617,7 @@ Owner: WS13. Partial: 14/27 declarations passed; the other 13 remain WS13 work.
 
 ## test/services/huddle/reconciler_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13b. Deferred.
 
 - one pass resolves overdue invitations, ends stale streams, and reconciles cleanup
 - a resolver failure is logged and does not stop cleanup reconciliation
