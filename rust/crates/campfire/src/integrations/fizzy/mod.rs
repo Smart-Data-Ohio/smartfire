@@ -58,3 +58,5 @@ fn ruby_inspect(value: &Value) -> String {
 }
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod rails_client_tests;
