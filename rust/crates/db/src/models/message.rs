@@ -455,6 +455,7 @@ impl Message {
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
             crate::models::message_reference::sync(tx, &message)?;
+            crate::models::calendar_event::references::sync(tx, &message)?;
             message.push_later_in_conversation(tx);
         }
         if message.thread_id.is_some() {
@@ -788,7 +789,10 @@ impl Message {
         }
         if !self.streaming {
             self.update_in_index(tx)?;
-            if references_changed { crate::models::message_reference::sync(tx, self)?; }
+            if references_changed {
+                crate::models::message_reference::sync(tx, self)?;
+                crate::models::calendar_event::references::sync(tx, self)?;
+            }
         }
         Ok(())
     }

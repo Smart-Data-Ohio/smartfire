@@ -4,6 +4,7 @@ mod account_test;
 mod audit_log_test;
 mod callbacks_test;
 mod channel_thread_test;
+mod calendar_event_test;
 mod differential_test;
 mod direct_room_test;
 mod first_run_test;
