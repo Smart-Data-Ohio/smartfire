@@ -1,5 +1,8 @@
 //! Views for `reference/app/views/accounts`.
 
+pub mod audit_logs;
+pub mod icons;
+
 use askama::Template;
 
 use crate::ViewContext;

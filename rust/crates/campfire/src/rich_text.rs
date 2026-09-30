@@ -48,6 +48,10 @@ struct Brand {
 const ICON_CONFIG: &str = include_str!("../vendor/icons.yml");
 static BRANDS: LazyLock<Vec<Brand>> =
     LazyLock::new(|| serde_yaml::from_str(ICON_CONFIG).expect("vendored config/icons.yml"));
+pub(crate) fn builtin_icon(name: &str) -> bool {
+    let name=campfire_richtext::ruby::strip(name).trim_matches(':').trim().to_lowercase();
+    BRANDS.iter().any(|b| b.name==name || b.aliases.contains(&name))
+}
 fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     let mut icons = IconCatalog::default();
     for brand in BRANDS.iter() {

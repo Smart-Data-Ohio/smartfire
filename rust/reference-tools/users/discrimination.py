@@ -11,6 +11,9 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("icons-svg", "crates/storage/src/workspace_icon.rs", '"script" => return Some("must not contain script elements")', '"script_never" => return Some("must not contain script elements")', "all_committed_media_and_field_validation_cases_match_rails"),
+    ("audit-csv-formula", "crates/campfire/src/controllers/accounts/audit_logs.rs", "['=', '+', '-', '@', '\\t', '\\r']", "['X', '+', '-', '@', '\\t', '\\r']", "html_navigation_csv_and_filtered_order_match_rails"),
+    ("icons-header", "crates/campfire/src/controllers/workspace_icons.rs", 'c.set_header("x-content-type-options", "nosniff");', 'c.set_header("x-content-type-options", "sniff");', "serving_svg_and_png_uses_private_bytes_and_checksum_conditionals"),
     ("account-view-auth", "crates/views/templates/accounts/users/_user.html", "{% if ctx.can_administer() && user.active() %}", "{% if !ctx.can_administer() && user.active() %}", "account_member_rows_match_google_security_role_and_inactive_rails_controls"),
     ("account-view-google", "crates/views/src/users/summary.rs", "self.email_self_changed || !self.google_email_link_allowed", "self.email_self_changed || self.google_email_link_allowed", "account_member_rows_match_google_security_role_and_inactive_rails_controls"),
     ("audit-duplicate", "crates/campfire/src/account_security.rs", "    )?;\n    Ok(())\n}\n\npub fn settings_changed", "    )?;\n    AuditLog::record(tx, NewAuditLog { action: action.into(), target: Some(Target::from(account)), ..Default::default() }, context)?;\n    Ok(())\n}\n\npub fn settings_changed", "settings_name_writes_exactly_one_rails_audit_row"),

@@ -42,6 +42,20 @@ covered_before = {
 }
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
+    "controllers/accounts/audit_logs_controller_test.rb": {
+        "admins can browse the log", "members are forbidden", "visitors are sent to sign in", "visitors cannot export CSV", "members cannot export CSV",
+        "filtering by actor matches names and emails in labels", "filtering by action and target type", "unknown filter values are ignored", "filtering by date range", "paging walks older entries",
+        "CSV export carries headers and the filtered rows", "CSV export neutralizes formula injection", "past the export cap the page warns and the CSV filename says truncated",
+        "within the export cap there is no truncation notice", "CSV export neutralizes formula injection in request columns",
+    },
+    "controllers/accounts/icons_controller_test.rb": {
+        "index lists icons with previews shortcodes titles and uploaders", "create uploads an icon", "create renders validation errors inline",
+        "create reports a name that raced past validation as taken", "destroy removes the icon and its blob", "members get forbidden on list create and delete",
+    },
+    "controllers/workspace_icons_controller_test.rb": {
+        "serves an SVG with the documented headers", "serves a PNG without the SVG-only headers", "supports conditional GETs with the blob checksum",
+        "returns not found for unknown names", "returns not found for signed-out users", "unenrolled sessions are sent to setup instead of served the icon", "stale enrolled sessions are signed out instead of served the icon",
+    },
     "controllers/users_controller_test.rb": {
         "profile message buttons carry the accessible name", "index lists active members with presence and selection",
         "index lists starred people first with a star marker", "index requires sign-in",

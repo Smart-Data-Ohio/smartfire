@@ -1,5 +1,7 @@
 //! `AccountsController` (reference/app/controllers/accounts_controller.rb): account settings.
 
+pub mod audit_logs;
+pub mod icons;
 pub mod bots;
 pub mod custom_styles;
 pub mod join_codes;

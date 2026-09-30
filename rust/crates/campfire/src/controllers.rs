@@ -38,6 +38,7 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
+pub mod workspace_icons;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
@@ -187,6 +188,11 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts/bots#update" => arc(accounts::bots::update),
         "accounts/bots#destroy" => arc(accounts::bots::destroy),
         "accounts/join_codes#create" => arc(accounts::join_codes::create),
+        "accounts/icons#index" => arc(accounts::icons::index),
+        "accounts/icons#create" => arc(accounts::icons::create),
+        "accounts/icons#destroy" => arc(accounts::icons::destroy),
+        "workspace_icons#show" => arc(workspace_icons::show),
+        "accounts/audit_logs#show" => arc(accounts::audit_logs::show),
         "accounts/logos#show" => arc(accounts::logos::show),
         "accounts/logos#destroy" => arc(accounts::logos::destroy),
         "accounts/custom_styles#edit" => arc(accounts::custom_styles::edit),
