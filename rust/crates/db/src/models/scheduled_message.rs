@@ -345,7 +345,7 @@ impl ScheduledMessage {
                     || mentioned_ids.contains(&member.user_id)
                 {
                     tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
-                        stream: format!("user_{}_unread_rooms", member.user_id),
+                        stream: crate::broadcasts::unread_rooms_stream_name(member.user_id),
                         payload: serde_json::json!({ "roomId": message.room_id }),
                     }));
                 }

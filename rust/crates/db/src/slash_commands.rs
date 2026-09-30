@@ -484,7 +484,7 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
                 || mentioned.contains(&member.user_id)
             {
                 tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
-                    stream: format!("user_{}_unreads", member.user_id),
+                    stream: crate::broadcasts::unread_rooms_stream_name(member.user_id),
                     payload: json!({"roomId":room.id}),
                 }));
             }
