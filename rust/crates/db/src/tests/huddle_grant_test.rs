@@ -13,7 +13,15 @@ fn config() -> HuddleConfig {
 }
 
 fn issue(db: &TestDb, membership: i64, session: i64) -> HuddleGrant {
-    db.write(move |tx| HuddleGrant::issue(tx, session, membership, &config()))
+    db.write(move |tx| {
+        HuddleGrant::issue(
+            tx,
+            session,
+            membership,
+            Membership::find(tx.conn(), membership)?.room_id,
+            &config(),
+        )
+    })
 }
 fn clear_grants(db: &TestDb) {
     db.write(|tx| Ok(tx.conn().execute("DELETE FROM huddle_grants", [])?));
@@ -228,8 +236,14 @@ fn huddle_issuance_reuses_active_grants_and_never_revives_revoked_rows() {
     assert_ne!(fresh.identity, reused.identity);
     db.write(move |tx| Session::find(tx.conn(), session)?.destroy(tx));
     assert!(
-        db.try_write(move |tx| HuddleGrant::issue(tx, session, membership, &config()))
-            .is_err()
+        db.try_write(move |tx| HuddleGrant::issue(
+            tx,
+            session,
+            membership,
+            Membership::find(tx.conn(), membership)?.room_id,
+            &config()
+        ))
+        .is_err()
     );
 }
 
@@ -248,7 +262,15 @@ fn huddle_concurrent_issuance_obeys_partial_unique_index() {
         let b = scope.spawn(|| {
             barrier.wait();
             other
-                .write_blocking(move |tx| HuddleGrant::issue(tx, session, membership, &config()))
+                .write_blocking(move |tx| {
+                    HuddleGrant::issue(
+                        tx,
+                        session,
+                        membership,
+                        Membership::find(tx.conn(), membership)?.room_id,
+                        &config(),
+                    )
+                })
                 .unwrap()
         });
         (a.join().unwrap(), b.join().unwrap())
@@ -426,6 +448,86 @@ fn huddle_room_deletion_revokes_without_per_participant_cleanup() {
             [],
             |r| r.get::<_, i64>(0)
         )?)),
+        0
+    );
+}
+
+#[test]
+fn huddle_issuance_rejects_cross_user_and_stale_room_coordinates() {
+    let db = TestDb::new();
+    let (_, membership, session) = setup(&db);
+    clear_grants(&db);
+    let other = db.write(|tx| Session::start(tx, crate::fixtures::identify("jason"), None, None));
+    assert!(
+        db.try_write(move |tx| HuddleGrant::issue(
+            tx,
+            other.id,
+            membership,
+            Membership::find(tx.conn(), membership)?.room_id,
+            &config()
+        ))
+        .is_err()
+    );
+    let room = db.read(|conn| Ok(Membership::find(conn, membership)?.room_id));
+    assert!(
+        db.try_write(move |tx| HuddleGrant::issue(tx, session, membership, room + 1, &config()))
+            .is_err()
+    );
+    assert_eq!(
+        db.read(|conn| Ok(
+            conn.query_row("SELECT count(*) FROM huddle_grants", [], |r| r
+                .get::<_, i64>(0))?
+        )),
+        0
+    );
+}
+
+#[test]
+fn huddle_issuance_retries_three_real_unique_conflicts_without_leaking_rows() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    let db = TestDb::new();
+    let (_, membership, session) = setup(&db);
+    clear_grants(&db);
+    db.write(|tx| Ok(tx.conn().execute_batch("CREATE TRIGGER collide_grant BEFORE INSERT ON huddle_grants BEGIN INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,created_at,updated_at) VALUES(NEW.identity,NEW.room_name,NEW.session_id,NEW.user_id,NEW.membership_id,NEW.room_id,NEW.created_at,NEW.updated_at); END;")?));
+    struct CountingClock {
+        now: Timestamp,
+        calls: Arc<AtomicUsize>,
+    }
+    impl crate::Clock for CountingClock {
+        fn now(&self) -> Timestamp {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            self.now
+        }
+    }
+    let calls = Arc::new(AtomicUsize::new(0));
+    let mut env = db.db.env().clone();
+    env.clock = Arc::new(CountingClock {
+        now: db.now(),
+        calls: calls.clone(),
+    });
+    let mut cfg = crate::Config::new(db.db.path());
+    cfg.prepare = false;
+    let competing = crate::Database::open(cfg, env).unwrap();
+    let result = competing.write_blocking(move |tx| {
+        HuddleGrant::issue(
+            tx,
+            session,
+            membership,
+            Membership::find(tx.conn(), membership)?.room_id,
+            &config(),
+        )
+    });
+    assert!(result.unwrap_err().is_record_not_unique());
+    // Each attempt asks for the in-call cutoff and then the INSERT timestamp.
+    assert_eq!(calls.load(Ordering::SeqCst), 6);
+    assert_eq!(
+        db.read(|conn| Ok(
+            conn.query_row("SELECT count(*) FROM huddle_grants", [], |r| r
+                .get::<_, i64>(0))?
+        )),
         0
     );
 }

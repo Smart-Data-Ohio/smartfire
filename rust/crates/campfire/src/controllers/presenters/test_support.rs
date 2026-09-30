@@ -119,6 +119,14 @@ pub struct TestApp {
 impl TestApp {
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
+        Self::boot_with_huddle(crate::huddle::Config::default()).await
+    }
+
+    pub async fn boot_with_huddle(huddle: crate::huddle::Config) -> Option<TestApp> {
+        Self::boot_with_huddle_and_clock(huddle, seed_clock()).await
+    }
+
+    pub async fn boot_with_huddle_and_clock(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -126,7 +134,7 @@ impl TestApp {
         copy_dir(&seed.join("storage"), &dir.path().join("files"));
         let root = dir.path().to_string_lossy().into_owned();
         let secret = parity_env("SECRET_KEY_BASE").unwrap();
-        let config = Config::from_lookup(|name| match name {
+        let mut config = Config::from_lookup(|name| match name {
             "SECRET_KEY_BASE" => Some(secret.clone()),
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
@@ -134,7 +142,8 @@ impl TestApp {
             _ => None,
         })
         .unwrap();
-        Some(TestApp { booted: boot_with_clock(config, seed_clock()).await.unwrap(), _dir: dir })
+        config.huddle = huddle;
+        Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap(), _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {

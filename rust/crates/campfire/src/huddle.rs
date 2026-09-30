@@ -24,6 +24,11 @@ pub struct Config {
     pub api_secret: Option<String>,
     pub gateway_secret: Option<String>,
 }
+impl std::fmt::Debug for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HuddleConfig").field("configured", &self.configured()).field("admin_configured", &self.admin_configured()).finish_non_exhaustive()
+    }
+}
 
 impl Config {
     pub fn from_env() -> Self {

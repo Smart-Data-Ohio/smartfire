@@ -119,11 +119,34 @@ impl HuddleGrant {
         tx: &mut Tx<'_>,
         session_id: i64,
         membership_id: i64,
+        room_id: i64,
+        config: &HuddleConfig,
+    ) -> Result<Self> {
+        for attempt in 0..3 {
+            let result =
+                tx.savepoint(|tx| Self::issue_once(tx, session_id, membership_id, room_id, config));
+            if result
+                .as_ref()
+                .is_err_and(|error| error.is_record_not_unique())
+                && attempt < 2
+            {
+                continue;
+            }
+            return result;
+        }
+        unreachable!()
+    }
+
+    fn issue_once(
+        tx: &mut Tx<'_>,
+        session_id: i64,
+        membership_id: i64,
+        expected_room_id: i64,
         config: &HuddleConfig,
     ) -> Result<Self> {
         let candidate: Option<(i64, i64, Option<String>, bool)> = tx.conn().query_row_cached(
-            "SELECT u.id,r.id,CASE WHEN r.type='Rooms::Stage' THEN m.stage_role END,m.server_muted_at IS NOT NULL FROM sessions s JOIN users u ON u.id=s.user_id AND u.status=0 AND u.role!=2 JOIN memberships m ON m.id=? AND m.user_id=u.id JOIN rooms r ON r.id=m.room_id AND r.deleted_at IS NULL WHERE s.id=?",
-            params![membership_id, session_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            "SELECT u.id,r.id,CASE WHEN r.type='Rooms::Stage' THEN m.stage_role END,m.server_muted_at IS NOT NULL FROM sessions s JOIN users u ON u.id=s.user_id AND u.status=0 AND u.role!=2 JOIN memberships m ON m.id=? AND m.room_id=? AND m.user_id=u.id JOIN rooms r ON r.id=m.room_id AND r.deleted_at IS NULL WHERE s.id=?",
+            params![membership_id, expected_room_id, session_id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
         ).optional()?;
         let Some((user_id, room_id, stage_role, server_muted)) = candidate else {
             return Err(crate::Error::Other("HuddleGrant::Ineligible".into()));

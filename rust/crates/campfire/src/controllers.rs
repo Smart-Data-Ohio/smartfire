@@ -51,6 +51,9 @@ pub mod sessions;
 pub mod unfurl_links;
 pub mod users;
 pub mod welcome;
+pub mod internal_huddle;
+#[cfg(test)]
+mod internal_huddle_tests;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -135,6 +138,9 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "internal/huddle#authorize" => arc(internal_huddle::authorize),
+        "internal/huddle#show" => arc(internal_huddle::show),
+        "internal/huddle#left" => arc(internal_huddle::left),
         "welcome#show" => arc(welcome::show),
         "first_runs#show" => arc(first_runs::show),
         "first_runs#create" => arc(first_runs::create),
