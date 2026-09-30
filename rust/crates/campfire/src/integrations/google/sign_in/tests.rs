@@ -221,7 +221,7 @@ async fn exchange_denial_bad_tokens_and_invalid_json_are_distinct() {
         (200, "{\"id_token\":123}", Error::Rejected("bad_token")),
         (200, "{\"id_token\":\" \"}", Error::Rejected("bad_token")),
     ] {
-        let (client, _) = fake(vec![
+        let (client, _server) = fake(vec![
             Route::new("POST", "oauth2.googleapis.com", "/token", status).body(body),
         ])
         .await;
@@ -242,7 +242,7 @@ async fn real_socket_read_timeouts_are_unavailable_for_both_google_hosts() {
         .body(jwt_vectors()["jwt"]["google"]["jwks"].as_str().unwrap());
     token.delay = Duration::from_secs(11);
     keys.delay = Duration::from_secs(11);
-    let (client, _) = fake(vec![token, keys]).await;
+    let (client, _server) = fake(vec![token, keys]).await;
     let started = std::time::Instant::now();
     let (token, key) = tokio::join!(
         client.exchange_code("code", "http://test.host/callback", "verifier"),
@@ -258,7 +258,7 @@ async fn real_socket_read_timeouts_are_unavailable_for_both_google_hosts() {
 async fn security_verified_tokens_match_all_pinned_rails_vectors() {
     let v = jwt_vectors();
     let g = &v["jwt"]["google"];
-    let (mut client, _) = fake(vec![
+    let (mut client, _server) = fake(vec![
         Route::new("GET", "www.googleapis.com", "/oauth2/v3/certs", 200)
             .body(g["jwks"].as_str().unwrap()),
     ])
@@ -357,7 +357,7 @@ async fn empty_cache_unknown_kid_fetches_twice_and_bad_jwks_are_unavailable() {
     );
     assert_eq!(server.received().len(), 2);
     for (status, body) in [(503, "outage"), (200, "nope"), (200, "{\"keys\":[]}")] {
-        let (client, _) = fake(vec![
+        let (client, _server) = fake(vec![
             Route::new("GET", "www.googleapis.com", "/oauth2/v3/certs", status).body(body),
         ])
         .await;
