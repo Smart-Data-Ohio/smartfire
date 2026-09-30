@@ -14,6 +14,7 @@ mod membership_test;
 mod keyword_alert_test;
 mod ws17_review_test;
 mod ws17_case_guard_test;
+mod ws17_endpoint_review_test;
 mod message_activity_test;
 mod message_edit_test;
 mod message_pin_test;

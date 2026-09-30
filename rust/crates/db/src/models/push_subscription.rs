@@ -409,32 +409,91 @@ struct EndpointUri {
 
 impl EndpointUri {
     fn parse(endpoint: &str) -> Option<Self> {
-        if endpoint.is_empty() || endpoint.chars().any(|c| c.is_whitespace()) {
+        // URI::RFC3986_Parser (uri 1.1.1), rather than a browser URL parser:
+        // path/authority/fragment escapes are strict and raw Unicode is rejected.
+        if endpoint.is_empty() || !endpoint.is_ascii() {
             return None;
         }
-        let (scheme, rest) = endpoint.split_once("://")?;
-        let scheme = scheme.to_ascii_lowercase();
-        let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
-        let authority = authority
-            .rsplit_once('@')
-            .map(|(_, h)| h)
-            .unwrap_or(authority);
-        let (host, port) = match authority.rsplit_once(':') {
-            _ if authority.ends_with(']') => (authority.to_string(), None),
-            Some((host, port)) => (host.to_string(), Some(port.parse::<u16>().ok()?)),
-            None => (authority.to_string(), None),
+        let (without_fragment, fragment) = endpoint.split_once('#')
+            .map_or((endpoint, None), |(base, fragment)| (base, Some(fragment)));
+        if fragment.is_some_and(|v| !uri_component(v, "/?:@")) {
+            return None;
+        }
+        let (base, query) = without_fragment.split_once('?')
+            .map_or((without_fragment, None), |(base, query)| (base, Some(query)));
+        let (scheme, rest) = match base.split_once(':') {
+            Some((scheme, rest)) if !scheme.is_empty()
+                && scheme.as_bytes()[0].is_ascii_alphabetic()
+                && scheme.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'-' | b'.')) =>
+                    (scheme.to_ascii_lowercase(), rest),
+            _ => (String::new(), base),
         };
-        let default_port = match scheme.as_str() {
+        let mut host = String::new();
+        let mut port = match scheme.as_str() {
             "https" => Some(443),
             "http" => Some(80),
             _ => None,
         };
-        Some(Self {
-            scheme,
-            host,
-            port: port.or(default_port),
-        })
+        let path = if let Some(rest) = rest.strip_prefix("//") {
+            let (authority, path) = rest.find('/').map_or((rest, ""), |index| (&rest[..index], &rest[index..]));
+            let authority = if let Some((userinfo, authority)) = authority.split_once('@') {
+                if !uri_component(userinfo, ":") { return None; }
+                authority
+            } else { authority };
+            let (hostname, explicit_port) = if authority.starts_with('[') {
+                let end = authority.find(']')?;
+                let address = &authority[1..end];
+                let ipv_future = address.strip_prefix('v').and_then(|a| a.split_once('.'))
+                    .is_some_and(|(version, address)| !version.is_empty()
+                        && version.bytes().all(|b| b.is_ascii_hexdigit())
+                        && !address.is_empty() && uri_component(address, ":") && !address.contains('%'));
+                if address.parse::<std::net::Ipv6Addr>().is_err() && !ipv_future { return None; }
+                let suffix = &authority[end + 1..];
+                let explicit_port = if suffix.is_empty() { None } else { Some(suffix.strip_prefix(':')?) };
+                (&authority[..end + 1], explicit_port)
+            } else if let Some((hostname, port)) = authority.split_once(':') {
+                (hostname, Some(port))
+            } else { (authority, None) };
+            if !hostname.starts_with('[') && !uri_component(hostname, "") { return None; }
+            host = hostname.to_owned();
+            if let Some(explicit) = explicit_port {
+                if !explicit.bytes().all(|b| b.is_ascii_digit()) { return None; }
+                if !explicit.is_empty() {
+                    // Ruby accepts arbitrary-size integer ports. Only 443 is permitted.
+                    port = Some(if explicit.trim_start_matches('0') == "443" { 443 } else { 0 });
+                }
+            }
+            path
+        } else {
+            if scheme.is_empty() && rest.split('/').next().is_some_and(|first| first.contains(':')) {
+                return None;
+            }
+            rest
+        };
+        if !uri_component(path, "/:@") { return None; }
+        // Generic#query= removes TAB/CR/LF and escapes other ASCII bytes. It raises
+        // for % followed by two non-hex characters, unlike strict path escapes.
+        let opaque = !scheme.is_empty() && !rest.starts_with('/');
+        if !opaque && query.is_some_and(|q| {
+            let q: Vec<_> = q.bytes().filter(|b| !matches!(b, b'\t' | b'\r' | b'\n')).collect();
+            q.windows(3).any(|w| w[0] == b'%' && !w[1].is_ascii_hexdigit() && !w[2].is_ascii_hexdigit())
+        }) { return None; }
+        Some(Self { scheme, host, port })
     }
+}
+
+// RFC3986 unreserved + sub-delimiters, with component-specific delimiters.
+fn uri_component(value: &str, delimiters: &str) -> bool {
+    let mut bytes = value.bytes();
+    while let Some(b) = bytes.next() {
+        if b == b'%' {
+            if !bytes.next().is_some_and(|b| b.is_ascii_hexdigit())
+                || !bytes.next().is_some_and(|b| b.is_ascii_hexdigit()) { return false; }
+        } else if !(b.is_ascii_alphanumeric() || b"-._~!$&'()*+,;=".contains(&b) || delimiters.as_bytes().contains(&b)) {
+            return false;
+        }
+    }
+    true
 }
 
 #[cfg(test)]
