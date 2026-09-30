@@ -233,7 +233,9 @@ impl CalendarEvent {
             tx.conn().execute("UPDATE events SET title=?,description=?,starts_at=?,ends_at=?,time_zone=?,venue_room_id=?,series_id=?,recurrence_rule=?,recurrence_until=?,meet_link_requested=?,reminded_at=?,updated_at=? WHERE id=?",
                 params![a.title,a.description,a.starts_at,a.ends_at,a.time_zone,a.venue_room_id,self.series_id,a.recurrence_rule,a.recurrence_until.map(|d| d.to_string()),a.meet_link_requested,reminded_at,if changed { tx.now() } else {self.updated_at},self.id])?;
         }
-        Self::find(tx.conn(), self.id)
+        let saved = Self::find(tx.conn(), self.id)?;
+        saved.broadcast_cards(tx)?;
+        Ok(saved)
     }
 
     fn update_following(
@@ -563,6 +565,7 @@ impl CalendarEvent {
             "UPDATE events SET cancelled_at=?,updated_at=? WHERE id=?",
             params![tx.now(), tx.now(), self.id],
         )?;
+        self.broadcast_cards(tx)?;
         self.handle_unread(tx)?;
         if notify {
             for user in self

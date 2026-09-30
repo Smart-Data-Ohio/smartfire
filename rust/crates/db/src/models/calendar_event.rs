@@ -429,9 +429,8 @@ impl CalendarEvent {
         }
         Ok(())
     }
-    /// Event's after_update_commit callbacks, including reminder-only updates. The
-    /// EventCards rendering adapter is the remaining WS14e HTML slice.
-    pub(super) fn update_callbacks(&self, tx: &mut Tx<'_>) -> Result<()> {
+    /// Register the record callback at its first save, preserving Rails delivery order.
+    pub(super) fn broadcast_cards(&self, tx: &mut Tx<'_>) -> Result<()> {
         use crate::broadcasts::{Broadcast, Partial, conversation_messages, message_dom_id};
         let ids = query_all(
             tx.conn(),
@@ -441,12 +440,20 @@ impl CalendarEvent {
         )?;
         for id in ids {
             let message = crate::Message::find(tx.conn(), id)?;
-            tx.emit_after_commit(SideEffect::broadcast(&Broadcast::replace_keeping_scroll(
-                conversation_messages(tx.conn(), &message)?,
-                message_dom_id(&message, Some("event_cards")),
-                Partial::EventCards { message_id: id },
-            )));
+            tx.emit_broadcast_once(
+                "events",
+                self.id,
+                &Broadcast::replace_keeping_scroll(
+                    conversation_messages(tx.conn(), &message)?,
+                    message_dom_id(&message, Some("event_cards")),
+                    Partial::EventCards { message_id: id },
+                ),
+            );
         }
+        Ok(())
+    }
+    pub(super) fn update_callbacks(&self, tx: &mut Tx<'_>) -> Result<()> {
+        self.broadcast_cards(tx)?;
         if self.needs_meet_link() {
             tx.emit_after_commit(SideEffect::job(&MeetLinkJob { event_id: self.id }));
         }

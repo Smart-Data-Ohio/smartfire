@@ -1,0 +1,101 @@
+[
+  {
+    "kind": "invitation",
+    "frames": [
+      {
+        "stream": "user_149087659_activity",
+        "payload": {
+          "activityItemId": 7000000001
+        }
+      }
+    ]
+  },
+  {
+    "kind": "edit",
+    "frames": [
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-announcement\"><template>  <div id=\"event_cards_message_ws14e-announcement\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000001\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000001\">Changed &lt;&amp;&gt;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T16:10:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 4:10 PM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000001_event_8000000001\" src=\"/rooms/486777696/events/8000000001/attendance?message_id=9000000001\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      }
+    ]
+  },
+  {
+    "kind": "response",
+    "frames": []
+  },
+  {
+    "kind": "reminder",
+    "frames": [
+      {
+        "stream": "user_149087659_activity",
+        "payload": {
+          "activityItemId": 7000000001
+        }
+      },
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-announcement\"><template>  <div id=\"event_cards_message_ws14e-announcement\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000001\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000001\">Changed &lt;&amp;&gt;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T16:10:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 4:10 PM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000001_event_8000000001\" src=\"/rooms/486777696/events/8000000001/attendance?message_id=9000000001\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      }
+    ]
+  },
+  {
+    "kind": "cancel",
+    "frames": [
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-announcement\"><template>  <div id=\"event_cards_message_ws14e-announcement\" class=\"event-cards\">\n      <article class=\"event-card event-card--cancelled\" data-event-card=\"8000000001\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n      <span class=\"event-card__state\">Cancelled</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000001\">Changed &lt;&amp;&gt;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T16:10:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 4:10 PM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000001_event_8000000001\" src=\"/rooms/486777696/events/8000000001/attendance?message_id=9000000001\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      },
+      {
+        "stream": "user_149087659_activity",
+        "payload": {
+          "activityItemId": 7000000001
+        }
+      }
+    ]
+  },
+  {
+    "kind": "series_invitation",
+    "frames": [
+      {
+        "stream": "user_149087659_activity",
+        "payload": {
+          "activityItemId": 7000000003
+        }
+      }
+    ]
+  },
+  {
+    "kind": "two_records",
+    "frames": [
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-series\"><template>  <div id=\"event_cards_message_ws14e-series\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000002\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000002\">Shared changed</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-04T09:00:00Z\" data-local-time-target=\"datetime\">March 4, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000002_event_8000000002\" src=\"/rooms/486777696/events/8000000002/attendance?message_id=9000000002\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      },
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-shared\"><template>  <div id=\"event_cards_message_ws14e-shared\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000002\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000002\">Shared changed</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-04T09:00:00Z\" data-local-time-target=\"datetime\">March 4, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000003_event_8000000002\" src=\"/rooms/486777696/events/8000000002/attendance?message_id=9000000003\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n      <article class=\"event-card\" data-event-card=\"8000000003\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000003\">Shared changed</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-11T09:00:00Z\" data-local-time-target=\"datetime\">March 11, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000003_event_8000000003\" src=\"/rooms/486777696/events/8000000003/attendance?message_id=9000000003\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      },
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-shared\"><template>  <div id=\"event_cards_message_ws14e-shared\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000002\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000002\">Shared changed</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-04T09:00:00Z\" data-local-time-target=\"datetime\">March 4, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000003_event_8000000002\" src=\"/rooms/486777696/events/8000000002/attendance?message_id=9000000003\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n      <article class=\"event-card\" data-event-card=\"8000000003\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000003\">Shared changed</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-11T09:00:00Z\" data-local-time-target=\"datetime\">March 11, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000003_event_8000000003\" src=\"/rooms/486777696/events/8000000003/attendance?message_id=9000000003\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      }
+    ]
+  },
+  {
+    "kind": "one_record_twice",
+    "frames": [
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-series\"><template>  <div id=\"event_cards_message_ws14e-series\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000002\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000002\">Shared changed</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-04T09:00:00Z\" data-local-time-target=\"datetime\">March 4, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000002_event_8000000002\" src=\"/rooms/486777696/events/8000000002/attendance?message_id=9000000002\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      },
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-shared\"><template>  <div id=\"event_cards_message_ws14e-shared\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"8000000002\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000002\">Shared changed</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-04T09:00:00Z\" data-local-time-target=\"datetime\">March 4, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000003_event_8000000002\" src=\"/rooms/486777696/events/8000000002/attendance?message_id=9000000003\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n      <article class=\"event-card\" data-event-card=\"8000000003\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000003\">Shared changed</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-11T09:00:00Z\" data-local-time-target=\"datetime\">March 11, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000003_event_8000000003\" src=\"/rooms/486777696/events/8000000003/attendance?message_id=9000000003\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      }
+    ]
+  },
+  {
+    "kind": "update_then_destroy",
+    "frames": []
+  }
+]

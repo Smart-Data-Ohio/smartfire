@@ -191,34 +191,34 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 | Rails test | Coverage or deferral |
 |---|---|
 | `test/controllers/rooms/events_controller_test.rb:10` — index lists upcoming, past, and cancelled events separately | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:24` — show renders for members and 404s for non-members | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:24` — show renders for members and 404s for non-members | Covered: `event_pages_scope_members_bots_and_the_series_index` |
 | `test/controllers/rooms/events_controller_test.rb:37` — a member can create an event and members are invited | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:51` — a member can create a repeating event with one invitation per member | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:74` — create rejects a series above the occurrence cap | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:88` — index shows a series once with its repeat label and remaining count | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:88` — index shows a series once with its repeat label and remaining count | Covered: `event_pages_scope_members_bots_and_the_series_index` |
 | `test/controllers/rooms/events_controller_test.rb:109` — index lists past occurrences individually | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:126` — show renders the series banner with previous and next occurrence links | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:150` — edit offers a scope on series occurrences and the rule only on the first event | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:126` — show renders the series banner with previous and next occurrence links | Covered: `full_event_pages_match_pinned_rails_bytes (HTML, head/middle/last navigation; HTTP associations still need end-to-end coverage)` |
+| `test/controllers/rooms/events_controller_test.rb:150` — edit offers a scope on series occurrences and the rule only on the first event | Covered: `full_event_forms_match_pinned_rails_bytes (32 full layouts, singleton/head/followers)` |
 | `test/controllers/rooms/events_controller_test.rb:172` — updating this and following shifts later occurrences and notifies once per attendee | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:196` — updating without a scope leaves the rest of the series untouched | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:218` — changing the rule away from the first event is rejected | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:233` — non-organizers cannot edit or cancel series occurrences | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:233` — non-organizers cannot edit or cancel series occurrences | Covered: `event_write_controller_security_and_validation` |
 | `test/controllers/rooms/events_controller_test.rb:253` — an administrator who is not the organizer can use this and following, but an ordinary member cannot | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:288` — cancelling this and following cancels later occurrences with one item per attendee | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:307` — cancelling without a scope cancels only that occurrence | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:322` — cancelling this event explicitly cancels only that occurrence | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:337` — show renders cancel scopes for series occurrences and a single cancel for single events | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:356` — index issues a bounded number of queries regardless of occurrence count | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:393` — create renders errors for invalid events | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:356` — index issues a bounded number of queries regardless of occurrence count | Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling |
+| `test/controllers/rooms/events_controller_test.rb:393` — create renders errors for invalid events | Covered: `event_write_controller_security_and_validation; full_event_forms_match_pinned_rails_bytes` |
 | `test/controllers/rooms/events_controller_test.rb:401` — bots are denied | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:419` — requires authentication | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:427` — only the organizer or an administrator can edit | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:443` — the organizer can update times and attendees are notified | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:457` — saving the edit form from another time zone does not move the event | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:482` — show prints the scheduled zone next to the localized time | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:489` — cancelled events cannot be edited | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:500` — non-organizers cannot cancel | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:509` — the organizer can cancel and cancelling twice is a no-op | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:457` — saving the edit form from another time zone does not move the event | Covered: `controller_time_and_parameter_casts_match_pinned_rails; event_create_update_cancel_keep_zone_and_calendar_jobs` |
+| `test/controllers/rooms/events_controller_test.rb:482` — show prints the scheduled zone next to the localized time | Covered: `full_event_pages_match_pinned_rails_bytes (viewer UTC/Hawaii and scheduled Eastern/UTC)` |
+| `test/controllers/rooms/events_controller_test.rb:489` — cancelled events cannot be edited | Covered: `event_create_update_cancel_keep_zone_and_calendar_jobs` |
+| `test/controllers/rooms/events_controller_test.rb:500` — non-organizers cannot cancel | Covered: `event_write_controller_security_and_validation` |
+| `test/controllers/rooms/events_controller_test.rb:509` — the organizer can cancel and cancelling twice is a no-op | Covered: `event_create_update_cancel_keep_zone_and_calendar_jobs; event_scoped_operations_match_rails_vectors` |
 | `test/controllers/rooms/events_controller_test.rb:521` — show notes the Google Calendar copy when an entry exists for the viewer | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:533` — show hides another member's Google Calendar copy | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:541` — a member can create an event with a venue | Deferred: WS14e continuation |
@@ -226,24 +226,24 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 | `test/controllers/rooms/events_controller_test.rb:571` — create rejects a text channel venue | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:582` — create rejects a venue the organizer does not belong to | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:595` — update rejects a venue the organizer does not belong to | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:609` — the edit form keeps a venue the editor cannot see so an unrelated edit does not clear it | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:627` — the new form does not list another member's venue | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:636` — the form lists only the member's voice and Stage channels, grouped by kind | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:659` — show links the venue with a Join button for venue members | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:672` — show names the venue without a link for non-members | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:686` — index rows show the venue | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:697` — show renders the live dot for a stage venue with a live stream | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:609` — the edit form keeps a venue the editor cannot see so an unrelated edit does not clear it | Covered: `full_event_forms_match_pinned_rails_bytes (hidden stored venue rendering; unrelated HTTP edit still deferred)` |
+| `test/controllers/rooms/events_controller_test.rb:627` — the new form does not list another member's venue | Covered: `full_event_forms_match_pinned_rails_bytes (member with no venues)` |
+| `test/controllers/rooms/events_controller_test.rb:636` — the form lists only the member's voice and Stage channels, grouped by kind | Covered: `full_event_forms_match_pinned_rails_bytes (Voice/Stage groups)` |
+| `test/controllers/rooms/events_controller_test.rb:659` — show links the venue with a Join button for venue members | Covered: `full_event_pages_match_pinned_rails_bytes` |
+| `test/controllers/rooms/events_controller_test.rb:672` — show names the venue without a link for non-members | Covered: `full_event_pages_match_pinned_rails_bytes` |
+| `test/controllers/rooms/events_controller_test.rb:686` — index rows show the venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
+| `test/controllers/rooms/events_controller_test.rb:697` — show renders the live dot for a stage venue with a live stream | Covered: `full_event_pages_match_pinned_rails_bytes (live stage venue)` |
 | `test/controllers/rooms/events_controller_test.rb:711` — show renders no live pip for a stage venue with an ended stream | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:725` — show hides the live dot from members who do not belong to the stage venue | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:745` — show never renders a live dot for a voice venue | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:755` — index rows render the live dot for a live stage venue | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:725` — show hides the live dot from members who do not belong to the stage venue | Covered: `full_event_pages_match_pinned_rails_bytes (nonmember JZ)` |
+| `test/controllers/rooms/events_controller_test.rb:745` — show never renders a live dot for a voice venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
+| `test/controllers/rooms/events_controller_test.rb:755` — index rows render the live dot for a live stage venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
 | `test/controllers/rooms/events_controller_test.rb:768` — index rows render no live pip for a stage venue with an ended stream | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:782` — index rows never render a live dot for a voice venue | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:792` — index issues the same queries regardless of event count when venues are shared | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:826` — show and index omit the Where line without a venue | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:838` — creating with a Meet request stores the flag | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:846` — show renders the Meet link when present | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:856` — show renders no Meet row without a link | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:782` — index rows never render a live dot for a voice venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
+| `test/controllers/rooms/events_controller_test.rb:792` — index issues the same queries regardless of event count when venues are shared | Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling |
+| `test/controllers/rooms/events_controller_test.rb:826` — show and index omit the Where line without a venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
+| `test/controllers/rooms/events_controller_test.rb:838` — creating with a Meet request stores the flag | Covered: `event_create_update_cancel_keep_zone_and_calendar_jobs` |
+| `test/controllers/rooms/events_controller_test.rb:846` — show renders the Meet link when present | Covered: `full_event_pages_match_pinned_rails_bytes` |
+| `test/controllers/rooms/events_controller_test.rb:856` — show renders no Meet row without a link | Covered: `full_event_pages_match_pinned_rails_bytes` |
 | `test/controllers/rooms/events_controller_test.rb:863` — show renders no Meet row for a non-https link | Deferred: WS14e continuation |
 
 ## test/controllers/rooms/events/attendances_controller_test.rb (16)
@@ -251,19 +251,19 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 | Rails test | Coverage or deferral |
 |---|---|
 | `test/controllers/rooms/events/attendances_controller_test.rb:10` — a member can respond and change their response | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
-| `test/controllers/rooms/events/attendances_controller_test.rb:23` — non-members get a 404 | Deferred: WS14e continuation |
+| `test/controllers/rooms/events/attendances_controller_test.rb:23` — non-members get a 404 | Covered: `attendance_controller_security_blocks_nonmembers_and_bots` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:32` — bots are denied | Covered: `attendance_controller_security_blocks_nonmembers_and_bots` |
-| `test/controllers/rooms/events/attendances_controller_test.rb:40` — cancelled events reject responses | Deferred: WS14e continuation |
+| `test/controllers/rooms/events/attendances_controller_test.rb:40` — cancelled events reject responses | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:49` — a response on the first event of a series is copied to every future occurrence | Deferred: WS14e continuation |
 | `test/controllers/rooms/events/attendances_controller_test.rb:64` — a later response stays local unless apply to all future is checked | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:87` — show offers apply to all future on later occurrences with a successor | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:111` — unknown responses are rejected | Deferred: WS14e continuation |
+| `test/controllers/rooms/events/attendances_controller_test.rb:87` — show offers apply to all future on later occurrences with a successor | Covered: `attendance_controller_renders_and_updates_the_requested_frame; event_fragments_match_rails` |
+| `test/controllers/rooms/events/attendances_controller_test.rb:111` — unknown responses are rejected | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:118` — show renders the attendance frame with the response controls for members | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:136` — show 404s for non-members | Covered: `attendance_controller_security_blocks_nonmembers_and_bots` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:149` — show offers apply to all future occurrences on the series head and hides it on the last occurrence | Covered: `attendance_frames_are_byte_identical_to_rails_fragments` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:172` — show reports the closed state for cancelled events | Covered: `attendance_frames_are_byte_identical_to_rails_fragments` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:187` — responding from the frame re-renders the frame instead of redirecting | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
-| `test/controllers/rooms/events/attendances_controller_test.rb:206` — a frame response from a non-member 404s | Deferred: WS14e continuation |
+| `test/controllers/rooms/events/attendances_controller_test.rb:206` — a frame response from a non-member 404s | Covered: `attendance_controller_security_blocks_nonmembers_and_bots` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:222` — a frame response with an unknown choice re-renders the frame with an alert | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:238` — a frame response to a cancelled event re-renders the frame with an alert | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
 
@@ -271,9 +271,9 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 
 | Rails test | Coverage or deferral |
 |---|---|
-| `test/system/events_test.rb:4` — scheduling an event invites members, who respond and see it in the inbox | Deferred: WS14e continuation |
-| `test/system/events_test.rb:48` — scheduling a repeating event invites once per member and copies the first response | Deferred: WS14e continuation |
-| `test/system/events_test.rb:102` — scheduling an event announces it in the room with a card members respond from | Deferred: WS14e continuation |
+| `test/system/events_test.rb:4` — scheduling an event invites members, who respond and see it in the inbox | Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling |
+| `test/system/events_test.rb:48` — scheduling a repeating event invites once per member and copies the first response | Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling |
+| `test/system/events_test.rb:102` — scheduling an event announces it in the room with a card members respond from | Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling |
 
 ## test/integration/event_cards_test.rb (8)
 
@@ -286,7 +286,7 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 | `test/integration/event_cards_test.rb:96` — the scheduling announcement renders its card in the room | Covered: `event_cards_refresh_after_an_event_edit_through_the_message_cache` |
 | `test/integration/event_cards_test.rb:108` — a link to an event in another room stays a plain link with no card for anyone | Deferred: WS14e continuation |
 | `test/integration/event_cards_test.rb:142` — a message without an event link renders no card | Deferred: WS14e continuation |
-| `test/integration/event_cards_test.rb:153` — rendering a room page costs no extra queries per message with an event link | Deferred: WS14e continuation |
+| `test/integration/event_cards_test.rb:153` — rendering a room page costs no extra queries per message with an event link | Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling |
 
 ## Counts
 
@@ -305,3 +305,12 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 - `test/integration/event_cards_test.rb`: 8
 
 Total named Rails tests inventoried: 221. Includes the Calendar entry model (WS14g) and event-card integration file beyond the brief's controller/model/system split.
+
+## Additional exact differentials and explicit integration boundaries
+
+- The three lead rulings are covered by `event_after_commit_rejection_keeps_rails_rows`, `event_announcement_uses_rails_configured_origin`, `event_nil_series_start_matches_rails_failure_without_writes`, `event_create_keeps_commit_after_announcement_failure_and_jobs_reject_atomically`, and `persisted_series_nil_start_returns_rails_public_500_and_writes_nothing`. The nil-start request test covers head/middle/last with this_event/this_and_following/all; body equality uses pinned public/500.html.
+- `controller_time_and_parameter_casts_match_pinned_rails` compares 66 actual Rails private-method/model-cast states for create/update/prefill, including scalar/array/hash shapes, explicit offsets, fixed edit zones, DST gaps/folds, invalid dates, booleans, and Unicode prefill truncation.
+- `full_event_pages_match_pinned_rails_bytes` and `full_event_forms_match_pinned_rails_bytes` compare 60 complete Rails layouts. They do not assert database query bounds, browser behavior, or every named HTTP controller case.
+- `event_cards_and_activity_match_rails_over_real_sockets` compares nine Rails states: singleton/series invitations, title edit, silent RSVP, reminder claim, cancellation, distinct events referencing one message, repeated saves of one event, update-then-destroy. It also proves rollback silence, identical public card bytes for two viewers, and outsider stream denial. Full initial announcement Message append remains WS8b renderer integration on this old base.
+- Still deferred: callback/job coalescing for repeated event API calls in a wider outer transaction when Meet links are requested, and partial invitation failure among several recipients. Normal scoped Calendar callback vectors and queue atomicity are covered; these broader edge cases are not.
+- WS13 live stream reader is implemented for currently-live streams. Additional ended-stream fixture/HTTP cases remain named above. WS17 production delivery/policy stays behind the live source and durable job seam. Streamed-message finalization still requires the WS11 lifecycle hook.
