@@ -175,6 +175,7 @@ pub struct Jobs {
     /// Inside a write, emit [`Event::Job`] so the job commits with it; outside one,
     /// `queue.perform_later(&db, request)` enqueues it in a write of its own.
     pub queue: JobQueue,
+    pub model_callbacks: Arc<campfire_db::callbacks::Registry>,
     ad_hoc: mpsc::Sender<AdHocWork>,
     cable: Arc<OnceLock<Cable>>,
     /// Weak because the app holds the database, which holds this sink.
@@ -190,7 +191,7 @@ impl Jobs {
     pub fn new(registry: &Registry, config: &RunnerConfig) -> anyhow::Result<(Self, AdHocQueue)> {
         let queue = JobQueue::new(registry, config)?;
         let (ad_hoc, receiver) = mpsc::channel(AD_HOC_CAPACITY);
-        Ok((Self { queue, ad_hoc, cable: Arc::new(OnceLock::new()), app: Arc::new(OnceLock::new()) }, AdHocQueue(receiver)))
+        Ok((Self { queue, model_callbacks: Arc::default(), ad_hoc, cable: Arc::new(OnceLock::new()), app: Arc::new(OnceLock::new()) }, AdHocQueue(receiver)))
     }
 
     /// Runs best-effort work in memory. Dropped with an error log when the ad hoc queue is full,
@@ -213,6 +214,10 @@ impl Jobs {
 }
 
 impl EventSink for Jobs {
+    fn model_callback(&self, tx: &mut Tx<'_>, callback: campfire_db::callbacks::Callback) -> campfire_db::Result<()> {
+        self.model_callbacks.call(tx, callback)
+    }
+
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
         if let Some(request) = request_for(event) {
             if !tx.in_transaction() {

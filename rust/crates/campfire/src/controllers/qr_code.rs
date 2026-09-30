@@ -7,6 +7,11 @@ use campfire_kit::{Ctx, Error, ExpiresIn, Result, StatusCode};
 
 use crate::concerns::{self, Before};
 
+/// Inline enrollment QR: its secret never reaches a URL or request log.
+pub fn two_factor_svg(uri: &str) -> Option<String> {
+    rqrcode::svg_with_options(uri.as_bytes(), 6, 24)
+}
+
 /// `allow_unauthenticated_access`
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;

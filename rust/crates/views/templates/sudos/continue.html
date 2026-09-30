@@ -1,0 +1,13 @@
+{% extends "layouts/application.html" %}
+{% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
+{% block content %}
+<section class="txt-align-center">
+  <div class="panel">
+    <h1 class="txt-large">Confirmed — continuing</h1>
+
+    {% let form = h::form_with(path).method(method).class("flex flex-column gap").data("controller", "auto-submit") %}{% filter form_with(form) %}
+      {{ crate::sudos::replay_fields(params, None) }}
+      {{ h::legacy_tag("input", h::attrs().type_("submit").name("commit").value("Continue").class("btn btn--reversed center txt-large").data("disable-with", "Continue")) }}
+{% endfilter %}  </div>
+</section>
+{% endblock %}

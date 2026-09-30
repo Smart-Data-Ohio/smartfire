@@ -6,12 +6,12 @@ root=Path(__file__).resolve().parents[2]
 scratch=root.parent/'.scratch'/'ws11-work-mutations';scratch.mkdir(parents=True,exist_ok=True)
 env=dict(os.environ,CI='1',TMPDIR=str(root.parent/'.scratch'),CARGO_TARGET_DIR=str(root/'target'),CABLE_TEST_PORT_RANGE='52200-52249',MAIL_TEST_PORT_RANGE='52200-52249',INTEGRATION_TEST_PORT_RANGE='52250-52299')
 mutations=[
- ('read-grant','agent_work_events.rs','!agent_access::capability_for_agent(tx.conn(), agent.id, "read_messages", Some(room_id))?','false','campfire_db','ws11_work_events_assign'),
- ('membership','agent_work_events.rs','!exists(tx.conn(), "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?", params![agent.user_id,room_id])?','false','campfire_db','ws11_work_events_assign'),
+ ('read-grant','agent_work_events.rs','!agent_access::capability_for_agent(tx.conn(), agent.id, "read_messages", Some(room_id),)?','false','campfire_db','ws11_work_events_assign'),
+ ('membership','agent_work_events.rs','!exists(tx.conn(), "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?", params![agent.user_id,room_id],)?','false','campfire_db','ws11_work_events_assign'),
  ('hop-limit','agent_work_events.rs','hop>=bot_webhook_fanout::HOP_LIMIT','hop>bot_webhook_fanout::HOP_LIMIT','campfire_db','ws11_work_events_assign'),
  ('self-trigger','bot_webhook_fanout.rs','AND (actor_id IS NULL OR actor_id != ?)','AND ? IS NOT NULL','campfire_db','ws11_work_events_assign'),
  ('deleted-snapshot','agent_work_events.rs','json!({"work_snapshot":deleted.snapshot})','json!({"work_snapshot":null,"unused":deleted.snapshot})','campfire_db','ws11_work_events_assign'),
- ('work-queue','agent_work_events.rs','tx.emit_after_commit(crate::Event::job(&EventWebhookJob {event_id:event.id,attempt:Some(event.webhook_attempts)}))','let _ = crate::Event::job(&EventWebhookJob {event_id:event.id,attempt:Some(event.webhook_attempts)})','campfire','ws11_work_delete_queue'),
+ ('work-queue','agent_work_events.rs','tx.emit_after_commit(crate::Event::job(&EventWebhookJob {event_id:event.id,attempt:Some(event.webhook_attempts),}))','let _ = crate::Event::job(&EventWebhookJob {event_id:event.id,attempt:Some(event.webhook_attempts)})','campfire','ws11_work_delete_queue'),
 ]
 for name,file,before,after,package,test in mutations:
  p=root/'crates/db/src/models'/file;original=p.read_text();pattern=r'\s*'.join(re.escape(c) for c in before if not c.isspace())

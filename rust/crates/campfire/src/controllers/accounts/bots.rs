@@ -53,7 +53,7 @@ pub async fn new(c: &mut Ctx) -> Result {
 /// Rails creates a workspace Agent and reveals the digest-backed key once.
 pub async fn create(c: &mut Ctx) -> Result {
     before(c).await?;
-    concerns::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c)?;
     let params = bot_params(c)?;
     let name = params.get("name").and_then(Param::to_s).ok_or_else(|| {
         Error::internal(anyhow::anyhow!("NOT NULL constraint failed: users.name"))

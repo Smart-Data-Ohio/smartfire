@@ -463,3 +463,7 @@ mod tests {
         assert_eq!(resolver.lookups(), vec!["www.example.com", "mixed.example", "private.example", "nowhere.example"]);
     }
 }
+
+#[cfg(test)]
+#[path="guard_case_tests.rs"]
+mod named_case_tests;

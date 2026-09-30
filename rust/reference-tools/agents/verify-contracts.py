@@ -30,6 +30,10 @@ contracts = [
     ('context_contract', 'context-contract-final', False),
     ('direct_messages_contract', 'direct-messages-contract-final', False),
     ('lifecycle_contract', 'lifecycle-contract-final', False),
+    ('streaming_contract', 'streaming-contract-final', False),
+    ('stream_trailing_contract', 'stream-trailing-contract-final', False),
+    ('cleanup_contract', 'cleanup-contract-final', False),
+    ('user_removal_contract', 'user-removal-contract-final', False),
 ]
 for name, output, freeze in contracts:
     command = ['rust/parity/bin/reference', 'runner', '--seed', 'default']
@@ -41,4 +45,4 @@ for name, output, freeze in contracts:
     if name not in ('bot_contract', 'posting_budget_contract', 'webhook_contract'):
         assert (scratch / f'{output}.json').read_bytes() == (root / f'rust/vectors/agents_{name}.json').read_bytes(), name
 subprocess.run([sys.executable, 'rust/reference-tools/agents/compare-contracts.py'], cwd=root, check=True)
-print('WS11 domain Rails oracles: 16 byte-identical contract files; 19 contracts recorded in total')
+print('WS11 domain Rails oracles: 20 byte-identical contract files; 23 contracts recorded in total')

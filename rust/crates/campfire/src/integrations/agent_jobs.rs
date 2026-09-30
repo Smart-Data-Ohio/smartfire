@@ -68,6 +68,39 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
     let e = e.clone();
     let encryption = app.ar_encryption.clone();
     let db = app.db.clone();
+    let event = e.clone();
+    let threads = match app
+        .db
+        .read(move |conn| {
+            let mut ids = Vec::new();
+            if let Some(message_id) = event.message_id
+                && let Some(message) = Message::find_by_id(conn, message_id)?
+                && let Some(thread_id) = message.thread_id
+            {
+                ids.push(thread_id);
+            }
+            if let Some(thread_id) = event
+                .metadata
+                .get("thread_id")
+                .and_then(serde_json::Value::as_i64)
+            {
+                ids.push(thread_id);
+            }
+            Ok(ids)
+        })
+        .await
+    {
+        Ok(ids) => ids,
+        Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
+    };
+    let access = match app
+        .agent_repositories
+        .resolve_threads(&app.db, id, threads)
+        .await
+    {
+        Ok(access) => access,
+        Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
+    };
     let prepared = app
         .db
         .write(move |tx| {
@@ -82,7 +115,7 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
                 tx.conn(),
                 &*db.env().rich_text,
                 &e,
-                &Default::default(),
+                &access,
             )?;
             let campfire_db::models::agent_payloads::Payload::Ready { body, sync_message } =
                 payload
@@ -285,6 +318,60 @@ mod tests {
             .await
             .unwrap()
     }
+    #[tokio::test]
+    async fn ws11_repository_webhook_uses_the_live_owner_decision() {
+        struct Readable;
+        impl super::super::agent_repositories::RepositoryReader for Readable {
+            fn readable(
+                &self,
+                request: super::super::agent_repositories::RepositoryRequest,
+            ) -> super::super::net::BoxFuture<'_, campfire_db::Result<bool>> {
+                assert_eq!(request.user_id, DAVID);
+                assert_eq!(
+                    (request.owner.as_str(), request.repo.as_str()),
+                    ("private", "repo")
+                );
+                Box::pin(async { Ok(true) })
+            }
+        }
+        let test = TestApp::boot().await.expect("default seed");
+        let app = &test.booted.app;
+        let event = pending(app).await;
+        let (id, message_id) = (event.agent_id, event.message_id.unwrap());
+        let crypto = app.ar_encryption.clone();
+        app.db.write(move|tx| {
+            tx.conn().execute("UPDATE agents SET owner_id=? WHERE id=?",rusqlite::params![DAVID,id])?;
+            tx.conn().execute("INSERT INTO github_connected_accounts(user_id,github_login,access_token,created_at,updated_at) VALUES (?,'ws11-owner',?,?,?)",rusqlite::params![DAVID,crypto.encrypt("ws11-public-test-token"),tx.now(),tx.now()])?;
+            let thread=campfire_db::ChannelThread::create(tx,campfire_db::NewChannelThread{room_id:ALL_TALK,creator_id:DAVID,name:Some("PR".into()),..Default::default()})?;
+            tx.conn().execute("UPDATE messages SET thread_id=? WHERE id=?",rusqlite::params![thread.id,message_id])?;
+            tx.conn().execute("INSERT INTO github_pull_requests(id,owner,repo,number,title,private,created_at,updated_at) VALUES (900140000,'Private','Repo',1,'Owner-visible title',1,?,?)",rusqlite::params![tx.now(),tx.now()])?;
+            tx.conn().execute("INSERT INTO github_pull_request_threads(github_pull_request_id,room_id,channel_thread_id,created_at,updated_at) VALUES (900140000,?,?,?,?)",rusqlite::params![ALL_TALK,thread.id,tx.now(),tx.now()])?;
+            Ok(())
+        }).await.unwrap();
+        app.agent_repositories.install(Arc::new(Readable));
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 200)]).await;
+        let net = network(
+            Arc::new(FakeResolver::new([("bots.example", vec!["93.184.216.34"])])),
+            Arc::new(MappingDialer {
+                public: HashSet::from(["93.184.216.34".parse().unwrap()]),
+                to: server.addr,
+                dialed: Mutex::new(vec![]),
+            }),
+        );
+        post_with_network(
+            app,
+            domain::EventWebhookJob {
+                event_id: event.id,
+                attempt: Some(0),
+            },
+            &net,
+        )
+        .await
+        .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&server.received()[0].body).unwrap();
+        assert_eq!(body["pull_request"]["title"], "Owner-visible title");
+    }
+
     #[tokio::test]
     async fn ws11_agent_webhook_http_retries_claims_and_permanent_failures() {
         let test = TestApp::boot().await.expect("default seed");

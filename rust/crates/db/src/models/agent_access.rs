@@ -203,6 +203,17 @@ pub fn ensure_webhook_signing_secret(
             return Ok(secret);
         }
     }
+    reset_webhook_signing_secret(tx, encryption, agent_id)
+}
+
+/// `reset_webhook_signing_secret!`: the writer's BEGIN IMMEDIATE is the
+/// SQLite row lock. Refuse an unprotected after-commit write.
+pub fn reset_webhook_signing_secret(
+    tx: &Tx<'_>,
+    encryption: &rails_compat::ar_encryption::ArEncryption,
+    agent_id: i64,
+) -> Result<String> {
+    if !tx.in_transaction() { return Err(crate::Error::Other("agent signing secret reset requires the writer transaction".into())); }
     let (secret, encrypted) = super::webhook::new_signing_secret(encryption);
     tx.conn().execute_cached(
         "UPDATE agents SET webhook_signing_secret = ?, updated_at = ? WHERE id = ?",

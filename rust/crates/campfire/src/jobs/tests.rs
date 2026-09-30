@@ -271,6 +271,17 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
     assert_eq!(status, axum::http::StatusCode::OK, "sign-in page: {body}");
     let (status, body) = browser.post("/session", "text/html", &[("email_address", "person@example.com"), ("password", "secret123456")]).await;
     assert_eq!(status, axum::http::StatusCode::FOUND, "signed in: {body}");
+    let (status, _) = browser.get("/two_factor_setup").await;
+    assert_eq!(status, axum::http::StatusCode::OK);
+    let encryption = rails_compat::ar_encryption::ArEncryption::new(&app.secrets);
+    let enrollment_now = campfire_db::Timestamp::from_jiff(app.clock.now());
+    let secret = app.db.read(move |conn| {
+        let session_id = conn.query_row("SELECT session_id FROM two_factor_setup_secrets", [], |r| r.get(0))?;
+        campfire_db::TwoFactorSetupSecret::valid_for(conn, session_id, enrollment_now)?.expect("live enrollment").secret(&encryption)
+    }).await.unwrap();
+    let code = rails_compat::totp::at(&secret, app.clock.now().as_second()).unwrap();
+    let (status, body) = browser.post("/two_factor_setup", "text/html", &[("code", &code)]).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "completed enrollment: {body}");
     let path = format!("/rooms/{room}/messages");
     let post = |n: &'static str| [("message[body]", "<p>Hello bot</p>"), ("message[client_message_id]", n)];
     let messages = || count(&app, "SELECT count(*) FROM messages");
@@ -716,12 +727,17 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     });
     let tasks: Vec<_> = periodic
         .tasks()
-        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks"].contains(&t.name()))
+        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks", "streaming messages"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     assert_eq!(serde_json::json!(tasks), golden["tasks"]);
     let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
     assert_eq!(recovery.interval(), Duration::from_secs(30));
+    // WS11 tasks have their own fresh, pinned Rails roster, rather than the WS8 subset.
+    let ws11:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/agents_streaming_contract.json")).unwrap();
+    let mut tasks:Vec<_>=periodic.tasks().filter(|t|["clear plaintext bot tokens","stranded agent webhooks","streaming messages"].contains(&t.name())).map(|t|serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()})).collect();
+    tasks.sort_by_key(|t|t["name"].as_str().unwrap().to_owned());
+    assert_eq!(serde_json::json!(tasks),ws11["results"]["tasks"]);
 }
 
 #[tokio::test]
@@ -730,8 +746,9 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     let app = booted.app.clone();
     app.db.write(|tx|{tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob{source_message_id:999}));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
     let rows = wait_for(&app, "quote refresh execution", |rows| {
-        rows.iter()
-            .all(|row| row.class != "Message::QuoteCardsRefreshJob")
+        // The periodic runner may enqueue retention alongside this job. Wait for
+        // that work too before asserting an empty queue, rather than racing it.
+        rows.is_empty()
             || rows
                 .iter()
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")

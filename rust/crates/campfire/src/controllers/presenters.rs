@@ -4,6 +4,7 @@
 
 pub mod accounts;
 pub mod agents;
+pub mod agent_payload;
 pub mod attachments;
 pub mod page;
 pub mod pagination;
@@ -131,6 +132,9 @@ pub struct Presenter<'a> {
     /// `Current.request_host`, which opengraph embeds are checked against.
     pub request_host: Option<String>,
     pub cache_base_url: Option<String>,
+    pub current_user_id: Option<i64>,
+    #[allow(dead_code)] // WS11-api calls agent_message_payload after its branch merges.
+    agent_payload: &'a agent_payload::State,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
 }
@@ -145,6 +149,8 @@ impl<'a> Presenter<'a> {
             now: app.clock.now(),
             request_host,
             cache_base_url: None,
+            current_user_id: None,
+            agent_payload: &app.agent_message_payload,
             users: RefCell::default(),
             room_names: RefCell::default(),
         }
@@ -519,7 +525,13 @@ pub fn user_summary(secrets: &Secrets, user: &User) -> campfire_views::users::Us
             campfire_db::Status::Banned => Status::Banned,
         },
         avatar_path: avatar_path(secrets, user),
+        two_factor_enabled: false,
     }
+}
+
+/// The account list additionally offers administrator recovery for enrolled humans.
+pub fn account_user_summary(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db::Result<campfire_views::users::UserSummary> {
+    Ok(campfire_views::users::UserSummary { two_factor_enabled: user.two_factor_enabled(conn)?, ..user_summary(secrets,user) })
 }
 
 /// `to_fs(:epoch)` as a string (milliseconds).

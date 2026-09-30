@@ -485,11 +485,13 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
+    let current_user_id = require_current_user(c)?.id;
     c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
+            presenter.current_user_id = Some(current_user_id);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
             campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))
         })

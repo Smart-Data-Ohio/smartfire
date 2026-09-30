@@ -2,9 +2,12 @@
 
 mod account_test;
 mod agent_posting_test;
+mod agent_peer_callbacks_test;
 mod agent_access_model_test;
 mod agent_approval_test;
 mod agent_record_test;
+mod agent_cases_test;
+mod agent_dispatcher_cases_test;
 mod agent_slash_command_test;
 mod agent_step_test;
 mod agent_working_presence_test;
@@ -12,6 +15,11 @@ mod agent_work_events_test;
 mod agent_context_test;
 mod agent_direct_messages_test;
 mod agent_lifecycle_test;
+mod agent_cleanup_test;
+mod agent_credential_cases_test;
+mod agent_grant_cases_test;
+mod agent_user_removal_test;
+mod agent_streaming_test;
 mod agent_delivery_test;
 mod agent_event_access_test;
 mod agent_event_polling_test;
@@ -44,7 +52,10 @@ mod scheduled_message_test;
 mod save_touches_test;
 mod search_query_test;
 mod session_test;
+mod two_factor_test;
+mod two_factor_rollback_test;
 mod user_test;
+mod user_device_test;
 
 use std::sync::Arc;
 

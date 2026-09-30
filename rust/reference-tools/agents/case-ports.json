@@ -1,0 +1,430 @@
+{
+  "reference_pin": "d7c7de92",
+  "files": [
+    {
+      "rails_file": "test/models/agent_credential_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_credential_cases_test.rs",
+      "cases": [
+        {
+          "rails": "create_with_secret stores a digest and returns a reveal-once secret",
+          "rust": "ws11_credential_case_reveal_once_digest_and_display"
+        },
+        {
+          "rails": "name is required",
+          "rust": "ws11_credential_case_name_required"
+        },
+        {
+          "rails": "token digest is unique",
+          "rust": "ws11_credential_case_digest_unique"
+        },
+        {
+          "rails": "authenticate finds an active credential and ignores whitespace",
+          "rust": "ws11_credential_case_authentication_strips_whitespace"
+        },
+        {
+          "rails": "authenticate returns nil for unknown secrets",
+          "rust": "ws11_credential_case_unknown_and_blank_secrets"
+        },
+        {
+          "rails": "revoked credentials do not authenticate",
+          "rust": "ws11_credential_case_revoked_cannot_authenticate"
+        },
+        {
+          "rails": "expired credentials do not authenticate",
+          "rust": "ws11_credential_case_expired_cannot_authenticate"
+        },
+        {
+          "rails": "future expiry stays active",
+          "rust": "ws11_credential_case_future_expiry_stays_active"
+        },
+        {
+          "rails": "record_use stamps time and ip",
+          "rust": "ws11_credential_case_use_stamps_time_and_ip"
+        },
+        {
+          "rails": "record_use throttles to once per minute",
+          "rust": "ws11_credential_case_use_throttle_preserves_first_ip_until_next_minute"
+        },
+        {
+          "rails": "destroying the agent removes its credentials",
+          "rust": "ws11_credential_case_destroy_agent_removes_credentials"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_grant_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_grant_cases_test.rs",
+      "cases": [
+        {
+          "rails": "requires a known capability",
+          "rust": "ws11_grant_case_known_capability_required"
+        },
+        {
+          "rails": "accepts every documented capability",
+          "rust": "ws11_grant_case_all_documented_capabilities_valid"
+        },
+        {
+          "rails": "dm_anyone must be workspace-wide",
+          "rust": "ws11_grant_case_dm_anyone_workspace_only"
+        },
+        {
+          "rails": "read, post, react, manage_threads, external_action, fizzy, and dm_anyone are enforced",
+          "rust": "ws11_grant_case_enforced_vocabulary_matches_rails"
+        },
+        {
+          "rails": "room is optional and means workspace-wide",
+          "rust": "ws11_grant_case_optional_room_means_workspace"
+        },
+        {
+          "rails": "duplicate active grants are rejected",
+          "rust": "ws11_grant_case_active_duplicate_rejected"
+        },
+        {
+          "rails": "database rejects a second active workspace-wide grant for the same agent and capability",
+          "rust": "ws11_grant_case_database_rejects_active_workspace_duplicate"
+        },
+        {
+          "rails": "database rejects a second active room grant for the same agent, room, and capability",
+          "rust": "ws11_grant_case_database_rejects_active_scoped_duplicate"
+        },
+        {
+          "rails": "same capability in another room or workspace-wide does not conflict",
+          "rust": "ws11_grant_case_other_room_and_workspace_do_not_conflict"
+        },
+        {
+          "rails": "re-granting after revocation is allowed",
+          "rust": "ws11_grant_case_regrant_after_revocation"
+        },
+        {
+          "rails": "revoke! timestamps and is idempotent",
+          "rust": "ws11_grant_case_revoke_timestamp_idempotent"
+        },
+        {
+          "rails": "active and revoked scopes",
+          "rust": "ws11_grant_case_active_and_revoked_scopes"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_backfill_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_cleanup_test.rs",
+      "cases": [
+        {
+          "rails": "backfill creates one ownerless workspace agent per bot user",
+          "rust": "ws11_cleanup_backfill_is_ownerless_workspace_one_shot_like_the_migration"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_cases_test.rs",
+      "cases": [
+        {
+          "rails": "kind defaults to personal",
+          "rust": "ws11_agent_case_kind_defaults_to_personal"
+        },
+        {
+          "rails": "personal requires an owner on create",
+          "rust": "ws11_agent_case_personal_requires_an_owner_on_create"
+        },
+        {
+          "rails": "personal requires an owner on update",
+          "rust": "ws11_agent_case_personal_requires_an_owner_on_update"
+        },
+        {
+          "rails": "workspace requires an owner on create",
+          "rust": "ws11_agent_case_workspace_requires_an_owner_on_create"
+        },
+        {
+          "rails": "ownerless workspace rows from the backfill stay valid on update",
+          "rust": "ws11_agent_case_ownerless_workspace_rows_from_the_backfill_stay_valid_on_update"
+        },
+        {
+          "rails": "user is required and unique",
+          "rust": "ws11_agent_case_user_is_required_and_unique"
+        },
+        {
+          "rails": "belongs to bot user and owner",
+          "rust": "ws11_agent_case_belongs_to_bot_user_and_owner"
+        },
+        {
+          "rails": "destroying the bot user removes its agent",
+          "rust": "ws11_agent_case_destroying_the_bot_user_removes_its_agent"
+        },
+        {
+          "rails": "active when not suspended and user is active",
+          "rust": "ws11_agent_case_active_when_not_suspended_and_user_is_active"
+        },
+        {
+          "rails": "inactive when suspended",
+          "rust": "ws11_agent_case_inactive_when_suspended"
+        },
+        {
+          "rails": "inactive when user is deactivated",
+          "rust": "ws11_agent_case_inactive_when_user_is_deactivated"
+        },
+        {
+          "rails": "legacy capabilities when no grants have ever existed",
+          "rust": "ws11_agent_case_legacy_capabilities_when_no_grants_have_ever_existed"
+        },
+        {
+          "rails": "no legacy capabilities once any grant exists",
+          "rust": "ws11_agent_case_no_legacy_capabilities_once_any_grant_exists"
+        },
+        {
+          "rails": "revoking the last grant does not restore the legacy fallback",
+          "rust": "ws11_agent_case_revoking_the_last_grant_does_not_restore_the_legacy_fallback"
+        },
+        {
+          "rails": "legacy agent keeps read, post, and react but nothing else",
+          "rust": "ws11_agent_case_legacy_agent_keeps_read_post_and_react_but_nothing_else"
+        },
+        {
+          "rails": "room grant authorizes only that room",
+          "rust": "ws11_agent_case_room_grant_authorizes_only_that_room"
+        },
+        {
+          "rails": "workspace-wide grant authorizes every room",
+          "rust": "ws11_agent_case_workspace_wide_grant_authorizes_every_room"
+        },
+        {
+          "rails": "revoked grants do not authorize",
+          "rust": "ws11_agent_case_revoked_grants_do_not_authorize"
+        },
+        {
+          "rails": "suspended agent cannot do anything, even with legacy fallback",
+          "rust": "ws11_agent_case_suspended_agent_cannot_do_anything_even_with_legacy_fallback"
+        },
+        {
+          "rails": "unknown capabilities are denied",
+          "rust": "ws11_agent_case_unknown_capabilities_are_denied"
+        },
+        {
+          "rails": "status defaults to idle",
+          "rust": "ws11_agent_case_status_defaults_to_idle"
+        },
+        {
+          "rails": "status accepts the vocabulary and rejects anything else",
+          "rust": "ws11_agent_case_status_accepts_the_vocabulary_and_rejects_anything_else"
+        },
+        {
+          "rails": "status note allows 200 characters at most",
+          "rust": "ws11_agent_case_status_note_allows_200_characters_at_most"
+        },
+        {
+          "rails": "description allows 500 characters at most",
+          "rust": "ws11_agent_case_description_allows_500_characters_at_most"
+        },
+        {
+          "rails": "status_changed_at starts blank and is stamped on status change only",
+          "rust": "ws11_agent_case_status_changed_at_starts_blank_and_is_stamped_on_status_change_only"
+        },
+        {
+          "rails": "touch_last_seen_at throttles to once per minute",
+          "rust": "ws11_agent_case_touch_last_seen_at_throttles_to_once_per_minute"
+        },
+        {
+          "rails": "kind description covers personal, workspace, and ownerless agents",
+          "rust": "ws11_agent_case_kind_description_covers_personal_workspace_and_ownerless_agents"
+        },
+        {
+          "rails": "grants summary reports legacy access when no grants were ever recorded",
+          "rust": "ws11_agent_case_grants_summary_reports_legacy_access_when_no_grants_were_ever_recorded"
+        },
+        {
+          "rails": "grants summary counts room grants and flags workspace-wide grants",
+          "rust": "ws11_agent_case_grants_summary_counts_room_grants_and_flags_workspace_wide_grants"
+        },
+        {
+          "rails": "grants summary omits capabilities with no active grant",
+          "rust": "ws11_agent_case_grants_summary_omits_capabilities_with_no_active_grant"
+        },
+        {
+          "rails": "grants summary reports no active grants once everything is revoked",
+          "rust": "ws11_agent_case_grants_summary_reports_no_active_grants_once_everything_is_revoked"
+        },
+        {
+          "rails": "activity summary counts the last 24 hours from the ledger",
+          "rust": "ws11_agent_case_activity_summary_counts_the_last_24_hours_from_the_ledger"
+        },
+        {
+          "rails": "for_directory lists active first, excludes deactivated users",
+          "rust": "ws11_agent_case_for_directory_lists_active_first_excludes_deactivated_users"
+        },
+        {
+          "rails": "note-only change still broadcasts the badge",
+          "rust": "ws11_agent_case_note_only_change_still_broadcasts_the_badge"
+        },
+        {
+          "rails": "touch_last_seen_at writes at most once when the throttle races",
+          "rust": "ws11_agent_case_touch_last_seen_at_writes_at_most_once_when_the_throttle_races"
+        },
+        {
+          "rails": "signing secret generation mints exactly one secret when raced",
+          "rust": "ws11_agent_case_signing_secret_generation_mints_exactly_one_secret_when_raced"
+        },
+        {
+          "rails": "signing secret reset takes the row lock",
+          "rust": "ws11_agent_case_signing_secret_reset_takes_the_row_lock"
+        },
+        {
+          "rails": "last_seen_at touch alone broadcasts nothing",
+          "rust": "ws11_agent_case_last_seen_at_touch_alone_broadcasts_nothing"
+        },
+        {
+          "rails": "unrelated updates broadcast nothing",
+          "rust": "ws11_agent_case_unrelated_updates_broadcast_nothing"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/services/slash_commands/dispatcher_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_dispatcher_cases_test.rs",
+      "cases": [
+        {
+          "rails": "invoking an agent command delivers a slash_command event",
+          "rust": "ws11_dispatcher_case_invoking_an_agent_command_delivers_a_slash_command_event"
+        },
+        {
+          "rails": "invoking an agent command in a thread records the thread",
+          "rust": "ws11_dispatcher_case_invoking_an_agent_command_in_a_thread_records_the_thread"
+        },
+        {
+          "rails": "invoking an agent command in the channel records no thread",
+          "rust": "ws11_dispatcher_case_invoking_an_agent_command_in_the_channel_records_no_thread"
+        },
+        {
+          "rails": "invoking an agent command requires post_messages",
+          "rust": "ws11_dispatcher_case_invoking_an_agent_command_requires_post_messages"
+        },
+        {
+          "rails": "invoking an agent command is rate limited",
+          "rust": "ws11_dispatcher_case_invoking_an_agent_command_is_rate_limited"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/lib/restricted_http/private_network_guard_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/net/guard_case_tests.rs",
+      "cases": [
+        {
+          "rails": "private_ip? returns true for 'This' network (RFC1700)",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_this_network_rfc1700"
+        },
+        {
+          "rails": "private_ip? returns true for loopback addresses",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_loopback_addresses"
+        },
+        {
+          "rails": "private_ip? returns true for RFC1918 private addresses",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_rfc1918_private_addresses"
+        },
+        {
+          "rails": "private_ip? returns true for link-local addresses",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_link_local_addresses"
+        },
+        {
+          "rails": "private_ip? returns false for public addresses",
+          "rust": "ws11_private_guard_case_private_ip_returns_false_for_public_addresses"
+        },
+        {
+          "rails": "private_ip? returns true for IPv4-mapped IPv6 addresses with private IPs",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_ipv4_mapped_ipv6_addresses_with_private_ips"
+        },
+        {
+          "rails": "private_ip? returns true for IPv4-mapped IPv6 addresses with link-local IPs",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_ipv4_mapped_ipv6_addresses_with_link_local_ips"
+        },
+        {
+          "rails": "private_ip? returns true for IPv4-mapped IPv6 addresses even with public IPs",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_ipv4_mapped_ipv6_addresses_even_with_public_ips"
+        },
+        {
+          "rails": "private_ip? returns true for IPv4-compatible IPv6 addresses with private IPs",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_ipv4_compatible_ipv6_addresses_with_private_ips"
+        },
+        {
+          "rails": "private_ip? returns true for IPv4-compatible IPv6 addresses with link-local IPs",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_ipv4_compatible_ipv6_addresses_with_link_local_ips"
+        },
+        {
+          "rails": "private_ip? returns true for IPv4-compatible IPv6 addresses even with public IPs",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_ipv4_compatible_ipv6_addresses_even_with_public_ips"
+        },
+        {
+          "rails": "private_ip? returns true for carrier-grade NAT addresses (RFC6598)",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_carrier_grade_nat_addresses_rfc6598"
+        },
+        {
+          "rails": "private_ip? returns true for NAT64 addresses embedding a private IPv4",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_nat64_addresses_embedding_a_private_ipv4"
+        },
+        {
+          "rails": "private_ip? returns true for the whole local-use NAT64 block (RFC8215)",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_the_whole_local_use_nat64_block_rfc8215"
+        },
+        {
+          "rails": "private_ip? returns true for SIIT IPv4-translated addresses (RFC2765)",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_siit_ipv4_translated_addresses_rfc2765"
+        },
+        {
+          "rails": "private_ip? returns false for NAT64 addresses embedding a public IPv4",
+          "rust": "ws11_private_guard_case_private_ip_returns_false_for_nat64_addresses_embedding_a_public_ipv4"
+        },
+        {
+          "rails": "private_ip? returns true for 6to4 and Teredo transition addresses",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_6to4_and_teredo_transition_addresses"
+        },
+        {
+          "rails": "private_ip? returns true for IPv6 loopback, ULA, and link-local",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_ipv6_loopback_ula_and_link_local"
+        },
+        {
+          "rails": "private_ip? returns true for IPv6 multicast, documentation, and benchmarking ranges",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_ipv6_multicast_documentation_and_benchmarking_ranges"
+        },
+        {
+          "rails": "private_ip? returns false for public IPv6 addresses",
+          "rust": "ws11_private_guard_case_private_ip_returns_false_for_public_ipv6_addresses"
+        },
+        {
+          "rails": "private_ip? returns true for invalid addresses",
+          "rust": "ws11_private_guard_case_private_ip_returns_true_for_invalid_addresses"
+        },
+        {
+          "rails": "resolve raises Violation for private hostname",
+          "rust": "ws11_private_guard_case_resolve_raises_violation_for_private_hostname"
+        },
+        {
+          "rails": "resolve returns IP for public hostname",
+          "rust": "ws11_private_guard_case_resolve_returns_ip_for_public_hostname"
+        },
+        {
+          "rails": "resolve refuses hostnames answering only blocked IPv6 addresses",
+          "rust": "ws11_private_guard_case_resolve_refuses_hostnames_answering_only_blocked_ipv6_addresses"
+        },
+        {
+          "rails": "resolve refuses numeric IPv4 literals however they are spelled",
+          "rust": "ws11_private_guard_case_resolve_refuses_numeric_ipv4_literals_however_they_are_spelled"
+        },
+        {
+          "rails": "resolve returns the normalized address for public numeric literals",
+          "rust": "ws11_private_guard_case_resolve_returns_the_normalized_address_for_public_numeric_literals"
+        },
+        {
+          "rails": "resolve refuses bracketed IPv6 literals pointing at blocked addresses",
+          "rust": "ws11_private_guard_case_resolve_refuses_bracketed_ipv6_literals_pointing_at_blocked_addresses"
+        },
+        {
+          "rails": "resolve raises Unresolvable, not Violation, when the host resolves to nothing",
+          "rust": "ws11_private_guard_case_resolve_raises_unresolvable_not_violation_when_the_host_resolves_to_nothing"
+        }
+      ]
+    }
+  ],
+  "boundary_deferred": {
+    "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
+    "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
+    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8."
+  }
+}
