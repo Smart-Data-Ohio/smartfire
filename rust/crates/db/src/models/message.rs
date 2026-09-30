@@ -363,36 +363,16 @@ impl Message {
 
     // Message::Searchable
 
-    /// `room.messages.search(query)`: FTS5 `MATCH`, `ordered`. Upstream's search; ours goes through
-    /// `SearchQuery` (a later workstream).
+    /// Our `SearchQuery` grammar applied to a live room, returned oldest first.
     pub fn search_in_room(conn: &Connection, room_id: i64, query: &str) -> Result<Vec<Self>> {
-        let query = match_terms(query);
-        if query.is_empty() {
-            return Ok(Vec::new());
-        }
-        query_all(
-            conn,
-            r#"SELECT "messages".* FROM "messages" join message_search_index idx on messages.id = idx.rowid WHERE "messages"."room_id" = ? AND (idx.body match ?) ORDER BY "messages"."created_at" ASC, "messages"."id" ASC"#,
-            params![room_id, query],
-            Self::from_row,
-        )
+        super::search_query::SearchQuery::parse(query).messages_in_room(conn, room_id)
     }
 
-    /// `Current.user.reachable_messages.search(query).last(100)`
+    /// The first bounded reachable search window. Subsequent windows use
+    /// `SearchQuery::messages_for_user` with an accessible message cursor.
     pub fn search_reachable(conn: &Connection, user_id: i64, query: &str) -> Result<Vec<Self>> {
-        let query = match_terms(query);
-        if query.is_empty() {
-            return Ok(Vec::new());
-        }
-        let sql = format!(
-            r#"{SELECT_REACHABLE} join message_search_index idx on messages.id = idx.rowid WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND (idx.body match ?) ORDER BY "messages"."created_at" DESC, "messages"."id" DESC LIMIT 100"#
-        );
-        Ok(reversed(query_all(
-            conn,
-            &sql,
-            params![user_id, query],
-            Self::from_row,
-        )?))
+        Ok(super::search_query::SearchQuery::parse(query)
+            .messages_for_user(conn, user_id, jiff::tz::TimeZone::UTC, None)?.messages)
     }
 
     // Creating, updating, destroying
@@ -1218,15 +1198,3 @@ fn reversed<T>(mut rows: Vec<T>) -> Vec<T> {
     rows
 }
 
-/// Each word of a search as an FTS5 string, so every word must appear and none is read as query
-/// syntax. Rails passes the words straight to `MATCH`, where `NOT`, `AND`, `OR` or `NEAR` in the
-/// wrong place is a syntax error (a 500).
-/// NULs separate words too: SQLite would end the query string at one.
-fn match_terms(query: &str) -> String {
-    query
-        .split(|c: char| c.is_whitespace() || c == '\0')
-        .filter(|word| !word.is_empty())
-        .map(|word| format!("\"{}\"", word.replace('"', "\"\"")))
-        .collect::<Vec<_>>()
-        .join(" ")
-}

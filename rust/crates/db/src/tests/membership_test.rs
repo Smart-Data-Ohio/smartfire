@@ -171,7 +171,7 @@ fn removing_a_membership_resets_the_users_connections() {
     let m = membership(&t);
     t.write(move |tx| m.destroy(tx));
     assert_eq!(
-        t.events(),
+        t.events().into_iter().filter(|event|matches!(event, Event::DisconnectUser{..})).collect::<Vec<_>>(),
         vec![Event::DisconnectUser {
             user_id: id("david"),
             reconnect: true

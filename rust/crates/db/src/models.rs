@@ -22,6 +22,7 @@ pub mod scheduled_message;
 pub mod room;
 pub mod room_category;
 pub mod search;
+pub mod search_query;
 pub mod session;
 pub mod sound;
 pub mod thread_membership;
