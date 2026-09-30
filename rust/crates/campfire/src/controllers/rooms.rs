@@ -177,6 +177,7 @@ pub(crate) async fn render_shared_room(c: &Ctx, room: &Room) -> Result<Rendered>
             let account = Account::first(conn)?;
             Ok(page::render_detached_at(&app, account.as_ref(), &base_url, |_| {
                 campfire_views::users::SidebarSharedPartial { room: sidebar_room }.render()
+
             }))
         })
         .await
@@ -213,6 +214,14 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 invitation: original && !Message::paged(conn, Timeline::Room(room.id))?,
                 join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
                 messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
+                ooo_notice_members:
+                    crate::controllers::presenters::status_settings::ooo_notice_members(
+                        conn,
+                        &app.secrets,
+                        &room,
+                        user.id,
+                        app.db.env().now(),
+                    )?,
             };
             Ok((show, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_github_refreshes()))
         })
@@ -229,3 +238,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "rooms/ws17_ooo_tests.rs"]
+mod ws17_ooo_tests;

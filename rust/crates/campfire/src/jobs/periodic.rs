@@ -20,8 +20,8 @@
 //! | clear plaintext bot tokens | 24 h, its work once per process | registered ([`clear_plaintext_bot_tokens_task`]) |
 //! | retention prune | `RETENTION_PRUNE_INTERVAL` (24 h) | WS8 |
 //! | presence leases | 1 min | WS17 |
-//! | meeting status | 1 min | WS14 |
-//! | out of office | 1 min | WS14 |
+//! | meeting status | 1 min | WS17 (WS14 refresh execution) |
+//! | out of office | 1 min | WS17 (WS14 refresh execution) |
 //! | board sla nudges | 5 min | WS12 |
 //! | board stale digests | 1 h | WS12 |
 //! | streaming messages | 30 s | WS11 |
@@ -153,6 +153,18 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
         Ok(())
     }));
+    periodic.task(Task::new("presence leases", Duration::from_secs(MINUTE), |app: App| async move {
+        app.db.write(|tx| campfire_db::WorkspacePresenceLease::prune(tx, 100)).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("meeting status", Duration::from_secs(MINUTE), |app: App| async move {
+        campfire_db::models::calendar_dispatch::dispatch_meetings(&app.db, app.db.env().now()).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("out of office", Duration::from_secs(MINUTE), |app: App| async move {
+        campfire_db::models::calendar_dispatch::dispatch_ooo(&app.db, app.db.env().now()).await?;
+        Ok(())
+    }));
     periodic
 }
 pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
@@ -251,4 +263,21 @@ pub(crate) async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod ws17_tests {
+    use super::*;
+    #[test]
+    fn ws17_calendar_sweeps_are_registered_once_each_minute() {
+        let tasks = periodic(PeriodicIntervals {
+            reminders: Duration::from_secs(30),
+            retention: Duration::from_secs(24 * HOUR),
+        });
+        for name in ["meeting status", "out of office"] {
+            let matching: Vec<_> = tasks.tasks().filter(|task| task.name() == name).collect();
+            assert_eq!(matching.len(), 1, "{name}");
+            assert_eq!(matching[0].interval(), Duration::from_secs(MINUTE));
+        }
+    }
 }

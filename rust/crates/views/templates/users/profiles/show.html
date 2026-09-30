@@ -15,7 +15,7 @@
       </button>
 {% endfilter %}  </div>
 {% endblock %}
-{% block content %}<section class="panel flex flex-column gap" style="view-transition-name: avatar-{{ user.id }}">
+{% block content %}<section class="panel profile-settings flex flex-column gap" style="view-transition-name: avatar-{{ user.id }}">
   {% include "pwa/_install_instructions.html" %}
 
   <div class="align-center center avatar__form gap" data-controller="upload-preview">
@@ -89,6 +89,12 @@
       {{ h::profile_form_submit_button(ctx) }}
     </div>
 {% endfilter %}
+  {{ self.status_form() }}
+
+  {{ self.notification_form() }}
+
+  {{ self.appearance_form() }}
+
   {{ self.github_panel() }}
 
   <div class="margin-block pad-inline pad-block fill-shade border-radius">

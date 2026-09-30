@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_clock};
+use crate::app::{Booted, boot_with_services};
 use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -129,6 +129,10 @@ impl TestApp {
         Self::boot_with_clock(seed_clock()).await
     }
 
+    pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+        Self::boot_with_services(seed_clock(), network, &[]).await
+    }
+
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
         Self::boot_with_clock_and_env(clock, &[]).await
     }
@@ -137,17 +141,26 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_with_clients(clock, extra, None).await
+        Self::boot_with_clients(clock, crate::integrations::net::Network::system(), extra, None).await
     }
 
     pub async fn boot_with_github_app(
         github_app: crate::integrations::github::client::AppClient,
     ) -> Option<TestApp> {
-        Self::boot_with_clients(seed_clock(), &[], Some(github_app)).await
+        Self::boot_with_clients(seed_clock(), crate::integrations::net::Network::system(), &[], Some(github_app)).await
+    }
+
+    async fn boot_with_services(
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_clients(clock, network, extra, None).await
     }
 
     async fn boot_with_clients(
         clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
         github_app: Option<crate::integrations::github::client::AppClient>,
     ) -> Option<TestApp> {
@@ -173,17 +186,15 @@ impl TestApp {
                 .map(|(_, value)| (*value).into()),
         })
         .unwrap();
+        let intervals = crate::jobs::periodic::Intervals { periodic: None, huddle: None };
         let booted = match github_app {
-            Some(client) => crate::app::boot_with_github_clients(
+            Some(client) => crate::app::boot_with_all_services(
                 config, clock, crate::integrations::github::client::ReadClient::from_env(),
-                client, crate::integrations::net::Network::system(),
+                client, crate::integrations::net::Network::system(), network, intervals,
             ).await.unwrap(),
-            None => boot_with_clock(config, clock).await.unwrap(),
+            None => boot_with_services(config, clock, network, intervals).await.unwrap(),
         };
-        Some(TestApp {
-            booted,
-            _dir: dir,
-        })
+        Some(TestApp { booted, _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {

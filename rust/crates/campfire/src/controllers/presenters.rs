@@ -4,6 +4,7 @@
 
 pub mod accounts;
 pub mod github;
+pub mod status_settings;
 pub mod attachments;
 pub mod link_embeds;
 pub mod fizzy_cards;

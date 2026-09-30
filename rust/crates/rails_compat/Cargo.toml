@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 serde_json.workspace = true
+serde.workspace = true
 jiff.workspace = true
 thiserror.workspace = true
 base64.workspace = true
@@ -21,3 +22,6 @@ ring.workspace = true
 regex.workspace = true
 uuid.workspace = true
 subtle.workspace = true
+
+[build-dependencies]
+cc.workspace = true
