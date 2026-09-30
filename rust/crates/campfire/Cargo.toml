@@ -52,8 +52,12 @@ flate2.workspace = true
 base64.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
+url.workspace = true
+subtle.workspace = true
 
 [dev-dependencies]
+hmac.workspace = true
+rcgen.workspace = true
 campfire_kit = { workspace = true, features = ["test-support"] }
 campfire_db = { workspace = true, features = ["test-support"] }
 tikv-jemalloc-sys.workspace = true

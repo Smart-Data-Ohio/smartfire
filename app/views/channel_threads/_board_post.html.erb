@@ -1,5 +1,5 @@
 <% @page_title = @thread.name %>
-<% @body_class = "sidebar board-post" %>
+<% @body_class = "sidebar" %>
 
 <% content_for :nav do %>
   <div class="flex-item-justify-start">
@@ -8,6 +8,9 @@
 <% end %>
 
 <% content_for :sidebar, sidebar_turbo_frame_tag(src: user_sidebar_path) %>
+<% content_for :head do %>
+  <meta name="current-room-id" content="<%= @room.id %>">
+<% end %>
 
 <% owner = @thread.work_owner %>
 <% owner_label = owner.blank? ? "Unassigned" : @thread.work_owner_active? ? owner.name : "Owner unavailable (#{owner.name})" %>
@@ -154,6 +157,8 @@
         <p class="board-post__messages-empty">No messages yet. Start the discussion below.</p>
       <% end %>
       <%= message_area_tag(@room, thread: @thread) do %>
+        <%= render "messages/template" %>
+
         <%= messages_tag(@room, thread: @thread) do %>
           <%= render partial: "messages/message", collection: @messages %>
         <% end %>

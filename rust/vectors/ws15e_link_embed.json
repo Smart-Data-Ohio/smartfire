@@ -1,0 +1,259 @@
+{
+  "reference": "d7c7de92",
+  "metadata": [
+    {
+      "html": "<meta property=\"og:title\" content=\"Example Title\"><meta property=\"og:description\" content=\"An example description.\"><meta property=\"og:site_name\" content=\"Example\"><meta property=\"og:image\" content=\"https://example.com/image.png\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "Example Title",
+        "description": "An example description.",
+        "site_name": "Example",
+        "image_url": "https://example.com/image.png"
+      }
+    },
+    {
+      "html": "<title>Document Title</title><meta name=\"twitter:title\" content=\"Card Title\"><meta name=\"twitter:description\" content=\"Card description.\"><meta name=\"twitter:image\" content=\"/card.png\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "Card Title",
+        "description": "Card description.",
+        "site_name": "example.com",
+        "image_url": "https://example.com/card.png"
+      }
+    },
+    {
+      "html": "<meta property=\"og:image\" content=\"http://cdn.example.com/plain.png\"><meta property=\"og:image:secure_url\" content=\"https://cdn.example.com/secure.png\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": null,
+        "description": null,
+        "site_name": "example.com",
+        "image_url": "https://cdn.example.com/secure.png"
+      }
+    },
+    {
+      "html": "<meta property=\"og:image\" content=\"images/hero.png\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": null,
+        "description": null,
+        "site_name": "example.com",
+        "image_url": "https://example.com/blog/images/hero.png"
+      }
+    },
+    {
+      "html": "<meta property=\"og:title\" content=\"<img src=x onerror=alert(1)>Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! \"><meta property=\"og:description\" content=\"<b>bold</b> words\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! Hey! ",
+        "description": "bold words",
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<meta property=\"og:title\" content=\"Tom &amp; Jerry say &quot;hi&quot; &lt;3\"><meta property=\"og:description\" content=\"5 &gt; 3 &amp; 2 &lt; 4, &quot;quoted&quot;\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "Tom & Jerry say \"hi\" <3",
+        "description": "5 > 3 & 2 < 4, \"quoted\"",
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<meta property=\"og:title\" content=\"&lt;img src=x onerror=alert(1)&gt;Hi\"><meta property=\"og:description\" content=\"<a href=&quot;javascript:alert(1)&quot;>click</a>\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "Hi",
+        "description": "click",
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<meta property=\"og:image\" content=\"javascript:alert(1)\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": null,
+        "description": null,
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<title>Plain document title</title><meta name=\"description\" content=\"Plain description\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "Plain document title",
+        "description": "Plain description",
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<meta property=\"og:title\" content=\"\"><meta property=\"og:title\" content=\"Ignored duplicate\"><meta name=\"twitter:title\" content=\"Fallback\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "Fallback",
+        "description": null,
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<meta PROPERTY=\"OG:TITLE\" content=\"Uppercase value\"><meta name=\"twitter:site\" content=\"@author\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "Uppercase value",
+        "description": null,
+        "site_name": "@author",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<title>Café 😀</title><meta property=\"og:title\" content=\"é😀中文\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "é😀中文",
+        "description": null,
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<meta property=\"og:title\" content=\"&#160; hello &#160;\"><meta property=\"og:description\" content=\"&amp;nbsp;\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "&nbsp; hello &nbsp;",
+        "description": "&nbsp;",
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<meta property=\"og:image\" content=\"../next.png?x=1#photo\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": null,
+        "description": null,
+        "site_name": "example.com",
+        "image_url": "https://example.com/next.png?x=1#photo"
+      }
+    },
+    {
+      "html": "<meta property=\"og:title\" content=\"<script>bad</script><b>good</b>\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "badgood",
+        "description": null,
+        "site_name": "example.com",
+        "image_url": null
+      }
+    },
+    {
+      "html": "<meta property=\"og:title\" content=\"&lt;3\">",
+      "base": "https://example.com/blog/page",
+      "expected": {
+        "title": "<3",
+        "description": null,
+        "site_name": "example.com",
+        "image_url": null
+      }
+    }
+  ],
+  "cards": [
+    {
+      "attributes": {
+        "title": "Title",
+        "description": "Description",
+        "site_name": "Example",
+        "image_url": "https://example.com/image.png"
+      },
+      "url": "https://example.com/raw#own",
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__site\">Example</p>\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/raw#own\">Title</a>\n        </p>\n        <p class=\"link-embed-card__description\">Description</p>\n    </div>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"link-embed-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://example.com/raw#own\">\n        <img alt=\"\" loading=\"lazy\" class=\"link-embed-card__image\" src=\"https://example.com/image.png\" />\n</a>  </article>\n"
+    },
+    {
+      "attributes": {
+        "title": "Title"
+      },
+      "url": "https://example.com/raw#own",
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/raw#own\">Title</a>\n        </p>\n    </div>\n  </article>\n"
+    },
+    {
+      "attributes": {
+        "description": "Only description"
+      },
+      "url": "https://example.com/raw#own",
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__description\">Only description</p>\n    </div>\n  </article>\n"
+    },
+    {
+      "attributes": {},
+      "url": "https://example.com/raw#own",
+      "html": ""
+    },
+    {
+      "attributes": {
+        "title": "Tom & Jerry <3 \"hi\"",
+        "description": "<script>untrusted</script>",
+        "site_name": "A & B",
+        "image_url": "https://example.com/a?x=1&y=2"
+      },
+      "url": "https://example.com/raw#own",
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__site\">A &amp; B</p>\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/raw#own\">Tom &amp; Jerry &lt;3 &quot;hi&quot;</a>\n        </p>\n        <p class=\"link-embed-card__description\">&lt;script&gt;untrusted&lt;/script&gt;</p>\n    </div>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"link-embed-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://example.com/raw#own\">\n        <img alt=\"\" loading=\"lazy\" class=\"link-embed-card__image\" src=\"https://example.com/a?x=1&amp;y=2\" />\n</a>  </article>\n"
+    },
+    {
+      "attributes": {
+        "title": "  ",
+        "description": "Text",
+        "site_name": "  ",
+        "image_url": null
+      },
+      "url": "https://example.com/raw#own",
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__description\">Text</p>\n    </div>\n  </article>\n"
+    }
+  ],
+  "containers": [
+    {
+      "attributes": [],
+      "client_id": "ws15e-card-key",
+      "html": "  <div id=\"link_embed_cards_message_ws15e-card-key\" class=\"link-embed-cards\"></div>\n"
+    },
+    {
+      "attributes": [
+        {
+          "title": "Title",
+          "description": "Description",
+          "site_name": "Example",
+          "image_url": "https://example.com/image.png"
+        }
+      ],
+      "client_id": "ws15e-card-key",
+      "html": "  <div id=\"link_embed_cards_message_ws15e-card-key\" class=\"link-embed-cards\">\n      <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__site\">Example</p>\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/raw#own\">Title</a>\n        </p>\n        <p class=\"link-embed-card__description\">Description</p>\n    </div>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"link-embed-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://example.com/raw#own\">\n        <img alt=\"\" loading=\"lazy\" class=\"link-embed-card__image\" src=\"https://example.com/image.png\" />\n</a>  </article>\n\n  </div>\n"
+    },
+    {
+      "attributes": [
+        {
+          "title": "Title"
+        },
+        {
+          "description": "Only description"
+        }
+      ],
+      "client_id": "ws15e-card-key",
+      "html": "  <div id=\"link_embed_cards_message_ws15e-card-key\" class=\"link-embed-cards\">\n      <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/raw#own\">Title</a>\n        </p>\n    </div>\n  </article>\n\n  \n      <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__description\">Only description</p>\n    </div>\n  </article>\n\n  </div>\n"
+    },
+    {
+      "attributes": [
+        {
+          "title": "Title",
+          "description": "Description",
+          "site_name": "Example",
+          "image_url": "https://example.com/image.png"
+        }
+      ],
+      "client_id": "quoted\"<&'key",
+      "html": "  <div id=\"link_embed_cards_message_quoted&quot;&lt;&amp;&#39;key\" class=\"link-embed-cards\">\n      <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__site\">Example</p>\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/raw#own\">Title</a>\n        </p>\n        <p class=\"link-embed-card__description\">Description</p>\n    </div>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"link-embed-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://example.com/raw#own\">\n        <img alt=\"\" loading=\"lazy\" class=\"link-embed-card__image\" src=\"https://example.com/image.png\" />\n</a>  </article>\n\n  </div>\n"
+    }
+  ]
+}

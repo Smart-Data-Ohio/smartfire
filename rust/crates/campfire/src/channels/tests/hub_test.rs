@@ -518,10 +518,15 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
             .await
             .contains("Real presentation partial")
     );
-    // Human edits replace meta and all six card containers after the presentation.
+    let message = hub.app.db().read(move |conn| campfire_db::Message::find(conn,id)).await.unwrap();
     for part in ["meta", "github_pr_cards", "twitter_cards", "message_link_cards", "fizzy_cards", "linkedin_cards", "link_embed_cards"] {
-        assert!(broadcast_html(&mut client).await.contains(&format!("target=\"{part}_message_")));
+        let html = broadcast_html(&mut client).await;
+        let target = crate::channels::broadcasts::message_dom_id(&message,Some(part));
+        assert!(html.contains(&format!(r#"target="{target}""#)),"{html}");
+        assert!(html.contains(r#"action="replace""#));
+        assert!(html.contains(r#"maintain_scroll="true""#));
     }
+    client.assert_silent().await;
     let response = browser
         .write(
             Req::new(Method::POST, &format!("/messages/{id}/boosts"))

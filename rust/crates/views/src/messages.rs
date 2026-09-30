@@ -137,6 +137,7 @@ pub struct MessageComponents {
     pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub twitter_cards: Vec<String>,
+    pub twitter_posts: Vec<crate::twitter::Card>,
     pub event_cards: Vec<String>,
     pub message_link_cards: Vec<String>,
     pub fizzy_cards: Vec<String>,
@@ -651,6 +652,7 @@ fn message_digest() -> &'static str {
     static DIGEST: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         fragment_cache::digest(&[
             include_str!("../templates/messages/_message.html"),
+            include_str!("../templates/twitter/posts/_card.html"),
             include_str!("../templates/messages/_presentation.html"),
             include_str!("../templates/messages/_toolbar.html"),
             include_str!("../templates/messages/_pin_badge.html"),
@@ -918,7 +920,7 @@ pub fn cards(
     h::raw(format!(
         "{}<div id=\"{}\" class=\"{class}\">{}</div>\n",
         " ".repeat(indent),
-        message.dom_id(prefix),
+        h::escape(&message.dom_id(prefix)),
         bodies.concat()
     ))
 }

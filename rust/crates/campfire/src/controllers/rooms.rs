@@ -398,7 +398,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let message_id = c.param_str("message_id").and_then(cast_integer);
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let (show,composer) = c
+    let (show,composer,fetches,twitter_fetches) = c
         .app()
         .db
         .read(move |conn| {
@@ -430,10 +430,11 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                         user.id,
                         app.db.env().now(),
                     )?,
-            },composer))
+            },composer,presenter.pending_link_fetches(),presenter.pending_twitter_fetches()))
         })
         .await
         .map_err(db_error)?;
+    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches).await.map_err(db_error)?;
     let response = super::presenters::view_context::page_or_frame(c,StatusCode::OK,
         |ctx|super::presenters::room_native::render(ctx,&show,&composer,false),
         |ctx|super::presenters::room_native::render(ctx,&show,&composer,true)).await?;

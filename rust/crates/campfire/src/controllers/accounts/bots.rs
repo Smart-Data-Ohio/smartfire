@@ -105,7 +105,8 @@ pub async fn update(c: &mut Ctx) -> Result {
 pub async fn destroy(c: &mut Ctx) -> Result {
     before(c).await?;
     let mut bot = set_bot(c).await?;
-    c.app().db.write(move |tx| bot.deactivate(tx)).await.map_err(Error::internal)?;
+    let context = crate::controllers::two_factor::audit_context(c)?;
+    c.app().db.write(move |tx| bot.deactivate_with_audit(tx, &context)).await.map_err(Error::internal)?;
     redirect_to_bots(c)
 }
 

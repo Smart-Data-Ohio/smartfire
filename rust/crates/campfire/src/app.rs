@@ -206,26 +206,19 @@ async fn open_database(
 
 /// The HTTP service: public files, then `/cable`, then the Rails route table.
 fn router(app: &App, kit: Kit) -> Router {
+    let github_webhook = || {
+        axum::routing::post(campfire_kit::unparsed_action(controllers::github::webhooks::create))
+            .fallback(campfire_kit::unparsed_action(controllers::github::webhooks::not_found))
+    };
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
-        .merge(
-            app.cable
-                .router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH),
-        )
-        // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController
-        // routes, which reads its own body after its rate limit.
-        .route(
-            "/csp_reports",
-            axum::routing::post(campfire_kit::unparsed_action(
-                controllers::csp_reports::create,
-            )),
-        )
-        .route(
-            "/csp_reports.{format}",
-            axum::routing::post(campfire_kit::unparsed_action(
-                controllers::csp_reports::create,
-            )),
-        )
+        .merge(app.cable.router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH))
+        // API actions authenticate/rate-limit before interpreting their own raw uploads.
+        // Unmatched webhook verbs use Rails' 404 response rather than Axum's default 405.
+        .route("/github/webhooks", github_webhook())
+        .route("/github/webhooks.{format}", github_webhook())
+        .route("/csp_reports", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
+        .route("/csp_reports.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));

@@ -47,6 +47,19 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             decode(request).and_then(|broadcast| status_badge(cable, broadcast)),
         campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND =>
             decode(request).and_then(|broadcast| ooo_notice(cable, broadcast)),
+        crate::integrations::link_embed::store::CardUpdate::KIND => decode::<crate::integrations::link_embed::store::CardUpdate>(request)
+            .and_then(|event| {
+                let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+                crate::controllers::presenters::link_embeds::broadcast_updates(app, event.embed_id)
+            }),
+        crate::integrations::fizzy::cards::CardUpdate::KIND => decode::<crate::integrations::fizzy::cards::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            crate::controllers::presenters::fizzy_cards::broadcast_updates(app, event.card_id)
+        }),
+        crate::integrations::twitter::post::CardUpdate::KIND => decode::<crate::integrations::twitter::post::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            crate::controllers::presenters::twitter_cards::broadcast_updates(app, event.post_id)
+        }),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {

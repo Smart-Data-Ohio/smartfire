@@ -739,6 +739,11 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .collect();
     let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
     let mut expected = golden["tasks"].as_array().unwrap().clone();
+    // Main adds provider claim recovery before retention in the pinned task order.
+    let retention = expected.pop().unwrap();
+    expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
+    expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
+    expected.push(retention);
     expected.push(ws17["presence_task"].clone());
     let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
     expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());

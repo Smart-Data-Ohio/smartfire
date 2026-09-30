@@ -31,8 +31,8 @@ use campfire_views::messages as views;
 use crate::active_storage::{self, keep_after_commit};
 use crate::app::{App, AppCtx};
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::presenters::page::{self, Rendered, db_error};
 use crate::controllers::presenters::attachments::Assignment;
+use crate::controllers::presenters::page::{self, Rendered, db_error};
 use crate::controllers::presenters::{DbResolver, Presenter, room_kind, storage_error};
 use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
 
@@ -218,7 +218,7 @@ pub async fn preview(c: &mut Ctx) -> Result {
     let (app, request_host) = (c.app().clone(), Some(c.request.host()));
     let html = c.app().db.read(move |conn| {
         let body = app.db.env().rich_text.render_markdown(conn, &source, room.id).map_err(campfire_db::Error::Other)?;
-        let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
+        let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
         crate::rich_text::markdown_presentation(conn, &body, &resolver.render_context(request_host)).map_err(campfire_db::Error::Other)
     }).await.map_err(db_error)?;
     let body = serde_json::to_string(&serde_json::json!({"html": html})).map_err(Error::internal)?;
@@ -261,10 +261,10 @@ pub(crate) struct MessageParams {
     pub clear_markdown_source: bool,
     pub client_message_lookup: campfire_db::models::agent_posting::client_ids::Lookup,
     pub body: Option<String>,
+    pub markdown_source: Option<String>,
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub client_message_id: Option<String>,
-    pub markdown_source: Option<String>,
     pub reply_to_message_id: Option<i64>,
     pub reply_notify_author: Option<bool>,
     pub drive_file_ids: Vec<String>,
@@ -273,10 +273,11 @@ pub(crate) struct MessageParams {
 /// `params.require(:message).permit(:body, :attachment, :client_message_id)`
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     let message = c.params.require("message")?;
-    let permitted = message.permit(&permit_keys(&["body", "attachment", "client_message_id"]));
+    let permitted = message.permit(&permit_keys(&["body", "attachment", "client_message_id", "markdown_source"]));
     let text = |key: &str| permitted.get(key).and_then(Param::as_str).map(str::to_string);
     Ok(MessageParams {
         body: text("body"),
+        markdown_source: text("markdown_source"),
         attachment: attachment_assignment(&permitted)?,
         client_message_id: text("client_message_id"),
         ..Default::default()
@@ -510,10 +511,8 @@ async fn create_message_in_context(c: &Ctx, room: &Room, thread: Option<campfire
         Some(Assignment::Invalid) => return Err(invalid_attachment()),
         _ => None,
     };
-    let body = match attributes.body {
-        Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
-        None => None,
-    };
+    let body = attributes.body.map(|body| canonicalize_body(c.app(), body, Some(c.request.host())));
+    let body = match body { Some(body) => Some(body.await?), None => None };
     let (message, blob) = c
         .app()
         .db
@@ -578,7 +577,7 @@ pub(crate) async fn canonicalize_body(app: &App, body: String, request_host: Opt
 /// Assigning a String to a rich text attribute stores the canonicalized content
 /// (`ActionText::Content.new(body, canonicalize: true).to_html`).
 pub(crate) fn canonical_body(conn: &campfire_db::Connection, app: &App, body: &str, request_host: Option<String>) -> String {
-    let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
+    let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
     let ctx = resolver.render_context(request_host);
     Content::load(body, &ctx).map(|content| content.to_html()).unwrap_or_else(|_| body.to_string())
 }
@@ -647,16 +646,17 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
         .db
         .write(move |tx| {
             let mut message = message;
-            if attributes.clear_markdown_source {
-                message.edit(tx, campfire_db::MessageChanges { clear_markdown_source: true, body, ..Default::default() })?;
-            } else if let Some(body) = body {
-                message.update_body(tx, &body)?;
-            }
             let attachment_given = attachment.is_some();
             let blob = attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?;
             if attachment_given {
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
             }
+            message.edit(tx, campfire_db::MessageChanges {
+                clear_markdown_source: attributes.clear_markdown_source,
+                markdown_source: attributes.markdown_source,
+                body,
+                ..Default::default()
+            })?;
             Ok((message.id, blob))
         })
         .await
@@ -725,16 +725,22 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
             app.broadcasts.message_replace(&room, &message, &partials);
-            // WS8bm2 owning quote-container seam: Rails update replaces this target
-            // after presentation/meta even when the edited message has no quotes.
-            let html = page::render_detached_at(&app, account.as_ref(), &base_url,
-                |ctx| campfire_views::message_links::cards(ctx, &view).0);
-            let html = campfire_cable::turbo::action_tag(campfire_cable::turbo::Action::Replace,
-                campfire_cable::turbo::Target::Target(&campfire_db::broadcasts::message_dom_id(&message, Some("message_link_cards"))),
-                Some(&html), &[("maintain_scroll", Some("true"))]);
-            let stream = campfire_db::broadcasts::conversation_messages(conn, &message)?.iter()
-                .map(campfire_db::broadcasts::Streamable::to_param).collect::<Vec<_>>().join(":");
-            app.cable.broadcast_stream_to(&[&stream], &html);
+            let replacements = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| -> askama::Result<_> {
+                Ok([
+                    ("meta", views::MetaPartial {ctx, message: &view}.render()?),
+                    // WS15g/WS8b provide the existing MessageComponents loop bodies for these
+                    // two containers. The empty replacements still remove cards after edits.
+                    ("github_pr_cards", views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0),
+                    ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
+                    ("message_link_cards", campfire_views::message_links::cards(ctx, &view).0),
+                    ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
+                    ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),
+                    ("link_embed_cards", views::cards(&view, "link_embed_cards", "link-embed-cards", 2, &view.components.link_embed_cards).0),
+                ])
+            }).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            for (part, html) in replacements {
+                app.broadcasts.message_part_replace(&room, &message, part, &html);
+            }
             Ok(())
         })
         .await
@@ -780,16 +786,21 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    c.app()
+    let (value, fetches, twitter_fetches) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
-            campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))
+            let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
+            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches()))
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
+        .await
+        .map_err(db_error)?;
+    Ok(value)
 }
 
 /// `render action: :room_not_found` (inside the layout).

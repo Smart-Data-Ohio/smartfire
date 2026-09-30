@@ -534,11 +534,15 @@ impl User {
             r#"DELETE FROM "searches" WHERE "searches"."user_id" = ?"#,
             [self.id],
         )?;
+        conn.execute_cached("DELETE FROM two_factor_setup_secrets WHERE session_id IN (SELECT id FROM sessions WHERE user_id=?)", [self.id])?;
         conn.execute_cached(
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
+        // Main's account owners share this transaction; WS11 retains real suspension.
+        let sink = tx.env().sink.clone();
+        sink.disconnect_user_accounts(tx, self.id)?;
         super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
         let email = self.deactivated_email_address();
         // app/models/user.rb: manual OOO cannot survive account deactivation.

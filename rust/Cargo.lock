@@ -355,6 +355,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "hkdf",
+ "hmac",
  "http",
  "http-body-util",
  "httpdate",
@@ -366,6 +367,7 @@ dependencies = [
  "percent-encoding",
  "rails_compat",
  "rand 0.9.5",
+ "rcgen",
  "regex",
  "rusqlite",
  "rustls",
@@ -374,6 +376,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
+ "subtle",
  "tempfile",
  "thiserror",
  "tikv-jemalloc-sys",
@@ -384,6 +387,7 @@ dependencies = [
  "tower",
  "tracing",
  "tracing-subscriber",
+ "url",
  "uuid",
 ]
 
@@ -593,6 +597,7 @@ version = "0.1.0"
 dependencies = [
  "askama",
  "campfire_assets",
+ "campfire_richtext",
  "campfire_routes",
  "campfire_storage",
  "jiff",

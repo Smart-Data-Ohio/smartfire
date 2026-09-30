@@ -9,14 +9,17 @@ pub mod room_native;
 pub mod switcher;
 pub mod status_settings;
 pub mod attachments;
+pub mod link_embeds;
+pub mod fizzy_cards;
+pub mod twitter_cards;
 pub mod page;
 pub mod pagination;
 pub mod rich_text;
 mod message_cache;
 mod room_list;
-pub mod view_context;
 #[cfg(test)]
 pub mod test_support;
+pub mod view_context;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -25,13 +28,13 @@ use std::sync::LazyLock;
 use campfire_db::{Boost, Connection, Membership, Message, RichText, Room, RoomType, User};
 use campfire_richtext::Presentation;
 use campfire_storage::{Storage, Variation};
+use campfire_views::fragment_cache;
 use campfire_views::messages::json::{BoostJson, BoostMessageJson, IdJson, MessageBodyJson, MessageJson, UserJson};
+use campfire_views::messages::support::RubyNumber;
 use campfire_views::messages::support::json_time;
 use campfire_views::messages::{
     AttachmentPreview, AttachmentView, BoostView, MessageContent, MessageItem, MessageView, RoomKind, SoundImage, SoundView, UserView,
 };
-use campfire_views::messages::support::RubyNumber;
-use campfire_views::fragment_cache;
 use campfire_views::rooms::RoomView;
 use rails_compat::Secrets;
 use regex::Regex;
@@ -141,6 +144,10 @@ pub struct Presenter<'a> {
     room_names: RefCell<HashMap<i64, (Room, String)>>,
     // WS8bm2 shared rendering-details seam for root and search pages.
     pub(crate) search_preloads: Option<super::searches::preloads::Preloads>,
+    link_fetches: std::rc::Rc<RefCell<std::collections::BTreeSet<i64>>>,
+    twitter_fetches: std::rc::Rc<RefCell<std::collections::BTreeSet<i64>>>,
+    twitter_posts: std::rc::Rc<RefCell<HashMap<i64, Vec<crate::integrations::twitter::post::Post>>>>,
+    twitter_existence: std::rc::Rc<RefCell<HashMap<String, bool>>>,
 }
 
 impl<'a> Presenter<'a> {
@@ -157,21 +164,48 @@ impl<'a> Presenter<'a> {
             users: RefCell::default(),
             room_names: RefCell::default(),
             search_preloads: None,
+            link_fetches: Default::default(), twitter_fetches: Default::default(),
+            twitter_posts: Default::default(), twitter_existence: Default::default(),
         }
     }
 
     pub(crate) fn resolver(&self) -> super::searches::preloads::PageResolver<'_> {
-        super::searches::preloads::PageResolver { db: DbResolver { conn: self.conn, secrets: self.secrets, now: self.now }, preloads: self.search_preloads.as_ref() }
+        super::searches::preloads::PageResolver { db: DbResolver::with_twitter_cache(self.conn, self.secrets, self.now, &self.twitter_existence), preloads: self.search_preloads.as_ref() }
     }
     pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
         let data = super::searches::preloads::Preloads::load(self, messages)?;
         Ok(Self { app:self.app,conn:self.conn,secrets:self.secrets,storage:self.storage,rich_text:self.rich_text,now:self.now,
             request_host:self.request_host.clone(),cache_base_url:self.cache_base_url.clone(),
-            users:RefCell::default(),room_names:RefCell::default(),search_preloads:Some(data) })
+            users:RefCell::default(),room_names:RefCell::default(),search_preloads:Some(data),
+            link_fetches:self.link_fetches.clone(),twitter_fetches:self.twitter_fetches.clone(),
+            twitter_posts:self.twitter_posts.clone(),twitter_existence:self.twitter_existence.clone() })
     }
     fn stored_body(&self, message: &Message) -> Result<Option<String>> {
         if let Some(data) = &self.search_preloads { return Ok(data.records.bodies.get(&message.id).cloned().flatten()); }
         message.body_html(self.conn)
+    }
+
+    /// A read records stale cards; its caller claims/enqueues them on the writer after rendering.
+    pub fn request_link_fetch(&self, embed: &crate::integrations::link_embed::Embed) {
+        if embed.needs_fetch(campfire_db::Timestamp::from_jiff(self.now)) {
+            self.link_fetches.borrow_mut().insert(embed.id);
+        }
+    }
+
+    pub fn pending_link_fetches(&self) -> Vec<i64> {
+        self.link_fetches.borrow().iter().copied().collect()
+    }
+
+    pub fn pending_twitter_fetches(&self) -> Vec<i64> { self.twitter_fetches.borrow().iter().copied().collect() }
+    pub fn twitter_posts(&self, message: &Message) -> Result<Vec<crate::integrations::twitter::post::Post>> {
+        if let Some(posts) = self.twitter_posts.borrow().get(&message.id) { return Ok(posts.clone()); }
+        let mut posts = crate::integrations::twitter::post::Post::for_message(self.conn, message.id)?;
+        crate::integrations::twitter::post::Post::order_cards(&mut posts);
+        self.twitter_posts.borrow_mut().insert(message.id, posts.clone());
+        Ok(posts)
+    }
+    pub fn request_twitter_fetch(&self, post: &crate::integrations::twitter::post::Post) {
+        if post.fetch_pending() { self.twitter_fetches.borrow_mut().insert(post.id); }
     }
 
     pub fn user(&self, id: i64) -> Result<User> {
@@ -274,6 +308,11 @@ impl<'a> Presenter<'a> {
     /// rendering, while individual messages bypass the collection cache.
     pub fn messages(&self, messages: &[Message]) -> Result<Vec<MessageItem>> {
         if self.search_preloads.is_none() {
+            let ids = messages.iter().map(|m| m.id).collect::<Vec<_>>();
+            let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
+            for id in &ids { posts.entry(*id).or_default(); }
+            for posts in posts.values_mut() { crate::integrations::twitter::post::Post::order_cards(posts); }
+            self.twitter_posts.borrow_mut().extend(posts);
             return self.preload_search(messages)?.messages(messages);
         }
         messages.iter().map(|message| self.message_item(message)).collect()
@@ -354,7 +393,11 @@ impl<'a> Presenter<'a> {
             content: self.content(message, &plain_text)?,
             boosts: self.boosts(message)?,
             details: self.message_details(message)?,
-            components: self.quote_components(message)?,
+            components: {
+                let mut components = link_embeds::components(self, message)?;
+                components.quote_references = self.quote_components(message)?.quote_references;
+                components
+            },
         })
     }
 

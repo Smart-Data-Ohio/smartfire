@@ -249,6 +249,8 @@ impl PageResolver<'_> {
     }
 }
 impl AttachableResolver for PageResolver<'_> {
+    fn twitter_post_exists_for_url(&self, url: &str) -> bool { self.db.twitter_post_exists_for_url(url) }
+
     fn embed_image_path(&self, url: &str) -> std::result::Result<String, campfire_richtext::Error> {
         self.db.embed_image_path(url)
     }

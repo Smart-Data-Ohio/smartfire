@@ -46,6 +46,11 @@ pub mod channel_thread_messages;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
+pub mod fizzy_cards;
+pub mod fizzy_connections;
+pub mod fizzy_message_cards;
+pub mod github;
+pub mod message_embed_suppressions;
 pub mod messages;
 pub(crate) mod message_features;
 pub mod presenters;
@@ -61,6 +66,7 @@ pub mod sessions;
 pub mod sudos;
 pub mod two_factor;
 pub mod unfurl_links;
+pub mod embeds;
 pub mod users;
 pub mod welcome;
 
@@ -167,6 +173,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
+        "rooms/fizzy/cards#show" => arc(fizzy_cards::show),
+        "fizzy/connections#create" => arc(fizzy_connections::create),
+        "fizzy/connections#destroy" => arc(fizzy_connections::destroy),
+        "rooms/fizzy/message_cards#new" => arc(fizzy_message_cards::new),
+        "rooms/fizzy/message_cards#create" => arc(fizzy_message_cards::create),
+        "github/webhooks#create" => arc(github::webhooks::create),
         "two_factor/reauthentications#create" => arc(two_factor::reauthentication_create),
         "two_factor/challenges#show" => arc(two_factor::challenge_show),
         "two_factor/challenges#create" => arc(two_factor::challenge_create),
@@ -325,7 +337,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "searches#index" => arc(searches::index),
         "searches#create" => arc(searches::create),
         "searches#clear" => arc(searches::clear),
+        "embeds/images#show" => arc(embeds::show),
         "unfurl_links#create" => arc(unfurl_links::create),
+        "message_embed_suppressions#create" => arc(message_embed_suppressions::create),
         "pwa#manifest" => arc(pwa::manifest),
         "pwa#service_worker" => arc(pwa::service_worker),
         "rails/health#show" => arc(health::show),
@@ -732,6 +746,7 @@ mod tests {
         "rails/health#show", "turbo/native/navigation#recede", "turbo/native/navigation#resume",
         "turbo/native/navigation#refresh", "action_mailbox/ingresses/postmark/inbound_emails#create",
 
+        "embeds/images#show",
         "action_mailbox/ingresses/sendgrid/inbound_emails#create",
         "action_mailbox/ingresses/mandrill/inbound_emails#health_check",
         "action_mailbox/ingresses/mandrill/inbound_emails#create",
