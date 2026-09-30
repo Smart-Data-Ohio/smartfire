@@ -474,6 +474,9 @@ impl User {
     /// non-direct memberships, push subscriptions, searches and sessions, and scrambles the
     /// email address.
     pub fn deactivate(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.deactivate_with_audit(tx, &super::audit_log::Context::default())
+    }
+    pub fn deactivate_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
         self.close_remote_connections(tx, false);
         let conn = tx.conn();
         conn.execute_cached(
@@ -492,6 +495,7 @@ impl User {
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
+        super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
         let email = self.deactivated_email_address();
         self.update(
             tx,
@@ -512,6 +516,9 @@ impl User {
 
     /// `User::Bannable#ban`
     pub fn ban(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.ban_with_audit(tx, &super::audit_log::Context::default())
+    }
+    pub fn ban_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
         // create_bans_from_sessions: `sessions.pluck(:ip_address).compact_blank.uniq`
         let ips: Vec<Option<String>> = query_all(
             tx.conn(),
@@ -533,6 +540,7 @@ impl User {
             [self.id],
         )?;
         tx.emit_after_commit(Event::RemoveBannedContent { user_id: self.id });
+        super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
         self.update(
             tx,
             UserChanges {

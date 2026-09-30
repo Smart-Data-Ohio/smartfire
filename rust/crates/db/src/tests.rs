@@ -11,6 +11,7 @@ mod agent_working_presence_test;
 mod agent_work_events_test;
 mod agent_context_test;
 mod agent_direct_messages_test;
+mod agent_lifecycle_test;
 mod agent_delivery_test;
 mod agent_event_access_test;
 mod agent_event_polling_test;
