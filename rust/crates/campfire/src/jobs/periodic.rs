@@ -200,11 +200,10 @@ pub fn clear_plaintext_bot_tokens_task() -> Task<App> {
 }
 
 /// `Huddle::Reconciler`'s steps, every `HUDDLE_RECONCILE_INTERVAL`, each isolated from the
-/// others' failures. Cleanup is registered; overdue invitations and stale streams are
-/// deferred to the next WS13 slice.
+/// others' failures. Invitations and cleanups are registered; stream lifecycle is next.
 pub fn huddle_reconciler(interval: Duration) -> Periodic<App> {
     let mut periodic = Periodic::new("Huddle reconciliation");
-    periodic.task(Task::new("huddle cleanups", interval, |app: App| async move {
+    periodic.task(Task::new("huddle reconciliation", interval, |app: App| async move {
         super::huddle::reconcile(&app.db, crate::huddle::RoomService::new(crate::huddle::Config::from_env())).await.map(drop)
     }));
     periodic

@@ -1,6 +1,6 @@
 //! Durable presence, join-notice, invitation-push and cleanup jobs.
-//! The reconciler currently registers cleanups; overdue invitations and stale streams
-//! remain the next WS13 lifecycle slice. Invitation/join payloads enqueue through WS17's seam.
+//! Invitation/join payloads enqueue through WS17's seam. The invitation resolver and
+//! cleanup sweep run in this process; stream render callbacks remain a lifecycle slice.
 use campfire_db::Database;
 use campfire_db::models::huddle_cleanup::{CleanupJob, HuddleCleanup, Operation};
 use campfire_jobs::{Execution, JobKind, JobResult, Outcome, RetryPolicy};
@@ -142,6 +142,9 @@ pub(crate) async fn perform(
 }
 
 pub(crate) async fn reconcile(db: &Database, service: RoomService) -> anyhow::Result<usize> {
+    if let Err(error) = resolve_invitations(db).await {
+        tracing::error!(%error,"Huddle invitation resolution failed");
+    }
     if !service.admin_configured() {
         return Ok(0);
     }
@@ -158,4 +161,16 @@ pub(crate) async fn reconcile(db: &Database, service: RoomService) -> anyhow::Re
         }
     }
     Ok(completed)
+}
+
+async fn resolve_invitations(db: &Database) -> campfire_db::Result<()> {
+    let now = db.env().now();
+    let ids = db
+        .read(move |conn| campfire_db::models::huddle_invitations::overdue_ids(conn, now, None))
+        .await?;
+    for id in ids {
+        db.write(move |tx| campfire_db::models::huddle_invitations::resolve_item(tx, id))
+            .await?;
+    }
+    Ok(())
 }

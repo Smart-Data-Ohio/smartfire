@@ -156,3 +156,47 @@ fn issuance_invitations_match_forty_nine_rails_scenarios() {
         }
     }
 }
+
+#[test]
+fn overdue_invitations_match_twenty_nine_rails_scenarios_and_are_idempotent() {
+    let vectors: Value =
+        serde_json::from_str(include_str!("../models/huddle_resolver_vectors.json")).unwrap();
+    assert_eq!(vectors["cases"].as_array().unwrap().len(), 29);
+    for case in vectors["cases"].as_array().unwrap() {
+        assert_eq!(case["idempotent"], true);
+        let db = TestDb::new();
+        db.clock
+            .travel_to(Timestamp::from_second(vectors["now"].as_i64().unwrap()));
+        let input = case["input"].clone();
+        db.write(move |tx| huddle_notices_test::load(tx, &input));
+        db.sink.take();
+        let user = case["user_id"].as_i64();
+        db.write(move |tx| huddle_invitations::resolve_overdue(tx, user));
+        let events = db.sink.take();
+        for ring in events
+            .iter()
+            .filter_map(|event| event.as_job::<RingRequest>())
+        {
+            db.write(move |tx| huddle_invitations::publish_ring(tx, &ring, true));
+        }
+        let actual = db
+            .events()
+            .iter()
+            .filter_map(|event| match event.as_broadcast()? {
+                crate::broadcasts::Broadcast::Cable { stream, payload } => {
+                    Some(json!({"stream":stream,"payload":payload}))
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(json!(actual), case["broadcasts"], "{}", case["name"]);
+        let mut actual = db.read(|conn| snapshot(conn, "activity_items"));
+        let mut expected = case["items"].clone();
+        normalize(&mut actual);
+        normalize(&mut expected);
+        assert_eq!(actual, expected, "{}", case["name"]);
+        db.sink.take();
+        db.write(move |tx| huddle_invitations::resolve_overdue(tx, user));
+        assert!(db.events().is_empty(), "{} resolved twice", case["name"]);
+    }
+}

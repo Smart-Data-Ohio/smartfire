@@ -112,6 +112,35 @@ async fn huddle_issuance_rings_and_pushes_once_and_suppresses_the_join_notice() 
 }
 
 #[tokio::test]
+async fn huddle_in_process_loop_resolves_invitations_without_livekit_admin_configuration() {
+    use crate::controllers::presenters::test_support::{TestApp,DAVID,DIRECT_DAVID_JASON};
+    use campfire_db::models::huddle_grant::HuddleGrant;
+    let Some(test)=TestApp::boot().await else{return;};
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    let app=test.booted.app.clone();
+    let item=app.db.write(|tx| {
+        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
+        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
+        let grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})?;
+        let item=tx.conn().query_row("SELECT id FROM activity_items WHERE source_type='HuddleGrant' AND source_id=?",[grant.id],|r|r.get::<_,i64>(0))?;
+        tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(46)),item])?;
+        Ok(item)
+    }).await.unwrap();
+    let config=runner_config(&app.config);
+    let (_,ad_hoc)=Jobs::new(&registry(),&config).unwrap();
+    let loops=periodic::Loops {periodic:None,huddle:Some(periodic::huddle_reconciler(Duration::from_millis(20)))};
+    let runner=start(app.clone(),registry(),ad_hoc,config,loops);
+    let deadline=tokio::time::Instant::now()+Duration::from_secs(5);
+    loop {
+        let missed=app.db.read(move |conn|Ok(campfire_db::ActivityItem::find(conn,item)?.event_type=="huddle_missed")).await.unwrap();
+        if missed {break;}
+        assert!(tokio::time::Instant::now()<deadline,"the actual in-process huddle task did not resolve the invitation");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    runner.shutdown(Duration::from_secs(2)).await;
+}
+
+#[tokio::test]
 async fn huddle_issuance_enqueue_failure_rolls_back_the_grant_and_invitation() {
     use crate::controllers::presenters::test_support::{TestApp,DAVID,DIRECT_DAVID_JASON};
     use campfire_db::models::huddle_grant::HuddleGrant;

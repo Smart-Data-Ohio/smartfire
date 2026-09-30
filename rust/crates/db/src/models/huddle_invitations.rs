@@ -168,3 +168,56 @@ fn refresh(tx: &mut Tx<'_>, item: &ActivityItem, source: i64) -> Result<Activity
     ActivityItem::broadcast_change(tx, item.user_id, item.id)?;
     ActivityItem::find(tx.conn(), item.id)
 }
+/// Also used lazily by WS12's inbox. Revoked grants intentionally count as join evidence,
+/// as Rails' resolver tests issuance/liveness without the `active` scope.
+pub fn resolve_overdue(tx: &mut Tx<'_>, user_id: Option<i64>) -> Result<()> {
+    let ids = overdue_ids(tx.conn(), tx.now(), user_id)?;
+    for id in ids {
+        resolve_item(tx, id)?;
+    }
+    Ok(())
+}
+
+/// The in-process loop commits one item at a time, matching Rails' per-item transactions.
+pub fn overdue_ids(
+    conn: &crate::Connection,
+    now: Timestamp,
+    user_id: Option<i64>,
+) -> Result<Vec<i64>> {
+    query_all(
+        conn,
+        "SELECT id FROM activity_items WHERE event_type='huddle_started' AND handled_at IS NULL AND created_at<? AND (? IS NULL OR user_id=?) ORDER BY id",
+        params![now.ago(SignedDuration::from_secs(45)), user_id, user_id],
+        |r| r.get(0),
+    )
+}
+
+pub fn resolve_item(tx: &mut Tx<'_>, id: i64) -> Result<()> {
+    let item = match ActivityItem::find(tx.conn(), id) {
+        Ok(item) => item,
+        Err(crate::Error::RecordNotFound(_)) => return Ok(()),
+        Err(error) => return Err(error),
+    };
+    // An issuance or another resolver may have handled it after the loop's read.
+    if item.source_type != "HuddleGrant"
+        || item.event_type != "huddle_started"
+        || item.handled_at.is_some()
+        || item.created_at >= tx.now().ago(SignedDuration::from_secs(45))
+    {
+        return Ok(());
+    }
+    let Some(grant) = HuddleGrant::find_by_id(tx.conn(), item.source_id)? else {
+        return Ok(());
+    };
+    let joined=tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND user_id=? AND (last_issued_at>=? OR last_seen_at>?))",params![grant.room_id,item.user_id,item.created_at,tx.now().ago(SignedDuration::from_secs(20))],|r|r.get::<_,bool>(0))?;
+    if joined {
+        item.mark_handled(tx)?;
+    } else {
+        tx.conn().execute_cached(
+            "UPDATE activity_items SET event_type='huddle_missed',updated_at=? WHERE id=?",
+            params![tx.now(), item.id],
+        )?;
+        ActivityItem::broadcast_change(tx, item.user_id, item.id)?;
+    }
+    Ok(())
+}

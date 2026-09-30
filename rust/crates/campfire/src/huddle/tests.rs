@@ -449,6 +449,36 @@ async fn cleanup_failed_network_retains_retry_and_absent_participant_completes()
 }
 
 #[tokio::test]
+async fn resolver_failure_preserves_prior_items_and_does_not_stop_cleanup() {
+    use campfire_db::models::{huddle_cleanup::{HuddleCleanup,Operation},huddle_grant::HuddleGrant};
+    use crate::controllers::presenters::test_support::{TestApp,DAVID,JASON,KEVIN,DIRECT_DAVID_JASON};
+    let app=TestApp::boot().await.expect("WS13 needs the parity seed");
+    let db=app.booted.app.db.clone();
+    app.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    let (first,second,cleanup)=db.write(|tx| {
+        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
+        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
+        let grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})?;
+        let first=campfire_db::ActivityItem::find_by_user_and_source(tx.conn(),JASON,"HuddleGrant",grant.id)?.unwrap().id;
+        let second=campfire_db::ActivityItem::refresh_unread(tx,KEVIN,"HuddleGrant",grant.id,"huddle_started")?.id;
+        tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id IN (?,?)",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(120)),first,second])?;
+        tx.conn().execute_batch(&format!("CREATE TRIGGER ws13_reject_resolution BEFORE UPDATE ON activity_items WHEN NEW.id={second} BEGIN SELECT RAISE(ABORT,'ws13 reject resolution'); END"))?;
+        let cleanup=HuddleCleanup::create(tx,Operation::DeleteRoom,"ws13-resolver-failure",None,None,false)?.id;
+        tx.conn().execute_batch(&format!("CREATE TRIGGER ws13_require_resolution_order BEFORE UPDATE ON huddle_cleanups WHEN NEW.id={cleanup} AND (SELECT event_type FROM activity_items WHERE id={first})!='huddle_missed' BEGIN SELECT RAISE(ABORT,'ws13 cleanup ran first'); END"))?;
+        Ok((first,second,cleanup))
+    }).await.unwrap();
+    let server=Server::start(404,Duration::ZERO).await;
+    assert_eq!(crate::jobs::huddle::reconcile(&db,RoomService::new(config(&server.url))).await.unwrap(),1);
+    db.read(move |conn| {
+        assert_eq!(campfire_db::ActivityItem::find(conn,first)?.event_type,"huddle_missed");
+        assert_eq!(campfire_db::ActivityItem::find(conn,second)?.event_type,"huddle_started");
+        assert!(HuddleCleanup::find_by_id(conn,cleanup)?.unwrap().completed_at.is_some());
+        Ok(())
+    }).await.unwrap();
+    assert_eq!(server.received.lock().unwrap().len(),1);
+}
+
+#[tokio::test]
 async fn cleanup_reconciles_at_most_one_hundred_due_rows_without_admin_configuration_idles() {
     use campfire_db::models::huddle_cleanup::{HuddleCleanup, Operation};
     let app = crate::controllers::presenters::test_support::TestApp::boot()
@@ -565,7 +595,7 @@ async fn cleanup_background_queue_and_http_enqueue_rollback() {
             .tasks()
             .map(|t| (t.name(), t.interval()))
             .collect::<Vec<_>>(),
-        vec![("huddle cleanups", Duration::from_secs(5))]
+        vec![("huddle reconciliation", Duration::from_secs(5))]
     );
     let before = app.db().read(|conn| {
         Ok(conn.query_row("SELECT (SELECT COUNT(*) FROM memberships WHERE room_id=?1), (SELECT COUNT(*) FROM messages WHERE room_id=?1), (SELECT COUNT(*) FROM huddle_cleanups)", [ALL_TALK], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, i64>(2)?)))?)
