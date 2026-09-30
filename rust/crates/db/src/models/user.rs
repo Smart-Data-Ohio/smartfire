@@ -495,6 +495,8 @@ impl User {
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
+        let sink = tx.env().sink.clone();
+        sink.disconnect_user_accounts(tx, self.id)?;
         super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
         let email = self.deactivated_email_address();
         self.update(
@@ -540,6 +542,8 @@ impl User {
             [self.id],
         )?;
         tx.emit_after_commit(Event::RemoveBannedContent { user_id: self.id });
+        let sink = tx.env().sink.clone();
+        sink.disconnect_user_accounts(tx, self.id)?;
         super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
         self.update(
             tx,

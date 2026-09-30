@@ -785,6 +785,7 @@ fn status_name(status: u16) -> &'static str {
         404 => "not_found",
         422 => "unprocessable_entity",
         429 => "too_many_requests",
+        502 => "bad_gateway",
         _ => "internal_server_error",
     }
 }

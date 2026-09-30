@@ -27,7 +27,7 @@ const TTL_SECONDS: u64 = 60 * 60 * 24 * 7 * 4;
 const URGENCY: &str = "high";
 /// Per connect and read. The web-push gem leaves `Net::HTTP`'s 60 seconds, which let a slow push
 /// service hold one of the pool's few workers for minutes.
-const TIMEOUTS: Timeouts = Timeouts { open: Duration::from_secs(10), read: Duration::from_secs(10) };
+const TIMEOUTS: Timeouts = Timeouts { open: Duration::from_secs(10), read: Duration::from_secs(10), write: crate::integrations::net::http::NET_HTTP_DEFAULT_TIMEOUT };
 /// For a whole delivery, however the push service trickles its reply.
 const DELIVERY_DEADLINE: Duration = Duration::from_secs(30);
 /// `Rails.application.routes.url_helpers.account_logo_path`

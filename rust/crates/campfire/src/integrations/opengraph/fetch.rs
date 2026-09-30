@@ -19,7 +19,7 @@ pub const MAX_REDIRECTS: usize = 10;
 
 /// Each connect and each read; Rails leaves `Net::HTTP`'s 60 seconds. The unfurl as a whole has
 /// `UNFURL_DEADLINE`.
-const TIMEOUTS: Timeouts = Timeouts { open: Duration::from_secs(5), read: Duration::from_secs(5) };
+const TIMEOUTS: Timeouts = Timeouts { open: Duration::from_secs(5), read: Duration::from_secs(5), write: crate::integrations::net::http::NET_HTTP_DEFAULT_TIMEOUT };
 
 #[derive(Debug, thiserror::Error)]
 pub enum FetchError {

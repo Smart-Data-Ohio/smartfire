@@ -150,6 +150,11 @@ impl Event {
 }
 
 pub trait EventSink: Send + Sync {
+    /// Owner account lifecycle hook supplied by WS15e/g at the app boundary.
+    fn disconnect_user_accounts(&self, _tx: &mut Tx<'_>, _user_id: i64) -> Result<()> {
+        Ok(())
+    }
+
     /// Hands the event off, once its write has committed (or right away, for [`Tx::emit_now`]).
     fn emit(&self, event: Event);
 
@@ -198,6 +203,10 @@ impl EventSink for RecordingSink {
 }
 
 impl<T: EventSink + ?Sized> EventSink for Arc<T> {
+    fn disconnect_user_accounts(&self, tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
+        (**self).disconnect_user_accounts(tx, user_id)
+    }
+
     fn emit(&self, event: Event) {
         (**self).emit(event)
     }

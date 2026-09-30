@@ -106,6 +106,19 @@ fn preflight(
     Ok(None)
 }
 pub async fn operation(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceResult> {
+    use crate::integrations::fizzy::agent_reads::{self, Read};
+    let read = match op {
+        "fizzy_boards" => Some(Read::Boards { account: args["account_id"].clone() }),
+        "fizzy_board" => Some(Read::Board { account: args["account_id"].clone(), board: args["board_id"].clone() }),
+        "fizzy_search" => Some(Read::Search { account: args["account_id"].clone(), query: args["q"].clone() }),
+        "fizzy_card" => Some(Read::Card { account: args["account_id"].clone(), number: args["number"].clone() }),
+        _ => None,
+    };
+    if let Some(read) = read {
+        let app = c.app();
+        let result = agent_reads::read(app, &app.fizzy.network, &app.fizzy.base, agent_id, read).await.map_err(db_error)?;
+        return Ok(ServiceResult { payload: result.payload, error: result.error, status: result.status });
+    }
     let op = op.to_owned();
     let encryption = c.app().ar_encryption.clone();
     c.app()

@@ -141,7 +141,7 @@ impl Received {
 }
 
 /// Constrain host listeners when several parity workers run on the same machine.
-async fn bind_test_listener() -> TcpListener {
+pub(crate) async fn bind_test_listener() -> TcpListener {
     if let Ok(range) = std::env::var("INTEGRATION_TEST_PORT_RANGE") {
         let (first, last) = range.split_once('-').expect("INTEGRATION_TEST_PORT_RANGE=start-end");
         let (first, last): (u16, u16) = (first.parse().unwrap(), last.parse().unwrap());
@@ -161,6 +161,7 @@ async fn bind_test_listener() -> TcpListener {
 pub struct FakeServer {
     pub addr: SocketAddr,
     pub received: Arc<Mutex<Vec<Received>>>,
+    accept: tokio::task::JoinHandle<()>,
 }
 
 impl FakeServer {
@@ -189,7 +190,7 @@ impl FakeServer {
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
         let log = received.clone();
-        tokio::spawn(async move {
+        let accept = tokio::spawn(async move {
             loop {
                 let Ok((stream, _)) = listener.accept().await else { break };
                 let (routes, log, tls) = (routes.clone(), log.clone(), tls.clone());
@@ -207,11 +208,17 @@ impl FakeServer {
                 });
             }
         });
-        Self { addr, received }
+        Self { addr, received, accept }
     }
 
     pub fn received(&self) -> Vec<Received> {
         self.received.lock().unwrap().clone()
+    }
+}
+
+impl Drop for FakeServer {
+    fn drop(&mut self) {
+        self.accept.abort();
     }
 }
 

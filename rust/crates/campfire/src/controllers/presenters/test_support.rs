@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_clock};
+use crate::app::{Booted, boot_with_fizzy};
 use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -129,6 +129,10 @@ impl TestApp {
     }
 
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_with_fizzy(clock, crate::integrations::fizzy::State::system()).await
+    }
+
+    pub async fn boot_with_fizzy(clock: campfire_kit::SharedClock, fizzy: crate::integrations::fizzy::State) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -144,7 +148,7 @@ impl TestApp {
             _ => None,
         })
         .unwrap();
-        let Booted { app, router, jobs } = boot_with_clock(config, clock).await.unwrap();
+        let Booted { app, router, jobs } = boot_with_fizzy(config, clock, fizzy).await.unwrap();
         Some(TestApp { booted: TestBooted { app, router, jobs: Some(jobs) }, _dir: dir })
     }
 

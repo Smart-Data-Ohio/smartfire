@@ -14,6 +14,11 @@ pub(super) async fn setup() -> TestApp {
     )))
     .await
     .expect("WS11-api tests require the pinned default seed");
+    initialize(&app).await;
+    app
+}
+
+pub(super) async fn initialize(app: &TestApp) {
     app.db().write(|tx| {
         tx.conn().execute("UPDATE agents SET status='idle',status_note=NULL,status_changed_at=NULL,working_presence=NULL,working_presence_expires_at=NULL,last_seen_at=NULL WHERE id=?",[AGENT])?;
         tx.conn().execute("DELETE FROM agent_events WHERE agent_id=?", [AGENT])?;
@@ -26,7 +31,6 @@ pub(super) async fn setup() -> TestApp {
         }
         Ok(())
     }).await.unwrap();
-    app
 }
 
 async fn request(app: &TestApp, case: &Value) -> Reply {

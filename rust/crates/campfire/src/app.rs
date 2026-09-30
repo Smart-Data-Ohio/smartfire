@@ -39,6 +39,8 @@ pub struct AppState {
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
     pub mail: crate::mail::State,
+    /// Owner-scoped Fizzy client transport; authentication remains in the shared service.
+    pub fizzy: crate::integrations::fizzy::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
@@ -83,6 +85,10 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
 /// [`boot`] with its clock given rather than read from `CAMPFIRE_FROZEN_TIME`: the seeded tests
 /// run at the parity seed's instant, as the reference does (`parity/seeds/README.md`).
 pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Result<Booted> {
+    boot_with_fizzy(config, clock, crate::integrations::fizzy::State::system()).await
+}
+
+pub(crate) async fn boot_with_fizzy(config: Config, clock: SharedClock, fizzy: crate::integrations::fizzy::State) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let ar_encryption = Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets));
@@ -142,6 +148,7 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
         cable,
         jobs,
         mail,
+        fizzy,
         web_push,
         fragment_cache,
     });
