@@ -192,7 +192,15 @@ impl SavedItem {
             )?,
             (false, false) => unreachable!("unchanged save returned above"),
         };
-        *self = Self::find(tx.conn(), self.id)?;
+        // update! keeps unassigned attributes on the loaded instance. The JSON
+        // controller serializes it without reloading, even if another writer
+        // changed reminder fields in the meantime.
+        self.status = status;
+        self.remind_at = remind_at;
+        if remind_at_changed {
+            self.reminded_at = None;
+        }
+        self.updated_at = now;
         Ok(())
     }
 

@@ -644,7 +644,8 @@ async fn review_regression_status_patch_preserves_dispatch_claim() {
         ))
     );
     assert_eq!(jobs, 1);
-    assert_eq!(response.json()["reminded_at"], "2026-03-02T16:02:00.000Z");
+    assert_eq!(response.json()["reminded_at"], race_oracle()["after_status_response"]["reminded_at"]);
+    assert_eq!(response.json()["remind_at"], race_oracle()["after_status_response"]["remind_at"]);
 }
 
 #[tokio::test]
@@ -714,7 +715,8 @@ async fn review_regression_status_patch_preserves_concurrent_reschedule() {
         )),
         "status PATCH overwrote the concurrent reminder schedule"
     );
-    assert_eq!(response.json()["remind_at"], "2026-03-02T18:00:00.000Z");
+    assert_eq!(response.json()["remind_at"], race_oracle()["after_reschedule_response"]["remind_at"]);
+    assert_eq!(response.json()["reminded_at"], race_oracle()["after_reschedule_response"]["reminded_at"]);
 }
 
 fn race_oracle() -> Value {
