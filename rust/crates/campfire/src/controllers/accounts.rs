@@ -62,7 +62,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let logo = Assignment::from_params(&params, "logo")?.stage(c.app()).await?;
     let audit = super::two_factor::audit_context(c)?;
 
-    let pending = c
+    c
         .app()
         .db
         .write(move |tx| {
@@ -70,14 +70,13 @@ pub async fn update(c: &mut Ctx) -> Result {
             let before_logo = attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
             let settings: Option<Vec<(&str, &str)>> = settings.as_ref().map(|s| s.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect());
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
-            let pending = attachments::assign(tx, Record::account(account.id), "logo", logo)?;
+            attachments::assign(tx, Record::account(account.id), "logo", logo)?;
             let after_logo = attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
             crate::account_security::settings_changed(tx, &before, &account, before_logo, after_logo, &audit)?;
-            Ok(pending)
+            Ok(())
         })
         .await
         .map_err(Error::internal)?;
-    attachments::analyze_later(c.app(), pending);
 
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to_with(&location, Redirect { notice: Some("✓".into()), ..Redirect::default() })

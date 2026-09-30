@@ -6,8 +6,8 @@
 //! the old attachment is destroyed first (`has_one ... dependent: :destroy` replacing its target;
 //! its blob is purged after commit, `dependent: :purge_later`), then the new blob and attachment
 //! rows are inserted, and each attachment change touches the record
-//! (`belongs_to :record, touch: true`). Since a fresh blob isn't analyzed, `ActiveStorage::AnalyzeJob`
-//! runs after commit (analysis touches the record again).
+//! (`belongs_to :record, touch: true`). A fresh blob's analyzer runs after commit (analysis touches
+//! the record again): media analyzers use a durable job, while `NullAnalyzer` runs inline.
 //!
 //! Unlike Rails, which uploads after commit, the file is uploaded before the transaction
 //! ([`Assignment::stage`]), so the writer never waits on copying and checksumming it; a
@@ -19,7 +19,8 @@ use campfire_db::{CachedStatements, Connection, Event, Tx};
 use campfire_kit::{Error, Param, Result, UploadedFile};
 use campfire_storage::{Blob, Filename, Staged, Variation};
 
-use crate::active_storage::{analyzed_metadata, keep_after_commit, stage_file};
+use crate::active_storage::{keep_after_commit, stage_file};
+use crate::jobs::AnalyzeJob;
 use crate::app::App;
 
 /// An uploaded file (`ActionDispatch::Http::UploadedFile`), still in its multipart tempfile.
@@ -55,6 +56,10 @@ pub enum Assignment<U = Upload> {
     Delete,
     /// An uploaded file: `Attached::Changes::CreateOne`.
     Create(U),
+    /// A direct upload's signed blob id, resolved before saving.
+    Signed(String),
+    /// A verified, existing blob.
+    Existing(Blob),
     /// Anything else (e.g. a plain string that isn't a signed blob id): Rails raises.
     Invalid,
 }
@@ -67,6 +72,7 @@ impl Assignment {
         match params.get(key) {
             None => Ok(Assignment::Delete),
             Some(param) if param.is_null() || param.as_str() == Some("") => Ok(Assignment::Delete),
+            Some(param) if param.as_str().is_some() => Ok(Assignment::Signed(param.as_str().unwrap().to_string())),
             Some(param) => Ok(Upload::from_param(Some(param)).map_or(Assignment::Invalid, Assignment::Create)),
         }
     }
@@ -77,15 +83,19 @@ impl Assignment {
             Assignment::Unchanged => Assignment::Unchanged,
             Assignment::Delete => Assignment::Delete,
             Assignment::Create(upload) => Assignment::Create(upload.stage(app).await?),
+            Assignment::Signed(signed) => {
+                let id = campfire_storage::paths::verify_signed_blob_id(&*app.storage.verifier, &signed, app.clock.now())
+                    .ok_or_else(|| Error::internal(anyhow::anyhow!("invalid blob signature")))?;
+                let blob = app.db.read(move |conn| Blob::find(conn, id).map_err(storage_error)).await.map_err(Error::internal)?
+                    .ok_or(Error::NotFound)?;
+                let storage = app.storage.clone();
+                let blob = tokio::task::spawn_blocking(move || storage.identify_blob(blob)).await.map_err(Error::internal)?.map_err(Error::internal)?;
+                Assignment::Existing(blob)
+            }
+            Assignment::Existing(blob) => Assignment::Existing(blob),
             Assignment::Invalid => Assignment::Invalid,
         })
     }
-}
-
-/// A blob inserted for an attachment, to analyze after commit.
-#[derive(Debug)]
-pub struct Pending {
-    pub blob: Blob,
 }
 
 /// `record.<name>.attached?`'s blob: the attachment's blob, if any.
@@ -93,15 +103,17 @@ pub fn attached_blob(conn: &Connection, record_type: &str, record_id: i64, name:
     Blob::attached(conn, record_type, record_id, name).map_err(storage_error)
 }
 
-/// Applies an assignment inside the record's save. Returns the blob to analyze after commit.
-pub fn assign(tx: &mut Tx<'_>, record: Record, name: &str, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Pending>> {
+/// Applies an assignment inside the record's save. Durable analysis jobs are atomic with it.
+pub fn assign(tx: &mut Tx<'_>, record: Record, name: &str, assignment: Assignment<Staged>) -> campfire_db::Result<()> {
     match assignment {
-        Assignment::Unchanged => Ok(None),
+        Assignment::Unchanged => Ok(()),
         Assignment::Delete => {
             destroy(tx, record, name)?;
-            Ok(None)
+            Ok(())
         }
-        Assignment::Create(staged) => attach(tx, record, name, staged).map(Some),
+        Assignment::Create(staged) => attach(tx, record, name, staged),
+        Assignment::Existing(blob) => attach_existing(tx, record, name, blob),
+        Assignment::Signed(_) => Err(campfire_db::Error::Other("unstaged signed blob assignment".into())),
         Assignment::Invalid => Err(campfire_db::Error::Other("Could not find or build blob: expected attachable".into())),
     }
 }
@@ -125,14 +137,83 @@ impl Record {
 }
 
 /// `record.<name> = uploaded_file; record.save`: replaces any current attachment.
-pub fn attach(tx: &mut Tx<'_>, record: Record, name: &str, staged: Staged) -> campfire_db::Result<Pending> {
+pub fn attach(tx: &mut Tx<'_>, record: Record, name: &str, staged: Staged) -> campfire_db::Result<()> {
+    let blob = staged.insert(tx.conn(), tx.now().jiff()).map_err(storage_error)?;
+    keep_after_commit(tx, staged);
+    attach_existing(tx, record, name, blob)
+}
+
+/// `Attached::Changes::CreateOne`: reuse the attachment when it already has this blob.
+pub fn attach_existing(
+    tx: &mut Tx<'_>,
+    record: Record,
+    name: &str,
+    blob: Blob,
+) -> campfire_db::Result<()> {
+    let blob = save_existing(tx, blob)?;
+    if attached_blob(tx.conn(), record.record_type, record.id, name)?
+        .is_some_and(|attached| attached.id == blob.id)
+    {
+        return Ok(());
+    }
     destroy(tx, record, name)?;
     let now = tx.now();
-    let blob = staged.insert(tx.conn(), now.jiff()).map_err(storage_error)?;
-    keep_after_commit(tx, staged);
-    campfire_storage::blob::insert_attachment(tx.conn(), name, record.record_type, record.id, blob.id, now.jiff()).map_err(storage_error)?;
+    campfire_storage::blob::insert_attachment(
+        tx.conn(),
+        name,
+        record.record_type,
+        record.id,
+        blob.id,
+        now.jiff(),
+    )
+    .map_err(storage_error)?;
     super::accounts::touch(tx.conn(), record.table, record.id, tx.now())?;
-    Ok(Pending { blob })
+    enqueue_analysis(tx, &blob);
+    Ok(())
+}
+
+/// Save `identify_without_saving`'s changes with the record's attachment, not in a prior write.
+pub fn save_existing(tx: &mut Tx<'_>, identified: Blob) -> campfire_db::Result<Blob> {
+    let mut blob = Blob::find(tx.conn(), identified.id)
+        .map_err(storage_error)?
+        .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+    if !blob.is_identified() && identified.is_identified() {
+        blob.metadata
+            .set("identified", campfire_storage::Json::Bool(true));
+        blob.content_type = identified.content_type;
+        tx.conn().execute_cached(
+            "UPDATE active_storage_blobs SET content_type = ?1, metadata = ?2 WHERE id = ?3",
+            rusqlite::params![blob.content_type, blob.metadata.encode(), blob.id],
+        )?;
+        crate::active_storage::touch_attachment_records(tx, blob.id)?;
+    }
+    Ok(blob)
+}
+
+/// `Attachment#analyze_blob_later`: media jobs commit with the attachment; Rails' synchronous
+/// `NullAnalyzer` updates metadata in its own write after the attachment commits.
+pub fn enqueue_analysis(tx: &mut Tx<'_>, blob: &Blob) {
+    if blob.is_analyzed() {
+        return;
+    }
+    if campfire_storage::analyze::Analyzer::for_content_type(blob.content_type()).analyze_later() {
+        tx.emit_after_commit(Event::job(&AnalyzeJob { blob_id: blob.id }));
+    } else {
+        let blob_id = blob.id;
+        tx.after_commit(move |after| {
+            campfire_db::run_write(after.conn(), after.env(), |tx| {
+                let Some(mut blob) = Blob::find(tx.conn(), blob_id).map_err(storage_error)? else {
+                    return Ok(());
+                };
+                if !blob.is_analyzed() {
+                    blob.metadata.set("analyzed", campfire_storage::Json::Bool(true));
+                    blob.update_metadata(tx.conn(), blob.metadata.clone()).map_err(storage_error)?;
+                    crate::active_storage::touch_attachment_records(tx, blob.id)?;
+                }
+                Ok(())
+            })
+        });
+    }
 }
 
 /// `record.<name>.destroy` (the attachment): delete it, touch the record, and purge its blob
@@ -154,43 +235,6 @@ pub fn destroy(tx: &mut Tx<'_>, record: Record, name: &str) -> campfire_db::Resu
     Ok(true)
 }
 
-/// After commit: `analyze_blob_later` (the file was uploaded before the save).
-pub fn analyze_later(app: &App, pending: Option<Pending>) {
-    let Some(Pending { blob }) = pending else { return };
-    let job_app = app.clone();
-    app.jobs.perform_later("ActiveStorage::AnalyzeJob", async move { analyze(&job_app, blob.id).await });
-}
-
-/// `ActiveStorage::AnalyzeJob`: `blob.analyze`, then `touch_attachment_records`. The file is
-/// analyzed off the writer; only the metadata update and touches run on it.
-pub async fn analyze(app: &App, blob_id: i64) -> anyhow::Result<()> {
-    let blob = app.db.read(move |conn| Blob::find(conn, blob_id).map_err(storage_error)).await?;
-    let Some(blob) = blob else { return Ok(()) };
-    let metadata = analyzed_metadata(app, &blob).await.map_err(|e| anyhow::anyhow!("{e:?}"))?;
-    app.db
-        .write(move |tx| {
-            let mut blob = blob;
-            blob.update_metadata(tx.conn(), metadata).map_err(storage_error)?;
-            for (record_type, record_id) in campfire_storage::blob::attachment_records(tx.conn(), blob_id).map_err(storage_error)? {
-                if let Some(table) = table_for(&record_type) {
-                    super::accounts::touch(tx.conn(), table, record_id, tx.now())?;
-                }
-            }
-            Ok(())
-        })
-        .await?;
-    Ok(())
-}
-
-fn table_for(record_type: &str) -> Option<&'static str> {
-    match record_type {
-        "User" => Some("users"),
-        "Account" => Some("accounts"),
-        "Message" => Some("messages"),
-        _ => None,
-    }
-}
-
 /// `record.<name>.variant(name).processed if record.<name>.variable?`: the processed variant's
 /// blob, or `None` when there's no attachment or it can't be transformed.
 pub async fn processed_variant(app: &App, record: Record, name: &str, transformations: Variation) -> Result<Option<Blob>> {
@@ -207,3 +251,6 @@ pub async fn processed_variant(app: &App, record: Record, name: &str, transforma
 pub fn storage_error(error: campfire_storage::Error) -> campfire_db::Error {
     campfire_db::Error::Other(error.to_string())
 }
+
+#[cfg(test)]
+mod tests;

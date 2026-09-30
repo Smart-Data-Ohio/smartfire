@@ -273,8 +273,8 @@ pub async fn update(c: &mut Ctx) -> Result {
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
         .await;
-    let pending = match result {
-        Ok(pending) => pending,
+    match result {
+        Ok(()) => {}
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             c.set_current(concerns::CurrentUser(error_user));
             return render_profile(
@@ -288,8 +288,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             .await;
         }
         Err(error) => return Err(Error::internal(error)),
-    };
-    attachments::analyze_later(c.app(), pending);
+    }
 
     let location = c.url_for(&campfire_routes::user_profile());
     c.redirect_to_with(

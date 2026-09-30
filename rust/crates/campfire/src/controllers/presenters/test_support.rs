@@ -130,7 +130,7 @@ impl TestApp {
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
-        Self::boot_with_services(seed_clock(), network, &[]).await
+        Self::boot_with_clients("default", seed_clock(), network, &[], None).await
     }
 
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
@@ -141,30 +141,27 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_with_clients(clock, crate::integrations::net::Network::system(), extra, None).await
+        Self::boot_with_clients("default", clock, crate::integrations::net::Network::system(), extra, None).await
     }
 
     pub async fn boot_with_github_app(
         github_app: crate::integrations::github::client::AppClient,
     ) -> Option<TestApp> {
-        Self::boot_with_clients(seed_clock(), crate::integrations::net::Network::system(), &[], Some(github_app)).await
+        Self::boot_with_clients("default", seed_clock(), crate::integrations::net::Network::system(), &[], Some(github_app)).await
     }
 
-    async fn boot_with_services(
-        clock: campfire_kit::SharedClock,
-        network: crate::integrations::net::Network,
-        extra: &[(&str, &str)],
-    ) -> Option<TestApp> {
-        Self::boot_with_clients(clock, network, extra, None).await
+    pub async fn boot_seed(name: &str) -> Option<TestApp> {
+        Self::boot_with_clients(name, seed_clock(), crate::integrations::net::Network::system(), &[], None).await
     }
 
     async fn boot_with_clients(
+        name: &str,
         clock: campfire_kit::SharedClock,
         network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
         github_app: Option<crate::integrations::github::client::AppClient>,
     ) -> Option<TestApp> {
-        let seed = seed_dir("default")?;
+        let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
         std::fs::copy(
@@ -195,6 +192,7 @@ impl TestApp {
             None => boot_with_services(config, clock, network, intervals).await.unwrap(),
         };
         Some(TestApp { booted, _dir: dir })
+
     }
 
     pub fn db(&self) -> &campfire_db::Database {

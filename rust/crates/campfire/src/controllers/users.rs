@@ -53,13 +53,12 @@ pub async fn create(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let user = User::create(tx, attributes)?;
-            let pending = attachments::assign(tx, Record::user(user.id), "avatar", avatar)?;
-            Ok((user, pending))
+            attachments::assign(tx, Record::user(user.id), "avatar", avatar)?;
+            Ok(user)
         })
         .await;
     match result {
-        Ok((user, pending)) => {
-            attachments::analyze_later(c.app(), pending);
+        Ok(user) => {
             concerns::start_new_session_for(c, user).await?;
             let root = c.url_for(&campfire_routes::root());
             c.redirect_to(&root)
