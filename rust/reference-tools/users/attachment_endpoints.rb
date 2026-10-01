@@ -17,8 +17,9 @@ raise "not authenticated" unless client.response.status == 200
 token = Nokogiri::HTML(client.response.body).at_css('meta[name="csrf-token"]')["content"]
 rows = []
 ["logo", "icon"].each do |kind|
-  ["clean.svg", "square_64.png"].each do |fixture|
-    [" ", "/"].each_with_index do |suffix, index|
+  ["clean.svg", "square_64.png", "namespaced.svg"].each do |fixture|
+    # Generic XML magic needs the sanitized .svg extension to identify a prefixed SVG.
+    (fixture == "namespaced.svg" ? [" "] : [" ", "/"]).each_with_index do |suffix, index|
       name = "ws8br2_#{kind}_#{fixture.tr('.', '_')}_#{index}"
       bytes = File.binread(File.join(ENV.fetch("PARITY_WORK"), "vectors/workspace_icons", fixture))
       filename = fixture + suffix
