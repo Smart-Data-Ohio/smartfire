@@ -15,8 +15,6 @@ request.cookie_jar.signed[:session_token] = user.sessions.where.not(two_factor_v
 headers = { "Cookie" => "session_token=#{Rack::Utils.escape(request.cookie_jar[:session_token])}" }
 browser = ActionDispatch::Integration::Session.new(Rails.application)
 browser.host! "campfire.test"
-source = File.read(Rails.root.join("app/views/rooms/show.html.erb"))
-slot = source[/^    <% if @unread_divider_message_id.*?^    <% end %>\n/m] or raise "list boundary changed"
 member = room.memberships.find_by!(user:)
 states = [
   { name: "read_stale_pointer", pointer: messages[79].id },
@@ -36,7 +34,11 @@ rows = states.map do |state|
   raise "room failed: #{browser.response.status}" unless browser.response.successful?
   controller = browser.controller
   facts = controller.view_assigns
-  html = controller.render_to_string(inline: slot, layout: false)
+  Current.user = user
+  # Capture the actual messages container's complete contents, including the blank
+  # invitation line before the unread branch. A branch-only render missed that seam.
+  show = controller.render_to_string(template: 'rooms/show', layout: false)
+  html = show.match(/<div id="#{Regexp.escape(ActionView::RecordIdentifier.dom_id(room, :messages))}"[^>]*>(.*?)<\/div>\n\s*<turbo-cable-stream-source/m)&.[](1) or raise 'list boundary changed'
   raise "session value in list" if html.include?("authenticity_token") || html.match?(/nonce="[^"]+/)
   state.merge(status: browser.response.status, total_count: browser.response.headers["X-Total-Count"],
     ids: facts.fetch("messages").map(&:id), divider_id: facts["unread_divider_message_id"],

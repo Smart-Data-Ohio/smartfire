@@ -366,7 +366,8 @@ fn normalize_filename(filename: &str) -> String {
     if unescaped.is_empty() {
         return unescaped;
     }
-    unescaped.rsplit(['/', '\\']).next().unwrap_or("").to_string()
+    // Ruby String#split drops trailing empty fields before Rack takes .last.
+    unescaped.rsplit(['/', '\\']).find(|part| !part.is_empty()).unwrap_or("").to_string()
 }
 
 #[cfg(test)]

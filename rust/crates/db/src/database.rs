@@ -625,6 +625,20 @@ impl Database {
             .map_err(|e| Error::Other(e.to_string()))?
     }
 
+    /// Record actual reader SQL across this database's blocking workers. Test-only;
+    /// each database owns its capture, so parallel app tests cannot mix queries.
+    #[cfg(feature = "test-support")]
+    pub fn capture_read_queries(&self) -> Arc<Mutex<Vec<String>>> {
+        let log = Arc::new(Mutex::new(Vec::new()));
+        *self.readers.query_log.lock().unwrap() = Some(log.clone());
+        log
+    }
+
+    #[cfg(feature = "test-support")]
+    pub fn stop_capturing_read_queries(&self) {
+        *self.readers.query_log.lock().unwrap() = None;
+    }
+
     /// [`Database::read`] for synchronous callers.
     pub fn read_blocking<T>(&self, f: impl FnOnce(&Connection) -> Result<T>) -> Result<T> {
         self.readers.with(f)
@@ -739,6 +753,8 @@ fn open_connection(path: &Path, reader: bool) -> Result<Connection> {
 }
 
 struct ReaderPool {
+    #[cfg(feature = "test-support")]
+    query_log: Mutex<Option<Arc<Mutex<Vec<String>>>>>,
     idle: Mutex<Vec<Connection>>,
     available: Condvar,
 }
@@ -748,6 +764,8 @@ impl ReaderPool {
         Self {
             idle: Mutex::new(connections),
             available: Condvar::new(),
+            #[cfg(feature = "test-support")]
+            query_log: Mutex::new(None),
         }
     }
 
@@ -767,11 +785,43 @@ impl ReaderPool {
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
             }
         };
-        let checkout = Checkout {
-            pool: self,
-            conn: Some(conn),
-        };
-        f(checkout.conn.as_ref().expect("checked out"))
+        let checkout = Checkout { pool: self, conn: Some(conn) };
+        let conn = checkout.conn.as_ref().expect("checked out");
+        #[cfg(feature = "test-support")]
+        let _trace = self.query_log.lock().unwrap().clone().map(|log| QueryTrace::enter(conn, log));
+        f(conn)
+    }
+}
+
+#[cfg(feature = "test-support")]
+thread_local! {
+    static READ_QUERIES: std::cell::RefCell<Option<Arc<Mutex<Vec<String>>>>> = const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(feature = "test-support")]
+struct QueryTrace<'a>(&'a Connection, Option<Arc<Mutex<Vec<String>>>>);
+
+#[cfg(feature = "test-support")]
+impl<'a> QueryTrace<'a> {
+    fn enter(conn: &'a Connection, log: Arc<Mutex<Vec<String>>>) -> Self {
+        fn record(event: rusqlite::trace::TraceEvent<'_>) {
+            if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event {
+                READ_QUERIES.with(|log| {
+                    if let Some(log) = log.borrow().as_ref() { log.lock().unwrap().push(sql.into()); }
+                });
+            }
+        }
+        let previous = READ_QUERIES.with(|slot| slot.replace(Some(log)));
+        conn.trace_v2(rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT, Some(record));
+        Self(conn, previous)
+    }
+}
+
+#[cfg(feature = "test-support")]
+impl Drop for QueryTrace<'_> {
+    fn drop(&mut self) {
+        self.0.trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+        READ_QUERIES.with(|slot| { slot.replace(self.1.take()); });
     }
 }
 

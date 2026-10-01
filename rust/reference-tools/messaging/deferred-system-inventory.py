@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
-"""Inventory pinned owned/shared system files; zero execution, not a parity pass claim."""
+"""Verify named behaviour attribution against the pin; never claim a pixel pass."""
 from pathlib import Path
 import re
 import subprocess
+import json
+import hashlib
 ROOT = Path(__file__).resolve().parents[3]
-FILES = ['boosting_messages', 'code_highlighting', 'sending_messages', 'threads', 'workspace_markdown',
-         'composer', 'composer_attach_menu', 'message_interactions', 'message_actions_mobile',
-         'message_toolbar', 'message_list_a11y', 'drive_attachments', 'unread_divider', 'search_forward_edit',
-         'keyboard_shortcuts', 'content_security_policy', 'motion', 'mobile_layout', 'timezone_detection']
-for name in FILES:
-    path = f'test/system/{name}_test.rb'
+inventory = json.loads((ROOT / 'rust/plans/ws8bm-system-cases.json').read_text())
+totals = {'passed': 0, 'deferred': 0, 'blocked_ws12': 0}
+for row in inventory['files']:
+    path = row['file']
     source = subprocess.check_output(['git', 'show', f'd7c7de92:{path}'], cwd=ROOT, text=True)
-    declared = len(re.findall(r'^\s*test\s+["\']', source, re.M))
-    print(f'{path}: {declared} literal test declarations; 0 executed; deferred', flush=True)
-print(f'WS8bm system inventory: {len(FILES)} pinned files; declarations only; no browser or pixel pass claim', flush=True)
+    assert hashlib.sha256(source.encode()).hexdigest() == row['source_sha256']
+    assert re.findall(r'^\s*test\s+"([^"]+)"', source, re.M) == [case['name'] for case in row['cases']]
+    counts = dict.fromkeys(totals, 0)
+    for case in row['cases']:
+        assert case['status'] in totals
+        assert (case['status'] == 'passed') == bool(case['evidence'])
+        counts[case['status']] += 1
+        totals[case['status']] += 1
+    print(f"{path}: {len(row['cases'])} named declarations; {counts['passed']} mapped behaviour passes; {counts['deferred']} deferred; {counts['blocked_ws12']} WS12 blocked", flush=True)
+assert sum(totals.values()) == 135
+print(f"WS8bm system inventory: 135 named declarations; {totals['passed']} mapped behaviour passes; {totals['deferred']} deferred; {totals['blocked_ws12']} WS12 blocked; no pixel checks", flush=True)

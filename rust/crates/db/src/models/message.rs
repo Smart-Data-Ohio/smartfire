@@ -1324,7 +1324,7 @@ impl Message {
         if text.trim().is_empty() {
             text = self
                 .attachment(conn)?
-                .map(|(_, blob)| blob.filename)
+                .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
                 .unwrap_or_default();
         }
         Ok(

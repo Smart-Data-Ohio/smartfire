@@ -1,0 +1,249 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "kind": "initial",
+      "path": "/rooms/486777696/threads.json",
+      "responses": [
+        {
+          "input": {
+            "message": {
+              "client_message_id": "jpeg-initial-0",
+              "markdown_source": "JPEG boundary",
+              "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887"
+            },
+            "thread": {
+              "name": "JPEG boundary"
+            }
+          },
+          "status": 500,
+          "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+          "content_type": "application/json; charset=UTF-8",
+          "cache_control": null,
+          "location": null,
+          "state": {
+            "message_count": 1,
+            "variants": [
+              {
+                "digest": "6gwfjNKv9eUy9jNUtEZvQFLU0hQ=",
+                "filename": "moon.webp",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": true
+              },
+              {
+                "digest": "IBhrLAIapu+NCId+2Kz6EqUWRKY=",
+                "filename": "moon.jpg",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": false
+              }
+            ],
+            "original_exists": true
+          }
+        },
+        {
+          "input": {
+            "message": {
+              "client_message_id": "jpeg-initial-1",
+              "markdown_source": "JPEG boundary",
+              "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887"
+            },
+            "thread": {
+              "name": "JPEG boundary"
+            }
+          },
+          "status": 201,
+          "body": "{\"thread\":{\"id\":10,\"name\":\"JPEG boundary\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/10\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=10\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"parent_message\":null}",
+          "content_type": "application/json; charset=utf-8",
+          "cache_control": "max-age=0, private, must-revalidate",
+          "location": null,
+          "state": {
+            "message_count": 2,
+            "variants": [
+              {
+                "digest": "6gwfjNKv9eUy9jNUtEZvQFLU0hQ=",
+                "filename": "moon.webp",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": true
+              },
+              {
+                "digest": "IBhrLAIapu+NCId+2Kz6EqUWRKY=",
+                "filename": "moon.jpg",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": false
+              }
+            ],
+            "original_exists": true
+          }
+        }
+      ]
+    },
+    {
+      "kind": "reply",
+      "path": "/rooms/486777696/threads/9/messages.json",
+      "responses": [
+        {
+          "input": {
+            "message": {
+              "client_message_id": "jpeg-reply-0",
+              "markdown_source": "JPEG boundary",
+              "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887"
+            }
+          },
+          "status": 500,
+          "body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+          "content_type": "application/json; charset=UTF-8",
+          "cache_control": null,
+          "location": null,
+          "state": {
+            "message_count": 1,
+            "variants": [
+              {
+                "digest": "6gwfjNKv9eUy9jNUtEZvQFLU0hQ=",
+                "filename": "moon.webp",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": true
+              },
+              {
+                "digest": "IBhrLAIapu+NCId+2Kz6EqUWRKY=",
+                "filename": "moon.jpg",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": false
+              }
+            ],
+            "original_exists": true,
+            "joined": true,
+            "closed": false
+          }
+        },
+        {
+          "input": {
+            "message": {
+              "client_message_id": "jpeg-reply-1",
+              "markdown_source": "JPEG boundary",
+              "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887"
+            }
+          },
+          "status": 201,
+          "body": "{\"id\":935962059,\"client_message_id\":\"jpeg-reply-1\",\"created_at\":\"2026-03-02T16:00:00.000Z\",\"updated_at\":\"2026-03-02T16:00:00.000Z\",\"body\":{\"plain_text\":\"JPEG boundary\",\"html\":\"<div class=\\\"markdown-body\\\" data-controller=\\\"drive-link\\\"><p>JPEG boundary</p></div>\",\"markdown_source\":\"JPEG boundary\"},\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"room\":{\"id\":486777696,\"icon_name\":null},\"thread_context\":{\"id\":9,\"name\":\"Review\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":2,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"drive_attachments\":[],\"url\":\"http://campfire.test/rooms/486777696?message_id=935962059&thread=9\"}",
+          "content_type": "application/json; charset=utf-8",
+          "cache_control": "no-store",
+          "location": null,
+          "state": {
+            "message_count": 2,
+            "variants": [
+              {
+                "digest": "6gwfjNKv9eUy9jNUtEZvQFLU0hQ=",
+                "filename": "moon.webp",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": true
+              },
+              {
+                "digest": "IBhrLAIapu+NCId+2Kz6EqUWRKY=",
+                "filename": "moon.jpg",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": false
+              }
+            ],
+            "original_exists": true,
+            "joined": true,
+            "closed": false
+          }
+        }
+      ]
+    },
+    {
+      "kind": "root",
+      "path": "/rooms/486777696/messages.turbo_stream",
+      "responses": [
+        {
+          "input": {
+            "message": {
+              "client_message_id": "jpeg-root-0",
+              "markdown_source": "JPEG boundary",
+              "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887"
+            }
+          },
+          "status": 200,
+          "body": "<turbo-stream action=\"append\" target=\"messages_rooms_closed_486777696\"><template>\n<div id=\"message_jpeg-root-0\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935962058\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"127326141\" data-actions-url=\"http://campfire.test/rooms/486777696/messages/935962058/actions\" data-message-url=\"http://campfire.test/rooms/486777696/messages/935962058\" data-boost-url=\"http://campfire.test/messages/935962058/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_jpeg-root-0\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_jpeg-root-0\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_jpeg-root-0\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"David\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <strong data-reply-target=\"author\">David</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962058\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962058\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_jpeg-root-0\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887/moon.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887/moon.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg\" /></a></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_jpeg-root-0\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_jpeg-root-0\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_jpeg-root-0\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_jpeg-root-0\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_jpeg-root-0\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_jpeg-root-0\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_jpeg-root-0\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_jpeg-root-0\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_jpeg-root-0\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_jpeg-root-0\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935962058/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_jpeg-root-0\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>\n",
+          "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+          "cache_control": "max-age=0, private, must-revalidate",
+          "location": null,
+          "state": {
+            "message_count": 1,
+            "variants": [
+              {
+                "digest": "6gwfjNKv9eUy9jNUtEZvQFLU0hQ=",
+                "filename": "moon.webp",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": true
+              },
+              {
+                "digest": "IBhrLAIapu+NCId+2Kz6EqUWRKY=",
+                "filename": "moon.jpg",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": true
+              }
+            ],
+            "original_exists": true
+          }
+        },
+        {
+          "input": {
+            "message": {
+              "client_message_id": "jpeg-root-1",
+              "markdown_source": "JPEG boundary",
+              "attachment": "eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887"
+            }
+          },
+          "status": 200,
+          "body": "<turbo-stream action=\"append\" target=\"messages_rooms_closed_486777696\"><template>\n<div id=\"message_jpeg-root-1\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935962059\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"127326141\" data-actions-url=\"http://campfire.test/rooms/486777696/messages/935962059/actions\" data-message-url=\"http://campfire.test/rooms/486777696/messages/935962059\" data-boost-url=\"http://campfire.test/messages/935962059/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_jpeg-root-1\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_jpeg-root-1\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_jpeg-root-1\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"David\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <strong data-reply-target=\"author\">David</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962059\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962059\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_jpeg-root-1\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"max-inline-size center flex overflow-clip\" style=\"width: 320px; aspect-ratio: 1.0;\"><a class=\"flex\" data-lightbox-target=\"image\" data-action=\"lightbox#open\" data-lightbox-url-value=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887/moon.jpg?disposition=attachment\" href=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887/moon.jpg\"><img width=\"640\" height=\"640\" class=\"message__attachment\" loading=\"lazy\" alt=\"moon\" src=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MSwicHVyIjoiYmxvYl9pZCJ9fQ==--14b48c3590d22e2f1a34e72712de6f8ed8058887/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fbGltaXQiOlsxMjAwLDgwMF19LCJwdXIiOiJ2YXJpYXRpb24ifX0=--38c0c0eeb72fc51ec9781c5c23b51fcf4ee11799/moon.jpg\" /></a></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_jpeg-root-1\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_jpeg-root-1\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_jpeg-root-1\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_jpeg-root-1\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_jpeg-root-1\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_jpeg-root-1\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_jpeg-root-1\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_jpeg-root-1\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_jpeg-root-1\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_jpeg-root-1\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935962059/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_jpeg-root-1\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></template></turbo-stream>\n",
+          "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+          "cache_control": "max-age=0, private, must-revalidate",
+          "location": null,
+          "state": {
+            "message_count": 2,
+            "variants": [
+              {
+                "digest": "6gwfjNKv9eUy9jNUtEZvQFLU0hQ=",
+                "filename": "moon.webp",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": true
+              },
+              {
+                "digest": "IBhrLAIapu+NCId+2Kz6EqUWRKY=",
+                "filename": "moon.jpg",
+                "metadata": {
+                  "identified": true
+                },
+                "exists": true
+              }
+            ],
+            "original_exists": true
+          }
+        }
+      ]
+    }
+  ]
+}

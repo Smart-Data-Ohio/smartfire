@@ -3,6 +3,7 @@
 mod account_test;
 mod slack_import_test;
 mod slack_test;
+mod activity_item_test;
 mod agent_posting_test;
 mod agent_budget_cases_test;
 mod agent_peer_callbacks_test;
@@ -97,7 +98,9 @@ mod session_test;
 mod two_factor_test;
 mod two_factor_rollback_test;
 mod user_test;
+mod user_star_test;
 mod user_device_test;
+mod unicode_casing_parity_test;
 
 use std::sync::Arc;
 

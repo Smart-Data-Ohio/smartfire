@@ -1,3 +1,4 @@
+use super::super::pull_requests::PullRequest;
 use super::*;
 use crate::{app, config::Config};
 use campfire_db::{Message, MessageChanges, NewMessage, fixtures};
@@ -82,6 +83,34 @@ fn new_message() -> NewMessage {
 }
 fn numbers(tx: &Tx<'_>, message: &Message) -> campfire_db::Result<Vec<i64>> {
     Ok(tx.conn().prepare("SELECT p.number FROM github_pull_requests p JOIN github_pull_request_references r ON r.github_pull_request_id=p.id WHERE r.message_id=? ORDER BY p.number")?.query_map([message.id],|r|r.get(0))?.collect::<rusqlite::Result<_>>()?)
+}
+
+#[tokio::test]
+async fn github_fresh_card_new_reference_enqueues_but_existing_reference_does_not() {
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/messaging/fresh-github-reference.json"
+    ))
+    .unwrap();
+    // application() stops the runner before loading fixtures: record jobs, never fetch.
+    let (app, _dir) = application().await;
+    app.db.write(move |tx| {
+        let pr = PullRequest::for_reference(tx, "rails", "rails", 3141)?;
+        tx.conn().execute(
+            "UPDATE github_pull_requests SET private=0,title='Cached card',state='open',fetched_at=?,fetch_requested_at=NULL WHERE id=?",
+            (tx.now(), pr.id),
+        )?;
+        let message = Message::create_markdown(tx, new_message(), "see https://github.com/rails/rails/pull/3141")?;
+        for row in oracle["rows"].as_array().unwrap() {
+            if row["name"] == "existing_reference" {
+                tx.conn().execute("UPDATE github_pull_requests SET fetch_requested_at=NULL WHERE id=?", [pr.id])?;
+                sync(tx, &message, true)?;
+            }
+            assert_eq!(serde_json::json!(PullRequest::find(tx.conn(), pr.id)?.stale(tx.now())), row["stale"]);
+            let count: i64 = tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'", [], |r| r.get(0))?;
+            assert_eq!(serde_json::json!(count), row["fetches"], "{}", row["name"]);
+        }
+        Ok(())
+    }).await.unwrap();
 }
 
 #[tokio::test]
