@@ -402,3 +402,63 @@ async fn google_compound_attendance_attributes_match_rails_bytes() {
         }
     }
 }
+
+#[tokio::test]
+async fn google_pending_meet_conference_uses_the_real_durable_retry_handler() {
+    let v = vectors();
+    let case = v["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["spec"]["name"] == "pending")
+        .unwrap();
+    let (a, _) = fixture(case).await;
+    let id = case["events"][0]["id"].as_i64().unwrap();
+    a.db()
+        .write(move |tx| {
+            tx.emit_after_commit(campfire_db::Event::job(
+                &campfire_db::models::google_calendar::MeetLinkJob { event_id: id },
+            ));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let runner = campfire_jobs::start(
+        a.db().clone(),
+        a.booted.app.jobs.queue.clone(),
+        crate::jobs::registry(),
+        a.booted.app.clone(),
+        crate::jobs::runner_config(&a.booted.app.config),
+    );
+    tokio::time::timeout(Duration::from_secs(5),async {loop {
+        let ready=a.db().read(|c|Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM background_jobs WHERE job_class='Calendar::MeetLinkJob' AND status='ready' AND attempts=1)",[],|r|r.get::<_,bool>(0))?)).await.unwrap();
+        if ready {break}tokio::time::sleep(Duration::from_millis(10)).await;
+    }}).await.unwrap();
+    runner.shutdown(Duration::from_secs(5)).await;
+    a.db()
+        .read(move |c| {
+            let job = campfire_jobs::inspect::all(c)?
+                .into_iter()
+                .find(|j| j.class == "Calendar::MeetLinkJob")
+                .unwrap();
+            assert_eq!(job.arguments, json!({"event_id":id}));
+            let seconds = (job.run_at.as_microsecond() - job.updated_at.as_microsecond()) as f64
+                / 1_000_000.0;
+            assert!((3.0..3.15).contains(&seconds));
+            assert!(job.last_error.unwrap().contains("conference still pending"));
+            assert!(CalendarEvent::find(c, id)?.meet_link.is_none());
+            let raw: String = c.query_row(
+                "SELECT arguments FROM background_jobs WHERE job_class='Calendar::MeetLinkJob'",
+                [],
+                |r| r.get(0),
+            )?;
+            let raw: Value = serde_json::from_str(&raw).unwrap();
+            assert_eq!(
+                raw["_campfire_retry_metadata_v1"]["counts"]["[Google::Client::Unavailable]"],
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}

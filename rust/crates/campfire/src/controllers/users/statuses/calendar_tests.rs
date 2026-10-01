@@ -64,7 +64,10 @@ async fn assert_frames(app: &TestApp, socket: &mut Client, frames: &[Value], nam
 async fn replay(names: &[&str]) {
     let golden = vectors();
     let now = stamp(golden["now"].as_str().unwrap());
-    let app = boot().await;
+    let mut app = boot().await;
+    // Replay Rails dispatcher fixtures with its test queue adapter; the fetch consumer
+    // is exercised separately through the real runner in WS14g.
+    app.booted.jobs.stop(std::time::Duration::from_secs(5)).await;
     let (_server, mut socket) = subscribe(&app).await;
     for name in names {
         let row = golden["rows"]

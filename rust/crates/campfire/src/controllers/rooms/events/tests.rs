@@ -25,7 +25,7 @@ async fn event(app: &TestApp) -> CalendarEvent {
 
 #[tokio::test]
 async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
-    let app = TestApp::boot().await.expect("pinned default seed");
+    let mut app = TestApp::boot().await.expect("pinned default seed");
     let oracle: serde_json::Value =
         serde_json::from_str(include_str!("event-review-regressions.json")).unwrap();
     app.db()
@@ -38,6 +38,8 @@ async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
         })
         .await
         .unwrap();
+    // Rails uses the test queue adapter here: inspect producer rows before consumption.
+    app.booted.jobs.stop(std::time::Duration::from_secs(5)).await;
     let mut david = app.david();
     for case in oracle["attendance"].as_array().unwrap() {
         let head = event(&app).await;
@@ -463,9 +465,11 @@ async fn event_write_controller_security_and_validation() {
 }
 #[tokio::test]
 async fn persisted_series_nil_start_returns_rails_public_500_and_writes_nothing() {
-    let Some(app) = TestApp::boot().await else {
+    let Some(mut app) = TestApp::boot().await else {
         return;
     };
+    // Rails uses the test queue adapter here: inspect producer rows before consumption.
+    app.booted.jobs.stop(std::time::Duration::from_secs(5)).await;
     let head = event(&app).await;
     let rows = app.db().read(move |c| head.series_events(c)).await.unwrap();
     let expected: serde_json::Value = serde_json::from_str(include_str!(concat!(
@@ -701,9 +705,11 @@ async fn event_create_keeps_commit_after_announcement_failure_and_jobs_reject_at
 
 #[tokio::test]
 async fn descriptions_and_private_calendar_copies_match_rails() {
-    let Some(app) = TestApp::boot().await else {
+    let Some(mut app) = TestApp::boot().await else {
         return;
     };
+    // Rails uses the test queue adapter here: inspect producer rows before consumption.
+    app.booted.jobs.stop(std::time::Duration::from_secs(5)).await;
     let e = event(&app).await;
     let id = e.id;
     app.db().write(move|tx| {
