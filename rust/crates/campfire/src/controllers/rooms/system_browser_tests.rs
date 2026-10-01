@@ -85,6 +85,8 @@ async fn run_browser(real_livekit:bool) {
                     // against a warm fragment cache. Original seed rooms remain intact.
                     tx.conn().execute_batch("DELETE FROM background_jobs; DELETE FROM activity_items; DELETE FROM huddle_cleanups; DELETE FROM huddle_grants; DELETE FROM streams;  UPDATE users SET inbox_preferences=NULL;")?;
                     tx.conn().execute(&format!("UPDATE rooms SET deleted_at=COALESCE(deleted_at,updated_at),direct_member_key=NULL WHERE id NOT IN ({seed_room_ids})"),[])?;
+                    #[cfg(ws13b_domain_api)]
+                    tx.conn().execute("UPDATE users SET dnd_enabled=0,dnd_until=NULL",[])?;
                     let room = if options["kind"] == "designers" {
                         Room::find(tx.conn(),654632876)?
                     } else if options["kind"] == "direct" {
@@ -283,6 +285,13 @@ fn mutation(tx:&mut campfire_db::Tx<'_>, options:&serde_json::Value, config:&cam
     }
     if op=="preferences" {
         tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?",params![options["preferences"].to_string(),options["user"].as_i64().unwrap()])?;
+        #[cfg(ws13b_domain_api)]
+        if let Some(quiet)=options["quiet"].as_bool() {
+            // Rails injects RingPolicy.quiet_check. The current WS13b issuance
+            // emits inline, so provide that same decision through WS17's
+            // existing persisted manual-DND input rather than replacing a frame.
+            tx.conn().execute("UPDATE users SET dnd_enabled=?,dnd_until=NULL WHERE id=?",params![quiet,options["user"].as_i64().unwrap()])?;
+        }
         return Ok(json!({}));
     }
     let id=options["grant"].as_i64().unwrap();
@@ -328,7 +337,7 @@ fn queued_ring_adapter(app:crate::app::App,quiet:std::sync::Arc<std::sync::atomi
                 drop(statement);
                 for (id,arguments) in rows {
                     if decision==0 { publish_queued_ring(tx,id)?; }
-                    else if arguments["cancelled"]!=1 && arguments["superseded"]!=1 {
+                    else if arguments["delivered"]!=1 && arguments["cancelled"]!=1 && arguments["superseded"]!=1 {
                         let request:RingRequest=serde_json::from_value(arguments).unwrap();
                         publish_ring_with_policy(tx,&request,Some(&|_|decision==2))?;
                     }

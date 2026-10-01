@@ -2,7 +2,7 @@
 """Execute WS13 browser cases with PR #172 APIs, without merging its branch.
 
 Run only from an isolated fresh clone under the WS13 scratch directory. The
-five exact source files are restored even on failure; production signatures
+exact source files and compile dependencies are restored even on failure; production signatures
 and the WS13 branch remain unchanged. Pass a reviewed immutable domain SHA.
 """
 import argparse, hashlib, json, os, subprocess
@@ -11,15 +11,18 @@ p=argparse.ArgumentParser();p.add_argument('--domain-sha',required=True);args=p.
 root=Path(__file__).resolve().parents[3]
 assert '/rust-ws13/.scratch/' in str(root), 'use an isolated WS13 scratch checkout'
 files=['rust/crates/db/src/models/'+name+'.rs' for name in ['activity_item','huddle_grant','huddle_invitations','huddle_notices']]+['rust/crates/campfire/src/jobs/huddle.rs']
+# Compile WS13b's own job module unchanged; it is not ported or executed here.
+dependencies=['rust/crates/campfire/src/jobs/huddle/ring_matrix_tests.rs']
 source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
 domain=subprocess.check_output(['git','rev-parse',args.domain_sha+'^{commit}'],cwd=root,text=True).strip()
 assert len(domain)==40
-original={name:(root/name).read_bytes() for name in files}
+original={name:(root/name).read_bytes() if (root/name).exists() else None for name in files+dependencies}
 for name in files:
     assert original[name]==subprocess.check_output(['git','show',f'HEAD:{name}'],cwd=root),name
 try:
-    for name in files:
+    for name in files+dependencies:
         data=subprocess.check_output(['git','show',f'{domain}:{name}'],cwd=root)
+        (root/name).parent.mkdir(parents=True,exist_ok=True)
         (root/name).write_bytes(data)
         print(f'WS13b API source: {name} {hashlib.sha256(data).hexdigest()}',flush=True)
     print(f'WS13 source: {source}; WS13b API: {domain}; no merge',flush=True)
@@ -37,6 +40,8 @@ try:
     env['WS13_PLAYWRIGHT_IMAGE']='ws13-parity-playwright:'+image_hash
     subprocess.run([artifacts[0],'huddle_system_cases_in_real_browser','--ignored','--nocapture','--test-threads=8'],cwd=root,env=env,check=True)
 finally:
-    for name,data in original.items():(root/name).write_bytes(data)
+    for name,data in original.items():
+        if data is None:(root/name).unlink(missing_ok=True)
+        else:(root/name).write_bytes(data)
     subprocess.run(['git','diff','--exit-code'],cwd=root,check=True)
     print('WS13b API overlay restored; WS13 source clean',flush=True)
