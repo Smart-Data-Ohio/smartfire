@@ -19,7 +19,7 @@ pub async fn show(c: &mut Ctx) -> Result {
     let id = c.param_str("id").unwrap_or_default().to_string();
     let url = urlsafe_decode64(&id).ok_or_else(|| Error::internal(anyhow::anyhow!("invalid base64")))?;
     // Too much to encode is the client's doing (rqrcode raises, a 500 in Rails).
-    let qr_code = rqrcode::svg_bytes(&url).ok_or(Error::Status(StatusCode::UNPROCESSABLE_ENTITY))?;
+    let qr_code = rqrcode::svg_bytes(&url).ok_or_else(|| Error::internal(anyhow::anyhow!("Data length exceed maximum capacity of version 40")))?;
 
     // `expires_in 1.year, public: true`
     c.expires_in(31_556_952, ExpiresIn { public: true, ..ExpiresIn::default() });
@@ -95,5 +95,24 @@ mod tests {
         assert_eq!(urlsafe_decode64("ab=c"), None);
         assert_eq!(urlsafe_decode64("aB=="), None);
         assert_eq!(urlsafe_decode64("a*bc"), None);
+    }
+
+    #[tokio::test]
+    async fn qr_http_matches_rails_bytes_cache_and_capacity_errors() {
+        use crate::controllers::presenters::test_support::TestApp;
+        let Some(app) = TestApp::boot().await else { return };
+        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/users_public.json")).unwrap();
+        for vector in vectors["qr"].as_array().unwrap() {
+            let response = app.anonymous().get(&format!("/qr_code/{}", vector["id"].as_str().unwrap())).await;
+            assert_eq!(response.status.as_u16(), vector["status"].as_u64().unwrap() as u16);
+            if let Some(body) = vector["body"].as_str() {
+                assert_eq!(response.text(), body);
+                assert_eq!(response.header("cache-control"), vector["cache_control"].as_str());
+                assert_eq!(response.content_type(), Some("image/svg+xml; charset=utf-8"));
+            }
+        }
+        for bad in ["a", "ab=c", "aB==", "a*bc"] {
+            assert_eq!(app.anonymous().get(&format!("/qr_code/{bad}")).await.status.as_u16(), 500);
+        }
     }
 }

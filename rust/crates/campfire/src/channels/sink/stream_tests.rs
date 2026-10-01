@@ -30,10 +30,20 @@ fn oracle() -> Value {
 }
 #[tokio::test]
 async fn ws11_stream_peer_append_and_rendered_replacements_match_rails() {
+    check_frames(&[],oracle()).await;
+}
+
+#[tokio::test]
+async fn ws11_stream_peer_configured_url_defaults_match_rails() {
+    let configured:Value=serde_json::from_str(include_str!("../../../../../vectors/agents_stream_configured_frames_contract.json")).unwrap();
+    check_frames(&[("APP_URL","https://campfire.example.test:8443")],configured).await;
+}
+
+async fn check_frames(extra: &[(&str,&str)], gold: Value) {
     let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
         SEED_NOW.parse().unwrap(),
     ));
-    let (app, _dir) = TestApp::boot_with_clock(clock)
+    let (app, _dir) = TestApp::boot_with_clock_and_env(clock,extra)
         .await
         .expect("default seed")
         .stop_jobs()
@@ -88,10 +98,10 @@ async fn ws11_stream_peer_append_and_rendered_replacements_match_rails() {
         })
         .await
         .unwrap();
-    assert_eq!(mid, oracle()["message_id"].as_i64().unwrap());
+    assert_eq!(mid, gold["message_id"].as_i64().unwrap());
     assert_eq!(
         vec![frame(&mut client, &identifier, &stream).await],
-        oracle()["start"].as_array().unwrap().clone()
+        gold["start"].as_array().unwrap().clone()
     );
     client.assert_silent().await;
     app.db
@@ -113,7 +123,7 @@ async fn ws11_stream_peer_append_and_rendered_replacements_match_rails() {
         .unwrap();
     assert_eq!(
         vec![frame(&mut client, &identifier, &stream).await],
-        oracle()["update"].as_array().unwrap().clone()
+        gold["update"].as_array().unwrap().clone()
     );
     app.db
         .write(move |tx| {
@@ -126,7 +136,7 @@ async fn ws11_stream_peer_append_and_rendered_replacements_match_rails() {
         frame(&mut client, &identifier, &stream).await,
         frame(&mut client, &identifier, &stream).await,
     ];
-    let expected = oracle()["final"]
+    let expected = gold["final"]
         .as_array()
         .unwrap()
         .iter()

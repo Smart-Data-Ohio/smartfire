@@ -59,7 +59,7 @@ pub struct AgentEvent {
     pub webhook_next_attempt_at: Option<Timestamp>,
     pub webhook_last_error: Option<String>,
 }
-#[derive(Default)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct NewEvent {
     pub agent_id: i64,
     pub room_id: Option<i64>,
@@ -107,7 +107,17 @@ impl AgentEvent {
             Self::from_row,
         )
     }
-    pub fn create(tx: &Tx<'_>, mut a: NewEvent) -> Result<Self> {
+    pub fn create(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
+        Self::create_record(tx,a,false)
+    }
+    /// Thread's after_destroy_commit keeps its already-loaded belongs_to Agent,
+    /// even if the outer transaction deleted that row. Rails has no ledger FK.
+    /// This is only for an identity captured by the deletion callback; ordinary
+    /// event creation still validates an agent_id against the database.
+    pub(crate) fn create_captured(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
+        Self::create_record(tx,a,true)
+    }
+    fn create_record(tx: &Tx<'_>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
         let mut errors = Errors::default();
         if !DELIVERABLE_TYPES.contains(&a.event_type.as_str())
             && !["posted", "delivery_suppressed_rate_limit", "delivery_suppressed_hop_limit", "delivery_suppressed_revoked"].contains(&a.event_type.as_str())        {
@@ -124,6 +134,7 @@ impl AgentEvent {
         }
         for (table, field, id) in [("agents", "agent", Some(a.agent_id))] {
             if let Some(id) = id
+                && !captured_agent
                 && !exists(
                     tx.conn(),
                     &format!("SELECT 1 FROM {table} WHERE id=?"),
@@ -181,7 +192,7 @@ impl AgentEvent {
         }
     }
 }
-pub(crate) fn ruby_i64(v: &Value) -> i64 {
+pub fn ruby_i64(v: &Value) -> i64 {
     match v {
         Value::Number(n) => n
             .as_i64()

@@ -1,204 +1,157 @@
-# WS11 delivery and adapter parity report — partial
+WS11 merge of main #179/#180 — verified merge; wider domain partial
 
-Continuation after `3d72b4e2`, on `rust/ws11-agents`. Implementation and fresh-clone gate source: `ecc652b7ba4e97e2c05396d33682280454025c98`; the report-only commit follows. Oracle: our Rails at `d7c7de92`. Prior approval-after-commit fixes and UI owner APIs remain included; their detailed historical evidence is in this report's `3d72b4e2` version. This continuation closes **18 more named comparisons**, reducing 132 deferred names to **114**. Additional adapter/render comparisons are evidence, not automatic closure of the four complete streaming source cases.
+Verified merge/source: `f2c30b8c2d296f3b76c7cc30fbb17a1c8cb3ee98` on `rust/ws11-agents`. Parents: `3a2cf0d8e3a096170216e1aec60bb56392947746` and main `2b05160758307effa035b7d2581618014c46b755` (#179 viewer-zone timestamps/cache keys and #180 PR-refresh deflake). The final report commit changes documentation only. No behavior changed beyond bringing in and reconciling the merge. The two CodeQL findings were left unchanged as instructed. No stash, test weakening, timing-threshold increase, pixel work or Python model-server operation was used.
 
-## Pushed slices and changes
+Conflict reconciliation:
 
-| Commit | Files under `rust/` and behavior |
+| File | Both sides preserved |
 |---|---|
-| `90a831a7` | Merge main `ea630861` with a merge commit. `models/message.rs` installs the main ordinary `ActivityItem::record_message` producer during message creation and full stream finalization. Keep `manages_bots` enabled. |
-| `8b76fd0a` | `integrations/agent_jobs/delivery_path_cases.rs`: actual HTTP delivery, duplicate execution, lost delivery/suppression CAS, agent/legacy hop limit, and four concurrent producers of 28 mentions. `tests/agent_delivery_cases_test.rs`: both legacy fanout names. Reconcile three push AppState constructors with the stable owner services. |
-| `ada86d8f` | `agent_jobs/webhook_key_cases.rs`: all nine WebhookAgentKey names through real HTTP. Ten Rails transcripts cover context, ownership, public PR, ordinary thread/room, approvals, work, completion and legacy. Compare serialized payloads, body HMAC and timestamp/signature headers; agents omit reply tokens, legacy tokens authenticate for the room. |
-| `92056558`, `1f26a300` | `integrations/agent_repositories.rs`: production boot installs a thin `RepositoryReader` adapter to the existing WS15g Accounts domain. Preserve owner-linked account selection, post-await authority revalidation and conservative custom/uninstalled states. Tests use an owned local TLS endpoint for `api.github.com`, never the real service. A staged payload activation overlapped this commit; `1f26a300` immediately restored the inactive factory until its complete slice. |
-| `4bc45631` | `controllers/messages/payload.rs`, `presenters/agent_payload.rs`, `presenters.rs`, `rich_text.rs`, `app.rs`: install the shared WS8 payload reader at boot. Imported reader helpers from WS8b-m `6bb4ea416d46775a4109d1fbd661659a2b87117f`, without its HTTP surface. Preserve Current.user, base URL and existing service signatures. Eight semantic JSON comparisons include byte-identical rendered HTML. Delegate plain text to Message so forwarded Markdown retains its note. |
-| `7991aca1` | `channels/sink.rs` and real authenticated WebSocket tests: render ordinary Message append as well as MessageReplace; render callback partials directly to avoid stale same-timestamp drafts/final indicators. `agent_posting.rs`: use the actual `user_<id>_unreads` channel. `jobs/peer_callbacks.rs`: install available GitHub/Fizzy has-one removal adapters in declaration order with rollback. Approval preference-neighbor case now uses the installed ordinary mention producer rather than manual activity writes. |
-| `ee21457a` | Merge main `76e54ad5` (#169 timing helpers, #171 durable attachment analysis). Resolve controller/jobs conflicts preserving agent replay/budget preflight before attachment resolution and main's durable analysis enqueue. Keep the model callback registry in all builds and the upstream ad-hoc handlers only in tests. Retain main's bounded test helpers; no WS11 threshold/concurrency relaxations. |
-| `ecc652b7` | Strict clippy found an unused test-server wrapper and WS17 test-module placement after the merge. Remove the unused wrapper and move the test module below production items. No behavior, test policy or suppressions changed; both fresh gates are rerun on this source. |
+| `crates/campfire/src/controllers/messages.rs` | Keep WS11's required authenticated user and `presenter.current_user_id` for the agent payload reader. Reuse that authenticated ID for main's `use_viewer_zone`. Keep main's viewer-zone creation response and actor-zone creation broadcast rendering intact. |
+| `crates/campfire/src/controllers/presenters.rs` | Keep `current_user_id`, the agent payload state, agent module and editable-body owner API. Add main's `render_zone` and preserve it alongside the agent state in both the ordinary and search-preload constructors. All main rendering/cache changes survive. |
 
-## Differential and failing-first evidence
+`message_cache.rs` is byte-identical to main: expand the Rails timestamp components in `self.render_zone`, keep plain record versions in UTC, and add no zone-name suffix. Alias zones therefore share keys; ordinary fragments retain Rails' observed cross-zone cache sharing. Main's actor-zone shared event broadcasts and UTC detached-job fallback remain unchanged. All 22 incoming non-conflict files match main byte for byte, including #180's held PR-refresh queue assertion. The agent database/domain, delivery, private repository readers and reviewed indicator fix did not change in this merge.
 
-All new Ruby probes run inside the pinned Rails image. Vector values were regenerated, never hand-edited. The raw JSON is compared structurally where transport semantics permit; every Rails-rendered HTML field/frame is compared as an exact string. No pixel comparison was performed.
-
-* **Delivery policy mutations:** compiled rate limit 20→28 and lost-CAS success `==1`→`>=0` both fail against the real installed app path. The restored source passes the same checks and the final whole-workspace gate.
-* **Repository adapter:** the production-boot test first failed before installation. Actual Rails and Rust HTTP responses 200/403/404/401/500 agree on decisions, GET paths, grant/denial caching, disconnect and retry behavior. A compiled reader bypass returning true exposes private details and fails. Rails retains the private link while redacting title/branches on denial; Rust retains that exact behavior.
-* **Shared presenter:** the adapter comparison first failed with the reader uninstalled. After installation, the pinned forward-note comparison exposed a real plain-text omission, fixed in Rust. Other cases cover rich text, Markdown, deleted replies, thread/bot/human permissions, request base URL and attachment metadata.
-* **Hard removal:** the real production job first kept the user and linked accounts because adapters were missing. After installation it matches Rails success and trigger-rejected Fizzy deletion: success deletes all three rows; failure rolls back all three.
-* **Streaming:** before the append renderer, a subscribed authenticated client received no append within the existing watchdog. After that fix the same frozen timestamp exposed stale `Starting` content versus Rails `Latest draft`; direct callback partials fix it. The final comparison receives exact append, update, full-final and unread frames, and verifies repeat finalization is quiet. These are deterministic missing-renderer/stale-content failures, not a reason to widen timing thresholds.
-
-Raw summaries retained in `.scratch/` (failing-first runs are against the pre-fix implementations in this continuation):
+Raw merge checks:
 
 ```text
-# delivery-path-mutations.log
-WS11 delivery path mutation: rate; exit=101; test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 934 filtered out; finished in 15.66s
-WS11 delivery path mutation: claim; exit=101; test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 934 filtered out; finished in 1.53s
-WS11 delivery path mutations: 2 compiled mutations caught; source restored
-# live-reader-failing-first.log
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 944 filtered out; finished in 0.63s
-# live-reader-mutation.log
-WS11 live reader privacy bypass: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 946 filtered out; finished in 0.34s
-WS11 live reader mutation: 1 compiled owner-access bypass caught; source restored
-# live-adapter-failing-first.log
-test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 944 filtered out; finished in 1.61s
-# peer-removal-failing-first.log
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 947 filtered out; finished in 1.18s
-# stream-peer-failing-first.log
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 948 filtered out; finished in 5.43s
-# stream-peer-restored.log, intermediate stale HTML reproduction
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 948 filtered out; finished in 0.67s
-# delivery-path-cases.log
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 929 filtered out; finished in 7.76s
-# fanout-named-cases.log
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 856 filtered out; finished in 0.35s
-# webhook-key-complete.log
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 936 filtered out; finished in 1.87s
-# live-reader-positive.log
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 945 filtered out; finished in 2.11s
-# shared-payload-restored.log
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 942 filtered out; finished in 1.31s
-# peer-removal-restored.log
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 948 filtered out; finished in 1.05s
-# stream-peer-complete.log
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 948 filtered out; finished in 2.12s
-# approval-neighbour-complete.log
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 858 filtered out; finished in 0.16s
+WS11 merge cargo metadata --locked: exit=0; 77 workspace dependency keys; 0 duplicates
+WS11 merge preservation: 22/22 non-conflict incoming files byte-identical to main; 2 union conflict resolutions
+WS11 viewer-zone preservation: main timestamp-key expansion and all 3 Rails corpora byte-identical; recorded source hashes match d7c7de92
 ```
 
-An earlier streaming-test link was killed by the machine (`collect2: fatal error: ld terminated with signal 9 [Killed]`, `stream-peer-linker-killed.log`). No tests ran in that attempt; the unchanged build was retried. All executed failures above were resolved in Rust. Fresh-gate outcomes are recorded separately below.
-
-## Final oracle regeneration and exact commands
-
-Cwd: assigned worktree. These checks were rerun after the final main merge. Main's rubyzip lock drift is reported; all these agent-area oracles stay at the pin. The known Rails behavior of retaining redacted private-PR links is preserved, without redesign.
-
-```sh
-python3 rust/reference-tools/agents/check-reference.py
-python3 rust/reference-tools/agents/verify-contracts.py
-python3 rust/reference-tools/agents/verify-ledger-contracts.py
-python3 rust/reference-tools/agents/verify-path-contracts.py
-python3 rust/reference-tools/agents/verify-peer-contracts.py
-python3 rust/reference-tools/agents/verify-callback-contracts.py
-python3 rust/reference-tools/agents/verify-ui-owner-inputs.py
-python3 rust/reference-tools/agents/check-case-ports.py
-python3 rust/reference-tools/agents/write-case-status.py
-(cd rust && cargo metadata --locked --format-version 1 >/dev/null)
-```
+The three incoming Rails corpora and recorded source hashes were checked without rewriting them. The full fresh suite runs their seven HTTP, complete-card-container, cache-key/cache-reuse and actual shared-socket comparisons:
 
 ```text
-WS11 reference sources: 62 pinned files matched; 0 image mismatches (d7c7de92)
-WS11 checkout drift: Gemfile.lock rubyzip 3.0.2 -> 3.7.0 from merged main; oracle stays pinned
-WS11 bot/posting Rails oracles: 2 byte-identical contract files
-WS11 webhook Rails oracle: 62 numeric hosts; 3 DNS cases; 4 signatures; 3 payloads matched; randomized AR secret regenerated
-WS11 domain Rails oracles: 20 byte-identical contract files; 23 contracts recorded in total
-WS11 ledger Rails oracles: 2 regenerated byte-identical budget/event model vectors
-WS11 delivery path Rails oracle: 10 webhook, 5 repository and 8 presenter transcripts regenerated byte-identical
-WS11 peer Rails oracles: 2 destroy outcomes, 1 approval/mention neighbour and 3 rendered cable phases regenerated byte-identical
-WS11 callback Rails oracles: 5 byte-identical vectors; 28 guard case names and address inputs matched the pin
-WS11 UI owner Rails oracle: 81 cap; 21 icon; 4 read-only secret inputs; regenerated bytes match
-WS11 source case files: 19 pinned Git files matched; 0 checkout mismatches
-WS11 domain inventory: 26 pinned Rails files; 378 source cases; 0 source cases claimed as run
-WS11 deferred case inventory: 13 pinned files; 114 named source cases; owners recorded per file
-WS11 workspace dependencies: 77 unique keys; 0 duplicate keys
+test controllers::rooms::native_integration_tests::zone_audit_event_broadcast_matches_rails_actor_zone_for_every_recipient ... ok
+test controllers::rooms::native_integration_tests::zone_audit_github_message_cards_match_rails_with_warm_zones ... ok
+test controllers::rooms::native_integration_tests::zone_audit_message_creation_matches_rails_and_reload ... ok
+test controllers::rooms::native_integration_tests::zone_cache_hawaii_and_honolulu_share_github_fragments_like_rails ... ok
+test controllers::rooms::native_integration_tests::zone_cache_hawaii_and_india_share_ordinary_fragments_like_rails ... ok
+test controllers::rooms::native_integration_tests::zone_cache_timestamp_components_match_rails_across_dst_and_fractional_zones ... ok
+test controllers::rooms::native_integration_tests::zone_audit_utc_and_invalid_zone_fallbacks_cover_all_three_paths ... ok
 ```
 
-Strict TOML parsing after both main merges finds zero duplicate workspace dependency keys. Locked cargo metadata passes after the merge and in the fresh clone. The inherited PDF fixture's xref trailing spaces were preserved as fixture bytes.
+Verification ran from a fresh remote clone at `.scratch/ws11-main-179-verification`, exactly the merge SHA above. All ten pinned seeds were copied and checked. Pinned libvips/ffmpeg libraries were used from the start, and the storage corpus uses the committed pinned-media runner. Cargo jobs=2, libtest threads=4 and the configured machine-wide rustc throttle were retained. Only one extra scratch target existed; it was removed after every process completed. The documented vendored html5ever exclusion remains the workspace-test/clippy convention.
 
-## Fresh-clone gate
-
-The committed runner was executed from the assigned worktree:
+Setup and effective commands executed for the fresh clone (paths/env below refer to that clone):
 
 ```sh
-rust/reference-tools/agents/run-fresh.sh
-```
-
-It cloned the pushed branch into `.scratch/fresh-ws11-delivery-adapters` with an empty target. The nine already-built pinned seeds were copied, then validated again; no untracked source or target output was copied. The source SHA matched the remote branch at clone time. The runner sets CI, two build jobs, four test threads, the machine-wide rustc queue, private TMPDIR, line-table debug info and WS11-owned ports 52200–52299. The first fresh run passed all 2,499 tests but clippy rejected two merge cleanup issues. After `ecc652b7`, `.scratch/rerun-fresh-gate.sh` fast-forwarded this independently cloned checkout from the pushed remote and reran both complete gates (clippy first). No outside target/source artifacts were introduced. Its substantive commands, from the fresh clone, are:
-
-```sh
-cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1
+PARITY_IMAGE=triage-reference-d7c7de92 WS8BR2_MEDIA_DIR="$PWD/.scratch/rails-media-ws11-179" bash rust/reference-tools/users/media_runtime.sh
+export CI=1 TMPDIR="$PWD/.scratch" CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0
+export CARGO_PROFILE_DEV_DEBUG=line-tables-only CARGO_PROFILE_TEST_DEBUG=line-tables-only
+export CARGO_TARGET_DIR="$PWD/rust/target"
+export PATH="$PWD/.scratch/rails-media-ws11-179/usr/bin:$PATH"
+export LD_LIBRARY_PATH="$PWD/.scratch/rails-media-ws11-179/native-libs"
+export CABLE_TEST_PORT_RANGE=52200-52249 MAIL_TEST_PORT_RANGE=52200-52249
+export INTEGRATION_TEST_PORT_RANGE=52250-52298 WS15E_TEST_PORT_RANGE=52250-52298 GITHUB_TEST_PORT_RANGE=52250-52298
+export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="$PWD/rust/reference-tools/agents/pinned-media-runner.py"
 python3 rust/reference-tools/agents/check-seeds.py
 cargo test --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever --no-fail-fast -- --test-threads=4 --nocapture
 cargo clippy --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever --all-targets -- -D warnings
+# In the clone's rust/ directory:
+cargo metadata --locked --format-version 1 >/dev/null
 ```
 
-Storage-vector media execution uses `pinned-media-runner.py`: the same freshly compiled binary runs in the pinned Rails image with no network; every other test runs natively. All 19 listed media byte comparisons pass. The 11 inherited ignores are nine reference/export/external-service/measurement helpers and two DB doctests; none is newly ignored by WS11. `manages_bots` ran and passed. No missing-seed skips, test failures or timing flakes occurred in this fresh gate.
+Locked metadata also ran immediately after resolving the merge, and before the fresh suite. TOML parsing checks for duplicate workspace keys. Raw fresh-clone summaries, including every test-result line:
 
-Final summary commands, from the assigned worktree:
+```text
+WS11 seeds: 10 built; 0 plaintext tokens; every labeled bot key matches its digest
+WS11 cargo metadata --locked: exit=0; 77 workspace dependency keys; 0 duplicates
+WS11 workspace totals: 3637 passed; 0 failed; 12 ignored; 58 result summaries
+WS11 missing-seed skips: 0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 53s
+WS11 fresh seeds-final: exit=0
+WS11 fresh workspace-pinned: exit=0
+WS11 fresh clippy-pinned: exit=0
+```
+
+The exact requested release-input build ran from the worker worktree:
 
 ```sh
-python3 rust/reference-tools/agents/summarize-tests.py .scratch/fresh-workspace.log
-python3 rust/reference-tools/agents/named-case-pass-counts.py .scratch/fresh-workspace.log
+bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
 ```
 
-The initial gate's honest exit summary, retained in `fresh-exits-before-clippy-cleanup.log`:
+Environment: RUST_CI_IMAGE=campfire-toolchain-ci-rust-speedups, CI=1, RUNNER_TEMP=.scratch/ws11-179-ci-temp, RUST_CI_CONTAINER_PREFIX=ws11-179, CARGO_HOME=/usr/local/cargo and CARGO_TARGET_DIR=/src/rust/target. The scratch launcher reserved the CI wrapper's existing four compiler workers in the configured machine-wide slot pool, without editing the throttle or adding job flags. Raw output (ANSI color escapes removed):
 
 ```text
-WS11 fresh exits: test=0 clippy=101
-error: function `trickling_server` is never used
-error: items after a test module
+WS11 CI build: reserved 4 configured machine-wide rustc slots; throttle configuration unchanged
+WS11 release-inputs CI build: exit=0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 43.31s
 ```
 
-Raw final fresh summaries:
+Twenty repetitions ran the unchanged exact test app::tests::concurrent_message_posts_all_complete from the same fresh source. The scratch harness differs from the committed 50-run script only in repetition count and explicit source-root argument. It built with locked Cargo, then ran four test processes at once, libtest threads=4, Tokio workers=8 and the unchanged 60-second timeout. With the fresh target/media/port environment above, the command from this worktree was:
 
-```text
-WS11 fresh source: ecc652b7ba4e97e2c05396d33682280454025c98
-WS11 seeds: 9 built; 0 plaintext tokens; every labeled bot key matches its digest
-WS11 fresh exits: test=0 clippy=0
-WS11 workspace totals: 2499 passed; 0 failed; 11 ignored; 48 result summaries
-WS11 missing-seed skips: 0
-test result: ok. 965 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 311.15s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.77s
-test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 45.06s
-test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.83s
-test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.10s
-test result: ok. 855 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 129.28s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.45s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.99s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
-test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.06s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.29s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.15s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.63s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.65s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
-test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.98s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.58s
-test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.25s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 27.78s
+```sh
+python3 .scratch/ws11-179-repeat-20.py .scratch/ws11-main-179-verification
 ```
 
-## Executed named comparisons by pinned Rails file
-
-Largest source files first. Counts below require the corresponding Rust test names to have actually passed in the fresh log. Rails runner probes were executed; these counts do not claim that the full Ruby test files were run.
+Raw repetition summaries:
 
 ```text
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.47s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.30s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.24s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.33s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.21s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.23s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.24s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.69s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.55s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.36s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.58s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.31s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.23s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.36s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.30s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.58s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.29s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.28s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.23s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1794 filtered out; finished in 1.38s
+WS11 concurrent HTTP posts: 20/20 passed; test-process concurrency=4; libtest threads=4; Tokio workers=8; timeout unchanged at 60s
+```
+
+The complete workspace has zero failures and zero missing-seed skips. manages_bots is unignored and passes. The reviewed agent indicator, stream, event-socket, privacy, publication-order, stop-on-error and queue-atomicity checks all run in that workspace. Existing explicit ignores were retained; none was added here. This merge-only slice adds no new failing-first claim. The prior indicator fix and its failing-first Rails/socket evidence are preserved unchanged in plans/ws11-deletion-indicator-r5-report.md; previous callback/merge evidence remains historical in plans/ws11-callback-review-r4-report.md and plans/ws11-main-b908-report.md.
+
+Named comparison accounting was rerun from the worker worktree:
+
+```sh
+python3 rust/reference-tools/agents/domain-case-inventory.py
+python3 rust/reference-tools/agents/check-case-ports.py
+python3 rust/reference-tools/agents/named-case-pass-counts.py .scratch/ws11-179-workspace-pinned.log
+python3 rust/reference-tools/agents/summarize-tests.py .scratch/ws11-179-workspace-pinned.log
+```
+
+Raw grouped counts:
+
+```text
+WS11 domain inventory: 26 pinned Rails files; 378 source cases; 0 source cases claimed as run
+WS11 named ports: test/models/agent_credential_test.rb: 11 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent_grant_test.rb: 12 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent_backfill_test.rb: 1 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent_test.rb: 39 mapped cases; 2 unmapped case names
+WS11 named ports: test/services/slash_commands/dispatcher_test.rb: 5 mapped cases; 35 unmapped case names
+WS11 named ports: test/jobs/agent/delivery_job_test.rb: 27 mapped cases; 2 unmapped case names
+WS11 named ports: test/lib/restricted_http/private_network_guard_test.rb: 28 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/message_streaming_test.rb: 19 mapped cases; 4 unmapped case names
+WS11 named ports: test/models/agent_approval_test.rb: 20 mapped cases; 0 unmapped case names
+WS11 named ports: test/jobs/agent/event_webhook_job_test.rb: 17 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/user/bot_test.rb: 9 mapped cases; 6 unmapped case names
+WS11 named ports: test/models/webhook_test.rb: 22 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent/delivery_recovery_test.rb: 13 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent_budgets_test.rb: 9 mapped cases; 2 unmapped case names
+WS11 named ports: test/models/agent_event_test.rb: 10 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent_step_test.rb: 10 mapped cases; 0 unmapped case names
+WS11 named ports: test/jobs/agent/delivery_concurrency_test.rb: 1 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/message/bot_webhook_fanout_test.rb: 2 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/webhook_agent_key_test.rb: 9 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent_revocation_test.rb: 8 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent_kill_switch_test.rb: 7 mapped cases; 1 unmapped case names
+WS11 named ports: test/models/agent_working_presence_test.rb: 6 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agent_slash_command_test.rb: 6 mapped cases; 0 unmapped case names
+WS11 named ports: test/services/bots/clear_plaintext_tokens_test.rb: 3 mapped cases; 0 unmapped case names
+WS11 named ports: test/models/agents/work_payload_test.rb: 3 mapped cases; 0 unmapped case names
+WS11 source case files: 25 pinned Git files matched; 0 checkout mismatches
 WS11 named comparisons: test/models/agent_test.rb: 39 passed; 0 failed; 2 deferred
 WS11 named comparisons: test/services/slash_commands/dispatcher_test.rb: 5 passed; 0 failed; 35 deferred
 WS11 named comparisons: test/jobs/agent/delivery_job_test.rb: 27 passed; 0 failed; 2 deferred
@@ -216,42 +169,37 @@ WS11 named comparisons: test/models/agent_credential_test.rb: 11 passed; 0 faile
 WS11 named comparisons: test/models/agent_event_test.rb: 10 passed; 0 failed; 0 deferred
 WS11 named comparisons: test/models/agent_step_test.rb: 10 passed; 0 failed; 0 deferred
 WS11 named comparisons: test/models/webhook_agent_key_test.rb: 9 passed; 0 failed; 0 deferred
-WS11 named comparisons: test/models/agent_kill_switch_test.rb: 0 passed; 0 failed; 8 deferred
-WS11 named comparisons: test/models/agent_revocation_test.rb: 0 passed; 0 failed; 8 deferred
-WS11 named comparisons: test/models/agent_slash_command_test.rb: 0 passed; 0 failed; 6 deferred
-WS11 named comparisons: test/models/agent_working_presence_test.rb: 0 passed; 0 failed; 6 deferred
-WS11 named comparisons: test/models/agents/work_payload_test.rb: 0 passed; 0 failed; 3 deferred
-WS11 named comparisons: test/services/bots/clear_plaintext_tokens_test.rb: 0 passed; 0 failed; 3 deferred
+WS11 named comparisons: test/models/agent_kill_switch_test.rb: 7 passed; 0 failed; 1 deferred
+WS11 named comparisons: test/models/agent_revocation_test.rb: 8 passed; 0 failed; 0 deferred
+WS11 named comparisons: test/models/agent_slash_command_test.rb: 6 passed; 0 failed; 0 deferred
+WS11 named comparisons: test/models/agent_working_presence_test.rb: 6 passed; 0 failed; 0 deferred
+WS11 named comparisons: test/models/agents/work_payload_test.rb: 3 passed; 0 failed; 0 deferred
+WS11 named comparisons: test/services/bots/clear_plaintext_tokens_test.rb: 3 passed; 0 failed; 0 deferred
 WS11 named comparisons: test/models/message/bot_webhook_fanout_test.rb: 2 passed; 0 failed; 0 deferred
 WS11 named comparisons: test/jobs/agent/delivery_concurrency_test.rb: 1 passed; 0 failed; 0 deferred
 WS11 named comparisons: test/models/agent_backfill_test.rb: 1 passed; 0 failed; 0 deferred
-WS11 named comparison totals: 264 passed; 0 failed; 114 deferred
+WS11 named comparison totals: 297 passed; 0 failed; 81 deferred
+WS11 deferred ownership: 81 exact named comparisons across 8 files; every deferred case has an owner
 ```
 
-## Precisely remaining — 114 named comparisons
+Precisely remaining: **81 named comparisons**, unchanged across eight files. Every exact deferred name and owner is retained in reference-tools/agents/deferred-domain-cases.json. WS11-ui owns the pages; WS11-api owns REST/MCP. Their surfaces were not implemented or changed here.
 
-The exhaustive names and owner boundaries are in `rust/reference-tools/agents/deferred-domain-cases.json`. The following counts are source-case deferrals; broader consolidated tests or vectors do not close these names.
-
-| Rails file | Deferred | Owner / missing full named comparison |
+| Pinned Rails file | Remaining named comparisons | Owner |
 |---|---:|---|
 | `test/services/slash_commands/dispatcher_test.rb` | 35 | WS11 agent dispatch; WS8 built-in commands |
 | `test/models/channel_thread_agent_assignment_test.rb` | 29 | WS11 agent callbacks; WS12 mutation producers |
-| `test/models/agent_kill_switch_test.rb` | 8 | WS11; WS15g/WS15e approved-action execution callbacks |
-| `test/models/agent_revocation_test.rb` | 8 | WS11 domain |
-| `test/models/agent_slash_command_test.rb` | 6 | WS11 domain |
-| `test/models/agent_working_presence_test.rb` | 6 | WS11 domain |
 | `test/models/user/bot_test.rb` | 6 | WS11 bot domain/removal; WS11-api by-bot HTTP surface |
 | `test/models/message_streaming_test.rb` | 4 | WS11 finalization; WS12 activity; WS14/15 external reference sync |
-| `test/models/agents/work_payload_test.rb` | 3 | WS11; WS8 message presenter; WS15g private repository reader |
-| `test/services/bots/clear_plaintext_tokens_test.rb` | 3 | WS11 domain |
+| `test/models/agent_test.rb` | 2 | WS11-ui rendered broadcast cases; WS11 domain cases compared |
 | `test/jobs/agent/delivery_job_test.rb` | 2 | WS11 domain |
 | `test/models/agent_budgets_test.rb` | 2 | WS11 domain |
-| `test/models/agent_test.rb` | 2 | WS11-ui rendered broadcast cases; WS11 domain cases compared |
+| `test/models/agent_kill_switch_test.rb` | 1 | WS11 callbacks; WS12 owned-board mutation producer |
 
-Remaining domain comparisons cover: explicit rate-check/insert locking and self-assignment hop delivery; complete stream start/finalize/append/trailing side effects; kill switch and revocation; slash registration; working presence; token reset/reply/queued delivery; plaintext cleanup; activity access/handoffs and the complete work payload/assignment mutation producers. Continue with delivery names, then these lifecycle/source-case comparisons. Built-in slash cases remain WS8, work mutation producers remain WS12, and two rendered agent badge/directory names remain WS11-ui.
 
-Production repository and shared message-payload adapters are installed. Remaining peer flags: `MessageGithubReferences` (WS15g), `MessageEventReferences` and calendar/Google dependencies (WS14), `UserHuddles`/`SessionHuddles` (WS13), Slack connection/import dependencies (WS16), and the WS12 work/assignment producers needed for complete case closure. Available GitHub/Fizzy user-account deletion, main ordinary message activity, and WS15e link/Fizzy/Twitter reference synchronization are installed. Unavailable removal dependencies leave rows intact and let FK failures roll back; complete cross-domain hard removal/finalization is still partial.
+Raw cleanup summary:
 
-WS11-ui still owns server pages/human approval controller. WS11-api still owns agent REST/MCP, by-bot HTTP endpoints, throttle and authorization/authentication concerns. Their public domain signatures remain stable. The thin WS15g adapter delegates to existing Accounts code; no GitHub HTTP, refresh or cache policy was implemented here. The shared WS8 reader import may overlap WS8b-m at lead merge; it is intentionally limited to the helper and Markdown reader.
+```text
+WS11 cleanup: removed fresh-clone rust/target; 0 scratch target directories remain; ordinary rust/target cache retained
+```
 
-No open permission request. No Rails expectation or source was changed to improve behavior. No pixel work, stash, added ignore, threshold widening or test-concurrency reduction. The fresh scratch target is deleted after verification; logs, vectors, seeds and source remain available.
+Logs and fresh source remain in this worktree's .scratch, with generated test evidence at .scratch/ws11-179-generated-test-evidence. The ordinary rust/target cache is retained. The report mirror in rust/plans/ws11-report.md and the requested wave4/ws11-report.md are byte-identical.

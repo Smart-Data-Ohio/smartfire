@@ -38,7 +38,24 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 /// it still run.
 fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
+        campfire_db::models::huddle_effects::StageEndedNote::KIND => decode::<campfire_db::models::huddle_effects::StageEndedNote>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stage_ended_note(app,e.message_id))),
+        campfire_db::models::huddle_effects::StagePanel::KIND => decode::<campfire_db::models::huddle_effects::StagePanel>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stage_panel(app,e.room_id,e.membership_id))),
+        campfire_db::models::huddle_effects::StreamChanged::KIND => decode::<campfire_db::models::huddle_effects::StreamChanged>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stream_changed(app,e.room_id))),
+        campfire_db::models::huddle_effects::StreamStopped::KIND => decode::<campfire_db::models::huddle_effects::StreamStopped>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stream_stopped(app,e.room_id,e.user_id))),
+        campfire_db::models::huddle_effects::StageRoster::KIND => decode::<campfire_db::models::huddle_effects::StageRoster>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stage_roster(app,e.room_id))),
+        campfire_db::models::huddle_effects::RoleEvent::KIND => decode::<campfire_db::models::huddle_effects::RoleEvent>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::role_event(app,e.room_id,e.membership_id))),
+        campfire_db::models::huddle_effects::Presence::KIND => decode::<campfire_db::models::huddle_effects::Presence>(request).and_then(|effect| {
+            app.map_or(Ok(()), |app| super::huddle_effects::presence(app, effect.room_id))
+        }),
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
+            if let Some(app) = app && super::message_features::deliver(cable, app, &broadcast)? { return Ok(()); }
+            messaging(cable, app, &broadcast)
+        }),
+        campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND =>
+            decode(request).and_then(|broadcast| status_badge(cable, broadcast)),
+        campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND =>
+            decode(request).and_then(|broadcast| ooo_notice(cable, broadcast)),
         crate::integrations::link_embed::store::CardUpdate::KIND => decode::<crate::integrations::link_embed::store::CardUpdate>(request)
             .and_then(|event| {
                 let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
@@ -66,7 +83,6 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             })?;
             Ok(())
         }),
-        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, app, &broadcast)),
         crate::integrations::github::notifier::MessageCreated::KIND => decode(request).and_then(|broadcast| {
             let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;
             super::github_notifier::publish(app, &broadcast)
@@ -75,8 +91,6 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;
             super::github_cards::publish(app, &broadcast)
         }),
-        campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND => decode(request).and_then(|b| status_badge(cable, b)),
-        campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND => decode(request).and_then(|b| ooo_notice(cable, b)),
         campfire_db::models::agent::AgentStatusChange::KIND => {
             decode(request).and_then(|broadcast| agent_status(app, &broadcast))
         }
@@ -202,10 +216,10 @@ fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updat
     Ok(())
 }
 
-/// WS8 domain frames share WS7's publisher and conservative Turbo guard.
-/// Message appends and replacements render after commit without request/session context.
+/// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
+/// directory partial descriptions belongs to WS8br; message/poll/pin partials use WS8b-m's seam.
 fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
-    use campfire_db::broadcasts::Broadcast;
+    use campfire_db::broadcasts::{Broadcast, TurboAction};
     if let Broadcast::Turbo(frame) = broadcast
         && matches!(frame.action, campfire_db::broadcasts::TurboAction::Append | campfire_db::broadcasts::TurboAction::Replace)
         && let Some(campfire_db::broadcasts::Partial::Message {message_id} | campfire_db::broadcasts::Partial::MessageReplace {message_id}) = &frame.partial
@@ -215,7 +229,12 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
         let html=app.db.read_blocking(move|conn| {
             let message=campfire_db::Message::find(conn,message_id)?;
             let view=crate::controllers::presenters::Presenter::new(conn,&copy,None).message(&message)?;
-            Ok(crate::controllers::presenters::page::render_detached(&copy,None,|ctx|campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders")))
+            // APP_URL supplies route defaults. Without it ActionController's
+            // renderer uses example.org, independent of mail's example.com fallback.
+            let origin=copy.config.mail.app_url.as_deref().unwrap_or("http://example.org");
+            // Rails broadcasts render the partial directly. A stream update can
+            // keep its frozen updated_at, so the collection cache would be stale.
+            Ok(crate::controllers::presenters::page::render_detached_at(&copy,None,origin,|ctx|campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders")))
         })?;
         if campfire_views::helpers::request_forgery::has_token_slots(&html) {
             anyhow::bail!("refusing unresolved CSRF token slots in a message replacement");
@@ -227,19 +246,36 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
         cable.broadcast_action_to(&streamables,action,Target::Target(&frame.target),Some(&html),attrs);
         return Ok(());
     }
-    let (stream, payload) = template_free_broadcast(broadcast)
-        .ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
-    match broadcast {
-        Broadcast::Cable { .. } => {
-            cable.broadcast(&stream, &payload);
+    if let Some((stream, payload)) = template_free_broadcast(broadcast) {
+        match broadcast {
+            Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }
+            Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }
         }
-        Broadcast::Turbo(_) => {
-            cable.broadcast_stream_to(
-                &[&stream],
-                payload.as_str().expect("Turbo frame is a string"),
-            );
-        }
+        return Ok(());
     }
+    let Broadcast::Turbo(frame) = broadcast else { unreachable!() };
+    let app = app.ok_or_else(|| anyhow::anyhow!("app is not booted for partial rendering"))?;
+    let html = match &frame.partial {
+        Some(campfire_db::broadcasts::Partial::EventCards { message_id }) => {
+            Some(app.db.read_blocking(|conn| crate::controllers::presenters::events::cards(conn, *message_id))?)
+        }
+        Some(partial) => match super::rooms_directory::render(app, partial)? {
+            Some(html) => Some(html),
+            None => crate::controllers::messages::rendered::domain_partial(app, partial)?,
+        },
+        None => None,
+    }.ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
+    if campfire_views::helpers::request_forgery::has_token_slots(&html) { return Err(anyhow::anyhow!("unresolved CSRF token slot")); }
+    let action = match frame.action {
+        TurboAction::Append => Action::Append,
+        TurboAction::Prepend => Action::Prepend,
+        TurboAction::Replace => Action::Replace,
+        TurboAction::Update => Action::Update,
+        TurboAction::Remove => Action::Remove,
+    };
+    let stream = broadcast.stream_name();
+    let attributes = [("maintain_scroll", frame.maintain_scroll.then_some("true"))];
+    cable.broadcast_action_to(&[&stream], action, Target::Target(&frame.target), Some(&html), &attributes);
     Ok(())
 }
 
@@ -285,37 +321,7 @@ pub fn room_removal(cable: &Cable, broadcast: &RoomRemovalBroadcast, huddle_conf
 /// the public and internal LiveKit URLs name different endpoints. Read on every call, as Rails
 /// reads `ENV` on every call. (The huddle workstream owns the rest of `Huddle`.)
 pub fn huddle_configured(env: impl Fn(&str) -> Option<String>) -> bool {
-    const REQUIRED: [&str; 5] = [
-        "LIVEKIT_URL",
-        "LIVEKIT_INTERNAL_URL",
-        "LIVEKIT_API_KEY",
-        "LIVEKIT_API_SECRET",
-        "LIVEKIT_GATEWAY_SECRET",
-    ];
-    let values: Vec<String> = REQUIRED
-        .iter()
-        .filter_map(|name| env(name).filter(|value| !value.trim().is_empty()))
-        .collect();
-    if values.len() != REQUIRED.len() {
-        return false;
-    }
-    match (endpoint_address(&values[0]), endpoint_address(&values[1])) {
-        (Some(public), Some(internal)) => public != internal,
-        _ => false,
-    }
-}
-
-/// `Huddle.endpoint_address`: `[host.downcase, port || default_port]`; `None` is the rescued
-/// `URI::InvalidURIError` (no host, or a scheme other than http, ws, https and wss).
-fn endpoint_address(value: &str) -> Option<(String, u16)> {
-    let uri = crate::security::ruby_uri::parse(value)?;
-    let default_port = match uri.scheme.as_deref()? {
-        "http" | "ws" => 80,
-        "https" | "wss" => 443,
-        _ => return None,
-    };
-    let host = uri.host.filter(|host| !host.trim().is_empty())?;
-    Some((host.to_ascii_lowercase(), uri.port.unwrap_or(default_port)))
+    crate::huddle::Config::from_lookup(env).configured()
 }
 
 pub(crate) fn template_free_broadcast(
@@ -349,6 +355,19 @@ mod tests {
                 .find(|(key, _)| *key == name)
                 .map(|(_, value)| value.to_string())
         })
+    }
+
+    #[test]
+    fn huddle_configuration_matches_ws13_rails_vectors() {
+        let vectors: serde_json::Value = serde_json::from_str(include_str!("../huddle/protocol_vectors.json")).unwrap();
+        for case in vectors["urls"].as_array().unwrap() {
+            let configured = huddle_configured(|name| Some(match name {
+                "LIVEKIT_URL" => case["public_url"].as_str().unwrap(),
+                "LIVEKIT_INTERNAL_URL" => case["internal_url"].as_str().unwrap(),
+                _ => "ws13-fixture-value",
+            }.to_string()));
+            assert_eq!(configured, case["configured"].as_bool().unwrap(), "{case}");
+        }
     }
 
     #[test]

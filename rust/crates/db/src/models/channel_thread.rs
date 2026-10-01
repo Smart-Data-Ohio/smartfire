@@ -201,6 +201,13 @@ impl ChannelThread {
         )
     }
 
+    /// Preload the forward picker's threads in one query, retaining each room's ordering.
+    pub fn for_rooms(conn: &Connection, room_ids: &[i64]) -> Result<Vec<Self>> {
+        if room_ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn, &format!("SELECT * FROM channel_threads WHERE room_id IN ({}) ORDER BY last_activity_at DESC, id DESC", placeholders(room_ids.len())),
+            rusqlite::params_from_iter(room_ids), Self::from_row)
+    }
+
     /// `room.channel_threads.active.ordered`: neither closed nor locked (stale ones included:
     /// `status` reads them as closed).
     pub fn active_for_room(conn: &Connection, room_id: i64) -> Result<Vec<Self>> {
@@ -306,6 +313,7 @@ impl ChannelThread {
             ],
             |r| r.get(0),
         )?;
+        tx.register_record("channel_threads", id);
         for name in tag_names.unwrap_or_default() {
             ThreadTag::create(tx, id, &name)?;
         }
@@ -418,6 +426,7 @@ impl ChannelThread {
     /// `update!` of the given state: validated, then written with a fresh `updated_at` if
     /// anything changed (a save with no changes writes nothing).
     fn save(&mut self, tx: &mut Tx<'_>, changed: ChannelThread) -> Result<()> {
+        tx.register_record("channel_threads", self.id);
         if changed == *self {
             return Ok(());
         }
@@ -465,6 +474,30 @@ impl ChannelThread {
         self.save(tx, changed)
     }
 
+    /// The ordinary thread metadata update with Rails' pending tag set. WS12's board
+    /// auto-assignment/row callbacks remain at its existing seam; this caller handles channels.
+    pub fn update_metadata(&mut self, tx: &mut Tx<'_>, name: Option<&str>, minutes: Option<i64>, tags: Option<&[String]>) -> Result<()> {
+        let mut changed = self.clone();
+        if let Some(name) = name { changed.name = name.into(); }
+        if let Some(minutes) = minutes { changed.auto_archive_after_minutes = minutes; }
+        let names = tags.map(normalize_tag_names);
+        let room = Room::find(tx.conn(), self.room_id)?;
+        changed.validate(tx.conn(), &room, names.as_deref())?.into_result()?;
+        // Remove obsolete tags before save's stored-tag validation, then add only missing
+        // names. A metadata no-op or unchanged tag retains its existing row/timestamp.
+        if let Some(names) = &names {
+            for tag in self.tags(tx.conn())? {
+                if !names.contains(&tag.name) { tag.destroy(tx)?; }
+            }
+        }
+        self.save(tx, changed)?;
+        if let Some(names) = names {
+            let existing = self.tag_names(tx.conn())?;
+            for name in names { if !existing.contains(&name) { ThreadTag::create(tx, self.id, &name)?; } }
+        }
+        Ok(())
+    }
+
     // Lifecycle
 
     /// `status`: locked, else closed (explicitly, or stale), else active. Reads report a stale
@@ -477,6 +510,13 @@ impl ChannelThread {
         } else {
             ThreadStatus::Active
         })
+    }
+
+    /// Same lifecycle read with the already-preloaded parent room (destination pickers).
+    pub fn status_in_room(&self, room: &Room, now: Timestamp) -> ThreadStatus {
+        if self.locked_at.is_some() { ThreadStatus::Locked }
+        else if self.closed_at.is_some() || (!room.board() && self.auto_archive_at() <= now) { ThreadStatus::Closed }
+        else { ThreadStatus::Active }
     }
 
     /// `auto_archive_at`
@@ -740,13 +780,16 @@ impl ChannelThread {
     /// memberships and the other dependents' rows, then the thread; the parent message is stamped
     /// (`after_destroy :stamp_parent_message`) and its indicator hidden after commit.
     ///
-    /// Work/SLA inbox dependencies and the agent-owned deletion snapshot are atomic.
+    /// Work/SLA dependents commit with deletion. The agent ledger runs after
+    /// commit; a captured deletion job keeps its durable enqueue atomic without
+    /// reserving an event ID ahead of ledger publication.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.destroy_by(tx, None)
     }
 
     pub fn destroy_by(&self, tx: &mut Tx<'_>, deleted_by_id: Option<i64>) -> Result<()> {
         let fresh = Self::find(tx.conn(), self.id)?;
+        tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
         crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
         for tag in ThreadTag::for_thread(tx.conn(), self.id)? {
@@ -785,11 +828,13 @@ impl ChannelThread {
                 params![tx.now(), parent_id],
             )?;
         }
-        super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         let parent_message_id = self.parent_message_id;
-        tx.after_commit(move |tx| {
+        // Rails registers the indicator before emit_deleted_work_unassigned.
+        // A ledger failure must not suppress the already-committed deletion's UI update.
+        tx.after_commit_record("channel_threads", self.id, move |tx| {
             Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)
         });
+        super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         Ok(())
     }
 

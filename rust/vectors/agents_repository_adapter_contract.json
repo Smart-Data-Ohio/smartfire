@@ -272,6 +272,7 @@
       ],
       "paths": [
         "/repos/mixed/repo",
+        "/repos/mixed/repo",
         "/repos/mixed/repo"
       ],
       "disconnected_reason": null,

@@ -155,10 +155,10 @@ impl Poll {
             .authenticity_token(false)
             .open()
     }
-    pub fn close_time(&self) -> h::Html {
+    pub fn close_time(&self, ctx: &ViewContext) -> h::Html {
         self.closes_at.map_or_else(h::empty, |time| {
             crate::time::local_datetime_tag(
-                &crate::time::Zone::utc(),
+                &ctx.time_zone,
                 time,
                 "datetime",
                 h::attrs().class("poll__close-time"),
@@ -214,8 +214,9 @@ fn votes_label(count: usize) -> String {
 #[derive(Template)]
 #[template(path = "polls/_poll.html")]
 struct PollPartial<'a> {
+    ctx: &'a ViewContext<'a>,
     poll: &'a Poll,
 }
-pub fn poll(_ctx: &ViewContext, poll: &Poll) -> h::Html {
-    h::raw(PollPartial { poll }.render().expect("polls/poll renders"))
+pub fn poll(ctx: &ViewContext, poll: &Poll) -> h::Html {
+    h::raw(PollPartial { ctx, poll }.render().expect("polls/poll renders"))
 }

@@ -1,0 +1,1646 @@
+{
+  "reference": "d7c7de92",
+  "parent_id": 935962058,
+  "thread_id": 9,
+  "created_id": 10,
+  "rows": [
+    {
+      "name": "new_channel",
+      "viewer": 0,
+      "method": "get",
+      "path": "/rooms/486777696/threads/new.html",
+      "input": {},
+      "time": "2026-03-02T16:00:00Z",
+      "status": 404,
+      "cache_control": "no-cache",
+      "content_type": "text/html",
+      "location": null,
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 9,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Lifecycle",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "tags": [],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        }
+      ]
+    },
+    {
+      "name": "nested_create",
+      "viewer": 0,
+      "method": "post",
+      "path": "/rooms/486777696/threads.json",
+      "input": {
+        "thread": {
+          "name": "Nested start",
+          "message": {
+            "markdown_source": "First **reply**",
+            "client_message_id": "lifecycle-first"
+          }
+        }
+      },
+      "time": "2026-03-02T16:00:10Z",
+      "status": 201,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":10,\"name\":\"Nested start\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:10.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/10\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=10\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"parent_message\":null}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Lifecycle",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "tags": [],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "retry",
+      "viewer": 0,
+      "method": "post",
+      "path": "/rooms/486777696/threads.json",
+      "input": {
+        "thread": {
+          "name": "Ignored",
+          "auto_archive_after_minutes": 5,
+          "message": {
+            "markdown_source": "",
+            "client_message_id": "lifecycle-first"
+          }
+        }
+      },
+      "time": "2026-03-02T16:00:20Z",
+      "status": 201,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":10,\"name\":\"Nested start\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":null,\"last_activity_at\":\"2026-03-02T16:00:10.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":1,\"member_count\":1,\"creator\":{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/10\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=10\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"parent_message\":null}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Lifecycle",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "tags": [],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate_parent",
+      "viewer": 0,
+      "method": "post",
+      "path": "/rooms/486777696/threads.json",
+      "input": {
+        "thread": {
+          "parent_message_id": 935962058
+        }
+      },
+      "time": "2026-03-02T16:00:30Z",
+      "status": 409,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"error\":\"A thread already exists for that message\"}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Lifecycle",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "tags": [],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invalid_parent",
+      "viewer": 0,
+      "method": "post",
+      "path": "/rooms/486777696/threads.json",
+      "input": {
+        "thread": {
+          "parent_message_id": 935962059
+        }
+      },
+      "time": "2026-03-02T16:00:40Z",
+      "status": 404,
+      "cache_control": "no-cache",
+      "content_type": "application/json",
+      "location": null,
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Lifecycle",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "tags": [],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invalid_initial",
+      "viewer": 0,
+      "method": "post",
+      "path": "/rooms/486777696/threads.json",
+      "input": {
+        "thread": {
+          "name": "Rollback",
+          "message": {
+            "markdown_source": "",
+            "client_message_id": "lifecycle-invalid"
+          }
+        }
+      },
+      "time": "2026-03-02T16:00:50Z",
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"error\":\"Markdown source can't be blank\"}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Lifecycle",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "tags": [],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invalid_archive",
+      "viewer": 0,
+      "method": "post",
+      "path": "/rooms/486777696/threads.json",
+      "input": {
+        "thread": {
+          "name": "Wrong clock",
+          "auto_archive_after_minutes": "0"
+        }
+      },
+      "time": "2026-03-02T16:01:00Z",
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"error\":\"Auto archive after minutes is not included in the list\"}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Lifecycle",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:00:00.000Z",
+          "tags": [],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rename",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "name": "Renamed <&>",
+          "auto_archive_after_minutes": "1440"
+        }
+      },
+      "time": "2026-03-02T16:01:10Z",
+      "status": 200,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":9,\"name\":\"Renamed <&>\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":1440,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:01:10.000Z",
+          "tags": [],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tags",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "tags": " API, bug, api "
+        }
+      },
+      "time": "2026-03-02T16:01:20Z",
+      "status": 200,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":9,\"name\":\"Renamed <&>\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":1440,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:01:10.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invalid_tags",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "name": "Must roll back",
+          "tags": "a,b,c,d,e,f"
+        }
+      },
+      "time": "2026-03-02T16:01:30Z",
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"error\":\"Tags are limited to 5 per post\"}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:01:10.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invalid_name",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "name": ""
+        }
+      },
+      "time": "2026-03-02T16:01:40Z",
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"error\":\"Name can't be blank\"}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:01:10.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "forbidden_lock",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "locked"
+        }
+      },
+      "time": "2026-03-02T16:01:50Z",
+      "status": 403,
+      "cache_control": "no-cache",
+      "content_type": "application/json",
+      "location": null,
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:01:10.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "closed"
+        }
+      },
+      "time": "2026-03-02T16:02:00Z",
+      "status": 200,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":9,\"name\":\"Renamed <&>\",\"status\":\"closed\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":\"2026-03-02T16:02:00.000Z\",\"locked_at\":null,\"auto_archive_after_minutes\":1440,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": "2026-03-02T16:02:00.000Z",
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:02:00.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reopen_without_join",
+      "viewer": 0,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "active"
+        }
+      },
+      "time": "2026-03-02T16:02:10Z",
+      "status": 403,
+      "cache_control": "no-cache",
+      "content_type": "application/json",
+      "location": null,
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": "2026-03-02T16:02:00.000Z",
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:02:00.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "creator_reopen",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "active"
+        }
+      },
+      "time": "2026-03-02T16:02:20Z",
+      "status": 200,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":9,\"name\":\"Renamed <&>\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":1440,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:02:20.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "moderator_lock",
+      "viewer": 0,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "locked"
+        }
+      },
+      "time": "2026-03-02T16:02:30Z",
+      "status": 200,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":9,\"name\":\"Renamed <&>\",\"status\":\"locked\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":\"2026-03-02T16:02:30.000Z\",\"locked_at\":\"2026-03-02T16:02:30.000Z\",\"auto_archive_after_minutes\":1440,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": "2026-03-02T16:02:30.000Z",
+          "locked_at": "2026-03-02T16:02:30.000Z",
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:02:30.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "creator_unlock",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "active"
+        }
+      },
+      "time": "2026-03-02T16:02:40Z",
+      "status": 403,
+      "cache_control": "no-cache",
+      "content_type": "application/json",
+      "location": null,
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": "2026-03-02T16:02:30.000Z",
+          "locked_at": "2026-03-02T16:02:30.000Z",
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:02:30.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "moderator_unlock",
+      "viewer": 0,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "active"
+        }
+      },
+      "time": "2026-03-02T16:02:50Z",
+      "status": 200,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":9,\"name\":\"Renamed <&>\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":1440,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":false,\"unread\":null,\"involvement\":null,\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":false,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 1440,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "updated_at": "2026-03-02T16:02:50.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "stale_reopen",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "active"
+        }
+      },
+      "time": "2026-03-02T16:03:00Z",
+      "status": 200,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":9,\"name\":\"Renamed <&>\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:03:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":60,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 60,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:03:00.000Z",
+          "updated_at": "2026-03-02T16:03:00.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "stale_close",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {
+        "thread": {
+          "status": "closed"
+        }
+      },
+      "time": "2026-03-02T16:03:10Z",
+      "status": 200,
+      "cache_control": "max-age=0, private, must-revalidate",
+      "content_type": "application/json; charset=utf-8",
+      "location": null,
+      "html": false,
+      "body": "{\"thread\":{\"id\":9,\"name\":\"Renamed <&>\",\"status\":\"closed\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T14:03:00.000Z\",\"closed_at\":\"2026-03-02T16:03:10.000Z\",\"locked_at\":null,\"auto_archive_after_minutes\":60,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":[],\"work_owner_options\":[{\"id\":127326141,\"name\":\"David\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null,\"active\":true,\"human\":true,\"agent\":false},{\"id\":394959859,\"name\":\"Bender Bot\",\"role\":\"bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\",\"active\":true,\"human\":false,\"agent\":true}],\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":false,\"can_unlock\":false,\"can_delete\":false,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}}}",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 60,
+          "closed_at": "2026-03-02T16:03:10.000Z",
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T14:03:00.000Z",
+          "updated_at": "2026-03-02T16:03:10.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "forbidden_delete",
+      "viewer": 1,
+      "method": "delete",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {},
+      "time": "2026-03-02T16:03:20Z",
+      "status": 403,
+      "cache_control": "no-cache",
+      "content_type": "text/html",
+      "location": null,
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 60,
+          "closed_at": "2026-03-02T16:03:10.000Z",
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T14:03:00.000Z",
+          "updated_at": "2026-03-02T16:03:10.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "forbidden_html",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.html",
+      "input": {
+        "thread": {
+          "status": "locked"
+        }
+      },
+      "time": "2026-03-02T16:03:30Z",
+      "status": 302,
+      "cache_control": "no-cache",
+      "content_type": "text/html; charset=utf-8",
+      "location": "http://campfire.test/rooms/486777696/threads/9",
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 60,
+          "closed_at": "2026-03-02T16:03:10.000Z",
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T14:03:00.000Z",
+          "updated_at": "2026-03-02T16:03:10.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invalid_html",
+      "viewer": 1,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/9.html",
+      "input": {
+        "thread": {
+          "name": ""
+        }
+      },
+      "time": "2026-03-02T16:03:40Z",
+      "status": 422,
+      "cache_control": "no-cache",
+      "content_type": "text/html; charset=utf-8",
+      "location": null,
+      "html": true,
+      "body": "\n<main class=\"thread\" aria-labelledby=\"thread-title\" data-controller=\"message-format message-list\" data-message-format-first-of-day-class=\"message--first-of-day\" data-message-format-formatted-class=\"message--formatted\" data-message-format-me-class=\"message--me\" data-message-format-mentioned-class=\"message--mentioned\" data-message-format-threaded-class=\"message--threaded\">\n  <header>\n    <h1 id=\"thread-title\"></h1>\n    <p>closed · 0 messages</p>\n  </header>\n\n\n    <article aria-label=\"Thread starter\">\n<div id=\"message_lifecycle-parent\" tabindex=\"-1\" class=\"message\" data-controller=\"reply\" data-message-id=\"935962058\" data-room-id=\"486777696\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\" data-user-id=\"127326141\" data-actions-url=\"http://campfire.test/rooms/486777696/messages/935962058/actions\" data-message-url=\"http://campfire.test/rooms/486777696/messages/935962058\" data-boost-url=\"http://campfire.test/messages/935962058/boosts\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <figure class=\"avatar message__avatar\">\n      <a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" /></a>\n    </figure>\n\n    <turbo-frame id=\"edit_message_lifecycle-parent\">\n      <div class=\"message__body\">\n        <div class=\"message__body-content\">\n          <div class=\"message__toolbar shadow\" data-controller=\"message-toolbar\" role=\"group\" aria-label=\"Message actions\">\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#react\"\n          title=\"React with thumbs up\" aria-label=\"React with thumbs up\">\n    <span aria-hidden=\"true\">👍</span>\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#pickEmoji\"\n          title=\"Add reaction\" aria-label=\"Add reaction\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#reply\"\n          title=\"Reply to message\" aria-label=\"Reply to message\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/reply-edb77e33.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#thread\"\n          title=\"Open thread\" aria-label=\"Open thread\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"20\" height=\"20\" />\n  </button>\n  <button type=\"button\" class=\"message__toolbar-btn\" data-action=\"message-toolbar#more\"\n          title=\"More message actions\" aria-label=\"More message actions\"\n          aria-haspopup=\"menu\" aria-controls=\"message-actions-menu\" aria-expanded=\"false\">\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/menu-dots-horizontal-f6a5d793.svg\" width=\"20\" height=\"20\" />\n  </button>\n</div>\n\n          <span id=\"pin_badge_message_lifecycle-parent\" class=\"message__pin-badge\" hidden>\n  <img aria-hidden=\"true\" src=\"/assets/pin-2f109331.svg\" width=\"14\" height=\"14\" />\n  <span>Pinned</span>\n</span>\n\n          <div class=\"message__meta\" id=\"meta_message_lifecycle-parent\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"David\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <strong data-reply-target=\"author\">David</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962058\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962058\">All Talk</a>\n    </span>\n  </h3>\n</div>\n\n          \n          \n\n          <div id=\"presentation_message_lifecycle-parent\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>Lifecycle parent</p></div>\n</div>\n\n          \n          \n            <div id=\"drive_attachments_message_lifecycle-parent\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n\n          <div id=\"github_pr_cards_message_lifecycle-parent\" class=\"github-pr-cards\"></div>\n\n            <div id=\"twitter_cards_message_lifecycle-parent\" class=\"x-post-cards\"></div>\n\n          \n          <div id=\"message_link_cards_message_lifecycle-parent\" class=\"message-link-cards\"></div>\n\n          <div id=\"fizzy_cards_message_lifecycle-parent\" class=\"fizzy-cards\"></div>\n\n            <div id=\"linkedin_cards_message_lifecycle-parent\" class=\"linkedin-post-cards\"></div>\n\n            <div id=\"link_embed_cards_message_lifecycle-parent\" class=\"link-embed-cards\"></div>\n\n          <turbo-frame id=\"boosting_message_lifecycle-parent\">\n  <div class=\"boosts flex flex-wrap align-center gap full-width\" style=\"--column-gap: 0.4ch; --row-gap: 0\">\n    \n<div id=\"boosts_message_lifecycle-parent\" class=\"flex-inline flex-wrap gap\">\n\n</div>\n\n\n    <turbo-frame id=\"new_boost_message_lifecycle-parent\">\n      <div class=\"flex-inline message__boost-inline\" data-controller=\"soft-keyboard\">\n        <a class=\"boost__action txt-small btn\" data-action=\"soft-keyboard#open\" href=\"/messages/935962058/boosts/new\">\n          <img aria-hidden=\"true\" src=\"/assets/boost-4a7bab66.svg\" width=\"20\" height=\"20\" />\n          <span class=\"for-screen-reader\">Add a boost</span>\n</a>      </div>\n</turbo-frame>  </div>\n</turbo-frame>\n            <button type=\"button\" id=\"thread_indicator_message_lifecycle-parent\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n\n        </div>\n      </div>\n    </turbo-frame>\n</div></article>\n\n  <section aria-label=\"Thread messages\">\n    \n  </section>\n</main>",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 9,
+          "name": "Renamed <&>",
+          "creator_id": 149087659,
+          "parent_message_id": 935962058,
+          "auto_archive_after_minutes": 60,
+          "closed_at": "2026-03-02T16:03:10.000Z",
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T14:03:00.000Z",
+          "updated_at": "2026-03-02T16:03:10.000Z",
+          "tags": [
+            "api",
+            "bug"
+          ],
+          "members": [
+            149087659
+          ],
+          "messages": []
+        },
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "delete",
+      "viewer": 0,
+      "method": "delete",
+      "path": "/rooms/486777696/threads/9.json",
+      "input": {},
+      "time": "2026-03-02T16:03:50Z",
+      "status": 204,
+      "cache_control": "no-cache",
+      "content_type": null,
+      "location": null,
+      "html": null,
+      "body": "",
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"thread_indicator_message_lifecycle-parent\"><template>  <button type=\"button\" id=\"thread_indicator_message_lifecycle-parent\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n</template></turbo-stream>"
+        }
+      ],
+      "thread_count": 9,
+      "threads": [
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "create_html",
+      "viewer": 0,
+      "method": "post",
+      "path": "/rooms/486777696/threads.html",
+      "input": {
+        "name": "HTML thread"
+      },
+      "time": "2026-03-02T16:04:00Z",
+      "status": 302,
+      "cache_control": "no-cache",
+      "content_type": "text/html; charset=utf-8",
+      "location": "http://campfire.test/rooms/486777696/threads/11",
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "name": "HTML thread",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:04:00.000Z",
+          "updated_at": "2026-03-02T16:04:00.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": []
+        }
+      ]
+    },
+    {
+      "name": "update_html",
+      "viewer": 0,
+      "method": "patch",
+      "path": "/rooms/486777696/threads/11.html",
+      "input": {
+        "name": "HTML renamed"
+      },
+      "time": "2026-03-02T16:04:10Z",
+      "status": 302,
+      "cache_control": "no-cache",
+      "content_type": "text/html; charset=utf-8",
+      "location": "http://campfire.test/rooms/486777696/threads/11",
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 10,
+      "threads": [
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "name": "HTML renamed",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:04:00.000Z",
+          "updated_at": "2026-03-02T16:04:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": []
+        }
+      ]
+    },
+    {
+      "name": "delete_html",
+      "viewer": 0,
+      "method": "delete",
+      "path": "/rooms/486777696/threads/11.html",
+      "input": {},
+      "time": "2026-03-02T16:04:20Z",
+      "status": 302,
+      "cache_control": "no-cache",
+      "content_type": "text/html; charset=utf-8",
+      "location": "http://campfire.test/rooms/486777696",
+      "html": false,
+      "body": "",
+      "frames": [],
+      "thread_count": 9,
+      "threads": [
+        {
+          "id": 10,
+          "name": "Nested start",
+          "creator_id": 127326141,
+          "parent_message_id": null,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "locked_at": null,
+          "last_activity_at": "2026-03-02T16:00:10.000Z",
+          "updated_at": "2026-03-02T16:00:10.000Z",
+          "tags": [],
+          "members": [
+            127326141
+          ],
+          "messages": [
+            {
+              "id": 935962059,
+              "client_message_id": "lifecycle-first",
+              "markdown_source": "First **reply**",
+              "body": "<p>First <strong>reply</strong></p>"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

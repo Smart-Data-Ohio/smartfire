@@ -1,0 +1,43 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "name": "missing",
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"fizzy-connection-title\">\n  <h2 id=\"fizzy-connection-title\" class=\"txt-large\">Fizzy</h2>\n\n\n      <p>Paste a personal access token to preview Fizzy cards in messages and create cards from them. Generate one in Fizzy under your profile → API → Personal access tokens; card creation needs <strong>Read + Write</strong>. The token is validated with Fizzy before it is stored and is never shown again.</p>\n    <form class=\"flex align-center gap\" action=\"/fizzy/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/fizzy/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"Fizzy token…\" autocomplete=\"off\" required=\"required\" aria-label=\"Fizzy personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Connect Fizzy\" class=\"btn\" data-disable-with=\"Connect Fizzy\" />\n</form></section>\n",
+      "reason_after": null
+    },
+    {
+      "name": "usable",
+      "token": "ws8br2-fizzy-fixture-token",
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"fizzy-connection-title\">\n  <h2 id=\"fizzy-connection-title\" class=\"txt-large\">Fizzy</h2>\n\n\n    <p>Connected as Person &lt;&amp; Co (Team &lt;&amp; Co)</p>\n    <p>Card links in messages preview with <strong>your</strong> Fizzy access, and cards you create from messages are created as <strong>Person &lt;&amp; Co</strong> on Fizzy.</p>\n    <form data-turbo-confirm=\"Disconnect Fizzy? Card previews will stop working and you will no longer be able to create cards from messages.\" class=\"button_to\" method=\"post\" action=\"/fizzy/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect Fizzy</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/fizzy/connection\" /></form>\n</section>\n",
+      "reason_after": null
+    },
+    {
+      "name": "blank",
+      "token": " ",
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"fizzy-connection-title\">\n  <h2 id=\"fizzy-connection-title\" class=\"txt-large\">Fizzy</h2>\n\n\n      <p>Fizzy rejected the connection. Paste a new token to reconnect.</p>\n    <form class=\"flex align-center gap\" action=\"/fizzy/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/fizzy/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"Fizzy token…\" autocomplete=\"off\" required=\"required\" aria-label=\"Fizzy personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Reconnect Fizzy\" class=\"btn\" data-disable-with=\"Reconnect Fizzy\" />\n</form></section>\n",
+      "reason_after": null
+    },
+    {
+      "name": "blank_reason",
+      "token": " ",
+      "reason": " ",
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"fizzy-connection-title\">\n  <h2 id=\"fizzy-connection-title\" class=\"txt-large\">Fizzy</h2>\n\n\n      <p>Fizzy rejected the connection. Paste a new token to reconnect.</p>\n    <form class=\"flex align-center gap\" action=\"/fizzy/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/fizzy/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"Fizzy token…\" autocomplete=\"off\" required=\"required\" aria-label=\"Fizzy personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Reconnect Fizzy\" class=\"btn\" data-disable-with=\"Reconnect Fizzy\" />\n</form></section>\n",
+      "reason_after": " "
+    },
+    {
+      "name": "unreadable",
+      "token": "bad-ciphertext",
+      "unreadable": true,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"fizzy-connection-title\">\n  <h2 id=\"fizzy-connection-title\" class=\"txt-large\">Fizzy</h2>\n\n\n      <p>Fizzy rejected the connection (The stored token could not be read; link it again). Paste a new token to reconnect.</p>\n    <form class=\"flex align-center gap\" action=\"/fizzy/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/fizzy/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"Fizzy token…\" autocomplete=\"off\" required=\"required\" aria-label=\"Fizzy personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Reconnect Fizzy\" class=\"btn\" data-disable-with=\"Reconnect Fizzy\" />\n</form></section>\n",
+      "reason_after": "The stored token could not be read; link it again"
+    },
+    {
+      "name": "rejected",
+      "token": "ws8br2-fizzy-fixture-token",
+      "reason": "Fizzy rejected <& token",
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"fizzy-connection-title\">\n  <h2 id=\"fizzy-connection-title\" class=\"txt-large\">Fizzy</h2>\n\n\n      <p>Fizzy rejected the connection (Fizzy rejected &lt;&amp; token). Paste a new token to reconnect.</p>\n    <form class=\"flex align-center gap\" action=\"/fizzy/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/fizzy/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"Fizzy token…\" autocomplete=\"off\" required=\"required\" aria-label=\"Fizzy personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Reconnect Fizzy\" class=\"btn\" data-disable-with=\"Reconnect Fizzy\" />\n</form></section>\n",
+      "reason_after": "Fizzy rejected <& token"
+    }
+  ]
+}

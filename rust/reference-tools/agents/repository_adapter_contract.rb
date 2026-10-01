@@ -21,8 +21,10 @@ travel_to Time.utc(2026,3,2,16) do
     http=Object.new
     http.define_singleton_method(:get) { |path,headers| paths << path; response }
     Net::HTTP.define_singleton_method(:start) { |*args,**kwargs,&block| block.call(http) }
-    decisions=[account.can_read_repository?("Mixed","Repo"),account.reload.can_read_repository?("MIXED","REPO")]
-    cases[status]={decisions:decisions,paths:paths.dup,disconnected_reason:account.reload.disconnected_reason,links:Agents::WorkPayload.for(thread,agent:agent.reload)[:links]}
+    direct=account.can_read_repository?("Mixed","Repo")
+    links=Agents::WorkPayload.for(thread,agent:agent.reload)[:links]
+    decisions=[direct,links.first[:title].present?]
+    cases[status]={decisions:decisions,paths:paths.dup,disconnected_reason:account.reload.disconnected_reason,links:links}
   end
   puts JSON.pretty_generate(reference_pin:"d7c7de92",cases:cases)
 end

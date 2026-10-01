@@ -43,8 +43,11 @@ use crate::config::Config;
 
 pub mod periodic;
 mod messaging;
+pub(crate) mod huddle;
 mod notifications;
 mod peer_callbacks;
+#[cfg(test)]
+pub(crate) mod reminders;
 
 /// The app's job classes and their handlers, which get the [`App`].
 pub type Registry = campfire_jobs::Registry<App>;
@@ -177,6 +180,7 @@ pub fn registry() -> Registry {
     registry.register(analyze_blob);
     registry.register(quote_cards_refresh);
     messaging::register(&mut registry);
+    huddle::register(&mut registry);
     notifications::register(&mut registry);
     // Room::PushMessageJob and Bot::WebhookJob
     crate::integrations::register_jobs(&mut registry);
@@ -272,8 +276,14 @@ impl EventSink for Jobs {
 
     fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
         let app = self.app.get().and_then(Weak::upgrade);
-        let crypto = app.as_ref().map(|app| rails_compat::ar_encryption::ArEncryption::new(&app.secrets));
-        crate::integrations::sync_message_references(tx, message, enqueue, crypto.as_ref())
+        let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
+        crate::integrations::sync_message_references(tx, message, enqueue, crypto)
+    }
+
+    fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, phase: campfire_db::callbacks::Phase, enqueue: bool) -> campfire_db::Result<()> {
+        let app = self.app.get().and_then(Weak::upgrade);
+        let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
+        crate::integrations::sync_message_reference_phase(tx,message,phase,enqueue,crypto)
     }
 
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
@@ -470,3 +480,9 @@ mod tests;
 
 #[cfg(test)]
 mod peer_callback_tests;
+#[cfg(test)]
+mod huddle_render_tests;
+#[cfg(test)]
+mod huddle_policy_integration_tests;
+#[cfg(test)]
+mod huddle_neighbor_mention_test;

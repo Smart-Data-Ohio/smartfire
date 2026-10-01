@@ -1,0 +1,226 @@
+[
+  {
+    "name": "shrunk/random/388013012/802",
+    "seed": 388013012,
+    "banner": true,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "inbox",
+        "seconds": 121
+      },
+      {
+        "action": "regrant",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/3620200082/52",
+    "seed": 3620200082,
+    "banner": false,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "rejoin",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/3620200082/68",
+    "seed": 3620200082,
+    "banner": false,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/3620200082/46",
+    "seed": 3620200082,
+    "banner": false,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/388013012/45",
+    "seed": 388013012,
+    "banner": true,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "inbox",
+        "seconds": 0
+      },
+      {
+        "action": "retry",
+        "seconds": 121
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/3620200082/469",
+    "seed": 3620200082,
+    "banner": false,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "rejoin",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/388013012/17",
+    "seed": 388013012,
+    "banner": false,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "rejoin",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/388013012/25",
+    "seed": 388013012,
+    "banner": true,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "inbox",
+        "seconds": 0
+      },
+      {
+        "action": "issue",
+        "seconds": 121
+      },
+      {
+        "action": "rejoin",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/388013012/97",
+    "seed": 388013012,
+    "banner": false,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  },
+  {
+    "name": "shrunk/random/3620200082/656",
+    "seed": 3620200082,
+    "banner": false,
+    "newest_first": false,
+    "steps": [
+      {
+        "action": "issue",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      },
+      {
+        "action": "handled",
+        "seconds": 0
+      }
+    ]
+  }
+]

@@ -6,8 +6,10 @@ pub mod parts;
 pub mod presentation;
 pub mod reactions;
 pub mod support;
+pub mod composer;
 
 use askama::Template;
+use crate::helpers::filters;
 use campfire_routes as routes;
 use jiff::Timestamp;
 use serde::Deserialize;
@@ -132,12 +134,14 @@ pub struct MessageDetails {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct MessageComponents {
+    pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub github_cards_html: Option<String>,
     pub github_cards_stamp: String,
     pub twitter_cards: Vec<String>,
     pub twitter_posts: Vec<crate::twitter::Card>,
     pub event_cards: Vec<String>,
+    pub event_views: Vec<crate::events::CardView>,
     pub message_link_cards: Vec<String>,
     pub fizzy_cards: Vec<String>,
     pub linkedin_cards: Vec<String>,
@@ -281,10 +285,8 @@ pub struct ReactionGroup<'a> {
 }
 
 /// A message on its way into `messages/_message`: the fragment itself when the cache already
-/// holds this message version, else the view to render it from. `cache [ message,
-/// "presentation-v3" ]` wraps the whole partial, so on a hit Rails evaluates none of it (no rich
-/// text, attachment, avatar or boosts); [`cached_message_fragment`] lets the presenter look first
-/// and build a [`MessageView`] only on a miss.
+/// holds the full collection presentation key, else the view to render individually. The
+/// presenter skips rich text, attachments, avatars and boosts on collection cache hits.
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageItem {
     Fragment {
@@ -558,11 +560,19 @@ pub struct MessagePartial<'a> {
     pub message: &'a MessageView,
 }
 
-/// `render message`: `messages/_message`, whose body is `cache [ message, "presentation-v3" ]`
-/// (and whose collection renders are `cached: true`), so a message version renders once.
+/// The original record-version cache API, retained for existing view consumers. HTTP
+/// presenters use [`collection_fragment_key`]; individual pages/broadcasts use
+/// [`uncached_message`] because Rails only caches collection rendering.
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
-        || message_fragment_key(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp),
+        || {
+            let key = message_fragment_key(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp);
+            if message.components.event_views.is_empty() { key } else {
+                use sha2::{Digest, Sha256};
+                let facts = serde_json::to_vec(&message.components.event_views).expect("event facts serialize");
+                format!("{key}/events/{}/{:x}", ctx.time_zone.name(), Sha256::digest(facts))
+            }
+        },
         || {
             MessagePartial { ctx, message }
                 .render()
@@ -576,12 +586,14 @@ pub fn cached_message(ctx: &ViewContext, message: &MessageView) -> crate::helper
     askama::filters::Safe(self::message(ctx, message))
 }
 
-/// WS8bm's complete-message callback renderer. A child step changes without
-/// touching message.updated_at, so callbacks must bypass the warmed fragment.
+/// Rails renders individual messages without collection caching. Use this for standalone
+/// pages and broadcasts, whose streaming state can change without touching the message row.
 pub fn uncached_message(ctx: &ViewContext, message: &MessageView) -> String {
-    MessagePartial { ctx, message }
-        .render()
-        .expect("messages/_message renders")
+    MessagePartial { ctx, message }.render().expect("messages/_message renders")
+}
+
+pub fn uncached_message_html(ctx: &ViewContext, message: &MessageView) -> crate::helpers::Html {
+    askama::filters::Safe(uncached_message(ctx, message))
 }
 
 /// [`cached_message`] for a [`MessageItem`]: a fragment found up front goes out as it is, with
@@ -594,7 +606,7 @@ pub fn cached_message_item<'a>(
         MessageItem::Fragment { html, .. } => {
             crate::helpers::request_forgery::fill_token_slots(html)
         }
-        MessageItem::View(message) => std::borrow::Cow::Owned(self::message(ctx, message)),
+        MessageItem::View(message) => std::borrow::Cow::Owned(uncached_message(ctx, message)),
     })
 }
 
@@ -620,6 +632,12 @@ fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str, stamp: &
         fragment_cache::keys::PRESENTATION_CACHE_VERSION,
     );
     if stamp.is_empty() { key } else { format!("{key}/{stamp}") }
+}
+
+/// Collection fragments carry the domain's full presentation key. The Index/MessageItem API
+/// stays unchanged; presenters return its existing Fragment variant on both misses and hits.
+pub fn collection_fragment_key(presentation_key: &str, base_url: &str) -> String {
+    format!("views/messages/_message:{}/{presentation_key}/{base_url}", message_digest())
 }
 
 /// `messages/boosts/_boost`, whose body is `cache boost`.
@@ -680,11 +698,39 @@ fn boost_digest() -> &'static str {
 }
 
 /// `messages/index`: the page of messages the client fetches while scrolling (no layout).
+/// WS8b-r's room-shell entry point stays `Index { ctx, messages: &[MessageItem] }`.
+/// Build items with `Presenter::messages`; the cache-aware `cached_message_item` renders each.
 #[derive(Template)]
 #[template(path = "messages/index.html")]
 pub struct Index<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub messages: &'a [MessageItem],
+}
+
+/// The list slot in rooms/show, including its exact indentation. The divider is per viewer
+/// and deliberately sits outside every cached message fragment.
+#[derive(Template)]
+#[template(path = "messages/room_index.html")]
+pub struct RoomIndex<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub messages: &'a [MessageItem],
+    pub unread_index: Option<usize>,
+    pub unread_count: i64,
+}
+
+impl RoomIndex<'_> {
+    fn portion(&self, start: usize, end: usize) -> h::Html {
+        h::raw(self.messages[start..end].iter().map(|message| cached_message_item(self.ctx, message).to_string()).collect::<String>())
+    }
+    fn divider(&self) -> h::Html {
+        h::raw(UnreadDivider { unread_count: self.unread_count }.render().expect("unread divider renders"))
+    }
+}
+
+#[derive(Template)]
+#[template(path = "messages/_unread_divider.html")]
+pub struct UnreadDivider {
+    pub unread_count: i64,
 }
 
 /// `messages/show`: the message partial, inside the application layout.
@@ -703,10 +749,24 @@ pub struct PresentationPartial<'a> {
     pub message: &'a MessageView,
 }
 
-/// `messages/_meta`, replaced by the real message edit caller.
+/// Session-independent message parts replaced by the human edit endpoints.
 #[derive(Template)]
 #[template(path = "messages/_meta.html")]
 pub struct MetaPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
+#[derive(Template)]
+#[template(path = "messages/_drive_attachments.html")]
+pub struct DriveAttachmentsPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
+#[derive(Template)]
+#[template(path = "messages/_thread_indicator.html")]
+pub struct ThreadIndicatorPartial<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub message: &'a MessageView,
 }
@@ -725,8 +785,22 @@ pub struct RoomNotFound;
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct EditView {
     pub message: MessageView,
-    /// The editor's `value`: `editable_body(message)` as HTML, from the richtext crate.
+    /// Message#editable_markdown_source. The field name predates the Markdown edit form.
     pub editable_body_html: String,
+}
+
+impl EditView {
+    /// DriveAttachment#url always uses this prefix; only ids are submitted by the edit form.
+    pub fn drive_file_id<'a>(&self, url: &'a str) -> &'a str {
+        url.strip_prefix("https://drive.google.com/open?id=").expect("DriveAttachment URL")
+    }
+}
+
+/// The shared message actions menu rendered once per page by the layout.
+#[derive(Template)]
+#[template(path = "messages/_actions.html")]
+pub struct ActionsMenu<'a> {
+    pub ctx: &'a ViewContext<'a>,
 }
 
 /// `messages/edit`.
@@ -745,6 +819,14 @@ pub struct CreateStream<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub message: &'a MessageItem,
     pub room_kind: RoomKind,
+}
+
+#[derive(Template)]
+#[template(path = "channel_thread_messages/create.turbo_stream.html")]
+pub struct ThreadCreateStream<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+    pub thread_id: i64,
 }
 
 /// `messages/destroy.turbo_stream`, also what `Message#broadcast_remove` sends.
@@ -859,14 +941,15 @@ pub fn cards(
     ))
 }
 
-pub fn event_cards(message: &MessageView) -> h::Html {
-    if message.components.event_cards.is_empty() {
+pub fn event_cards(ctx: &ViewContext, message: &MessageView) -> h::Html {
+    if message.components.event_cards.is_empty() && message.components.event_views.is_empty() {
         return h::raw("");
     }
+    let bodies = format!("{}{}", message.components.event_cards.concat(), crate::events::card_entries(&message.components.event_views, &message.id.to_string(), &ctx.time_zone).concat());
     h::raw(format!(
         "  <div id=\"{}\" class=\"event-cards\">\n{}  </div>\n",
-        message.dom_id("event_cards"),
-        message.components.event_cards.concat()
+        h::escape(&message.dom_id("event_cards")),
+        bodies
     ))
 }
 

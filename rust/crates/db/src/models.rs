@@ -30,9 +30,21 @@ pub mod ban;
 pub mod boost;
 pub mod bot_webhook_fanout;
 pub mod channel_thread;
+pub mod calendar_event;
 pub mod calendar_dispatch;
 pub mod direct_room;
 pub mod first_run;
+pub mod huddle_cleanup;
+pub mod huddle_grant;
+pub mod huddle_effects;
+pub mod huddle_notices;
+pub mod huddle_invitations;
+pub mod huddle_stream_liveness;
+pub mod stream;
+pub mod stage;
+pub mod stage_streams;
+pub mod stage_participation;
+pub mod call_moderation;
 pub mod forwarder;
 pub mod membership;
 pub mod keyword_alert;
@@ -55,14 +67,18 @@ pub mod two_factor;
 pub mod thread_membership;
 pub mod thread_tag;
 pub mod user;
+pub mod user_star;
+pub use user_star::UserStar;
+pub mod user_status_settings;
 pub mod dnd_allowed_user;
 pub use dnd_allowed_user::DndAllowedUser;
 pub mod notification_policy;
 pub mod user_device;
 pub mod webhook;
 pub mod workspace_presence_lease;
-pub mod user_status_settings;
+
 pub mod room_members;
+pub mod workspace_icon;
 
 pub use account::{Account, AccountSettings};
 pub use auth_audit::{AuthAudit, SudoVerifier};
@@ -71,6 +87,8 @@ pub use activity_item::ActivityItem;
 pub use ban::Ban;
 pub use boost::Boost;
 pub use channel_thread::{ChannelThread, NewChannelThread, ThreadPush, ThreadPushCandidate, ThreadStatus};
+pub use calendar_event::{CalendarEvent, NewCalendarEvent};
+pub use calendar_event::attendance::EventAttendance;
 pub use first_run::FirstRun;
 pub use membership::{Involvement, Membership, RoomRemovalBroadcast, StageRole};
 pub use keyword_alert::KeywordAlert;
@@ -106,3 +124,11 @@ pub use agent_approval::{AgentApproval, NewApproval};
 pub use agent::{Agent,AgentChanges,AgentKind,NewAgent};
 pub use agent_slash_command::{AgentSlashCommand,NewAgentSlashCommand};
 pub use agent_step::{AgentStep,NewAgentStep,AgentStepChanges};
+// WS8bm2 read-only rendering preload seam.
+pub mod message_rendering;
+
+// WS8bm2 listing/quote read adapters.
+pub mod room_files;
+pub mod message_quote;
+
+pub mod reminder_policy;

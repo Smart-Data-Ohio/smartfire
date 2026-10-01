@@ -88,10 +88,15 @@ pub struct NewMessage {
 /// Attributes assigned to a saved message (`message.update!(...)`); `None` leaves one alone.
 #[derive(Debug, Clone, Default)]
 pub struct MessageChanges {
-    /// Explicit nil assignment used by the raw bot edit endpoint.
-    pub clear_markdown_source: bool,
     /// Rendered into the body before validation, like a new message's.
     pub markdown_source: Option<String>,
+    /// The human edit endpoint assigns nil when switching back to a legacy body.
+    pub clear_markdown_source: bool,
+    /// Rendered non-mention attachments retained during a legacy-to-Markdown edit.
+    pub legacy_attachment_snapshot: Option<String>,
+    pub client_message_id: Option<Option<String>>,
+    pub reply_to_message_id: Option<Option<i64>>,
+    pub reply_notify_author: Option<bool>,
     /// A legacy (Action Text) body.
     pub body: Option<String>,
     pub forward_note: Option<Option<String>>,
@@ -480,11 +485,15 @@ impl Message {
     /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
     /// must not warm previews. Import callers pass false to retain DB references without fetches.
     pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
-        for sync in tx.env().message_reference_syncs.clone() {
-            sync(tx, self, enqueue)?;
+        use crate::callbacks::Phase;
+        for sync in tx.env().message_reference_syncs.clone() { sync(tx,self,enqueue)?; }
+        let sink=tx.env().sink.clone();
+        for phase in [Phase::MessageFizzyReferences,Phase::MessageTwitterReferences,Phase::MessageEventReferences,Phase::MessageLinkReferences] {
+            if phase == Phase::MessageEventReferences { crate::models::calendar_event::references::sync(tx, self)?; }
+            sink.sync_message_reference_phase(tx,self,phase,enqueue)?;
+
         }
-        let sink = tx.env().sink.clone();
-        sink.sync_message_references(tx, self, enqueue)
+        Ok(())
     }
 
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
@@ -724,7 +733,8 @@ impl Message {
     }
 
     fn markdown_source_will_change(&self, changes: &MessageChanges) -> bool {
-        (changes.clear_markdown_source && self.markdown_source.is_some()) || changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
+        (changes.clear_markdown_source && self.markdown_source.is_some())
+            || changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
     }
 
     /// `save!` of assigned changes. A changed Markdown source re-renders the body
@@ -736,12 +746,15 @@ impl Message {
         self.validate_streaming_state(tx.conn())?;
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
-        let markdown_source =
-            if changes.clear_markdown_source { None } else if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() } else { self.markdown_source.clone() };
+        let markdown_source = if changes.clear_markdown_source { None }
+            else if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() }
+            else { self.markdown_source.clone() };
         let body = match &changes.markdown_source {
             Some(source) if self.markdown_source_will_change(&changes) => {
                 if source.chars().count() <= SOURCE_LIMIT {
-                    Some(tx.rich_text().render_markdown(conn, source, self.room_id).map_err(crate::error::Error::Other)?)
+                    let rendered = tx.rich_text().render_markdown(conn, source, self.room_id).map_err(crate::error::Error::Other)?;
+                    Some([Some(rendered), changes.legacy_attachment_snapshot.clone()].into_iter().flatten()
+                        .filter(|body| !body.chars().all(char::is_whitespace)).collect::<Vec<_>>().join("\n"))
                 } else {
                     None
                 }
@@ -756,11 +769,14 @@ impl Message {
         let drive_file_ids = changes.drive_file_ids.clone().unwrap_or_else(|| current_drive_ids.clone());
         let forward_note = changes.forward_note.clone().unwrap_or_else(|| self.forward_note.clone());
         let embeds_suppressed = changes.embeds_suppressed.unwrap_or(self.embeds_suppressed);
+        let client_message_id = changes.client_message_id.clone().unwrap_or_else(|| Some(self.client_message_id.clone()));
+        let reply_to_message_id = changes.reply_to_message_id.unwrap_or(self.reply_to_message_id);
+        let reply_notify_author = changes.reply_notify_author.unwrap_or(self.reply_notify_author);
 
         let attributes = NewMessage {
             room_id: self.room_id,
             creator_id: self.creator_id,
-            client_message_id: Some(self.client_message_id.clone()),
+            client_message_id: client_message_id.clone(),
             body: body.clone(),
             attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?.map(|a| a.blob_id),
             thread_id: self.thread_id,
@@ -770,8 +786,8 @@ impl Message {
             action: self.action,
             board_post_opener: self.board_post_opener,
             embeds_suppressed,
-            reply_to_message_id: self.reply_to_message_id,
-            reply_notify_author: Some(self.reply_notify_author),
+            reply_to_message_id,
+            reply_notify_author: Some(reply_notify_author),
             forwarded_from_message_id: self.forwarded_from_message_id,
             forwarded_at: self.forwarded_at,
             forward_note: forward_note.clone(),
@@ -783,6 +799,9 @@ impl Message {
         let now = tx.now();
         let edited_at = if content_changes { Some(now) } else { self.edited_at };
         let columns_changed = markdown_source != self.markdown_source
+            || client_message_id.as_deref() != Some(self.client_message_id.as_str())
+            || reply_to_message_id != self.reply_to_message_id
+            || reply_notify_author != self.reply_notify_author
             || forward_note != self.forward_note
             || embeds_suppressed != self.embeds_suppressed
             || edited_at != self.edited_at;
@@ -792,8 +811,8 @@ impl Message {
         }
         let streaming_updated_at = if self.streaming { Some(now) } else { self.streaming_updated_at };
         tx.conn().execute_cached(
-            r#"UPDATE "messages" SET "markdown_source" = ?, "forward_note" = ?, "embeds_suppressed" = ?, "edited_at" = ?, "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
-            params![markdown_source, forward_note, embeds_suppressed, edited_at, streaming_updated_at, now, self.id],
+            r#"UPDATE "messages" SET "markdown_source" = ?, "client_message_id" = ?, "reply_to_message_id" = ?, "reply_notify_author" = ?, "forward_note" = ?, "embeds_suppressed" = ?, "edited_at" = ?, "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
+            params![markdown_source, client_message_id, reply_to_message_id, reply_notify_author, forward_note, embeds_suppressed, edited_at, streaming_updated_at, now, self.id],
         )?;
         if let Some(body) = &body {
             match RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
@@ -1179,11 +1198,22 @@ impl Message {
         use crate::callbacks::Phase;
         for phase in [Phase::MessageGithubReferences, Phase::MessageFizzyReferences,
             Phase::MessageTwitterReferences, Phase::MessageEventReferences] {
-            tx.model_callback(phase, self.id)?;
+            self.sync_reference_phase(tx, phase, true)?;
         }
         crate::models::message_reference::sync(tx,self)?;
-        tx.model_callback(Phase::MessageLinkReferences, self.id)?;
-        self.sync_external_references(tx, true)
+        self.sync_reference_phase(tx, Phase::MessageLinkReferences, true)
+    }
+
+    fn sync_reference_phase(&self, tx: &mut Tx<'_>, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+        tx.model_callback(phase, self.id)?;
+        if phase == crate::callbacks::Phase::MessageGithubReferences {
+            for sync in tx.env().message_reference_syncs.clone() { sync(tx, self, enqueue)?; }
+        }
+        if phase == crate::callbacks::Phase::MessageEventReferences {
+            crate::models::calendar_event::references::sync(tx, self)?;
+        }
+        let sink = tx.env().sink.clone();
+        sink.sync_message_reference_phase(tx, self, phase, enqueue)
     }
 
     /// Claim first, like Rails' `update_all`, then run the deferred callbacks.

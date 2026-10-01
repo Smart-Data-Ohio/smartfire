@@ -131,6 +131,8 @@ impl Record {
         Self { record_type: "User", table: "users", id }
     }
 
+    pub fn workspace_icon(id:i64) -> Self {Self {record_type:"WorkspaceIcon",table:"workspace_icons",id}}
+
     pub fn account(id: i64) -> Self {
         Self { record_type: "Account", table: "accounts", id }
     }

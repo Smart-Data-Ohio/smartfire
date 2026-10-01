@@ -33,6 +33,7 @@ pub struct FormWith {
     action: String,
     method: String,
     object_name: Option<String>,
+    namespace: Option<String>,
     id: Option<String>,
     class: Option<String>,
     data: Attrs,
@@ -48,6 +49,7 @@ pub fn form_with(url: impl std::fmt::Display) -> FormWith {
         action: url.to_string(),
         method: "post".to_string(),
         object_name: None,
+        namespace: None,
         id: None,
         class: None,
         data: attrs(),
@@ -65,6 +67,12 @@ impl FormWith {
         self
     }
 
+    /// WS8br seam: the default Rails field_error_proc for fields bound to a record
+    /// with validation errors. Existing owner forms keep their default empty list.
+    pub fn field_errors(mut self, attributes: Vec<String>) -> Self {
+        self.error_fields = attributes;
+        self
+    }
     /// Rails PR #148 uses `authenticity_token: false` in shared message fragments.
     pub fn authenticity_token(mut self, include: bool) -> Self {
         self.authenticity_token = include;
@@ -73,6 +81,12 @@ impl FormWith {
     /// `model:` — the param key fields are scoped under ("user", "account").
     pub fn model(mut self, param_key: &str) -> Self {
         self.object_name = Some(param_key.to_string());
+        self
+    }
+
+    /// `namespace:` prefixes field IDs, leaving their parameter names unchanged.
+    pub fn namespace(mut self, namespace: impl Into<String>) -> Self {
+        self.namespace = Some(namespace.into());
         self
     }
 
@@ -122,6 +136,7 @@ impl FormWith {
     fn builder(&self) -> FormBuilder {
         FormBuilder {
             object_name: self.object_name.clone().unwrap_or_default(),
+            namespace: self.namespace.clone(),
             multipart: self.multipart.clone(),
             error_fields: self.error_fields.clone(),
         }
@@ -180,6 +195,11 @@ impl FormWith {
 
     pub fn text_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
         self.builder().input_field("text", method, value, options)
+    }
+
+    /// `Tags::DateField#render`, with the caller's canonical Date value.
+    pub fn date_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
+        self.builder().input_field("date", method, value, options)
     }
 
     pub fn number_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -305,6 +325,7 @@ impl FormWith {
 
 struct FormBuilder {
     object_name: String,
+    namespace: Option<String>,
     multipart: Rc<Cell<bool>>,
     error_fields: Vec<String>,
 }
@@ -329,11 +350,9 @@ impl FormBuilder {
 
     /// `Tags::Base#tag_id`: the sanitized object name and method joined by "_".
     fn tag_id(&self, method: &str) -> String {
-        if self.object_name.is_empty() {
-            return method.to_string();
-        }
-        let object = sanitize_object_name(&self.object_name);
-        format!("{object}_{method}")
+        let id = if self.object_name.is_empty() { method.to_string() }
+            else { format!("{}_{method}", sanitize_object_name(&self.object_name)) };
+        self.namespace.as_ref().map_or(id.clone(), |namespace| format!("{namespace}_{id}"))
     }
 
     fn add_default_name_and_id(&self, method: &str, options: &mut Attrs) {
@@ -507,7 +526,12 @@ pub fn button_to(url: &str, options: Attrs, content: &str) -> Html {
 /// `button_to(url, options.merge(form: form_options)) { content }`: `form_options` are the
 /// `<form>`'s attributes, ahead of its `method` and `action`. Its `class` defaults to
 /// `form_class`, else "button_to".
-pub fn button_to_form(url: &str, mut options: Attrs, form_options: Attrs, content: &str) -> Html {
+pub fn button_to_form(url: &str, options: Attrs, form_options: Attrs, content: &str) -> Html {
+    button_to_form_params(url, options, form_options, content, &[])
+}
+
+/// `button_to(..., params:)`: callers supply Rails' ordered, flattened form parameters.
+pub fn button_to_form_params(url: &str, mut options: Attrs, form_options: Attrs, content: &str, params: &[(&str, &str)]) -> Html {
     let authenticity_token = options.remove("authenticity_token") != Some(Value::Bool(false));
     let method = options
         .remove("method")
@@ -546,8 +570,11 @@ pub fn button_to_form(url: &str, mut options: Attrs, form_options: Attrs, conten
     let button = content_tag("button", &options, content).0;
 
     let form = form.method(form_method).attr("action", url);
+    let parameters: String = params.iter().map(|(name, value)| {
+        legacy_tag("input", attrs().type_("hidden").name(*name).value(*value)).0
+    }).collect();
     Safe(format!(
-        "<form{}>{method_field}{button}{token}</form>",
+        "<form{}>{method_field}{button}{token}{parameters}</form>",
         form.render()
     ))
 }

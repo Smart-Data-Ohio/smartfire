@@ -5,7 +5,7 @@ use crate::{
             accounts::{Account, Input},
             cards::{Cache, Card},
         },
-        test_support::{FakeServer, Route},
+        test_support::{FakeServer, Route, ws15e_http_case, ws15e_http_case_listener},
     },
 };
 use axum::http::{Method, StatusCode};
@@ -30,25 +30,8 @@ async fn ws15e_fizzy_connection_http_matrix() {
         "sudo",
         "csrf",
     ] {
-        // Hold the isolated socket across exec, as the message-card fixture does.
-        let listener = crate::test_support::bind_listener()
-            .await
-            .into_std()
-            .unwrap();
-        let base = format!("http://{}", listener.local_addr().unwrap());
-        let output = tokio::process::Command::new(std::env::current_exe().unwrap())
-            .args([
-                "controllers::fizzy_connections::tests::ws15e_fizzy_connection_http_matrix",
-                "--exact",
-                "--nocapture",
-                "--test-threads=8",
-            ])
-            .env("WS15E_FIZZY_CONNECTION_CASE", case)
-            .env("FIZZY_API_BASE_URL", &base)
-            .stdin(OwnedFd::from(listener))
-            .output()
-            .await
-            .unwrap();
+        let output = ws15e_http_case("WS15E_FIZZY_CONNECTION_CASE", case,
+            "controllers::fizzy_connections::tests::ws15e_fizzy_connection_http_matrix").await;
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             output.status.success(),
@@ -73,15 +56,7 @@ async fn run(case: &str) {
     } else {
         json!({"accounts":[{"slug":"/897362094","name":"Smart Data","user":{"id":"03user1","name":"David"}}]})
     };
-    let api_base = crate::integrations::fizzy::client::api_base_url();
-    let listener =
-        std::net::TcpListener::from(std::io::stdin().as_fd().try_clone_to_owned().unwrap());
-    assert_eq!(
-        api_base,
-        format!("http://{}", listener.local_addr().unwrap())
-    );
-    listener.set_nonblocking(true).unwrap();
-    let listener = tokio::net::TcpListener::from_std(listener).unwrap();
+    let listener = ws15e_http_case_listener();
     let server = FakeServer::on_listener(
         vec![
             Route::new("GET", "127.0.0.1", "/my/identity.json", status).body(identity.to_string()),

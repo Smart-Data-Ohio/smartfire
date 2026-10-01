@@ -2,6 +2,8 @@
 //! join code, and a user's page.
 
 pub mod avatars;
+pub mod cards;
+pub mod stars;
 pub mod bans;
 pub mod dnd_allowances;
 pub mod notification_settings;
@@ -10,6 +12,15 @@ pub mod profiles;
 pub mod presences;
 pub mod push_subscriptions;
 pub mod sidebars;
+pub mod time_zones;
+pub mod tours;
+
+#[cfg(test)]
+mod preferences_tests;
+#[cfg(test)]
+pub(crate) mod people_tests;
+#[cfg(test)]
+mod profile_settings_tests;
 pub mod sessions;
 
 use askama::Template;
@@ -22,6 +33,15 @@ use super::presenters::{self, view_context};
 use crate::app::AppCtx;
 use crate::controllers::presenters::page::framed_page;
 use crate::concerns::{self, Before, cast_integer};
+
+pub async fn index(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default()).await?;
+    let viewer = concerns::require_current_user(c)?.id;
+    let now = campfire_db::Timestamp::from_jiff(c.now());
+    let people = c.app().db.read(move |conn| campfire_db::models::user::presentation::directory(conn,viewer,now)).await.map_err(Error::internal)?;
+    let people = people.into_iter().map(|person| presenters::people::person(&c.app().secrets,person)).collect::<Vec<_>>();
+    framed_page!(c,StatusCode::OK,|ctx| users::Directory { ctx,people:people.clone() }).await
+}
 
 /// `require_unauthenticated_access only: %i[ new create ]`, `before_action :verify_join_code`
 pub async fn new(c: &mut Ctx) -> Result {
@@ -154,3 +174,36 @@ async fn verify_join_code(c: &mut Ctx) -> Result<Account> {
 fn user_params(c: &Ctx) -> Result<ParamMap> {
     Ok(c.params.require("user")?.permit(&permit_keys(&["name", "avatar", "email_address", "password"])))
 }
+
+#[cfg(test)]
+mod profile_page_tests;
+
+#[cfg(test)]
+mod joining_tests;
+
+#[cfg(test)]
+mod profile_sections_tests;
+
+#[cfg(test)]
+mod status_popup_tests;
+
+#[cfg(test)]
+mod profile_security_tests;
+
+#[cfg(test)]
+mod ban_lifecycle_tests;
+
+#[cfg(test)]
+mod layout_preferences_tests;
+
+#[cfg(test)]
+mod profile_effective_ooo_tests;
+
+#[cfg(test)]
+mod agent_profile_tests;
+
+#[cfg(test)]
+mod fizzy_profile_tests;
+
+#[cfg(test)]
+mod stars_tests;

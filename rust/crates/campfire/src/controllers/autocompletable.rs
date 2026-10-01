@@ -1,74 +1,74 @@
-//! `Autocompletable::UsersController` (reference/app/controllers/autocompletable/users_controller.rb):
-//! mention and user-picker suggestions.
-
+//! Markdown composer autocomplete sources from our Rails app.
+pub mod icons;
+pub mod slash_commands;
 pub mod users {
-    use askama::Template;
-    use campfire_db::{Connection, Room, User};
-    use campfire_kit::{Ctx, Error, Result, StatusCode, format};
-    use campfire_views::autocompletable;
-    use rusqlite::types::Value;
-
     use crate::app::AppCtx;
     use crate::concerns::{self, Before, cast_integer};
-    use crate::controllers::presenters::pagination::Page;
-    use crate::controllers::presenters::view_context::Layout;
-    use crate::controllers::presenters;
-
-    /// `set_page_and_extract_portion_from find_autocompletable_users.with_attached_avatar.ordered, per_page: 20`
+    use crate::controllers::presenters::{self, page::db_error, pagination::Page};
+    use campfire_db::{Room, autocomplete_users};
+    use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format};
     pub async fn index(c: &mut Ctx) -> Result {
         concerns::before_actions(c, Before::default()).await?;
-        let user_id = concerns::require_current_user(c)?.id;
-
-        // `params[:room_id].present? ? Current.user.rooms.find(params[:room_id]).users : User.all`
-        let room_id = match c.params.get("room_id").filter(|param| param.is_present()) {
-            Some(param) => {
-                let id = param.as_str().and_then(cast_integer).ok_or(Error::NotFound)?;
-                let room = c.app().db.read(move |conn| Room::find_for_user(conn, user_id, id)).await.map_err(Error::internal)?;
-                Some(room.ok_or(Error::NotFound)?.id)
-            }
-            None => None,
+        let viewer = concerns::require_current_user(c)?.id;
+        let room_id = if let Some(raw) = c.param("room_id").filter(|p| p.is_present()) {
+            let id = raw
+                .to_s()
+                .and_then(|s| cast_integer(&s))
+                .ok_or(Error::NotFound)?;
+            Some(
+                c.app()
+                    .db
+                    .read(move |conn| Room::find_for_user(conn, viewer, id))
+                    .await
+                    .map_err(db_error)?
+                    .ok_or(Error::NotFound)?
+                    .id,
+            )
+        } else {
+            None
         };
-        // The rich text editor's mentions prompt filters with `filter`, the autocomplete inputs with `query`
-        let query = [c.params.get("filter"), c.params.get("query")]
-            .into_iter()
-            .flatten()
-            .find(|param| param.is_present())
-            .and_then(|param| param.to_s());
-
-        let users = c.app().db.read(move |conn| autocompletable_users(conn, room_id, query.as_deref())).await.map_err(Error::internal)?;
-        let page = Page::new(c.param_str("page"), users.len() as i64, &[20]);
-        let secrets = c.app().secrets.clone();
-        let users: Vec<_> = page.records(&users).iter().map(|user| presenters::accounts::mention_user(&secrets, user)).collect();
-
-        let format = c.respond_to(&[&format::HTML, &format::JSON])?;
+        let query = c
+            .param("query")
+            .filter(|p| p.is_present())
+            .and_then(Param::to_s);
+        let counted = query.clone();
+        let count = c
+            .app()
+            .db
+            .read(move |conn| autocomplete_users::count(conn, room_id, counted.as_deref()))
+            .await
+            .map_err(db_error)?;
+        let page = Page::new(c.param_str("page"), count, &[20]);
+        let offset = page.offset();
+        let limit = page.limit();
+        let (records, unique) = c
+            .app()
+            .db
+            .read(move |conn| {
+                autocomplete_users::page(conn, room_id, query.as_deref(), offset, limit)
+            })
+            .await
+            .map_err(db_error)?;
+        let zone = crate::controllers::message_features::user_zone(c).await?;
+        let users = records
+            .iter()
+            .map(|u| {
+                let mut mention = presenters::accounts::mention_user(&c.app().secrets, u);
+                // User timestamps are TimeWithZone in the request's SetTimeZone scope.
+                mention.user.avatar_path = campfire_routes::fresh_user_avatar(
+                    presenters::avatar_token(&c.app().secrets, u.id),
+                    zone.to_fs(u.updated_at.jiff(), "number"),
+                );
+                mention
+            })
+            .collect::<Vec<_>>();
+        c.respond_to(&[&format::JSON])?;
         page.apply_headers(c);
-        if *format == format::JSON {
-            let body = autocompletable::users_index_json(&users, &c.url_for(""));
-            Ok(c.render_as(StatusCode::OK, "application/json; charset=utf-8", body))
-        } else {
-            // `render layout: false`: <lexxy-prompt-item> elements for the mentions prompt
-            let layout = Layout::load(c).await?;
-            let html = layout.render(c, |ctx| autocompletable::UsersIndex { ctx, users }.render())?;
-            Ok(c.render(StatusCode::OK, &format::HTML, html))
-        }
-    }
-
-    /// `users_scope.active[.filtered_by(query)].ordered`
-    fn autocompletable_users(conn: &Connection, room_id: Option<i64>, query: Option<&str>) -> campfire_db::Result<Vec<User>> {
-        let mut sql = String::from(r#"SELECT "users".* FROM "users""#);
-        let mut values = Vec::new();
-        if let Some(room_id) = room_id {
-            sql.push_str(r#" INNER JOIN "memberships" ON "users"."id" = "memberships"."user_id" WHERE "memberships"."room_id" = ? AND"#);
-            values.push(Value::Integer(room_id));
-        } else {
-            sql.push_str(" WHERE");
-        }
-        sql.push_str(r#" "users"."status" = 0"#);
-        if let Some(query) = query {
-            sql.push_str(" AND (name like ?)");
-            values.push(Value::Text(format!("%{query}%")));
-        }
-        sql.push_str(" ORDER BY LOWER(name)");
-        presenters::accounts::query_users(conn, &sql, rusqlite::params_from_iter(values))
+        let body = campfire_views::autocompletable::markdown_users_index_json(
+            &users,
+            &unique,
+            &c.url_for(""),
+        );
+        Ok(c.render(StatusCode::OK, &format::JSON, body))
     }
 }

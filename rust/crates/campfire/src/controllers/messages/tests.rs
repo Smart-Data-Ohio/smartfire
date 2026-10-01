@@ -98,7 +98,7 @@ async fn index_pages_with_conditional_gets() {
     assert!(!reply.text().contains("<html"), "layout false");
     let etag = reply.header("etag").unwrap().to_string();
     assert!(etag.starts_with("W/\""));
-    assert!(reply.header("last-modified").is_some());
+    assert!(reply.header("last-modified").is_none(), "Rails uses only the ETag");
 
     let cached = david
         .send(Req::new(Method::GET, &format!("/rooms/{ALL_TALK}/messages?before={}", messages[50].id)).header("if-none-match", &etag))
@@ -194,7 +194,9 @@ async fn show_edit_update_and_destroy() {
 
     let edit = david.get(&format!("{path}/edit")).await;
     assert_eq!(edit.status, StatusCode::OK);
-    assert!(edit.text().contains("<lexxy-editor"));
+    assert!(edit.text().contains("class=\"message-edit\""));
+    assert!(edit.text().contains("name=\"message[markdown_source]\""));
+    assert!(edit.text().contains("name=\"message[drive_file_ids][]\""));
 
     let updated = david.write(Req::new(Method::PATCH, &path).form(&[("message[body]", "<p>Edited</p>")])).await;
     assert_eq!(updated.status, StatusCode::FOUND, "{}", updated.text());
@@ -203,7 +205,10 @@ async fn show_edit_update_and_destroy() {
     assert_eq!(body.as_deref(), Some("<p>Edited</p>"));
 
     let json = david.write(Req::new(Method::PATCH, &format!("{path}.json")).form(&[("message[body]", "x")])).await;
-    assert_eq!(json.status, StatusCode::INTERNAL_SERVER_ERROR, "no messages/show.json");
+    assert_eq!(json.status, StatusCode::OK, "{}", json.text());
+    assert_eq!(json.json()["id"], message.id);
+    assert_eq!(json.json()["body"]["plain_text"], "x");
+    assert_eq!(json.json()["creator"]["id"], DAVID);
 
     let destroyed = david.write(Req::new(Method::DELETE, &path).header("accept", TURBO_STREAM_ACCEPT)).await;
     assert_eq!(destroyed.status, StatusCode::OK);
@@ -249,7 +254,9 @@ async fn a_forged_host_stays_out_of_the_caches() {
     assert!(!honest.text().contains("evil.example"), "{}", honest.text());
 
     let mut david = app.david();
-    let room = format!("/rooms/{ALL_TALK}");
+    // WS8br's shell uses the authorized empty-list placeholder. Exercise the same owner
+    // fragments through its real pagination endpoint, retaining every forged-host assertion.
+    let room = format!("/rooms/{ALL_TALK}/messages");
     assert_eq!(david.send(forged(&room)).await.status, StatusCode::OK);
     let honest = app.david().get(&room).await;
     assert_eq!(honest.status, StatusCode::OK);
@@ -414,7 +421,7 @@ async fn ws11_reply_token_unknown_message_is_forbidden() {
 
 #[tokio::test]
 async fn ws11_agent_backed_bots_never_receive_legacy_webhook_jobs() {
-    let app = TestApp::boot().await.expect("build the default parity seed");
+    let app = TestApp::boot().await.expect("build the default parity seed").without_job_runner().await;
     app.db().write(|tx| {
         tx.conn().execute("UPDATE rooms SET type='Rooms::Direct' WHERE id=?", [ALL_TALK])?;
         let message = Message::create(tx, campfire_db::NewMessage { room_id: ALL_TALK, creator_id: DAVID, body: Some("DM".into()), ..Default::default() })?;

@@ -1,6 +1,7 @@
 //! Ports of `reference/test/models/**`, run against the reference fixtures.
 
 mod account_test;
+mod activity_item_test;
 mod agent_posting_test;
 mod agent_budget_cases_test;
 mod agent_peer_callbacks_test;
@@ -39,11 +40,28 @@ mod audit_log_test;
 mod callbacks_test;
 mod calendar_dispatch_test;
 mod channel_thread_test;
+mod calendar_event_test;
 mod differential_test;
 mod direct_room_test;
 mod first_run_test;
 mod forwarder_test;
 mod fixtures_test;
+mod huddle_grant_test;
+mod huddle_grant_sequences_test;
+mod huddle_revocation_test;
+mod huddle_notices_test;
+mod huddle_invitations_test;
+mod huddle_invitation_sequences_test;
+mod huddle_notifier_sequences_test;
+mod huddle_domain_lifecycle_sequences_test;
+mod huddle_membership_creation_test;
+mod huddle_join_push_sequences_test;
+mod huddle_invitation_job_test;
+mod huddle_query_assertions_test;
+mod huddle_ring_policy_seam_test;
+mod huddle_ring_revocation_test;
+mod huddle_ring_generations_test;
+mod huddle_observed_matrix_test;
 mod membership_test;
 mod keyword_alert_test;
 mod ws17_review_test;
@@ -78,6 +96,7 @@ mod session_test;
 mod two_factor_test;
 mod two_factor_rollback_test;
 mod user_test;
+mod user_star_test;
 mod user_device_test;
 
 use std::sync::Arc;
@@ -102,6 +121,10 @@ impl TestDb {
 
     /// Fixtures loaded with `clock` and BCrypt cost `bcrypt_cost` for their password digests.
     pub fn with_clock(clock: TestClock, bcrypt_cost: u32) -> Self {
+        Self::with_clock_and_origin(clock, bcrypt_cost, "http://example.com")
+    }
+
+    pub fn with_clock_and_origin(clock: TestClock, bcrypt_cost: u32, origin: &str) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let sink = RecordingSink::new();
         let env = Env {
@@ -109,6 +132,7 @@ impl TestDb {
             sink: Arc::new(sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
+            default_url_origin: origin.into(),
             ..Default::default()
         };
         let mut config = Config::new(dir.path().join("test.sqlite3"));
@@ -166,7 +190,7 @@ impl TestDb {
             sink: Arc::new(self.sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
-            ..Default::default()
+            ..Env::default()
         };
         let mut config = Config::new(self.db.path());
         config.readers = 1;

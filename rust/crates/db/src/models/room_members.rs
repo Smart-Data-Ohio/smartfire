@@ -1,8 +1,6 @@
 //! Read projection for `Rooms::MembersController`. Agent behavior remains in WS11;
 //! human status/presence uses the flagged, imported WS17 readers.
-use std::collections::HashSet;
-
-use rusqlite::{Connection, params};
+use rusqlite::Connection;
 
 use super::{
     user_status_settings::UserStatusSettings,
@@ -29,11 +27,7 @@ pub fn for_room(conn: &Connection, room: i64, viewer: i64, now: Timestamp) -> Re
     let ids: Vec<_> = users.iter().map(|user| user.id).collect();
     let mut settings = UserStatusSettings::for_ids(conn, &ids)?;
     let leases = WorkspacePresenceLease::presence_by_user_id(conn, &ids, now)?;
-    // FLAGGED WS8b User::Starring reader seam (app/models/user/starring.rb).
-    // Viewer qualification belongs in this query, including when the viewer is a member.
-    let stars: HashSet<i64> = query_all(conn,
-        "SELECT s.starred_user_id FROM user_stars s JOIN memberships m ON m.user_id=s.starred_user_id WHERE s.user_id=? AND m.room_id=?",
-        params![viewer,room], |row| row.get(0))?.into_iter().collect();
+    let stars = User::find(conn, viewer)?.starred_ids_among(conn, &ids)?;
     users
         .into_iter()
         .map(|user| {

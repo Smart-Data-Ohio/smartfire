@@ -1,0 +1,220 @@
+{
+  "seed": {
+    "rooms": [
+      {
+        "id": 186869642,
+        "name": "Jason",
+        "kind": "dm",
+        "url": "/rooms/186869642",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 699448325,
+        "name": "Kevin",
+        "kind": "dm",
+        "url": "/rooms/699448325",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 699448329,
+        "name": "Jason, JZ, and Kevin",
+        "kind": "group",
+        "url": "/rooms/699448329",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 104393281,
+        "name": "All Pets",
+        "kind": "channel",
+        "url": "/rooms/104393281",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 486777696,
+        "name": "All Talk",
+        "kind": "channel",
+        "url": "/rooms/486777696",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 699448328,
+        "name": "Broken",
+        "kind": "channel",
+        "url": "/rooms/699448328",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 654632876,
+        "name": "Designers",
+        "kind": "channel",
+        "url": "/rooms/654632876",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": true
+      },
+      {
+        "id": 201306877,
+        "name": "HQ",
+        "kind": "channel",
+        "url": "/rooms/201306877",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 699448326,
+        "name": "Quiet Corner",
+        "kind": "channel",
+        "url": "/rooms/699448326",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 699448332,
+        "name": "Release board",
+        "kind": "board",
+        "url": "/rooms/699448332",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 699448331,
+        "name": "Release stage",
+        "kind": "stage",
+        "url": "/rooms/699448331",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      },
+      {
+        "id": 699448330,
+        "name": "Team lounge",
+        "kind": "voice",
+        "url": "/rooms/699448330",
+        "icon_name": null,
+        "unread": false,
+        "muted": false,
+        "favorite": false
+      }
+    ],
+    "people": [
+      {
+        "id": 773523953,
+        "name": "JZ",
+        "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000",
+        "dm_url": null
+      },
+      {
+        "id": 149087659,
+        "name": "Jason",
+        "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000",
+        "dm_url": "/rooms/186869642"
+      },
+      {
+        "id": 712064548,
+        "name": "Kevin",
+        "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000",
+        "dm_url": "/rooms/699448325"
+      },
+      {
+        "id": 773523958,
+        "name": "Lonely Lou",
+        "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000",
+        "dm_url": null
+      },
+      {
+        "id": 773523959,
+        "name": "New member",
+        "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000",
+        "dm_url": null
+      }
+    ],
+    "threads": [
+      {
+        "id": 8,
+        "name": "Pull request review",
+        "room_name": "Designers",
+        "room_id": 654632876,
+        "url": "http://campfire.test/rooms/654632876?thread=8"
+      },
+      {
+        "id": 7,
+        "name": "Done work",
+        "room_name": "Release board",
+        "room_id": 699448332,
+        "url": "http://campfire.test/rooms/699448332?thread=7"
+      },
+      {
+        "id": 6,
+        "name": "Blocked work",
+        "room_name": "Release board",
+        "room_id": 699448332,
+        "url": "http://campfire.test/rooms/699448332?thread=6"
+      },
+      {
+        "id": 5,
+        "name": "In progress work",
+        "room_name": "Release board",
+        "room_id": 699448332,
+        "url": "http://campfire.test/rooms/699448332?thread=5"
+      },
+      {
+        "id": 4,
+        "name": "Planned work",
+        "room_name": "Release board",
+        "room_id": 699448332,
+        "url": "http://campfire.test/rooms/699448332?thread=4"
+      },
+      {
+        "id": 3,
+        "name": "Locked discussion",
+        "room_name": "Designers",
+        "room_id": 654632876,
+        "url": "http://campfire.test/rooms/654632876?thread=3"
+      },
+      {
+        "id": 2,
+        "name": "Completed discussion",
+        "room_name": "Designers",
+        "room_id": 654632876,
+        "url": "http://campfire.test/rooms/654632876?thread=2"
+      },
+      {
+        "id": 1,
+        "name": "Launch review",
+        "room_name": "Designers",
+        "room_id": 654632876,
+        "url": "http://campfire.test/rooms/654632876?thread=1"
+      }
+    ]
+  },
+  "seed_body": "{\"rooms\":[{\"id\":186869642,\"name\":\"Jason\",\"kind\":\"dm\",\"url\":\"/rooms/186869642\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448325,\"name\":\"Kevin\",\"kind\":\"dm\",\"url\":\"/rooms/699448325\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448329,\"name\":\"Jason, JZ, and Kevin\",\"kind\":\"group\",\"url\":\"/rooms/699448329\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":104393281,\"name\":\"All Pets\",\"kind\":\"channel\",\"url\":\"/rooms/104393281\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":486777696,\"name\":\"All Talk\",\"kind\":\"channel\",\"url\":\"/rooms/486777696\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448328,\"name\":\"Broken\",\"kind\":\"channel\",\"url\":\"/rooms/699448328\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":654632876,\"name\":\"Designers\",\"kind\":\"channel\",\"url\":\"/rooms/654632876\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":true},{\"id\":201306877,\"name\":\"HQ\",\"kind\":\"channel\",\"url\":\"/rooms/201306877\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448326,\"name\":\"Quiet Corner\",\"kind\":\"channel\",\"url\":\"/rooms/699448326\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448332,\"name\":\"Release board\",\"kind\":\"board\",\"url\":\"/rooms/699448332\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448331,\"name\":\"Release stage\",\"kind\":\"stage\",\"url\":\"/rooms/699448331\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448330,\"name\":\"Team lounge\",\"kind\":\"voice\",\"url\":\"/rooms/699448330\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false}],\"people\":[{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"dm_url\":null},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"dm_url\":\"/rooms/186869642\"},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"dm_url\":\"/rooms/699448325\"},{\"id\":773523958,\"name\":\"Lonely Lou\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000\",\"dm_url\":null},{\"id\":773523959,\"name\":\"New member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\",\"dm_url\":null}],\"threads\":[{\"id\":8,\"name\":\"Pull request review\",\"room_name\":\"Designers\",\"room_id\":654632876,\"url\":\"http://campfire.test/rooms/654632876?thread=8\"},{\"id\":7,\"name\":\"Done work\",\"room_name\":\"Release board\",\"room_id\":699448332,\"url\":\"http://campfire.test/rooms/699448332?thread=7\"},{\"id\":6,\"name\":\"Blocked work\",\"room_name\":\"Release board\",\"room_id\":699448332,\"url\":\"http://campfire.test/rooms/699448332?thread=6\"},{\"id\":5,\"name\":\"In progress work\",\"room_name\":\"Release board\",\"room_id\":699448332,\"url\":\"http://campfire.test/rooms/699448332?thread=5\"},{\"id\":4,\"name\":\"Planned work\",\"room_name\":\"Release board\",\"room_id\":699448332,\"url\":\"http://campfire.test/rooms/699448332?thread=4\"},{\"id\":3,\"name\":\"Locked discussion\",\"room_name\":\"Designers\",\"room_id\":654632876,\"url\":\"http://campfire.test/rooms/654632876?thread=3\"},{\"id\":2,\"name\":\"Completed discussion\",\"room_name\":\"Designers\",\"room_id\":654632876,\"url\":\"http://campfire.test/rooms/654632876?thread=2\"},{\"id\":1,\"name\":\"Launch review\",\"room_name\":\"Designers\",\"room_id\":654632876,\"url\":\"http://campfire.test/rooms/654632876?thread=1\"}]}",
+  "escaped_body": "{\"rooms\":[{\"id\":186869642,\"name\":\"Jason\",\"kind\":\"dm\",\"url\":\"/rooms/186869642\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448325,\"name\":\"Kevin\",\"kind\":\"dm\",\"url\":\"/rooms/699448325\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448329,\"name\":\"Jason, JZ, and Kevin\",\"kind\":\"group\",\"url\":\"/rooms/699448329\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":104393281,\"name\":\"All Pets\",\"kind\":\"channel\",\"url\":\"/rooms/104393281\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448328,\"name\":\"Broken\",\"kind\":\"channel\",\"url\":\"/rooms/699448328\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":654632876,\"name\":\"Designers\",\"kind\":\"channel\",\"url\":\"/rooms/654632876\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":true},{\"id\":486777696,\"name\":\"Escaped <&>  \",\"kind\":\"channel\",\"url\":\"/rooms/486777696\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":201306877,\"name\":\"HQ\",\"kind\":\"channel\",\"url\":\"/rooms/201306877\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448326,\"name\":\"Quiet Corner\",\"kind\":\"channel\",\"url\":\"/rooms/699448326\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448332,\"name\":\"Release board\",\"kind\":\"board\",\"url\":\"/rooms/699448332\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448331,\"name\":\"Release stage\",\"kind\":\"stage\",\"url\":\"/rooms/699448331\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false},{\"id\":699448330,\"name\":\"Team lounge\",\"kind\":\"voice\",\"url\":\"/rooms/699448330\",\"icon_name\":null,\"unread\":false,\"muted\":false,\"favorite\":false}],\"people\":[{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"dm_url\":null},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"dm_url\":\"/rooms/186869642\"},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"dm_url\":\"/rooms/699448325\"},{\"id\":773523958,\"name\":\"Lonely Lou\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203160000\",\"dm_url\":null},{\"id\":773523959,\"name\":\"New member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\",\"dm_url\":null}],\"threads\":[{\"id\":8,\"name\":\"Pull request review\",\"room_name\":\"Designers\",\"room_id\":654632876,\"url\":\"http://campfire.test/rooms/654632876?thread=8\"},{\"id\":7,\"name\":\"Done work\",\"room_name\":\"Release board\",\"room_id\":699448332,\"url\":\"http://campfire.test/rooms/699448332?thread=7\"},{\"id\":6,\"name\":\"Blocked work\",\"room_name\":\"Release board\",\"room_id\":699448332,\"url\":\"http://campfire.test/rooms/699448332?thread=6\"},{\"id\":5,\"name\":\"In progress work\",\"room_name\":\"Release board\",\"room_id\":699448332,\"url\":\"http://campfire.test/rooms/699448332?thread=5\"},{\"id\":4,\"name\":\"Planned work\",\"room_name\":\"Release board\",\"room_id\":699448332,\"url\":\"http://campfire.test/rooms/699448332?thread=4\"},{\"id\":3,\"name\":\"Locked discussion\",\"room_name\":\"Designers\",\"room_id\":654632876,\"url\":\"http://campfire.test/rooms/654632876?thread=3\"},{\"id\":2,\"name\":\"Completed discussion\",\"room_name\":\"Designers\",\"room_id\":654632876,\"url\":\"http://campfire.test/rooms/654632876?thread=2\"},{\"id\":1,\"name\":\"Launch review\",\"room_name\":\"Designers\",\"room_id\":654632876,\"url\":\"http://campfire.test/rooms/654632876?thread=1\"}]}",
+  "anonymous_status": 302,
+  "bot_status": 403
+}

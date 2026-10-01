@@ -1,0 +1,988 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-03-02T16:00:00Z",
+  "cases": [
+    {
+      "name": "default",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "manual_dnd",
+      "attributes": {
+        "theme": "light",
+        "text_size": "large",
+        "time_zone": "Pacific Time (US & Canada)",
+        "time_zone_explicit": false,
+        "dnd_enabled": true,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "<meta name=\"notification-dnd\" content=\"muted\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\" content=\"Pacific Time (US &amp; Canada)\">"
+    },
+    {
+      "name": "dnd_presence",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "dnd",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "<meta name=\"notification-dnd\" content=\"muted\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "expired_dnd",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": true,
+        "dnd_until": "2026-03-02T15:59:59Z",
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "boundary_dnd",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": true,
+        "dnd_until": "2026-03-02T16:00:00Z",
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "running_dnd",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": true,
+        "dnd_until": "2026-03-02T16:00:01Z",
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "<meta name=\"notification-dnd\" content=\"muted\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "quiet_hours",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": "UTC",
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": true,
+        "quiet_hours_start_minute": 1320,
+        "quiet_hours_end_minute": 420,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "<meta name=\"quiet-hours\" content=\"1320-420\"><meta name=\"quiet-hours-zone\" content=\"UTC\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\" content=\"UTC\">"
+    },
+    {
+      "name": "quiet_hours_off",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": 1320,
+        "quiet_hours_end_minute": 420,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "quiet_hours_incomplete",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": true,
+        "quiet_hours_start_minute": 0,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "quiet_hours_equal",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": true,
+        "quiet_hours_start_minute": 0,
+        "quiet_hours_end_minute": 0,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "<meta name=\"quiet-hours\" content=\"0-0\"><meta name=\"quiet-hours-zone\" content=\"UTC\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "quiet_hours_zone_default",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": true,
+        "quiet_hours_start_minute": 60,
+        "quiet_hours_end_minute": 120,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "<meta name=\"quiet-hours\" content=\"60-120\"><meta name=\"quiet-hours-zone\" content=\"UTC\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "meeting_current",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": true,
+        "meeting_dnd_enabled": true,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "busy": [
+          [
+            "2026-03-02T15:55:00Z",
+            "2026-03-02T16:55:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "<meta name=\"meeting-quiet\" content=\"1772466900-1772470500\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "meeting_future",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": true,
+        "meeting_dnd_enabled": true,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "busy": [
+          [
+            "2026-03-02T17:00:00Z",
+            "2026-03-02T18:00:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "<meta name=\"meeting-quiet\" content=\"1772470800-1772474400\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "meeting_empty",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": true,
+        "meeting_dnd_enabled": true,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "busy": []
+      },
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "meeting_missing",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": true,
+        "meeting_dnd_enabled": true,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "meeting_status_off",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": true,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "busy": [
+          [
+            "2026-03-02T15:55:00Z",
+            "2026-03-02T16:55:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "meeting_quiet_off",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": true,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "busy": [
+          [
+            "2026-03-02T15:55:00Z",
+            "2026-03-02T16:55:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "manual_ooo",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": "2026-03-03T16:00:00Z",
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "<meta name=\"ooo-quiet\" content=\"0-1772553600\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "expired_ooo",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": "2026-03-02T15:59:59Z",
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "boundary_ooo",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": "2026-03-02T16:00:00Z",
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "calendar_ooo_future",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": true,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "ooo": [
+          [
+            "2026-03-02T17:00:00Z",
+            "2026-03-02T18:00:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "<meta name=\"ooo-quiet\" content=\"1772470800-1772474400\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "calendar_ooo_off",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "ooo": [
+          [
+            "2026-03-02T17:00:00Z",
+            "2026-03-02T18:00:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "ooo_notifications_kept",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": "2026-03-03T16:00:00Z",
+        "ooo_calendar_enabled": true,
+        "ooo_notify_enabled": true
+      },
+      "cache": {
+        "ooo": [
+          [
+            "2026-03-02T17:00:00Z",
+            "2026-03-02T18:00:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "ooo_manual_and_calendar",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": "2026-03-03T16:00:00Z",
+        "ooo_calendar_enabled": true,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "ooo": [
+          [
+            "2026-03-02T15:55:00Z",
+            "2026-03-02T16:55:00Z"
+          ],
+          [
+            "2026-03-02T17:00:00Z",
+            "2026-03-02T18:00:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "<meta name=\"ooo-quiet\" content=\"0-1772553600,1772466900-1772470500,1772470800-1772474400\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "cache_order_and_offsets",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": true,
+        "meeting_dnd_enabled": true,
+        "ooo_until": null,
+        "ooo_calendar_enabled": true,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "busy": [
+          [
+            "2026-03-02T18:00:00.999999+02:00",
+            "2026-03-02T19:00:00+02:00"
+          ],
+          [
+            "2026-03-02T17:00:00Z",
+            "2026-03-02T18:00:00Z"
+          ],
+          [
+            "2026-03-02T15:55:00Z",
+            "2026-03-02T16:55:00Z"
+          ],
+          [
+            "2026-03-02T15:55:00Z",
+            "2026-03-02T16:55:00Z"
+          ]
+        ],
+        "ooo": [
+          [
+            "2026-03-02T17:00:00Z",
+            "2026-03-02T18:00:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "<meta name=\"meeting-quiet\" content=\"1772467200-1772470800,1772470800-1772474400,1772466900-1772470500,1772466900-1772470500\"><meta name=\"ooo-quiet\" content=\"1772470800-1772474400\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "cache_malformed_pairs",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": true,
+        "meeting_dnd_enabled": true,
+        "ooo_until": null,
+        "ooo_calendar_enabled": true,
+        "ooo_notify_enabled": false
+      },
+      "cache": {
+        "busy": [
+          null,
+          "wrong",
+          [],
+          [
+            "wrong",
+            "2026-03-02T16:00:00Z"
+          ],
+          [
+            "2026-03-02T16:00:00Z"
+          ],
+          [
+            "2026-03-02T15:55:00Z",
+            "2026-03-02T16:55:00Z"
+          ],
+          [
+            "2026-03-02T16:00:00Z",
+            "2026-03-02T15:59:59Z",
+            "ignored"
+          ]
+        ],
+        "ooo": [
+          null,
+          [],
+          [
+            "2026-03-02T17:00:00Z",
+            "2026-03-02T18:00:00Z"
+          ]
+        ]
+      },
+      "google": null,
+      "sound_meta": "<meta name=\"meeting-quiet\" content=\"1772466900-1772470500,1772467200-1772467199\"><meta name=\"ooo-quiet\" content=\"1772470800-1772474400\">",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "drive_missing",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": null,
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "drive_calendar_only",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": {
+        "scopes": "https://www.googleapis.com/auth/calendar.events"
+      },
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "drive_current_scope",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": {
+        "scopes": "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file"
+      },
+      "sound_meta": "",
+      "drive_meta": "<meta name=\"google-drive-previews\" content=\"enabled\">",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "drive_retired_scope",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": {
+        "scopes": "https://www.googleapis.com/auth/drive.metadata.readonly"
+      },
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "drive_disconnected",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": {
+        "scopes": "https://www.googleapis.com/auth/drive.file",
+        "reason": "Rejected by Google"
+      },
+      "sound_meta": "",
+      "drive_meta": "<meta name=\"google-drive-previews\" content=\"enabled\">",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "drive_ascii_separators",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": {
+        "scopes": "openid\thttps://www.googleapis.com/auth/drive.file\nemail"
+      },
+      "sound_meta": "",
+      "drive_meta": "<meta name=\"google-drive-previews\" content=\"enabled\">",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "drive_wrong_case",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": {
+        "scopes": "HTTPS://WWW.GOOGLEAPIS.COM/AUTH/DRIVE.FILE"
+      },
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    },
+    {
+      "name": "drive_unicode_separator",
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "dnd_enabled": false,
+        "dnd_until": null,
+        "presence_setting": "auto",
+        "quiet_hours_enabled": false,
+        "quiet_hours_start_minute": null,
+        "quiet_hours_end_minute": null,
+        "meeting_status_enabled": false,
+        "meeting_dnd_enabled": false,
+        "ooo_until": null,
+        "ooo_calendar_enabled": false,
+        "ooo_notify_enabled": false
+      },
+      "cache": null,
+      "google": {
+        "scopes": "openid https://www.googleapis.com/auth/drive.file"
+      },
+      "sound_meta": "",
+      "drive_meta": "",
+      "time_zone_meta": "<meta name=\"current-user-time-zone\">"
+    }
+  ]
+}

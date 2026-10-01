@@ -50,8 +50,8 @@
         </div>
 
 {% if user.active() %}{% if !ctx.is_current_user(user.id) %}{% if let Some(status) = profile_status %}{{ self.allowance(status) }}{% endif %}{% endif %}          <div class="pad-inline-double margin-inline margin-block-start">
-            {% filter button_to(h::rooms_directs_with_user(user.id), h::attrs().class("btn btn--reversed full-width txt-large")) %}
-              {{ h::image_tag(ctx, "messages.svg", h::attrs().aria("hidden", "true").aria("label", "Ping " ~ user.name)) }}
+            {% filter button_to(h::rooms_directs_with_user(user.id), h::attrs().class("btn btn--reversed full-width txt-large").aria("label", "Message " ~ user.name)) %}
+              {{ h::image_tag(ctx, "messages.svg", h::attrs().aria("hidden", "true")) }}
 {% endfilter %}          </div>
 
 {% if ctx.can_administer() %}            <hr class="margin-block-start borderless">

@@ -155,6 +155,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         }
     }));
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
+    jobs::huddle::recover_unregistered(&db).await?;
 
     // config/puma.rb: `Membership.disconnect_all` when the server boots.
     db.write(|tx| campfire_db::Membership::disconnect_all(tx).map(|_| ()))
@@ -243,6 +244,7 @@ async fn open_database(
         sink: Arc::new(jobs),
         rich_text,
         bcrypt_cost: 12,
+        default_url_origin: config.mail.url_origin().to_owned(),
         message_reference_syncs: vec![crate::integrations::github::references::sync],
         user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
     };

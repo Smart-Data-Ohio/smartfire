@@ -121,6 +121,9 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     periodic.task(Task::new("stranded agent webhooks", Duration::from_secs(30), |app: App| async move {
         stranded_agent_webhooks(&app.db).await
     }));
+    periodic.task(Task::new("event reminders", intervals.reminders, |app: App| async move {
+        event_reminders(&app.db).await
+    }));
     periodic.task(Task::new(
         "saved item reminders",
         intervals.reminders,
@@ -170,7 +173,7 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     }));
     periodic
 }
-pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
+pub(crate) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::SavedItem::due_reminder_ids(conn, now))
@@ -181,6 +184,17 @@ pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
             .await
         {
             tracing::error!(id,%error,"Saved item reminder failed");
+        }
+    }
+    Ok(())
+}
+
+pub(super) async fn event_reminders(db: &Database) -> anyhow::Result<()> {
+    let now = db.env().now();
+    let ids = db.read(move |conn| campfire_db::CalendarEvent::due_reminder_ids(conn, now)).await?;
+    for id in ids {
+        if let Err(error) = db.write(move |tx| campfire_db::CalendarEvent::dispatch_reminder(tx, id, now)).await {
+            tracing::error!(id, %error, "Event reminder failed");
         }
     }
     Ok(())
@@ -222,9 +236,13 @@ pub fn clear_plaintext_bot_tokens_task() -> Task<App> {
 }
 
 /// `Huddle::Reconciler`'s steps, every `HUDDLE_RECONCILE_INTERVAL`, each isolated from the
-/// others' failures. None is ported yet.
-pub fn huddle_reconciler(_interval: Duration) -> Periodic<App> {
-    Periodic::new("Huddle reconciliation")
+/// others' failures: overdue invitations, stale presenters, then due LiveKit cleanups.
+pub fn huddle_reconciler(interval: Duration) -> Periodic<App> {
+    let mut periodic = Periodic::new("Huddle reconciliation");
+    periodic.task(Task::new("huddle reconciliation", interval, |app: App| async move {
+        super::huddle::reconcile(&app.db, crate::huddle::RoomService::new(crate::huddle::Config::from_env())).await.map(drop)
+    }));
+    periodic
 }
 
 /// `Bots::ClearPlaintextTokens.run!`: for every user that still has a plaintext `bot_token`, the

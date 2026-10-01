@@ -1,0 +1,251 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "kind": "logo",
+      "fixture": "clean.svg",
+      "filename": "clean.svg ",
+      "name": "ws8br2_logo_clean_svg_0",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "clean.svg ",
+      "sanitized": "clean.svg",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "logo",
+      "fixture": "clean.svg",
+      "filename": "clean.svg/",
+      "name": "ws8br2_logo_clean_svg_1",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "clean.svg/",
+      "sanitized": "clean.svg-",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 0
+    },
+    {
+      "kind": "logo",
+      "fixture": "square_64.png",
+      "filename": "square_64.png ",
+      "name": "ws8br2_logo_square_64_png_0",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "square_64.png ",
+      "sanitized": "square_64.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 0
+    },
+    {
+      "kind": "logo",
+      "fixture": "square_64.png",
+      "filename": "square_64.png/",
+      "name": "ws8br2_logo_square_64_png_1",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "square_64.png/",
+      "sanitized": "square_64.png-",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 0
+    },
+    {
+      "kind": "logo",
+      "fixture": "namespaced.svg",
+      "filename": "namespaced.svg ",
+      "name": "ws8br2_logo_namespaced_svg_0",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "namespaced.svg ",
+      "sanitized": "namespaced.svg",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 0
+    },
+    {
+      "kind": "icon",
+      "fixture": "clean.svg",
+      "filename": "clean.svg ",
+      "name": "ws8br2_icon_clean_svg_0",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "clean.svg ",
+      "sanitized": "clean.svg",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "icon",
+      "fixture": "clean.svg",
+      "filename": "clean.svg/",
+      "name": "ws8br2_icon_clean_svg_1",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "clean.svg/",
+      "sanitized": "clean.svg-",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "icon",
+      "fixture": "square_64.png",
+      "filename": "square_64.png ",
+      "name": "ws8br2_icon_square_64_png_0",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "square_64.png ",
+      "sanitized": "square_64.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "icon",
+      "fixture": "square_64.png",
+      "filename": "square_64.png/",
+      "name": "ws8br2_icon_square_64_png_1",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "square_64.png/",
+      "sanitized": "square_64.png-",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "icon",
+      "fixture": "namespaced.svg",
+      "filename": "namespaced.svg ",
+      "name": "ws8br2_icon_namespaced_svg_0",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "namespaced.svg ",
+      "sanitized": "namespaced.svg",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    }
+  ],
+  "null_analysis": [
+    {
+      "fail_analysis": false,
+      "fail_audit": false,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "blob_reused": true,
+      "raw_filename": "notes.txt ",
+      "sanitized": "notes.txt",
+      "content_type": "text/plain",
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      },
+      "analysis_jobs": 0,
+      "audits": [
+        {
+          "action": "account.settings.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Account",
+          "target_id": 873240054,
+          "target_label": "37signals",
+          "details": {
+            "logo": {
+              "before": false,
+              "after": true
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-attachment-fixture"
+        }
+      ]
+    },
+    {
+      "fail_analysis": true,
+      "fail_audit": false,
+      "status": 500,
+      "location": null,
+      "blob_reused": true,
+      "raw_filename": "notes.txt ",
+      "sanitized": "notes.txt",
+      "content_type": "text/plain",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 0,
+      "audits": []
+    },
+    {
+      "fail_analysis": false,
+      "fail_audit": true,
+      "status": 500,
+      "location": null,
+      "blob_reused": true,
+      "raw_filename": "notes.txt ",
+      "sanitized": "notes.txt",
+      "content_type": "text/plain",
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      },
+      "analysis_jobs": 0,
+      "audits": []
+    }
+  ]
+}

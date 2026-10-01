@@ -1,0 +1,22 @@
+<article id="saved_item_{{ item.id }}" class="saved-item saved-item--{{ item.status_class() }}">
+  <div class="saved-item__meta">
+    <span class="saved-item__kind">{% if item.done() %}Done{% else %}In progress{% endif %}</span>
+    {{ item.created(ctx) }}
+  </div>
+
+  <div class="saved-item__content">
+    <h2 class="saved-item__title">{{ item.room_name }}</h2>
+    <p class="saved-item__author">{{ item.author_name }}</p>
+    <p class="saved-item__body">{{ item.body }}</p>
+{% if item.remind_at.is_some() %}      <p class="saved-item__reminder">
+{% if item.reminded_at.is_some() %}          Reminded {{ item.reminder(ctx) }}.
+{% else %}          Reminds {{ item.reminder(ctx) }}.
+{% endif %}      </p>
+{% endif %}  </div>
+
+  <div class="saved-item__actions">
+    {{ h::link_to_text("Open", ctx.url(&item.message_path).as_str(), h::attrs().class("btn btn--primary")) }}
+      {{ item.status_button(status_filter) }}
+    {{ item.remove_button(status_filter) }}
+  </div>
+</article>{{ "\n" }}
