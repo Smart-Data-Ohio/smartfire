@@ -354,7 +354,7 @@ impl TestApp {
             huddle: None,
         };
         let booted = if let Some(fizzy) = fizzy {
-            crate::app::boot_with_all_services_and_fizzy(config, clock, crate::integrations::github::client::ReadClient::from_env(), crate::integrations::github::client::AppClient::new(None, None), crate::integrations::net::Network::system(), network, intervals, fizzy).await.unwrap()
+            crate::app::boot_with_integrations(config, clock, crate::app::BootIntegrations { github_read: crate::integrations::github::client::ReadClient::from_env(), github_app: crate::integrations::github::client::AppClient::new(None, None), github_network: crate::integrations::net::Network::system(), subscription_network: network, fizzy }, intervals).await.unwrap()
         } else { match github_app {
             Some(client) => crate::app::boot_with_all_services(
                 config,
