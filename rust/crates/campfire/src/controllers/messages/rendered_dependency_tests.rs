@@ -207,3 +207,164 @@ regression!(
     link_reference,
     poll_clock
 );
+
+async fn cached_message(app: &TestApp, id: i64) -> (String, String, Arc<String>) {
+    let state = app.booted.app.clone();
+    app.db()
+        .read(move |conn| {
+            let p = Presenter::new(conn, &state, None);
+            let message = Message::find(conn, id)?;
+            let helper = p.message_collection_cache_key(&message)?;
+            let key = p.message_fragment_cache_key(&message, "http://campfire.test")?;
+            let html = state
+                .fragment_cache
+                .get::<Arc<String>>(&key)
+                .expect("mounted shared fragment");
+            Ok((helper, key, html))
+        })
+        .await
+        .unwrap()
+}
+
+async fn unrelated_write(upload_icon: bool) {
+    use axum::http::Method;
+    use campfire_db::NewMessage;
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let app = TestApp::boot_with_test_clock(clock.clone()).await.unwrap();
+    let id = app
+        .db()
+        .write(|tx| {
+            let m = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("Stable fragment :github:".into()),
+                    client_message_id: Some("cache-stability".into()),
+                    ..Default::default()
+                },
+            )?;
+            campfire_db::Boost::create(tx, m.id, JASON, "👍")?;
+            Ok(m.id)
+        })
+        .await
+        .unwrap();
+    let mut viewer = app.david();
+    for path in [
+        format!("/rooms/{ALL_TALK}"),
+        format!("/rooms/{ALL_TALK}/messages"),
+    ] {
+        assert_eq!(viewer.get(&path).await.status, StatusCode::OK);
+    }
+    let before = cached_message(&app, id).await;
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/cache-stability.json"
+    ))
+    .unwrap();
+    let name = if upload_icon {
+        "unused_icon_upload"
+    } else {
+        "unrelated_post"
+    };
+    let expected = oracle["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["name"] == name)
+        .unwrap();
+    assert_eq!(
+        before.0,
+        expected["before"]["key"].as_str().unwrap(),
+        "pinned Rails helper key"
+    );
+    assert_eq!(
+        before.2.as_str(),
+        expected["before"]["html"].as_str().unwrap(),
+        "pinned Rails partial"
+    );
+    clock.set("2026-03-02T16:00:02Z".parse().unwrap());
+    if upload_icon {
+        let svg = std::fs::read(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../vectors/workspace_icons/clean.svg"),
+        )
+        .unwrap();
+        let response = viewer
+            .write(Req::new(Method::POST, "/account/icons").multipart(
+                &[
+                    ("workspace_icon[name]", "review_unused_icon"),
+                    ("workspace_icon[title]", "Unused review icon"),
+                ],
+                ("workspace_icon[image]", "clean.svg", "image/svg+xml", &svg),
+            ))
+            .await;
+        assert_eq!(response.status, StatusCode::FOUND, "{}", response.text());
+        assert!(
+            app.db()
+                .read(|c| Ok(
+                    campfire_db::models::workspace_icon::WorkspaceIcon::find_by_name(
+                        c,
+                        "review_unused_icon"
+                    )?
+                    .is_some()
+                ))
+                .await
+                .unwrap()
+        );
+    } else {
+        let response = viewer
+            .write(
+                Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages"))
+                    .header("accept", "text/vnd.turbo-stream.html")
+                    .form(&[("message[markdown_source]", "Unrelated post")]),
+            )
+            .await;
+        assert!(
+            response.status.is_success() || response.status.is_redirection(),
+            "{} {}",
+            response.status,
+            response.text()
+        );
+        assert!(
+            app.db()
+                .read(|c| Ok(c.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM messages WHERE markdown_source='Unrelated post')",
+                    [],
+                    |r| r.get::<_, bool>(0)
+                )?))
+                .await
+                .unwrap()
+        );
+    }
+    for path in [
+        format!("/rooms/{ALL_TALK}"),
+        format!("/rooms/{ALL_TALK}/messages"),
+    ] {
+        assert_eq!(viewer.get(&path).await.status, StatusCode::OK);
+        let after = cached_message(&app, id).await;
+        assert_eq!(before.0, after.0, "Rails collection helper remains stable");
+        assert_eq!(
+            before.2.as_str(),
+            after.2.as_str(),
+            "identical rendered HTML"
+        );
+        assert_eq!(
+            before.1, after.1,
+            "unrelated writes preserve the fragment key"
+        );
+        assert!(
+            Arc::ptr_eq(&before.2, &after.2),
+            "reuse the shared allocation"
+        );
+    }
+}
+
+#[tokio::test]
+async fn unrelated_post_preserves_shared_fragment() {
+    unrelated_write(false).await;
+}
+
+#[tokio::test]
+async fn unused_icon_upload_preserves_shared_fragment() {
+    unrelated_write(true).await;
+}

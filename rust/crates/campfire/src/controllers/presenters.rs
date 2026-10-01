@@ -653,7 +653,10 @@ impl<'a> Presenter<'a> {
         };
         let Some(base) = self.cache_base_url.as_deref().filter(|_| !has_events) else { return Ok(MessageItem::View(Box::new(view()?))) };
         let mut key = self.message_fragment_cache_key(message, base)?;
-        if search { key.push_str("/show-room-icon"); }
+        if search {
+            key.push_str("/show-room-icon/");
+            key.push_str(&self.message_room_icon_cache_key(message)?);
+        }
         let html = fragment_cache::try_fetch_value(|| key, || {
             let view = view()?;
             let account = campfire_db::Account::first(self.conn)?;
