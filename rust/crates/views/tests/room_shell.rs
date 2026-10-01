@@ -37,7 +37,7 @@ fn view(row: &serde_json::Value) -> rooms::ShowView {
         scroll_to_unread_divider: row["scroll_to_unread_divider"].as_bool(),
         jump_to_unread_url: None,
         unread_divider_message_id: None,
-        unread_divider_index:None,
+        unread_divider_index: None,
         unread_count: 0,
         ooo_notice_members: vec![],
     }
@@ -98,5 +98,51 @@ fn unread_jump_controls_match_rails() {
             linked.contains(row["jump_buttons"]["link"].as_str().unwrap()),
             "off-page link bytes"
         );
+    }
+}
+
+#[test]
+fn review_pr175_real_list_renderer_overrides_fallback_once_for_each_viewer() {
+    let asset = |name: &str| campfire_assets::asset_path(name);
+    let signer = |_: &[&str]| String::new();
+    let ctx = common::context(&asset, &signer);
+    let mut show = view(&fixtures()[0]);
+    show.messages = (0..8)
+        .map(|i| messages::MessageItem::Fragment {
+            client_message_id: format!("review_{i}"),
+            room_id: show.room.id,
+            html: std::sync::Arc::new(format!("<div id=\"message_review_{i}\">Message {i}</div>")),
+        })
+        .collect();
+    for (index, count) in [(Some(2), 6), (Some(6), 2), (Some(2), 6), (None, 0)] {
+        let owner = messages::RoomIndex {
+            ctx: &ctx,
+            messages: &show.messages,
+            unread_index: index,
+            unread_count: count,
+        }
+        .render()
+        .unwrap();
+        show.shell.message_list = Some(owner.clone());
+        // Fallback facts are populated as in PR177; neither can append another list or divider.
+        show.unread_divider_index = Some(1);
+        show.unread_count = 99;
+        let actual = rooms::room_message_list(&ctx, &show).to_string();
+        assert_eq!(actual, owner);
+        assert_eq!(
+            actual.matches("id=\"unread-divider\"").count(),
+            usize::from(index.is_some())
+        );
+        assert_eq!(actual.matches("id=\"message_review_").count(), 8);
+        if let Some(index) = index {
+            let start = actual.find("<div id=\"unread-divider\"").unwrap();
+            let end = start + actual[start..].find("</div>").unwrap() + 6;
+            assert!(actual[start..end].contains(&format!("data-unread-count=\"{count}\"")));
+            assert!(
+                actual[end..]
+                    .trim_start()
+                    .starts_with(&format!("<div id=\"message_review_{index}\""))
+            );
+        }
     }
 }
