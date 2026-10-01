@@ -1,39 +1,38 @@
-# WS13 timing continuation — verified slice, wider parity partial
+# WS13 — main WS13b integration and PR handoff
 
-Pushed implementation: 13dfb4a7c1b3625291208c5d0596391081a283b8. Commits: d23f2894 (inbox owner/route handoff), 04f5d30a (completed RTP sampling), 7e4f4c5a (complete-page navigation and diagnostics), 13dfb4a7 (stable browser namespace and opaque packet forwarding). The report-only commit follows. No merge of main or PR #172 occurred in this continuation. The baseline remains the previously merged main 20dc8ea3. No PR was opened; the lead will authorize that after #172 lands.
+Verified implementation: `638d746c89959d35a9f7912469ad657489680650`, pushed on `rust/ws13-huddles`; the report-only commit follows. Merge commit `fd57e46b3edde778f885af25f252b23ca263a368` merges main `b908ebc28f5b13039ce4dcca427bb1fb314b3d88` into WS13 (first parent `b542f3a0`). No stash, rebase or PR creation occurred. The lead opens the PR.
 
-## Readiness root causes and comparison
+The full workspace and all acceptance batches passed at `de7f1ba57debe5f3445e76b1ac28970a256b3412` in the fresh clone. Subsequent changes restore main's production OOO presenter availability, collapse an equivalent conditional, and limit five fixture-only helpers to test builds. Those changes leave test bodies and expectations unchanged; affected composition/OOO tests, strict clippy, locked metadata and the sealed production build pass at the verified implementation above. All eight independent invitation declarations pass directly on main's WS13b APIs. The two original inbox declarations are nonblocking and deferred to WS11-UI by the lead's ruling; their assertions remain ready to enable.
 
-**Initial device-picker presence-idle timeout:** the controller could not become idle because it never connected. Diagnostics reproduced the same ten-second guard failure with readyState complete, presence markup present but no controller and no aggregate fetch, while Chromium reported ERR_NETWORK_CHANGED on the huddle_presence_controller import and other lazy modules. A second startup had an empty sidebar frame after its request was cancelled by the same error. The media browser shared the host network namespace; Docker veth creation/removal on the shared machine invalidates Chromium requests. The existing parity HTTP forwarder documents and avoids this failure class already. This is a transport/startup failure, not Rust reporting presence readiness earlier than Rails.
+## Changes and merge decisions
 
-The unchanged original Rails device-picker declaration also fails under controlled host bridge-interface churn at its initial sign-in navigation (Designers never appears); the accompanying server-enforcement declaration passes. It passes all three unperturbed original comparisons against the same server. Waiting longer cannot revive failed lazy module imports. The repair gives real-media Chromium its own stable Docker bridge namespace, like the ordinary parity browser's existing isolated namespace. Opaque ICE/DTLS/SRTP UDP packets traverse local Unix IPC to per-peer UDP sockets bound to 127.0.0.1 and the same local LiveKit UDP 7882. Gateway TCP uses the existing Unix loopback forwarder. No provider response, track, RTP counter or frame is synthesized or rewritten. A native 35/35 diagnostic run passed during 12 controlled host veth creation/removal cycles and logged 8,089 outbound / 4,732 inbound datagrams. Independent-peer/byte-preservation tests pass, and deliberate byte corruption is rejected.
+- `rust/parity/system/ws13-domain-system.py` is deleted; the `ws13b_domain_api` cfg, its lint allowance and `WS13_WS13B_API` dispatch are removed. The ordinary browser entry always includes invitations and uses main's queued-ring API. Five formerly overlaid production files and WS13b's ring-matrix test module match main byte for byte. No WS13b model, job or service test was ported or changed.
+- Shared controller wiring (`controllers/mod.rs`, `concerns.rs`, `rooms.rs`, `rooms/room_native.rs`, `users/sidebars.rs`) retains main's authorization, audit and native room/sidebar behavior while adding configured huddle, voice and Stage navigation and room-destruction callbacks. Main's user/agent lifecycle owns revocation; the obsolete unreferenced `db/models/user/lifecycle.rs` duplicate is deleted. Domain signatures stay unchanged.
+- Shared views retain main's room/sidebar data structures and post-#163 layout/preferences/Picker adapters. The recorded complete WS13 composition remains in `views/rooms/composition_page.rs`, `views/users/sidebar_composition.rs` and their templates. The huddle navigation wrapper accounts for main's notification partial trailing newline. The full-room fixture supplies main's presenter an origin without a trailing slash. The old quote fixture supplies main's Card renderer Rails' 200-character excerpt facts; recorded HTML expectations remain unchanged. Main's native full-page goldens and WS13's 28 headers / 38 full-room pages all pass.
+- `channels/room_composition.rs` leaves unconfigured directory rows/headers with main's renderer. Configured DM callbacks use main's membership association avatar order, filtered by the original descriptor's selected members, before adding huddle controls. A new controller/Cable regression compares the avatar sequence with the unchanged Rails directory fixture; it failed before the fix and passes afterward.
+- Real DM media startup now follows the original Rails test's session order: the second participant opens the room after the first joins. An inline invitation from main had correctly covered its header Join control when both pages were opened prematurely. Delayed-session media instrumentation is installed before its real visit; it does not evaluate mediaDevices on about:blank. No media assertions, readiness signals, test concurrency or deadlines were weakened. The unchanged original Rails DM declaration passed against the same earlier project-local LiveKit process.
+- Main's `controllers/channel_threads/page_tests.rs` enqueue-count fixture reproduced its live-worker race on a clean main checkout. It now stops its own job runner before setting up the durable enqueue-count assertions. Dedupe, queue-insert failure and rollback assertions remain unchanged; production behavior is untouched. `views/tests/room_shell.rs` initializes the new optional navigation field. `ci/cargo.sh` respects `CARGO_BUILD_JOBS`, defaulting to the machine-required two.
 
-An additional adapter mismatch was corrected: goto DOMContentLoaded had returned before full page load, whereas original Selenium uses normal/readyState complete. A delayed-controller regression fails at interactive and passes at complete. That correction alone did not fix the network outage: the preserved earlier fresh sequence was 35/35, 35/35, 33/35, with the final two failures furnishing the ERR_NETWORK_CHANGED evidence. It is not counted as the final clean streak. Navigation now waits for load; the 30-second navigation, 15-second Cable, ten-second presence-idle and two-second huddle-controller deadlines remain unchanged. No fixture assertion was removed. Future failures retain readiness, controller, request and page-error diagnostics.
+WS13b and WS17 production seams are unchanged. Main owns policy and transport; retained core helper signatures are `enqueue_huddle_push(tx: &mut Tx<'_>, request: &PushRequest)` and `prepare_push(tx: &mut Tx<'_>, request: &PushRequest, policy_allowed: bool) -> Result<Option<PushDelivery>>`. No transport or domain follow-up is assigned to WS13.
 
-**Zero inbound audio before server enforcement:** the pinned Playwright 1.63 waitForFunction implementation tests predicate truthiness before awaiting it. Our async getStats predicate returned a truthy Promise; polling stopped after the first sample even when it resolved false. This was false readiness in the adapter, not an observed premature Rust frontend signal. Rails' evaluate_async_script passes the resolved boolean to its callback and its outer Ruby loop retries. `pollBrowser` now awaits every evaluate sample and retries its resolved result with the original 20-second deadline and 100 ms interval. No-byte and delayed-positive regressions both failed before the change (0/2), then passed. The original pre-revocation positive-byte assertion remains, and all original enforcement interactions run.
+## Exact deferred declarations and owners
 
-The unchanged original Rails declarations passed three consecutive two-case runs (55 assertions each) on this server. The read-only probe also observes positive native RTP byte counts immediately after Rails' original media helper. No Rails test or application change was necessary. Shared huddle, presence and Stimulus controller sources match d7c7de92 byte for byte; Rust production readiness/render/domain/transport signatures were not changed.
+| Original declaration in test/system/huddle_invitations_test.rb | Required public actions | Owner |
+| --- | --- | --- |
+| the recipient sees an incoming huddle banner and dismissing it marks the item read | GET /activity/unread_count.json; PATCH /activity/:id/read | WS11-UI, rust/ws11ui-agent-pages |
+| joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel | PATCH /activity/:id/handled | WS11-UI, rust/ws11ui-agent-pages |
 
-Both runtimes used the same project-local LiveKit 1.13.7 process, loopback signaling/admin 7880 and UDP 7882. Rust's unchanged gateway used held WS13 ports; Rails used its original 7884 gateway and 3001 Capybara listener. External IP discovery and TURN remained disabled. Native WebRTC, decoded audio/video, microphone processing, screen capture, token-refresh/full reconnects, membership/session revocation and server enforcement are exercised. No recorded responses substitute for media and no pixel work was done.
+These are the only WS13 deferrals. The public actions still return 501 on this main baseline. Set `WS13_ENABLE_INBOX_CASES=1` to run their retained complete interactions when the routes land. No inbox endpoint was implemented here. Route/controller ownership is documented in `rust/plans/ws13-inbox-route-dependencies.md`.
 
-## Exact remaining work and owner
+The title catalogue retains 548 declarations across 33 files. WS13 owns 332: 226 controller/integration declarations and 106 system declarations; 330 are assertion-covered and the two above deferred. System acceptance is 69 ordinary cases plus 35 real-media cases, with two inbox cases skipped. WS13b's 216 owned declarations are unscored in this report. Per-file counts and every title remain in `rust/plans/ws13-deferred-tests.md`. No pixel work or LiveKit deferral remains.
 
-The two open original invitation declarations remain:
+## Fresh-clone setup and command environment
 
-1. `the recipient sees an incoming huddle banner and dismissing it marks the item read`: needs GET /activity/unread_count.json (`ActivityItemsController#unread_count`) and PATCH /activity/:id/read (`#read`; absent state defaults to read).
-2. `joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel`: needs PATCH /activity/:id/handled (`#handled`; absent state defaults to handled).
+`git clone --no-hardlinks --branch rust/ws13-huddles <WS13 worktree> .scratch/fresh-ws13-main-172` created a new source clone with no target or local fixture inputs copied. It was fast-forwarded only on WS13 through the verified implementation. Default and first_run seeds were rebuilt from pinned tracked inputs. CI=1 makes missing seeds fail. It was clean before and after all gates. A temporary clean detached checkout of main b908ebc2 in this same clone provided the baseline comparison, then its WS13 branch was restored clean; no source overlay was applied.
 
-Current specific owner: **WS11-UI**, branch rust/ws11ui-agent-pages. Its current wave4/ws11ui-report.md records inbox index/count and controllers/activity_items.rs at line 10, and explicitly lists read/handled plus HuddleGrant presentation as its inbox continuation at line 24. WS11's report leaves pages to that worker. The WS8b-m brief enumerates message controllers and its report leaves activity/work/board 501 seams. Decisions contains no reassignment. No WS12 brief exists in the delegation tree; the old generic WS12 source/plan label was historical. The full audit and Rails route/controller/client requirements are in [ws13-inbox-route-dependencies.md](ws13-inbox-route-dependencies.md). No foreign-owner endpoint was implemented here.
+Commands run from that fresh clone with mise Rust 1.98.1, CI=1, CARGO_BUILD_JOBS=2, CARGO_PROFILE_DEV_DEBUG=0, CARGO_PROFILE_TEST_DEBUG=0 and CARGO_INCREMENTAL=0. CAMPFIRE_REFERENCE and CARGO_TARGET_DIR point into that clone; TMPDIR and npm cache use its scratch. Cable ports are 52300–52349 and mail ports 52350–52399. All test-thread/concurrency flags are eight. The machine-wide rustc throttle remains configured. No python model server was touched.
 
-All ten original invitation declarations still depend on WS13b's issuance/ring/state API. The eight conditional passes remain inventoried as conditional; they were not rerun or claimed as main-only passes in this continuation. Once the lead authorizes merging main after #172, rerun all ten without the overlay; land the three inbox endpoints through WS11-UI and rerun both full open declarations. Then open the WS13 PR when authorized. The overlay runner is retained unchanged; no overlay was active for any fresh verification below. WS13b and WS17 seams stay unchanged. The WS17 producer signatures remain `enqueue_huddle_push(tx: &mut Tx<'_>, request: &PushRequest)` and `prepare_push(tx: &mut Tx<'_>, request: &PushRequest, policy_allowed: bool) -> Result<Option<PushDelivery>>`.
-
-The 548-title catalogue keeps every declaration: WS13 has 226 controller/integration declarations and 106 system declarations, with 330 assertion-covered and the above two open. WS13b's 216 owned titles are unscored here; no historical WS13b pass counts are copied. The 35 real-media cases now have three consecutive clean fresh-clone batches. Existing full page/Designers/sidebar/chrome/CSP work is unchanged and remains exercised by the seeded workspace tests.
-
-## Fresh-clone verification and raw summaries
-
-A new no-hardlinks clone of the WS13 branch was created at `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws13/.scratch/fresh-ws13-timing-20261001`. It was fast-forwarded only on WS13 through 13dfb4a7c1b3625291208c5d0596391081a283b8. Its default and first_run seeds were built from the pinned tracked seed inputs. No untracked fixture or pre-existing target data was copied. `git diff --exit-code` was clean before and after verification. CI=1 requires the seeds; no missing-seed skip occurred. CARGO_BUILD_JOBS=2, dev/test debug=0, incremental=0; test threads/concurrency=8. Rails PARALLEL_WORKERS=1 is its original LiveKit configuration. CAMPFIRE_REFERENCE and CARGO_TARGET_DIR point into the fresh clone; TMPDIR/npm cache use its scratch. The local LiveKit env is runtime configuration generated by bin/livekit-local setup.
-
-`git clone --no-hardlinks --branch rust/ws13-huddles <WS13 worktree> .scratch/fresh-ws13-timing-20261001`; `rust/parity/bin/seed build default first_run` (pinned seed construction):
+`rust/parity/bin/seed build default first_run`:
 
 ```text
 seed: building default
@@ -42,201 +41,190 @@ seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
 ```
 
-`cargo metadata --locked --format-version 1 >/dev/null`; strict tomllib workspace dependency-key parse:
+`mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 >/dev/null` from fresh/rust; strict `tomllib.loads` parse of `[workspace.dependencies]` (duplicate keys are rejected):
 
 ```text
 Locked cargo metadata: ok
 Workspace dependency keys: 77 unique; duplicates: []
 ```
 
-`python3 rust/reference-tools/ws13_verify_reference.py`; `ws13_verify_declarations.py`:
+Source identity checks (`git show b908ebc2:<path>` compared with fresh file bytes, overlay script/cfg absence); `python3 rust/reference-tools/ws13_verify_reference.py`; `python3 rust/reference-tools/ws13_verify_declarations.py`:
 
 ```text
+Main WS13b source identity: rust/crates/db/src/models/activity_item.rs matches b908ebc2
+Main WS13b source identity: rust/crates/db/src/models/huddle_grant.rs matches b908ebc2
+Main WS13b source identity: rust/crates/db/src/models/huddle_invitations.rs matches b908ebc2
+Main WS13b source identity: rust/crates/db/src/models/huddle_notices.rs matches b908ebc2
+Main WS13b source identity: rust/crates/campfire/src/jobs/huddle.rs matches b908ebc2
+Main WS13b source identity: rust/crates/campfire/src/jobs/huddle/ring_matrix_tests.rs matches b908ebc2
+WS13b overlay removed: no script or private cfg
 Reference identity: 97 files match d7c7de92
 Post-#163 sidebar source: tracked SHA256 matches 2e20b24c
 Post-#163 application layout: tracked source and oracle image SHA256 match 2e20b24c
 Rails declaration catalogue: 548 titles retained; WS13 330 passed / 2 open; WS13b 216 owned, unscored; 33 files; source titles match
 ```
 
-Original Rails comparison: source project-local env; docker image ws13-reference:system-d7c7de92, host network, cpus=2, uid/gid=1000, original gateway dependencies and private tmp; `bundle exec bin/rails db:setup`; three invocations of `bundle exec bin/rails test test/system/huddles_test.rb -n "/device.pickers.list.the.fake.devices.and.switching.keeps.media.flowing|server.enforcement.removes.a.revoked.participant/"`, LIVEKIT_SYSTEM_TESTS=1, PARALLEL_WORKERS=1:
+## Failing-first and merge regressions
+
+Initial seeded workspace run before the rendering corrections (complete no-fail-fast run; other crates passed):
 
 ```text
-Finished in 11.529551s, 0.1735 runs/s, 4.7704 assertions/s.
-2 runs, 55 assertions, 0 failures, 0 errors, 0 skips
-Finished in 11.450953s, 0.1747 runs/s, 4.8031 assertions/s.
-2 runs, 55 assertions, 0 failures, 0 errors, 0 skips
-Finished in 11.358896s, 0.1761 runs/s, 4.8420 assertions/s.
-2 runs, 55 assertions, 0 failures, 0 errors, 0 skips
+test result: FAILED. 1718 passed; 4 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1700.77s
 ```
 
-Same runtime/env, read-only tracked probe: `bundle exec ruby -Itest /rails/rust/reference-tools/ws13_media_readiness_probe.rb -n "/device.pickers.list.the.fake.devices.and.switching.keeps.media.flowing|server.enforcement.removes.a.revoked.participant/"`:
+Clean main baseline: `cargo test --locked -p campfire controllers::channel_threads::page_tests:: -- --test-threads=8`, using the pinned Docker runtime runner described below:
 
 ```text
-WS13 Rails navigation: {"presence_controller":true,"presence_in_flight":false,"ready_state":"complete","page_load_strategy":"normal"}
-WS13 Rails navigation: {"presence_controller":true,"presence_in_flight":false,"ready_state":"complete","page_load_strategy":"normal"}
-WS13 Rails completed RTP sample: {"kind":"audio","bytes":345}
-WS13 Rails navigation: {"presence_controller":true,"presence_in_flight":false,"ready_state":"complete","page_load_strategy":"normal"}
-WS13 Rails completed RTP sample: {"kind":"audio","bytes":3796}
-WS13 Rails completed RTP sample: {"kind":"audio","bytes":5544}
-WS13 Rails completed RTP sample: {"kind":"audio","bytes":7638}
-Finished in 14.035947s, 0.1425 runs/s, 3.9185 assertions/s.
-2 runs, 55 assertions, 0 failures, 0 errors, 0 skips
+    Finished `test` profile [unoptimized] target(s) in 1m 24s
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 1651 filtered out; finished in 37.83s
 ```
 
-Native-browser failing-first regressions, same pinned Playwright image and test-concurrency=8. Original Promise sampling:
+The unchanged enqueue fixture read zero queued jobs instead of one on both branches. No wider waits or lower test concurrency were used.
+
+Configured DM avatar regression: `cargo test --locked -p campfire configured_direct_callback_keeps_rails_membership_avatar_order -- --test-threads=8`, pinned runtime runner:
 
 ```text
-ℹ tests 2
-ℹ pass 0
+    Finished `test` profile [unoptimized] target(s) in 1m 40s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1727 filtered out; finished in 1.45s
+```
+
+Its actual sequence was Jason, Kevin, JZ; the unchanged Rails fixture specifies Jason, JZ, Kevin. After using main association ordering, the configured callback and ten related merge regressions pass. The exact command passes these OR filters after Cargo’s `--`: `configured_direct_callback_keeps_rails_membership_avatar_order`, `channels::tests::hub_test::directory::`, `complete_call_headers_match_twenty_eight_rails_renders`, `full_room_pages_match_thirty_eight_complete_rails_pages`, `pull_request_thread_without_starter_refreshes_once_and_survives_queue_failure`, `composed_sidebar_`, and `--test-threads=8`:
+
+```text
+    Finished `test` profile [unoptimized] target(s) in 1m 40s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 1717 filtered out; finished in 10.61s
+```
+
+Original Rails DM comparison: LIVEKIT_SYSTEM_TESTS=1, PARALLEL_WORKERS=1, ws13-reference:system-d7c7de92, local host networking, private scratch tmp and tracked-lock gateway dependencies; `bundle exec bin/rails db:setup` then `bundle exec bin/rails test test/system/huddles_test.rb -n "/two.direct.message.participants.exchange.audio.and.screen.while.navigating.and.reconnecting/"`:
+
+```text
+Finished in 9.057030s, 0.1104 runs/s, 3.8644 assertions/s.
+1 runs, 35 assertions, 0 failures, 0 errors, 0 skips
+```
+
+## Acceptance at de7f1ba5 in the fresh clone
+
+Explicit full ten-case diagnostic: `WS13_INVITATIONS_ONLY=1 WS13_ENABLE_INBOX_CASES=1 rust/parity/system/ws13`. Only the two WS11-UI cases fail; this is not a passing gate or an invitation-domain failure:
+
+```text
+    Finished `test` profile [unoptimized] target(s) in 0.14s
+ℹ tests 10
+ℹ pass 8
 ℹ fail 2
-ℹ duration_ms 690.12999
+ℹ skipped 0
+ℹ duration_ms 34469.570354
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1727 filtered out; finished in 37.45s
 ```
 
-After RTP repair but before navigation repair:
+Nonblocking invitation acceptance: `WS13_INVITATIONS_ONLY=1 rust/parity/system/ws13`:
 
 ```text
-ℹ tests 3
-ℹ pass 2
-ℹ fail 1
-ℹ duration_ms 1244.229499
-```
-
-Final navigation + asynchronous sampling regressions:
-
-```text
-ℹ tests 3
-ℹ pass 3
+    Finished `test` profile [unoptimized] target(s) in 0.10s
+ℹ tests 10
+ℹ pass 8
 ℹ fail 0
-ℹ duration_ms 1417.773916
+ℹ skipped 2
+ℹ duration_ms 20826.286648
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1727 filtered out; finished in 23.40s
 ```
 
-Original Rails under controlled host interface churn (same original two-case pattern, same LiveKit process):
+Real media: `rust/parity/system/ws13-livekit`. The script sources the generated project-local env, checks readiness and installs gateway dependencies from the tracked lock. LiveKit 1.13.7 runs only on loopback signaling/admin 7880 and UDP 7882, external discovery/TURN disabled. Browser transport remains isolated and forwards opaque local media packets. The four asynchronous-sampling/transport regressions precede the 35 original real-media interactions. Native audio/video tracks, decode, RTP statistics, token-refresh/full reconnects and server enforcement are asserted; no recorded media substitutes:
 
 ```text
-Finished in 21.963709s, 0.0911 runs/s, 1.2293 assertions/s.
-2 runs, 27 assertions, 1 failures, 0 errors, 0 skips
-```
-
-Isolation diagnostic fault injection and byte-corruption gate (not final fresh acceptance):
-
-```text
-WS13 isolation fault injection: 12 host veth creation/removal cycles during native media batch
-```
-
-```text
-ℹ tests 3
-ℹ pass 3
-ℹ fail 0
-ℹ duration_ms 1226.065446
-WS13 local media datagrams: 8089 sent; 4732 received
-ℹ tests 35
-ℹ pass 35
-ℹ fail 0
-ℹ duration_ms 214863.494622
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1058 filtered out; finished in 218.20s
-```
-
-```text
-ℹ tests 1
-ℹ pass 0
-ℹ fail 1
-ℹ duration_ms 38.24217
-```
-
-```text
+WS13 local media datagrams: 2 sent; 2 received
 ℹ tests 4
 ℹ pass 4
 ℹ fail 0
-ℹ duration_ms 1320.485818
-```
-
-Fresh real-media batches: `rust/parity/system/ws13-livekit` three consecutive invocations. Each first runs the four standalone regressions; then the ignored Rust wrapper launches the original 35 native-media interactions. No filtered retry/reset of the successful streak:
-
-Batch 1:
-
-```text
-ℹ tests 4
-ℹ pass 4
-ℹ fail 0
-ℹ duration_ms 896.071422
+ℹ skipped 0
+ℹ duration_ms 1098.693917
+    Finished `test` profile [unoptimized] target(s) in 0.17s
+WS13 local media datagrams: 8194 sent; 4800 received
 ℹ tests 35
 ℹ pass 35
 ℹ fail 0
-ℹ duration_ms 168250.185402
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1058 filtered out; finished in 170.75s
+ℹ skipped 0
+ℹ duration_ms 224169.594759
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1727 filtered out; finished in 227.55s
 ```
 
-Batch 2:
+Ordinary browser: `rust/parity/system/ws13`:
 
 ```text
-ℹ tests 4
-ℹ pass 4
+    Finished `test` profile [unoptimized] target(s) in 0.42s
+ℹ tests 71
+ℹ pass 69
 ℹ fail 0
-ℹ duration_ms 957.361382
-ℹ tests 35
-ℹ pass 35
-ℹ fail 0
-ℹ duration_ms 161983.314736
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1058 filtered out; finished in 165.21s
+ℹ skipped 2
+ℹ duration_ms 256321.012802
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1727 filtered out; finished in 261.88s
 ```
 
-Batch 3:
+Gateway’s own Node suite against Rust endpoints: `mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire huddle_gateway_own_node_suite_against_rust_endpoints -- --ignored --nocapture --test-threads=8`:
 
 ```text
-ℹ tests 4
-ℹ pass 4
+    Finished `test` profile [unoptimized] target(s) in 0.86s
+ℹ tests 16
+ℹ pass 16
 ℹ fail 0
-ℹ duration_ms 997.880353
-ℹ tests 35
-ℹ pass 35
-ℹ fail 0
-ℹ duration_ms 165377.075621
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1058 filtered out; finished in 167.53s
+ℹ skipped 0
+ℹ duration_ms 15574.715098
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1727 filtered out; finished in 16.08s
 ```
 
-Main-only seeded workspace: mise Rust 1.98.1 `cargo test --locked --workspace --no-fail-fast -- --test-threads=8`, using target.x86_64-unknown-linux-gnu.runner to run the same fresh binaries in ws13-reference:d7c7de92 (--network none, cpus=2, uid/gid=1000, fresh source mounted at its identical absolute path). No ws13b_domain_api cfg or source overlay:
+## Workspace, clippy and sealed release-input build
+
+`mise exec rust@1.98.1 -- cargo --config 'target.x86_64-unknown-linux-gnu.runner=<JSON runner array>' test --locked --manifest-path rust/Cargo.toml --workspace --no-fail-fast -- --test-threads=8`. The array is `docker run --rm --name ws13-pinned-workspace-test --label com.smartfire.rust-parity.owner=ws13 --cpus 2 --network none --user 1000:1000 --volume <absolute-fresh>:<absolute-fresh> --workdir <absolute-fresh> --env CI=1 --env TMPDIR=<absolute-fresh>/.scratch --env CABLE_TEST_PORT_RANGE=52300-52349 --env MAIL_TEST_PORT_RANGE=52350-52399 --entrypoint /usr/bin/env ws13-reference:d7c7de92`. This runs the linked fresh binaries with the pinned libvips/ffmpeg while preserving their absolute reference paths. Raw summary lines from every target and doctest:
 
 ```text
-test result: ok. 1054 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 900.95s
+    Finished `test` profile [unoptimized] target(s) in 1m 48s
+test result: ok. 1723 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1648.10s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.45s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.64s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
-test result: ok. 723 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 110.33s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.57s
+test result: ok. 951 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 153.16s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.95s
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.03s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.03s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.06s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.25s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.53s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.59s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.34s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.38s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.56s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.76s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.38s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.35s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.86s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.20s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.56s
-test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.66s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.48s
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.45s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.35s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -251,45 +239,41 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-Gateway acceptance: `cargo test --locked -p campfire huddle_gateway_own_node_suite_against_rust_endpoints -- --ignored --nocapture --test-threads=8`:
-
 ```text
-ℹ tests 16
-ℹ pass 16
-ℹ fail 0
-ℹ duration_ms 14492.440328
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1058 filtered out; finished in 14.81s
+Workspace aggregate: 3385 passed; 0 failed; 14 ignored (unit, integration and doctest summaries)
 ```
 
-Main-only ordinary browser: `rust/parity/system/ws13`:
+After the full workspace pass, the production/all-target lint gate exposed main OOO presenter functions incorrectly limited to tests, five retained fixture helpers compiled as unused production functions, and two style warnings. Main’s OOO presenter file is now byte-identical to b908ebc2 and remains available to production room pages. Only the fixture helpers are test-gated; no warning allowances were added. Affected tests rerun on the final implementation with the same pinned Docker runner and `--test-threads=8`, OR filters `controllers::rooms::room_shell_tests::`, `controllers::rooms::full_room_tests::`, `controllers::presenters::chrome_tests::`, `controllers::rooms::ws17_ooo_tests::`, `composed_sidebar_`, `configured_direct_callback_keeps_rails_membership_avatar_order`, and `ooo_notice`:
 
 ```text
-ℹ tests 61
-ℹ pass 61
-ℹ fail 0
-ℹ duration_ms 193808.426444
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1058 filtered out; finished in 195.53s
+    Finished `test` profile [unoptimized] target(s) in 1m 38s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 1706 filtered out; finished in 18.79s
 ```
 
-Strict main-only clippy: mise Rust 1.98.1 `cargo clippy --locked --workspace --all-targets -- -D warnings`:
+Ignored Rust harness wrappers for gateway, ordinary browser and LiveKit were explicitly run above. Other workspace ignores are inherited recording/export/differential helpers or measurements, not additional WS13 deferrals; the raw ignored counts are preserved.
+
+Strict clippy: `mise exec rust@1.98.1 -- cargo clippy --locked --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`:
 
 ```text
-    Finished `dev` profile [unoptimized] target(s) in 1m 02s
+    Finished `dev` profile [unoptimized] target(s) in 53.54s
 ```
 
-Normal production binary, no overlay: mise Rust 1.98.1 `cargo build --locked -p campfire`:
+Exact release-input gate: `bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins`. RUNNER_TEMP is fresh/.scratch/ci-runner, RUST_CI_CONTAINER_PREFIX=ws13 and CARGO_TARGET_DIR=/src/rust/target, mapped to the same fresh target. The stale local default campfire-toolchain tag lacked mold and failed dependency build-script linking; its retained log is release-inputs-before-toolchain-fix.log. The passing run sets RUST_CI_IMAGE=sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2, the existing Rust 1.98.1 CI toolchain with mold and pinned media libraries. A WS13-only local Docker CLI adapter mounts the unchanged machine slot-count file and lock directory and sets a scratch RUSTC_WRAPPER: it uses the existing throttle loop for every container compile, accounting for the separate PID namespace. Host throttle configuration and slot count are unchanged. The wrapper copies only builder source/asset inputs and provides no parity/vector/reference-tool files. CARGO_BUILD_JOBS remains two:
 
 ```text
-    Finished `dev` profile [unoptimized] target(s) in 58.80s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 31s
 ```
 
-Cleanup: fresh `cargo clean` and project-local LiveKit termination; no scratch target or own LiveKit process remains:
+## Cleanup and evidence
+
+`cargo clean --manifest-path rust/Cargo.toml` with the fresh CARGO_TARGET_DIR; verified scratch target deletion. The own project-local LiveKit process was stopped immediately after media acceptance, before the ordinary/workspace runs. No WS13 test process remains; no other worker target/process or model server was touched:
 
 ```text
-Project-local LiveKit: SIGTERM sent to verified WS13 server PID 3387686
+Project-local LiveKit: SIGTERM sent to verified WS13 server PID 1755477
 Project-local LiveKit: exit 0; verified server PID is gone
-     Removed 7517 files, 3.4GiB total
-Fresh scratch cargo target: deleted
+     Removed 10541 files, 5.4GiB total
+Fresh scratch cargo target: deleted .scratch/fresh-ws13-main-172/rust/target; no other target touched
+Project-local LiveKit: original WS13 server PID 1755477 remains gone
 ```
 
-Verification logs remain under this worktree's .scratch/timing-logs and .scratch/timing-isolated-fresh-logs. Failed diagnostic and earlier fresh batches are retained. The diagnostic isolated run had a trailing shell error because its wrapper was edited while active; the 35 native cases passed, but that invocation is not claimed as a green wrapper. Final verification uses immutable committed fresh sources. The relay unit initially triggered a Node callback-scope abort with a 109-byte Unix socket address; a short relative IPC address avoids the Linux 108-byte address limit, including in deeply nested fresh clones. Coredump evidence showed SIGABRT, not OOM; no core was extracted. Final native/regression batches use the pinned browser Node runtime. No waits, thresholds, parity masks, test concurrency or production seams were weakened.
+Final logs are retained at `.scratch/merge-ws13b/final-verification-logs`; earlier failing-first, main baseline and diagnostic runs remain separately under `.scratch/merge-ws13b/accepted-logs`, `fresh-logs`, `final-logs` and `before-order-verification-logs`. The earlier verification coordinator was stopped before its workspace gate to include the configured-order regression; its completed browser/media runs are not substituted for final acceptance. No HTML golden expectations, waits, timing thresholds, test concurrency or domain/transport signatures were weakened.
