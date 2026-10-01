@@ -3,6 +3,8 @@
 mod tests;
 #[cfg(test)]
 mod page_tests;
+#[cfg(test)]
+mod board_read_tests;
 mod writes;
 pub use writes::{create, destroy, new, update};
 #[cfg(test)]
@@ -79,10 +81,13 @@ pub async fn show(c: &mut Ctx) -> Result {
         }).await?;
         return render_json(c, StatusCode::OK, &payload);
     }
-    if room.board() || thread.work() {
-        // WS12 owns board posts, work links, owner controls and work history.
-        return Ok(c.head(StatusCode::NOT_IMPLEMENTED));
+    if room.board() {
+        let viewer = require_current_user(c)?.clone();
+        let picker = c.app().config.google_picker.is_some();
+        let post = messages::present(c, move |p| crate::controllers::presenters::board_posts::post(p, &room, &thread, &viewer, &records, picker)).await?;
+        return page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::channel_threads::board::Show { ctx, post: &post }).await;
     }
+    if thread.work() { return Ok(c.head(StatusCode::NOT_IMPLEMENTED)); }
     render_standalone(c, thread, records, StatusCode::OK).await
 }
 

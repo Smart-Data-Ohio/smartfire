@@ -199,7 +199,7 @@ async fn complete_standalone_thread_templates_match_rails_layout_bytes() {
 }
 
 #[tokio::test]
-async fn work_and_board_html_remain_authorized_ws12_seams() {
+async fn ordinary_work_html_remains_pending_and_board_posts_render() {
     let (app, _, threads) = fixture().await;
     assert_eq!(app.sign_in(KEVIN).await.get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::NOT_FOUND);
     assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::NOT_IMPLEMENTED);
@@ -208,7 +208,9 @@ async fn work_and_board_html_remain_authorized_ws12_seams() {
         let thread = ChannelThread::create(tx, NewChannelThread {room_id: room.id, creator_id: DAVID, name: Some("Board post".into()), work_status: Some("planned".into()), ..Default::default()})?;
         Ok((room.id, thread.id))
     }).await.unwrap();
-    assert_eq!(app.david().get(&format!("/rooms/{room}/threads/{thread}")).await.status, StatusCode::NOT_IMPLEMENTED);
+    let response = app.david().get(&format!("/rooms/{room}/threads/{thread}")).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(response.text().contains("class=\"board-post\""));
 }
 
 #[tokio::test]

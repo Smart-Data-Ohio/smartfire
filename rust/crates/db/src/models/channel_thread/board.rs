@@ -325,7 +325,7 @@ impl ChannelThread {
             return Ok(());
         }
         let id = self.id;
-        tx.after_commit_record_latest("board_post_destroy", id, move |tx| {
+        tx.after_commit_record("channel_threads", id, move |tx| {
             for prefix in ["board_row", "board_column_row"] {
                 tx.emit_after_commit(Event::broadcast(&Broadcast::remove(
                     room_messages(&room),

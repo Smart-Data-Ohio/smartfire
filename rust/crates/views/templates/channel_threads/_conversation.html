@@ -15,8 +15,8 @@
 
 
     {{ self.list_open() }}
-      {% for message in messages %}{{ crate::messages::cached_message_item(ctx, message) }}{% endfor %}
-</div>
+{% if !messages.is_empty() %}      {% for message in messages %}{{ crate::messages::cached_message_item(ctx, message) }}{% endfor %}
+{% endif %}</div>
     {{ self.stream() }}
     {{ self.jump(ctx) }}
 </div></div>

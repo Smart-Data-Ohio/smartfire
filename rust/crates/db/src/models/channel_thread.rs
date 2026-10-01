@@ -29,6 +29,7 @@ use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
 
 mod board;
+mod work;
 pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, board_page_number};
 
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.

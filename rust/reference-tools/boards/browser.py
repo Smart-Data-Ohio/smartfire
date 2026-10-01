@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import socket
+import sys
 import subprocess
 import tempfile
 import time
@@ -14,6 +15,7 @@ import urllib.request
 root = Path(__file__).resolve().parents[2]
 scratch = root.parent / ".scratch"
 scratch.mkdir(exist_ok=True)
+script = "post_browser.mjs" if "--posts" in sys.argv else "browser.mjs"
 run_dir = Path(tempfile.mkdtemp(prefix="ws12-browser-boards-",dir=scratch))
 seed = root / "parity/.seed/default"
 labels = json.loads((seed / "labels.json").read_text())
@@ -66,7 +68,7 @@ try:
             subprocess.run(["docker","run","--rm","--name",f"ws12-boards-browser-{name.lower()}","--network","host",
                 "--label","parity.owner=ws12","-v",f"{root.parent}:/work:ro",
                 "-e",f"WS12_BROWSER_URL=http://127.0.0.1:{port}","-e","WS12_BROWSER_LABELS=/work/rust/parity/.seed/default/labels.json",
-                image,"node","/work/rust/reference-tools/boards/browser.mjs"],check=True)
+                image,"node",f"/work/rust/reference-tools/boards/{script}"],check=True)
 finally:
     if server is not None:
         server.terminate()

@@ -40,7 +40,7 @@ for path in files:
         if "activity_items_controller" in relative or "activity_items_helper" in relative or "system/activity_inbox" in relative:
             owner, evidence = "WS11-UI controller/rendering + WS12 domain integration", "Merge WS11-UI and replace its flagged activity adapters with ActivityItem domain APIs; verify full response bytes and inbox interactions."
         elif any(part in relative for part in ("channel_thread_agent_assignment", "agents/work", "agent_boards", "agent_working_presence", "agent_work_assignment", "agents/posts_controller", "agents/mcp_handoff")):
-            owner,evidence = "WS12 after WS11 #176", "Agent work services and eligible-agent owner integration remain pending the lead's WS11 merge."
+            owner,evidence = "WS12 using merged WS11 #176", "WS11 #176 is merged. Agent work writes/services are still WS12-owned and unblocked; read owner candidates use its real APIs."
         elif relative=="test/models/user_star_test.rb":
             status,evidence="ported","crates/db/src/tests/user_star_test.rs (5 discriminating model/independent-writer tests)."
         elif relative=="test/controllers/rooms/boards_controller_test.rb":
@@ -64,10 +64,15 @@ for path in files:
             }
             if title in completed:
                 status,evidence="ported","crates/db/src/tests/board_test.rs, controllers/rooms/boards_domain_tests.rs and actual Rails boards_domain.json. Tags array normalization/clearing is tested; HTTP comma-separated tag coercion remains with board post endpoints."
-            elif "agent owner" in title or "owner availability" in title:
-                owner,evidence="WS12 after WS11 #176","Read-only owner labels/filtering match the actual Rails seed and revoked human membership vectors; the original agent owner/grant mutation and candidate assertions wait for WS11."
+            elif "owner availability" in title:
+                status,evidence="ported","crates/db/src/tests/work_read_test.rs covers every assigned owner kind, membership removal and revoked agent grants, plus HTTP owner labels."
+            elif "agent owner" in title:
+                owner,evidence="WS12 using merged WS11 #176","Read candidates/filtering are integrated with real Agent APIs and covered, but this original declaration also calls the still-pending assignment writer."
             else:
                 evidence="WS12 board post/result/work slice. Existing tracking validation is retained, but removing tracking, comma-separated HTTP tag input, result writes/events/recipients and run URL writes are not closed by board listing tests."
+        elif relative=="test/controllers/channel_threads_board_test.rb":
+            if title in {"new post form renders in boards and 404s in channels and for non-members", "post page shows the board header, result, and manage controls without tracking controls"}:
+                status,evidence="ported","channel_threads/board_read_tests.rs: 29 complete Rails HTTP bodies, including new forms, pages, permissions, links/history/result, pane/anchors and missing memberships."
         elif relative=="test/controllers/users/stars_controller_test.rb":
             status,evidence="ported","controllers/users/stars_tests.rs (7 HTTP tests, 21 Rails JSON responses, 2 fragment/stream byte vectors)."
         elif relative=="test/system/starred_people_test.rb":

@@ -32,7 +32,15 @@ pub async fn new(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = alive_room(c).await?;
     if !room.board() { return Ok(c.head(StatusCode::NOT_FOUND)); }
-    crate::controllers::not_yet_ported(c).await
+    let first_message = match c.params.get("thread").filter(|value| !value.is_null()) {
+        Some(value) => value.as_hash().ok_or_else(|| Error::internal(anyhow::anyhow!("thread does not support dig")))?
+            .get("first_message").map(|value| campfire_richtext::ruby::json_value_to_s(&value.to_json())),
+        None => None,
+    };
+    let viewer = require_current_user(c)?.clone();
+    let mut post = messages::present(c, move |p| crate::controllers::presenters::board_posts::new_post(p, &room, &viewer)).await?;
+    post.first_message = first_message;
+    page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::channel_threads::board::New { ctx, post: &post }).await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
