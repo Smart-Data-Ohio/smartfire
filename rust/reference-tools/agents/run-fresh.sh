@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-FRESH="$ROOT/.scratch/fresh-ws11-review-176-publication-final"
+FRESH="$ROOT/.scratch/fresh-ws11-review-176-r4"
 test ! -e "$FRESH"
 rm -f "$ROOT/.scratch/fresh-exits.log"
 SOURCE_SHA=$(git -C "$ROOT" rev-parse HEAD)
