@@ -91,6 +91,17 @@ async fn observation(
     );
     state
 }
+async fn lifecycle_observation(a: &TestApp, history: &[(i64, i64, i64)]) -> Value {
+    let history = history.to_vec();
+    a.db().read(move |c| {
+        use rusqlite::OptionalExtension;
+        let id=c.query_row("SELECT user_id FROM google_identities WHERE subject='controller-member'",[],|r|r.get::<_,i64>(0)).optional()?.or(c.query_row("SELECT id FROM users WHERE email_address IN ('new-member@smartdata.net','new-member@cnbssoftware.com')",[],|r|r.get::<_,i64>(0)).optional()?).unwrap_or(KEVIN);
+        let user=campfire_db::User::find(c,id)?;
+        let memberships=c.prepare("SELECT room_id FROM memberships WHERE user_id=? ORDER BY room_id")?.query_map([id],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        let actual=c.prepare("SELECT id,room_id,creator_id FROM messages WHERE creator_id=? ORDER BY id")?.query_map([KEVIN],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)))?.collect::<rusqlite::Result<Vec<(i64,i64,i64)>>>()?;
+        Ok(json!({"user":{"id":id,"name":user.name,"email_address":user.email_address,"role":user.role.name(),"status":user.status.name()},"password_present":user.password_digest.is_some(),"memberships":memberships,"history_preserved":actual==history}))
+    }).await.unwrap()
+}
 #[tokio::test]
 async fn google_controller_cases_match_complete_pinned_rails_observations() {
     let oracle: Value = serde_json::from_str(include_str!(
@@ -109,6 +120,7 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
         });
         let purpose = row["spec"]["purpose"].as_str().unwrap();
         let scenario = row["spec"]["scenario"].as_str().unwrap();
+        let lifecycle = row["spec"]["lifecycle"].as_bool().unwrap_or(false);
         a.booted.app.google.install(SignIn::with_client(
             config(if scenario == "unconfigured" {
                 &[]
@@ -128,11 +140,26 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
         } else {
             None
         };
+        let owned_scenario = scenario.to_owned();
         let password = a
             .db()
             .write(move |tx| {
                 tx.conn()
                     .execute_batch("DELETE FROM google_identities;DELETE FROM audit_logs;")?;
+                if lifecycle {
+                    let scenario = owned_scenario.as_str();
+                    tx.conn().execute("UPDATE users SET email_address='legacy@smartdata.net',role=1,google_email_link_allowed=1,email_self_changed_at=NULL WHERE id=?",[KEVIN])?;
+                    if scenario=="bot" {tx.conn().execute("UPDATE users SET role=2 WHERE id=?",[KEVIN])?;}
+                    if matches!(scenario,"self_changed"|"admin_allowed") {tx.conn().execute("UPDATE users SET google_email_link_allowed=0,email_self_changed_at=? WHERE id=?",rusqlite::params![tx.now(),KEVIN])?;}
+                    if scenario=="linking_disabled" {tx.conn().execute("UPDATE users SET google_email_link_allowed=0 WHERE id=?",[KEVIN])?;}
+                    if scenario=="admin_allowed" {campfire_db::User::find(tx.conn(),KEVIN)?.update(tx,campfire_db::UserChanges{allow_google_email_link:true,..Default::default()})?;}
+                    if matches!(scenario,"immutable_email"|"retained_deactivated"|"retained_banned"|"different_subject") {
+                        campfire_db::models::google_identity::GoogleIdentity::link_to_user(tx,json!({"sub":if scenario=="different_subject"{"controller-old"}else{"controller-member"},"email":"legacy@smartdata.net","hd":"smartdata.net"}).as_object().unwrap(),KEVIN)?;
+                    }
+                    if matches!(scenario,"deactivated"|"retained_deactivated") {tx.conn().execute("UPDATE users SET status=1 WHERE id=?",[KEVIN])?;}
+                    if matches!(scenario,"banned"|"retained_banned") {tx.conn().execute("UPDATE users SET status=2 WHERE id=?",[KEVIN])?;}
+                    tx.conn().execute_batch("UPDATE sqlite_sequence SET seq=9000000000 WHERE name='users'")?;
+                }
                 if let Some((id, subject, email)) = identity {
                     campfire_db::models::google_identity::GoogleIdentity::link_to_user(
                         tx,
@@ -146,6 +173,20 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             })
             .await
             .unwrap();
+        let history = a
+            .db()
+            .read(|c| {
+                Ok(c.prepare(
+                    "SELECT id,room_id,creator_id FROM messages WHERE creator_id=? ORDER BY id",
+                )?
+                .query_map([KEVIN], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+                .collect::<rusqlite::Result<Vec<(i64, i64, i64)>>>()?)
+            })
+            .await
+            .unwrap();
+        if lifecycle {
+            assert!(!history.is_empty(), "missing authored history fixture");
+        }
         let mut b = if purpose == "sign_in" || scenario == "anonymous" {
             a.anonymous()
         } else {
@@ -231,6 +272,24 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             if scenario == "expired_flow" {
                 clock.advance(jiff::SignedDuration::from_secs(601));
             }
+            if scenario == "policy_changed" {
+                a.booted.app.google.install(SignIn::with_client(
+                    config(&["cnbssoftware.com"]),
+                    r.clone(),
+                ));
+            }
+            let email = if lifecycle {
+                match scenario {
+                    "provision" => "new-member@smartdata.net",
+                    "provision_secondary" => "new-member@cnbssoftware.com",
+                    "immutable_email" => "changed@smartdata.net",
+                    _ => "LEGACY@smartdata.net",
+                }
+            } else if purpose == "link" {
+                "kevin.w@smartdata.net"
+            } else {
+                "david@smartdata.net"
+            };
             let mut claims = claims(
                 &a,
                 &q,
@@ -239,12 +298,12 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
                 } else {
                     "controller-member"
                 },
-                if purpose == "link" {
-                    "kevin.w@smartdata.net"
-                } else {
-                    "david@smartdata.net"
-                },
+                email,
             );
+            claims["name"] = json!("Fixture member");
+            if scenario == "provision_secondary" {
+                claims["hd"] = json!("cnbssoftware.com");
+            }
             claims["exp"] = json!(now.as_second() + 3600);
             claims["auth_time"] = json!(
                 now.as_second()
@@ -290,6 +349,35 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             );
             let cb = b.get(&callback_path).await;
             let mut observed = observation(&a, &b, &cb, &before, &r, 0, &password).await;
+            if lifecycle {
+                observed["lifecycle"] = lifecycle_observation(&a, &history).await;
+                if matches!(
+                    scenario,
+                    "legacy_password" | "provision" | "provision_secondary"
+                ) {
+                    b.get(cb.location().unwrap()).await;
+                    b.write(Req::new(Method::DELETE, "/session")).await;
+                    b.get("/session/new").await;
+                    let call_before = r.calls.lock().unwrap().len();
+                    let response = b
+                        .write(Req::new(Method::POST, "/session").form(&[
+                            (
+                                "email_address",
+                                if scenario == "legacy_password" {
+                                    "legacy@smartdata.net"
+                                } else {
+                                    email
+                                },
+                            ),
+                            ("password", "secret123456"),
+                        ]))
+                        .await;
+                    let mut password_login =
+                        observation(&a, &b, &response, &before, &r, call_before, &password).await;
+                    password_login["lifecycle"] = lifecycle_observation(&a, &history).await;
+                    observed["password_login"] = password_login;
+                }
+            }
             if purpose == "reauth" {
                 // Follow the callback exactly as the real profile confirmation UI does.
                 b.get(cb.location().unwrap()).await;
@@ -346,5 +434,8 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             row["spec"]
         );
     }
-    println!("Pinned Rails Google controller observations: 66 exercised; 0 skipped");
+    println!(
+        "Pinned Rails Google controller observations: {} exercised; 0 skipped",
+        oracle["rows"].as_array().unwrap().len()
+    );
 }

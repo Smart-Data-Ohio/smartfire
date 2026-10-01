@@ -2,6 +2,7 @@
 require 'json'
 require 'openssl'
 require 'action_dispatch/testing/integration'
+require 'fileutils'
 ActiveJob::Base.queue_adapter = :test
 ActionController::Base.allow_forgery_protection = false
 Rails.application.routes.default_url_options.merge!(host: 'campfire.test', protocol: 'http')
@@ -62,6 +63,16 @@ def observation(client,before,call_before)
   }
 end
 
+def lifecycle_observation
+  target=GoogleIdentity.find_by(subject:'controller-member')&.user || User.find_by(email_address:'new-member@smartdata.net') || User.find_by(email_address:'new-member@cnbssoftware.com') || User.find(712064548)
+  {
+    user:target.attributes.slice('id','name','email_address','role','status'),
+    password_present:target.password_digest.present?,
+    memberships:target.memberships.order(:room_id).pluck(:room_id),
+    history_preserved:Message.where(creator_id:712064548).order(:id).pluck(:id,:room_id,:creator_id)==$controller_history
+  }
+end
+
 specs=[]
 %w[reauth sudo].each do |purpose|
   %w[success wrong_subject stale missing_auth before_auth_boundary at_auth_boundary after_auth_boundary wrong_nonce wrong_domain unavailable cancelled expired_flow replay unlinked unconfigured signed_out other_member].each { |scenario|specs << {purpose:,scenario:} }
@@ -70,9 +81,17 @@ end
 [nil,[],42,'unexpected',{'id_token'=>[]},{'id_token'=>{}}].each { |payload| specs << {purpose:'sign_in',scenario:'token_shape',payload:} }
 [nil,[],42,{'keys'=>nil},{'keys'=>'unexpected'},{'keys'=>[nil,42,'invalid',{'kty'=>'RSA','kid'=>[],'n'=>{},'e'=>42}]}].each { |payload| specs << {purpose:'sign_in',scenario:'key_shape',payload:} }
 %w[consume_backup consume_device consume_all_devices consume_disable before_reauth_expiry at_reauth_expiry after_reauth_expiry wrong_credential_preserves].each { |scenario|specs << {purpose:'reauth',scenario:} }
+%w[legacy_password provision provision_secondary immutable_email deactivated banned bot retained_deactivated retained_banned different_subject self_changed admin_allowed linking_disabled policy_changed].each { |scenario|specs << {purpose:'sign_in',scenario:,lifecycle:true} }
 rows=[]
 specs.each_with_index do |spec,index|
-  ActiveRecord::Base.transaction(requires_new:true) do
+  # Restore the isolated reference database between cases. An enclosing rollback
+  # transaction would suppress the request's real after_commit membership effects.
+  database=ActiveRecord::Base.connection_db_config.database
+  ActiveRecord::Base.connection.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+  ActiveRecord::Base.connection_pool.disconnect!
+  snapshot="#{database}.controller-cases-backup"
+  FileUtils.cp(database,snapshot)
+  begin
     $controller_now=BASE
     ENV['GOOGLE_CLIENT_ID']='test-client-id';ENV['GOOGLE_CLIENT_SECRET']='FAKE-google-client-secret'
     ENV['GOOGLE_SIGN_IN_DOMAINS']=spec[:scenario]=='unconfigured' ? '' : 'smartdata.net,cnbssoftware.com'
@@ -82,8 +101,29 @@ specs.each_with_index do |spec,index|
     kevin=User.find_by!(name:'Kevin');david=User.find_by!(name:'David');jz=User.find_by!(name:'JZ')
     $controller_password=kevin.password_digest
     purpose=spec[:purpose];scenario=spec[:scenario]
+    if spec[:lifecycle]
+      kevin.update_columns(email_address:'legacy@smartdata.net',role:1,google_email_link_allowed:true,email_self_changed_at:nil)
+      kevin.update_columns(status:1) if %w[deactivated retained_deactivated].include?(scenario)
+      kevin.update_columns(status:2) if %w[banned retained_banned].include?(scenario)
+      kevin.update_columns(role:2) if scenario=='bot'
+      kevin.update_columns(email_self_changed_at:BASE,google_email_link_allowed:false) if %w[self_changed admin_allowed].include?(scenario)
+      kevin.update_columns(google_email_link_allowed:false) if scenario=='linking_disabled'
+      kevin.update!(email_self_changed_at:nil,google_email_link_allowed:true) if scenario=='admin_allowed'
+      if %w[immutable_email retained_deactivated retained_banned different_subject].include?(scenario)
+        GoogleIdentity.create!(user:kevin,subject:scenario=='different_subject' ? 'controller-old' : 'controller-member',email:'legacy@smartdata.net',domain:'smartdata.net')
+      end
+      ActiveRecord::Base.connection.execute("UPDATE sqlite_sequence SET seq=9000000000 WHERE name='users'")
+      $controller_history=Message.where(creator_id:kevin.id).order(:id).pluck(:id,:room_id,:creator_id)
+      raise 'missing authored history fixture' if $controller_history.empty?
+    end
     actor=purpose=='link' || purpose=='sign_in' ? kevin : david
     subject='controller-member';email=purpose=='link' ? 'kevin.w@smartdata.net' : 'david@smartdata.net'
+    email=case scenario
+      when 'provision' then 'new-member@smartdata.net'
+      when 'provision_secondary' then 'new-member@cnbssoftware.com'
+      when 'immutable_email' then 'changed@smartdata.net'
+      else 'LEGACY@smartdata.net'
+    end if spec[:lifecycle]
     if %w[reauth sudo].include?(purpose) && scenario!='unlinked'
       GoogleIdentity.create!(user:actor,subject:,email:,domain:'smartdata.net')
     elsif scenario=='already_linked'
@@ -111,8 +151,10 @@ specs.each_with_index do |spec,index|
       client.get(scenario=='other_member' ? '/users/me/profile' : '/session/new') if %w[signed_out other_member].include?(scenario)
       end
       $controller_now=BASE+601 if scenario=='expired_flow'
+      ENV['GOOGLE_SIGN_IN_DOMAINS']='cnbssoftware.com' if scenario=='policy_changed'
       auth_offset={'stale'=>-360,'before_auth_boundary'=>-331,'at_auth_boundary'=>-330,'after_auth_boundary'=>-329}.fetch(scenario,0)
       claims={'iss'=>'https://accounts.google.com','aud'=>'test-client-id','sub'=>scenario=='wrong_subject' ? 'controller-attacker' : subject,'email'=>email,'email_verified'=>true,'hd'=>scenario=='wrong_domain' ? 'wrong.test' : 'smartdata.net','name'=>'Fixture member','nonce'=>scenario=='wrong_nonce' ? 'forged' : query['nonce'],'exp'=>BASE.to_i+3600,'auth_time'=>BASE.to_i+auth_offset}
+      claims['hd']='cnbssoftware.com' if scenario=='provision_secondary'
       claims.delete('auth_time') if scenario=='missing_auth'
       $controller_token_payload={'id_token'=>JWT.encode(claims,KEY,'RS256',{kid:'fixture'})}
       $controller_token_payload=spec[:payload] if scenario=='token_shape'
@@ -121,6 +163,18 @@ specs.each_with_index do |spec,index|
       call_before=$controller_calls.length
       client.get('/session/google/callback',params:{state:query['state'],code:'fixture-code',**(scenario=='cancelled' ? {error:'access_denied'} : {})})
       result=observation(client,before,call_before)
+      if spec[:lifecycle]
+        result[:lifecycle]=lifecycle_observation
+        if %w[legacy_password provision provision_secondary].include?(scenario)
+          client.get(client.response.location)
+          client.delete('/session')
+          client.get('/session/new')
+          call_before=$controller_calls.length
+          client.post('/session',params:{email_address:scenario=='legacy_password' ? 'legacy@smartdata.net' : email,password:'secret123456'})
+          result[:password_login]=observation(client,before,call_before)
+          result[:password_login][:lifecycle]=lifecycle_observation
+        end
+      end
       if purpose=='reauth'
         # The UI follows the callback redirect before submitting its protected form.
         client.get(client.response.location)
@@ -148,7 +202,11 @@ specs.each_with_index do |spec,index|
       result=observation(client,before,0)
     end
     rows << {index:,spec:,actor_id:actor.id,jz_id:jz.id,start:,result:}
-    raise ActiveRecord::Rollback
+  ensure
+    ActiveRecord::Base.connection_pool.disconnect!
+    FileUtils.rm_f(["#{database}-wal","#{database}-shm"])
+    FileUtils.cp(snapshot,database)
+    FileUtils.rm_f(snapshot)
   end
 end
 puts JSON.pretty_generate({reference:'d7c7de92',now:BASE.to_i,rows:})

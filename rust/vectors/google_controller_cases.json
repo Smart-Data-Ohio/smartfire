@@ -4389,6 +4389,1338 @@
           }
         ]
       }
+    },
+    {
+      "index": 66,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "legacy_password",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/two_factor_challenge",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-member",
+            "email": "LEGACY@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "google.sign_in.link",
+            "actor_id": 712064548,
+            "target_id": 712064548,
+            "target_type": "User",
+            "target_label": "Kevin <legacy@smartdata.net>",
+            "details": {
+              "email": "LEGACY@smartdata.net"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        },
+        "password_login": {
+          "status": 302,
+          "location": "http://campfire.test/two_factor_challenge",
+          "flash": {},
+          "device_count": 1,
+          "backup_count": 0,
+          "credential_enabled": true,
+          "calls": [],
+          "delta": [
+            0,
+            0,
+            1,
+            0
+          ],
+          "markers": {},
+          "flow_present": false,
+          "identities": [
+            {
+              "user_id": 712064548,
+              "subject": "controller-member",
+              "email": "LEGACY@smartdata.net",
+              "domain": "smartdata.net"
+            }
+          ],
+          "email": "legacy@smartdata.net",
+          "password_preserved": true,
+          "audits": [
+            {
+              "action": "google.sign_in.link",
+              "actor_id": 712064548,
+              "target_id": 712064548,
+              "target_type": "User",
+              "target_label": "Kevin <legacy@smartdata.net>",
+              "details": {
+                "email": "LEGACY@smartdata.net"
+              }
+            }
+          ],
+          "lifecycle": {
+            "user": {
+              "id": 712064548,
+              "name": "Kevin",
+              "email_address": "legacy@smartdata.net",
+              "role": "administrator",
+              "status": "active"
+            },
+            "password_present": true,
+            "memberships": [
+              201306877,
+              340026324,
+              654632876,
+              699448325,
+              699448326,
+              699448327,
+              699448329,
+              699448330,
+              699448331
+            ],
+            "history_preserved": true
+          }
+        }
+      }
+    },
+    {
+      "index": 67,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "provision",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 9000000001,
+            "subject": "controller-member",
+            "email": "new-member@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "user.create",
+            "actor_id": 9000000001,
+            "target_id": 9000000001,
+            "target_type": "User",
+            "target_label": "Fixture member <new-member@smartdata.net>",
+            "details": {
+              "method": "google"
+            }
+          },
+          {
+            "action": "session.sign_in.success",
+            "actor_id": 9000000001,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 9000000001,
+            "name": "Fixture member",
+            "email_address": "new-member@smartdata.net",
+            "role": "member",
+            "status": "active"
+          },
+          "password_present": false,
+          "memberships": [
+            104393281,
+            201306877,
+            699448327
+          ],
+          "history_preserved": true
+        },
+        "password_login": {
+          "status": 401,
+          "location": null,
+          "flash": {},
+          "device_count": 1,
+          "backup_count": 0,
+          "credential_enabled": true,
+          "calls": [],
+          "delta": [
+            1,
+            0,
+            1,
+            0
+          ],
+          "markers": {},
+          "flow_present": false,
+          "identities": [
+            {
+              "user_id": 9000000001,
+              "subject": "controller-member",
+              "email": "new-member@smartdata.net",
+              "domain": "smartdata.net"
+            }
+          ],
+          "email": "legacy@smartdata.net",
+          "password_preserved": true,
+          "audits": [
+            {
+              "action": "user.create",
+              "actor_id": 9000000001,
+              "target_id": 9000000001,
+              "target_type": "User",
+              "target_label": "Fixture member <new-member@smartdata.net>",
+              "details": {
+                "method": "google"
+              }
+            },
+            {
+              "action": "session.sign_in.success",
+              "actor_id": 9000000001,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "method": "google"
+              }
+            },
+            {
+              "action": "session.sign_in.failure",
+              "actor_id": null,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "method": "password"
+              }
+            }
+          ],
+          "lifecycle": {
+            "user": {
+              "id": 9000000001,
+              "name": "Fixture member",
+              "email_address": "new-member@smartdata.net",
+              "role": "member",
+              "status": "active"
+            },
+            "password_present": false,
+            "memberships": [
+              104393281,
+              201306877,
+              699448327
+            ],
+            "history_preserved": true
+          }
+        }
+      }
+    },
+    {
+      "index": 68,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "provision_secondary",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 9000000001,
+            "subject": "controller-member",
+            "email": "new-member@cnbssoftware.com",
+            "domain": "cnbssoftware.com"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "user.create",
+            "actor_id": 9000000001,
+            "target_id": 9000000001,
+            "target_type": "User",
+            "target_label": "Fixture member <new-member@cnbssoftware.com>",
+            "details": {
+              "method": "google"
+            }
+          },
+          {
+            "action": "session.sign_in.success",
+            "actor_id": 9000000001,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 9000000001,
+            "name": "Fixture member",
+            "email_address": "new-member@cnbssoftware.com",
+            "role": "member",
+            "status": "active"
+          },
+          "password_present": false,
+          "memberships": [
+            104393281,
+            201306877,
+            699448327
+          ],
+          "history_preserved": true
+        },
+        "password_login": {
+          "status": 401,
+          "location": null,
+          "flash": {},
+          "device_count": 1,
+          "backup_count": 0,
+          "credential_enabled": true,
+          "calls": [],
+          "delta": [
+            1,
+            0,
+            1,
+            0
+          ],
+          "markers": {},
+          "flow_present": false,
+          "identities": [
+            {
+              "user_id": 9000000001,
+              "subject": "controller-member",
+              "email": "new-member@cnbssoftware.com",
+              "domain": "cnbssoftware.com"
+            }
+          ],
+          "email": "legacy@smartdata.net",
+          "password_preserved": true,
+          "audits": [
+            {
+              "action": "user.create",
+              "actor_id": 9000000001,
+              "target_id": 9000000001,
+              "target_type": "User",
+              "target_label": "Fixture member <new-member@cnbssoftware.com>",
+              "details": {
+                "method": "google"
+              }
+            },
+            {
+              "action": "session.sign_in.success",
+              "actor_id": 9000000001,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "method": "google"
+              }
+            },
+            {
+              "action": "session.sign_in.failure",
+              "actor_id": null,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "method": "password"
+              }
+            }
+          ],
+          "lifecycle": {
+            "user": {
+              "id": 9000000001,
+              "name": "Fixture member",
+              "email_address": "new-member@cnbssoftware.com",
+              "role": "member",
+              "status": "active"
+            },
+            "password_present": false,
+            "memberships": [
+              104393281,
+              201306877,
+              699448327
+            ],
+            "history_preserved": true
+          }
+        }
+      }
+    },
+    {
+      "index": 69,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "immutable_email",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/two_factor_challenge",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-member",
+            "email": "changed@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 70,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "deactivated",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "This account is no longer active. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "deactivated"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 71,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "banned",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "This account is no longer active. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "banned"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 72,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "bot",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in failed. Try again or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "bot",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 73,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "retained_deactivated",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "This account is no longer active. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-member",
+            "email": "legacy@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "deactivated"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 74,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "retained_banned",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "This account is no longer active. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-member",
+            "email": "legacy@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "banned"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 75,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "different_subject",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in could not pick your account. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-old",
+            "email": "legacy@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 76,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "self_changed",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "An administrator must link this account to Google before you can sign in with Google. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 77,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "admin_allowed",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/two_factor_challenge",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-member",
+            "email": "LEGACY@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "google.sign_in.link",
+            "actor_id": 712064548,
+            "target_id": 712064548,
+            "target_type": "User",
+            "target_label": "Kevin <legacy@smartdata.net>",
+            "details": {
+              "email": "LEGACY@smartdata.net"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 78,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "linking_disabled",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "An administrator must link this account to Google before you can sign in with Google. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 79,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "policy_changed",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is only available for @cnbssoftware.com. Other email addresses can sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
     }
   ]
 }

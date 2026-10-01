@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 178 ported domain/API/controller cases; 433 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 186 ported domain/API/controller cases; 425 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -182,17 +182,17 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Ported** — start and callback 404 when sign-in domains are explicitly empty — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
 - **Ported** — signed-in users are sent home instead of starting or finishing Google sign-in — `app::google_tests::google_sessions_csrf_pkce_and_signed_in_guards_match_rails`.
 - **Ported** — first-run setup cannot be bypassed through Google sign-in — `app::google_tests::google_sessions_first_run_cannot_be_bypassed`.
-- **Partial** — new smartdata.net user is auto-provisioned as an ordinary member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — new cnbssoftware.com user is auto-provisioned as an ordinary member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — existing account links by verified email, preserving id, history, role, and password — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — subsequent logins resolve the immutable subject across email changes — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — new smartdata.net user is auto-provisioned as an ordinary member — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
+- **Ported** — new cnbssoftware.com user is auto-provisioned as an ordinary member — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
+- **Ported** — existing account links by verified email, preserving id, history, role, and password — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
+- **Ported** — subsequent logins resolve the immutable subject across email changes — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Ported** — post-auth return destination survives the Google round trip — `app::google_tests::google_sessions_secondary_domains_multi_audience_and_return_path_provision_only_identity`.
 - **Partial** — external Google account is rejected while password sign-in still works — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Ported** — missing hd is rejected: the email suffix alone proves nothing — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
 - **Ported** — spoofed hd with an external email domain is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
 - **Ported** — allowed email with an external hd is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
 - **Ported** — Google-only user cannot sign in with a password — `app::google_tests::google_sessions_secondary_domains_multi_audience_and_return_path_provision_only_identity`.
-- **Partial** — deactivated user with a retained identity is rejected, never revived — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — deactivated user with a retained identity is rejected, never revived — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Partial** — deactivated predecessor without an identity is not recreated — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Ported** — banned user is rejected — `app::google_tests::google_sessions_ineligible_users_and_ambiguous_emails_never_create_identity_or_session`.
 - **Ported** — bot user is rejected — `app::google_tests::google_sessions_ineligible_users_and_ambiguous_emails_never_create_identity_or_session`.
@@ -232,9 +232,9 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/sessions/google_pre_hijack_test.rb
 
-- **Deferred** — a self-changed email is not auto-linked and asks for an administrator — WS14g continuation.
-- **Deferred** — an administrator allowing the link lets the next Google sign-in link — WS14g continuation.
-- **Deferred** — an account from before the rule, with its original email, still auto-links — WS14g continuation.
+- **Ported** — a self-changed email is not auto-linked and asks for an administrator — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
+- **Ported** — an administrator allowing the link lets the next Google sign-in link — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
+- **Ported** — an account from before the rule, with its original email, still auto-links — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Deferred** — a join-code signup never auto-links by email, even untouched — WS14g continuation.
 - **Deferred** — a Google-provisioned account keeps signing in by subject after a self-change — WS14g continuation.
 
@@ -764,11 +764,11 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/audit_log/sign_in_audit_test.rb (Google/Calendar/Drive cases only)
 
-- **Deferred** — Google sign-in success is recorded — WS14g audit producer + WS9 integration.
-- **Deferred** — Google sign-in that provisions a user records the creation — WS14g audit producer + WS9 integration.
-- **Deferred** — Google sign-in that auto-links an allowed address records the link — WS14g audit producer + WS9 integration.
+- **Ported** — Google sign-in success is recorded — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
+- **Ported** — Google sign-in that provisions a user records the creation — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
+- **Ported** — Google sign-in that auto-links an allowed address records the link — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 - **Deferred** — repeat Google sign-in records no link or creation row — WS14g audit producer + WS9 integration.
-- **Deferred** — rejected Google sign-in is recorded as a failure — WS14g audit producer + WS9 integration.
+- **Ported** — rejected Google sign-in is recorded as a failure — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (committed Rails requests; exact user/identity/audit deltas, nonempty authored history and memberships; legacy/Google-only password submissions).
 
 ## test/controllers/two_factor/reauthentications_controller_test.rb (Google/Calendar/Drive cases only)
 
@@ -828,13 +828,13 @@ The profile connection/sign-in panels match seven connection and three identity 
 
 The WS11 agent credential/authentication seam is now on merged main; it is consumed rather than reimplemented. Merged main now supplies the actual message/thread submission, replacement, JSON and broadcast APIs, which WS14g consumes in 32 pinned Rails HTTP/socket comparisons. Agent polling/REST delivery remains with WS11-api. Existing Message attachment domain validation/save/touch/cascade code remains shared. Human recipient policy and viewer metadata authorization are implemented; remaining named tests below their respective headings remain explicitly partial/deferred.
 
-The remaining session/link/step-up controller cases include account history/password preservation, domain/rotation changes across HTTP, authenticated replay, deactivation/ban races and the full original audits/page assertions. Existing representative tests do not count as completion of an unmapped Rails case. The SQL-read-count assertion for inbound preloading is also unfinished.
+Remaining session/link/step-up cases include key rotation across HTTP, forged-state and authenticated replay details, deactivation/ban races, sudo protected-action continuation and the remaining original audits/page assertions. Nonempty authored history, role, id, email and legacy password preservation are now compared through committed Rails requests. SQL-read-count coverage for inbound preloading is complete.
 
 ### October 2 continuation
 
 The real combined RSVP/Meet runner now uses a frozen clock, deterministic inbound-scope capture and a change-driven committed queue drain. Its original five-second deadline and normal runner concurrency remain. The application encryption provider now caches its 65536-round derivation per Secrets, matching Rails; repeated derivation was the CPU bottleneck. Thirty trials at eight concurrent tests on four CPUs passed after the fix (5/30 before it).
 
-The new controller-cases probe captures 66 complete Rails request observations, including signed-out/other-member callbacks, domain/nonce/subject checks, signed-in replay, malformed token/key payloads, and strict auth_time cutoff ±1 second for both reauth and sudo. Reauth observations follow the callback and exercise backup rotation (including single consumption), device removal, disabling two factor, wrong credentials, and the 599/600/601-second expiration boundary. Sudo protected-action continuation, whole-page composition and Google-only provisioning transitions still have their own remaining ledger entries. Eight additional controller declarations are now fully mapped; these are outside the primary 611-case count.
+The new controller-cases probe captures 80 complete Rails request observations, including signed-out/other-member callbacks, domain/nonce/subject checks, signed-in replay, malformed token/key payloads, and strict auth_time cutoff ±1 second for both reauth and sudo. Reauth observations follow the callback and exercise backup rotation (including single consumption), device removal, disabling two factor, wrong credentials, and the 599/600/601-second expiration boundary. Sudo protected-action continuation, whole-page composition and remaining sign-in lifecycle transitions still have their own ledger entries. Eight additional controller declarations are now fully mapped; these are outside the primary 611-case count.
 
 Inbound preloading now has the original one-event-read assertion, scaled from 3 to 30 confirmed entries, with recorded Google calls and unchanged responses/jobs. The merged owner SQL tracer is reused on the actual reader count.
 
@@ -843,3 +843,5 @@ Complete Google HTML now compares all three login HTTP pages and sixteen complet
 Error service reporting is now implemented through the app subscriber boundary. The Rails probe observes real report defaults and represents its execution-context ActiveJob object by class name (Ruby object pointers are not a cross-language contract); all other options, account contexts, request counts and retry emissions are compared exactly. The real error is passed to subscribers; default structured logs contain only classification/options, never snapshot tokens. Missing subscribers were reproduced after all eight committed attempts before wiring the consumer exhaustion block.
 
 The merged owner message APIs now close all 13 thread Drive declarations and 16 root message declarations, with 32 actual Rails producer observations and complete attachment socket frames. A synchronous stream fence proves both emitted and absent frames without timing windows. Attaching requires human room/write authority and valid ids, not a Google grant; non-creators cannot edit, and rejected submissions preserve rows/content. Three root display/edit-form declarations remain explicitly unmapped. Agent REST/polling endpoints are still absent on the merged main API surface (WS11-api); real Drive agent request authorization itself is already covered.
+
+The sign-in lifecycle matrix now commits the Rails HTTP requests and restores the isolated database between cases; wrapping them in an outer rollback suppressed Rails after-commit room joins. Fourteen lifecycle cases add both domain provisioning paths, Google-only password rejection, legacy password/history/role preservation, immutable subjects, status/role eligibility, trust-marker permissions and a policy change during OAuth. Twelve additional declarations are mapped in this slice (eight primary and four additional audit cases).
