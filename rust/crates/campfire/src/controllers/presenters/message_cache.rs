@@ -84,6 +84,8 @@ impl Presenter<'_> {
                     .map_err(|error| campfire_db::Error::Other(error.into()))?,
             );
         }
-        Ok(keys::expand(&key, &campfire_views::time::Zone::utc()))
+        // Rails expands TimeWithZone components in the viewer's zone. Plain record
+        // versions remain UTC; equivalent zone aliases therefore share the same key.
+        Ok(keys::expand(&key, &self.render_zone))
     }
 }
