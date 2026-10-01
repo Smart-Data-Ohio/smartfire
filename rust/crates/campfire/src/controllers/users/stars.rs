@@ -5,15 +5,23 @@ use crate::controllers::presenters::page;
 use campfire_db::UserStar;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 
-pub async fn create(c: &mut Ctx) -> Result { change(c, true).await }
-pub async fn destroy(c: &mut Ctx) -> Result { change(c, false).await }
+pub async fn create(c: &mut Ctx) -> Result {
+    change(c, true).await
+}
+pub async fn destroy(c: &mut Ctx) -> Result {
+    change(c, false).await
+}
 
 async fn change(c: &mut Ctx, starred: bool) -> Result {
     // Rails overrides request_authentication for JSON; preserve the rest of the shared chain.
     match concerns::before_actions(c, Before::default()).await {
-        Err(Error::Halt(response)) if response.status == StatusCode::FOUND
-            && !concerns::signed_in(c) && c.format()? == Some(&format::JSON) =>
-            return Ok(head(StatusCode::UNAUTHORIZED)),
+        Err(Error::Halt(response))
+            if response.status == StatusCode::FOUND
+                && !concerns::signed_in(c)
+                && c.format()? == Some(&format::JSON) =>
+        {
+            return Ok(head(StatusCode::UNAUTHORIZED));
+        }
         result => result?,
     }
     let target = match super::find_user(c, "user_id").await {
@@ -29,20 +37,37 @@ async fn change(c: &mut Ctx, starred: bool) -> Result {
         return Ok(head(StatusCode::FORBIDDEN));
     }
     let (viewer_id, target_id) = (viewer.id, target.id);
-    let result = c.app().db.write(move |tx| {
-        if starred { UserStar::find_or_create(tx, viewer_id, target_id)?; }
-        else { UserStar::remove(tx, viewer_id, target_id)?; }
-        Ok(())
-    }).await;
+    let result = c
+        .app()
+        .db
+        .write(move |tx| {
+            if starred {
+                UserStar::find_or_create(tx, viewer_id, target_id)?;
+            } else {
+                UserStar::remove(tx, viewer_id, target_id)?;
+            }
+            Ok(())
+        })
+        .await;
     if let Err(error) = result
-        && !(starred && (error.is_record_not_unique() || matches!(error, campfire_db::Error::RecordInvalid(_)))) {
+        && !(starred
+            && (error.is_record_not_unique()
+                || matches!(error, campfire_db::Error::RecordInvalid(_))))
+    {
         return Err(Error::internal(error));
     }
     match c.respond_to(&[&format::TURBO_STREAM, &format::JSON, &format::HTML])? {
-        f if *f == format::TURBO_STREAM => page::bare(c, StatusCode::OK, &format::TURBO_STREAM, |_| {
-            campfire_views::users::star_stream(target_id, starred)
-        }).await,
-        f if *f == format::JSON => Ok(c.render(StatusCode::OK, &format::JSON, format!("{{\"starred\":{starred}}}"))),
+        f if *f == format::TURBO_STREAM => {
+            page::bare(c, StatusCode::OK, &format::TURBO_STREAM, |_| {
+                campfire_views::users::star_stream(target_id, starred)
+            })
+            .await
+        }
+        f if *f == format::JSON => Ok(c.render(
+            StatusCode::OK,
+            &format::JSON,
+            format!("{{\"starred\":{starred}}}"),
+        )),
         _ => c.redirect_back_or_to(&campfire_routes::user(target_id)),
     }
 }

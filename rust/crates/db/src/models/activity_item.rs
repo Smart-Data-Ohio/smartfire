@@ -1,7 +1,7 @@
 //! app/models/activity_item.rb: inbox sources, live accessibility, state and after-commit signals.
 
-pub mod message_recorder;
 mod access;
+pub mod message_recorder;
 pub use access::ActivityQuery;
 
 use rusqlite::{Connection, Row, params};
@@ -95,32 +95,55 @@ impl ActivityItem {
         self.read_at.is_none() && self.handled_at.is_none()
     }
 
-    pub fn read(&self) -> bool { self.read_at.is_some() && self.handled_at.is_none() }
-    pub fn handled(&self) -> bool { self.handled_at.is_some() }
+    pub fn read(&self) -> bool {
+        self.read_at.is_some() && self.handled_at.is_none()
+    }
+    pub fn handled(&self) -> bool {
+        self.handled_at.is_some()
+    }
     pub fn state(&self) -> &'static str {
-        if self.handled() { "handled" } else if self.read_at.is_some() { "read" } else { "unread" }
+        if self.handled() {
+            "handled"
+        } else if self.read_at.is_some() {
+            "read"
+        } else {
+            "unread"
+        }
     }
 
     /// Return the freshly saved row for the inbox payload (also WS13's established API).
     pub fn mark_read(&self, tx: &mut Tx<'_>) -> Result<Self> {
-        if self.read_at.is_none() { self.save_state(tx,Some(tx.now()),self.handled_at) }
-        else { Self::find(tx.conn(),self.id) }
+        if self.read_at.is_none() {
+            self.save_state(tx, Some(tx.now()), self.handled_at)
+        } else {
+            Self::find(tx.conn(), self.id)
+        }
     }
     pub fn mark_unread(&self, tx: &mut Tx<'_>) -> Result<Self> {
-        self.save_state(tx,None,None)
+        self.save_state(tx, None, None)
     }
     pub fn mark_unhandled(&self, tx: &mut Tx<'_>) -> Result<Self> {
-        self.save_state(tx,self.read_at,None)
+        self.save_state(tx, self.read_at, None)
     }
 
-    fn save_state(&self, tx: &mut Tx<'_>, read_at: Option<Timestamp>, handled_at: Option<Timestamp>) -> Result<Self> {
+    fn save_state(
+        &self,
+        tx: &mut Tx<'_>,
+        read_at: Option<Timestamp>,
+        handled_at: Option<Timestamp>,
+    ) -> Result<Self> {
         // Rails dirty tracking skips a save (including updated_at and the callback) with no change.
-        if self.read_at == read_at && self.handled_at == handled_at { return Self::find(tx.conn(),self.id); }
+        if self.read_at == read_at && self.handled_at == handled_at {
+            return Self::find(tx.conn(), self.id);
+        }
+        self.validate_event_type()?;
         let now = tx.now();
-        tx.conn().execute_cached("UPDATE activity_items SET read_at=?,handled_at=?,updated_at=? WHERE id=?",
-            params![read_at,handled_at,now,self.id])?;
-        Self::broadcast_change(tx,self.user_id,self.id)?;
-        Self::find(tx.conn(),self.id)
+        tx.conn().execute_cached(
+            "UPDATE activity_items SET read_at=?,handled_at=?,updated_at=? WHERE id=?",
+            params![read_at, handled_at, now, self.id],
+        )?;
+        Self::broadcast_change(tx, self.user_id, self.id)?;
+        Self::find(tx.conn(), self.id)
     }
 
     /// `find_or_initialize_by(user:, source:)`, then `event_type =`, unread again (`read_at` and
@@ -133,17 +156,47 @@ impl ActivityItem {
         source_id: i64,
         event_type: &str,
     ) -> Result<Self> {
+        let previous = Self::find_by_user_and_source(tx.conn(), user_id, source_type, source_id)?;
         let mut errors = Errors::default();
+        // Rails 8 validates required associations only on new/changed foreign keys.
+        // A state/type refresh of an existing row must still work after its source disappears.
+        if previous.is_none() {
+            if User::find_by_id(tx.conn(), user_id)?.is_none() {
+                errors.add("user", "must exist");
+            }
+            // The eleven inbox source writers have known model tables. Arbitrary polymorphic
+            // source construction belongs to the still-pending generic recorder port (WS12).
+            let table = match source_type {
+                "Message" => Some("messages"),
+                "SavedItem" => Some("saved_items"),
+                "WorkThreadEvent" => Some("work_thread_events"),
+                "BoardSlaNudge" => Some("board_sla_nudges"),
+                "HuddleGrant" => Some("huddle_grants"),
+                "Event" => Some("events"),
+                "AgentApproval" => Some("agent_approvals"),
+                "AgentBudgetNotice" => Some("agent_budget_notices"),
+                "ScheduledMessage" => Some("scheduled_messages"),
+                "TwoFactorCredential" => Some("two_factor_credentials"),
+                "Session" => Some("sessions"),
+                _ => None,
+            };
+            if let Some(table) = table {
+                let exists: bool = tx.conn().query_row_cached(
+                    &format!("SELECT EXISTS(SELECT 1 FROM {table} WHERE id=?)"),
+                    [source_id],
+                    |row| row.get(0),
+                )?;
+                if !exists {
+                    errors.add("source", "must exist");
+                }
+            }
+        }
         if !EVENT_TYPES.contains(&event_type) {
             errors.add("event_type", "is not included in the list");
         }
-        if User::find_by_id(tx.conn(), user_id)?.is_none() {
-            errors.add("user", "must exist");
-        }
         errors.into_result()?;
         let now = tx.now();
-        let item = match Self::find_by_user_and_source(tx.conn(), user_id, source_type, source_id)?
-        {
+        let item = match previous {
             Some(item) => {
                 let changed = item.event_type != event_type
                     || item.read_at.is_some()
@@ -173,39 +226,61 @@ impl ActivityItem {
     /// `broadcast_activity_change`: to active humans only, on `ActivityChannel`'s stream, after
     /// commit. (Huddle items' invitation payload is WS13's.)
     pub(crate) fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {
-        let human = User::find_by_id(tx.conn(), user_id)?.is_some_and(|user| user.is_active() && !user.is_bot());
+        let human = User::find_by_id(tx.conn(), user_id)?
+            .is_some_and(|user| user.is_active() && !user.is_bot());
         if human {
             if crate::models::huddle_invitations::enqueue_item_ring(tx, id)? {
                 return Ok(());
             }
-            tx.emit_broadcast_once("activity_items", id, &Broadcast::Cable {
-                stream: format!("user_{user_id}_activity"),
-                payload: serde_json::json!({ "activityItemId": id }),
-            });
-
+            tx.emit_broadcast_once(
+                "activity_items",
+                id,
+                &Broadcast::Cable {
+                    stream: format!("user_{user_id}_activity"),
+                    payload: serde_json::json!({ "activityItemId": id }),
+                },
+            );
         }
         Ok(())
     }
 
     /// `mark_handled!`: preserve an existing read timestamp when accepting a late invite.
     pub fn mark_handled(&self, tx: &mut Tx<'_>) -> Result<Self> {
+        self.validate_event_type()?;
         // Rails' saved-change callback watches the state timestamps. Repeating
         // an answer at the same timestamp is a no-op (activity_item.rb:215-218).
         if self.read_at.is_none() || self.handled_at != Some(tx.now()) {
             tx.conn().execute_cached("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),tx.now(),self.id])?;
-            Self::broadcast_change(tx,self.user_id,self.id)?;
+            Self::broadcast_change(tx, self.user_id, self.id)?;
         }
-        Self::find(tx.conn(),self.id)
+        Self::find(tx.conn(), self.id)
+    }
 
+    fn validate_event_type(&self) -> Result<()> {
+        let mut errors = Errors::default();
+        if !EVENT_TYPES.contains(&self.event_type.as_str()) {
+            errors.add("event_type", "is not included in the list");
+        }
+        errors.into_result()
     }
 
     /// Approval settlement preserves an earlier read timestamp and broadcasts once
     /// for each newly handled item. The event sink runs only after commit.
-    pub(crate) fn handle_for_source(tx: &mut Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
-        let items = crate::sql::query_all(tx.conn(), "SELECT * FROM activity_items WHERE source_type=? AND source_id=? AND handled_at IS NULL ORDER BY id", params![source_type,source_id],Self::from_row)?;
+    pub(crate) fn handle_for_source(
+        tx: &mut Tx<'_>,
+        source_type: &str,
+        source_id: i64,
+    ) -> Result<()> {
+        let items = crate::sql::query_all(
+            tx.conn(),
+            "SELECT * FROM activity_items WHERE source_type=? AND source_id=? AND handled_at IS NULL ORDER BY id",
+            params![source_type, source_id],
+            Self::from_row,
+        )?;
         for item in items {
+            item.validate_event_type()?;
             tx.conn().execute("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?",params![tx.now(),tx.now(),tx.now(),item.id])?;
-            Self::broadcast_change(tx,item.user_id,item.id)?;
+            Self::broadcast_change(tx, item.user_id, item.id)?;
         }
         Ok(())
     }

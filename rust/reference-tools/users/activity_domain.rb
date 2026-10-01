@@ -45,6 +45,30 @@ states = []
   states << {operation:state,now:at.to_i,state:item.state,read_at:item.read_at&.to_i,
     handled_at:item.handled_at&.to_i,updated_at:item.updated_at.to_i}
 end
+validations = %w[Message SavedItem WorkThreadEvent BoardSlaNudge HuddleGrant Event AgentApproval AgentBudgetNotice ScheduledMessage TwoFactorCredential Session].map do |type|
+  invalid = ActivityItem.new(user:users.first,source_type:type,source_id:-1,event_type:"mention")
+  invalid.valid?
+  {source_type:type,errors:invalid.errors.full_messages}
+end
+invalid = ActivityItem.new(user_id:-1,source_type:"Message",source_id:-1,event_type:"invalid")
+invalid.valid?
+combined_validation = invalid.errors.full_messages
+stale = item.reload
+stale.update_columns(event_type:"invalid")
+stale.reload
+begin
+  stale.mark_read!
+  raise "invalid event update incorrectly succeeded"
+rescue ActiveRecord::RecordInvalid => error
+  invalid_event_update = error.record.errors.full_messages
+end
+stale.update_columns(event_type:"mention",read_at:nil)
+stale.reload
+stale.update_columns(source_id:-1)
+stale.reload
+stale.mark_read!
+# Rails 8 skips belongs_to existence validation when its non-null identity is unchanged.
+update_validation = {state:stale.state,read_at:stale.read_at.to_i,errors:stale.errors.full_messages}
 baseline_snapshots = snapshots
 snapshots = []
 Membership.delete_all
@@ -84,8 +108,10 @@ Membership.where(user_id:users.first.id).delete_all
 snapshot.call("all_sources_membership_revoked")
 agent.update_columns(owner_id:users[2].id)
 snapshot.call("agent_reassigned")
+agent.update_columns(owner_id:nil)
+snapshot.call("agent_without_owner")
 agent.user.update_columns(status:1)
 snapshot.call("agent_inactive")
 matrix = {setup:setup,memberships:memberships,items:rows,agent_id:agent.id,agent_user_id:agent.user_id,snapshots:snapshots}
-puts JSON.pretty_generate(reference:"d7c7de92",snapshots:baseline_snapshots,states:states,matrix:matrix)
-warn "Rails activity domain oracle: #{baseline_snapshots.size + snapshots.size} access snapshots over all 11 source types, #{states.size} state transitions; reference d7c7de92"
+puts JSON.pretty_generate(reference:"d7c7de92",snapshots:baseline_snapshots,states:states,matrix:matrix,validations:validations,combined_validation:combined_validation,update_validation:update_validation,invalid_event_update:invalid_event_update)
+warn "Rails activity domain oracle: #{baseline_snapshots.size + snapshots.size} access snapshots over all 11 source types, #{states.size} state transitions, #{validations.size + 3} validation cases; reference d7c7de92"

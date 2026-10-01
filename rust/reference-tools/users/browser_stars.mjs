@@ -23,6 +23,13 @@ async function starred(p, expected) {
   await p.waitForFunction(({id,expected}) => Boolean(document.querySelector(`#channel-members [aria-label='Starred members'] [data-member-id='${id}']`)) === expected,{id,expected})
   assert.equal(await p.locator(`#channel-members [aria-label='Starred members'] [data-member-id='${id}']`).count(),expected ? 1 : 0)
   assert.equal(await row(p).locator(".member-panel__presence").count(),1)
+  // Original system assertion: member controls keep identity beside the avatar.
+  const broken = await p.locator("#channel-members .member-panel__member").evaluateAll(rows => rows.filter(row => {
+    const avatar = row.querySelector(".member-panel__avatar").getBoundingClientRect()
+    const identity = row.querySelector(".member-panel__identity").getBoundingClientRect()
+    return identity.left < avatar.right || identity.top >= avatar.bottom || identity.width < 80
+  }).map(row => row.dataset.memberId))
+  assert.deepEqual(broken,[])
 }
 async function scenario(name, viewport, run) {
   const context = await browser.newContext({viewport})
@@ -94,6 +101,7 @@ try {
     await p.locator("#user_card").getByRole("button",{name:"★ Unstar",exact:true}).waitFor()
     await closeCard(p)
     await starred(p,true)
+    assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),true)
   })
   console.log(`WS12 browser stars: ${passed} passed; 0 failed; Chromium ${browser.version()}; real signed sessions, CSRF and Stimulus`)
 } finally {await browser.close()}

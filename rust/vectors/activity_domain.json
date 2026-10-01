@@ -1983,6 +1983,192 @@
         ]
       },
       {
+        "name": "agent_without_owner",
+        "viewers": [
+          {
+            "user_id": 127326141,
+            "ids": [
+              8400000100,
+              8400000090,
+              8400000080,
+              8400000070,
+              8400000060
+            ],
+            "unread_count": 5,
+            "filters": {
+              "unread": [
+                8400000100,
+                8400000090,
+                8400000080,
+                8400000070,
+                8400000060
+              ],
+              "read": [],
+              "handled": []
+            },
+            "types": {
+              "all": [
+                8400000100,
+                8400000090,
+                8400000080,
+                8400000070,
+                8400000060
+              ],
+              "mentions": [],
+              "threads": [],
+              "events": [],
+              "agents": [
+                8400000070,
+                8400000060
+              ],
+              "github": [],
+              "huddles": [],
+              "reminders": [],
+              "security": [
+                8400000100,
+                8400000090
+              ]
+            }
+          },
+          {
+            "user_id": 149087659,
+            "ids": [
+              8400000071,
+              8400000061,
+              8400000051,
+              8400000041,
+              8400000031,
+              8400000021,
+              8400000011,
+              8400000001
+            ],
+            "unread_count": 8,
+            "filters": {
+              "unread": [
+                8400000071,
+                8400000061,
+                8400000051,
+                8400000041,
+                8400000031,
+                8400000021,
+                8400000011,
+                8400000001
+              ],
+              "read": [],
+              "handled": []
+            },
+            "types": {
+              "all": [
+                8400000071,
+                8400000061,
+                8400000051,
+                8400000041,
+                8400000031,
+                8400000021,
+                8400000011,
+                8400000001
+              ],
+              "mentions": [
+                8400000001
+              ],
+              "threads": [
+                8400000031,
+                8400000021
+              ],
+              "events": [
+                8400000051
+              ],
+              "agents": [
+                8400000071,
+                8400000061
+              ],
+              "github": [],
+              "huddles": [
+                8400000041
+              ],
+              "reminders": [
+                8400000011
+              ],
+              "security": []
+            }
+          },
+          {
+            "user_id": 712064548,
+            "ids": [
+              8400000052,
+              8400000042,
+              8400000032,
+              8400000022,
+              8400000012,
+              8400000002
+            ],
+            "unread_count": 6,
+            "filters": {
+              "unread": [
+                8400000052,
+                8400000042,
+                8400000032,
+                8400000022,
+                8400000012,
+                8400000002
+              ],
+              "read": [],
+              "handled": []
+            },
+            "types": {
+              "all": [
+                8400000052,
+                8400000042,
+                8400000032,
+                8400000022,
+                8400000012,
+                8400000002
+              ],
+              "mentions": [
+                8400000002
+              ],
+              "threads": [
+                8400000032,
+                8400000022
+              ],
+              "events": [
+                8400000052
+              ],
+              "agents": [],
+              "github": [],
+              "huddles": [
+                8400000042
+              ],
+              "reminders": [
+                8400000012
+              ],
+              "security": []
+            }
+          },
+          {
+            "user_id": 394959859,
+            "ids": [],
+            "unread_count": 0,
+            "filters": {
+              "unread": [],
+              "read": [],
+              "handled": []
+            },
+            "types": {
+              "all": [],
+              "mentions": [],
+              "threads": [],
+              "events": [],
+              "agents": [],
+              "github": [],
+              "huddles": [],
+              "reminders": [],
+              "security": []
+            }
+          }
+        ]
+      },
+      {
         "name": "agent_inactive",
         "viewers": [
           {
@@ -2087,7 +2273,6 @@
           {
             "user_id": 712064548,
             "ids": [
-              8400000072,
               8400000052,
               8400000042,
               8400000032,
@@ -2095,10 +2280,9 @@
               8400000012,
               8400000002
             ],
-            "unread_count": 7,
+            "unread_count": 6,
             "filters": {
               "unread": [
-                8400000072,
                 8400000052,
                 8400000042,
                 8400000032,
@@ -2111,7 +2295,6 @@
             },
             "types": {
               "all": [
-                8400000072,
                 8400000052,
                 8400000042,
                 8400000032,
@@ -2129,9 +2312,7 @@
               "events": [
                 8400000052
               ],
-              "agents": [
-                8400000072
-              ],
+              "agents": [],
               "github": [],
               "huddles": [
                 8400000042
@@ -2166,5 +2347,86 @@
         ]
       }
     ]
-  }
+  },
+  "validations": [
+    {
+      "source_type": "Message",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "SavedItem",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "WorkThreadEvent",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "BoardSlaNudge",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "HuddleGrant",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "Event",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "AgentApproval",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "AgentBudgetNotice",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "ScheduledMessage",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "TwoFactorCredential",
+      "errors": [
+        "Source must exist"
+      ]
+    },
+    {
+      "source_type": "Session",
+      "errors": [
+        "Source must exist"
+      ]
+    }
+  ],
+  "combined_validation": [
+    "User must exist",
+    "Source must exist",
+    "Event type is not included in the list"
+  ],
+  "update_validation": {
+    "state": "read",
+    "read_at": 1772467200,
+    "errors": []
+  },
+  "invalid_event_update": [
+    "Event type is not included in the list"
+  ]
 }

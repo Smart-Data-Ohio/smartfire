@@ -16,6 +16,8 @@ mutations = [
     ("star-association", "crates/db/src/models/user_star.rs", "if User::find_by_id(tx.conn(), starred_user_id)?.is_none() {", "if false {", "campfire_db", "ws12_star_model_requires_both_associations"),
     ("star-viewer", "crates/db/src/models/user_star.rs", "DELETE FROM user_stars WHERE user_id=? AND starred_user_id=?", "DELETE FROM user_stars WHERE user_id!=? AND starred_user_id=?", "campfire_db", "ws12_star_readers_and_deletes_are_viewer_scoped"),
     ("activity-viewer", "crates/db/src/models/activity_item/access.sql", "AND activity_items.user_id=?1", "AND activity_items.user_id!=?1", "campfire", "ws12_activity_membership_active_human_and_foreign_security_access_match_rails"),
+    ("activity-source", "crates/db/src/models/activity_item.rs", "if !exists {", "if false {", "campfire", "ws12_activity_writer_and_state_save_validate_associations_like_rails"),
+    ("activity-event", "crates/db/src/models/activity_item.rs", "if !EVENT_TYPES.contains(&self.event_type.as_str()) {", "if false {", "campfire", "ws12_activity_writer_and_state_save_validate_associations_like_rails"),
 ]
 for name, relative, old, new, package, test in mutations:
     path = root / relative
