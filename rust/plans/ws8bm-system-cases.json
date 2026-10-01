@@ -13,23 +13,23 @@
       "cases": [
         {
           "name": "boosting a message",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py boosting_messages: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "deleting a boost",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py boosting_messages: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "message update preserves the input state",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py boosting_messages: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "boost by another user preserves the input state",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py boosting_messages: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         }
       ]
     },
@@ -76,17 +76,17 @@
         {
           "name": "sending messages between two users",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: isolated seed per case; two actual viewer browsers, real HTTP/Cable, edit/reload and exact persistent row checks on both apps"
+          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "editing messages",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: isolated seed per case; two actual viewer browsers, real HTTP/Cable, edit/reload and exact persistent row checks on both apps"
+          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "deleting messages",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: isolated seed per case; two actual viewer browsers, real HTTP/Cable, edit/reload and exact persistent row checks on both apps"
+          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         }
       ]
     },
@@ -97,24 +97,23 @@
         {
           "name": "creates a thread from a channel message and keeps the channel draft separate",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted"
+          "evidence": "reference-tools/messaging/behavior-check.py threads: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the thread root counts its replies live and hides the count when none remain",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted"
+          "evidence": "reference-tools/messaging/behavior-check.py threads: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a stray create re-entry does not wipe the half-filled thread name",
-          "status": "deferred",
-          "evidence": null,
-          "prior_evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted",
-          "remaining_reason": "The final fresh-clone browser batch failed the stronger pre-submit name assertion: the field was empty after the pinned same-context re-entry. Earlier runs passed, but current acceptance is unresolved. Preserve the assertion and 30-second waits; do not refill the draft or change timing to get a pass."
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md",
+          "prior_evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted"
         },
         {
           "name": "browses active and closed threads and can join or leave a closed one",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py threads: separate JZ/David browsers; active and closed lists; real close/join/leave controls; retained message bodies, creator IDs, closure timestamp and membership rows checked on both apps"
+          "evidence": "reference-tools/messaging/behavior-check.py threads: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "tracks work, assigns an owner, completes and reopens it without losing the conversation",
@@ -149,12 +148,12 @@
         {
           "name": "rejects an external thread deep link before fetching it",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py threads: real external query URL; invalid-link status; no external browser request/resource or thread content; unchanged message/thread/membership counts on both apps"
+          "evidence": "reference-tools/messaging/behavior-check.py threads: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "renders untrusted thread metadata as text",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py threads: actual create form with the pinned malicious name; literal title, no image node or script execution; exact saved name and message source on both apps"
+          "evidence": "reference-tools/messaging/behavior-check.py threads: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "opens a shared thread message link around an older post",
@@ -180,37 +179,39 @@
         {
           "name": "Markdown messages reach other users and editing preserves the original source",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "desktop keyboard composition keeps line breaks and sends once after composition ends",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "untrusted markup stays inert in the delivered message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "Markdown replies and file attachments remain usable",
-          "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "status": "deferred",
+          "evidence": null,
+          "previous_evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels",
+          "remaining_reason": "Initial full fresh-clone paired run timed out waiting for the delivered reply attachment. A later unchanged diagnostic passed on both apps, but the initial application and root cause remain unknown. This is not credited as repaired by retry; retain diagnostics and investigate before behaviour sign-off."
         },
         {
           "name": "mention suggestions select a room member without sending the unfinished message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a rejected message can be recovered corrected and sent",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "sending preserves the submitted source and a newer draft",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "workspace follows the system theme and mobile navigation remains reachable",
@@ -225,58 +226,58 @@
       "cases": [
         {
           "name": "blurring an open autocomplete does not leave a zombie that swallows Enter",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a stale icon response does not poison the suggestion commit",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "mention queries are URL-encoded",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "composer autocomplete exposes combobox semantics over a polite listbox",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "composing text does not commit a suggestion or send the message",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "clicking a reply preview scrolls to the loaded message instead of navigating",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "clicking a reply preview falls back to the permalink when the target is not loaded",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "deleting a replied-to message turns open reply previews into a tombstone",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "two typers with the same name do not merge",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "composer drafts persist per room and clear on send",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "thread drafts persist per thread without touching the channel draft",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         }
       ]
     },
@@ -286,13 +287,13 @@
       "cases": [
         {
           "name": "+ shows both attach options when Drive is available",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "From this device triggers the file input",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "From Google Drive starts the legacy picker flow",
@@ -306,28 +307,28 @@
         },
         {
           "name": "+ opens the file picker directly without Drive",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "arrow keys move between items and Escape closes back onto +",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a tap outside closes the menu",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "phone layout keeps the menu above the composer with no horizontal overflow",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "device files, paste, and drag-and-drop still preview uploads",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py composer_attach_menu: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         }
       ]
     },
@@ -481,127 +482,127 @@
         {
           "name": "the message list is a single tab stop with a roving tabindex",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "arrow keys move between messages",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a stream replacing the focused message keeps focus and the tab stop on its replacement",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "deleting the focused message moves focus to the surviving tab stop",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "deleting an older focused message hands focus to its neighbour, not the newest",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a focus move during a stream render survives Turbo's focus restore",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a no-change room refresh does not yank focus back to the composer",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the ContextMenu key opens the shared menu and Escape returns focus",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a late composer autofocus does not steal focus from a message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "up arrow from an empty composer still edits my last message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "up-arrow-to-edit shows an error when the actions endpoint fails",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "forward reuses the menu-open metadata request instead of fetching again",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "a menu opened while an action waits does not redirect the pending action",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the menu closes before Turbo caches the page",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the main message list is a live log",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "paginated history stays quiet past the insert, then the live region comes back",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "an edit replacement is not announced as an addition",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "an own message is not re-announced when its broadcast replaces the pending copy",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "search results keep their menus and focusability",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the message-list top padding does not apply to search results",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the standalone thread page keeps menus and focusability",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the standalone message page keeps its menu and focusability",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the viewport allows pinch zoom",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "text fields stay at 16px on touch devices without changing the desktop look",
@@ -611,18 +612,18 @@
         },
         {
           "name": "profile message and ban buttons have accessible names",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "flash persists its 5-second minimum under reduced motion",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "flash dismisses on demand under reduced motion",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         }
       ]
     },
@@ -654,27 +655,27 @@
         {
           "name": "few unread render the divider above the first new message and keep the bottom scroll",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "many unread scroll the room to the divider",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "the jump pill shows while the divider is off-screen and returns to it",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "unread older than the last page keeps the last page and the pill links to the first unread",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "mark unread from the message menu points the divider at that message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         }
       ]
     },
@@ -685,17 +686,17 @@
         {
           "name": "search tolerates operators, shows an empty state and pages older results",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: real search empty/operator/40+2 paging controls and forwarding dialog; author and recipient tables/code; exact one rendered snapshot with NULL Markdown source and copied Action Text bytes on both apps; both checks reject committed response mutants"
+          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "forwarded Markdown keeps tables and code blocks",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: real search empty/operator/40+2 paging controls and forwarding dialog; author and recipient tables/code; exact one rendered snapshot with NULL Markdown source and copied Action Text bytes on both apps; both checks reject committed response mutants"
+          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         },
         {
           "name": "editing to add a URL renders its card live and the edited marker on load",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: source-pinned scoped browser controls on real Rails/Rust HTTP and Cable; complete paired pass and persisted rows verified from a fresh source clone; the specific served mutant reached its assertions and was rejected; no pixels; revision and initial failures recorded in ws8bm-report.md"
         }
       ]
     },
