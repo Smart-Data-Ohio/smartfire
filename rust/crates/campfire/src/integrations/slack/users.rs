@@ -42,18 +42,14 @@ pub fn users_for(
     if ids.is_empty() {
         return Ok(users);
     }
-    // Keep UserMapper#users_for's pluck order from the same SQLite mapping query.
-    // Ruby Hash preserves it through missing-author appends and stable name sorting.
-    let placeholders = std::iter::repeat_n("?", ids.len())
-        .collect::<Vec<_>>()
-        .join(",");
-    let mut bindings = vec![rusqlite::types::Value::Integer(run.slack_workspace_id)];
-    bindings.extend(ids.into_iter().map(rusqlite::types::Value::Text));
-    let mut statement = conn.prepare(&format!(
-        "SELECT slack_key,record_id FROM slack_import_records WHERE slack_workspace_id=? AND slack_kind='user' AND slack_key IN ({placeholders})"
-    ))?;
+    // Keep UserMapper#users_for's pluck order with the same indexed IN predicate.
+    // One JSON binding also handles sets beyond SQLite's bound-variable limit.
+    let ids = json!(ids.into_iter().collect::<Vec<_>>()).to_string();
+    let mut statement = conn.prepare(
+        "SELECT slack_key,record_id FROM slack_import_records WHERE slack_workspace_id=? AND slack_kind='user' AND slack_key IN (SELECT value FROM json_each(?))"
+    )?;
     let mappings = statement
-        .query_map(rusqlite::params_from_iter(bindings), |row| {
+        .query_map(params![run.slack_workspace_id, ids], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;

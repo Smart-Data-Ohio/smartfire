@@ -76,6 +76,17 @@ async fn slack_ordering_tied_group_names_repeat_rails_order_50_times() {
             json!(mapped.keys().collect::<Vec<_>>()),
             oracle["duplicate_keys"]
         );
+        let unique: Vec<_> = std::iter::once(oracle["keys"][0].clone())
+            .chain(
+                (0..oracle["duplicate_count"].as_u64().unwrap())
+                    .map(|i| json!(format!("UMISSING{i}"))),
+            )
+            .collect();
+        let mapped = users::users_for(tx.conn(), &run, &unique)?;
+        assert_eq!(
+            json!(mapped.keys().collect::<Vec<_>>()),
+            oracle["unique_keys"]
+        );
         Ok(())
     })
     .await

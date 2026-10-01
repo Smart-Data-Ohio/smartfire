@@ -61,6 +61,9 @@
   "duplicate_keys": [
     "U00"
   ],
+  "unique_keys": [
+    "U00"
+  ],
   "missing_ids": [
     "UMISSING-Z",
     "U10",
