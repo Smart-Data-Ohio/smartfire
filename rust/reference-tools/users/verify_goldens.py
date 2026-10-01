@@ -62,4 +62,4 @@ with output.open("wb") as stdout, (scratch / "auth-pages.log").open("wb") as std
                    cwd=root.parent, env=env, stdout=stdout, stderr=stderr, check=True)
 compare(output, root / "vectors/auth_full_pages.json")
 print("WS8br2 shared WS9 verification: all 15 complete auth pages match byte for byte", flush=True)
-print("WS8br2 golden verification: sources, both fresh seeds, 29 owned oracles and shared core/routes/sidebar/auth pages passed; no masks or normalization", flush=True)
+print("WS8br2 golden verification: sources, both fresh seeds, 30 owned oracles and shared core/routes/sidebar/auth pages passed; no masks or normalization", flush=True)

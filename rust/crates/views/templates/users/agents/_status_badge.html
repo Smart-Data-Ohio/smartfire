@@ -1,0 +1,4 @@
+<span id="status_badge_agent_{{ agent.id }}" class="agent-status">
+{% if agent.suspended %}    <span class="agent-status-badge agent-status-badge--suspended">Suspended</span>
+{% else %}    <span class="agent-status-badge agent-status-badge--{{ agent.status }}">{{ self.title() }}</span>{% if let Some(note) = agent.status_note %}{{ "\n" }}      <span class="agent-status-note">{{ note }}</span>{{ "\n" }}{% endif %}    <span class="agent-status-since">since {{ self.since() }} ago</span>
+{% endif %}</span>{{ "\n" }}

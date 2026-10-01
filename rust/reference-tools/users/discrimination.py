@@ -11,6 +11,10 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("agent-private-room", "crates/campfire/src/controllers/presenters/agent_profile.rs", "campfire_db::Membership::find_by_room_and_user(conn, room.id, viewer.id)?.is_some()", "true", "private_rooms_hidden"),
+    ("agent-owner-actions", "crates/campfire/src/controllers/presenters/agent_profile.rs", "viewer.is_administrator()", "true", "peer_hides_grants"),
+    ("signed-blob-filename", "crates/storage/src/blob.rs", "Some(&filename.sanitized())", "Some(filename.raw())", "signed_icon_and_logo_http_assignments_match_rails_filenames_metadata_and_jobs"),
+    ("attachment-durable-enqueue", "crates/campfire/src/controllers/presenters/attachments.rs", "tx.emit_after_commit(Event::job(&AnalyzeJob { blob_id: blob.id }));", "let _ = blob.id;", "signed_icon_analysis_enqueue_failure_rolls_back_icon_identification_and_audit"),
     ("sign-in-display-route", "crates/views/templates/sessions/_google_sign_in.html", "h::routes::session_google().as_str()", "h::routes::session().as_str()", "configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies"),
     ("sign-in-display-token", "crates/views/templates/sessions/_google_sign_in.html", 'h::attrs().method("post").class("btn center")', 'h::attrs().method("post").class("btn center").attr("authenticity_token", false)', "configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies"),
     ("sign-in-display-credentials", "crates/campfire/src/config.rs", "if google_client_configured {", "if true {", "configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies"),

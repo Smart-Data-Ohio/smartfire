@@ -11,6 +11,8 @@ mod sidebar;
 pub use sidebar::*;
 mod summary;
 pub use summary::*;
+mod agent_profile;
+pub use agent_profile::*;
 mod people;
 pub use people::*;
 mod settings;
@@ -77,6 +79,8 @@ pub struct Show<'a> {
     /// `user.transfer_id`, for `users/profiles/_transfer` (shown to administrators).
     pub transfer_id: String,
     pub profile_status: Option<statuses::ProfileStatus>,
+    pub agent_profile: Option<AgentProfile>,
+    pub can_manage_bot: bool,
 }
 
 impl Show<'_> {

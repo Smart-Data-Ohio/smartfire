@@ -113,13 +113,16 @@ pub async fn show(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
+    let viewer = concerns::require_current_user(c)?.clone();
+    let target = user.clone();
+    let (agent_profile, can_manage_bot) = c.app().db.read(move |conn| presenters::agent_profile::load(conn, &target, &viewer, now)).await.map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     view_context::page_or_frame(
         c,
         StatusCode::OK,
-        |ctx| show_page(ctx, &user, &transfer_id, &profile_status).render(),
+        |ctx| show_page(ctx, &user, &transfer_id, &profile_status, &agent_profile, can_manage_bot).render(),
         |ctx| {
-            let page = show_page(ctx, &user, &transfer_id, &profile_status);
+            let page = show_page(ctx, &user, &transfer_id, &profile_status, &agent_profile, can_manage_bot);
             campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
         },
     )
@@ -131,12 +134,16 @@ fn show_page<'a>(
     user: &users::UserSummary,
     transfer_id: &str,
     status: &users::statuses::ProfileStatus,
+    agent_profile: &Option<users::AgentProfile>,
+    can_manage_bot: bool,
 ) -> users::Show<'a> {
     users::Show {
         ctx,
         user: user.clone(),
         transfer_id: transfer_id.to_string(),
         profile_status: Some(status.clone()),
+        agent_profile: agent_profile.clone(),
+        can_manage_bot,
     }
 }
 
@@ -190,3 +197,6 @@ mod layout_preferences_tests;
 
 #[cfg(test)]
 mod profile_effective_ooo_tests;
+
+#[cfg(test)]
+mod agent_profile_tests;

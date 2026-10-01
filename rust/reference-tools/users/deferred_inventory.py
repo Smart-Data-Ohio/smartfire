@@ -85,6 +85,16 @@ covered.update({
     },
     "controllers/users_controller_test.rb": {
         "show", "new", "new does not allow a signed in user", "new requires a join code", "create", "creating a new user with an existing email address will redirect to login screen",
+        "bot profile links to capability grants for admins",
+        "bot profile links to capability grants for the agent owner",
+        "bot profile hides capability grants from anyone else",
+        "bot profile shows agent identity, status, rooms, and grants to a member",
+        "bot profile shows the 24-hour activity line to the owner",
+        "bot profile shows the 24-hour activity line to an admin",
+        "bot profile hides the 24-hour activity line from another member",
+        "bot profile hides rooms the viewer is not a member of",
+        "suspended agent profile shows Suspended",
+        "bot without an agent keeps the minimal profile",
         "profile message buttons carry the accessible name", "index lists active members with presence and selection",
         "index lists starred people first with a star marker", "index requires sign-in",
     },
@@ -124,7 +134,7 @@ covered.update({
         "destroy removes ban records and sets user to active", "non-admins cannot unban users",
     },
     "controllers/accounts_controller_test.rb": {"edit","edit groups administrators separately from members with a divider","update", "non-admins cannot update"},
-    # The original destroy case removes David, an agent owner: it still needs WS11.
+    # The original destroy case also checks the agent-owner suspension and both audits.
     "controllers/accounts/users_controller_test.rb": {"update", "non-admins cannot perform actions"},
     "controllers/accounts/custom_styles_controller_test.rb": {"edit","update", "non-admins cannot update"},
     "controllers/accounts/join_codes_controller_test.rb": {"create new join code", "only administrators can create new join codes"},
