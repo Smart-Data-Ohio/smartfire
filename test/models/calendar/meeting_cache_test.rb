@@ -2,6 +2,7 @@ require "test_helper"
 
 class Calendar::MeetingCacheTest < ActiveSupport::TestCase
   setup do
+    freeze_time
     @user = users(:david)
   end
 
@@ -59,14 +60,15 @@ class Calendar::MeetingCacheTest < ActiveSupport::TestCase
   end
 
   test "ooo_end_covering returns the latest covering end" do
+    latest_end = 3.hours.from_now
     cache = Calendar::MeetingCache.create!(user: @user,
       ooo_intervals: [
         [ 2.hours.ago.iso8601, 1.hour.from_now.iso8601 ],
-        [ 30.minutes.ago.iso8601, 3.hours.from_now.iso8601 ],
+        [ 30.minutes.ago.iso8601, latest_end.iso8601 ],
         [ 5.hours.ago.iso8601, 4.hours.ago.iso8601 ]
       ])
 
-    assert_in_delta 3.hours.from_now.to_f, cache.ooo_end_covering.to_f, 1
+    assert_equal latest_end, cache.ooo_end_covering
   end
 
   test "ooo_end_covering is nil while uncovered" do
