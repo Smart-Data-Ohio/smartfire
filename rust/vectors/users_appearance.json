@@ -1,0 +1,593 @@
+{
+  "reference": "d7c7de92",
+  "choices": [
+    [
+      "(GMT-12:00) International Date Line West",
+      "Etc/GMT+12"
+    ],
+    [
+      "(GMT-11:00) American Samoa",
+      "Pacific/Pago_Pago"
+    ],
+    [
+      "(GMT-11:00) Midway Island",
+      "Pacific/Midway"
+    ],
+    [
+      "(GMT-10:00) Hawaii",
+      "Pacific/Honolulu"
+    ],
+    [
+      "(GMT-09:00) Alaska",
+      "America/Juneau"
+    ],
+    [
+      "(GMT-08:00) Pacific Time (US & Canada)",
+      "America/Los_Angeles"
+    ],
+    [
+      "(GMT-08:00) Tijuana",
+      "America/Tijuana"
+    ],
+    [
+      "(GMT-07:00) Arizona",
+      "America/Phoenix"
+    ],
+    [
+      "(GMT-07:00) Mazatlan",
+      "America/Mazatlan"
+    ],
+    [
+      "(GMT-07:00) Mountain Time (US & Canada)",
+      "America/Denver"
+    ],
+    [
+      "(GMT-06:00) Central America",
+      "America/Guatemala"
+    ],
+    [
+      "(GMT-06:00) Central Time (US & Canada)",
+      "America/Chicago"
+    ],
+    [
+      "(GMT-06:00) Chihuahua",
+      "America/Chihuahua"
+    ],
+    [
+      "(GMT-06:00) Guadalajara",
+      "America/Mexico_City"
+    ],
+    [
+      "(GMT-06:00) Monterrey",
+      "America/Monterrey"
+    ],
+    [
+      "(GMT-06:00) Saskatchewan",
+      "America/Regina"
+    ],
+    [
+      "(GMT-05:00) Bogota",
+      "America/Bogota"
+    ],
+    [
+      "(GMT-05:00) Eastern Time (US & Canada)",
+      "America/New_York"
+    ],
+    [
+      "(GMT-05:00) Indiana (East)",
+      "America/Indiana/Indianapolis"
+    ],
+    [
+      "(GMT-05:00) Lima",
+      "America/Lima"
+    ],
+    [
+      "(GMT-04:00) Atlantic Time (Canada)",
+      "America/Halifax"
+    ],
+    [
+      "(GMT-04:00) Caracas",
+      "America/Caracas"
+    ],
+    [
+      "(GMT-04:00) Georgetown",
+      "America/Guyana"
+    ],
+    [
+      "(GMT-04:00) La Paz",
+      "America/La_Paz"
+    ],
+    [
+      "(GMT-04:00) Puerto Rico",
+      "America/Puerto_Rico"
+    ],
+    [
+      "(GMT-04:00) Santiago",
+      "America/Santiago"
+    ],
+    [
+      "(GMT-03:30) Newfoundland",
+      "America/St_Johns"
+    ],
+    [
+      "(GMT-03:00) Asuncion",
+      "America/Asuncion"
+    ],
+    [
+      "(GMT-03:00) Brasilia",
+      "America/Sao_Paulo"
+    ],
+    [
+      "(GMT-03:00) Buenos Aires",
+      "America/Argentina/Buenos_Aires"
+    ],
+    [
+      "(GMT-03:00) Montevideo",
+      "America/Montevideo"
+    ],
+    [
+      "(GMT-02:00) Greenland",
+      "America/Nuuk"
+    ],
+    [
+      "(GMT-02:00) Mid-Atlantic",
+      "Atlantic/South_Georgia"
+    ],
+    [
+      "(GMT-01:00) Azores",
+      "Atlantic/Azores"
+    ],
+    [
+      "(GMT-01:00) Cape Verde Is.",
+      "Atlantic/Cape_Verde"
+    ],
+    [
+      "(GMT+00:00) Edinburgh",
+      "Europe/London"
+    ],
+    [
+      "(GMT+00:00) Lisbon",
+      "Europe/Lisbon"
+    ],
+    [
+      "(GMT+00:00) Monrovia",
+      "Africa/Monrovia"
+    ],
+    [
+      "(GMT+00:00) UTC",
+      "Etc/UTC"
+    ],
+    [
+      "(GMT+01:00) Amsterdam",
+      "Europe/Amsterdam"
+    ],
+    [
+      "(GMT+01:00) Belgrade",
+      "Europe/Belgrade"
+    ],
+    [
+      "(GMT+01:00) Berlin",
+      "Europe/Berlin"
+    ],
+    [
+      "(GMT+01:00) Bern",
+      "Europe/Zurich"
+    ],
+    [
+      "(GMT+01:00) Bratislava",
+      "Europe/Bratislava"
+    ],
+    [
+      "(GMT+01:00) Brussels",
+      "Europe/Brussels"
+    ],
+    [
+      "(GMT+01:00) Budapest",
+      "Europe/Budapest"
+    ],
+    [
+      "(GMT+01:00) Casablanca",
+      "Africa/Casablanca"
+    ],
+    [
+      "(GMT+01:00) Copenhagen",
+      "Europe/Copenhagen"
+    ],
+    [
+      "(GMT+01:00) Dublin",
+      "Europe/Dublin"
+    ],
+    [
+      "(GMT+01:00) Ljubljana",
+      "Europe/Ljubljana"
+    ],
+    [
+      "(GMT+01:00) Madrid",
+      "Europe/Madrid"
+    ],
+    [
+      "(GMT+01:00) Paris",
+      "Europe/Paris"
+    ],
+    [
+      "(GMT+01:00) Prague",
+      "Europe/Prague"
+    ],
+    [
+      "(GMT+01:00) Rome",
+      "Europe/Rome"
+    ],
+    [
+      "(GMT+01:00) Sarajevo",
+      "Europe/Sarajevo"
+    ],
+    [
+      "(GMT+01:00) Skopje",
+      "Europe/Skopje"
+    ],
+    [
+      "(GMT+01:00) Stockholm",
+      "Europe/Stockholm"
+    ],
+    [
+      "(GMT+01:00) Vienna",
+      "Europe/Vienna"
+    ],
+    [
+      "(GMT+01:00) Warsaw",
+      "Europe/Warsaw"
+    ],
+    [
+      "(GMT+01:00) West Central Africa",
+      "Africa/Algiers"
+    ],
+    [
+      "(GMT+01:00) Zagreb",
+      "Europe/Zagreb"
+    ],
+    [
+      "(GMT+02:00) Athens",
+      "Europe/Athens"
+    ],
+    [
+      "(GMT+02:00) Bucharest",
+      "Europe/Bucharest"
+    ],
+    [
+      "(GMT+02:00) Cairo",
+      "Africa/Cairo"
+    ],
+    [
+      "(GMT+02:00) Harare",
+      "Africa/Harare"
+    ],
+    [
+      "(GMT+02:00) Helsinki",
+      "Europe/Helsinki"
+    ],
+    [
+      "(GMT+02:00) Jerusalem",
+      "Asia/Jerusalem"
+    ],
+    [
+      "(GMT+02:00) Kaliningrad",
+      "Europe/Kaliningrad"
+    ],
+    [
+      "(GMT+02:00) Pretoria",
+      "Africa/Johannesburg"
+    ],
+    [
+      "(GMT+02:00) Riga",
+      "Europe/Riga"
+    ],
+    [
+      "(GMT+02:00) Sofia",
+      "Europe/Sofia"
+    ],
+    [
+      "(GMT+02:00) Tallinn",
+      "Europe/Tallinn"
+    ],
+    [
+      "(GMT+02:00) Vilnius",
+      "Europe/Vilnius"
+    ],
+    [
+      "(GMT+03:00) Baghdad",
+      "Asia/Baghdad"
+    ],
+    [
+      "(GMT+03:00) Istanbul",
+      "Europe/Istanbul"
+    ],
+    [
+      "(GMT+03:00) Kuwait",
+      "Asia/Kuwait"
+    ],
+    [
+      "(GMT+03:00) Minsk",
+      "Europe/Minsk"
+    ],
+    [
+      "(GMT+03:00) Moscow",
+      "Europe/Moscow"
+    ],
+    [
+      "(GMT+03:00) Nairobi",
+      "Africa/Nairobi"
+    ],
+    [
+      "(GMT+03:00) Riyadh",
+      "Asia/Riyadh"
+    ],
+    [
+      "(GMT+03:00) Volgograd",
+      "Europe/Volgograd"
+    ],
+    [
+      "(GMT+03:30) Tehran",
+      "Asia/Tehran"
+    ],
+    [
+      "(GMT+04:00) Abu Dhabi",
+      "Asia/Muscat"
+    ],
+    [
+      "(GMT+04:00) Baku",
+      "Asia/Baku"
+    ],
+    [
+      "(GMT+04:00) Samara",
+      "Europe/Samara"
+    ],
+    [
+      "(GMT+04:00) Tbilisi",
+      "Asia/Tbilisi"
+    ],
+    [
+      "(GMT+04:00) Yerevan",
+      "Asia/Yerevan"
+    ],
+    [
+      "(GMT+04:30) Kabul",
+      "Asia/Kabul"
+    ],
+    [
+      "(GMT+05:00) Almaty",
+      "Asia/Almaty"
+    ],
+    [
+      "(GMT+05:00) Ekaterinburg",
+      "Asia/Yekaterinburg"
+    ],
+    [
+      "(GMT+05:00) Islamabad",
+      "Asia/Karachi"
+    ],
+    [
+      "(GMT+05:00) Tashkent",
+      "Asia/Tashkent"
+    ],
+    [
+      "(GMT+05:30) Chennai",
+      "Asia/Kolkata"
+    ],
+    [
+      "(GMT+05:30) Sri Jayawardenepura",
+      "Asia/Colombo"
+    ],
+    [
+      "(GMT+05:45) Kathmandu",
+      "Asia/Kathmandu"
+    ],
+    [
+      "(GMT+06:00) Dhaka",
+      "Asia/Dhaka"
+    ],
+    [
+      "(GMT+06:00) Urumqi",
+      "Asia/Urumqi"
+    ],
+    [
+      "(GMT+07:00) Bangkok",
+      "Asia/Bangkok"
+    ],
+    [
+      "(GMT+07:00) Jakarta",
+      "Asia/Jakarta"
+    ],
+    [
+      "(GMT+07:00) Krasnoyarsk",
+      "Asia/Krasnoyarsk"
+    ],
+    [
+      "(GMT+07:00) Novosibirsk",
+      "Asia/Novosibirsk"
+    ],
+    [
+      "(GMT+08:00) Beijing",
+      "Asia/Shanghai"
+    ],
+    [
+      "(GMT+08:00) Chongqing",
+      "Asia/Chongqing"
+    ],
+    [
+      "(GMT+08:00) Hong Kong",
+      "Asia/Hong_Kong"
+    ],
+    [
+      "(GMT+08:00) Irkutsk",
+      "Asia/Irkutsk"
+    ],
+    [
+      "(GMT+08:00) Kuala Lumpur",
+      "Asia/Kuala_Lumpur"
+    ],
+    [
+      "(GMT+08:00) Perth",
+      "Australia/Perth"
+    ],
+    [
+      "(GMT+08:00) Singapore",
+      "Asia/Singapore"
+    ],
+    [
+      "(GMT+08:00) Taipei",
+      "Asia/Taipei"
+    ],
+    [
+      "(GMT+08:00) Ulaanbaatar",
+      "Asia/Ulaanbaatar"
+    ],
+    [
+      "(GMT+09:00) Osaka",
+      "Asia/Tokyo"
+    ],
+    [
+      "(GMT+09:00) Seoul",
+      "Asia/Seoul"
+    ],
+    [
+      "(GMT+09:00) Yakutsk",
+      "Asia/Yakutsk"
+    ],
+    [
+      "(GMT+09:30) Adelaide",
+      "Australia/Adelaide"
+    ],
+    [
+      "(GMT+09:30) Darwin",
+      "Australia/Darwin"
+    ],
+    [
+      "(GMT+10:00) Brisbane",
+      "Australia/Brisbane"
+    ],
+    [
+      "(GMT+10:00) Canberra",
+      "Australia/Canberra"
+    ],
+    [
+      "(GMT+10:00) Guam",
+      "Pacific/Guam"
+    ],
+    [
+      "(GMT+10:00) Hobart",
+      "Australia/Hobart"
+    ],
+    [
+      "(GMT+10:00) Melbourne",
+      "Australia/Melbourne"
+    ],
+    [
+      "(GMT+10:00) Port Moresby",
+      "Pacific/Port_Moresby"
+    ],
+    [
+      "(GMT+10:00) Sydney",
+      "Australia/Sydney"
+    ],
+    [
+      "(GMT+10:00) Vladivostok",
+      "Asia/Vladivostok"
+    ],
+    [
+      "(GMT+11:00) Magadan",
+      "Asia/Magadan"
+    ],
+    [
+      "(GMT+11:00) New Caledonia",
+      "Pacific/Noumea"
+    ],
+    [
+      "(GMT+11:00) Solomon Is.",
+      "Pacific/Guadalcanal"
+    ],
+    [
+      "(GMT+11:00) Srednekolymsk",
+      "Asia/Srednekolymsk"
+    ],
+    [
+      "(GMT+12:00) Auckland",
+      "Pacific/Auckland"
+    ],
+    [
+      "(GMT+12:00) Fiji",
+      "Pacific/Fiji"
+    ],
+    [
+      "(GMT+12:00) Kamchatka",
+      "Asia/Kamchatka"
+    ],
+    [
+      "(GMT+12:00) Marshall Is.",
+      "Pacific/Majuro"
+    ],
+    [
+      "(GMT+12:45) Chatham Is.",
+      "Pacific/Chatham"
+    ],
+    [
+      "(GMT+13:00) Nuku'alofa",
+      "Pacific/Tongatapu"
+    ],
+    [
+      "(GMT+13:00) Samoa",
+      "Pacific/Apia"
+    ],
+    [
+      "(GMT+13:00) Tokelau Is.",
+      "Pacific/Fakaofo"
+    ]
+  ],
+  "cases": [
+    {
+      "attributes": {
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null
+      },
+      "errors": {},
+      "html": "<form class=\"flex flex-column gap\" data-turbo=\"false\" action=\"/users/me/profile\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/profile\" />\n  <fieldset class=\"margin-none\">\n    <legend class=\"txt-large\">Appearance</legend>\n\n    <div role=\"radiogroup\" aria-label=\"Theme\" class=\"flex align-center gap pad-block-half\">\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_light\" type=\"radio\" value=\"light\" name=\"user[theme]\" />\n          Light\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_dark\" type=\"radio\" value=\"dark\" name=\"user[theme]\" />\n          Dark\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_system\" type=\"radio\" value=\"system\" checked=\"checked\" name=\"user[theme]\" />\n          System\n        </label>\n    </div>\n\n    <div role=\"radiogroup\" aria-label=\"Text size\" class=\"flex flex-wrap align-center gap pad-block-half\">\n      <span class=\"txt-medium\">Text size</span>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_smaller\" type=\"radio\" value=\"smaller\" name=\"user[text_size]\" />\n          Smaller\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_small\" type=\"radio\" value=\"small\" name=\"user[text_size]\" />\n          Small\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_default\" type=\"radio\" value=\"default\" checked=\"checked\" name=\"user[text_size]\" />\n          Default\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_large\" type=\"radio\" value=\"large\" name=\"user[text_size]\" />\n          Large\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_larger\" type=\"radio\" value=\"larger\" name=\"user[text_size]\" />\n          Larger\n        </label>\n    </div>\n\n    <div class=\"flex align-center gap pad-block-half\">\n      <label class=\"txt-medium\" for=\"user_time_zone\">Time zone</label>\n      <select class=\"input flex-item-grow\" id=\"user_time_zone\" name=\"user[time_zone]\"><option value=\"\">Not set (use system)</option>\n<option value=\"Etc/GMT+12\">(GMT-12:00) International Date Line West</option>\n<option value=\"Pacific/Pago_Pago\">(GMT-11:00) American Samoa</option>\n<option value=\"Pacific/Midway\">(GMT-11:00) Midway Island</option>\n<option value=\"Pacific/Honolulu\">(GMT-10:00) Hawaii</option>\n<option value=\"America/Juneau\">(GMT-09:00) Alaska</option>\n<option value=\"America/Los_Angeles\">(GMT-08:00) Pacific Time (US &amp; Canada)</option>\n<option value=\"America/Tijuana\">(GMT-08:00) Tijuana</option>\n<option value=\"America/Phoenix\">(GMT-07:00) Arizona</option>\n<option value=\"America/Mazatlan\">(GMT-07:00) Mazatlan</option>\n<option value=\"America/Denver\">(GMT-07:00) Mountain Time (US &amp; Canada)</option>\n<option value=\"America/Guatemala\">(GMT-06:00) Central America</option>\n<option value=\"America/Chicago\">(GMT-06:00) Central Time (US &amp; Canada)</option>\n<option value=\"America/Chihuahua\">(GMT-06:00) Chihuahua</option>\n<option value=\"America/Mexico_City\">(GMT-06:00) Guadalajara</option>\n<option value=\"America/Monterrey\">(GMT-06:00) Monterrey</option>\n<option value=\"America/Regina\">(GMT-06:00) Saskatchewan</option>\n<option value=\"America/Bogota\">(GMT-05:00) Bogota</option>\n<option value=\"America/New_York\">(GMT-05:00) Eastern Time (US &amp; Canada)</option>\n<option value=\"America/Indiana/Indianapolis\">(GMT-05:00) Indiana (East)</option>\n<option value=\"America/Lima\">(GMT-05:00) Lima</option>\n<option value=\"America/Halifax\">(GMT-04:00) Atlantic Time (Canada)</option>\n<option value=\"America/Caracas\">(GMT-04:00) Caracas</option>\n<option value=\"America/Guyana\">(GMT-04:00) Georgetown</option>\n<option value=\"America/La_Paz\">(GMT-04:00) La Paz</option>\n<option value=\"America/Puerto_Rico\">(GMT-04:00) Puerto Rico</option>\n<option value=\"America/Santiago\">(GMT-04:00) Santiago</option>\n<option value=\"America/St_Johns\">(GMT-03:30) Newfoundland</option>\n<option value=\"America/Asuncion\">(GMT-03:00) Asuncion</option>\n<option value=\"America/Sao_Paulo\">(GMT-03:00) Brasilia</option>\n<option value=\"America/Argentina/Buenos_Aires\">(GMT-03:00) Buenos Aires</option>\n<option value=\"America/Montevideo\">(GMT-03:00) Montevideo</option>\n<option value=\"America/Nuuk\">(GMT-02:00) Greenland</option>\n<option value=\"Atlantic/South_Georgia\">(GMT-02:00) Mid-Atlantic</option>\n<option value=\"Atlantic/Azores\">(GMT-01:00) Azores</option>\n<option value=\"Atlantic/Cape_Verde\">(GMT-01:00) Cape Verde Is.</option>\n<option value=\"Europe/London\">(GMT+00:00) Edinburgh</option>\n<option value=\"Europe/Lisbon\">(GMT+00:00) Lisbon</option>\n<option value=\"Africa/Monrovia\">(GMT+00:00) Monrovia</option>\n<option value=\"Etc/UTC\">(GMT+00:00) UTC</option>\n<option value=\"Europe/Amsterdam\">(GMT+01:00) Amsterdam</option>\n<option value=\"Europe/Belgrade\">(GMT+01:00) Belgrade</option>\n<option value=\"Europe/Berlin\">(GMT+01:00) Berlin</option>\n<option value=\"Europe/Zurich\">(GMT+01:00) Bern</option>\n<option value=\"Europe/Bratislava\">(GMT+01:00) Bratislava</option>\n<option value=\"Europe/Brussels\">(GMT+01:00) Brussels</option>\n<option value=\"Europe/Budapest\">(GMT+01:00) Budapest</option>\n<option value=\"Africa/Casablanca\">(GMT+01:00) Casablanca</option>\n<option value=\"Europe/Copenhagen\">(GMT+01:00) Copenhagen</option>\n<option value=\"Europe/Dublin\">(GMT+01:00) Dublin</option>\n<option value=\"Europe/Ljubljana\">(GMT+01:00) Ljubljana</option>\n<option value=\"Europe/Madrid\">(GMT+01:00) Madrid</option>\n<option value=\"Europe/Paris\">(GMT+01:00) Paris</option>\n<option value=\"Europe/Prague\">(GMT+01:00) Prague</option>\n<option value=\"Europe/Rome\">(GMT+01:00) Rome</option>\n<option value=\"Europe/Sarajevo\">(GMT+01:00) Sarajevo</option>\n<option value=\"Europe/Skopje\">(GMT+01:00) Skopje</option>\n<option value=\"Europe/Stockholm\">(GMT+01:00) Stockholm</option>\n<option value=\"Europe/Vienna\">(GMT+01:00) Vienna</option>\n<option value=\"Europe/Warsaw\">(GMT+01:00) Warsaw</option>\n<option value=\"Africa/Algiers\">(GMT+01:00) West Central Africa</option>\n<option value=\"Europe/Zagreb\">(GMT+01:00) Zagreb</option>\n<option value=\"Europe/Athens\">(GMT+02:00) Athens</option>\n<option value=\"Europe/Bucharest\">(GMT+02:00) Bucharest</option>\n<option value=\"Africa/Cairo\">(GMT+02:00) Cairo</option>\n<option value=\"Africa/Harare\">(GMT+02:00) Harare</option>\n<option value=\"Europe/Helsinki\">(GMT+02:00) Helsinki</option>\n<option value=\"Asia/Jerusalem\">(GMT+02:00) Jerusalem</option>\n<option value=\"Europe/Kaliningrad\">(GMT+02:00) Kaliningrad</option>\n<option value=\"Africa/Johannesburg\">(GMT+02:00) Pretoria</option>\n<option value=\"Europe/Riga\">(GMT+02:00) Riga</option>\n<option value=\"Europe/Sofia\">(GMT+02:00) Sofia</option>\n<option value=\"Europe/Tallinn\">(GMT+02:00) Tallinn</option>\n<option value=\"Europe/Vilnius\">(GMT+02:00) Vilnius</option>\n<option value=\"Asia/Baghdad\">(GMT+03:00) Baghdad</option>\n<option value=\"Europe/Istanbul\">(GMT+03:00) Istanbul</option>\n<option value=\"Asia/Kuwait\">(GMT+03:00) Kuwait</option>\n<option value=\"Europe/Minsk\">(GMT+03:00) Minsk</option>\n<option value=\"Europe/Moscow\">(GMT+03:00) Moscow</option>\n<option value=\"Africa/Nairobi\">(GMT+03:00) Nairobi</option>\n<option value=\"Asia/Riyadh\">(GMT+03:00) Riyadh</option>\n<option value=\"Europe/Volgograd\">(GMT+03:00) Volgograd</option>\n<option value=\"Asia/Tehran\">(GMT+03:30) Tehran</option>\n<option value=\"Asia/Muscat\">(GMT+04:00) Abu Dhabi</option>\n<option value=\"Asia/Baku\">(GMT+04:00) Baku</option>\n<option value=\"Europe/Samara\">(GMT+04:00) Samara</option>\n<option value=\"Asia/Tbilisi\">(GMT+04:00) Tbilisi</option>\n<option value=\"Asia/Yerevan\">(GMT+04:00) Yerevan</option>\n<option value=\"Asia/Kabul\">(GMT+04:30) Kabul</option>\n<option value=\"Asia/Almaty\">(GMT+05:00) Almaty</option>\n<option value=\"Asia/Yekaterinburg\">(GMT+05:00) Ekaterinburg</option>\n<option value=\"Asia/Karachi\">(GMT+05:00) Islamabad</option>\n<option value=\"Asia/Tashkent\">(GMT+05:00) Tashkent</option>\n<option value=\"Asia/Kolkata\">(GMT+05:30) Chennai</option>\n<option value=\"Asia/Colombo\">(GMT+05:30) Sri Jayawardenepura</option>\n<option value=\"Asia/Kathmandu\">(GMT+05:45) Kathmandu</option>\n<option value=\"Asia/Dhaka\">(GMT+06:00) Dhaka</option>\n<option value=\"Asia/Urumqi\">(GMT+06:00) Urumqi</option>\n<option value=\"Asia/Bangkok\">(GMT+07:00) Bangkok</option>\n<option value=\"Asia/Jakarta\">(GMT+07:00) Jakarta</option>\n<option value=\"Asia/Krasnoyarsk\">(GMT+07:00) Krasnoyarsk</option>\n<option value=\"Asia/Novosibirsk\">(GMT+07:00) Novosibirsk</option>\n<option value=\"Asia/Shanghai\">(GMT+08:00) Beijing</option>\n<option value=\"Asia/Chongqing\">(GMT+08:00) Chongqing</option>\n<option value=\"Asia/Hong_Kong\">(GMT+08:00) Hong Kong</option>\n<option value=\"Asia/Irkutsk\">(GMT+08:00) Irkutsk</option>\n<option value=\"Asia/Kuala_Lumpur\">(GMT+08:00) Kuala Lumpur</option>\n<option value=\"Australia/Perth\">(GMT+08:00) Perth</option>\n<option value=\"Asia/Singapore\">(GMT+08:00) Singapore</option>\n<option value=\"Asia/Taipei\">(GMT+08:00) Taipei</option>\n<option value=\"Asia/Ulaanbaatar\">(GMT+08:00) Ulaanbaatar</option>\n<option value=\"Asia/Tokyo\">(GMT+09:00) Osaka</option>\n<option value=\"Asia/Seoul\">(GMT+09:00) Seoul</option>\n<option value=\"Asia/Yakutsk\">(GMT+09:00) Yakutsk</option>\n<option value=\"Australia/Adelaide\">(GMT+09:30) Adelaide</option>\n<option value=\"Australia/Darwin\">(GMT+09:30) Darwin</option>\n<option value=\"Australia/Brisbane\">(GMT+10:00) Brisbane</option>\n<option value=\"Australia/Canberra\">(GMT+10:00) Canberra</option>\n<option value=\"Pacific/Guam\">(GMT+10:00) Guam</option>\n<option value=\"Australia/Hobart\">(GMT+10:00) Hobart</option>\n<option value=\"Australia/Melbourne\">(GMT+10:00) Melbourne</option>\n<option value=\"Pacific/Port_Moresby\">(GMT+10:00) Port Moresby</option>\n<option value=\"Australia/Sydney\">(GMT+10:00) Sydney</option>\n<option value=\"Asia/Vladivostok\">(GMT+10:00) Vladivostok</option>\n<option value=\"Asia/Magadan\">(GMT+11:00) Magadan</option>\n<option value=\"Pacific/Noumea\">(GMT+11:00) New Caledonia</option>\n<option value=\"Pacific/Guadalcanal\">(GMT+11:00) Solomon Is.</option>\n<option value=\"Asia/Srednekolymsk\">(GMT+11:00) Srednekolymsk</option>\n<option value=\"Pacific/Auckland\">(GMT+12:00) Auckland</option>\n<option value=\"Pacific/Fiji\">(GMT+12:00) Fiji</option>\n<option value=\"Asia/Kamchatka\">(GMT+12:00) Kamchatka</option>\n<option value=\"Pacific/Majuro\">(GMT+12:00) Marshall Is.</option>\n<option value=\"Pacific/Chatham\">(GMT+12:45) Chatham Is.</option>\n<option value=\"Pacific/Tongatapu\">(GMT+13:00) Nuku&#39;alofa</option>\n<option value=\"Pacific/Apia\">(GMT+13:00) Samoa</option>\n<option value=\"Pacific/Fakaofo\">(GMT+13:00) Tokelau Is.</option></select>\n    </div>\n    <p class=\"txt-small margin-none\">Detected from your browser on first visit. Times, reminders, and quiet hours use it.</p>\n\n    <button class=\"btn btn--reversed center txt-large\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save changes</span></button>\n  </fieldset>\n</form>"
+    },
+    {
+      "attributes": {
+        "theme": "dark",
+        "text_size": "larger",
+        "time_zone": "America/New_York"
+      },
+      "errors": {},
+      "html": "<form class=\"flex flex-column gap\" data-turbo=\"false\" action=\"/users/me/profile\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/profile\" />\n  <fieldset class=\"margin-none\">\n    <legend class=\"txt-large\">Appearance</legend>\n\n    <div role=\"radiogroup\" aria-label=\"Theme\" class=\"flex align-center gap pad-block-half\">\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_light\" type=\"radio\" value=\"light\" name=\"user[theme]\" />\n          Light\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_dark\" type=\"radio\" value=\"dark\" checked=\"checked\" name=\"user[theme]\" />\n          Dark\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_system\" type=\"radio\" value=\"system\" name=\"user[theme]\" />\n          System\n        </label>\n    </div>\n\n    <div role=\"radiogroup\" aria-label=\"Text size\" class=\"flex flex-wrap align-center gap pad-block-half\">\n      <span class=\"txt-medium\">Text size</span>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_smaller\" type=\"radio\" value=\"smaller\" name=\"user[text_size]\" />\n          Smaller\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_small\" type=\"radio\" value=\"small\" name=\"user[text_size]\" />\n          Small\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_default\" type=\"radio\" value=\"default\" name=\"user[text_size]\" />\n          Default\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_large\" type=\"radio\" value=\"large\" name=\"user[text_size]\" />\n          Large\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_larger\" type=\"radio\" value=\"larger\" checked=\"checked\" name=\"user[text_size]\" />\n          Larger\n        </label>\n    </div>\n\n    <div class=\"flex align-center gap pad-block-half\">\n      <label class=\"txt-medium\" for=\"user_time_zone\">Time zone</label>\n      <select class=\"input flex-item-grow\" id=\"user_time_zone\" name=\"user[time_zone]\"><option value=\"\">Not set (use system)</option>\n<option value=\"Etc/GMT+12\">(GMT-12:00) International Date Line West</option>\n<option value=\"Pacific/Pago_Pago\">(GMT-11:00) American Samoa</option>\n<option value=\"Pacific/Midway\">(GMT-11:00) Midway Island</option>\n<option value=\"Pacific/Honolulu\">(GMT-10:00) Hawaii</option>\n<option value=\"America/Juneau\">(GMT-09:00) Alaska</option>\n<option value=\"America/Los_Angeles\">(GMT-08:00) Pacific Time (US &amp; Canada)</option>\n<option value=\"America/Tijuana\">(GMT-08:00) Tijuana</option>\n<option value=\"America/Phoenix\">(GMT-07:00) Arizona</option>\n<option value=\"America/Mazatlan\">(GMT-07:00) Mazatlan</option>\n<option value=\"America/Denver\">(GMT-07:00) Mountain Time (US &amp; Canada)</option>\n<option value=\"America/Guatemala\">(GMT-06:00) Central America</option>\n<option value=\"America/Chicago\">(GMT-06:00) Central Time (US &amp; Canada)</option>\n<option value=\"America/Chihuahua\">(GMT-06:00) Chihuahua</option>\n<option value=\"America/Mexico_City\">(GMT-06:00) Guadalajara</option>\n<option value=\"America/Monterrey\">(GMT-06:00) Monterrey</option>\n<option value=\"America/Regina\">(GMT-06:00) Saskatchewan</option>\n<option value=\"America/Bogota\">(GMT-05:00) Bogota</option>\n<option selected=\"selected\" value=\"America/New_York\">(GMT-05:00) Eastern Time (US &amp; Canada)</option>\n<option value=\"America/Indiana/Indianapolis\">(GMT-05:00) Indiana (East)</option>\n<option value=\"America/Lima\">(GMT-05:00) Lima</option>\n<option value=\"America/Halifax\">(GMT-04:00) Atlantic Time (Canada)</option>\n<option value=\"America/Caracas\">(GMT-04:00) Caracas</option>\n<option value=\"America/Guyana\">(GMT-04:00) Georgetown</option>\n<option value=\"America/La_Paz\">(GMT-04:00) La Paz</option>\n<option value=\"America/Puerto_Rico\">(GMT-04:00) Puerto Rico</option>\n<option value=\"America/Santiago\">(GMT-04:00) Santiago</option>\n<option value=\"America/St_Johns\">(GMT-03:30) Newfoundland</option>\n<option value=\"America/Asuncion\">(GMT-03:00) Asuncion</option>\n<option value=\"America/Sao_Paulo\">(GMT-03:00) Brasilia</option>\n<option value=\"America/Argentina/Buenos_Aires\">(GMT-03:00) Buenos Aires</option>\n<option value=\"America/Montevideo\">(GMT-03:00) Montevideo</option>\n<option value=\"America/Nuuk\">(GMT-02:00) Greenland</option>\n<option value=\"Atlantic/South_Georgia\">(GMT-02:00) Mid-Atlantic</option>\n<option value=\"Atlantic/Azores\">(GMT-01:00) Azores</option>\n<option value=\"Atlantic/Cape_Verde\">(GMT-01:00) Cape Verde Is.</option>\n<option value=\"Europe/London\">(GMT+00:00) Edinburgh</option>\n<option value=\"Europe/Lisbon\">(GMT+00:00) Lisbon</option>\n<option value=\"Africa/Monrovia\">(GMT+00:00) Monrovia</option>\n<option value=\"Etc/UTC\">(GMT+00:00) UTC</option>\n<option value=\"Europe/Amsterdam\">(GMT+01:00) Amsterdam</option>\n<option value=\"Europe/Belgrade\">(GMT+01:00) Belgrade</option>\n<option value=\"Europe/Berlin\">(GMT+01:00) Berlin</option>\n<option value=\"Europe/Zurich\">(GMT+01:00) Bern</option>\n<option value=\"Europe/Bratislava\">(GMT+01:00) Bratislava</option>\n<option value=\"Europe/Brussels\">(GMT+01:00) Brussels</option>\n<option value=\"Europe/Budapest\">(GMT+01:00) Budapest</option>\n<option value=\"Africa/Casablanca\">(GMT+01:00) Casablanca</option>\n<option value=\"Europe/Copenhagen\">(GMT+01:00) Copenhagen</option>\n<option value=\"Europe/Dublin\">(GMT+01:00) Dublin</option>\n<option value=\"Europe/Ljubljana\">(GMT+01:00) Ljubljana</option>\n<option value=\"Europe/Madrid\">(GMT+01:00) Madrid</option>\n<option value=\"Europe/Paris\">(GMT+01:00) Paris</option>\n<option value=\"Europe/Prague\">(GMT+01:00) Prague</option>\n<option value=\"Europe/Rome\">(GMT+01:00) Rome</option>\n<option value=\"Europe/Sarajevo\">(GMT+01:00) Sarajevo</option>\n<option value=\"Europe/Skopje\">(GMT+01:00) Skopje</option>\n<option value=\"Europe/Stockholm\">(GMT+01:00) Stockholm</option>\n<option value=\"Europe/Vienna\">(GMT+01:00) Vienna</option>\n<option value=\"Europe/Warsaw\">(GMT+01:00) Warsaw</option>\n<option value=\"Africa/Algiers\">(GMT+01:00) West Central Africa</option>\n<option value=\"Europe/Zagreb\">(GMT+01:00) Zagreb</option>\n<option value=\"Europe/Athens\">(GMT+02:00) Athens</option>\n<option value=\"Europe/Bucharest\">(GMT+02:00) Bucharest</option>\n<option value=\"Africa/Cairo\">(GMT+02:00) Cairo</option>\n<option value=\"Africa/Harare\">(GMT+02:00) Harare</option>\n<option value=\"Europe/Helsinki\">(GMT+02:00) Helsinki</option>\n<option value=\"Asia/Jerusalem\">(GMT+02:00) Jerusalem</option>\n<option value=\"Europe/Kaliningrad\">(GMT+02:00) Kaliningrad</option>\n<option value=\"Africa/Johannesburg\">(GMT+02:00) Pretoria</option>\n<option value=\"Europe/Riga\">(GMT+02:00) Riga</option>\n<option value=\"Europe/Sofia\">(GMT+02:00) Sofia</option>\n<option value=\"Europe/Tallinn\">(GMT+02:00) Tallinn</option>\n<option value=\"Europe/Vilnius\">(GMT+02:00) Vilnius</option>\n<option value=\"Asia/Baghdad\">(GMT+03:00) Baghdad</option>\n<option value=\"Europe/Istanbul\">(GMT+03:00) Istanbul</option>\n<option value=\"Asia/Kuwait\">(GMT+03:00) Kuwait</option>\n<option value=\"Europe/Minsk\">(GMT+03:00) Minsk</option>\n<option value=\"Europe/Moscow\">(GMT+03:00) Moscow</option>\n<option value=\"Africa/Nairobi\">(GMT+03:00) Nairobi</option>\n<option value=\"Asia/Riyadh\">(GMT+03:00) Riyadh</option>\n<option value=\"Europe/Volgograd\">(GMT+03:00) Volgograd</option>\n<option value=\"Asia/Tehran\">(GMT+03:30) Tehran</option>\n<option value=\"Asia/Muscat\">(GMT+04:00) Abu Dhabi</option>\n<option value=\"Asia/Baku\">(GMT+04:00) Baku</option>\n<option value=\"Europe/Samara\">(GMT+04:00) Samara</option>\n<option value=\"Asia/Tbilisi\">(GMT+04:00) Tbilisi</option>\n<option value=\"Asia/Yerevan\">(GMT+04:00) Yerevan</option>\n<option value=\"Asia/Kabul\">(GMT+04:30) Kabul</option>\n<option value=\"Asia/Almaty\">(GMT+05:00) Almaty</option>\n<option value=\"Asia/Yekaterinburg\">(GMT+05:00) Ekaterinburg</option>\n<option value=\"Asia/Karachi\">(GMT+05:00) Islamabad</option>\n<option value=\"Asia/Tashkent\">(GMT+05:00) Tashkent</option>\n<option value=\"Asia/Kolkata\">(GMT+05:30) Chennai</option>\n<option value=\"Asia/Colombo\">(GMT+05:30) Sri Jayawardenepura</option>\n<option value=\"Asia/Kathmandu\">(GMT+05:45) Kathmandu</option>\n<option value=\"Asia/Dhaka\">(GMT+06:00) Dhaka</option>\n<option value=\"Asia/Urumqi\">(GMT+06:00) Urumqi</option>\n<option value=\"Asia/Bangkok\">(GMT+07:00) Bangkok</option>\n<option value=\"Asia/Jakarta\">(GMT+07:00) Jakarta</option>\n<option value=\"Asia/Krasnoyarsk\">(GMT+07:00) Krasnoyarsk</option>\n<option value=\"Asia/Novosibirsk\">(GMT+07:00) Novosibirsk</option>\n<option value=\"Asia/Shanghai\">(GMT+08:00) Beijing</option>\n<option value=\"Asia/Chongqing\">(GMT+08:00) Chongqing</option>\n<option value=\"Asia/Hong_Kong\">(GMT+08:00) Hong Kong</option>\n<option value=\"Asia/Irkutsk\">(GMT+08:00) Irkutsk</option>\n<option value=\"Asia/Kuala_Lumpur\">(GMT+08:00) Kuala Lumpur</option>\n<option value=\"Australia/Perth\">(GMT+08:00) Perth</option>\n<option value=\"Asia/Singapore\">(GMT+08:00) Singapore</option>\n<option value=\"Asia/Taipei\">(GMT+08:00) Taipei</option>\n<option value=\"Asia/Ulaanbaatar\">(GMT+08:00) Ulaanbaatar</option>\n<option value=\"Asia/Tokyo\">(GMT+09:00) Osaka</option>\n<option value=\"Asia/Seoul\">(GMT+09:00) Seoul</option>\n<option value=\"Asia/Yakutsk\">(GMT+09:00) Yakutsk</option>\n<option value=\"Australia/Adelaide\">(GMT+09:30) Adelaide</option>\n<option value=\"Australia/Darwin\">(GMT+09:30) Darwin</option>\n<option value=\"Australia/Brisbane\">(GMT+10:00) Brisbane</option>\n<option value=\"Australia/Canberra\">(GMT+10:00) Canberra</option>\n<option value=\"Pacific/Guam\">(GMT+10:00) Guam</option>\n<option value=\"Australia/Hobart\">(GMT+10:00) Hobart</option>\n<option value=\"Australia/Melbourne\">(GMT+10:00) Melbourne</option>\n<option value=\"Pacific/Port_Moresby\">(GMT+10:00) Port Moresby</option>\n<option value=\"Australia/Sydney\">(GMT+10:00) Sydney</option>\n<option value=\"Asia/Vladivostok\">(GMT+10:00) Vladivostok</option>\n<option value=\"Asia/Magadan\">(GMT+11:00) Magadan</option>\n<option value=\"Pacific/Noumea\">(GMT+11:00) New Caledonia</option>\n<option value=\"Pacific/Guadalcanal\">(GMT+11:00) Solomon Is.</option>\n<option value=\"Asia/Srednekolymsk\">(GMT+11:00) Srednekolymsk</option>\n<option value=\"Pacific/Auckland\">(GMT+12:00) Auckland</option>\n<option value=\"Pacific/Fiji\">(GMT+12:00) Fiji</option>\n<option value=\"Asia/Kamchatka\">(GMT+12:00) Kamchatka</option>\n<option value=\"Pacific/Majuro\">(GMT+12:00) Marshall Is.</option>\n<option value=\"Pacific/Chatham\">(GMT+12:45) Chatham Is.</option>\n<option value=\"Pacific/Tongatapu\">(GMT+13:00) Nuku&#39;alofa</option>\n<option value=\"Pacific/Apia\">(GMT+13:00) Samoa</option>\n<option value=\"Pacific/Fakaofo\">(GMT+13:00) Tokelau Is.</option></select>\n    </div>\n    <p class=\"txt-small margin-none\">Detected from your browser on first visit. Times, reminders, and quiet hours use it.</p>\n\n    <button class=\"btn btn--reversed center txt-large\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save changes</span></button>\n  </fieldset>\n</form>"
+    },
+    {
+      "attributes": {
+        "theme": "light",
+        "text_size": "small",
+        "time_zone": "Pacific Time (US & Canada)"
+      },
+      "errors": {},
+      "html": "<form class=\"flex flex-column gap\" data-turbo=\"false\" action=\"/users/me/profile\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/profile\" />\n  <fieldset class=\"margin-none\">\n    <legend class=\"txt-large\">Appearance</legend>\n\n    <div role=\"radiogroup\" aria-label=\"Theme\" class=\"flex align-center gap pad-block-half\">\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_light\" type=\"radio\" value=\"light\" checked=\"checked\" name=\"user[theme]\" />\n          Light\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_dark\" type=\"radio\" value=\"dark\" name=\"user[theme]\" />\n          Dark\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_theme_system\" type=\"radio\" value=\"system\" name=\"user[theme]\" />\n          System\n        </label>\n    </div>\n\n    <div role=\"radiogroup\" aria-label=\"Text size\" class=\"flex flex-wrap align-center gap pad-block-half\">\n      <span class=\"txt-medium\">Text size</span>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_smaller\" type=\"radio\" value=\"smaller\" name=\"user[text_size]\" />\n          Smaller\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_small\" type=\"radio\" value=\"small\" checked=\"checked\" name=\"user[text_size]\" />\n          Small\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_default\" type=\"radio\" value=\"default\" name=\"user[text_size]\" />\n          Default\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_large\" type=\"radio\" value=\"large\" name=\"user[text_size]\" />\n          Large\n        </label>\n        <label class=\"txt-medium\">\n          <input id=\"user_text_size_larger\" type=\"radio\" value=\"larger\" name=\"user[text_size]\" />\n          Larger\n        </label>\n    </div>\n\n    <div class=\"flex align-center gap pad-block-half\">\n      <label class=\"txt-medium\" for=\"user_time_zone\">Time zone</label>\n      <select class=\"input flex-item-grow\" id=\"user_time_zone\" name=\"user[time_zone]\"><option value=\"\">Not set (use system)</option>\n<option value=\"Etc/GMT+12\">(GMT-12:00) International Date Line West</option>\n<option value=\"Pacific/Pago_Pago\">(GMT-11:00) American Samoa</option>\n<option value=\"Pacific/Midway\">(GMT-11:00) Midway Island</option>\n<option value=\"Pacific/Honolulu\">(GMT-10:00) Hawaii</option>\n<option value=\"America/Juneau\">(GMT-09:00) Alaska</option>\n<option selected=\"selected\" value=\"America/Los_Angeles\">(GMT-08:00) Pacific Time (US &amp; Canada)</option>\n<option value=\"America/Tijuana\">(GMT-08:00) Tijuana</option>\n<option value=\"America/Phoenix\">(GMT-07:00) Arizona</option>\n<option value=\"America/Mazatlan\">(GMT-07:00) Mazatlan</option>\n<option value=\"America/Denver\">(GMT-07:00) Mountain Time (US &amp; Canada)</option>\n<option value=\"America/Guatemala\">(GMT-06:00) Central America</option>\n<option value=\"America/Chicago\">(GMT-06:00) Central Time (US &amp; Canada)</option>\n<option value=\"America/Chihuahua\">(GMT-06:00) Chihuahua</option>\n<option value=\"America/Mexico_City\">(GMT-06:00) Guadalajara</option>\n<option value=\"America/Monterrey\">(GMT-06:00) Monterrey</option>\n<option value=\"America/Regina\">(GMT-06:00) Saskatchewan</option>\n<option value=\"America/Bogota\">(GMT-05:00) Bogota</option>\n<option value=\"America/New_York\">(GMT-05:00) Eastern Time (US &amp; Canada)</option>\n<option value=\"America/Indiana/Indianapolis\">(GMT-05:00) Indiana (East)</option>\n<option value=\"America/Lima\">(GMT-05:00) Lima</option>\n<option value=\"America/Halifax\">(GMT-04:00) Atlantic Time (Canada)</option>\n<option value=\"America/Caracas\">(GMT-04:00) Caracas</option>\n<option value=\"America/Guyana\">(GMT-04:00) Georgetown</option>\n<option value=\"America/La_Paz\">(GMT-04:00) La Paz</option>\n<option value=\"America/Puerto_Rico\">(GMT-04:00) Puerto Rico</option>\n<option value=\"America/Santiago\">(GMT-04:00) Santiago</option>\n<option value=\"America/St_Johns\">(GMT-03:30) Newfoundland</option>\n<option value=\"America/Asuncion\">(GMT-03:00) Asuncion</option>\n<option value=\"America/Sao_Paulo\">(GMT-03:00) Brasilia</option>\n<option value=\"America/Argentina/Buenos_Aires\">(GMT-03:00) Buenos Aires</option>\n<option value=\"America/Montevideo\">(GMT-03:00) Montevideo</option>\n<option value=\"America/Nuuk\">(GMT-02:00) Greenland</option>\n<option value=\"Atlantic/South_Georgia\">(GMT-02:00) Mid-Atlantic</option>\n<option value=\"Atlantic/Azores\">(GMT-01:00) Azores</option>\n<option value=\"Atlantic/Cape_Verde\">(GMT-01:00) Cape Verde Is.</option>\n<option value=\"Europe/London\">(GMT+00:00) Edinburgh</option>\n<option value=\"Europe/Lisbon\">(GMT+00:00) Lisbon</option>\n<option value=\"Africa/Monrovia\">(GMT+00:00) Monrovia</option>\n<option value=\"Etc/UTC\">(GMT+00:00) UTC</option>\n<option value=\"Europe/Amsterdam\">(GMT+01:00) Amsterdam</option>\n<option value=\"Europe/Belgrade\">(GMT+01:00) Belgrade</option>\n<option value=\"Europe/Berlin\">(GMT+01:00) Berlin</option>\n<option value=\"Europe/Zurich\">(GMT+01:00) Bern</option>\n<option value=\"Europe/Bratislava\">(GMT+01:00) Bratislava</option>\n<option value=\"Europe/Brussels\">(GMT+01:00) Brussels</option>\n<option value=\"Europe/Budapest\">(GMT+01:00) Budapest</option>\n<option value=\"Africa/Casablanca\">(GMT+01:00) Casablanca</option>\n<option value=\"Europe/Copenhagen\">(GMT+01:00) Copenhagen</option>\n<option value=\"Europe/Dublin\">(GMT+01:00) Dublin</option>\n<option value=\"Europe/Ljubljana\">(GMT+01:00) Ljubljana</option>\n<option value=\"Europe/Madrid\">(GMT+01:00) Madrid</option>\n<option value=\"Europe/Paris\">(GMT+01:00) Paris</option>\n<option value=\"Europe/Prague\">(GMT+01:00) Prague</option>\n<option value=\"Europe/Rome\">(GMT+01:00) Rome</option>\n<option value=\"Europe/Sarajevo\">(GMT+01:00) Sarajevo</option>\n<option value=\"Europe/Skopje\">(GMT+01:00) Skopje</option>\n<option value=\"Europe/Stockholm\">(GMT+01:00) Stockholm</option>\n<option value=\"Europe/Vienna\">(GMT+01:00) Vienna</option>\n<option value=\"Europe/Warsaw\">(GMT+01:00) Warsaw</option>\n<option value=\"Africa/Algiers\">(GMT+01:00) West Central Africa</option>\n<option value=\"Europe/Zagreb\">(GMT+01:00) Zagreb</option>\n<option value=\"Europe/Athens\">(GMT+02:00) Athens</option>\n<option value=\"Europe/Bucharest\">(GMT+02:00) Bucharest</option>\n<option value=\"Africa/Cairo\">(GMT+02:00) Cairo</option>\n<option value=\"Africa/Harare\">(GMT+02:00) Harare</option>\n<option value=\"Europe/Helsinki\">(GMT+02:00) Helsinki</option>\n<option value=\"Asia/Jerusalem\">(GMT+02:00) Jerusalem</option>\n<option value=\"Europe/Kaliningrad\">(GMT+02:00) Kaliningrad</option>\n<option value=\"Africa/Johannesburg\">(GMT+02:00) Pretoria</option>\n<option value=\"Europe/Riga\">(GMT+02:00) Riga</option>\n<option value=\"Europe/Sofia\">(GMT+02:00) Sofia</option>\n<option value=\"Europe/Tallinn\">(GMT+02:00) Tallinn</option>\n<option value=\"Europe/Vilnius\">(GMT+02:00) Vilnius</option>\n<option value=\"Asia/Baghdad\">(GMT+03:00) Baghdad</option>\n<option value=\"Europe/Istanbul\">(GMT+03:00) Istanbul</option>\n<option value=\"Asia/Kuwait\">(GMT+03:00) Kuwait</option>\n<option value=\"Europe/Minsk\">(GMT+03:00) Minsk</option>\n<option value=\"Europe/Moscow\">(GMT+03:00) Moscow</option>\n<option value=\"Africa/Nairobi\">(GMT+03:00) Nairobi</option>\n<option value=\"Asia/Riyadh\">(GMT+03:00) Riyadh</option>\n<option value=\"Europe/Volgograd\">(GMT+03:00) Volgograd</option>\n<option value=\"Asia/Tehran\">(GMT+03:30) Tehran</option>\n<option value=\"Asia/Muscat\">(GMT+04:00) Abu Dhabi</option>\n<option value=\"Asia/Baku\">(GMT+04:00) Baku</option>\n<option value=\"Europe/Samara\">(GMT+04:00) Samara</option>\n<option value=\"Asia/Tbilisi\">(GMT+04:00) Tbilisi</option>\n<option value=\"Asia/Yerevan\">(GMT+04:00) Yerevan</option>\n<option value=\"Asia/Kabul\">(GMT+04:30) Kabul</option>\n<option value=\"Asia/Almaty\">(GMT+05:00) Almaty</option>\n<option value=\"Asia/Yekaterinburg\">(GMT+05:00) Ekaterinburg</option>\n<option value=\"Asia/Karachi\">(GMT+05:00) Islamabad</option>\n<option value=\"Asia/Tashkent\">(GMT+05:00) Tashkent</option>\n<option value=\"Asia/Kolkata\">(GMT+05:30) Chennai</option>\n<option value=\"Asia/Colombo\">(GMT+05:30) Sri Jayawardenepura</option>\n<option value=\"Asia/Kathmandu\">(GMT+05:45) Kathmandu</option>\n<option value=\"Asia/Dhaka\">(GMT+06:00) Dhaka</option>\n<option value=\"Asia/Urumqi\">(GMT+06:00) Urumqi</option>\n<option value=\"Asia/Bangkok\">(GMT+07:00) Bangkok</option>\n<option value=\"Asia/Jakarta\">(GMT+07:00) Jakarta</option>\n<option value=\"Asia/Krasnoyarsk\">(GMT+07:00) Krasnoyarsk</option>\n<option value=\"Asia/Novosibirsk\">(GMT+07:00) Novosibirsk</option>\n<option value=\"Asia/Shanghai\">(GMT+08:00) Beijing</option>\n<option value=\"Asia/Chongqing\">(GMT+08:00) Chongqing</option>\n<option value=\"Asia/Hong_Kong\">(GMT+08:00) Hong Kong</option>\n<option value=\"Asia/Irkutsk\">(GMT+08:00) Irkutsk</option>\n<option value=\"Asia/Kuala_Lumpur\">(GMT+08:00) Kuala Lumpur</option>\n<option value=\"Australia/Perth\">(GMT+08:00) Perth</option>\n<option value=\"Asia/Singapore\">(GMT+08:00) Singapore</option>\n<option value=\"Asia/Taipei\">(GMT+08:00) Taipei</option>\n<option value=\"Asia/Ulaanbaatar\">(GMT+08:00) Ulaanbaatar</option>\n<option value=\"Asia/Tokyo\">(GMT+09:00) Osaka</option>\n<option value=\"Asia/Seoul\">(GMT+09:00) Seoul</option>\n<option value=\"Asia/Yakutsk\">(GMT+09:00) Yakutsk</option>\n<option value=\"Australia/Adelaide\">(GMT+09:30) Adelaide</option>\n<option value=\"Australia/Darwin\">(GMT+09:30) Darwin</option>\n<option value=\"Australia/Brisbane\">(GMT+10:00) Brisbane</option>\n<option value=\"Australia/Canberra\">(GMT+10:00) Canberra</option>\n<option value=\"Pacific/Guam\">(GMT+10:00) Guam</option>\n<option value=\"Australia/Hobart\">(GMT+10:00) Hobart</option>\n<option value=\"Australia/Melbourne\">(GMT+10:00) Melbourne</option>\n<option value=\"Pacific/Port_Moresby\">(GMT+10:00) Port Moresby</option>\n<option value=\"Australia/Sydney\">(GMT+10:00) Sydney</option>\n<option value=\"Asia/Vladivostok\">(GMT+10:00) Vladivostok</option>\n<option value=\"Asia/Magadan\">(GMT+11:00) Magadan</option>\n<option value=\"Pacific/Noumea\">(GMT+11:00) New Caledonia</option>\n<option value=\"Pacific/Guadalcanal\">(GMT+11:00) Solomon Is.</option>\n<option value=\"Asia/Srednekolymsk\">(GMT+11:00) Srednekolymsk</option>\n<option value=\"Pacific/Auckland\">(GMT+12:00) Auckland</option>\n<option value=\"Pacific/Fiji\">(GMT+12:00) Fiji</option>\n<option value=\"Asia/Kamchatka\">(GMT+12:00) Kamchatka</option>\n<option value=\"Pacific/Majuro\">(GMT+12:00) Marshall Is.</option>\n<option value=\"Pacific/Chatham\">(GMT+12:45) Chatham Is.</option>\n<option value=\"Pacific/Tongatapu\">(GMT+13:00) Nuku&#39;alofa</option>\n<option value=\"Pacific/Apia\">(GMT+13:00) Samoa</option>\n<option value=\"Pacific/Fakaofo\">(GMT+13:00) Tokelau Is.</option></select>\n    </div>\n    <p class=\"txt-small margin-none\">Detected from your browser on first visit. Times, reminders, and quiet hours use it.</p>\n\n    <button class=\"btn btn--reversed center txt-large\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save changes</span></button>\n  </fieldset>\n</form>"
+    },
+    {
+      "attributes": {
+        "theme": "neon",
+        "text_size": "huge",
+        "time_zone": "Narnia"
+      },
+      "errors": {
+        "theme": [
+          "is not included in the list"
+        ],
+        "text_size": [
+          "is not included in the list"
+        ],
+        "time_zone": [
+          "is not a valid time zone"
+        ]
+      },
+      "html": "<form class=\"flex flex-column gap\" data-turbo=\"false\" action=\"/users/me/profile\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/profile\" />\n  <fieldset class=\"margin-none\">\n    <legend class=\"txt-large\">Appearance</legend>\n\n    <div role=\"radiogroup\" aria-label=\"Theme\" class=\"flex align-center gap pad-block-half\">\n        <label class=\"txt-medium\">\n          <div class=\"field_with_errors\"><input id=\"user_theme_light\" type=\"radio\" value=\"light\" name=\"user[theme]\" /></div>\n          Light\n        </label>\n        <label class=\"txt-medium\">\n          <div class=\"field_with_errors\"><input id=\"user_theme_dark\" type=\"radio\" value=\"dark\" name=\"user[theme]\" /></div>\n          Dark\n        </label>\n        <label class=\"txt-medium\">\n          <div class=\"field_with_errors\"><input id=\"user_theme_system\" type=\"radio\" value=\"system\" name=\"user[theme]\" /></div>\n          System\n        </label>\n    </div>\n      <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">Theme is not included in the list.</p>\n\n    <div role=\"radiogroup\" aria-label=\"Text size\" class=\"flex flex-wrap align-center gap pad-block-half\">\n      <span class=\"txt-medium\">Text size</span>\n        <label class=\"txt-medium\">\n          <div class=\"field_with_errors\"><input id=\"user_text_size_smaller\" type=\"radio\" value=\"smaller\" name=\"user[text_size]\" /></div>\n          Smaller\n        </label>\n        <label class=\"txt-medium\">\n          <div class=\"field_with_errors\"><input id=\"user_text_size_small\" type=\"radio\" value=\"small\" name=\"user[text_size]\" /></div>\n          Small\n        </label>\n        <label class=\"txt-medium\">\n          <div class=\"field_with_errors\"><input id=\"user_text_size_default\" type=\"radio\" value=\"default\" name=\"user[text_size]\" /></div>\n          Default\n        </label>\n        <label class=\"txt-medium\">\n          <div class=\"field_with_errors\"><input id=\"user_text_size_large\" type=\"radio\" value=\"large\" name=\"user[text_size]\" /></div>\n          Large\n        </label>\n        <label class=\"txt-medium\">\n          <div class=\"field_with_errors\"><input id=\"user_text_size_larger\" type=\"radio\" value=\"larger\" name=\"user[text_size]\" /></div>\n          Larger\n        </label>\n    </div>\n      <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">Text size is not included in the list.</p>\n\n    <div class=\"flex align-center gap pad-block-half\">\n      <div class=\"field_with_errors\"><label class=\"txt-medium\" for=\"user_time_zone\">Time zone</label></div>\n      <div class=\"field_with_errors\"><select class=\"input flex-item-grow\" id=\"user_time_zone\" name=\"user[time_zone]\"><option value=\"\">Not set (use system)</option>\n<option value=\"Etc/GMT+12\">(GMT-12:00) International Date Line West</option>\n<option value=\"Pacific/Pago_Pago\">(GMT-11:00) American Samoa</option>\n<option value=\"Pacific/Midway\">(GMT-11:00) Midway Island</option>\n<option value=\"Pacific/Honolulu\">(GMT-10:00) Hawaii</option>\n<option value=\"America/Juneau\">(GMT-09:00) Alaska</option>\n<option value=\"America/Los_Angeles\">(GMT-08:00) Pacific Time (US &amp; Canada)</option>\n<option value=\"America/Tijuana\">(GMT-08:00) Tijuana</option>\n<option value=\"America/Phoenix\">(GMT-07:00) Arizona</option>\n<option value=\"America/Mazatlan\">(GMT-07:00) Mazatlan</option>\n<option value=\"America/Denver\">(GMT-07:00) Mountain Time (US &amp; Canada)</option>\n<option value=\"America/Guatemala\">(GMT-06:00) Central America</option>\n<option value=\"America/Chicago\">(GMT-06:00) Central Time (US &amp; Canada)</option>\n<option value=\"America/Chihuahua\">(GMT-06:00) Chihuahua</option>\n<option value=\"America/Mexico_City\">(GMT-06:00) Guadalajara</option>\n<option value=\"America/Monterrey\">(GMT-06:00) Monterrey</option>\n<option value=\"America/Regina\">(GMT-06:00) Saskatchewan</option>\n<option value=\"America/Bogota\">(GMT-05:00) Bogota</option>\n<option value=\"America/New_York\">(GMT-05:00) Eastern Time (US &amp; Canada)</option>\n<option value=\"America/Indiana/Indianapolis\">(GMT-05:00) Indiana (East)</option>\n<option value=\"America/Lima\">(GMT-05:00) Lima</option>\n<option value=\"America/Halifax\">(GMT-04:00) Atlantic Time (Canada)</option>\n<option value=\"America/Caracas\">(GMT-04:00) Caracas</option>\n<option value=\"America/Guyana\">(GMT-04:00) Georgetown</option>\n<option value=\"America/La_Paz\">(GMT-04:00) La Paz</option>\n<option value=\"America/Puerto_Rico\">(GMT-04:00) Puerto Rico</option>\n<option value=\"America/Santiago\">(GMT-04:00) Santiago</option>\n<option value=\"America/St_Johns\">(GMT-03:30) Newfoundland</option>\n<option value=\"America/Asuncion\">(GMT-03:00) Asuncion</option>\n<option value=\"America/Sao_Paulo\">(GMT-03:00) Brasilia</option>\n<option value=\"America/Argentina/Buenos_Aires\">(GMT-03:00) Buenos Aires</option>\n<option value=\"America/Montevideo\">(GMT-03:00) Montevideo</option>\n<option value=\"America/Nuuk\">(GMT-02:00) Greenland</option>\n<option value=\"Atlantic/South_Georgia\">(GMT-02:00) Mid-Atlantic</option>\n<option value=\"Atlantic/Azores\">(GMT-01:00) Azores</option>\n<option value=\"Atlantic/Cape_Verde\">(GMT-01:00) Cape Verde Is.</option>\n<option value=\"Europe/London\">(GMT+00:00) Edinburgh</option>\n<option value=\"Europe/Lisbon\">(GMT+00:00) Lisbon</option>\n<option value=\"Africa/Monrovia\">(GMT+00:00) Monrovia</option>\n<option value=\"Etc/UTC\">(GMT+00:00) UTC</option>\n<option value=\"Europe/Amsterdam\">(GMT+01:00) Amsterdam</option>\n<option value=\"Europe/Belgrade\">(GMT+01:00) Belgrade</option>\n<option value=\"Europe/Berlin\">(GMT+01:00) Berlin</option>\n<option value=\"Europe/Zurich\">(GMT+01:00) Bern</option>\n<option value=\"Europe/Bratislava\">(GMT+01:00) Bratislava</option>\n<option value=\"Europe/Brussels\">(GMT+01:00) Brussels</option>\n<option value=\"Europe/Budapest\">(GMT+01:00) Budapest</option>\n<option value=\"Africa/Casablanca\">(GMT+01:00) Casablanca</option>\n<option value=\"Europe/Copenhagen\">(GMT+01:00) Copenhagen</option>\n<option value=\"Europe/Dublin\">(GMT+01:00) Dublin</option>\n<option value=\"Europe/Ljubljana\">(GMT+01:00) Ljubljana</option>\n<option value=\"Europe/Madrid\">(GMT+01:00) Madrid</option>\n<option value=\"Europe/Paris\">(GMT+01:00) Paris</option>\n<option value=\"Europe/Prague\">(GMT+01:00) Prague</option>\n<option value=\"Europe/Rome\">(GMT+01:00) Rome</option>\n<option value=\"Europe/Sarajevo\">(GMT+01:00) Sarajevo</option>\n<option value=\"Europe/Skopje\">(GMT+01:00) Skopje</option>\n<option value=\"Europe/Stockholm\">(GMT+01:00) Stockholm</option>\n<option value=\"Europe/Vienna\">(GMT+01:00) Vienna</option>\n<option value=\"Europe/Warsaw\">(GMT+01:00) Warsaw</option>\n<option value=\"Africa/Algiers\">(GMT+01:00) West Central Africa</option>\n<option value=\"Europe/Zagreb\">(GMT+01:00) Zagreb</option>\n<option value=\"Europe/Athens\">(GMT+02:00) Athens</option>\n<option value=\"Europe/Bucharest\">(GMT+02:00) Bucharest</option>\n<option value=\"Africa/Cairo\">(GMT+02:00) Cairo</option>\n<option value=\"Africa/Harare\">(GMT+02:00) Harare</option>\n<option value=\"Europe/Helsinki\">(GMT+02:00) Helsinki</option>\n<option value=\"Asia/Jerusalem\">(GMT+02:00) Jerusalem</option>\n<option value=\"Europe/Kaliningrad\">(GMT+02:00) Kaliningrad</option>\n<option value=\"Africa/Johannesburg\">(GMT+02:00) Pretoria</option>\n<option value=\"Europe/Riga\">(GMT+02:00) Riga</option>\n<option value=\"Europe/Sofia\">(GMT+02:00) Sofia</option>\n<option value=\"Europe/Tallinn\">(GMT+02:00) Tallinn</option>\n<option value=\"Europe/Vilnius\">(GMT+02:00) Vilnius</option>\n<option value=\"Asia/Baghdad\">(GMT+03:00) Baghdad</option>\n<option value=\"Europe/Istanbul\">(GMT+03:00) Istanbul</option>\n<option value=\"Asia/Kuwait\">(GMT+03:00) Kuwait</option>\n<option value=\"Europe/Minsk\">(GMT+03:00) Minsk</option>\n<option value=\"Europe/Moscow\">(GMT+03:00) Moscow</option>\n<option value=\"Africa/Nairobi\">(GMT+03:00) Nairobi</option>\n<option value=\"Asia/Riyadh\">(GMT+03:00) Riyadh</option>\n<option value=\"Europe/Volgograd\">(GMT+03:00) Volgograd</option>\n<option value=\"Asia/Tehran\">(GMT+03:30) Tehran</option>\n<option value=\"Asia/Muscat\">(GMT+04:00) Abu Dhabi</option>\n<option value=\"Asia/Baku\">(GMT+04:00) Baku</option>\n<option value=\"Europe/Samara\">(GMT+04:00) Samara</option>\n<option value=\"Asia/Tbilisi\">(GMT+04:00) Tbilisi</option>\n<option value=\"Asia/Yerevan\">(GMT+04:00) Yerevan</option>\n<option value=\"Asia/Kabul\">(GMT+04:30) Kabul</option>\n<option value=\"Asia/Almaty\">(GMT+05:00) Almaty</option>\n<option value=\"Asia/Yekaterinburg\">(GMT+05:00) Ekaterinburg</option>\n<option value=\"Asia/Karachi\">(GMT+05:00) Islamabad</option>\n<option value=\"Asia/Tashkent\">(GMT+05:00) Tashkent</option>\n<option value=\"Asia/Kolkata\">(GMT+05:30) Chennai</option>\n<option value=\"Asia/Colombo\">(GMT+05:30) Sri Jayawardenepura</option>\n<option value=\"Asia/Kathmandu\">(GMT+05:45) Kathmandu</option>\n<option value=\"Asia/Dhaka\">(GMT+06:00) Dhaka</option>\n<option value=\"Asia/Urumqi\">(GMT+06:00) Urumqi</option>\n<option value=\"Asia/Bangkok\">(GMT+07:00) Bangkok</option>\n<option value=\"Asia/Jakarta\">(GMT+07:00) Jakarta</option>\n<option value=\"Asia/Krasnoyarsk\">(GMT+07:00) Krasnoyarsk</option>\n<option value=\"Asia/Novosibirsk\">(GMT+07:00) Novosibirsk</option>\n<option value=\"Asia/Shanghai\">(GMT+08:00) Beijing</option>\n<option value=\"Asia/Chongqing\">(GMT+08:00) Chongqing</option>\n<option value=\"Asia/Hong_Kong\">(GMT+08:00) Hong Kong</option>\n<option value=\"Asia/Irkutsk\">(GMT+08:00) Irkutsk</option>\n<option value=\"Asia/Kuala_Lumpur\">(GMT+08:00) Kuala Lumpur</option>\n<option value=\"Australia/Perth\">(GMT+08:00) Perth</option>\n<option value=\"Asia/Singapore\">(GMT+08:00) Singapore</option>\n<option value=\"Asia/Taipei\">(GMT+08:00) Taipei</option>\n<option value=\"Asia/Ulaanbaatar\">(GMT+08:00) Ulaanbaatar</option>\n<option value=\"Asia/Tokyo\">(GMT+09:00) Osaka</option>\n<option value=\"Asia/Seoul\">(GMT+09:00) Seoul</option>\n<option value=\"Asia/Yakutsk\">(GMT+09:00) Yakutsk</option>\n<option value=\"Australia/Adelaide\">(GMT+09:30) Adelaide</option>\n<option value=\"Australia/Darwin\">(GMT+09:30) Darwin</option>\n<option value=\"Australia/Brisbane\">(GMT+10:00) Brisbane</option>\n<option value=\"Australia/Canberra\">(GMT+10:00) Canberra</option>\n<option value=\"Pacific/Guam\">(GMT+10:00) Guam</option>\n<option value=\"Australia/Hobart\">(GMT+10:00) Hobart</option>\n<option value=\"Australia/Melbourne\">(GMT+10:00) Melbourne</option>\n<option value=\"Pacific/Port_Moresby\">(GMT+10:00) Port Moresby</option>\n<option value=\"Australia/Sydney\">(GMT+10:00) Sydney</option>\n<option value=\"Asia/Vladivostok\">(GMT+10:00) Vladivostok</option>\n<option value=\"Asia/Magadan\">(GMT+11:00) Magadan</option>\n<option value=\"Pacific/Noumea\">(GMT+11:00) New Caledonia</option>\n<option value=\"Pacific/Guadalcanal\">(GMT+11:00) Solomon Is.</option>\n<option value=\"Asia/Srednekolymsk\">(GMT+11:00) Srednekolymsk</option>\n<option value=\"Pacific/Auckland\">(GMT+12:00) Auckland</option>\n<option value=\"Pacific/Fiji\">(GMT+12:00) Fiji</option>\n<option value=\"Asia/Kamchatka\">(GMT+12:00) Kamchatka</option>\n<option value=\"Pacific/Majuro\">(GMT+12:00) Marshall Is.</option>\n<option value=\"Pacific/Chatham\">(GMT+12:45) Chatham Is.</option>\n<option value=\"Pacific/Tongatapu\">(GMT+13:00) Nuku&#39;alofa</option>\n<option value=\"Pacific/Apia\">(GMT+13:00) Samoa</option>\n<option value=\"Pacific/Fakaofo\">(GMT+13:00) Tokelau Is.</option></select></div>\n    </div>\n    <p class=\"txt-small margin-none\">Detected from your browser on first visit. Times, reminders, and quiet hours use it.</p>\n      <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">Time zone is not a valid time zone.</p>\n\n    <button class=\"btn btn--reversed center txt-large\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save changes</span></button>\n  </fieldset>\n</form>"
+    }
+  ]
+}

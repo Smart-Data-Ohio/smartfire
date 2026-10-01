@@ -1,12 +1,12 @@
-{% let form = h::form_with(h::routes::user_notification_settings()).model("user").method("patch").data("controller", "form").class("flex flex-column gap") %}{% filter form_with(form) %}
+{# WS17 owns this section, push settings, effective policy, and its update controller. #}{% let form = h::form_with("/users/me/notification_settings").model("user").method("patch").data("controller", "form").class("flex flex-column gap") %}{% filter form_with(form) %}
   <fieldset class="margin-none">
     <legend class="txt-large">Do not disturb</legend>
     <p class="txt-small margin-none">While DND is on, push notifications and sounds stay silent. Your inbox still records everything.</p>
 
     <div class="flex align-start gap pad-block-half">
       <label class="switch flex-item-no-shrink">
-        {{ data.hidden("dnd_enabled") }}
-        {{ data.check("dnd_enabled", data.dnd_active) }}
+        {{ self.switch_hidden("dnd_enabled") }}
+        {{ self.switch_input("dnd_enabled", sections.notifications.manual_dnd) }}
         <span class="switch__btn round"></span>
         <span class="for-screen-reader">Do not disturb</span>
       </label>
@@ -18,8 +18,8 @@
 
     <div class="flex align-start gap pad-block-half">
       <label class="switch flex-item-no-shrink">
-        {{ data.hidden("quiet_hours_enabled") }}
-        {{ data.check("quiet_hours_enabled", data.quiet_hours_enabled) }}
+        {{ self.switch_hidden("quiet_hours_enabled") }}
+        {{ self.switch_input("quiet_hours_enabled", sections.notifications.quiet_hours) }}
         <span class="switch__btn round"></span>
         <span class="for-screen-reader">Quiet hours</span>
       </label>
@@ -31,20 +31,19 @@
 
     <div class="flex align-center gap pad-block-half profile-settings__range">
       <span class="flex align-center gap">
-        {{ data.label(&form, "quiet_hours_start", "Quiet from", "txt-medium") }}
-        {{ data.clock_field(&form, "quiet_hours_start", data.quiet_hours_start.as_deref()) }}
+        {{ form.label("quiet_hours_start", "Quiet from", h::attrs().class("txt-medium")) }}
+        {{ self.time_input("quiet_hours_start", sections.notifications.quiet_start.as_deref()) }}
       </span>
       <span class="flex align-center gap">
-        {{ data.label(&form, "quiet_hours_end", "until", "txt-medium") }}
-        {{ data.clock_field(&form, "quiet_hours_end", data.quiet_hours_end.as_deref()) }}
+        {{ form.label("quiet_hours_end", "until", h::attrs().class("txt-medium")) }}
+        {{ self.time_input("quiet_hours_end", sections.notifications.quiet_end.as_deref()) }}
       </span>
     </div>
-{% if data.has_errors("quiet_hours_start") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">Quiet hours {{ data.error_sentence("quiet_hours_start") }}.</p>
-{% endif %}
+
     <div class="flex align-start gap pad-block-half">
       <label class="switch flex-item-no-shrink">
-        {{ data.hidden("meeting_dnd_enabled") }}
-        {{ data.check("meeting_dnd_enabled", data.meeting_dnd_enabled) }}
+        {{ self.switch_hidden("meeting_dnd_enabled") }}
+        {{ self.switch_input("meeting_dnd_enabled", sections.notifications.meeting_dnd) }}
         <span class="switch__btn round"></span>
         <span class="for-screen-reader">Do not disturb during meetings</span>
       </label>
@@ -56,8 +55,8 @@
 
     <div class="flex align-start gap pad-block-half">
       <label class="switch flex-item-no-shrink">
-        {{ data.hidden("ooo_notify_enabled") }}
-        {{ data.check("ooo_notify_enabled", data.ooo_notify_enabled) }}
+        {{ self.switch_hidden("ooo_notify_enabled") }}
+        {{ self.switch_input("ooo_notify_enabled", sections.notifications.ooo_notify) }}
         <span class="switch__btn round"></span>
         <span class="for-screen-reader">Keep notifying me while I'm out of office</span>
       </label>
@@ -67,11 +66,11 @@
       </span>
     </div>
 
-{% if !data.allowed_people.is_empty() %}      <p class="txt-medium margin-none pad-block-half">Still notify me for:</p>
+{% if !sections.notifications.allowed_people.is_empty() %}      <p class="txt-medium margin-none pad-block-half">Still notify me for:</p>
       <ul class="margin-none pad-inline">
-{% for person in data.allowed_people %}          <li class="flex align-center gap pad-block-half">
-            <span class="flex-item-grow">{{ person.name }}</span>
-            {{ data.remove_button(person) }}
+{% for (id, name) in sections.notifications.allowed_people %}          <li class="flex align-center gap pad-block-half">
+            <span class="flex-item-grow">{{ name }}</span>
+            {{ h::button_to(format!("/users/me/dnd_allowances/{id}").as_str(), h::attrs().method("delete").class("btn btn--negative txt-small").attr("aria-label", format!("Remove {name} from DND exceptions")), "Remove") }}
           </li>
 {% endfor %}      </ul>
 {% endif %}    <p class="txt-small">Star people from their profile page to let their messages through DND.</p>
@@ -82,10 +81,9 @@
   <fieldset class="margin-none">
     <legend class="txt-large">Keyword alerts</legend>
     <p class="txt-small margin-none">One word or phrase per line, up to 20. A match in any room you belong to lands in your inbox.</p>
-    {{ data.label(&form, "keyword_alerts", "Keywords", "txt-medium for-screen-reader") }}
-    {{ data.keyword_field() }}
-{% if data.has_errors("base") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">{{ data.error_sentence("base") }}.</p>
-{% endif %}
+    {{ form.label("keyword_alerts", "Keywords", h::attrs().class("txt-medium for-screen-reader")) }}
+    {{ h::content_tag_text("textarea", h::attrs().name("user[keyword_alerts]").id("user_keyword_alerts").rows(4).class("input full-width").autocomplete("off").placeholder("production\ndeploy freeze"), sections.notifications.keywords) }}
+
     {{ h::profile_form_submit_button(ctx) }}
   </fieldset>
 {% endfilter %}

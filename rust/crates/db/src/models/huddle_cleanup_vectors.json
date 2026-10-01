@@ -1,0 +1,189 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1767268800,
+  "enqueues": 1,
+  "states": [
+    {
+      "name": "created",
+      "result": null,
+      "row": {
+        "attempts": 0,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": "2026-01-01 12:00:00",
+        "last_attempted_at": null,
+        "next_attempt_at": "2026-01-01 12:01:00",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "lease_blocks_reconcile",
+      "result": false,
+      "row": {
+        "attempts": 0,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": "2026-01-01 12:00:00",
+        "last_attempted_at": null,
+        "next_attempt_at": "2026-01-01 12:01:00",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "queued_failure",
+      "result": false,
+      "row": {
+        "attempts": 1,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:00:00",
+        "next_attempt_at": "2026-01-01 12:00:15",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "duplicate_queue_delivery",
+      "result": false,
+      "row": {
+        "attempts": 1,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:00:00",
+        "next_attempt_at": "2026-01-01 12:00:15",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "retry_2",
+      "result": false,
+      "row": {
+        "attempts": 2,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:00:15",
+        "next_attempt_at": "2026-01-01 12:00:45",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "retry_3",
+      "result": false,
+      "row": {
+        "attempts": 3,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:00:45",
+        "next_attempt_at": "2026-01-01 12:01:45",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "retry_4",
+      "result": false,
+      "row": {
+        "attempts": 4,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:01:45",
+        "next_attempt_at": "2026-01-01 12:03:45",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "retry_5",
+      "result": false,
+      "row": {
+        "attempts": 5,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:03:45",
+        "next_attempt_at": "2026-01-01 12:07:45",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "retry_6",
+      "result": false,
+      "row": {
+        "attempts": 6,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:07:45",
+        "next_attempt_at": "2026-01-01 12:15:45",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "retry_7",
+      "result": false,
+      "row": {
+        "attempts": 7,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:15:45",
+        "next_attempt_at": "2026-01-01 12:30:45",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "retry_8",
+      "result": false,
+      "row": {
+        "attempts": 8,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:30:45",
+        "next_attempt_at": "2026-01-01 12:45:45",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "retry_9",
+      "result": false,
+      "row": {
+        "attempts": 9,
+        "completed_at": null,
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 12:45:45",
+        "next_attempt_at": "2026-01-01 13:00:45",
+        "updated_at": "2026-01-01 12:00:00"
+      }
+    },
+    {
+      "name": "already_removed_success",
+      "result": true,
+      "row": {
+        "attempts": 10,
+        "completed_at": "2026-01-01 13:00:45",
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 13:00:45",
+        "next_attempt_at": null,
+        "updated_at": "2026-01-01 13:00:45"
+      }
+    },
+    {
+      "name": "completed_noop",
+      "result": false,
+      "row": {
+        "attempts": 10,
+        "completed_at": "2026-01-01 13:00:45",
+        "created_at": "2026-01-01 12:00:00",
+        "enqueued_at": null,
+        "last_attempted_at": "2026-01-01 13:00:45",
+        "next_attempt_at": null,
+        "updated_at": "2026-01-01 13:00:45"
+      }
+    }
+  ]
+}

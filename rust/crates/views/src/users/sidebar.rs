@@ -322,3 +322,8 @@ struct EmptyVenueChildren<'a> {
     stage: bool,
     label: &'a str,
 }
+
+impl SidebarShow<'_> {
+    // #163: your own sidebar avatar opens the same profile card as other avatars.
+    fn profile_card_trigger(&self) -> h::Attrs { h::profile_card_trigger(self.current_user.id, false) }
+}

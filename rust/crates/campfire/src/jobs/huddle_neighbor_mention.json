@@ -1,0 +1,69 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1772467200,
+  "before": 0,
+  "after_timeout": 0,
+  "body": "Hey <action-text-attachment sgid=\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTQ5MDg3NjU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--2d7e85bc60af2ffd9f0bcdef54c409b3a50e3726\" content-type=\"application/vnd.campfire.mention\" content=\"<div class=&quot;mention mention--user-149087659&quot; sgid=&quot;eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTQ5MDg3NjU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--2d7e85bc60af2ffd9f0bcdef54c409b3a50e3726&quot; data-user-id=&quot;149087659&quot;>\n  <a title=&quot;Jason&quot; class=&quot;btn avatar&quot; data-turbo-frame=&quot;_top&quot; data-action=&quot;click-&gt;profile-card#open&quot; data-profile-card-url=&quot;/users/149087659/card&quot; href=&quot;/users/149087659&quot;><img aria-hidden=&quot;true&quot; src=&quot;/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260302160000&quot; width=&quot;48&quot; height=&quot;48&quot; /></a>\n  <button name=&quot;button&quot; type=&quot;button&quot; class=&quot;profile-card-name&quot; data-action=&quot;click-&gt;profile-card#open&quot; data-profile-card-url=&quot;/users/149087659/card&quot;>Jason</button>\n</div>\n\"></action-text-attachment>",
+  "message": {
+    "room_id": 654632876,
+    "creator_id": 127326141,
+    "client_message_id": "huddle-switch-neighbour"
+  },
+  "mention": {
+    "user_id": 149087659,
+    "source_type": "Message",
+    "event_type": "mention"
+  },
+  "plain_text": "Hey @Jason",
+  "guards": [
+    {
+      "name": "everything",
+      "recorded": true
+    },
+    {
+      "name": "nothing",
+      "recorded": true
+    },
+    {
+      "name": "muted",
+      "recorded": true
+    },
+    {
+      "name": "invisible",
+      "recorded": false
+    },
+    {
+      "name": "self",
+      "recorded": false
+    },
+    {
+      "name": "bot",
+      "recorded": false
+    },
+    {
+      "name": "inactive",
+      "recorded": false
+    },
+    {
+      "name": "system_note",
+      "recorded": false
+    },
+    {
+      "name": "streaming",
+      "recorded": false
+    },
+    {
+      "name": "thread_mentions",
+      "recorded": true
+    },
+    {
+      "name": "thread_nothing",
+      "recorded": false
+    }
+  ],
+  "idempotent": {
+    "read_at": 1772467246,
+    "handled_at": 1772467246,
+    "event_type": "mention"
+  }
+}

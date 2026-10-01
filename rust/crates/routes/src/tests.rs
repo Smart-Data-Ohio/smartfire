@@ -132,7 +132,15 @@ fn direct_routes_build_what_rails_does() {
 
 #[test]
 fn the_table_has_every_route() {
-    assert_eq!(TABLE.len(), 469);
+    // Approved Rails #163 adds status edit to the pin's 469 routes. The full JSON is
+    // regenerated from 2e20b24c by reference-tools/users/verify_goldens.py.
+    assert_eq!(TABLE.len(), 470);
+    let status_edit = TABLE.iter().find(|r| r.name == Some("edit_user_status")).unwrap();
+    assert_eq!(status_edit.verb, "GET");
+    assert_eq!(status_edit.spec, "/users/:user_id/status/edit(.:format)");
+    assert_eq!(status_edit.endpoint, "users/statuses#edit");
+    assert_eq!(status_edit.defaults, &[("user_id", "me")]);
+    assert_eq!(status_edit.action, ActionStatus::Defined);
     assert_eq!(TABLE[0].endpoint, "welcome#show");
     assert!(TABLE.iter().any(
         |r| r.endpoint == "rooms/settings#show" && r.action == ActionStatus::MissingController

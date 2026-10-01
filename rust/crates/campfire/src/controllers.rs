@@ -38,37 +38,42 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
-pub mod channel_threads;
-mod message_forwards;
-#[cfg(test)]
-pub(crate) mod message_forwards_tests;
-pub mod channel_thread_messages;
 pub mod autocompletable;
+pub mod channel_thread_messages;
+pub mod channel_threads;
 pub mod csp_reports;
+pub mod embeds;
 pub mod first_runs;
 pub mod fizzy_cards;
 pub mod fizzy_connections;
 pub mod fizzy_message_cards;
 pub mod github;
 pub mod message_embed_suppressions;
-pub mod messages;
 pub(crate) mod message_features;
+mod message_forwards;
+#[cfg(test)]
+pub(crate) mod message_forwards_tests;
+pub mod messages;
 pub mod presenters;
+pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
-pub mod rooms;
 pub mod room_categories;
-pub mod searches;
-pub mod switchers;
+pub mod rooms;
 pub mod saved_items;
 pub mod scheduled_messages;
+pub mod searches;
 pub mod sessions;
 pub mod sudos;
+pub mod switchers;
 pub mod two_factor;
 pub mod unfurl_links;
-pub mod embeds;
 pub mod users;
 pub mod welcome;
+pub mod internal_huddle;
+#[cfg(test)]
+mod internal_huddle_tests;
+pub mod workspace_icons;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -165,6 +170,20 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "rooms/stage/roles#update" => arc(rooms::stage_participation::role),
+        "rooms/stage/hands#create" => arc(rooms::stage_participation::raise),
+        "rooms/stage/hands#destroy" => arc(rooms::stage_participation::lower),
+        "rooms/stage/streams#create" => arc(rooms::stage_streams::create),
+        "rooms/stage/streams#destroy" => arc(rooms::stage_streams::destroy),
+        "rooms/call_moderation#mute" => arc(rooms::call_moderation::mute),
+        "rooms/call_moderation#unmute" => arc(rooms::call_moderation::unmute),
+        "rooms/call_moderation#disconnect" => arc(rooms::call_moderation::disconnect),
+        "internal/huddle#authorize" => arc(internal_huddle::authorize),
+        "internal/huddle#show" => arc(internal_huddle::show),
+        "internal/huddle#left" => arc(internal_huddle::left),
+        "public_pages#about" => arc(public_pages::about),
+        "public_pages#privacy" => arc(public_pages::privacy),
+        "public_pages#terms" => arc(public_pages::terms),
         "welcome#show" => arc(welcome::show),
         "first_runs#show" => arc(first_runs::show),
         "first_runs#create" => arc(first_runs::create),
@@ -220,6 +239,11 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts/bots#update" => arc(accounts::bots::update),
         "accounts/bots#destroy" => arc(accounts::bots::destroy),
         "accounts/join_codes#create" => arc(accounts::join_codes::create),
+        "accounts/icons#index" => arc(accounts::icons::index),
+        "accounts/icons#create" => arc(accounts::icons::create),
+        "accounts/icons#destroy" => arc(accounts::icons::destroy),
+        "workspace_icons#show" => arc(workspace_icons::show),
+        "accounts/audit_logs#show" => arc(accounts::audit_logs::show),
         "accounts/logos#show" => arc(accounts::logos::show),
         "accounts/logos#destroy" => arc(accounts::logos::destroy),
         "accounts/custom_styles#edit" => arc(accounts::custom_styles::edit),
@@ -227,6 +251,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts#edit" => arc(accounts::edit),
         "accounts#update" => arc(accounts::update),
         "users#new" => arc(users::new),
+        "users#index" => arc(users::index),
+        "users/cards#show" => arc(users::cards::show),
         "users#create" => arc(users::create),
         "users#show" => arc(users::show),
         "qr_code#show" => arc(qr_code::show),
@@ -235,16 +261,19 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/bans#create" => arc(users::bans::create),
         "users/bans#destroy" => arc(users::bans::destroy),
         "users/sidebars#show" => arc(users::sidebars::show),
+        "users/statuses#edit" => arc(users::statuses::edit),
         "users/profiles#show" => arc(users::profiles::show),
         "users/profiles#update" => arc(users::profiles::update),
+        "users/time_zones#update" => arc(users::time_zones::update),
+        "users/tours#update" => arc(users::tours::update),
+        "users/push_subscriptions/test_notifications#create" => {
+            arc(users::push_subscriptions::test_notifications::create)
+        }
         "users/sessions#index" => arc(users::sessions::index),
         "users/sessions#destroy" => arc(users::sessions::destroy),
         "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
         "accounts/users/two_factor_resets#create" => {
             arc(accounts::users::two_factor_resets::create)
-        }
-        "users/push_subscriptions/test_notifications#create" => {
-            arc(users::push_subscriptions::test_notifications::create)
         }
         "users/push_subscriptions#index" => arc(users::push_subscriptions::index),
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),
@@ -733,6 +762,122 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "embeds/images#show",
+        "users/presences#show",
+        "users/dnd_allowances#create",
+        "users/dnd_allowances#destroy",
+        "users/notification_settings#update",
+        "switchers#show",
+        "rooms#leave",
+        "rooms/directs#update",
+        "rooms/directs#add_members",
+        "rooms/directs#leave",
+        "room_categories#index",
+        "room_categories#create",
+        "room_categories#update",
+        "room_categories#destroy",
+        "rooms/categories#update",
+        "rooms/favorites#create",
+        "rooms/favorites#update",
+        "rooms/favorites#destroy",
+        "rooms/inbound_email_addresses#create",
+        "welcome#show",
+        "first_runs#show",
+        "first_runs#create",
+        "sessions/transfers#show",
+        "sessions/transfers#update",
+        "sessions#new",
+        "sessions#create",
+        "sessions#destroy",
+        "content_security_policy_reports#create",
+        "accounts/users#index",
+        "accounts/users#update",
+        "accounts/users#destroy",
+        "accounts/bots/keys#update",
+        "accounts/bots#index",
+        "accounts/bots#create",
+        "accounts/bots#new",
+        "accounts/bots#edit",
+        "accounts/bots#update",
+        "accounts/bots#destroy",
+        "accounts/join_codes#create",
+        "accounts/logos#show",
+        "accounts/logos#destroy",
+        "accounts/custom_styles#edit",
+        "accounts/custom_styles#update",
+        "accounts#edit",
+        "accounts#update",
+        "users#new",
+        "users#create",
+        "users#show",
+        "qr_code#show",
+        "users/avatars#show",
+        "users/avatars#destroy",
+        "users/bans#create",
+        "users/bans#destroy",
+        "users/sidebars#show",
+        "users/profiles#show",
+        "users/profiles#update",
+        "users/statuses#edit",
+        "users/statuses#update",
+        "users/push_subscriptions/test_notifications#create",
+        "users/push_subscriptions#index",
+        "users/push_subscriptions#create",
+        "users/push_subscriptions#destroy",
+        "autocompletable/users#index",
+        "messages#index",
+        "messages#create",
+        "messages#edit",
+        "messages#show",
+        "messages#update",
+        "messages#destroy",
+        "messages/boosts/by_bots#create",
+        "messages/boosts/by_bots#destroy",
+        "messages/by_bots#index",
+        "messages/by_bots#create",
+        "messages/by_bots#update",
+        "messages/by_bots#destroy",
+        "messages/boosts#index",
+        "messages/boosts#create",
+        "messages/boosts#new",
+        "messages/boosts#destroy",
+        "rooms/refreshes#show",
+        "rooms/involvements#show",
+        "rooms/involvements#update",
+        "rooms#index",
+        "rooms#show",
+        "rooms#destroy",
+        "rooms/opens#index",
+        "rooms/closeds#index",
+        "rooms/directs#index",
+        "rooms/opens#create",
+        "rooms/opens#new",
+        "rooms/opens#edit",
+        "rooms/opens#show",
+        "rooms/opens#update",
+        "rooms/opens#destroy",
+        "rooms/closeds#destroy",
+        "rooms/closeds#create",
+        "rooms/closeds#new",
+        "rooms/closeds#edit",
+        "rooms/closeds#show",
+        "rooms/closeds#update",
+        "rooms/directs#create",
+        "rooms/directs#new",
+        "rooms/directs#edit",
+        "rooms/directs#show",
+        "rooms/directs#destroy",
+        "searches#index",
+        "searches#create",
+        "searches#clear",
+        "unfurl_links#create",
+        "pwa#manifest",
+        "pwa#service_worker",
+        "rails/health#show",
+        "turbo/native/navigation#recede",
+        "turbo/native/navigation#resume",
+        "turbo/native/navigation#refresh",
+        "action_mailbox/ingresses/postmark/inbound_emails#create",
         "rooms/events#index",
         "rooms/events#show",
         "rooms/events#new",
@@ -740,49 +885,31 @@ mod tests {
         "rooms/events#edit",
         "rooms/events#update",
         "rooms/events#cancel",
-        "rooms/events/attendances#show", "rooms/events/attendances#update",
-        "switchers#show",
-        "rooms#join", "rooms/reads#create", "rooms/reads#destroy",
-        "rooms#leave", "rooms/directs#update", "rooms/directs#add_members", "rooms/directs#leave",
-        "room_categories#index", "room_categories#create", "room_categories#update", "room_categories#destroy",
-        "rooms/categories#update", "rooms/favorites#create", "rooms/favorites#update", "rooms/favorites#destroy", "rooms/inbound_email_addresses#create",
-        "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",
-        "sessions/transfers#update", "sessions#new", "sessions#create", "sessions#destroy",
-        "content_security_policy_reports#create", "accounts/users#index", "accounts/users#update",
-        "accounts/users#destroy", "accounts/bots/keys#update", "accounts/bots#index", "accounts/bots#create",
-        "accounts/bots#new", "accounts/bots#edit", "accounts/bots#update", "accounts/bots#destroy",
-        "accounts/join_codes#create", "accounts/logos#show", "accounts/logos#destroy",
-        "accounts/custom_styles#edit", "accounts/custom_styles#update", "accounts#edit", "accounts#update",
-        "users#new", "users#create", "users#show", "qr_code#show", "users/avatars#show",
-        "users/avatars#destroy", "users/bans#create", "users/bans#destroy", "users/sidebars#show",
-        "users/profiles#show", "users/profiles#update", "users/push_subscriptions/test_notifications#create",
-        "users/push_subscriptions#index", "users/push_subscriptions#create", "users/push_subscriptions#destroy",
-        "users/presences#show",
-        "users/dnd_allowances#create", "users/dnd_allowances#destroy",
-        "users/notification_settings#update",
-        "users/statuses#update",
-        "scheduled_messages#index", "scheduled_messages#create", "scheduled_messages#update", "scheduled_messages#destroy", "scheduled_messages#send_now",
-        "saved_items#index", "saved_items#create", "saved_items#update", "saved_items#destroy",
-        "rooms/polls#create", "rooms/polls#show", "rooms/polls#vote",
-        "messages/pins#create", "messages/pins#destroy", "rooms/pins#index",
-        "rooms/message_links#show", "rooms/files#index",
-        "rooms/slash_commands#create", "autocompletable/icons#index", "autocompletable/slash_commands#index",
-        "autocompletable/users#index", "messages#index", "messages#create", "messages#edit", "messages#show",
-        "messages#update", "messages#destroy", "messages/boosts/by_bots#create",
-        "messages/boosts/by_bots#destroy", "messages/by_bots#index", "messages/by_bots#create",
-        "messages/by_bots#update", "messages/by_bots#destroy", "messages/boosts#index",
-        "messages/boosts#create", "messages/boosts#new", "messages/boosts#destroy", "rooms/refreshes#show",
-        "rooms/involvements#show", "rooms/involvements#update", "rooms#index", "rooms#show", "rooms#destroy",
-        "rooms/opens#index", "rooms/closeds#index", "rooms/directs#index", "rooms/opens#create",
-        "rooms/opens#new", "rooms/opens#edit", "rooms/opens#show", "rooms/opens#update", "rooms/opens#destroy",
-        "rooms/closeds#destroy", "rooms/closeds#create", "rooms/closeds#new", "rooms/closeds#edit",
-        "rooms/closeds#show", "rooms/closeds#update", "rooms/directs#create", "rooms/directs#new",
-        "rooms/directs#edit", "rooms/directs#show", "rooms/directs#destroy", "searches#index",
-        "searches#create", "searches#clear", "unfurl_links#create", "pwa#manifest", "pwa#service_worker",
-        "rails/health#show", "turbo/native/navigation#recede", "turbo/native/navigation#resume",
-        "turbo/native/navigation#refresh", "action_mailbox/ingresses/postmark/inbound_emails#create",
-
-        "embeds/images#show",
+        "rooms/events/attendances#show",
+        "rooms/events/attendances#update",
+        "rooms#join",
+        "rooms/reads#create",
+        "rooms/reads#destroy",
+        "scheduled_messages#index",
+        "scheduled_messages#create",
+        "scheduled_messages#update",
+        "scheduled_messages#destroy",
+        "scheduled_messages#send_now",
+        "saved_items#index",
+        "saved_items#create",
+        "saved_items#update",
+        "saved_items#destroy",
+        "rooms/polls#create",
+        "rooms/polls#show",
+        "rooms/polls#vote",
+        "messages/pins#create",
+        "messages/pins#destroy",
+        "rooms/pins#index",
+        "rooms/message_links#show",
+        "rooms/files#index",
+        "rooms/slash_commands#create",
+        "autocompletable/icons#index",
+        "autocompletable/slash_commands#index",
         "action_mailbox/ingresses/sendgrid/inbound_emails#create",
         "action_mailbox/ingresses/mandrill/inbound_emails#health_check",
         "action_mailbox/ingresses/mandrill/inbound_emails#create",

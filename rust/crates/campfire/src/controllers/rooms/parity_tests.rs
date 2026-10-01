@@ -879,3 +879,37 @@ async fn unread_shell_facts_match_rails_pointer_cases() {
         assert_eq!(result.jump_url.as_deref(),case["jump_url"].as_str(),"{name}");
     }
 }
+
+#[tokio::test]
+async fn review_unread_divider_render_and_cached_page_match_rails() {
+    let app=TestApp::boot_frozen().await.expect("seed required");
+    let cases:Vec<serde_json::Value>=serde_json::from_str(include_str!("../../../../../vectors/room_shell_unread.json")).unwrap();
+    for case in cases {
+        let stamp=case["unread_at"].as_str().map(|t|campfire_db::Timestamp::from_jiff(t.parse::<jiff::Timestamp>().unwrap()));
+        let pointer=case["last_read_message_id"].as_i64();
+        app.db().write(move |tx| {tx.conn().execute("UPDATE memberships SET unread_at=?,last_read_message_id=? WHERE room_id=486777696 AND user_id=127326141",rusqlite::params![stamp,pointer])?;Ok(())}).await.unwrap();
+        // The second page exercises shared message-cache hits. Counts and the divider remain viewer-local.
+        for _ in 0..2 {
+            let response=app.david().get("/rooms/486777696").await;
+            assert_eq!(serde_json::json!(response.status.as_u16()),case["status"]);
+            let html=response.text();
+            assert_eq!(html.contains("data-messages-scroll-to-divider-value=\"true\""),case["scroll_flag"].as_bool().unwrap(),"{}",case["name"]);
+            assert_eq!(html.contains("id=\"unread-divider\""),case["divider_html"].is_string(),"{}: divider must exist when Rails renders it",case["name"]);
+            assert_eq!(html.contains("id=\"jump-to-unread\""),case["jump_button"].as_bool().unwrap());
+            if let Some(jump)=case["jump_html"].as_str() {assert!(html.contains(jump),"{}: exact Rails jump control bytes",case["name"]);}
+            if let Some(expected)=case["divider_html"].as_str() {
+                let start=html.find("<div id=\"unread-divider\"").unwrap();
+                let end=start+html[start..].find("</div>\n").unwrap()+7;
+                let before=&html[..start];
+                let prefix=&before[before.trim_end().len()..];
+                let suffix=&html[end..][..html[end..].len()-html[end..].trim_start().len()];
+                assert_eq!(prefix,case["prefix_whitespace"].as_str().unwrap(),"{}: Rails divider prefix bytes",case["name"]);
+                assert_eq!(suffix,case["suffix_whitespace"].as_str().unwrap(),"{}: Rails divider suffix bytes",case["name"]);
+                assert_eq!(&html[start..end],expected,"{}: exact Rails partial bytes",case["name"]);
+                let following=format!("id=\"{}\"",case["following"].as_str().unwrap());
+                assert!(html[end..].trim_start().starts_with(&format!("<div {following}")),"{}: divider directly precedes the first unread message",case["name"]);
+                if let Some(previous)=case["preceding"].as_str() {assert!(html[..start].contains(&format!("id=\"{previous}\"")));}
+            }
+        }
+    }
+}
