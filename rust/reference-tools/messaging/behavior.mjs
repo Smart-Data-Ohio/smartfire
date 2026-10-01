@@ -3,13 +3,18 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
+import {messageList} from './behavior-message-list.mjs';
+import {installMutation} from './behavior-mutations.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
-const [rails,rust,file,caseName]=process.argv.slice(2);
-assert.ok(['sending_messages','workspace_markdown','threads'].includes(file));
+const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
+const cases=JSON.parse(caseNames);
+const fixture=JSON.parse(fixtureJson);
+assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y'].includes(file));
 const browser=await chromium.launch({headless:true});
-async function acceptance(base) {
+const negative=process.env.WS8BM_NEGATIVE==='1';
+async function acceptance(base,caseName,probe={}) {
   const contexts=[];
   try {
     async function viewer(name) {
@@ -18,11 +23,15 @@ async function acceptance(base) {
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
       const page=await context.newPage();
+      if(negative) await installMutation(page,caseName,probe);
       page.on('pageerror',error=>console.error('WS8bm browser JavaScript:',base,error.stack));
       page.on('requestfailed',request=>{
         const failure=request.failure()?.errorText;
         // Navigation cancels background fetches; diagnose actual network failures.
-        if(failure!=='net::ERR_ABORTED') console.error('WS8bm browser failed request:',request.url(),failure);
+        if(failure!=='net::ERR_ABORTED') {
+          console.error('WS8bm browser failed request:',request.url(),failure);
+          if(negative) (probe.networkFailures??=[]).push(failure);
+        }
       });
       const response=await page.goto(base+'/rooms/654632876');
       assert.equal(response.status(),200);
@@ -34,6 +43,13 @@ async function acceptance(base) {
       return page;
     }
     const author=await viewer('JZ'),recipient=await viewer('Kevin');
+    // Startup errors are never accepted as proof of assertion discrimination.
+    probe.ready=true;
+    if(negative) {
+      // Shorter failure-only waits for deliberate mutants; acceptance keeps
+      // the original 30-second waits and unchanged concurrency/thresholds.
+      author.setDefaultTimeout(3000);recipient.setDefaultTimeout(3000);
+    }
     const messages=page=>page.locator('.message[data-message-id]');
     async function text(page,value,count=1) {
       await page.waitForFunction(({value,count})=>[...document.querySelectorAll('.message[data-message-id] [data-reply-target="body"]')].filter(body=>body.textContent.trim()===value).length===count,{value,count});
@@ -55,6 +71,10 @@ async function acceptance(base) {
     }
     async function field(page,value) {
       await page.waitForFunction(value=>document.querySelector('#composer textarea[name="message[markdown_source]"]')?.value===value,value);
+    }
+    if(file==='message_list_a11y') {
+      await messageList({author,recipient,caseName,send,text,openEdit,field});
+      return;
     }
     if (file==='threads') {
       const panel=author.locator('#thread-panel');
@@ -250,6 +270,69 @@ async function acceptance(base) {
           assert.equal(await message.locator('script, img[onerror], a[href^="javascript:"]').count(),0);
           assert.equal(await page.evaluate(()=>window.markdownPayloadExecuted===true),false);
         }
+      } else if(caseName==='Markdown replies and file attachments remain usable') {
+        const source='**A useful point** with `inline code`.';
+        await submit(author,source);
+        const parent=messages(author).filter({has:author.locator('strong').filter({hasText:'A useful point'})});
+        await parent.waitFor();
+        await parent.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
+        await author.getByRole('menuitem',{name:'Reply',exact:true}).click();
+        await author.locator('#composer [data-composer-target="contextLabel"]').filter({hasText:'Replying to JZ'}).waitFor();
+        await author.locator('#composer [data-composer-target="contextPreview"]').filter({hasText:'A useful point'}).waitFor();
+        await field(author,'');await author.getByLabel('Notify author',{exact:true}).uncheck();
+        await author.locator('#composer input[type="file"]').setInputFiles({name:'markdown-workspace-attachment.txt',mimeType:'text/plain',buffer:Buffer.from('An attachment sent from the Markdown composer.\n')});
+        await author.locator('#composer').filter({hasText:'markdown-workspace-attachment'}).waitFor();
+        await author.getByRole('button',{name:'Send Message',exact:true}).click();
+        for(const page of [author,recipient]) {
+          const attachment=messages(page).filter({has:page.locator('.message__reply-preview').filter({hasText:'A useful point'})});
+          await attachment.waitFor();
+          try {await attachment.getByRole('link',{name:'Download markdown-workspace-attachment.txt',exact:true}).waitFor();}
+          catch(error) {console.error('WS8bm attachment delivery:',base,await attachment.textContent());throw error;}
+        }
+        await author.locator('#composer [data-composer-target="context"][hidden]').waitFor({state:'attached'});
+      } else if(caseName==='mention suggestions select a room member without sending the unfinished message') {
+        const editor=author.getByRole('combobox',{name:'Write a message',exact:true});
+        const before=await messages(author).count();
+        await editor.fill('@Kev');await author.locator('suggestion-option').filter({hasText:'Kevin'}).waitFor();
+        await editor.press('Enter');await field(author,'@[Kevin] ');
+        assert.equal(await messages(author).count(),before);
+        await submit(author,'@[Kevin] please review **the layout**.');
+        for(const page of [author,recipient]) {
+          const message=messages(page).filter({has:page.locator('strong').filter({hasText:'the layout'})});
+          await message.locator('.mention').filter({hasText:'Kevin'}).waitFor();
+          assert.equal(await message.locator('.mention').getAttribute('data-user-id'),String(sessions.find(session=>session.user_name==='Kevin').user_id));
+          if(page===recipient) await message.locator(':scope.message--mentioned').waitFor();
+        }
+      } else if(caseName==='a rejected message can be recovered corrected and sent') {
+        // SOURCE_LIMIT is read from the pin, rather than the candidate's input.
+        const model=execFileSync('git',['show','d7c7de92:app/models/message/markdown.rb'],{encoding:'utf8'});
+        const limit=Number(model.match(/SOURCE_LIMIT = ([\d_]+)/)[1].replaceAll('_',''));
+        const invalid='A'.repeat(limit+1);
+        await author.locator('#composer textarea').evaluate((editor,value)=>{
+          editor.removeAttribute('maxlength');editor.value=value;editor.dispatchEvent(new Event('input',{bubbles:true}));
+        },invalid);
+        await author.getByRole('button',{name:'Send Message',exact:true}).click();
+        await author.locator('.message--failed').waitFor();
+        // Clearing the still-present failed input proves Restore draft reads
+        // the saved submission, rather than passing on an unchanged editor.
+        await author.getByRole('combobox',{name:'Write a message',exact:true}).fill('');
+        await author.getByRole('button',{name:'Restore draft',exact:true}).click();await field(author,invalid);
+        await submit(author,'**Recovered** after correcting the draft.');
+        for(const page of [author,recipient]) await messages(page).locator('strong').filter({hasText:'Recovered'}).waitFor();
+      } else if(caseName==='sending preserves the submitted source and a newer draft') {
+        const first='**First message** stays exact.',second='A newer draft is still here.';
+        await author.getByRole('combobox',{name:'Write a message',exact:true}).fill(first);
+        await author.evaluate(second=>{
+          document.querySelector('#composer button[name="send"]').click();
+          const editor=document.querySelector('#composer textarea[name="message[markdown_source]"]');
+          editor.value=second;editor.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertFromPaste'}));
+        },second);
+        for(const page of [author,recipient]) await messages(page).locator('strong').filter({hasText:'First message'}).waitFor();
+        await field(author,second);
+        assert.equal(await messages(recipient).filter({hasText:second}).count(),0);
+        await author.getByRole('button',{name:'Send Message',exact:true}).click();
+        for(const page of [author,recipient]) await text(page,second);
+        await field(author,'');
       } else {throw new Error(`unimplemented case ${caseName}`);}
       return;
     }
@@ -280,5 +363,22 @@ async function acceptance(base) {
     }
   } finally {for(const context of contexts) await context.close();}
 }
-try {await acceptance(rails);await acceptance(rust);}
+try {
+  for(const caseName of cases) {
+    if(negative) {
+      const probe={ready:false,applied:0};let failure;
+      try {await acceptance(rust,caseName,probe);} catch(error) {failure=error;}
+      if(!probe.ready || !probe.applied || !failure) console.error('WS8bm invalid discrimination run:',caseName,probe,failure);
+      assert.ok(probe.ready,'mutant must reach the actual named case, not fail startup');
+      assert.equal(probe.networkFailures?.length||0,0,'network failures cannot count as mutant rejection');
+      assert.ok(probe.applied>0,'a deliberate served mutation must actually apply');
+      assert.ok(failure,'named behaviour check must reject the served mutant');
+      assert.ok(failure.code==='ERR_ASSERTION'||failure.name==='TimeoutError',`unexpected infrastructure/adapter failure: ${failure}`);
+      console.log(`WS8bm discrimination: ${file}: ${caseName}: served mutant REJECTED (${failure.code||failure.name})`);
+    } else {
+      await acceptance(rails,caseName);await acceptance(rust,caseName);
+      console.log(`WS8bm browser flow: ${file}: ${caseName}: Rails PASS; Rust PASS`);
+    }
+  }
+}
 finally {await browser.close();}

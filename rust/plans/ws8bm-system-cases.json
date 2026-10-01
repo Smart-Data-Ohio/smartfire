@@ -178,37 +178,37 @@
         {
           "name": "Markdown messages reach other users and editing preserves the original source",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: isolated seeds, two live viewers, original source payloads, real editor/menu/keyboard and raw persistent source checks (multipart edit CRLF observed in Rails)"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "desktop keyboard composition keeps line breaks and sends once after composition ends",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: isolated seeds, two live viewers, original source payloads, real editor/menu/keyboard and raw persistent source checks (multipart edit CRLF observed in Rails)"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "untrusted markup stays inert in the delivered message",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: isolated seeds, two live viewers, original source payloads, real editor/menu/keyboard and raw persistent source checks (multipart edit CRLF observed in Rails)"
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "Markdown replies and file attachments remain usable",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "mention suggestions select a room member without sending the unfinished message",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "a rejected message can be recovered corrected and sent",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "sending preserves the submitted source and a newer draft",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "workspace follows the system theme and mobile navigation remains reachable",
@@ -478,103 +478,103 @@
       "cases": [
         {
           "name": "the message list is a single tab stop with a roving tabindex",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "arrow keys move between messages",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "a stream replacing the focused message keeps focus and the tab stop on its replacement",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "deleting the focused message moves focus to the surviving tab stop",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "deleting an older focused message hands focus to its neighbour, not the newest",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "a focus move during a stream render survives Turbo's focus restore",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "a no-change room refresh does not yank focus back to the composer",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "the ContextMenu key opens the shared menu and Escape returns focus",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "a late composer autofocus does not steal focus from a message",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "up arrow from an empty composer still edits my last message",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "up-arrow-to-edit shows an error when the actions endpoint fails",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "forward reuses the menu-open metadata request instead of fetching again",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "a menu opened while an action waits does not redirect the pending action",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "the menu closes before Turbo caches the page",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "the main message list is a live log",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "paginated history stays quiet past the insert, then the live region comes back",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "an edit replacement is not announced as an addition",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "an own message is not re-announced when its broadcast replaces the pending copy",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py message_list_a11y: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels"
         },
         {
           "name": "search results keep their menus and focusability",

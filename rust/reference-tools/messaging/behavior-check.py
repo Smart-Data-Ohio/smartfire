@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Seeded Rails/Rust behaviour checks. Builds its own seeds, binary and browser inputs.
 
-Each named case gets independent copies of the seed, two real viewer sessions and
-real HTTP/Action Cable. No pre-existing target/scratch, screenshot or response mask.
+Each writing case gets independent copies of the seed. Read-only message-list
+regressions share one verified fixture/server but get fresh viewer contexts.
+All cases exercise real HTTP/Action Cable. No pre-existing target/scratch, screenshot or response mask.
 """
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import shutil
@@ -27,6 +29,10 @@ CASES = {
         "Markdown messages reach other users and editing preserves the original source",
         "desktop keyboard composition keeps line breaks and sends once after composition ends",
         "untrusted markup stays inert in the delivered message",
+        "Markdown replies and file attachments remain usable",
+        "mention suggestions select a room member without sending the unfinished message",
+        "a rejected message can be recovered corrected and sent",
+        "sending preserves the submitted source and a newer draft",
     ],
     "threads": [
         "creates a thread from a channel message and keeps the channel draft separate",
@@ -36,11 +42,37 @@ CASES = {
         "rejects an external thread deep link before fetching it",
         "renders untrusted thread metadata as text",
     ],
+    "message_list_a11y": [
+        "the message list is a single tab stop with a roving tabindex",
+        "arrow keys move between messages",
+        "a stream replacing the focused message keeps focus and the tab stop on its replacement",
+        "a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement",
+        "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement",
+        "deleting the focused message moves focus to the surviving tab stop",
+        "deleting an older focused message hands focus to its neighbour, not the newest",
+        "a focus move during a stream render survives Turbo's focus restore",
+        "a no-change room refresh does not yank focus back to the composer",
+        "the ContextMenu key opens the shared menu and Escape returns focus",
+        "a late composer autofocus does not steal focus from a message",
+        "up arrow from an empty composer still edits my last message",
+        "up-arrow-to-edit shows an error when the actions endpoint fails",
+        "forward reuses the menu-open metadata request instead of fetching again",
+        "a menu opened while an action waits does not redirect the pending action",
+        "the menu closes before Turbo caches the page",
+        "the main message list is a live log",
+        "paginated history stays quiet past the insert, then the live region comes back",
+        "an edit replacement is not announced as an addition",
+        "an own message is not re-announced when its broadcast replaces the pending copy",
+    ],
 }
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("files", nargs="*", choices=CASES)
+parser.add_argument("--case", help="run one exact pinned declaration from the selected files")
+parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
 args = parser.parse_args()
 files = args.files or list(CASES)
+if args.case:
+    assert any(args.case in CASES[file] for file in files), "unknown/unmapped named case"
 SCRATCH.mkdir(exist_ok=True)
 env = dict(os.environ, CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="8", PARITY_CPUS="2",
            PARITY_NAMESPACE="ws8bm-behavior", PARITY_OWNER="ws8bm", TMPDIR=str(SCRATCH))
@@ -48,6 +80,7 @@ image = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
 revision = subprocess.check_output(["docker", "image", "inspect", "--format", "{{range .Config.Env}}{{println .}}{{end}}", image], text=True)
 assert any(f"GIT_REVISION={value}" in revision.splitlines() for value in [PIN, PIN[:8]]), "browser reference must be the pinned Rails image"
 env["PARITY_IMAGE"] = image
+env["WS8BM_NEGATIVE"] = "1" if args.negative else "0"
 subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"], cwd=ROOT, env=env, check=True)
 subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
@@ -68,6 +101,9 @@ reservations = []
 try:
     for port in ports:
         reservation = socket.socket()
+        # Refuse live listeners, while permitting our just-closed listener's
+        # TIME_WAIT sockets between independent invocations.
+        reservation.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         reservation.bind(("127.0.0.1", port))
         reservations.append(reservation)
 finally:
@@ -78,19 +114,44 @@ with sqlite3.connect(RUST / "parity/.seed/default/db/production.sqlite3") as con
     protected_counts = {table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                         for table in ["channel_threads", "messages", "thread_memberships"]}
 passed = 0
+mutation_names = set(json.loads(subprocess.check_output([
+    "node", "--input-type=module", "-e",
+    "import {mutationNames} from './rust/reference-tools/messaging/behavior-mutations.mjs'; console.log(JSON.stringify(mutationNames))"
+], cwd=ROOT, text=True))) if args.negative else set()
 for file in files:
     source = subprocess.check_output(["git", "show", f"{PIN}:test/system/{file}_test.rb"], cwd=ROOT)
-    for case in CASES[file]:
-        assert f'test "{case}"'.encode() in source, "case must be named in the pin"
+    selected = [case for case in CASES[file] if not args.case or case == args.case]
+    if args.negative:
+        if args.case:
+            assert args.case in mutation_names, "no served mutant for this named check"
+        selected = [case for case in selected if case in mutation_names]
+    # These first seventeen cases only change the current browser DOM/focus or
+    # open controls; a shared server avoids gratuitous Docker network churn.
+    # Fresh contexts still isolate drafts, menus, focus and observers. Every
+    # batch verifies saved message rows are unchanged. All writing/history
+    # cases retain separate fixture/database/server copies.
+    readonly = CASES["message_list_a11y"][:17] if file == "message_list_a11y" else []
+    batches = [[case for case in selected if case in readonly]] if readonly else []
+    batches += [[case] for case in selected if case not in readonly]
+    for batch in filter(None, batches):
+        case = batch[0]
+        for name in batch:
+            assert f'test "{name}"'.encode() in source, "case must be named in the pin"
         with tempfile.TemporaryDirectory(prefix="ws8bm-behavior-", dir=SCRATCH) as directory:
             work = Path(directory)
-            shutil.copytree(RUST / "parity/.seed/default/db", work / "db")
-            shutil.copytree(RUST / "parity/.seed/default/storage", work / "files")
-            run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]))
+            fixture = work / "fixture"
+            shutil.copytree(RUST / "parity/.seed/default", fixture)
+            if file == "message_list_a11y":
+                fixture_kind = "history" if case.startswith("paginated history") else "message_list"
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            shutil.copytree(fixture / "db", work / "db")
+            shutil.copytree(fixture / "storage", work / "files")
+            run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log:
                 try:
-                    subprocess.run([reference, "up", "--seed", "default", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
+                    subprocess.run([reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
                     process = subprocess.Popen([str(target / "debug/campfire"), "server"], cwd=ROOT, env=run_env, stdout=log, stderr=log)
                     deadline = time.monotonic() + 120
                     while True:
@@ -105,8 +166,13 @@ for file in files:
                         if time.monotonic() > deadline:
                             raise TimeoutError("candidate not ready")
                         time.sleep(.2)
-                    subprocess.run(["node", str(RUST / "reference-tools/messaging/behavior.mjs"), f"http://127.0.0.1:{ports[0]}", f"http://127.0.0.1:{ports[1]}", file, case], cwd=ROOT, env=run_env, check=True)
-                    databases = [RUST / f"parity/.seed/.instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
+                    fixture_data = fixture / "db/browser-fixture.json"
+                    metadata = json.loads(fixture_data.read_text()) if fixture_data.exists() else {}
+                    subprocess.run(["node", str(RUST / "reference-tools/messaging/behavior.mjs"), f"http://127.0.0.1:{ports[0]}", f"http://127.0.0.1:{ports[1]}", file, json.dumps(batch), json.dumps(metadata)], cwd=ROOT, env=run_env, check=True)
+                    if args.negative:
+                        passed += len(batch)
+                        continue
+                    databases = [work / f".instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
                     for database in databases:
                         with sqlite3.connect(database) as conn:
                             if case == "sending messages between two users":
@@ -131,6 +197,24 @@ for file in files:
                             elif case == CASES["workspace_markdown"][2]:
                                 payload = textwrap.dedent(source.decode().split("payload = <<~'MARKDOWN'\n")[1].split("    MARKDOWN")[0])
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (payload,)).fetchone()[0] == 1
+                            elif case == "Markdown replies and file attachments remain usable":
+                                parent = conn.execute("SELECT id FROM messages WHERE markdown_source='**A useful point** with `inline code`.'").fetchone()
+                                assert parent is not None
+                                attachments = conn.execute("SELECT messages.reply_notify_author,blobs.filename,blobs.byte_size,blobs.key FROM messages JOIN active_storage_attachments AS attachments ON attachments.record_type='Message' AND attachments.record_id=messages.id JOIN active_storage_blobs AS blobs ON blobs.id=attachments.blob_id WHERE messages.reply_to_message_id=?", (parent[0],)).fetchall()
+                                contents = b"An attachment sent from the Markdown composer.\n"
+                                assert len(attachments) == 1 and attachments[0][:3] == (0, "markdown-workspace-attachment.txt", len(contents))
+                                storage = work / (f".instances/{ports[0]}/storage" if database == databases[0] else "files")
+                                key = attachments[0][3]
+                                assert (storage / key[:2] / key[2:4] / key).read_bytes() == contents
+                            elif case == "mention suggestions select a room member without sending the unfinished message":
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source IN ('@Kev','@[Kevin] ')").fetchone()[0] == 0
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='@[Kevin] please review **the layout**.'").fetchone()[0] == 1
+                            elif case == "a rejected message can be recovered corrected and sent":
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE length(markdown_source)>50000").fetchone()[0] == 0
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='**Recovered** after correcting the draft.'").fetchone()[0] == 1
+                            elif case == "sending preserves the submitted source and a newer draft":
+                                for body in ["**First message** stays exact.", "A newer draft is still here."]:
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (body,)).fetchone()[0] == 1
                             elif case == CASES["threads"][0]:
                                 thread = conn.execute("SELECT id,parent_message_id,auto_archive_after_minutes FROM channel_threads WHERE name='Design review thread'").fetchone()
                                 assert thread is not None and thread[1:] == (607264868, 1440)
@@ -166,8 +250,18 @@ for file in files:
                                 thread = conn.execute("SELECT id FROM channel_threads WHERE name='Survives a stray reset'").fetchone()
                                 assert thread is not None
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [("The name survives the re-entry.",)]
-                    passed += 1
-                    print(f"WS8bm behaviour: {file}: {case}: Rails PASS; Rust PASS; persisted rows PASS", flush=True)
+                            elif file == "message_list_a11y":
+                                if case == "an edit replacement is not announced as an addition":
+                                    assert conn.execute("SELECT markdown_source FROM messages WHERE id=607264868").fetchone() == ("Edited quietly",)
+                                elif case == "an own message is not re-announced when its broadcast replaces the pending copy":
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='Announce me once'").fetchone()[0] == 1
+                                else:
+                                    with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                        expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
+                                    assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected, "navigation/focus/history must not change saved messages"
+                    for case in batch:
+                        passed += 1
+                        print(f"WS8bm behaviour: {file}: {case}: Rails PASS; Rust PASS; persisted rows PASS", flush=True)
                 finally:
                     if process is not None:
                         process.terminate()
@@ -178,4 +272,7 @@ for file in files:
                             process.wait()
                     subprocess.run([reference, "down", "--port", str(ports[0])], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
     print(f"WS8bm behaviour source: test/system/{file}_test.rb SHA256 {hashlib.sha256(source).hexdigest()}", flush=True)
-print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; 0 failed; no pixel checks", flush=True)
+if args.negative:
+    print(f"WS8bm discrimination check: {passed} named checks rejected their served mutants; 0 escaped", flush=True)
+else:
+    print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; 0 failed; no pixel checks", flush=True)
