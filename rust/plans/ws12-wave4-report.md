@@ -1,5 +1,5 @@
 # WS12 Wave 4 report
 
-The current continuation report is [ws12-boards-report.md](ws12-boards-report.md). It covers the partial board mutations and human work core, reviewed #181 activity/stars integration, exact verification receipts and remaining WS12 ownership.
+The current report is [ws12-boards-report.md](ws12-boards-report.md). It records the #182 main merge, preserved board/work writes and completed panes, the two integration corrections, final full-workspace/strict-clippy/release-inputs/82-Rails-response receipts, and the unchanged remaining WS12 ownership.
 
-The lead's separate stars/activity slice merged as #181. This branch takes main's reviewed dirty-column writes and operation-snapshot broadcasts; it adds the message/work-event recorder without duplicating those review fixes.
+The accepted implementation slice and its design/discrimination receipts remain linked at the top of that report. #181’s reviewed activity/stars dirty-column writes and operation-snapshot broadcasts remain taken from main. This run stops after push; inbox domain APIs are next after the lead freezes this PR.
