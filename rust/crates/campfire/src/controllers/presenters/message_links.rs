@@ -47,7 +47,7 @@ pub fn cards(presenter: &Presenter<'_>, message: &Message) -> Result<Vec<String>
                                 author: user.name.clone(),
                             room_label: room_label.into(),
                             created_at: source.created_at.jiff(),
-                            excerpt: plain_text.clone(),
+                            excerpt: campfire_views::helpers::truncate(&plain_text,200,"..."),
                             message_path: path.clone(),
                         }
                         .html(ctx)
@@ -84,7 +84,7 @@ mod tests {
                         author: input["author"].as_str().unwrap().into(),
                         room_label: input["room_label"].as_str().unwrap().into(),
                         created_at: input["created_at"].as_str().unwrap().parse().unwrap(),
-                        excerpt: input["plain_text"].as_str().unwrap().into(),
+                        excerpt: campfire_views::helpers::truncate(input["plain_text"].as_str().unwrap(),200,"..."),
                         message_path: input["path"].as_str().unwrap().into(),
                     }
                     .html(ctx);
