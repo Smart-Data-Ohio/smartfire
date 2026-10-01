@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { fixture, text, absent, emptyStackShown, panel, row, controls } from './ws13-support.mjs';
 import './ws13-audio.cases.mjs';
+import './ws13-roster.cases.mjs';
 
 test('stage rooms list in their own section with distinct creation controls and a stage panel',async t => {
   const f=await fixture(t,['jason']); const p=f.pages.jason;

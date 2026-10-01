@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. All 548 original declarations remain inventoried across 33 Rails files: 282 passed, 266 open. All 226 WS13 controller/integration declarations have complete assertions. WS13b owns the 216 model/job/service declarations, whose historical 37 passed and 179 open counts remain unchanged pending PR #172; that branch has not been merged. WS17's public seams stay unchanged. Eleven Stage and eight audio-processing browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 87 system declarations remain open: 52 ordinary browser cases and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
+Status: partial. All 548 original declarations remain inventoried across 33 Rails files: 290 passed, 258 open. All 226 WS13 controller/integration declarations have complete assertions. WS13b owns the 216 model/job/service declarations, whose historical 37 passed and 179 open counts remain unchanged pending PR #172; that branch has not been merged. WS17's public seams stay unchanged. Eleven Stage, eight audio-processing and eight roster browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 79 system declarations remain open: 44 ordinary browser cases and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -16,9 +16,9 @@ The process task now runs invitations, stale streams and cleanups in Rails order
 
 Controller and integration coverage is complete: all 226 original WS13 declarations have full assertions. This continuation closes the final 26 with actual HTTP/Cable effects, executed SQLite statement and transaction traces, and a deterministic membership-revocation race. Earlier partial counts in prior reports are historical. See the per-file table and retained titles below for the current counts.
 
-The complete room header has 28 byte-identical renders; voice/Stage new/edit pages have 14. The new Markdown composer, member/thread panels and poll builder have 30 complete Rails renders across Closed, named/unnamed Direct, Voice and Stage rooms and Drive modes. The complete sidebar frame has 17 cold Rails renders over the parity seed, using the exact post-#163 sidebar source. It includes workspace identity/destinations/tools, shared/Board/Voice/Stage/DM rows, favourites, category controls, placeholders, room menus and the profile-card trigger. Request tests also exercise persisted placement and the administrator-only group-DM delete flag. The surrounding room page, pending-message shell, first-paint preloads, unread-divider/jump controls and per-viewer live OOO notices are integrated: 36 complete pages plus 38 complete component renders. Actual seeded/populated pages compare their room/header/shell adapters and native message renderer, including on-page and off-page unread boundaries. Two retained Designers captures are explicitly deferred for shared GitHub PR cards and message-link lazy-frame integration. Shared/direct row refresh and callback adapters now use the same native composition as the request frame. Another 16 standalone sidebar rows and six recipient-specific group-DM headers match Rails byte for byte. Real socket/request tests cover rename delivery, recipient menu flags, JSON mute/read effects and live OOO updates/clears; Voice/Stage callback signatures are unchanged. The two Designers fixtures and shared post-#163 application-layout/status-action reconciliation remain for follow-up.
+The complete room header has 28 byte-identical renders; voice/Stage new/edit pages have 14. The new Markdown composer, member/thread panels and poll builder have 30 complete Rails renders across Closed, named/unnamed Direct, Voice and Stage rooms and Drive modes. The complete sidebar frame has 17 cold Rails renders over the parity seed, using the exact post-#163 sidebar source. It includes workspace identity/destinations/tools, shared/Board/Voice/Stage/DM rows, favourites, category controls, placeholders, room menus and the profile-card trigger. Request tests also exercise persisted placement and the administrator-only group-DM delete flag. The surrounding room page, pending-message shell, first-paint preloads, unread-divider/jump controls and per-viewer live OOO notices are integrated: 38 complete pages plus 38 complete component renders. Actual seeded/populated pages compare their room/header/shell adapters and native message renderer, including on-page and off-page unread boundaries. Both Designers captures are accepted with main’s GitHub cards and the native quote-child bridge. Shared/direct row refresh and callback adapters now use the same native composition as the request frame. Another 16 standalone sidebar rows and six recipient-specific group-DM headers match Rails byte for byte. Real socket/request tests cover rename delivery, recipient menu flags, JSON mute/read effects and live OOO updates/clears; Voice/Stage callback signatures are unchanged. The two Designers fixtures and approved post-#163 application-layout/status-action reconciliation are complete.
 
-Runtime recent-search, Drive and sound metadata adapters are integrated with 23 recorded persisted-state cases and eight Picker configurations. WS13b owns model/job/service cases; WS17 owns policy/transport. All 106 system cases remain deferred to end-to-end testing, including 35 LiveKit cases. No newly completed controller/integration title was inferred from render-vector counts.
+Runtime recent-search, Drive and sound metadata adapters are integrated with 23 recorded persisted-state cases and eight Picker configurations. WS13b owns model/job/service cases; WS17 owns policy/transport. Twenty-seven system cases now pass; 79 remain for end-to-end testing, including 35 LiveKit cases. No newly completed controller/integration title was inferred from render-vector counts.
 
 
 ## Rails declaration coverage by file
@@ -51,7 +51,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
 | `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
 | `test/system/huddle_audio_test.rb` | 8 | 8 | 0 |
-| `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
+| `test/system/huddle_roster_test.rb` | 8 | 8 | 0 |
 | `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 6 | 0 |
 | `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
 | `test/integration/huddle_presence_test.rb` | 5 | 5 | 0 |
@@ -60,7 +60,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **282** | **266** |
+| **Total** | **548** | **290** | **258** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -691,16 +691,16 @@ Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers
 
 ## test/system/huddle_roster_test.rb
 
-Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
+Owner: WS13. Complete: 8/8 original declarations passed against real Rust pages, signed sessions, assets and Cable. The SDK/analyser fixture stays at the original Rails boundary; all roster identity, button-state, meter timing and leave-order assertions are retained.
 
-- muting patches the local roster row instead of rebuilding it
-- speaking and mute changes patch the remote row in place
-- joining and leaving adds and removes roster rows only
-- the mute toggle keeps a stable label with pressed state and tooltip
-- the camera toggle keeps a stable label with pressed state and tooltip
-- the meter stops once its track ends
-- the meter skips ticks while the tab is hidden
-- leaving reports after the disconnect completes
+- **Passed:** muting patches the local roster row instead of rebuilding it
+- **Passed:** speaking and mute changes patch the remote row in place
+- **Passed:** joining and leaving adds and removes roster rows only
+- **Passed:** the mute toggle keeps a stable label with pressed state and tooltip
+- **Passed:** the camera toggle keeps a stable label with pressed state and tooltip
+- **Passed:** the meter stops once its track ends
+- **Passed:** the meter skips ticks while the tab is hidden
+- **Passed:** leaving reports after the disconnect completes
 
 ## test/system/huddles_test.rb
 
@@ -779,17 +779,17 @@ Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers
 
 `stream_controller_tests.rs` closes the 22 previously open stream declarations with exact HTTP bodies, global stream-count guards, outsider/admin/type isolation, presenter and stale-id behavior, member-edit teardown and last-host succession. Its real Cable test checks one room badge and three per-user replacements, explicit presenter-stop silence, a moderator's single stopped event, and a barrier proving silent no-op stop without sleeping or changing timing thresholds. `stage_page_tests.rs` checks the 15 page declarations through the actual generic room endpoint. Domain/model/job/service files remain WS13b-owned.
 
-The 35 real LiveKit declarations remain individually inventoried above: 31 in `test/system/huddles_test.rb`, four in `test/system/stage_test.rb`. Their browser WebRTC/media/reconnect assertions cannot be expressed by recorded responses from the injected administrative LiveKit client. Recorded client/Twirp and gateway contracts remain covered; the other 71 stubbed browser declarations remain open, rather than being reclassified as LiveKit-dependent.
+The 35 real LiveKit declarations remain individually inventoried above: 31 in `test/system/huddles_test.rb`, four in `test/system/stage_test.rb`. Their browser WebRTC/media/reconnect assertions cannot be expressed by recorded responses from the injected administrative LiveKit client. Recorded client/Twirp and gateway contracts remain covered; 52 ordinary browser declarations remain open, rather than being reclassified as LiveKit-dependent; 19 ordinary declarations are complete.
 
 ## Remaining controller and integration closure
 
 The nine tests in `remaining_call_tests.rs`, `remaining_query_tests.rs` and `remaining_presence_tests.rs` close the last 26 original declarations. Query probes trace executed cached statements, retaining the configured reader count. Their isolated app shuts down its independent background workers before measuring controller SQL; the test suite still runs four tests concurrently. A barrier holds the room read after membership scope while a separate write commits membership revocation, then verifies the issue path returns the controlled JSON denial without a grant. Stage edits prove the host read and membership insert sit between one immediate begin and commit. Steady-state admission runs no transaction or writes and at most eight statements; denial performs exactly one grant update and cleanup insert. Presence batches one grants query and one user preload across three live rooms. Real Cable frames prove exact hand/promotion/mute fan-out, personalization, cleanup and unchanged host grants, with a clock-controlled double raise preserving queue order. All five integration declarations inspect actual GET HTML for channel, direct and group stacks, quiet targets, adjacency and disabled configuration.
 
-All 226 controller/integration declarations are complete. WS13b retains the 216 domain declarations and unchanged historic 37 passed / 179 open. All 106 system declarations wait for the end-to-end phase: 71 stubbed browser cases and 35 real LiveKit cases remain individually inventoried, as requested.
+All 226 controller/integration declarations are complete. WS13b retains the 216 domain declarations and unchanged historic 37 passed / 179 open. Nineteen of 106 system declarations now pass. The remaining 52 ordinary browser cases and 35 real LiveKit cases remain individually inventoried, as requested.
 
 ## Room composition continuation
 
-`room_composition_tests.rs` compares 30 complete Rails fragment renders for the Markdown composer (without Drive, legacy Drive and the configured Picker), member panel, thread panel and poll builder across closed, named/unnamed direct, voice and Stage rooms. These native templates include reply context, autocomplete/slash-command wiring, the schedule-send dialog, shared multi-select controls and tracked-work thread controls. Generic room GETs now integrate them, with the shared thread-panel label loaded separately from the viewer's DM composer label. This is complete fragment composition; full room/page bytes remain open. The parent sidebar is covered in the following continuation. No system declaration is reclassified as passed.
+`room_composition_tests.rs` compares 30 complete Rails fragment renders for the Markdown composer (without Drive, legacy Drive and the configured Picker), member panel, thread panel and poll builder across closed, named/unnamed direct, voice and Stage rooms. These native templates include reply context, autocomplete/slash-command wiring, the schedule-send dialog, shared multi-select controls and tracked-work thread controls. Generic room GETs now integrate them, with the shared thread-panel label loaded separately from the viewer's DM composer label. This fragment slice was followed by the complete 38-page acceptance set below. The parent sidebar is covered in the following continuation. No system declaration is reclassified as passed.
 
 ## Complete sidebar composition continuation
 
@@ -801,8 +801,10 @@ Both previously retained Designers renders are now in the 38-page acceptance set
 
 `parity/system/ws13` explicitly runs eleven complete original Stage declarations in the pinned Playwright image against the production Rust router/assets/Cable over signed sessions. The private fixture/state routes exist only in the ignored external-test launcher, never in the shipped binary. Microphone and credential failure injections remain at the same boundary as the original declarations. The synthetic join/leave declaration holds external SDK signaling pending so the isolated capture proxy cannot misroute its TLS connection to Rust HTTP; its original event, label, no-second-join and idle assertions remain intact. The original selector and explicit broadcast/connection waits are unchanged. Selenium's empty inline-stack visibility is checked through CSS display/visibility because Playwright's nonzero-box predicate disagrees for Rails' whitespace-only target. No screenshots or image comparisons are used.
 
-The previous continuation paragraphs are historical: Designers and application-layout reconciliation are closed, and Stage ordinary cases have advanced from 0/11 to 11/11. Eight audio-processing declarations also pass in the same browser acceptance run. The current table and retained title markers are authoritative; 87/106 system declarations remain, including all 35 real LiveKit declarations.
+The previous continuation paragraphs are historical: Designers and application-layout reconciliation are closed, and Stage ordinary cases have advanced from 0/11 to 11/11. Eight audio-processing and eight roster declarations also pass in the same browser acceptance run. The current table and retained title markers are authoritative; 79/106 system declarations remain, including all 35 real LiveKit declarations.
 
 ## Audio browser continuation
 
 The eight audio declarations use the real Designers seed room (the fixture asserts its ID) and signed Rust sessions, with the actual Rails SDK/track stub transcribed verbatim apart from named JavaScript arguments. No product JavaScript, LiveKit policy, transport seam or original assertion was changed. The ordinary browser total is now 19 passed, 52 remaining; the real LiveKit total remains 0 passed, 35 remaining. Browser acceptance runs explicitly rather than being silently skipped as part of the ordinary workspace suite.
+
+The roster SDK/analyser fixture is copied from the pinned Rails helper. Browser contexts now close their individual forwarding proxies with the context: cancelled page requests cannot carry into later declarations. The shared fixture explicitly waits for its Stimulus huddle controller within the existing two-second selector budget before installing the original SDK fixture. These are harness lifecycle fixes; no original assertion, concurrency or explicit wait is changed.

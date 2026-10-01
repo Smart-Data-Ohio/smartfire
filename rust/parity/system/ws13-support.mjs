@@ -18,8 +18,11 @@ async function fixture(t, names, options={}) {
   const data = await response.json();
   const pages = {};
   for (const name of names) {
-    const context = await browser.newContext({proxy:{server:proxy.server,bypass:'<-loopback>'},timezoneId:'UTC',locale:'en-US',viewport:{width:1400,height:1000}});
-    t.after(() => context.close());
+    // Each browser context owns its forwarding agent. Close both together so
+    // cancelled page requests cannot occupy the shared agent across declarations.
+    const pageProxy = await startProxy(process.env.WS13_SYSTEM_TARGET);
+    const context = await browser.newContext({proxy:{server:pageProxy.server,bypass:'<-loopback>'},timezoneId:'UTC',locale:'en-US',viewport:{width:1400,height:1000}});
+    t.after(async () => { await context.close(); await pageProxy.close(); });
     await context.addCookies([{name:'session_token',value:data.people[name].cookie,url:origin}]);
     const page = await context.newPage();
     page.setDefaultTimeout(2000); // Capybara selector wait; individual Rails waits below are unchanged.
@@ -32,6 +35,9 @@ async function fixture(t, names, options={}) {
       const sources = [...document.querySelectorAll('turbo-cable-stream-source')];
       return sources.length>=3 && sources.every(source=>source.hasAttribute('connected'));
     },null,{timeout:15000});
+    // Cable and Stimulus connect independently. The Rails helper assumes the
+    // huddle controller exists before installing its SDK fixture.
+    await page.waitForFunction(() => !!window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle'),null,{timeout:2000});
     pages[name] = page;
   }
   const state = async () => (await api.request.get(`${origin}/__ws13__/rooms/${data.room}`)).json();
