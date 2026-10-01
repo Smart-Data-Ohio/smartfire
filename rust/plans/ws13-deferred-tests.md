@@ -631,7 +631,7 @@ Owner: WS13. Complete: 8/8 original declarations passed against the actual seede
 
 ## test/system/huddle_invitations_test.rb
 
-Owner: WS13. Eight of ten declarations pass with the exact current WS13b API in an isolated fresh clone; all ten depend on that branch. The first two fail because the public ActivityItemsController count/read/handled endpoints are still 501 on main. The existing ActivityItem source assigns the inbox to WS12; no domain or foreign-owner controller implementation was copied into WS13.
+Owner: WS13. Eight of ten declarations pass with the exact current WS13b API in an isolated fresh clone; all ten depend on that branch. The first two fail because the public ActivityItemsController count/read/handled endpoints are still 501 on main. The current WS11-UI report owns the inbox index/count and lists read/handled as its inbox continuation; the old WS12 source note is historical. Exact routes and ownership evidence are in ws13-inbox-route-dependencies.md. No domain or foreign-owner controller implementation was copied into WS13.
 
 - the recipient sees an incoming huddle banner and dismissing it marks the item read
 - joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel
