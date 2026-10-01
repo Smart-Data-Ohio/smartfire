@@ -14,7 +14,9 @@ export const click = (p,name) => name.startsWith('Noise suppression ')
   : p.getByRole('button',{name,exact:true}).click();
 export async function instrument(p) {
   await p.addInitScript(INSTRUMENT);
-  await p.evaluate(INSTRUMENT);
+  // Rails registers CDP initialization before the later session visits.
+  // about:blank has no secure-context mediaDevices; initialize on its real visit.
+  if(p.url()!=='about:blank') await p.evaluate(INSTRUMENT);
 }
 export async function mediaFixture(t,names=['jz'],options={}) {
   const f=await fixture(t,names,{kind:'designers',...options});
