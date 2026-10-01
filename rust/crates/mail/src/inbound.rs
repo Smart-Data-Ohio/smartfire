@@ -10,6 +10,7 @@ use campfire_db::{
     User,
 };
 use campfire_storage::{Filename, Staged, Storage};
+use rails_compat::unicode;
 use rusqlite::{OptionalExtension, params};
 use sha1::{Digest, Sha1};
 use std::{
@@ -195,7 +196,7 @@ fn creator(
     cfg: &Config,
 ) -> campfire_db::Result<(User, bool)> {
     if let Some(address) = &email.from {
-        let user = tx.conn().query_row("SELECT users.id FROM users JOIN memberships ON memberships.user_id = users.id WHERE users.status = 0 AND users.role != 2 AND memberships.room_id = ? AND LOWER(users.email_address) = ? LIMIT 1", params![room.id, address.to_lowercase()], |r| r.get::<_, i64>(0)).optional()?;
+        let user = tx.conn().query_row("SELECT users.id FROM users JOIN memberships ON memberships.user_id = users.id WHERE users.status = 0 AND users.role != 2 AND memberships.room_id = ? AND LOWER(users.email_address) = ? LIMIT 1", params![room.id, unicode::downcase(address)], |r| r.get::<_, i64>(0)).optional()?;
         if let Some(id) = user
             && authenticated_sender(&email.auth_headers, cfg.authserv_id.as_deref(), address)
         {
