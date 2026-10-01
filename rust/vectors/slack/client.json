@@ -1,0 +1,141 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "cases": [
+    {
+      "payload": {},
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: unknown"
+      }
+    },
+    {
+      "payload": {
+        "ok": true,
+        "result": 1
+      },
+      "expected": {
+        "payload": {
+          "ok": true,
+          "result": 1
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": 0
+      },
+      "expected": {
+        "payload": {
+          "ok": 0
+        }
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "invalid_auth"
+      },
+      "expected": {
+        "kind": "AuthError",
+        "message": "Slack authentication failed for users.list (invalid_auth)"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "token_revoked"
+      },
+      "expected": {
+        "kind": "AuthError",
+        "message": "Slack authentication failed for users.list (token_revoked)"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "account_inactive"
+      },
+      "expected": {
+        "kind": "AuthError",
+        "message": "Slack authentication failed for users.list (account_inactive)"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "not_authed"
+      },
+      "expected": {
+        "kind": "AuthError",
+        "message": "Slack authentication failed for users.list (not_authed)"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "ratelimited"
+      },
+      "expected": {
+        "kind": "RateLimited",
+        "message": "Slack rate limited users.list",
+        "retry_after": 60
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "channel_not_found"
+      },
+      "expected": {
+        "kind": "RequestError",
+        "message": "Slack error for users.list: channel_not_found"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": "channels:history",
+        "provided": "channels:read"
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: channels:history)",
+        "needed": "channels:history",
+        "provided": "channels:read"
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope",
+        "needed": [
+          "a",
+          "b"
+        ],
+        "provided": []
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: a,b)",
+        "needed": [
+          "a",
+          "b"
+        ],
+        "provided": []
+      }
+    },
+    {
+      "payload": {
+        "ok": false,
+        "error": "missing_scope"
+      },
+      "expected": {
+        "kind": "ScopeError",
+        "message": "Slack token is missing a required scope for users.list (needed: unknown)",
+        "needed": null,
+        "provided": null
+      }
+    }
+  ]
+}

@@ -407,6 +407,22 @@ fn slack_import_undo_refuses_dry_active_and_fresh_finishing_leases() {
     let t = setup();
     let id = start(&t);
     assert!(!t.write(move |tx| SlackImport::undo(tx, id)));
+    status(&t, id, "completed");
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE slack_imports SET mode = 'dry_run' WHERE id = ?",
+            [id],
+        )?;
+        Ok(())
+    });
+    assert!(!t.write(move |tx| SlackImport::undo(tx, id)));
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE slack_imports SET mode = 'import' WHERE id = ?",
+            [id],
+        )?;
+        Ok(())
+    });
     status(&t, id, "running");
     lease(&t, id);
     status(&t, id, "cancelled");
@@ -471,7 +487,7 @@ fn run_reason(c: &Connection, id: i64, now: Timestamp) -> Result<Option<String>>
 }
 
 #[test]
-fn slack_import_undo_overlap_covers_crash_mapping_but_not_skip_or_other_workspace() {
+fn slack_import_undo_overlap_covers_crash_mapping_but_not_skip() {
     let t = setup();
     let first = start(&t);
     let second = start(&t);
