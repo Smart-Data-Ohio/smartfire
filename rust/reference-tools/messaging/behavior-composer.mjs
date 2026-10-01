@@ -26,7 +26,7 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
   }
   if(caseName==='blurring an open autocomplete does not leave a zombie that swallows Enter') {
     await editor.fill(':thu');await page.locator('suggestion-option').filter({hasText:'thumbsup'}).waitFor();
-    await editor.evaluate(node=>node.blur());await page.locator('suggestion-option').waitFor({state:'detached'});
+    await editor.evaluate(node=>node.blur());await page.waitForFunction(()=>!document.querySelector('suggestion-option'));
     await editor.click();await editor.fill('hello');await editor.press('Enter');
     await text(page,'hello');await text(recipient,'hello');await field(page,'');
   } else if(caseName==='a stale icon response does not poison the suggestion commit') {
