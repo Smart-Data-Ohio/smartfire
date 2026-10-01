@@ -23,12 +23,51 @@ fn setup() -> TestDb {
         tx.conn().execute("INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,streaming,streaming_updated_at,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?,?)",params![ROOT,id("watercooler"),id("bender"),"Draft","ws11-quiet-root",tx.now(),tx.now(),tx.now()])?;
         tx.conn().execute("INSERT INTO channel_threads(id,room_id,creator_id,parent_message_id,name,last_activity_at,locked_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",params![THREAD,id("watercooler"),id("david"),ROOT,"Quiet",tx.now(),tx.now(),tx.now(),tx.now()])?;
         tx.conn().execute("INSERT INTO messages(id,room_id,creator_id,thread_id,markdown_source,client_message_id,streaming,streaming_updated_at,created_at,updated_at) VALUES (?,?,?,?,?,?,1,?,?,?)",params![REPLY,id("watercooler"),id("bender"),THREAD,"Reply","ws11-quiet-reply",tx.now(),tx.now(),tx.now()])?;
-        for (fixed_id,summary,status) in [(900090100,"Pending","pending"),(900090101,"Due","pending"),(900090102,"Approved","approved")] {
-            let a=AgentApproval::create(tx,NewApproval{agent_id:id("bender_agent"),action:"deploy".into(),summary:summary.into(),expires_at:Some(tx.now().since(jiff::SignedDuration::from_hours(1))),..Default::default()})?;
+        Ok(())
+    });
+    for (fixed_id, summary, status) in [
+        (900090100, "Pending", "pending"),
+        (900090101, "Due", "pending"),
+        (900090102, "Approved", "approved"),
+    ] {
+        // Commit creation and its inbox fanout before assigning the oracle's fixed ID.
+        // Renumbering inside the create transaction leaves after-commit hooks with a
+        // source ID that no longer exists, which ActivityItem correctly rejects.
+        let a = t.write(|tx| {
+            AgentApproval::create(
+                tx,
+                NewApproval {
+                    agent_id: id("bender_agent"),
+                    action: "deploy".into(),
+                    summary: summary.into(),
+                    expires_at: Some(tx.now().since(jiff::SignedDuration::from_hours(1))),
+                    ..Default::default()
+                },
+            )
+        });
+        t.write(move |tx| {
             tx.conn().execute("UPDATE agent_approvals SET id=?,status=? WHERE id=?",params![fixed_id,status,a.id])?;
             tx.conn().execute("UPDATE activity_items SET source_id=? WHERE source_type='AgentApproval' AND source_id=?",params![fixed_id,a.id])?;
-        }
-        tx.conn().execute("UPDATE agent_approvals SET expires_at=? WHERE id=900090101",[tx.now().ago(jiff::SignedDuration::from_secs(1))])?;
+            Ok(())
+        });
+        t.read(|conn| {
+            assert!(
+                crate::ActivityItem::find_by_user_and_source(
+                    conn,
+                    id("david"),
+                    "AgentApproval",
+                    fixed_id,
+                )?
+                .is_some()
+            );
+            Ok(())
+        });
+    }
+    t.write(|tx| {
+        tx.conn().execute(
+            "UPDATE agent_approvals SET expires_at=? WHERE id=900090101",
+            [tx.now().ago(jiff::SignedDuration::from_secs(1))],
+        )?;
         Ok(())
     });
     t.sink.take();
