@@ -1,5 +1,5 @@
 //! `app/models/search_query.rb` and the bounded window in `SearchesController#set_messages`.
-//! Board/work/event side sections remain explicit WS12/WS14 extensions.
+//! Owns read-only side-section queries; event/thread mutations stay with their owners.
 use crate::sql::query_all;
 use crate::{Connection, Message, Result, Timestamp};
 use jiff::{
@@ -14,9 +14,22 @@ static OPERATORS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:^|[ \t\n\x0b\x0c\r])((from|in|has|before|after|on|is):([^ \t\n\x0b\x0c\r]+))")
         .unwrap()
 });
-// Ruby [[:word:]] includes every connector punctuation, not only ASCII '_'.
-// Keep a＿b in one quoted FTS phrase so SQLite requires adjacent tokens.
-static WORDS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\w+").unwrap());
+mod word_ranges;
+use word_ranges::WORD_RANGES;
+fn word_character(character: char) -> bool {
+    let point = character as u32;
+    WORD_RANGES
+        .binary_search_by(|&(start, end)| {
+            if end < point {
+                std::cmp::Ordering::Less
+            } else if start > point {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        })
+        .is_ok()
+}
 static SPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\p{White_Space}+").unwrap());
 static DATE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap());
@@ -57,10 +70,8 @@ fn like(s: &str) -> String {
     )
 }
 fn midnight(date: Date, zone: &TimeZone) -> Result<Timestamp> {
-    date.to_datetime(Time::MIN)
-        .to_zoned(zone.clone())
-        .map(|d| Timestamp::from_jiff(d.timestamp()))
-        .map_err(|e| crate::Error::Other(e.to_string()))
+    crate::slash_commands::time_parser::local_datetime(date.to_datetime(Time::MIN), zone)
+        .ok_or_else(|| crate::Error::Other("Invalid local search date".into()))
 }
 impl SearchQuery {
     pub fn parse(raw: &str) -> Self {
@@ -126,9 +137,10 @@ impl SearchQuery {
         q
     }
     pub fn text_tokens(&self) -> Vec<String> {
-        WORDS
-            .find_iter(&self.text)
-            .map(|m| m.as_str().into())
+        self.text
+            .split(|character| !word_character(character))
+            .filter(|token| !token.is_empty())
+            .map(str::to_owned)
             .collect()
     }
     pub fn filters(&self) -> bool {
@@ -200,10 +212,12 @@ impl SearchQuery {
         }
         if let Some(date) = self.on_date {
             sql.push_str(" AND messages.created_at >= ? AND messages.created_at < ?");
-            values.push(midnight(date, zone)?.to_db().into());
-            let next = date
+            let start = midnight(date, zone)?;
+            let resolved_date = start.jiff().to_zoned(zone.clone()).date();
+            let next = resolved_date
                 .checked_add(jiff::Span::new().days(1))
                 .map_err(|e| crate::Error::Other(e.to_string()))?;
+            values.push(start.to_db().into());
             values.push(midnight(next, zone)?.to_db().into());
         }
         if self.thread_only {
@@ -238,15 +252,27 @@ impl SearchQuery {
         }
         sql.push_str(" ORDER BY messages.created_at DESC,messages.id DESC LIMIT ?");
         values.push((super::message::PAGE_SIZE + 1).into());
-        let mut messages = query_all(
+        let mut ids: Vec<i64> = query_all(
             conn,
-            &sql,
+            &sql.replacen("SELECT messages.*", "SELECT messages.id", 1),
             rusqlite::params_from_iter(values),
-            Message::from_row,
+            |row| row.get(0),
         )?;
-        let has_more = messages.len() > super::message::PAGE_SIZE as usize;
-        messages.truncate(super::message::PAGE_SIZE as usize);
-        messages.reverse();
+        let has_more = ids.len() > super::message::PAGE_SIZE as usize;
+        ids.truncate(super::message::PAGE_SIZE as usize);
+        let messages = if ids.is_empty() {
+            vec![]
+        } else {
+            query_all(
+                conn,
+                &format!(
+                    "SELECT * FROM messages WHERE id IN ({}) ORDER BY created_at ASC,id ASC",
+                    crate::sql::placeholders(ids.len())
+                ),
+                rusqlite::params_from_iter(ids),
+                Message::from_row,
+            )?
+        };
         Ok(SearchPage { messages, has_more })
     }
     pub fn messages_in_room(&self, conn: &Connection, room: i64) -> Result<Vec<Message>> {
@@ -262,5 +288,108 @@ impl SearchQuery {
             rusqlite::params_from_iter(values),
             Message::from_row,
         )
+    }
+}
+
+/// Preloaded scalar side-section rows; rendering never reads a room association.
+#[derive(Debug)]
+pub struct SearchSection {
+    pub kind: &'static str,
+    pub records: Vec<SearchSectionRecord>,
+}
+#[derive(Debug)]
+pub struct SearchSectionRecord {
+    pub id: i64,
+    pub room_id: i64,
+    pub room_type: String,
+    pub room_name: Option<String>,
+    pub title: String,
+    pub time: Timestamp,
+    pub status: Option<String>,
+    pub cancelled: bool,
+}
+impl SearchQuery {
+    pub fn sections_for_user(&self, conn: &Connection, user: i64) -> Result<Vec<SearchSection>> {
+        if self.text_tokens().is_empty() {
+            return Ok(vec![]);
+        }
+        let mut sections = vec![];
+        for kind in ["board-posts", "work-threads", "events"] {
+            let events = kind == "events";
+            let table = if events { "events" } else { "channel_threads" };
+            let title = if events { "title" } else { "name" };
+            let time = if events {
+                "starts_at"
+            } else {
+                "last_activity_at"
+            };
+            let status = if events { "NULL" } else { "rec.work_status" };
+            let cancelled = if events {
+                "rec.cancelled_at IS NOT NULL"
+            } else {
+                "0"
+            };
+            let mut sql = format!(
+                "SELECT rec.id,rec.room_id,rooms.type,rooms.name,rec.{title},rec.{time},{status},{cancelled} FROM {table} rec JOIN rooms ON rooms.id=rec.room_id WHERE rooms.deleted_at IS NULL AND EXISTS (SELECT 1 FROM memberships mem WHERE mem.room_id=rooms.id AND mem.user_id=?)"
+            );
+            let mut values: Vec<Value> = vec![user.into()];
+            if !events {
+                sql.push_str(if kind == "board-posts" {
+                    " AND rooms.type='Rooms::Board'"
+                } else {
+                    " AND rooms.type!='Rooms::Board' AND rec.work_status IS NOT NULL"
+                });
+            }
+            if !self.in_rooms.is_empty() {
+                sql.push_str(" AND (");
+                sql.push_str(
+                    &vec!["LOWER(rooms.name) LIKE ? ESCAPE '\\'"; self.in_rooms.len()].join(" OR "),
+                );
+                sql.push(')');
+                values.extend(self.in_rooms.iter().map(|name| Value::from(like(name))));
+            }
+            for token in self.text_tokens() {
+                if events {
+                    sql.push_str(" AND (LOWER(rec.title) LIKE ? ESCAPE '\\' OR LOWER(rec.description) LIKE ? ESCAPE '\\')");
+                    values.push(like(&token).into());
+                    values.push(like(&token).into());
+                } else {
+                    sql.push_str(" AND LOWER(rec.name) LIKE ? ESCAPE '\\'");
+                    values.push(like(&token).into());
+                }
+            }
+            sql.push_str(&format!(" ORDER BY rec.{time} DESC,rec.id DESC LIMIT 10"));
+            let records = query_all(conn, &sql, rusqlite::params_from_iter(values), |r| {
+                Ok(SearchSectionRecord {
+                    id: r.get(0)?,
+                    room_id: r.get(1)?,
+                    room_type: r.get(2)?,
+                    room_name: r.get(3)?,
+                    title: r.get(4)?,
+                    time: r.get(5)?,
+                    status: r.get(6)?,
+                    cancelled: r.get(7)?,
+                })
+            })?;
+            if !records.is_empty() {
+                sections.push(SearchSection { kind, records });
+            }
+        }
+        Ok(sections)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn word_ranges_match_the_pinned_ruby_runtime() {
+        let oracle: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../vectors/messaging/search.json"))
+                .unwrap();
+        assert_eq!(
+            serde_json::to_value(WORD_RANGES).unwrap(),
+            oracle["word_ranges"]
+        );
     }
 }

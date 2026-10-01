@@ -107,3 +107,11 @@ pub use agent_approval::{AgentApproval, NewApproval};
 pub use agent::{Agent,AgentChanges,AgentKind,NewAgent};
 pub use agent_slash_command::{AgentSlashCommand,NewAgentSlashCommand};
 pub use agent_step::{AgentStep,NewAgentStep,AgentStepChanges};
+// WS8bm2 read-only rendering preload seam.
+pub mod message_rendering;
+
+// WS8bm2 listing/quote read adapters.
+pub mod room_files;
+pub mod message_quote;
+
+pub mod reminder_policy;

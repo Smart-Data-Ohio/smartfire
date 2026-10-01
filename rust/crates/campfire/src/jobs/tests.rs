@@ -738,6 +738,7 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks", "streaming messages"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
+    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
     let mut expected = golden["tasks"].as_array().unwrap().clone();
     expected.insert(0, serde_json::json!({"name":"event reminders","seconds":17}));
     // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
@@ -745,7 +746,6 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
     expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
     expected.push(retention);
-    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
     expected.push(ws17["presence_task"].clone());
     let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
     expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
@@ -765,12 +765,24 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
 async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
-    app.db.write(|tx|{tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob{source_message_id:999}));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
-    // Wait for the whole queue asserted below, including callbacks from the quote refresh.
-    let rows = wait_for(&app, "quote refresh and boot-time maintenance execution", |rows| {
-        rows.is_empty() || rows.iter().any(|row| row.status == "failed")
-    }).await;
-    assert!(rows.is_empty(), "{rows:?}");
+    app.db.write(|tx| {
+        // Other periodic work can remain queued while the quote job completes.
+        tx.emit_after_commit(Event::job_in(Duration::from_secs(3600), &campfire_db::models::retention::PruneJob {}));
+        tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob { source_message_id: 999 }));
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'", [], |row| row.get::<_, i64>(0))?, 1);
+        Ok(())
+    }).await.unwrap();
+    let rows = wait_for(&app, "quote refresh execution", |rows| {
+        // Future retention work remains queued by design. Only the quote job
+        // must finish; the assertions below also verify the future job survives.
+        rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob")
+            || rows
+                .iter()
+                .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
+    })
+    .await;
+    assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
+    assert!(rows.iter().any(|row| row.class == "Retention::PruneJob" && row.run_at > campfire_db::Timestamp::from_jiff(app.clock.now())), "{rows:?}");
     booted.jobs.shutdown(WAIT).await;
 
 }

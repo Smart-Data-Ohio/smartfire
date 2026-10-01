@@ -2,14 +2,13 @@ use crate::{
     controllers::presenters::test_support::*,
     integrations::{
         fizzy::accounts::{Account, Input},
-        test_support::{FakeServer, Route},
+        test_support::{FakeServer, Route, ws15e_http_case, ws15e_http_case_listener},
     },
 };
 use axum::http::{Method, StatusCode};
 use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
-use std::os::fd::{AsFd, OwnedFd};
 
 
 #[tokio::test]
@@ -36,26 +35,8 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
         "no_connection",
         "direct_bots",
     ] {
-        // Keep the allocated socket open across exec, rather than choosing a port and rebinding.
-        // stdin carries the listener; the child gets its own configured origin without mutating ENV.
-        let listener = crate::test_support::bind_listener()
-            .await
-            .into_std()
-            .expect("reserve an isolated Fizzy API listener");
-        let base = format!("http://{}", listener.local_addr().unwrap());
-        let output = tokio::process::Command::new(std::env::current_exe().unwrap())
-            .args([
-                "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
-                "--exact",
-                "--nocapture",
-                "--test-threads=8",
-            ])
-            .env("WS15E_FIZZY_MESSAGE_CASE", case)
-            .env("FIZZY_API_BASE_URL", &base)
-            .stdin(OwnedFd::from(listener))
-            .output()
-            .await
-            .unwrap();
+        let output = ws15e_http_case("WS15E_FIZZY_MESSAGE_CASE", case,
+            "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix").await;
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             output.status.success(),
@@ -66,16 +47,12 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
             stdout.contains("1 passed; 0 failed"),
             "must execute: {stdout}"
         );
-        println!("Fizzy message cards Rails case {case} at {base}: 1 passed; 0 failed");
+        println!("Fizzy message cards Rails case {case}: 1 passed; 0 failed");
     }
 }
 async fn run(case: &str) {
-    let listener =
-        std::net::TcpListener::from(std::io::stdin().as_fd().try_clone_to_owned().unwrap());
+    let listener = ws15e_http_case_listener();
     let base = crate::integrations::fizzy::client::api_base_url();
-    assert_eq!(base, format!("http://{}", listener.local_addr().unwrap()));
-    listener.set_nonblocking(true).unwrap();
-    let listener = tokio::net::TcpListener::from_std(listener).unwrap();
     let mut app = TestApp::boot().await.expect("pinned seeds required");
     app.booted
         .jobs

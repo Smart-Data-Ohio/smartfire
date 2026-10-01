@@ -1046,8 +1046,8 @@ async fn autocompletes_users() {
     let mut browser = test.browser("198.51.100.17");
     browser.sign_in(&test.label("emails.david")).await;
     let html = browser.get("/autocompletable/users?filter=a").await;
-    assert_eq!(html.status, StatusCode::OK);
-    assert!(html.text().contains("<lexxy-prompt-item") && !html.text().contains("<!DOCTYPE"));
+    // WS8bm2: the pinned Markdown endpoint has only JSON templates (slash.json oracle).
+    assert_eq!(html.status, StatusCode::NOT_ACCEPTABLE);
     let json = browser.get("/autocompletable/users.json?query=a").await;
     assert_eq!(
         json.header("content-type"),

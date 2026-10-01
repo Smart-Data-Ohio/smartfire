@@ -39,6 +39,14 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
+            if let Some(app) = app && super::message_features::deliver(cable, app, &broadcast)? { return Ok(()); }
+            messaging(cable, app, &broadcast)
+        }),
+        campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND =>
+            decode(request).and_then(|broadcast| status_badge(cable, broadcast)),
+        campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND =>
+            decode(request).and_then(|broadcast| ooo_notice(cable, broadcast)),
         crate::integrations::link_embed::store::CardUpdate::KIND => decode::<crate::integrations::link_embed::store::CardUpdate>(request)
             .and_then(|event| {
                 let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
@@ -66,7 +74,6 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             })?;
             Ok(())
         }),
-        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, app, &broadcast)),
         crate::integrations::github::notifier::MessageCreated::KIND => decode(request).and_then(|broadcast| {
             let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;
             super::github_notifier::publish(app, &broadcast)
@@ -75,8 +82,6 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;
             super::github_cards::publish(app, &broadcast)
         }),
-        campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND => decode(request).and_then(|b| status_badge(cable, b)),
-        campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND => decode(request).and_then(|b| ooo_notice(cable, b)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {
@@ -96,10 +101,10 @@ fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updat
     Ok(())
 }
 
-/// WS8 domain frames share WS7's publisher and conservative Turbo guard.
-/// Message appends and replacements render after commit without request/session context.
+/// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
+/// directory partial descriptions belongs to WS8br; message/poll/pin partials use WS8b-m's seam.
 fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
-    use campfire_db::broadcasts::Broadcast;
+    use campfire_db::broadcasts::{Broadcast, TurboAction};
     if let Broadcast::Turbo(frame) = broadcast
         && matches!(frame.action, campfire_db::broadcasts::TurboAction::Append | campfire_db::broadcasts::TurboAction::Replace)
         && let Some(campfire_db::broadcasts::Partial::Message {message_id} | campfire_db::broadcasts::Partial::MessageReplace {message_id}) = &frame.partial
@@ -126,26 +131,36 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
         cable.broadcast_action_to(&streamables,action,Target::Target(&frame.target),Some(&html),attrs);
         return Ok(());
     }
-    if let Broadcast::Turbo(frame) = broadcast
-        && let Some(campfire_db::broadcasts::Partial::EventCards { message_id }) = &frame.partial
-    {
-        let app = app.ok_or_else(|| anyhow::anyhow!("event card broadcast before app boot"))?;
-        let html = app.db.read_blocking(|conn| crate::controllers::presenters::events::cards(conn, *message_id))?;
-        let action = match frame.action {
-            campfire_db::broadcasts::TurboAction::Replace => Action::Replace,
-            _ => return Err(anyhow::anyhow!("unexpected event card action")),
-        };
-        let attributes = if frame.maintain_scroll { vec![("maintain_scroll", Some("true"))] } else { Vec::new() };
-        cable.broadcast_action_to(&[&broadcast.stream_name()], action, Target::Target(&frame.target), Some(&html), &attributes);
-
+    if let Some((stream, payload)) = template_free_broadcast(broadcast) {
+        match broadcast {
+            Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }
+            Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }
+        }
         return Ok(());
     }
-    let (stream, payload) = template_free_broadcast(broadcast)
-        .ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
-    match broadcast {
-        Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }
-        Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }
-    }
+    let Broadcast::Turbo(frame) = broadcast else { unreachable!() };
+    let app = app.ok_or_else(|| anyhow::anyhow!("app is not booted for partial rendering"))?;
+    let html = match &frame.partial {
+        Some(campfire_db::broadcasts::Partial::EventCards { message_id }) => {
+            Some(app.db.read_blocking(|conn| crate::controllers::presenters::events::cards(conn, *message_id))?)
+        }
+        Some(partial) => match super::rooms_directory::render(app, partial)? {
+            Some(html) => Some(html),
+            None => crate::controllers::messages::rendered::domain_partial(app, partial)?,
+        },
+        None => None,
+    }.ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
+    if campfire_views::helpers::request_forgery::has_token_slots(&html) { return Err(anyhow::anyhow!("unresolved CSRF token slot")); }
+    let action = match frame.action {
+        TurboAction::Append => Action::Append,
+        TurboAction::Prepend => Action::Prepend,
+        TurboAction::Replace => Action::Replace,
+        TurboAction::Update => Action::Update,
+        TurboAction::Remove => Action::Remove,
+    };
+    let stream = broadcast.stream_name();
+    let attributes = [("maintain_scroll", frame.maintain_scroll.then_some("true"))];
+    cable.broadcast_action_to(&[&stream], action, Target::Target(&frame.target), Some(&html), &attributes);
     Ok(())
 }
 

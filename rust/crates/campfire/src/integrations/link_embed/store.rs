@@ -172,6 +172,21 @@ impl Reference {
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?)
     }
+    /// Read-only page preload seam; reference order and display URL remain owner facts.
+    pub fn for_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Vec<Self>>> {
+        let mut result: std::collections::HashMap<i64, Vec<Self>> = ids.iter().map(|id| (*id, Vec::new())).collect();
+        if ids.is_empty() { return Ok(result); }
+        let slots = vec!["?"; ids.len()].join(",");
+        let mut query = conn.prepare(&format!("SELECT r.id AS reference_id, r.message_id, r.url AS reference_url, r.position, e.* FROM link_embed_references r JOIN link_embeds e ON e.id = r.link_embed_id WHERE r.message_id IN ({slots}) ORDER BY r.message_id,r.position,r.id"))?;
+        for reference in query.query_map(rusqlite::params_from_iter(ids), |row| Ok(Self {
+            id: row.get("reference_id")?, message_id: row.get("message_id")?,
+            url: row.get("reference_url")?, position: row.get("position")?, embed: Embed::from_row(row)?,
+        }))? {
+            let reference = reference?; result.entry(reference.message_id).or_default().push(reference);
+        }
+        Ok(result)
+    }
+
 }
 
 #[derive(Debug, Serialize, Deserialize)]

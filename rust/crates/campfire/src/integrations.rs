@@ -30,7 +30,6 @@ pub mod link_embed;
 pub mod linkedin;
 pub mod net;
 pub mod opengraph;
-pub mod search;
 pub mod web_push;
 pub mod webhook;
 

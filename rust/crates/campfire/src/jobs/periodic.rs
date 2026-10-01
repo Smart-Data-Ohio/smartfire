@@ -173,7 +173,7 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     }));
     periodic
 }
-pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
+pub(crate) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::SavedItem::due_reminder_ids(conn, now))

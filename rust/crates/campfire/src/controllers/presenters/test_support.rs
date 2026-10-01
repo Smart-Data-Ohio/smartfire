@@ -14,6 +14,23 @@ use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
+/// Failure artifacts are output, never fixture inputs. Create their parent and a private
+/// directory even when neither TMPDIR nor any previous target directory exists.
+pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
+    let byte = actual.bytes().zip(expected.bytes()).position(|(a, b)| a != b)
+        .unwrap_or(actual.len().min(expected.len()));
+    let parent = Path::new(ROOT).join("target/ws8bm-diffs");
+    let directory = std::fs::create_dir_all(&parent).ok()
+        .and_then(|_| tempfile::Builder::new().prefix("difference-").tempdir_in(&parent).ok());
+    if let Some(directory) = directory {
+        let path = directory.keep();
+        let _ = std::fs::write(path.join("actual.txt"), actual);
+        let _ = std::fs::write(path.join("expected.txt"), expected);
+        panic!("{label}: byte {byte}; actual {} bytes, Rails {} bytes; {}", actual.len(), expected.len(), path.display());
+    }
+    panic!("{label}: byte {byte}; actual {} bytes, Rails {} bytes", actual.len(), expected.len());
+}
+
 pub const DAVID: i64 = 127326141;
 pub const JASON: i64 = 149087659;
 pub const KEVIN: i64 = 712064548;
@@ -129,8 +146,23 @@ impl TestApp {
         Self::boot_with_clock(seed_clock()).await
     }
 
+    /// Byte goldens generated with the reference's --freeze clock.
+    pub async fn boot_frozen() -> Option<TestApp> {
+        Self::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()))).await
+    }
+
+    /// Test-local configuration; no process environment changes or pre-existing input files.
+    pub async fn boot_frozen_with_env(values: &[(&str, &str)]) -> Option<TestApp> {
+        Self::boot_with_clock_and_env(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), values).await
+    }
+
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
         Self::boot_with_clients("default", seed_clock(), network, &[], None).await
+    }
+
+    /// A caller-owned clock for exact request/row differentials; normal seeded tests keep ticking.
+    pub async fn boot_with_test_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_with_clock(clock).await
     }
 
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
@@ -369,6 +401,28 @@ pub fn encode(value: &str) -> String {
     percent_encoding::utf8_percent_encode(value, percent_encoding::NON_ALPHANUMERIC).to_string()
 }
 
+tokio::task_local! {
+    static FIXED_RENDER_SECRETS: ();
+}
+
+/// Fix only rendering entropy, before the real router/controller runs. No HTML inputs
+/// or response rewrites; authentication and forgery verification keep their real tokens.
+pub async fn with_fixed_render_secrets<T>(request: impl std::future::Future<Output = T>) -> T {
+    FIXED_RENDER_SECRETS.scope((), request).await
+}
+
+pub(super) fn fixed_render_secrets() -> Option<campfire_views::helpers::request_forgery::RequestSecrets> {
+    use campfire_views::helpers::request_forgery::{AuthenticityTokens, RequestSecrets};
+    struct Tokens;
+    impl AuthenticityTokens for Tokens {
+        fn global(&self) -> String { "GLOBAL".into() }
+        fn for_form(&self, action: &str, method: &str) -> String { format!("{method}:{action}") }
+    }
+    FIXED_RENDER_SECRETS.try_with(|()| RequestSecrets {
+        tokens: Box::new(Tokens), csp_nonce: Some("NONCE".into()),
+    }).ok()
+}
+
 impl Browser<'_> {
     /// Rails-compatible sudo session for controller tests; no confirmation endpoint shortcut.
     pub(crate) async fn grant_sudo(&mut self) {
@@ -410,10 +464,10 @@ impl Browser<'_> {
     }
 
     pub async fn send(&mut self, req: Req) -> Reply {
-        let mut request = Request::builder()
-            .method(req.method.clone())
-            .uri(&req.path)
-            .header(header::HOST, "campfire.test");
+        let mut request = Request::builder().method(req.method.clone()).uri(&req.path);
+        if !req.headers.iter().any(|(name, _)| name.eq_ignore_ascii_case("host")) {
+            request = request.header(header::HOST, "campfire.test");
+        }
         if !self.cookies.is_empty() {
             let cookie = self
                 .cookies

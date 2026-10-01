@@ -1,0 +1,17 @@
+{% if stage %}<span id="sidebar_stage_live_{{ param_key }}_{{ id }}" class="stage-live-dot" data-live-stream-dot="true" data-room-id="{{ id }}"></span>
+    {% endif %}<span id="sidebar_voice_participants_{{ param_key }}_{{ id }}"
+      class="voice-stack"
+      role="group"
+      aria-label="Nobody {{ label }}"
+      title="Nobody {{ label }}"
+      data-controller="huddle-participants"
+      data-huddle-participants-url-value="/rooms/{{ id }}/huddle/participants"
+      data-huddle-participants-max-value="3"
+      data-huddle-participants-interval-value="0"
+      data-huddle-participants-label-value="{{ label }}"
+      data-huddle-participants-card-url-template-value="/users/USER_ID/card"
+      data-huddle-presence-room-id="{{ id }}">
+  <span class="voice-stack__avatars" data-huddle-participants-target="avatars">
+  </span>
+  <span class="voice-stack__count" data-huddle-participants-target="count" hidden></span>
+</span>{{ "\n" }}
