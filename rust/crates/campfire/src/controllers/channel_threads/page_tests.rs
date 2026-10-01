@@ -47,7 +47,9 @@ async fn pull_request_thread_pages_match_four_rails_http_responses() {
 
 #[tokio::test]
 async fn pull_request_thread_without_starter_refreshes_once_and_survives_queue_failure() {
-    let app = TestApp::boot_frozen().await.expect("default seed required");
+    let mut app = TestApp::boot_frozen().await.expect("default seed required");
+    // Inspect the producer's queued rows before a background consumer can remove them.
+    app.booted.jobs.stop(crate::test_support::WAIT).await;
     app.db().write(|tx| {
         tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE channel_threads SET parent_message_id=NULL WHERE id=8; UPDATE github_pull_requests SET fetched_at=NULL,fetch_requested_at=NULL WHERE id IN (SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=8)")?;
         Ok(())
