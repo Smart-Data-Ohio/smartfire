@@ -35,7 +35,7 @@ pub struct Error {
     pub provided: Box<Value>,
 }
 impl Error {
-    fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
+    pub(super) fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
         let retry_after = (kind == ErrorKind::RateLimited).then_some(DEFAULT_RETRY_AFTER);
         Self {
             kind,
@@ -63,6 +63,7 @@ pub struct Client {
     pacing: bool,
     on_request: Option<OnRequest>,
     last_call_at: HashMap<Tier, Instant>,
+    requests: u64,
 }
 impl Client {
     pub fn new(token: String, on_request: Option<OnRequest>) -> Self {
@@ -80,7 +81,11 @@ impl Client {
             pacing,
             on_request,
             last_call_at: HashMap::new(),
+            requests: 0,
         }
+    }
+    pub fn request_count(&self) -> u64 {
+        self.requests
     }
     pub async fn auth_test(&mut self) -> Result<Value, Error> {
         self.request("auth.test", &[], Tier::Three).await
@@ -195,6 +200,7 @@ impl Client {
     ) -> Result<Value, Error> {
         for attempt in 0..MAX_ATTEMPTS {
             self.pace(tier).await;
+            self.requests += 1;
             let result = self.get(method, params).await;
             match result {
                 Err(error)
@@ -373,4 +379,4 @@ fn check_ok(payload: Value, method: &str) -> Result<Value, Error> {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

@@ -8,7 +8,7 @@ use super::*;
 use crate::integrations::net::tls_config;
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route};
 
-async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
+pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     use rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
     let rcgen::CertifiedKey { cert, signing_key } =
         rcgen::generate_simple_self_signed(vec![HOST.to_owned()]).unwrap();
