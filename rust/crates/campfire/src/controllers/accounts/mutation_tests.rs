@@ -94,9 +94,9 @@ async fn run_mutation_cases(selected: Option<&str>) {
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
         .await;
     assert_eq!(confirmed.status, StatusCode::FOUND);
-    for case in cases["cases"].as_array().unwrap().iter().filter(|case| selected.is_none_or(|name| case["name"] == name)) {
+    for case in cases["cases"].as_array().unwrap().iter().chain(cases["deferred_agent_owner_cases"].as_array().unwrap()).filter(|case| selected.is_none_or(|name| case["name"] == name)) {
         let setup = case.clone();
-        let isolated_unban = selected == Some("unban_banned");
+        let isolated_unban = matches!(selected, Some("unban_banned" | "deactivate_self"));
         let (old_code,active)=app.db().write(move |tx| {
             tx.conn().execute("UPDATE accounts SET name='Signal',settings='{\"restrict_room_creation_to_administrators\":false}',custom_styles=?",[setup["styles_before"].as_str()])?;
             tx.conn().execute("UPDATE users SET role=0,status=?,theme=? WHERE id=?",rusqlite::params![setup["status_before"].as_i64().unwrap_or(0),setup["theme_before"].as_str().unwrap(),KEVIN])?;
@@ -136,7 +136,14 @@ async fn run_mutation_cases(selected: Option<&str>) {
         let subject_id=if path.starts_with("/account/users/") || path.starts_with("/users/") {
             path.split('/').find_map(|part|part.parse::<i64>().ok())
         } else {None};
+        let owner_removed = case["name"] == "deactivate_self";
         let (state,rows)=app.db().read(move |conn|{
+            if owner_removed {
+                let agent = campfire_db::Agent::for_user(conn, BENDER)?.unwrap();
+                assert_eq!(agent.owner_id, Some(DAVID));
+                assert_eq!(agent.suspended_at, Some(SEED_NOW.parse::<jiff::Timestamp>().map(campfire_db::Timestamp::from_jiff).unwrap()));
+                assert_eq!(campfire_db::Session::count_for_user(conn, DAVID)?, 0);
+            }
             let account=Account::first(conn)?.unwrap();
             let user=User::find(conn,KEVIN)?;
             let subject=subject_id.map(|id|User::find(conn,id)).transpose()?;
@@ -149,7 +156,11 @@ async fn run_mutation_cases(selected: Option<&str>) {
             Ok((serde_json::json!({"account_name":account.name,"restrict":account.settings().restrict_room_creation_to_administrators(),"styles":account.custom_styles,"code_changed":account.join_code!=old_code,"role":user.role.name(),"status":user.status.name(),"subject_status":subject.as_ref().map(|u|u.status.name()),"subject_role":subject.as_ref().map(|u|u.role.name()),"active_delta":after_active-active,"target_sessions":target_sessions,"banned_ips":banned_ips}),rows))
         }).await.unwrap();
         assert_eq!(state, case["state"], "{}", case["name"]);
-        if selected.is_some() {
+        if selected == Some("deactivate_self") {
+            assert_eq!(rows.len(), 2, "one agent suspension and one user deactivation audit");
+            assert_eq!(rows.iter().filter(|r| r["action"] == "user.deactivate").count(), 1);
+            assert_eq!(rows.iter().filter(|r| r["action"] == "agent.suspend").count(), 1);
+        } else if selected.is_some() {
             assert_eq!(rows.len(),1,"{}: exactly one audit row",case["name"]);
         }
         assert_eq!(
@@ -204,4 +215,9 @@ async fn ban_writes_exactly_one_rails_audit_row() {
 #[tokio::test]
 async fn unban_writes_exactly_one_rails_audit_row() {
     run_mutation_cases(Some("unban_banned")).await;
+}
+
+#[tokio::test]
+async fn deactivating_the_signed_in_agent_owner_matches_rails_and_suspends_the_agent() {
+    run_mutation_cases(Some("deactivate_self")).await;
 }

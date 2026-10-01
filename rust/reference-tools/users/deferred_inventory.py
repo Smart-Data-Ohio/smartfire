@@ -135,7 +135,7 @@ covered.update({
     },
     "controllers/accounts_controller_test.rb": {"edit","edit groups administrators separately from members with a divider","update", "non-admins cannot update"},
     # The original destroy case also checks the agent-owner suspension and both audits.
-    "controllers/accounts/users_controller_test.rb": {"update", "non-admins cannot perform actions"},
+    "controllers/accounts/users_controller_test.rb": {"update", "destroy", "non-admins cannot perform actions"},
     "controllers/accounts/custom_styles_controller_test.rb": {"edit","update", "non-admins cannot update"},
     "controllers/accounts/join_codes_controller_test.rb": {"create new join code", "only administrators can create new join codes"},
 })
