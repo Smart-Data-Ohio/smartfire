@@ -268,3 +268,6 @@ mod tests {
 
 #[cfg(test)]
 mod live_tests;
+
+#[cfg(test)]
+mod bot_plaintext_cases;

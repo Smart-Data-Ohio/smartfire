@@ -21,6 +21,7 @@ mod agent_context_test;
 mod agent_direct_messages_test;
 mod agent_lifecycle_test;
 mod agent_security_lifecycle_cases_test;
+mod agent_presence_slash_cases_test;
 mod agent_cleanup_test;
 mod agent_credential_cases_test;
 mod agent_grant_cases_test;

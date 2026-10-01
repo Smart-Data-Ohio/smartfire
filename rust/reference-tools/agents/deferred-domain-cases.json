@@ -136,33 +136,9 @@
     },
     {
       "rails_file": "test/models/agent_kill_switch_test.rb",
-      "owner": "WS11; WS15g/WS15e approved-action execution callbacks",
+      "owner": "WS11 callbacks; WS12 owned-board mutation producer",
       "remaining_named_case_ports": [
         "kill switch leaves owned work assigned without reassigning it"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_slash_command_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "registers a command",
-        "new commands take arguments by default",
-        "names are unique per room across agents",
-        "names must be lowercase command words",
-        "names cannot shadow built-ins",
-        "descriptions are capped"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_working_presence_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "sets presence with a TTL",
-        "blank clears presence",
-        "expired presence reads as cleared",
-        "presence is capped in length",
-        "shared service sets and clears",
-        "shared service rejects overlong text"
       ]
     },
     {
@@ -172,15 +148,6 @@
         "carries the full work shape for a channel thread",
         "marks human owners and null owners",
         "carries board identity, tags, run_url, and links for a post"
-      ]
-    },
-    {
-      "rails_file": "test/services/bots/clear_plaintext_tokens_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "re-keys the digest from the plaintext, then clears it",
-        "a key reset between the read and the write wins over the stale plaintext",
-        "repeat runs are no-ops"
       ]
     }
   ]

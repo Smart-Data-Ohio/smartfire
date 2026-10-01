@@ -14,7 +14,7 @@ shared = {
     'test/models/agent_test.rb': 'WS11-ui rendered broadcast cases; WS11 domain cases compared',
     'test/jobs/agent/event_webhook_job_test.rb': 'WS11 delivery; WS15g live repository reader',
     'test/models/agent_approval_test.rb': 'WS11 domain; WS11-ui human approval controller/pages',
-    'test/models/agent_kill_switch_test.rb': 'WS11; WS15g/WS15e approved-action execution callbacks',
+    'test/models/agent_kill_switch_test.rb': 'WS11 callbacks; WS12 owned-board mutation producer',
     'test/models/agents/work_payload_test.rb': 'WS11; WS8 message presenter; WS15g private repository reader',
     'test/models/channel_thread_agent_assignment_test.rb': 'WS11 agent callbacks; WS12 mutation producers',
     'test/models/message_streaming_test.rb': 'WS11 finalization; WS12 activity; WS14/15 external reference sync',

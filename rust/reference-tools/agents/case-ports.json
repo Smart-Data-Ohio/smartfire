@@ -1278,6 +1278,84 @@
           "rust": "ws11_kill_case_approved_github_job_rechecks_before_http"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent_working_presence_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_presence_slash_cases_test.rs",
+      "cases": [
+        {
+          "rails": "sets presence with a TTL",
+          "rust": "ws11_presence_case_ttl"
+        },
+        {
+          "rails": "blank clears presence",
+          "rust": "ws11_presence_case_blank_clears"
+        },
+        {
+          "rails": "expired presence reads as cleared",
+          "rust": "ws11_presence_case_expired_reads_cleared"
+        },
+        {
+          "rails": "presence is capped in length",
+          "rust": "ws11_presence_case_model_limit"
+        },
+        {
+          "rails": "shared service sets and clears",
+          "rust": "ws11_presence_case_shared_set_clear"
+        },
+        {
+          "rails": "shared service rejects overlong text",
+          "rust": "ws11_presence_case_shared_limit"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_slash_command_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_presence_slash_cases_test.rs",
+      "cases": [
+        {
+          "rails": "registers a command",
+          "rust": "ws11_slash_model_case_registers"
+        },
+        {
+          "rails": "new commands take arguments by default",
+          "rust": "ws11_slash_model_case_default_arguments"
+        },
+        {
+          "rails": "names are unique per room across agents",
+          "rust": "ws11_slash_model_case_room_unique_across_agents"
+        },
+        {
+          "rails": "names must be lowercase command words",
+          "rust": "ws11_slash_model_case_command_words"
+        },
+        {
+          "rails": "names cannot shadow built-ins",
+          "rust": "ws11_slash_model_case_no_builtin_shadow"
+        },
+        {
+          "rails": "descriptions are capped",
+          "rust": "ws11_slash_model_case_description_limit"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/services/bots/clear_plaintext_tokens_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_repositories/bot_plaintext_cases.rs",
+      "cases": [
+        {
+          "rails": "re-keys the digest from the plaintext, then clears it",
+          "rust": "ws11_plaintext_case_rekeys_stale_and_digestless_leaves_clean"
+        },
+        {
+          "rails": "a key reset between the read and the write wins over the stale plaintext",
+          "rust": "ws11_plaintext_case_key_reset_beats_snapshot"
+        },
+        {
+          "rails": "repeat runs are no-ops",
+          "rust": "ws11_plaintext_case_repeat_noop"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
