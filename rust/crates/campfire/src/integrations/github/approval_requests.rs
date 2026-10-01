@@ -82,8 +82,9 @@ pub fn scope(
         pull_request: pr,
     }))
 }
-/// All replay, budget and approval/inbox writes run in one transaction. The writer serializes
-/// duplicate external IDs; replay intentionally precedes action validation and budgets.
+/// Replay, budget and approval/durable-job writes share the writer transaction.
+/// Approval inbox fanout runs after commit, as Rails after_create_commit does.
+/// The writer serializes external IDs; replay precedes action validation and budgets.
 pub struct Request {
     pub user_id: i64,
     pub room_id: i64,

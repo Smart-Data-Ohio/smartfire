@@ -226,7 +226,7 @@ impl ChannelThread {
         if !room.board() {
             return;
         }
-        tx.after_commit_record("board_post_creation", id, move |tx| {
+        tx.after_commit_record_latest("board_post_creation", id, move |tx| {
             let Some(thread) = Self::find_by_id(tx.conn(), id)? else {
                 return Ok(());
             };
@@ -289,7 +289,7 @@ impl ChannelThread {
             return Ok(());
         }
         let id = self.id;
-        tx.after_commit_record("board_post_update", id, move |tx| {
+        tx.after_commit_record_latest("board_post_update", id, move |tx| {
             if !row_changed {
                 return Ok(());
             }
@@ -325,7 +325,7 @@ impl ChannelThread {
             return Ok(());
         }
         let id = self.id;
-        tx.after_commit_record("board_post_destroy", id, move |tx| {
+        tx.after_commit_record_latest("board_post_destroy", id, move |tx| {
             for prefix in ["board_row", "board_column_row"] {
                 tx.emit_after_commit(Event::broadcast(&Broadcast::remove(
                     room_messages(&room),

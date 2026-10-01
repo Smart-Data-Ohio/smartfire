@@ -317,6 +317,7 @@ impl ChannelThread {
             ],
             |r| r.get(0),
         )?;
+        tx.register_record("channel_threads", id);
         Self::register_board_creation(tx, id, &room);
         for name in tag_names.unwrap_or_default() {
             ThreadTag::create(tx, id, &name)?;
@@ -430,6 +431,7 @@ impl ChannelThread {
     /// `update!` of the given state: validated, then written with a fresh `updated_at` if
     /// anything changed (a save with no changes writes nothing).
     fn save(&mut self, tx: &mut Tx<'_>, changed: ChannelThread) -> Result<()> {
+        tx.register_record("channel_threads", self.id);
         if changed == *self {
             return Ok(());
         }
@@ -786,13 +788,16 @@ impl ChannelThread {
     /// memberships and the other dependents' rows, then the thread; the parent message is stamped
     /// (`after_destroy :stamp_parent_message`) and its indicator hidden after commit.
     ///
-    /// Work/SLA inbox dependencies and the agent-owned deletion snapshot are atomic.
+    /// Work/SLA dependents commit with deletion. The agent ledger runs after
+    /// commit; a captured deletion job keeps its durable enqueue atomic without
+    /// reserving an event ID ahead of ledger publication.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.destroy_by(tx, None)
     }
 
     pub fn destroy_by(&self, tx: &mut Tx<'_>, deleted_by_id: Option<i64>) -> Result<()> {
         let fresh = Self::find(tx.conn(), self.id)?;
+        tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
         crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
         // Rails suppresses a dependent tag's row replacement while its parent is destroyed.
@@ -830,12 +835,14 @@ impl ChannelThread {
                 params![tx.now(), parent_id],
             )?;
         }
-        super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         fresh.register_board_destruction(tx)?;
         let parent_message_id = self.parent_message_id;
-        tx.after_commit(move |tx| {
+        // Rails registers the indicator before emit_deleted_work_unassigned.
+        // A ledger failure must not suppress the already-committed deletion's UI update.
+        tx.after_commit_record("channel_threads", self.id, move |tx| {
             Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)
         });
+        super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         Ok(())
     }
 

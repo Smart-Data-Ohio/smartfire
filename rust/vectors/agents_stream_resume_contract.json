@@ -1,0 +1,12 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "valid": false,
+    "saved": false,
+    "errors": [
+      "cannot resume once finalized"
+    ],
+    "streaming": false,
+    "source": "Draft"
+  }
+}

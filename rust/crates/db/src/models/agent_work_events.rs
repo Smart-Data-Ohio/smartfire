@@ -5,6 +5,7 @@ use super::{agent_access, agent_payloads, bot_webhook_fanout};
 use crate::sql::{exists, query_one};
 use crate::{Agent, ChannelThread, Result, Tx, User};
 use rusqlite::params;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 fn owner_agent(tx: &Tx<'_>, owner: Option<i64>) -> Result<Option<i64>> {
@@ -28,20 +29,7 @@ pub fn enqueue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<()> {
     let Some(agent) = Agent::find(tx.conn(), event.agent_id)? else {
         return Ok(());
     };
-    if !exists(
-        tx.conn(),
-        "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?",
-        params![agent.user_id, room_id],
-    )? || !agent_access::capability_for_agent(
-        tx.conn(),
-        agent.id,
-        "read_messages",
-        Some(room_id),
-    )? || !exists(
-        tx.conn(),
-        "SELECT 1 FROM webhooks WHERE user_id=?",
-        [agent.user_id],
-    )? {
+    if !webhook_eligible(tx, agent.user_id, agent.id, room_id)? {
         return Ok(());
     }
     let changed=tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND webhook_status='none'",params![tx.now(),event.id])?;
@@ -52,6 +40,12 @@ pub fn enqueue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<()> {
         }));
     }
     Ok(())
+}
+
+fn webhook_eligible(tx: &Tx<'_>, user_id: i64, agent_id: i64, room_id: i64) -> Result<bool> {
+    Ok(exists(tx.conn(), "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?", params![user_id,room_id])?
+        && agent_access::capability_for_agent(tx.conn(),agent_id,"read_messages",Some(room_id))?
+        && exists(tx.conn(),"SELECT 1 FROM webhooks WHERE user_id=?",[user_id])?)
 }
 
 fn record(
@@ -179,6 +173,45 @@ pub(crate) struct DeletedWork {
     agent_id: i64,
     snapshot: Value,
 }
+
+/// The durable webhook starts with the captured deletion, not a reserved ledger
+/// ID. Its arguments are bound to the published event in the ledger's write.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DeletedWorkWebhookJob {
+    deleted_work: NewEvent,
+}
+impl crate::Job for DeletedWorkWebhookJob {
+    const CLASS: &'static str = "Agent::EventWebhookJob";
+}
+
+/// Only after_destroy_commit publishes the ledger, as Rails does. SQLite
+/// allocates the ID at insertion; the durable runner never recreates a missing row.
+pub fn publish_deleted_webhook(tx: &mut Tx<'_>, job: DeletedWorkWebhookJob) -> Result<EventWebhookJob> {
+    let captured = job.deleted_work;
+    let chain = captured.chain_id.clone();
+    let agent_id = captured.agent_id;
+    let event = query_one(tx.conn(),
+        "SELECT * FROM agent_events WHERE agent_id=? AND chain_id=? AND event_type='work_unassigned'",
+        params![agent_id,chain], AgentEvent::from_row)?;
+    let event = match event {
+        Some(event) => event,
+        None => {
+            let event = AgentEvent::create_captured(tx,captured)?;
+            if let (Some(agent), Some(room)) = (Agent::find(tx.conn(),event.agent_id)?,event.room_id)
+                && webhook_eligible(tx,agent.user_id,agent.id,room)?
+            {
+                tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",params![tx.now(),event.id])?;
+            }
+            event
+        }
+    };
+    let bound = EventWebhookJob {event_id:event.id,attempt:Some(event.webhook_attempts)};
+    // Replacing the intent commits with the ledger, so retries and later removal
+    // use the ordinary missing-event/attempt guards rather than republishing it.
+    tx.conn().execute("UPDATE background_jobs SET arguments=?,updated_at=? WHERE job_class='Agent::EventWebhookJob' AND json_extract(arguments,'$.deleted_work.chain_id')=? AND json_extract(arguments,'$.deleted_work.agent_id')=?",
+        params![json!(bound),tx.now(),chain,agent_id])?;
+    Ok(bound)
+}
 pub(crate) fn capture_deleted(
     tx: &Tx<'_>,
     thread: &ChannelThread,
@@ -207,15 +240,24 @@ pub(crate) fn record_deleted(
     deleted: Option<DeletedWork>,
 ) -> Result<()> {
     if let Some(deleted) = deleted {
-        record(
-            tx,
-            thread,
-            deleted.agent_id,
-            "work_unassigned",
-            actor_id,
-            (0, &uuid::Uuid::new_v4().to_string()),
-            json!({"work_snapshot":deleted.snapshot}),
-        )?;
+        let agent = Agent::find(tx.conn(), deleted.agent_id)?;
+        let deliverable = agent.map(|agent| webhook_eligible(tx, agent.user_id, agent.id, thread.room_id)).transpose()?.unwrap_or(false);
+        let event=NewEvent {
+            agent_id:deleted.agent_id, room_id:Some(thread.room_id), actor_id,
+            event_type:"work_unassigned".into(),outcome:Some("delivered".into()),
+            chain_id:Some(uuid::Uuid::new_v4().to_string()),
+            metadata:json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":deleted.snapshot["assigned_by"],"hop":0,"work_snapshot":deleted.snapshot}),
+            ..Default::default()
+        };
+        // The durable job shares deletion's transaction; a rejected enqueue
+        // still rolls back deletion. Only insertion publishes a polling ID.
+        let job = DeletedWorkWebhookJob {deleted_work:event.clone()};
+        if deliverable { tx.emit_after_commit(crate::Event::job(&job)); }
+        tx.after_commit_record("channel_threads",thread.id,move|tx|crate::database::run_write(tx.conn(),tx.env(),move|tx| {
+            if deliverable { publish_deleted_webhook(tx,job)?; }
+            else { let event=AgentEvent::create_captured(tx,event)?; enqueue_webhook(tx,&event)?; }
+            Ok(())
+        }));
     }
     Ok(())
 }

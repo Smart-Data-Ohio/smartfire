@@ -10,6 +10,7 @@ use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
 
+
 #[tokio::test]
 async fn ws15e_fizzy_message_creation_http_matrix() {
     if let Ok(case) = std::env::var("WS15E_FIZZY_MESSAGE_CASE") {
