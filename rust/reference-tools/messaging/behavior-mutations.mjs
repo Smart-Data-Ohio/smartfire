@@ -48,7 +48,7 @@ const mutations=new Map([
     'the standalone message page keeps its menu and focusability',
   ].map(name=>[name,[list,'message.setAttribute("aria-haspopup", "menu")','message.setAttribute("aria-haspopup", "dialog")']]),
   ['the message-list top padding does not apply to search results',['messages-','.messages:not(.searches__results)','.messages']],
-  ['the viewport allows pinch zoom',['viewport-response']],
+  ['the viewport allows pinch zoom',['controllers/messages_controller-','connect() {','connect() { document.querySelector("meta[name=\\\"viewport\\\"]")?.setAttribute("content", "width=device-width, initial-scale=1, user-scalable=no");']],
   ['profile message and ban buttons have accessible names',['profile-button-response']],
   ['flash persists its 5-second minimum under reduced motion',['flash-','animation-duration: 5s !important;','animation-duration: 2s !important;']],
   ['flash dismisses on demand under reduced motion',['controllers/element_removal_controller-','this.element.remove()','void(this.element)']],
@@ -89,12 +89,11 @@ export async function installMutation(page,caseName,probe) {
     const mention=asset==='mention-response'&&url.pathname.includes('/autocompletable/users');
     const search=asset==='search-page-response'&&url.pathname==='/searches'&&url.searchParams.has('before');
     const forward=asset==='forward-response'&&request.method()==='POST'&&/\/forwards(?:\.json)?$/.test(url.pathname);
-    const viewport=asset==='viewport-response'&&url.pathname==='/rooms/654632876';
     const profile=asset==='profile-button-response'&&url.pathname==='/users/712064548';
     const tombstone=asset==='reply-tombstone-response'&&url.pathname.startsWith('/rooms/')&&url.pathname.includes('/messages/')&&request.method()==='DELETE';
     const boost=asset==='boost-create-response'&&/\/messages\/\d+\/boosts$/.test(url.pathname)&&request.method()==='POST';
     const boostDelete=asset==='boost-delete-response'&&/\/messages\/\d+\/boosts\/\d+$/.test(url.pathname)&&(request.method()==='DELETE'||request.postData()?.includes('_method=delete'));
-    if(!refresh&&!mention&&!search&&!forward&&!viewport&&!profile&&!tombstone&&!boost&&!boostDelete&&!url.pathname.includes('/assets/'+asset)) return route.continue();
+    if(!refresh&&!mention&&!search&&!forward&&!profile&&!tombstone&&!boost&&!boostDelete&&!url.pathname.includes('/assets/'+asset)) return route.continue();
     // Reject the request before forwarding it: a deliberately failed write
     // cannot secretly reach the real app and then pass through its Cable frame.
     if(forward||tombstone) {probe.applied++;return route.fulfill({status:422,contentType:'application/json',body:'{"error":"injected failed write"}'});}
@@ -103,7 +102,6 @@ export async function installMutation(page,caseName,probe) {
     if(refresh) {headers['content-type']='text/vnd.turbo-stream.html';body=' ';}
     else if(mention) {assert.ok(body.includes('Kevin'));body=body.replaceAll('Kevin','Wrong member');}
     else if(search) {assert.ok(body.includes('system paging alpha'));body=body.replaceAll('system paging alpha','wrong older result');}
-    else if(viewport) {assert.ok(body.includes('interactive-widget=resizes-content'));body=body.replace('interactive-widget=resizes-content','user-scalable=no');}
     else if(profile) {assert.ok(body.includes('aria-label="Message Kevin"'));body=body.replace('aria-label="Message Kevin"','aria-label="Wrong recipient"');}
     else {assert.ok(body.includes(needle),`mutant source needle missing: ${asset}`);body=body.replace(needle,replacement);}
     probe.applied++;
