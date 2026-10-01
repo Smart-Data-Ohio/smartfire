@@ -66,17 +66,17 @@ async fn composite_keys_and_private_provider_frames_match_actual_rails_transitio
                     .preload_search(std::slice::from_ref(&message))?;
                 let view = p.message(&message)?;
                 assert_eq!(
-                    view.components.cache_key.as_deref(),
+                    Some(p.message_collection_cache_key(&message)?).as_deref(),
                     oracle()["cases"][i]["expanded"].as_str(),
                     "{}",
                     oracle()["cases"][i]["label"]
                 );
                 for zone in ["UTC", "Hawaii"] {
                     let mut p = Presenter::new(conn, &state, None);
-                    p.cache_time_zone = campfire_views::time::Zone::lookup(zone).unwrap();
+                    p.render_zone = campfire_views::time::Zone::lookup(zone).unwrap();
                     let p = p.preload_search(std::slice::from_ref(&message))?;
                     assert_eq!(
-                        p.message_cache_key(&message)?,
+                        p.message_collection_cache_key(&message)?,
                         oracle()["cases"][i]["expanded_zones"][zone]
                             .as_str()
                             .unwrap()
@@ -97,7 +97,7 @@ async fn composite_keys_and_private_provider_frames_match_actual_rails_transitio
                     ),
                 ] {
                     assert_eq!(
-                        campfire_views::messages::cards(&view, prefix, class, 0, values).0,
+                        if kind == "github" { view.components.github_cards_html.clone().unwrap() } else { campfire_views::messages::cards(&view, prefix, class, 0, values).0 },
                         oracle()["cases"][i][kind].as_str().unwrap()
                     );
                 }

@@ -43,16 +43,18 @@ fn crc32(bytes: &[u8]) -> u32 {
 /// `User#initials`: `name.scan(/\b\w/).join`. Ruby's `\w` is ASCII-only while `\b` sees
 /// Unicode word characters, so "Élodie" contributes nothing.
 pub fn initials(name: &str) -> String {
-    let is_word = |c: char| c.is_alphanumeric() || c == '_';
-    let mut previous: Option<char> = None;
-    let mut out = String::new();
+    static WORD: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"\A[\p{Alphabetic}\p{Mark}\p{Number}\p{Connector_Punctuation}\p{Join_Control}]\z").unwrap()
+    });
+    let mut initials = String::new();
+    let mut previous_word = false;
     for c in name.chars() {
-        if (c.is_ascii_alphanumeric() || c == '_') && !previous.is_some_and(is_word) {
-            out.push(c);
+        if (c.is_ascii_alphanumeric() || c == '_') && !previous_word {
+            initials.push(c);
         }
-        previous = Some(c);
+        previous_word = WORD.is_match(c.encode_utf8(&mut [0; 4]));
     }
-    out
+    initials
 }
 
 /// `User#title`: `[ name, bio ].compact_blank.join(" – ")`.

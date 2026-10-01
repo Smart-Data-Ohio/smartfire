@@ -6,8 +6,9 @@
 //!
 //! Every destination is written in the caller's transaction: an `Err` must abort the write (as
 //! `Database::write` does), which rolls back the forwards already made, and the attachment
-//! copies are discarded from storage through [`BlobCopier::discard`]. Analyzing the copied
-//! attachments (`process_attachment`) is the caller's, after commit, as for any new message.
+//! copies are discarded from storage through [`BlobCopier::discard`]. The runtime adapter's
+//! [`BlobCopier::process`] runs after each save, inside that same transaction, as Rails'
+//! `save_forward!` does. A processing or durable enqueue failure must roll back every target.
 
 use rusqlite::Connection;
 
@@ -69,6 +70,9 @@ fn invalid(message: &str) -> Refusal {
 pub trait BlobCopier {
     fn copy(&self, tx: &mut Tx<'_>, blob: &Blob) -> Result<Blob>;
     fn discard(&self, blobs: &[Blob]);
+    /// Small runtime seam for `save_forward! -> message.process_attachment`. Model-only
+    /// callers without media processing retain the existing adapter contract.
+    fn process(&self, _tx: &mut Tx<'_>, _message: &Message) -> Result<()> { Ok(()) }
 }
 
 /// `Messages::Forwarder.call(source:, destinations:, note:, creator:)`. The outer `Result` is
@@ -81,6 +85,16 @@ pub fn forward(
     creator_id: i64,
     copier: &dyn BlobCopier,
 ) -> Result<std::result::Result<Vec<Forwarded>, Refusal>> {
+    forward_with_client_ids(tx, source, destinations, note, creator_id, copier, &mut crate::sql::uuid)
+}
+
+/// The same forward operation with `Random.uuid` supplied as an input, so differential tests
+/// can lend both runtimes identical random IDs without rewriting their response bytes.
+#[allow(clippy::too_many_arguments)]
+pub fn forward_with_client_ids(
+    tx: &mut Tx<'_>, source: &Message, destinations: &[Destination], note: Option<&str>,
+    creator_id: i64, copier: &dyn BlobCopier, client_id: &mut dyn FnMut() -> String,
+) -> Result<std::result::Result<Vec<Forwarded>, Refusal>> {
     let destinations = match normalize_destinations(tx.conn(), destinations, creator_id)? {
         Ok(destinations) => destinations,
         Err(refusal) => return Ok(Err(refusal)),
@@ -89,7 +103,7 @@ pub fn forward(
     let mut copied = Vec::new();
     let mut results = Vec::new();
     for (room, thread) in destinations {
-        match create_forward(tx, source, room, thread, note, creator_id, copier, &mut copied) {
+        match create_forward(tx, source, room, thread, note, creator_id, copier, &mut copied, client_id()) {
             Ok(Ok(result)) => results.push(result),
             Ok(Err(refusal)) => {
                 copier.discard(&copied);
@@ -162,11 +176,12 @@ fn create_forward(
     creator_id: i64,
     copier: &dyn BlobCopier,
     copied: &mut Vec<Blob>,
+    client_id: String,
 ) -> Result<std::result::Result<Forwarded, Refusal>> {
     if Membership::find_by_room_and_user(tx.conn(), room.id, creator_id)?.is_none() {
         return Ok(Err(invalid("You cannot forward to that room")));
     }
-    let attributes = build_forward(tx, source, &room, note, creator_id, copier, copied)?;
+    let attributes = build_forward(tx, source, &room, note, creator_id, copier, copied, client_id)?;
     match thread {
         Some(mut thread) => {
             thread.reload(tx.conn())?;
@@ -175,11 +190,13 @@ fn create_forward(
             }
             // `ThreadMembership.join!`, then `update!(closed_at: nil, last_activity_at:)`.
             let message = thread.post_message(tx, creator_id, attributes)?;
+            copier.process(tx, &message)?;
             thread.reload(tx.conn())?;
             Ok(Ok(Forwarded { message, room, thread: Some(thread) }))
         }
         None => {
             let message = Message::create(tx, attributes)?;
+            copier.process(tx, &message)?;
             Ok(Ok(Forwarded { message, room, thread: None }))
         }
     }
@@ -188,6 +205,7 @@ fn create_forward(
 /// `build_forward`: a new client id, the body snapshot, the forward markers (a Markdown source,
 /// or a forward of one, makes a `forwarded_markdown` forward, which is still not a Markdown
 /// record), the note, and copies of the attachment and Drive ids.
+#[allow(clippy::too_many_arguments)]
 fn build_forward(
     tx: &mut Tx<'_>,
     source: &Message,
@@ -196,6 +214,7 @@ fn build_forward(
     creator_id: i64,
     copier: &dyn BlobCopier,
     copied: &mut Vec<Blob>,
+    client_id: String,
 ) -> Result<NewMessage> {
     let body = snapshot_body(tx.conn(), source)?;
     let body = tx.rich_text().try_canonicalize_html(tx.conn(), &body).map_err(Error::Other)?;
@@ -211,7 +230,7 @@ fn build_forward(
     Ok(NewMessage {
         room_id: room.id,
         creator_id,
-        client_message_id: None,
+        client_message_id: Some(client_id),
         body: Some(body),
         attachment_blob_id,
         forwarded_from_message_id: Some(source.id),

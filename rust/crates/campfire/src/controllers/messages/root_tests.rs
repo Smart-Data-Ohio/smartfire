@@ -107,6 +107,29 @@ async fn edit_html(app: &TestApp, id: i64) -> String {
 }
 
 #[tokio::test]
+async fn standalone_message_wrapper_matches_rails_bytes() {
+    use crate::controllers::presenters::{Presenter, page};
+    let (app, _, ids) = fixture().await;
+    for row in oracle()["shows"].as_array().unwrap() {
+        let id = ids[row["index"].as_u64().unwrap() as usize];
+        let runtime = app.booted.app.clone();
+        let html = app.db().read(move |conn| {
+            let message = Presenter::new(conn, &runtime, None).message(&Message::find(conn, id)?)?;
+            let account = campfire_db::Account::first(conn)?;
+            page::render_detached_at(&runtime, account.as_ref(), "http://campfire.test", |ctx| {
+                campfire_views::messages::Show { ctx, message: &message }.render()
+                    .map_err(|error| campfire_db::Error::Other(error.to_string()))
+            })
+        }).await.unwrap();
+        let expected = row["html"].as_str().unwrap();
+        if html != expected {
+            rails_mismatch(&html, expected, "standalone message");
+        }
+        assert_eq!(campfire_cable::turbo::session_bound(&html), None);
+    }
+}
+
+#[tokio::test]
 async fn edit_forms_and_actions_menu_match_rails_bytes() {
     use crate::controllers::presenters::{Presenter, page};
     let (app, _, ids) = fixture().await;

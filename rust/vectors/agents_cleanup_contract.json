@@ -1,0 +1,51 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "credential_same_stamp": true,
+    "credential_update": {
+      "name": "Renamed",
+      "expires_at": "2026-03-02T17:00:01.000Z",
+      "revoked_at": null,
+      "updated_at": "2026-03-02T16:00:01.000Z"
+    },
+    "credential_invalid": {
+      "name": [
+        "can't be blank"
+      ]
+    },
+    "grant_update": {
+      "capability": "post_messages",
+      "room_id": null,
+      "revoked_at": null,
+      "updated_at": "2026-03-02T16:00:01.000Z"
+    },
+    "grant_duplicate": {
+      "capability": [
+        "has already been granted"
+      ]
+    },
+    "revoked_update_allowed": true,
+    "rows_destroyed": [
+      false,
+      false
+    ],
+    "agent_destroy": {
+      "agent": false,
+      "credentials": 0,
+      "grants": 0,
+      "commands": 0,
+      "events": 0,
+      "approvals": 0,
+      "inbox": 0
+    },
+    "backfill": {
+      "same_users": true,
+      "workspace": true,
+      "ownerless": true,
+      "statuses": [
+        "idle"
+      ]
+    },
+    "backfill_again": "RecordNotUnique"
+  }
+}

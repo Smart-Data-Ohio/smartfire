@@ -1,4 +1,4 @@
-//! app/controllers/rooms/slash_commands_controller.rb. Agent execution remains WS11's seam.
+//! app/controllers/rooms/slash_commands_controller.rb. Registered agent execution uses the WS11 domain dispatcher.
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::{message_features as features, presenters::page::db_error};

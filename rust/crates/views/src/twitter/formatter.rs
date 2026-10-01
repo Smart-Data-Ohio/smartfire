@@ -1,9 +1,6 @@
 //! Twitter::PostFormatter. Only locally escaped strings become HTML-safe.
 use crate::helpers::html::{Html, escape, raw};
-// WS8bm2 adapter: use the existing view helper until WS15e is merged.
-fn url_encode(text: &str) -> String {
-    crate::helpers::url::cgi_escape(text).replace('+', "%20")
-}
+use campfire_richtext::ruby::url_encode;
 use regex::Regex;
 use std::sync::LazyLock;
 static URL: LazyLock<Regex> =
@@ -85,8 +82,7 @@ mod tests {
     #[test]
     fn ws15e_x_formatter_matches_pinned_rails_bytes() {
         let vectors: Value =
-            serde_json::from_str(include_str!("../../../../vectors/ws15e_twitter_text.json"))
-                .unwrap();
+            serde_json::from_str(include_str!("../../../../vectors/ws15e_twitter_text.json")).unwrap();
         for case in vectors["format"].as_array().unwrap() {
             let text = case["text"].as_str().unwrap_or("");
             assert_eq!(format(text).0, case["format"].as_str().unwrap(), "{case}");

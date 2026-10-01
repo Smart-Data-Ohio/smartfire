@@ -1,0 +1,45 @@
+{
+  "reference": "d7c7de92",
+  "results": {
+    "webhook_false_reject_false": {
+      "error": null,
+      "thread_exists": false,
+      "parent_exists": true,
+      "replies_remaining": 0,
+      "deletion_events": 1,
+      "indicator_frames": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"thread_indicator_message_ws11-deletion-indicator-webhook_false_reject_false\"><template>  <button type=\"button\" id=\"thread_indicator_message_ws11-deletion-indicator-webhook_false_reject_false\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n</template></turbo-stream>"
+      ]
+    },
+    "webhook_false_reject_true": {
+      "error": "statement_invalid",
+      "thread_exists": false,
+      "parent_exists": true,
+      "replies_remaining": 0,
+      "deletion_events": 0,
+      "indicator_frames": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"thread_indicator_message_ws11-deletion-indicator-webhook_false_reject_true\"><template>  <button type=\"button\" id=\"thread_indicator_message_ws11-deletion-indicator-webhook_false_reject_true\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n</template></turbo-stream>"
+      ]
+    },
+    "webhook_true_reject_false": {
+      "error": null,
+      "thread_exists": false,
+      "parent_exists": true,
+      "replies_remaining": 0,
+      "deletion_events": 1,
+      "indicator_frames": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"thread_indicator_message_ws11-deletion-indicator-webhook_true_reject_false\"><template>  <button type=\"button\" id=\"thread_indicator_message_ws11-deletion-indicator-webhook_true_reject_false\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n</template></turbo-stream>"
+      ]
+    },
+    "webhook_true_reject_true": {
+      "error": "statement_invalid",
+      "thread_exists": false,
+      "parent_exists": true,
+      "replies_remaining": 0,
+      "deletion_events": 0,
+      "indicator_frames": [
+        "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"thread_indicator_message_ws11-deletion-indicator-webhook_true_reject_true\"><template>  <button type=\"button\" id=\"thread_indicator_message_ws11-deletion-indicator-webhook_true_reject_true\" class=\"message__thread-indicator\"\n          data-controller=\"message-toolbar\" data-action=\"message-toolbar#thread\"\n          aria-label=\"Open thread, 0 replies\" hidden>\n    <img class=\"colorize--black\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n    <span>0 replies</span>\n  </button>\n</template></turbo-stream>"
+      ]
+    }
+  }
+}

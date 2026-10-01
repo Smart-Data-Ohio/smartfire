@@ -68,6 +68,7 @@ ensure
   client.close
 end
 
+# Only the dial target uses this port; recorded URLs and Host headers keep the fixture origin.
 server = TCPServer.new("127.0.0.1", 0)
 port = server.addr[1]
 Thread.new { loop { Thread.new(server.accept) { |client| respond(client, spec["routes"]) } } }

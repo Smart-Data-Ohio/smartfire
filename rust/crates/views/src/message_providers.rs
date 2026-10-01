@@ -205,6 +205,7 @@ pub struct EmbedEntry {
 
 /// WS8bm2 root composition seam. Context is used only by pure partial helpers.
 pub fn github_cards(ctx: &ViewContext, message: &crate::messages::MessageView) -> h::Html {
+    if let Some(html) = &message.components.github_cards_html { return h::raw(html.clone()); }
     let values = message.components.provider_github.as_ref().map(|entries| {
         entries
             .iter()

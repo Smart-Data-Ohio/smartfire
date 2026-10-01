@@ -1,0 +1,147 @@
+[
+  {
+    "config": {},
+    "snapshot": {
+      "github": {
+        "workspace_token": false,
+        "app_configured": false,
+        "webhook_secret": false,
+        "connected": 0,
+        "app_tokens": 0,
+        "disconnected": [
+          [
+            "oracle",
+            "revoked <account>"
+          ]
+        ],
+        "last_errors": [
+          [
+            "oracle",
+            "read &failed"
+          ]
+        ],
+        "deliveries_24h": 0,
+        "fetch_errors": []
+      },
+      "google": {
+        "configured": false,
+        "connected": 0,
+        "disconnected": [
+          [
+            "oracle@example.test",
+            "expired <grant>"
+          ]
+        ],
+        "entry_errors": [],
+        "push": {
+          "enabled": false,
+          "count": 1,
+          "expiring": [
+            [
+              811,
+              "2026-01-02T12:00:00.000Z",
+              "watch <error>"
+            ]
+          ]
+        }
+      },
+      "fizzy": {
+        "configured": false,
+        "note": "No Fizzy integration is configured in this workspace."
+      },
+      "agent_delivery": {
+        "pending": 1,
+        "failed": 1,
+        "recent_errors": [
+          [
+            881,
+            "github_action_completed",
+            "delivery <error>"
+          ]
+        ]
+      },
+      "email": {
+        "enabled": false,
+        "rooms_with_addresses": 1
+      }
+    },
+    "html": "\n\n<div class=\"panel flex flex-column gap\">\n  <h1 class=\"margin-none\">Integration health</h1>\n\n  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Not set — private cards need per-user accounts</dd></div>\n      <div><dt>GitHub App</dt><dd>Not configured — set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET (see docs/github-app.md)</dd></div>\n      <div><dt>Webhook secret</dt><dd>Not set — cards refresh on render only</dd></div>\n      <div><dt>Connected accounts</dt><dd>0 (0 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>0</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@oracle</strong> — revoked &lt;account&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@oracle</strong> — read &amp;failed</li>\n      </ul>\n  </section>\n\n  <section aria-labelledby=\"health-google\">\n    <h2 id=\"health-google\">Google Calendar</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>OAuth client</dt><dd>Not configured — set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET</dd></div>\n      <div><dt>Connected accounts</dt><dd>0</dd></div>\n      <div><dt>Push channels</dt><dd>Disabled — set GOOGLE_CALENDAR_WEBHOOK_URL for two-way RSVP sync (see docs/meet-and-rsvp.md)</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>oracle@example.test</strong> — expired &lt;grant&gt;</li>\n      </ul>\n      <h3>Push channels expiring within 24 hours</h3>\n      <ul>\n          <li><strong>user 811</strong> — expires 2026-01-02 12:00:00 UTC — watch &lt;error&gt;</li>\n      </ul>\n  </section>\n\n  <section aria-labelledby=\"health-fizzy\">\n    <h2 id=\"health-fizzy\">Fizzy</h2>\n    <p>No Fizzy integration is configured in this workspace.</p>\n  </section>\n\n  <section aria-labelledby=\"health-delivery\">\n    <h2 id=\"health-delivery\">Webhook and agent delivery</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Agent webhooks pending</dt><dd>1</dd></div>\n      <div><dt>Agent webhooks failed (24h)</dt><dd>1</dd></div>\n    </dl>\n      <h3>Recent delivery errors</h3>\n      <ul>\n          <li><strong>agent 881 / github_action_completed</strong> — delivery &lt;error&gt;</li>\n      </ul>\n  </section>\n\n  <section aria-labelledby=\"health-email\">\n    <h2 id=\"health-email\">Email to room</h2>\n      <p>Inbound email is not configured. Set <code>INBOUND_EMAIL_DOMAIN</code> and the relay ingress password (see docs/email-to-room.md).</p>\n  </section>\n</div>\n"
+  },
+  {
+    "config": {
+      "GITHUB_TOKEN": "configured-fixture",
+      "GITHUB_APP_CLIENT_ID": "configured-fixture",
+      "GITHUB_APP_CLIENT_SECRET": "configured-fixture",
+      "GITHUB_WEBHOOK_SECRET": "configured-fixture",
+      "GOOGLE_CLIENT_ID": "configured-fixture",
+      "GOOGLE_CLIENT_SECRET": "configured-fixture",
+      "GOOGLE_CALENDAR_WEBHOOK_URL": "https://example.test/callback",
+      "INBOUND_EMAIL_DOMAIN": "example.test"
+    },
+    "snapshot": {
+      "github": {
+        "workspace_token": true,
+        "app_configured": true,
+        "webhook_secret": true,
+        "connected": 0,
+        "app_tokens": 0,
+        "disconnected": [
+          [
+            "oracle",
+            "revoked <account>"
+          ]
+        ],
+        "last_errors": [
+          [
+            "oracle",
+            "read &failed"
+          ]
+        ],
+        "deliveries_24h": 0,
+        "fetch_errors": []
+      },
+      "google": {
+        "configured": true,
+        "connected": 0,
+        "disconnected": [
+          [
+            "oracle@example.test",
+            "expired <grant>"
+          ]
+        ],
+        "entry_errors": [],
+        "push": {
+          "enabled": true,
+          "count": 1,
+          "expiring": [
+            [
+              811,
+              "2026-01-02T12:00:00.000Z",
+              "watch <error>"
+            ]
+          ]
+        }
+      },
+      "fizzy": {
+        "configured": false,
+        "note": "No Fizzy integration is configured in this workspace."
+      },
+      "agent_delivery": {
+        "pending": 1,
+        "failed": 1,
+        "recent_errors": [
+          [
+            881,
+            "github_action_completed",
+            "delivery <error>"
+          ]
+        ]
+      },
+      "email": {
+        "enabled": true,
+        "rooms_with_addresses": 1
+      }
+    },
+    "html": "\n\n<div class=\"panel flex flex-column gap\">\n  <h1 class=\"margin-none\">Integration health</h1>\n\n  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Set</dd></div>\n      <div><dt>GitHub App</dt><dd>Configured</dd></div>\n      <div><dt>Webhook secret</dt><dd>Set</dd></div>\n      <div><dt>Connected accounts</dt><dd>0 (0 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>0</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@oracle</strong> — revoked &lt;account&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@oracle</strong> — read &amp;failed</li>\n      </ul>\n  </section>\n\n  <section aria-labelledby=\"health-google\">\n    <h2 id=\"health-google\">Google Calendar</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>OAuth client</dt><dd>Configured</dd></div>\n      <div><dt>Connected accounts</dt><dd>0</dd></div>\n      <div><dt>Push channels</dt><dd>1 watching</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>oracle@example.test</strong> — expired &lt;grant&gt;</li>\n      </ul>\n      <h3>Push channels expiring within 24 hours</h3>\n      <ul>\n          <li><strong>user 811</strong> — expires 2026-01-02 12:00:00 UTC — watch &lt;error&gt;</li>\n      </ul>\n  </section>\n\n  <section aria-labelledby=\"health-fizzy\">\n    <h2 id=\"health-fizzy\">Fizzy</h2>\n    <p>No Fizzy integration is configured in this workspace.</p>\n  </section>\n\n  <section aria-labelledby=\"health-delivery\">\n    <h2 id=\"health-delivery\">Webhook and agent delivery</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Agent webhooks pending</dt><dd>1</dd></div>\n      <div><dt>Agent webhooks failed (24h)</dt><dd>1</dd></div>\n    </dl>\n      <h3>Recent delivery errors</h3>\n      <ul>\n          <li><strong>agent 881 / github_action_completed</strong> — delivery &lt;error&gt;</li>\n      </ul>\n  </section>\n\n  <section aria-labelledby=\"health-email\">\n    <h2 id=\"health-email\">Email to room</h2>\n      <p>1 room with a forward-to address.</p>\n  </section>\n</div>\n"
+  }
+]

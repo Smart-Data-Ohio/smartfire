@@ -42,6 +42,7 @@ end
 render_edit = ->(message) { ApplicationController.render(template: "messages/edit", layout: false, assigns: { message:, room: }) }
 edits = [0, 1, 3].map { |index| { index:, html: render_edit.call(messages[index]), rendered_body: messages[index].body.to_s } }
 actions_menu = ApplicationController.render(partial: "messages/actions")
+shows = [0, 1, 2, 4].map { |index| { index:, html: ApplicationController.renderer.new(http_host: "campfire.test", https: false).render(template: "messages/show", layout: false, assigns: { message: messages[index], room: }) } }
 steps = [
   { index: 0, input: { markdown_source: "## After\n\n`code`", body: "discarded", client_message_id: "root-changed", drive_file_ids: [" abcdefghij ", "abcdefghij", "klmnopqrst"] } },
   { index: 0, input: { markdown_source: "## After\n\n`code`" } },
@@ -71,5 +72,5 @@ invalid = [{ markdown_source: "" }, { drive_file_ids: "scalar" }].map do |input|
   { input:, status: browser.response.status, json: JSON.parse(browser.response.body), json_text: browser.response.body }
 end
 File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", inputs:, message_ids: messages.map(&:id),
-  thread_id: thread.id, saved_id: saved.id, actions:, edits:, actions_menu:, updates:, invalid_updates: invalid) + "\n")
-puts "WS8bm root oracle: #{actions.size} real Rails actions responses; #{updates.size} updates and saved rows; #{invalid.size} rejected updates; #{edits.size + updates.size} edit forms and 1 actions menu"
+  thread_id: thread.id, saved_id: saved.id, actions:, edits:, actions_menu:, shows:, updates:, invalid_updates: invalid) + "\n")
+puts "WS8bm root oracle: #{actions.size} real Rails actions responses; #{updates.size} updates and saved rows; #{invalid.size} rejected updates; #{edits.size + updates.size} edit forms and 1 actions menu; #{shows.size} standalone messages"

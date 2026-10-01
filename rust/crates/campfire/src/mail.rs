@@ -275,7 +275,7 @@ mod tests {
         let g: serde_json::Value = serde_json::from_str(include_str!("../../db/src/tests/ws8_mail_merge_vectors.json")).unwrap();
         let raw = g["mail"]["raw"].as_str().unwrap().replace("ws8-mail-merge-token", &token);
         let id = inbound::accept(&b.app.db, b.app.storage.clone(), raw.into_bytes()).await.unwrap().unwrap();
-        let message = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        let message = tokio::time::timeout(crate::test_support::WAIT, async {
             loop {
                 let posted = b.app.db.read(move |conn| {
                     let status: i64 = conn.query_row("SELECT status FROM action_mailbox_inbound_emails WHERE id=?", [id], |r| r.get(0))?;
@@ -296,7 +296,7 @@ mod tests {
             "creator_name": User::find(conn, message.creator_id)?.name,
         }))).await.unwrap();
         for key in ["source", "body", "plain", "creator_name"] { assert_eq!(saved[key], g["mail"][key], "{key}"); }
-        b.jobs.shutdown(std::time::Duration::from_secs(1)).await;
+        b.jobs.shutdown(crate::test_support::WAIT).await;
     }
 
     #[tokio::test]
@@ -351,7 +351,7 @@ mod tests {
                 .unwrap(),
             1
         );
-        b.jobs.shutdown(std::time::Duration::from_secs(1)).await;
+        b.jobs.shutdown(crate::test_support::WAIT).await;
     }
     #[tokio::test]
     async fn ws10_relay_http_missing_password_refuses() {
@@ -372,7 +372,7 @@ mod tests {
                 .unwrap(),
             0
         );
-        b.jobs.shutdown(std::time::Duration::from_secs(1)).await;
+        b.jobs.shutdown(crate::test_support::WAIT).await;
     }
     #[tokio::test]
     async fn ws10_relay_http_disabled_domain_refuses() {
@@ -381,7 +381,7 @@ mod tests {
             send(&b, None, "message/rfc822").await.status(),
             StatusCode::NOT_FOUND
         );
-        b.jobs.shutdown(std::time::Duration::from_secs(1)).await;
+        b.jobs.shutdown(crate::test_support::WAIT).await;
     }
     #[tokio::test]
     async fn ws10_relay_http_enqueue_failure_rolls_back_acceptance() {
@@ -434,6 +434,6 @@ mod tests {
             send(&b, Some(&auth), "message/rfc822").await.status(),
             StatusCode::NO_CONTENT
         );
-        b.jobs.shutdown(std::time::Duration::from_secs(1)).await;
+        b.jobs.shutdown(crate::test_support::WAIT).await;
     }
 }

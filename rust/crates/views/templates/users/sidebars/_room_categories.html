@@ -1,0 +1,27 @@
+{% for category in categories %}  <section class="sidebar-section sidebar-section--category rooms" aria-labelledby="room-category-{{ category.id }}-heading" data-category-drop="{{ category.id }}">
+    <header class="sidebar-section__header room-category__header">
+      {{ category.collapse_button(ctx) }}      <h2 id="room-category-{{ category.id }}-heading" class="overflow-ellipsis">{{ category.name }}</h2>
+      <details class="room-category__rename">
+        <summary class="btn sidebar-section__tool" aria-label="Rename {{ category.name }}" title="Rename">Rename</summary>
+        {% let form = h::form_with(category.path()).model("room_category").method("patch").data("turbo_frame","user_sidebar").class("room-category__rename-form") %}{% filter form_with(form) %}
+          {{ form.text_field("name", None, h::attrs().value(category.name.as_str()).attr("required",true).attr("maxlength",50).autocomplete("off").aria("label", "New name for " ~ category.name)) }}
+          {{ h::legacy_tag("input",h::attrs().type_("submit").name("commit").value("Save").class("btn").data("disable_with","Save")) }}
+{% endfilter %}      </details>
+      {% filter button_to_form(category.path(),h::attrs().method("delete").class("btn sidebar-section__tool").aria("label","Delete " ~ category.name).attr("title","Delete").data("turbo_confirm","Delete “" ~ category.name ~ "”? Its channels move back to Channels."), h::attrs().data("turbo_frame","user_sidebar")) %}
+        {{ h::image_tag(ctx,"trash.svg",h::attrs().size(16).aria_hidden()) }}
+{% endfilter %}    </header>
+
+    <div id="category_rooms_{{ category.id }}" class="sidebar-list{% if category.rooms.is_empty() %} sidebar-list--empty{% endif %}"{% if category.collapsed %} hidden{% endif %}>
+{% for room in category.rooms %}        {% include "users/sidebars/rooms/_shared.html" %}
+{% endfor %}    </div>
+  </section>
+{% endfor %}
+<details class="room-category__new">
+  <summary class="btn room-category__new-toggle">
+    {{ h::image_tag(ctx,"add.svg",h::attrs().size(16).aria_hidden()) }}
+    <span>New category</span>
+  </summary>
+  {% let form = h::form_with("/room_categories").model("room_category").data("turbo_frame","user_sidebar").class("room-category__new-form") %}{% filter form_with(form) %}
+    {{ form.text_field("name",None,h::attrs().attr("required",true).attr("maxlength",50).autocomplete("off").placeholder("Category name").aria("label","New category name")) }}
+    {{ h::legacy_tag("input",h::attrs().type_("submit").name("commit").value("Create").class("btn btn--reversed").data("disable_with","Create")) }}
+{% endfilter %}</details>{{ "\n" }}

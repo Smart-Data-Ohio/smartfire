@@ -1,0 +1,397 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "fresh",
+      "age": 899,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "running",
+          "extra": "preserved"
+        },
+        "detail": null,
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:45:01",
+        "audits": 0,
+        "jobs": 0
+      },
+      "audits": [],
+      "jobs": []
+    },
+    {
+      "name": "boundary",
+      "age": 900,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "running",
+          "extra": "preserved"
+        },
+        "detail": null,
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:45:00",
+        "audits": 0,
+        "jobs": 0
+      },
+      "audits": [],
+      "jobs": []
+    },
+    {
+      "name": "overdue",
+      "age": 901,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "message": "GitHub action execution timed out"
+        },
+        "detail": "GitHub action execution timed out",
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:59",
+        "audits": 1,
+        "jobs": 0
+      },
+      "audits": [
+        {
+          "action": "agent.github_action.execute",
+          "actor_id": 811,
+          "actor_label": "Oracle <oracle@example.test>",
+          "target_type": "AgentApproval",
+          "target_id": 813,
+          "target_label": "github.comment approval #813",
+          "details": {
+            "action": "github.comment",
+            "status": "failed",
+            "message": "GitHub action execution timed out"
+          }
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "blank_url_webhook",
+      "age": 960,
+      "webhook": true,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "message": "GitHub action execution timed out"
+        },
+        "detail": "GitHub action execution timed out",
+        "webhook_status": "pending",
+        "webhook_next_attempt_at": "2026-01-01 12:00:00",
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 1,
+        "jobs": 1
+      },
+      "audits": [
+        {
+          "action": "agent.github_action.execute",
+          "actor_id": 811,
+          "actor_label": "Oracle <oracle@example.test>",
+          "target_type": "AgentApproval",
+          "target_id": 813,
+          "target_label": "github.comment approval #813",
+          "details": {
+            "action": "github.comment",
+            "status": "failed",
+            "message": "GitHub action execution timed out"
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Agent::EventWebhookJob",
+          "args": [
+            814,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "name": "historical_approval",
+      "age": 960,
+      "historical": true,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "message": "GitHub action execution timed out"
+        },
+        "detail": "GitHub action execution timed out",
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 1,
+        "jobs": 0
+      },
+      "audits": [
+        {
+          "action": "agent.github_action.execute",
+          "actor_id": 811,
+          "actor_label": "Oracle <oracle@example.test>",
+          "target_type": "AgentApproval",
+          "target_id": 813,
+          "target_label": "github.comment approval #813",
+          "details": {
+            "action": "github.comment",
+            "status": "failed",
+            "message": "GitHub action execution timed out"
+          }
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "missing_approval",
+      "age": 960,
+      "missing": true,
+      "expected": {
+        "metadata": {
+          "approval_id": 999,
+          "action": "github.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "message": "GitHub action execution timed out"
+        },
+        "detail": "GitHub action execution timed out",
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 0,
+        "jobs": 0
+      },
+      "audits": [],
+      "jobs": []
+    },
+    {
+      "name": "late_finish",
+      "age": 960,
+      "webhook": true,
+      "late_finish": true,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "message": "GitHub action execution timed out"
+        },
+        "detail": "GitHub action execution timed out",
+        "webhook_status": "pending",
+        "webhook_next_attempt_at": "2026-01-01 12:00:00",
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 1,
+        "jobs": 1
+      },
+      "audits": [
+        {
+          "action": "agent.github_action.execute",
+          "actor_id": 811,
+          "actor_label": "Oracle <oracle@example.test>",
+          "target_type": "AgentApproval",
+          "target_id": 813,
+          "target_label": "github.comment approval #813",
+          "details": {
+            "action": "github.comment",
+            "status": "failed",
+            "message": "GitHub action execution timed out"
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Agent::EventWebhookJob",
+          "args": [
+            814,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "name": "finish_before_sweep",
+      "age": 960,
+      "webhook": true,
+      "finish_first": true,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "completed",
+          "url": "https://github.com/rails/rails/pull/12#issuecomment-9"
+        },
+        "detail": null,
+        "webhook_status": "pending",
+        "webhook_next_attempt_at": "2026-01-01 12:00:00",
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 1,
+        "jobs": 1
+      },
+      "audits": [
+        {
+          "action": "agent.github_action.execute",
+          "actor_id": 811,
+          "actor_label": "Oracle <oracle@example.test>",
+          "target_type": "AgentApproval",
+          "target_id": 813,
+          "target_label": "github.comment approval #813",
+          "details": {
+            "action": "github.comment",
+            "status": "completed",
+            "url": "https://github.com/rails/rails/pull/12#issuecomment-9"
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "class": "Agent::EventWebhookJob",
+          "args": [
+            814,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fizzy",
+      "age": 960,
+      "fizzy": true,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "fizzy.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "message": "Fizzy action execution timed out"
+        },
+        "detail": "Fizzy action execution timed out",
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 1,
+        "jobs": 0
+      },
+      "audits": [
+        {
+          "action": "agent.fizzy_action.execute",
+          "actor_id": 811,
+          "actor_label": "Oracle <oracle@example.test>",
+          "target_type": "AgentApproval",
+          "target_id": 813,
+          "target_label": "fizzy.comment approval #813",
+          "details": {
+            "action": "fizzy.comment",
+            "status": "failed",
+            "message": "Fizzy action execution timed out"
+          }
+        }
+      ],
+      "jobs": []
+    },
+    {
+      "name": "audit_failure",
+      "age": 960,
+      "webhook": true,
+      "audit_failure": true,
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "message": "GitHub action execution timed out"
+        },
+        "detail": "GitHub action execution timed out",
+        "webhook_status": "pending",
+        "webhook_next_attempt_at": "2026-01-01 12:00:00",
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 0,
+        "jobs": 1
+      },
+      "audits": [],
+      "jobs": [
+        {
+          "class": "Agent::EventWebhookJob",
+          "args": [
+            814,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "name": "preserved_url_excluded_from_timeout_audit",
+      "age": 960,
+      "url": "https://github.com/rails/rails/pull/12#historical",
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "url": "https://github.com/rails/rails/pull/12#historical",
+          "message": "GitHub action execution timed out"
+        },
+        "detail": "GitHub action execution timed out",
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 1,
+        "jobs": 0
+      },
+      "audits": [
+        {
+          "action": "agent.github_action.execute",
+          "actor_id": 811,
+          "actor_label": "Oracle <oracle@example.test>",
+          "target_type": "AgentApproval",
+          "target_id": 813,
+          "target_label": "github.comment approval #813",
+          "details": {
+            "action": "github.comment",
+            "status": "failed",
+            "message": "GitHub action execution timed out"
+          }
+        }
+      ],
+      "jobs": []
+    }
+  ]
+}

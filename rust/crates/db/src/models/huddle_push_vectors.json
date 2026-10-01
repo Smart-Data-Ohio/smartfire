@@ -1,0 +1,792 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1767268800,
+  "cases": [
+    {
+      "name": "huddle_default",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {},
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_hidden",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": "invisible"
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "huddle_off",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": "nothing"
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "huddle_muted",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": "muted"
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_mentions",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": "mentions"
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_null_involvement",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": null
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "huddle_no_subscriptions",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "no_subscriptions": true
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "huddle_inbox_off",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "inbox": false
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_dnd",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "dnd": true
+      },
+      "policy_allowed": false,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_fresh_connection",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connected_age": 0
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "huddle_exact_connection_ttl",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connected_age": 60
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "huddle_stale_connection",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connected_age": 61
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_future_connection",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connected_age": -1
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "huddle_disconnected_nonzero_count",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connections": 7
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_connected_zero_count",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connections": 0,
+        "connected_age": 0
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": []
+        }
+      ]
+    },
+    {
+      "name": "huddle_throttled_599",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "push_age": 599
+      },
+      "policy_allowed": true,
+      "before": 1767268201,
+      "after": 1767268201,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_throttled_exact_600",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "push_age": 600
+      },
+      "policy_allowed": true,
+      "before": 1767268200,
+      "after": 1767268200,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_throttled_601",
+      "kind": "huddle",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "push_age": 601
+      },
+      "policy_allowed": true,
+      "before": 1767268199,
+      "after": 1767268199,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_join_default",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {},
+      "policy_allowed": true,
+      "before": null,
+      "after": 1767268800,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David joined your huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_join_hidden",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": "invisible"
+      },
+      "policy_allowed": false,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_off",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": "nothing"
+      },
+      "policy_allowed": false,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_muted",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": "muted"
+      },
+      "policy_allowed": false,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_mentions",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": "mentions"
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": 1767268800,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David joined your huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_join_null_involvement",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "involvement": null
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_no_subscriptions",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "no_subscriptions": true
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_inbox_off",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "inbox": false
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_dnd",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "dnd": true
+      },
+      "policy_allowed": false,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_fresh_connection",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connected_age": 0
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_exact_connection_ttl",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connected_age": 60
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_stale_connection",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connected_age": 61
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": 1767268800,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David joined your huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_join_future_connection",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connected_age": -1
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_disconnected_nonzero_count",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connections": 7
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": 1767268800,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David joined your huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    },
+    {
+      "name": "huddle_join_connected_zero_count",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "connections": 0,
+        "connected_age": 0
+      },
+      "policy_allowed": true,
+      "before": null,
+      "after": null,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_throttled_599",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "push_age": 599
+      },
+      "policy_allowed": true,
+      "before": 1767268201,
+      "after": 1767268201,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_throttled_exact_600",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "push_age": 600
+      },
+      "policy_allowed": true,
+      "before": 1767268200,
+      "after": 1767268200,
+      "pushes": []
+    },
+    {
+      "name": "huddle_join_throttled_601",
+      "kind": "huddle_join",
+      "recipient_id": 149087659,
+      "sender_id": 127326141,
+      "room_id": 186869642,
+      "membership_id": 198590975,
+      "options": {
+        "push_age": 601
+      },
+      "policy_allowed": true,
+      "before": 1767268199,
+      "after": 1767268800,
+      "pushes": [
+        {
+          "payload": {
+            "title": "David joined your huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "subscription_ids": [
+            782661003
+          ]
+        }
+      ]
+    }
+  ]
+}

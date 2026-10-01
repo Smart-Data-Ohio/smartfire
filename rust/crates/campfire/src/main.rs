@@ -10,12 +10,15 @@ mod concerns;
 mod config;
 // WS8bm2 readiness seam for slash launch data; WS13 owns execution.
 mod huddle_readiness;
+mod picker_configuration;
 mod controllers;
 mod integrations;
+mod huddle;
 mod jobs;
 mod mail;
 mod rich_text;
 mod messaging;
+mod public_policy;
 mod security;
 
 /// jemalloc: the room page alone makes thousands of allocations per request, across as many
@@ -83,3 +86,6 @@ mod tests {
 
 #[cfg(test)]
 mod slash_commands_tests;
+
+#[cfg(test)]
+mod test_support;

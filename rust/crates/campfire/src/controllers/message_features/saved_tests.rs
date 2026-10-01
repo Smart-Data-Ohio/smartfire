@@ -11,7 +11,7 @@ async fn fixture() -> (TestApp, i64, Arc<campfire_kit::clock::FrozenClock>) {
     ));
     let app = TestApp::boot_with_test_clock(clock.clone())
         .await
-        .expect("WS8bm2 requires default seed");
+        .expect("WS8bm2 requires default seed").without_job_runner().await;
     let message = app
         .db()
         .write(|tx| {

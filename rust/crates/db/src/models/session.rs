@@ -196,10 +196,14 @@ impl Session {
         Ok(())
     }
 
-    /// `destroy!`. Presence leases and two-factor setup secrets go with it (`dependent:
-    /// :delete_all`, and `ON DELETE CASCADE` in the schema). Not yet ported: the `before_destroy`
-    /// `HuddleGrant.revoke_for_session!` (huddles are a later workstream).
+    /// `destroy!`: revoke huddle grants before deleting the session and its dependents.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        tx.model_callback(crate::callbacks::Phase::SessionHuddles, self.id)?;
+        crate::models::huddle_grant::HuddleGrant::revoke_for_session(
+            tx,
+            self.id,
+            &crate::models::room_delete::HuddleConfig::from_env(),
+        )?;
         tx.conn().execute_cached(
             r#"DELETE FROM "workspace_presence_leases" WHERE "workspace_presence_leases"."session_id" = ?"#,
             [self.id],

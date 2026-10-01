@@ -15,7 +15,7 @@ use crate::controllers::presenters::{self, accounts::string_attribute};
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let user = concerns::require_current_user(c)?.clone();
-    render_show(c, StatusCode::OK, user, None).await
+    render_show(c, StatusCode::OK, user, None, None, None).await
 }
 
 async fn render_show(
@@ -23,8 +23,21 @@ async fn render_show(
     status: StatusCode,
     user: campfire_db::User,
     current_password_error: Option<&'static str>,
+    status_preview: Option<users::StatusFields>,
+    settings_error: Option<(
+        campfire_db::models::user::profile_settings::Changes,
+        campfire_db::Errors,
+    )>,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
+    if let Some((changes, _)) = &settings_error {
+        let id = user.id;
+        let mut rendered = c.app().db.read(move |conn| campfire_db::UserStatusSettings::find(conn, id)).await.map_err(Error::internal)?;
+        if let Some(value) = &changes.theme { rendered.theme = value.clone(); }
+        if let Some(value) = &changes.text_size { rendered.text_size = value.clone(); }
+        if let Some(value) = &changes.time_zone { rendered.time_zone = Some(value.clone()); }
+        c.set_current(presenters::view_context::RenderedSettings(rendered));
+    }
     let has_password = user
         .password_digest
         .as_deref()
@@ -48,7 +61,61 @@ async fn render_show(
     };
     let id = user.id;
     let now = c.now();
+    let rendered = c.current::<presenters::view_context::RenderedSettings>().cloned();
+    let owned = match rendered {
+        Some(data) => data.0,
+        None => c.app().db.read(move |conn| campfire_db::UserStatusSettings::find(conn, id)).await.map_err(Error::internal)?,
+    };
+    let owned_errors = c.current::<RenderedErrors>().map(|data| data.0.clone()).unwrap_or_default();
+    let source = owned.clone();
+    let failures = owned_errors.clone();
+    let configured = c.app().config.profile_google_calendar_configured;
+    let settings_form = c.app().db.read(move |conn| presenters::status_settings::forms(conn, &source, failures, campfire_db::Timestamp::from_jiff(now), configured)).await.map_err(Error::internal)?;
+
     let google = c.app().two_factor.google().is_some();
+    let mut appearance = c
+        .app()
+        .db
+        .read(move |conn| campfire_db::models::user::profile_settings::appearance(conn, id))
+        .await
+        .map_err(Error::internal)?;
+    if c.current::<presenters::view_context::RenderedSettings>().is_some() {
+        appearance.theme = owned.theme.clone(); appearance.text_size = owned.text_size.clone(); appearance.time_zone = owned.time_zone.clone();
+    }
+    let preview_settings = settings_error.as_ref().map(|(changes, _)| changes.clone());
+    let errors = if let Some((changes, errors)) = settings_error {
+        if let Some(theme) = changes.theme {
+            appearance.theme = theme;
+        }
+        if let Some(text_size) = changes.text_size {
+            appearance.text_size = text_size;
+        }
+        if let Some(time_zone) = changes.time_zone {
+            appearance.time_zone = Some(time_zone);
+        }
+        errors
+    } else {
+        owned_errors.clone()
+    };
+    let appearance = users::AppearanceData {
+        theme: appearance.theme,
+        text_size: appearance.text_size,
+        zone_identifier: appearance
+            .time_zone
+            .as_deref()
+            .and_then(campfire_db::models::user::profile_settings::zone_identifier),
+        theme_errors: errors.on("theme").into_iter().map(str::to_owned).collect(),
+        text_size_errors: errors
+            .on("text_size")
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+        time_zone_errors: errors
+            .on("time_zone")
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+    };
     let security = c
         .app()
         .db
@@ -77,9 +144,49 @@ async fn render_show(
         })
         .await
         .map_err(Error::internal)?;
+    let mut sections = c
+        .app()
+        .db
+        .read(move |conn| presenters::profile_sections::load(conn, id, now))
+        .await
+        .map_err(Error::internal)?;
+    // WS9 owns sign-in configuration and identity rows directly; WS14g completes Calendar.
+    sections.google.sign_in_configured = google;
+    sections.google.calendar_configured = c.app().config.profile_google_calendar_configured;
+    if google {
+        sections.google.identity_email = c
+            .app()
+            .db
+            .read(move |conn| {
+                use rusqlite::OptionalExtension;
+                Ok(conn
+                    .query_row(
+                        "SELECT email FROM google_identities WHERE user_id=?",
+                        [id],
+                        |r| r.get(0),
+                    )
+                    .optional()?)
+            })
+            .await
+            .map_err(Error::internal)?;
+    }
+    sections.status = presenters::profile_sections::status_fields(&owned, &owned_errors, campfire_db::Timestamp::from_jiff(now));
+    sections.status.fetch_error = settings_form.fetch_error.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));
+    if let Some(fields) = status_preview {
+        sections.status = fields;
+    }
+    if let Some(changes) = preview_settings {
+        presenters::profile_sections::preview(&mut sections, &changes, &errors);
+    }
+    sections.fizzy = presenters::fizzy_profile::connection(c.app(), user.id).await.map_err(Error::internal)?;
+    let github = presenters::github::connection(c.app(), user.id).await.map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
+        github: github.clone(),
+        settings: settings_form.clone(),
+        sections: sections.clone(),
+        appearance: appearance.clone(),
         has_password,
         current_password_error,
         security: security.clone(),
@@ -103,14 +210,36 @@ pub async fn update(c: &mut Ctx) -> Result {
     let password_changing = raw.get("password").is_some_and(|p| p.is_present());
     let time_zone_submitted = raw.get("time_zone").is_some();
     // `user_params.compact`: nil scalar values are dropped below.
-    let params = c.params.require("user")?.permit(&permit_keys(&[
+    let mut permitted = permit_keys(&[
         "name",
         "avatar",
         "email_address",
         "password",
         "bio",
         "time_zone",
-    ]));
+        "theme",
+        "text_size",
+        "voice_mode",
+        "push_to_talk_key",
+        "github_login",
+    ]);
+    permitted.push(campfire_kit::Permit::Nested(
+        "inbox_preferences".into(),
+        permit_keys(campfire_db::models::user::profile_settings::INBOX_KEYS),
+    ));
+    let params = c.params.require("user")?.permit(&permitted);
+    let settings = campfire_db::models::user::profile_settings::Changes {
+        theme: compact_string(&params, "theme"),
+        text_size: compact_string(&params, "text_size"),
+        time_zone: compact_string(&params, "time_zone"),
+        voice_mode: compact_string(&params, "voice_mode"),
+        push_to_talk_key: compact_string(&params, "push_to_talk_key"),
+        github_login: compact_string(&params, "github_login"),
+        inbox_preferences: params
+            .get("inbox_preferences")
+            .filter(|p| !p.is_null())
+            .map(|p| p.to_json()),
+    };
     // Rails checks the raw request before strong parameters discard non-scalars.
     let email_changing = c
         .params
@@ -144,6 +273,8 @@ pub async fn update(c: &mut Ctx) -> Result {
                 } else {
                     "is incorrect"
                 }),
+                None,
+                Some((settings, campfire_db::Errors::default())),
             )
             .await;
         }
@@ -178,9 +309,10 @@ pub async fn update(c: &mut Ctx) -> Result {
     };
 
     let avatar = avatar.stage(c.app()).await?;
+    let preview_settings = settings.clone();
     let mut error_user = user.clone();
     assign_error_attributes(&mut error_user, &params);
-    let pending = c
+    let result = c
         .app()
         .db
         .write(move |tx| {
@@ -192,18 +324,26 @@ pub async fn update(c: &mut Ctx) -> Result {
                 password_changing,
                 &audit,
             )?;
+            campfire_db::models::user::profile_settings::update(tx, user.id, settings)?;
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
         .await;
-    let pending = match pending {
-        Ok(pending) => pending,
-        Err(campfire_db::Error::RecordInvalid(_)) => {
+    match result {
+        Ok(()) => {},
+        Err(campfire_db::Error::RecordInvalid(errors)) => {
             c.set_current(concerns::CurrentUser(error_user.clone()));
-            return render_show(c, StatusCode::UNPROCESSABLE_ENTITY, error_user, None).await;
+            return render_show(
+                c,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                error_user,
+                None,
+                None,
+                Some((preview_settings, errors)),
+            )
+            .await;
         }
         Err(error) => return Err(Error::internal(error)),
     };
-    attachments::analyze_later(c.app(), pending);
 
     let location = c.url_for(&campfire_routes::user_profile());
     c.redirect_to_with(
@@ -233,3 +373,21 @@ fn compact_string(params: &campfire_kit::ParamMap, key: &str) -> Option<String> 
     params.get(key).filter(|p| !p.is_null())?;
     string_attribute(params, key).flatten()
 }
+
+
+#[derive(Clone)]
+struct RenderedErrors(campfire_db::Errors);
+pub(super) async fn render_settings(c: &mut Ctx, status: StatusCode, settings: campfire_db::UserStatusSettings, errors: campfire_db::Errors) -> Result {
+    if !errors.is_empty() && settings.user.role != campfire_db::Role::Bot {
+        let id = settings.user.id;
+        let enabled = c.app().db.read(move |conn| Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM two_factor_credentials WHERE user_id=? AND confirmed_at IS NOT NULL)", [id], |r| r.get::<_, bool>(0))?)).await.map_err(Error::internal)?;
+        if enabled { return Err(Error::internal(anyhow::anyhow!("profiles/two_factor: undefined method any? for nil remembered devices"))); }
+    }
+    let user = settings.user.clone();
+    c.set_current(presenters::view_context::RenderedSettings(settings));
+    c.set_current(RenderedErrors(errors));
+    render_show(c, status, user, None, None, None).await
+}
+#[cfg(test)]
+#[path = "profiles/ws17_tests.rs"]
+mod ws17_tests;

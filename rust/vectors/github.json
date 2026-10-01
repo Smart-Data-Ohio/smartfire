@@ -1,0 +1,498 @@
+{
+  "reference_pin": "d7c7de92",
+  "reference_hashes": {
+    "app/models/github/app.rb": "87cbb3e099673c18b70440ebaf101c164c21d0d5e359b9656433d96a012fd58e",
+    "app/models/github/write_client.rb": "4a68f34e122d1ea9991928ec5d6b83ae1b0744d65835f4233cb6120efca875a1",
+    "app/models/github_connected_account.rb": "d123e83747757014a8d5b683eb0cc9b10a59ec4cd6e7103fa7417281cacb09db",
+    "app/controllers/github/app_connections_controller.rb": "1bdf78952e912520d328f31fcb360f31d853eec9824ddbf6b96575333d4b8bb2",
+    "config/initializers/active_record_encryption.rb": "afa0254cbbcc4f7dd43fd2f0639c501611eb57782415bfce31c643e975511dae",
+    "config/application.rb": "dcf4809f7c3cc3e1b5b11a1da365e40766ba81287e39fe14acfbc10e647d2315",
+    "Gemfile.lock": "3184e63450819b129ee8afc1dd1db60910f578ce55a53bdcb7dde43400bb67eb",
+    "app/controllers/github/webhooks_controller.rb": "f0b0724774dbc61be94cafe44c4b32faa2b77de3a1eddf58a304a14e9675e04b",
+    "app/models/github/webhook_delivery.rb": "00423a22f8e303ec55d381deae5c73ab84414facf692083eb8345c205de1f471",
+    "app/models/github/notifier.rb": "7e9751f8cadc30fc68ef5b79ed0939fb17bd5661032484a9b88ad13a961685db",
+    "app/jobs/github/perform_agent_action_job.rb": "fe988ee4ee5f5464ecf48942e6d6b3c2c9e7561689eb09694bb9e32bac6c653b",
+    "app/jobs/fizzy/perform_agent_action_job.rb": "e19ef338d0705d5382034a687722a8c9dc1c245ce0382a8f94fe1c00afd9f9cb",
+    "app/models/audit_log.rb": "b84d5a7935b867f1a857b43bd554a5ccdb30d2dbcc11dfc09ebb838453035407",
+    "app/models/agent_event.rb": "5a705b7e517ae01567ed0fd1504d21c37d4ca24b3065e455a7b771f34e9eefca",
+    "app/models/github/pull_request_fetcher.rb": "02ee8f0ea839d43c9debe6ee02bda1382597299abb971f50c6a97f854bba5885",
+    "app/jobs/github/fetch_pull_request_job.rb": "5fa26fc75cbc0c80f43521522bbebe82c8276ca495ee87ea95b274ce0780a4e8",
+    "app/models/github/pull_request.rb": "dd3a23cb77c6e1c6aca3c66d20411a9f0b721bf1f405bd321785756b2c0f32f5",
+    "app/models/github/agent_pull_request_action.rb": "80412097e544d3b1dab15da577211edccb75bffe4fc4cdd88b029200fd74a326",
+    "app/models/github/review_logins.rb": "a49e4c0968b2ff639333a6028e32d654217efee0efa87e770232150fbce37506",
+    "app/models/agent.rb": "9a6da628548a4439bb1952d9456de6b48a5fb51b8648395f06c7767a5063a1a4",
+    "app/models/agent_approval.rb": "0839b1d16085c2fb5eea876bd58485cc48f0bf9dd77b0aedb1d601b6e5d22974",
+    "app/models/github/notification.rb": "b933183bebc3c9399440c69cd4ee49286fa545b638d19e9cb502ee0644a590f1",
+    "app/models/github/repository_subscription.rb": "2fc88122796425d41c6efe929d699df2f739d92171bba478c0538856bfc928a8",
+    "app/models/github/pull_request_reference_sync.rb": "73922b259a39974e334cda3de403b5e6f254d3193bacf9ae24d99f218cdb95da",
+    "app/models/github/pull_request_url.rb": "8c38e501395e0ceb6d9d8b77ba7b6a94cf255a19e560cf2091b3ad330334c42f",
+    "app/models/message.rb": "7a62f0a514187f003c8ce3629a93cf9f4c0638410be335c89de1c51612c6db81",
+    "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519",
+    "app/models/user/inbox_preferences.rb": "12fc4a801806c55cca7f1bc85c63795437cf09bf573f9c403830ba2165e6fd39",
+    "app/jobs/github/deliver_subscription_event_job.rb": "c25b69e6a29ce0ea7196fe5fcd1085434a30d5f5326742aa7943b21cdf969dea",
+    "app/models/user.rb": "41c18c8325200bf8034554c4b107cc722d7b89aba32ade9d9944a7055587dd5b",
+    "app/models/user/bot.rb": "f88b6d192d9643de81d76a68801ab3245c67fd5345dfcdc7438b7efd4ed27e40",
+    "app/models/membership.rb": "7942db424021486f7046742095b26141031dab9da05e599e22f382d120e4ed9b",
+    "app/models/thread_membership.rb": "f27243d9ab35929f2e66885fe8e01673ed8e7500c588f732d0f299b6e42bb39a",
+    "app/models/activity_item.rb": "2e6d1915f243be790d6b82dedbdd7525fda0d849d705935bb9ffae38de69eb29",
+    "app/jobs/application_job.rb": "c92083e93519039ab08b6cf37fcb21e7148cd62b91f906a07e3ea7f71b584c5d"
+  },
+  "secret_key_base": "5335c3b1ad35b4ad170c3413bd651ef3b6ed64e257261871a6de3f978cf3868ee417a927040935fb30b0f7debdedb34a2a403e9f34b16cf594c917c2ecd4a995",
+  "now": "2026-01-01T12:00:00Z",
+  "row": {
+    "id": 1,
+    "access_token": "{\"p\":\"nASRsmwTmLZjL1mykP2U7qa+qcQf\",\"h\":{\"iv\":\"yzjmjIDBYi5YTHpJ\",\"at\":\"vMye/VT7yXD9IjXaQ50CBg==\"}}",
+    "created_at": "2026-01-01 12:00:00",
+    "disconnected_reason": null,
+    "github_login": "OctoCat",
+    "last_error": null,
+    "refresh_token": "{\"p\":\"UiqS9jzooWOoV4KbQjqH5fq4rYAtcg==\",\"h\":{\"iv\":\"KECS6NSiO+LJh/Ju\",\"at\":\"QGD17sd22rE1E9FsNEQW6A==\"}}",
+    "token_expires_at": "2026-01-01 13:00:00",
+    "token_source": "app",
+    "updated_at": "2026-01-01 12:00:00",
+    "user_id": 1
+  },
+  "plaintext": {
+    "access_token": "fixture-github-access",
+    "refresh_token": "fixture-github-refresh"
+  },
+  "states": [
+    {
+      "name": "valid",
+      "signed": "IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIg==--5010e7c123fac563606dcdd9ac20feffe061741e",
+      "stored": "00000000000000000000000000000000",
+      "accepted": true
+    },
+    {
+      "name": "wrong_session",
+      "signed": "IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIg==--5010e7c123fac563606dcdd9ac20feffe061741e",
+      "stored": "11111111111111111111111111111111",
+      "accepted": false
+    },
+    {
+      "name": "missing_session",
+      "signed": "IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIg==--5010e7c123fac563606dcdd9ac20feffe061741e",
+      "stored": null,
+      "accepted": false
+    },
+    {
+      "name": "wrong_session_type",
+      "signed": "IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIg==--5010e7c123fac563606dcdd9ac20feffe061741e",
+      "stored": [
+        "00000000000000000000000000000000"
+      ],
+      "accepted": false
+    },
+    {
+      "name": "wrong_signed_type",
+      "signed": "WyIwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCJd--15596bbb42ea7931f692bdcfba0b4f3b685d9223",
+      "stored": "00000000000000000000000000000000",
+      "accepted": false
+    },
+    {
+      "name": "wrong_verifier",
+      "signed": "IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIg==--6a00b16dcd24db5f54285150c19862e65cbf79bd",
+      "stored": "00000000000000000000000000000000",
+      "accepted": false
+    },
+    {
+      "name": "wrong_purpose",
+      "signed": "eyJfcmFpbHMiOnsiZGF0YSI6IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIiwicHVyIjoid3JvbmcifX0=--18dcc42e261009b683810c594296fc946b6bade6",
+      "stored": "00000000000000000000000000000000",
+      "accepted": false
+    },
+    {
+      "name": "expired",
+      "signed": "eyJfcmFpbHMiOnsiZGF0YSI6IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIiwiZXhwIjoiMjAyNi0wMS0wMVQxMjowMDowMC4wMDBaIn19--02ebc912f789412aea8f4a39cedfd452b7aad7da",
+      "stored": "00000000000000000000000000000000",
+      "accepted": false
+    },
+    {
+      "name": "fresh_expiring",
+      "signed": "eyJfcmFpbHMiOnsiZGF0YSI6IjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIiwiZXhwIjoiMjAyNi0wMS0wMVQxMjowMDowMS4wMDBaIn19--dc84022efec87507486c9058efe997898345237c",
+      "stored": "00000000000000000000000000000000",
+      "accepted": true
+    }
+  ],
+  "oauth": [
+    {
+      "status": 200,
+      "body": "{\"access_token\":\"fixture-access\",\"refresh_token\":\"fixture-refresh\",\"expires_in\":28800}",
+      "expected": {
+        "value": {
+          "access_token": "fixture-access",
+          "refresh_token": "fixture-refresh",
+          "expires_in": 28800
+        }
+      }
+    },
+    {
+      "status": 200,
+      "body": "{\"error\":\"bad_verification_code\"}",
+      "expected": {
+        "kind": "Github::App::Unauthorized",
+        "message": "GitHub rejected the GitHub App grant (401)"
+      }
+    },
+    {
+      "status": 200,
+      "body": "{\"error\":\"bad_refresh_token\"}",
+      "expected": {
+        "kind": "Github::App::Unauthorized",
+        "message": "GitHub rejected the GitHub App grant (401)"
+      }
+    },
+    {
+      "status": 401,
+      "body": "{}",
+      "expected": {
+        "kind": "Github::App::Unauthorized",
+        "message": "GitHub rejected the GitHub App grant (401)"
+      }
+    },
+    {
+      "status": 500,
+      "body": "{}",
+      "expected": {
+        "kind": "Github::App::Error",
+        "message": "GitHub App token request failed (500)"
+      }
+    },
+    {
+      "status": 200,
+      "body": "{}",
+      "expected": {
+        "kind": "Github::App::Error",
+        "message": "GitHub App token request failed (200)"
+      }
+    },
+    {
+      "status": 200,
+      "body": "garbage",
+      "expected": {
+        "kind": "Github::App::Error",
+        "message": "Could not reach GitHub (Parser Error)"
+      }
+    },
+    {
+      "status": 200,
+      "body": "{\"access_token\":\"fixture-access\",\"error\":\"also-error\"}",
+      "expected": {
+        "value": {
+          "access_token": "fixture-access",
+          "error": "also-error"
+        }
+      }
+    },
+    {
+      "status": 200,
+      "body": "{\"access_token\":\" \"}",
+      "expected": {
+        "kind": "Github::App::Error",
+        "message": "GitHub App token request failed (200)"
+      }
+    },
+    {
+      "status": 200,
+      "body": "null",
+      "expected": {
+        "kind": "Github::App::Error",
+        "message": "Could not reach GitHub (No Method Error)"
+      }
+    },
+    {
+      "status": 200,
+      "body": "[]",
+      "expected": {
+        "kind": "Github::App::Error",
+        "message": "Could not reach GitHub (Type Error)"
+      }
+    },
+    {
+      "status": 200,
+      "body": "false",
+      "expected": {
+        "kind": "Github::App::Error",
+        "message": "Could not reach GitHub (No Method Error)"
+      }
+    },
+    {
+      "status": 200,
+      "body": "\"access_token\"",
+      "expected": {
+        "value": "access_token"
+      }
+    }
+  ],
+  "write": [
+    {
+      "status": 200,
+      "body": "{}",
+      "expected": {
+        "value": {}
+      }
+    },
+    {
+      "status": 201,
+      "body": "{\"id\":12}",
+      "expected": {
+        "value": {
+          "id": 12
+        }
+      }
+    },
+    {
+      "status": 204,
+      "body": "",
+      "expected": {
+        "value": {}
+      }
+    },
+    {
+      "status": 200,
+      "body": "garbage",
+      "expected": {
+        "value": {}
+      }
+    },
+    {
+      "status": 401,
+      "body": "{\"message\":\"secret\"}",
+      "expected": {
+        "kind": "Github::WriteClient::Unauthorized",
+        "message": "GitHub rejected the linked token"
+      }
+    },
+    {
+      "status": 403,
+      "body": "{\"message\":\"Denied @[Alice]\\r\\nTry again\"}",
+      "expected": {
+        "kind": "Github::WriteClient::Refused",
+        "message": "GitHub refused: Denied @​[Alice] Try again"
+      }
+    },
+    {
+      "status": 404,
+      "body": "{}",
+      "expected": {
+        "kind": "Github::WriteClient::Refused",
+        "message": "GitHub refused: request was not allowed"
+      }
+    },
+    {
+      "status": 422,
+      "body": "{\"message\":\"Invalid reviewer\"}",
+      "expected": {
+        "kind": "Github::WriteClient::Refused",
+        "message": "GitHub refused: Invalid reviewer"
+      }
+    },
+    {
+      "status": 500,
+      "body": "{\"message\":\"secret\"}",
+      "expected": {
+        "kind": "Github::WriteClient::Error",
+        "message": "GitHub returned 500"
+      }
+    },
+    {
+      "status": 302,
+      "body": "{}",
+      "expected": {
+        "kind": "Github::WriteClient::Error",
+        "message": "GitHub returned 302"
+      }
+    },
+    {
+      "status": 403,
+      "body": "null",
+      "expected": {
+        "kind": "Github::WriteClient::Error",
+        "message": "Could not reach GitHub (No Method Error)"
+      }
+    },
+    {
+      "status": 403,
+      "body": "[]",
+      "expected": {
+        "kind": "Github::WriteClient::Error",
+        "message": "Could not reach GitHub (Type Error)"
+      }
+    },
+    {
+      "status": 403,
+      "body": "\"message\"",
+      "expected": {
+        "kind": "Github::WriteClient::Refused",
+        "message": "GitHub refused: message"
+      }
+    },
+    {
+      "status": 403,
+      "body": "{\"message\":[\"@[X]\",\"a\\nb\"]}",
+      "expected": {
+        "kind": "Github::WriteClient::Refused",
+        "message": "GitHub refused: [\"@​[X]\", \"a\\nb\"]"
+      }
+    },
+    {
+      "status": 403,
+      "body": "{\"message\":{\"key\":\"@[X]\"}}",
+      "expected": {
+        "kind": "Github::WriteClient::Refused",
+        "message": "GitHub refused: {\"key\" => \"@​[X]\"}"
+      }
+    }
+  ],
+  "login": [
+    {
+      "status": 200,
+      "body": "{\"login\":\"octocat\"}",
+      "expected": {
+        "value": "octocat"
+      }
+    },
+    {
+      "status": 200,
+      "body": "{}",
+      "expected": {
+        "kind": "KeyError",
+        "message": "key not found: \"login\""
+      }
+    },
+    {
+      "status": 200,
+      "body": "{\"login\":null}",
+      "expected": {
+        "kind": "Github::WriteClient::Error",
+        "message": "GitHub did not return a login"
+      }
+    },
+    {
+      "status": 200,
+      "body": "{\"login\":\" \"}",
+      "expected": {
+        "kind": "Github::WriteClient::Error",
+        "message": "GitHub did not return a login"
+      }
+    },
+    {
+      "status": 200,
+      "body": "[]",
+      "expected": {
+        "kind": "TypeError",
+        "message": "no implicit conversion of String into Integer"
+      }
+    },
+    {
+      "status": 200,
+      "body": "null",
+      "expected": {
+        "kind": "NoMethodError",
+        "message": "undefined method 'fetch' for nil"
+      }
+    },
+    {
+      "status": 200,
+      "body": "\"login\"",
+      "expected": {
+        "kind": "NoMethodError",
+        "message": "undefined method 'fetch' for an instance of String"
+      }
+    },
+    {
+      "status": 200,
+      "body": "{\"login\":[\"alice\",\"bob\"]}",
+      "expected": {
+        "value": "[\"alice\", \"bob\"]"
+      }
+    },
+    {
+      "status": 200,
+      "body": "{\"login\":{\"a\":\"b\"}}",
+      "expected": {
+        "value": "{\"a\" => \"b\"}"
+      }
+    }
+  ],
+  "read": [
+    {
+      "status": 404,
+      "body": "{}",
+      "headers": {},
+      "expected": {
+        "kind": "Github::PullRequestFetcher::FetchError",
+        "message": "Pull request not found on GitHub"
+      }
+    },
+    {
+      "status": 401,
+      "body": "{}",
+      "headers": {},
+      "expected": {
+        "kind": "Github::PullRequestFetcher::FetchError",
+        "message": "GitHub authentication failed"
+      }
+    },
+    {
+      "status": 403,
+      "body": "{}",
+      "headers": {},
+      "expected": {
+        "kind": "Github::PullRequestFetcher::FetchError",
+        "message": "GitHub request forbidden"
+      }
+    },
+    {
+      "status": 429,
+      "body": "{}",
+      "headers": {},
+      "expected": {
+        "kind": "Github::PullRequestFetcher::FetchError",
+        "message": "GitHub request forbidden"
+      }
+    },
+    {
+      "status": 500,
+      "body": "{}",
+      "headers": {},
+      "expected": {
+        "kind": "Github::PullRequestFetcher::FetchError",
+        "message": "GitHub returned 500"
+      }
+    },
+    {
+      "status": 200,
+      "body": "garbage",
+      "headers": {},
+      "expected": {
+        "kind": "JSON::ParserError",
+        "message": "unexpected character: 'garbage' at line 1 column 1"
+      }
+    },
+    {
+      "status": 403,
+      "body": "{}",
+      "headers": {
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": "1767268800"
+      },
+      "expected": {
+        "kind": "Github::PullRequestFetcher::FetchError",
+        "message": "GitHub rate limit exceeded, resets 01 Jan 12:00"
+      }
+    },
+    {
+      "status": 429,
+      "body": "{}",
+      "headers": {
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": "bogus"
+      },
+      "expected": {
+        "kind": "Github::PullRequestFetcher::FetchError",
+        "message": "GitHub rate limit exceeded, resets 01 Jan 00:00"
+      }
+    }
+  ]
+}

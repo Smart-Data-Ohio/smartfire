@@ -40,6 +40,7 @@ pub struct FormWith {
     /// `html:`, merged after the options Rails slices out (`id`, `class`, `data`).
     html: Attrs,
     authenticity_token: bool,
+    field_errors: Vec<String>,
     multipart: Rc<Cell<bool>>,
 }
 
@@ -54,11 +55,23 @@ pub fn form_with(url: impl std::fmt::Display) -> FormWith {
         data: attrs(),
         html: attrs(),
         authenticity_token: true,
+        field_errors: Vec::new(),
         multipart: Rc::new(Cell::new(false)),
     }
 }
 
 impl FormWith {
+    /// WS8br seam: the default Rails field_error_proc for fields bound to a record
+    /// with validation errors. Existing owner forms keep their default empty list.
+    pub fn field_errors(mut self, attributes: Vec<String>) -> Self {
+        self.field_errors = attributes;
+        self
+    }
+    fn with_field_error(&self, method: &str, field: Html) -> Html {
+        if self.field_errors.iter().any(|attribute| attribute == method) {
+            super::tag::content_tag("div", attrs().class("field_with_errors"), &field.0)
+        } else { field }
+    }
     /// Rails PR #148 uses `authenticity_token: false` in shared message fragments.
     pub fn authenticity_token(mut self, include: bool) -> Self {
         self.authenticity_token = include;
@@ -70,6 +83,12 @@ impl FormWith {
         self
     }
 
+    /// `namespace:` prefixes field IDs, leaving their parameter names unchanged.
+    pub fn namespace(mut self, namespace: impl Into<String>) -> Self {
+        self.namespace = Some(namespace.into());
+        self
+    }
+
     /// `method:`; a persisted `model:` implies "patch", so pass it for those too.
     pub fn method(mut self, method: &str) -> Self {
         self.method = method.to_string();
@@ -78,12 +97,6 @@ impl FormWith {
 
     pub fn id(mut self, id: impl std::fmt::Display) -> Self {
         self.id = Some(id.to_string());
-        self
-    }
-
-    /// WS8b-r thread composer namespaces field IDs without changing parameter names.
-    pub fn namespace(mut self, namespace: impl Into<String>) -> Self {
-        self.namespace = Some(namespace.into());
         self
     }
 
@@ -179,7 +192,12 @@ impl FormWith {
     }
 
     pub fn text_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
-        self.builder().input_field("text", method, value, options)
+        self.with_field_error(method, self.builder().input_field("text", method, value, options))
+    }
+
+    /// `Tags::DateField#render`, with the caller's canonical Date value.
+    pub fn date_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
+        self.builder().input_field("date", method, value, options)
     }
 
     pub fn email_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -197,7 +215,7 @@ impl FormWith {
         let builder = self.builder();
         let mut options = options;
         options.fetch_or_set("for", Some(builder.tag_id(method).into()));
-        super::tag::content_tag_text("label", &options, text)
+        self.with_field_error(method, super::tag::content_tag_text("label", &options, text))
     }
 
     pub fn url_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -268,8 +286,9 @@ impl FormBuilder {
 
     /// `Tags::Base#tag_id`: the sanitized object name and method joined by "_".
     fn tag_id(&self, method: &str) -> String {
-        let id=if self.object_name.is_empty() {method.to_string()} else {format!("{}_{method}",sanitize_object_name(&self.object_name))};
-        self.namespace.as_ref().map_or(id.clone(),|namespace|format!("{namespace}_{id}"))
+        let id = if self.object_name.is_empty() { method.to_string() }
+            else { format!("{}_{method}", sanitize_object_name(&self.object_name)) };
+        self.namespace.as_ref().map_or(id.clone(), |namespace| format!("{namespace}_{id}"))
     }
 
     fn add_default_name_and_id(&self, method: &str, options: &mut Attrs) {

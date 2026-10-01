@@ -3,6 +3,7 @@ use crate::{ViewContext, helpers as h};
 use askama::Template;
 use jiff::Timestamp;
 
+#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
 pub struct Pin {
     pub message_id: i64,
     pub pinner_name: String,
@@ -11,6 +12,7 @@ pub struct Pin {
     pub created_at: Timestamp,
     pub message_path: String,
 }
+#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
 pub struct List {
     pub room_id: i64,
     pub room_param_key: String,

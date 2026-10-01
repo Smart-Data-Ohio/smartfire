@@ -9,12 +9,23 @@ use campfire_richtext::{AttachableResolver, GidLookup, MentionUser, RenderContex
 use rails_compat::global_id::{self, ATTACHABLE_PURPOSE, GlobalId};
 use std::collections::HashMap;
 
+pub(crate) struct GithubRendering {
+    pub html: String,
+    pub stamp: String,
+    pub refreshes: Vec<i64>,
+}
+
 pub(crate) struct Preloads {
+    pub github: HashMap<i64, GithubRendering>,
+    pub event_views: HashMap<i64, Vec<campfire_views::events::CardView>>,
     pub records: RenderingRecords,
     pub users: HashMap<i64, RenderingUser>,
     pub attachments: HashMap<i64, campfire_storage::Blob>,
     pub icons: IconCatalog,
     pub custom_icons: HashMap<String, String>,
+    // Shared persisted provider facts, loaded before any message/quote rendering.
+    pub fizzy_cards: HashMap<i64, Vec<crate::integrations::fizzy::cards::Card>>,
+    pub link_references: HashMap<i64, Vec<crate::integrations::link_embed::Reference>>,
 }
 impl Preloads {
     pub fn load(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
@@ -41,7 +52,41 @@ impl Preloads {
                 }
             })
             .collect();
+        let ids = records.body_ids(messages);
+        let fizzy_cards = crate::integrations::fizzy::cards::Card::for_messages(p.conn, &ids)?;
+        let link_references = crate::integrations::link_embed::Reference::for_messages(p.conn, &ids)?;
+        let mut event_views = HashMap::new();
+        let event_messages = if ids.is_empty() { Vec::new() } else {
+            let sql = format!("SELECT DISTINCT message_id FROM event_references WHERE message_id IN ({})", std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(","));
+            p.conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        for id in event_messages {
+            if let Some(message) = messages.iter().find(|m| m.id == id).or_else(|| records.sources.get(&id)) {
+                event_views.insert(id, crate::controllers::presenters::events::for_message(p.conn, message)?);
+            }
+        }
+        // Keep main's GitHub factory and refresh policy, while honoring the existing
+        // message-owner contract that a preloaded message performs no further queries.
+        // Merely preloading never schedules refreshes; only an actual fragment miss does.
+        let mut github = HashMap::new();
+        let linked = if ids.is_empty() { Vec::new() } else {
+            let sql = format!("SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ({})", std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(","));
+            p.conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_,i64>(0))?
+                .collect::<std::result::Result<Vec<_>,_>>()?
+        };
+        for id in &linked {
+            let message = messages.iter().find(|m| m.id == *id).or_else(|| records.sources.get(id));
+            if let Some(message) = message {
+                let html = crate::controllers::presenters::github::message_cards_in_zone(p.conn, p.app(), message, &p.render_zone)?;
+                let stamp = crate::controllers::presenters::github::cache_stamp(p.conn, message)?;
+                let refreshes = crate::integrations::github::pull_requests::PullRequest::for_message(p.conn, *id)?
+                    .into_iter().filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(p.now))).map(|pr| pr.id).collect();
+                github.insert(*id, GithubRendering { html, stamp, refreshes });
+            }
+        }
         Ok(Self {
+            github, event_views, fizzy_cards, link_references,
             records,
             users,
             attachments,
@@ -249,6 +294,8 @@ impl PageResolver<'_> {
     }
 }
 impl AttachableResolver for PageResolver<'_> {
+    fn twitter_post_exists_for_url(&self, url: &str) -> bool { self.db.twitter_post_exists_for_url(url) }
+
     fn embed_image_path(&self, url: &str) -> std::result::Result<String, campfire_richtext::Error> {
         self.db.embed_image_path(url)
     }

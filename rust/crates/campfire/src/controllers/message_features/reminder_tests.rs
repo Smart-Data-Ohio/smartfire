@@ -181,7 +181,7 @@ async fn missing_saved_item_discards_and_transport_errors_do_not_acknowledge_del
     assert!(result.is_err());
 }
 #[tokio::test]
-async fn real_runner_retains_allowed_pushes_until_the_ws17_tagged_transport_is_wired() {
+async fn real_runner_completes_allowed_pushes_when_web_push_is_unconfigured() {
     let app = app().await;
     let id = load_payload(&app).await;
     app.db()
@@ -196,21 +196,13 @@ async fn real_runner_retains_allowed_pushes_until_the_ws17_tagged_transport_is_w
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(10);
     loop {
         let rows = app.db().read(campfire_jobs::inspect::all).await.unwrap();
-        let row = rows
-            .iter()
-            .find(|row| row.class == "SavedItem::ReminderPushJob")
-            .expect("allowed push must remain durable");
-        assert_ne!(row.status, "failed", "{row:?}");
-        if row.run_at > app.db().env().now() {
-            assert_eq!(row.status, "ready");
-            assert!(row.last_error.is_none());
-            assert_eq!(row.arguments, serde_json::json!({"saved_item_id":id}));
+        let Some(row) = rows.iter().find(|row| row.class == "SavedItem::ReminderPushJob") else {
+            assert!(app.booted.app.web_push.is_none(), "this case exercises disabled transport");
+            assert!(app.db().read(move |conn| SavedItem::find(conn,id)).await.is_ok(), "delivery never removes the saved item");
             break;
-        }
-        assert!(
-            tokio::time::Instant::now() < deadline,
-            "transport seam did not reschedule: {row:?}"
-        );
+        };
+        assert_ne!(row.status, "failed", "{row:?}");
+        assert!(tokio::time::Instant::now() < deadline, "disabled transport did not finish: {row:?}");
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     }
 }

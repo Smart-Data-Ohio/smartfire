@@ -1,4 +1,4 @@
-//! JSON picker for built-ins and registered-agent metadata; execution is WS11's seam.
+//! JSON picker for built-ins and registered-agent metadata; execution uses WS11's domain dispatcher.
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions};
 use crate::controllers::{message_features as features, presenters::page::db_error};

@@ -73,6 +73,8 @@ pub struct AttendanceView {
     pub event_id: i64,
     pub room_id: i64,
     pub message_id: Option<String>,
+    #[serde(default)]
+    pub message_id_input: Option<String>,
     pub current_response: Option<String>,
     pub going: i64,
     pub maybe: i64,
@@ -82,6 +84,11 @@ pub struct AttendanceView {
     pub alert: Option<String>,
 }
 impl AttendanceView {
+    pub fn message_input_value(&self) -> Option<&str> {
+        self.message_id_input
+            .as_deref()
+            .or(self.message_id.as_deref())
+    }
     pub fn frame_id(&self) -> String {
         format!(
             "response_for_message_{}_event_{}",
@@ -96,7 +103,7 @@ impl AttendanceView {
         )
     }
     pub fn going_count(&self) -> String {
-        format!("{} going", self.going)
+        pages::plural(self.going, "going")
     }
     pub fn maybe_count(&self) -> String {
         format!(
@@ -157,3 +164,7 @@ pub fn card_entries(events: &[CardView], message_id: &str, zone: &Zone) -> Vec<S
         })
         .collect()
 }
+
+pub mod pages;
+
+pub mod forms;

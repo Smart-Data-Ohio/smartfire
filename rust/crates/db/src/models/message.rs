@@ -244,6 +244,11 @@ impl Message {
         query_one(conn, &sql, [room_id, id], Self::from_row)?.or_not_found("Message")
     }
 
+    /// `room.root_messages.count` (bot API pagination excludes replies).
+    pub fn count_roots_in_room(conn: &Connection, room_id: i64) -> Result<i64> {
+        sql::count(conn, r#"SELECT COUNT(*) FROM "messages" WHERE "room_id" = ? AND "thread_id" IS NULL"#, [room_id])
+    }
+
     /// `room.messages.count`
     pub fn count_in_room(conn: &Connection, room_id: i64) -> Result<i64> {
         sql::count(
@@ -394,8 +399,8 @@ impl Message {
     /// SQLite transaction as the write, so failure rolls it all back. Broadcasts and job wakes
     /// run after commit in Rails' order: unread, push, then the final thread indicator.
     /// Not ported here, for their owners: agent deliveries
-    /// (WS11), activity items (WS12), the GitHub, Fizzy, Twitter, event and link-embed reference
-    /// syncs (WS14, WS15), and the Slack importer's `importing` flag (WS16).
+    /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
+    /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
         let body = Self::rendered_body(tx, &attributes)?;
         Self::validate(tx.conn(), &attributes)?.into_result()?;
@@ -461,7 +466,8 @@ impl Message {
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
-            crate::models::message_reference::sync(tx, &message)?;
+            if !message.system_note { crate::ActivityItem::record_message(tx, &message)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?; }
+            message.sync_all_references(tx)?;
             message.push_later_in_conversation(tx);
         }
         if message.thread_id.is_some() {
@@ -469,9 +475,25 @@ impl Message {
             // room's archive state.
             ChannelThread::close_stale_in(tx, Some(message.room_id))?;
         }
+        crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)
+    }
+
+    /// Network-card owners plug into the real create/edit callbacks through the app sink.
+    /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
+    /// must not warm previews. Import callers pass false to retain DB references without fetches.
+    pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
+        use crate::callbacks::Phase;
+        for sync in tx.env().message_reference_syncs.clone() { sync(tx,self,enqueue)?; }
+        let sink=tx.env().sink.clone();
+        for phase in [Phase::MessageFizzyReferences,Phase::MessageTwitterReferences,Phase::MessageEventReferences,Phase::MessageLinkReferences] {
+            if phase == Phase::MessageEventReferences { crate::models::calendar_event::references::sync(tx, self)?; }
+            sink.sync_message_reference_phase(tx,self,phase,enqueue)?;
+
+        }
+        Ok(())
     }
 
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
@@ -619,12 +641,25 @@ impl Message {
         self.thread_id.is_some() && !self.system_note && !self.streaming
     }
 
+    /// Rails validates the saved false -> true transition on every update.
+    /// Compare the persisted row, so a stale or manually edited model cannot
+    /// bypass the stream's irreversible finalization claim.
+    fn validate_streaming_state(&self, conn: &Connection) -> Result<()> {
+        if self.streaming && !Self::find(conn, self.id)?.streaming {
+            let mut errors = Errors::default();
+            errors.add("streaming", "cannot resume once finalized");
+            return errors.into_result();
+        }
+        Ok(())
+    }
+
     /// `before_save :touch_streaming_activity, if: :streaming?`: every save while streaming
     /// restarts the finalize sweep's inactivity clock. That's a saved change, so it touches the
     /// room too (`belongs_to :room, touch: true`), even when nothing else changed. (`touch` isn't
     /// a save, so boosts don't restart the clock.) `save_touches_test` holds each save path to
     /// Rails' answer.
     fn touch_streaming_activity(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.validate_streaming_state(tx.conn())?;
         if !self.streaming {
             return Ok(());
         }
@@ -652,7 +687,9 @@ impl Message {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
             }
         }
-        self.touch(tx)
+        self.touch(tx)?;
+        if !self.streaming { self.sync_external_references(tx, true)?; }
+        Ok(())
     }
 
     /// The edit endpoints' save (`MessagesController#update`,
@@ -706,6 +743,7 @@ impl Message {
     /// in this transaction (Rails' `after_update_commit :update_in_index` is moved here so a
     /// failed renderer cannot leave a partially processed write).
     fn save_changes(&mut self, tx: &mut Tx<'_>, changes: MessageChanges, stamp_edited: bool) -> Result<()> {
+        self.validate_streaming_state(tx.conn())?;
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
         let markdown_source = if changes.clear_markdown_source { None }
@@ -805,9 +843,14 @@ impl Message {
         }
         if !self.streaming {
             self.update_in_index(tx)?;
-            if references_changed { crate::models::message_reference::sync(tx, self)?; }
+            if references_changed { self.sync_all_references(tx)?; }
         }
         Ok(())
+    }
+
+    /// Compatibility entry point for import callers; both owners use the real save hook.
+    pub fn sync_integration_references(&self, tx: &mut Tx<'_>, enqueue_fetches: bool) -> Result<()> {
+        self.sync_external_references(tx, enqueue_fetches)
     }
 
     /// `drive_attachments.map(&:file_id)`, in id order.
@@ -841,6 +884,9 @@ impl Message {
         if let Some(attachment) =
             Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
         {
+            if Some(attachment.blob_id) == blob_id {
+                return Ok(());
+            }
             attachment.delete(tx)?;
             tx.emit_after_commit(Event::PurgeBlob {
                 blob_id: attachment.blob_id,
@@ -1118,6 +1164,20 @@ impl Message {
     /// thread stream joins its thread's reply count, and the indicator is broadcast after commit.
     /// The rest of `finalize_stream!` (the deferred side effects) is WS11's.
     pub fn claim_stream_finalized(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        let claimed = self.claim_stream_finalized_without_indicator(tx)?;
+        if claimed
+            && self.thread_reply()
+            && let Some(thread_id) = self.thread_id
+        {
+            tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
+        }
+        Ok(claimed)
+    }
+
+    pub(crate) fn claim_stream_finalized_without_indicator(
+        &mut self,
+        tx: &mut Tx<'_>,
+    ) -> Result<bool> {
         let now = tx.now();
         let claimed = tx.conn().execute_cached(
             r#"UPDATE "messages" SET "streaming" = 0, "updated_at" = ? WHERE "messages"."id" = ? AND "messages"."streaming" = 1"#,
@@ -1127,10 +1187,78 @@ impl Message {
             self.reload(tx.conn())?;
             if let Some(thread_id) = self.thread_id.filter(|_| self.thread_reply()) {
                 ChannelThread::refresh_messages_count(tx, thread_id)?;
-                tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
             }
         }
         Ok(claimed)
+    }
+
+    /// `sync_all_references`, in the Rails declaration order. Peer adapters
+    /// implement their import/fetch policy; no network I/O runs here.
+    pub fn sync_all_references(&self, tx: &mut Tx<'_>) -> Result<()> {
+        use crate::callbacks::Phase;
+        for phase in [Phase::MessageGithubReferences, Phase::MessageFizzyReferences,
+            Phase::MessageTwitterReferences, Phase::MessageEventReferences] {
+            self.sync_reference_phase(tx, phase, true)?;
+        }
+        crate::models::message_reference::sync(tx,self)?;
+        self.sync_reference_phase(tx, Phase::MessageLinkReferences, true)
+    }
+
+    fn sync_reference_phase(&self, tx: &mut Tx<'_>, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+        tx.model_callback(phase, self.id)?;
+        if phase == crate::callbacks::Phase::MessageGithubReferences {
+            for sync in tx.env().message_reference_syncs.clone() { sync(tx, self, enqueue)?; }
+        }
+        if phase == crate::callbacks::Phase::MessageEventReferences {
+            crate::models::calendar_event::references::sync(tx, self)?;
+        }
+        let sink = tx.env().sink.clone();
+        sink.sync_message_reference_phase(tx, self, phase, enqueue)
+    }
+
+    /// Claim first, like Rails' `update_all`, then run the deferred callbacks.
+    /// A callback exception preserves the claim and earlier effects. The writer
+    /// returns it after commit; a durable enqueue error still rolls the entire
+    /// write back through Tx::persist_error (the fixed queue-atomicity decision).
+    pub fn finalize_stream(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        if !self.claim_stream_finalized_without_indicator(tx)? { return Ok(false); }
+        let effects = (|| {
+            let agent = crate::Agent::for_user(tx.conn(), self.creator_id)?;
+            if !agent.as_ref().map(|a| a.active(tx.conn())).transpose()?.unwrap_or(false) {
+                return self.finalize_claimed_stream_quietly(tx);
+            }
+            self.create_in_index(tx)?;
+            self.receive_in_conversation(tx)?;
+            self.push_later_in_conversation(tx);
+            if !self.system_note { crate::ActivityItem::record_message(tx, self)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
+            crate::models::agent_delivery::enqueue_for_message(tx,self)?;
+            self.sync_all_references(tx)?;
+            crate::models::bot_webhook_fanout::deliver(tx,self)?;
+            if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
+            if let Some(mut agent) = crate::Agent::for_user(tx.conn(),self.creator_id)? {agent.clear_working_presence(tx)?;}
+            self.broadcast_finalized_thread_indicator(tx);
+            crate::models::agent_streaming::broadcast_final(tx,self)
+        })();
+        if let Err(error) = effects { tx.after_commit(move |_| Err(error)); }
+        Ok(true)
+    }
+
+    /// Quiet finalize is used by suspension even in locked threads. It claims
+    /// once and broadcasts the final draft without indexing, receive or fanout.
+    pub fn finalize_stream_quietly(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        if !self.claim_stream_finalized_without_indicator(tx)? { return Ok(false); }
+        if let Err(error) = self.finalize_claimed_stream_quietly(tx) { tx.after_commit(move |_| Err(error)); }
+        Ok(true)
+    }
+    fn finalize_claimed_stream_quietly(&self, tx: &mut Tx<'_>) -> Result<()> {
+        if let Some(mut agent) = crate::Agent::for_user(tx.conn(),self.creator_id)? {agent.clear_working_presence(tx)?;}
+        self.broadcast_finalized_thread_indicator(tx);
+        crate::models::agent_streaming::broadcast_final(tx,self)
+    }
+    fn broadcast_finalized_thread_indicator(&self, tx: &mut Tx<'_>) {
+        if self.thread_reply() && let Some(thread_id)=self.thread_id {
+            tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
+        }
     }
 
     pub fn reload(&mut self, conn: &Connection) -> Result<()> {

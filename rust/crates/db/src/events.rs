@@ -150,6 +150,28 @@ impl Event {
 }
 
 pub trait EventSink: Send + Sync {
+    /// Peer model adapter. The default is a flagged uninstalled stub, as with
+    /// `callbacks::Registry`; production Jobs dispatches its installed handlers.
+    fn model_callback(&self, _tx: &mut Tx<'_>, _callback: crate::callbacks::Callback) -> Result<()> { Ok(()) }
+    /// Domain connected-account callbacks in User#deactivate. SQL only, on the triggering write.
+    fn disconnect_user_accounts(&self, _tx: &mut Tx<'_>, _user_id: i64) -> Result<()> {
+        Ok(())
+    }
+
+    /// Domain reference callbacks run on the message writer's transaction. No network or
+    /// HTML belongs here; durable fetch requests must commit with their triggering message.
+    fn sync_message_references(&self, _tx: &mut Tx<'_>, _message: &crate::Message, _enqueue: bool) -> Result<()> {
+        Ok(())
+    }
+
+    /// A real reference adapter at its position in Message#sync_all_references.
+    /// Existing custom sinks retain their combined hook at the link phase.
+    fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &crate::Message, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+        if phase == crate::callbacks::Phase::MessageLinkReferences {
+            self.sync_message_references(tx, message, enqueue)
+        } else { Ok(()) }
+    }
+
     /// Hands the event off, once its write has committed (or right away, for [`Tx::emit_now`]).
     fn emit(&self, event: Event);
 
@@ -198,6 +220,22 @@ impl EventSink for RecordingSink {
 }
 
 impl<T: EventSink + ?Sized> EventSink for Arc<T> {
+    fn model_callback(&self, tx: &mut Tx<'_>, callback: crate::callbacks::Callback) -> Result<()> {
+        (**self).model_callback(tx, callback)
+    }
+
+    fn disconnect_user_accounts(&self, tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
+        (**self).disconnect_user_accounts(tx, user_id)
+    }
+
+    fn sync_message_references(&self, tx: &mut Tx<'_>, message: &crate::Message, enqueue: bool) -> Result<()> {
+        (**self).sync_message_references(tx, message, enqueue)
+    }
+
+    fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &crate::Message, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+        (**self).sync_message_reference_phase(tx, message, phase, enqueue)
+    }
+
     fn emit(&self, event: Event) {
         (**self).emit(event)
     }

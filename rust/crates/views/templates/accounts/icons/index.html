@@ -1,0 +1,54 @@
+{% extends "layouts/application.html" %}
+{%- block head %}{% endblock %}
+{% block nav %}  <div class="flex-item-justify-start">
+    {{ h::link_back_to(ctx, h::routes::edit_account()) }}
+  </div>
+{% endblock %}
+{% block content %}
+
+<section class="panel panel--wide txt-align-center flex flex-column position-relative" style="view-transition-name: workspace-icons">
+  <div class="flex align-center gap">
+    <div class="pad-inline-double center">
+      <h1 class="margin-none">Workspace icons</h1>
+      <p class="margin-none-block-start">Upload SVG or PNG icons members can use as <code>:shortcodes:</code> in messages and reactions.</p>
+    </div>
+  </div>
+
+  <div class="pad-inline pad-block-start">
+{% let form = h::form_with(h::routes::account_icons()).model("workspace_icon").class("flex flex-column gap txt-align-start fill-shade border-radius pad") %}    {% filter form_with(form) %}
+{% if !icon.errors.is_empty() %}        <div class="txt-negative" role="alert">
+          <ul class="margin-none">
+{% for message in icon.errors %}              <li>{{ message }}</li>
+{% endfor %}          </ul>
+        </div>
+{% endif %}
+      <div class="flex align-center gap">
+        <label class="flex flex-column gap flex-item-grow">
+          <span class="txt-small"><strong>Name</strong> <span class="txt-subtle">lowercase letters, numbers, underscores, 2–32 characters</span></span>
+          {{ icon.field("name", form.text_field("name", icon.name.as_deref(), h::attrs().class("input").autocomplete("off").placeholder("acme"))) }}
+        </label>
+
+        <label class="flex flex-column gap flex-item-grow">
+          <span class="txt-small"><strong>Title</strong></span>
+          {{ icon.field("title", form.text_field("title", icon.title.as_deref(), h::attrs().class("input").autocomplete("off").placeholder("Acme Corp"))) }}
+        </label>
+      </div>
+
+      <label class="flex flex-column gap">
+        <span class="txt-small"><strong>Icon file</strong> <span class="txt-subtle">SVG or square PNG (at least 64px), at most 256 KB</span></span>
+        {{ icon.field("image", form.file_field("image", h::attrs().class("input").attr("accept", "image/svg+xml,image/png"))) }}
+      </label>
+
+      <div>
+        {{ h::legacy_tag("input", h::attrs().type_("submit").name("commit").value("Upload icon").class("btn btn--reversed").data("disable_with", "Upload icon")) }}
+      </div>
+{% endfilter %}  </div>
+
+  <div class="pad-inline pad-block-start">
+    <menu class="flex flex-column gap margin-none pad">
+{% if !icons.is_empty() %}        {% for icon in icons %}{% include "accounts/icons/_icon.html" %}{% endfor %}
+{% else %}        <li class="txt-subtle">No workspace icons yet.</li>
+{% endif %}    </menu>
+  </div>
+</section>
+{% endblock %}

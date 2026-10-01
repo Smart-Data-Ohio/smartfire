@@ -1,0 +1,172 @@
+{
+  "reference": "d7c7de92",
+  "status_reference": "2e20b24c",
+  "popup": [
+    {
+      "name": "seed",
+      "fields": {
+        "presence": "auto",
+        "emoji": "🚀",
+        "text": "Shipping Rust",
+        "errors": {}
+      },
+      "html": "<turbo-frame id=\"user_card\">\n  <div class=\"status-popup\">\n    <h2 class=\"status-popup__title\">Set a status</h2>\n\n    <form class=\"flex flex-column\" data-action=\"turbo:submit-end-&gt;profile-card#statusSaved\" action=\"/users/me/status\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/status\" />\n      <div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_presence_setting\">Presence</label>\n  <select class=\"input\" id=\"status_popup_presence_setting\" name=\"user[presence_setting]\"><option selected=\"selected\" value=\"auto\">Automatic</option>\n<option value=\"dnd\">Do not disturb</option>\n<option value=\"invisible\">Invisible (appear offline)</option></select>\n</div>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_custom_status_emoji\">Emoji</label>\n  <input class=\"input\" maxlength=\"8\" placeholder=\"😀\" autocomplete=\"off\" size=\"6\" id=\"status_popup_custom_status_emoji\" type=\"text\" value=\"🚀\" name=\"user[custom_status_emoji]\" />\n  <label class=\"txt-medium for-screen-reader\" for=\"status_popup_custom_status_text\">Status text</label>\n  <input class=\"input flex-item-grow\" maxlength=\"100\" placeholder=\"Working from the train…\" autocomplete=\"off\" id=\"status_popup_custom_status_text\" size=\"100\" type=\"text\" value=\"Shipping Rust\" name=\"user[custom_status_text]\" />\n</div>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_custom_status_expires_in\">Clear after</label>\n  <select class=\"input\" id=\"status_popup_custom_status_expires_in\" name=\"user[custom_status_expires_in]\"><option value=\"minutes_30\">30 minutes</option>\n<option value=\"hour_1\">1 hour</option>\n<option value=\"hours_4\">4 hours</option>\n<option value=\"today\">Today</option>\n<option value=\"week\">This week</option>\n<option selected=\"selected\" value=\"never\">Never</option></select>\n</div>\n\n\n      <div class=\"status-popup__actions\">\n        <button name=\"button\" type=\"submit\" class=\"btn btn--reversed\">Save</button>\n        <button name=\"user[clear_custom_status]\" type=\"submit\" value=\"1\" class=\"btn\">Clear status</button>\n        <a class=\"btn\" href=\"/users/127326141/card\">Cancel</a>\n      </div>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "name": "invisible",
+      "fields": {
+        "presence": "invisible",
+        "emoji": "<",
+        "text": "A & B",
+        "errors": {}
+      },
+      "html": "<turbo-frame id=\"user_card\">\n  <div class=\"status-popup\">\n    <h2 class=\"status-popup__title\">Set a status</h2>\n\n    <form class=\"flex flex-column\" data-action=\"turbo:submit-end-&gt;profile-card#statusSaved\" action=\"/users/me/status\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/status\" />\n      <div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_presence_setting\">Presence</label>\n  <select class=\"input\" id=\"status_popup_presence_setting\" name=\"user[presence_setting]\"><option value=\"auto\">Automatic</option>\n<option value=\"dnd\">Do not disturb</option>\n<option selected=\"selected\" value=\"invisible\">Invisible (appear offline)</option></select>\n</div>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_custom_status_emoji\">Emoji</label>\n  <input class=\"input\" maxlength=\"8\" placeholder=\"😀\" autocomplete=\"off\" size=\"6\" id=\"status_popup_custom_status_emoji\" type=\"text\" value=\"&lt;\" name=\"user[custom_status_emoji]\" />\n  <label class=\"txt-medium for-screen-reader\" for=\"status_popup_custom_status_text\">Status text</label>\n  <input class=\"input flex-item-grow\" maxlength=\"100\" placeholder=\"Working from the train…\" autocomplete=\"off\" id=\"status_popup_custom_status_text\" size=\"100\" type=\"text\" value=\"A &amp; B\" name=\"user[custom_status_text]\" />\n</div>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_custom_status_expires_in\">Clear after</label>\n  <select class=\"input\" id=\"status_popup_custom_status_expires_in\" name=\"user[custom_status_expires_in]\"><option value=\"minutes_30\">30 minutes</option>\n<option value=\"hour_1\">1 hour</option>\n<option value=\"hours_4\">4 hours</option>\n<option value=\"today\">Today</option>\n<option value=\"week\">This week</option>\n<option selected=\"selected\" value=\"never\">Never</option></select>\n</div>\n\n\n      <div class=\"status-popup__actions\">\n        <button name=\"button\" type=\"submit\" class=\"btn btn--reversed\">Save</button>\n        <button name=\"user[clear_custom_status]\" type=\"submit\" value=\"1\" class=\"btn\">Clear status</button>\n        <a class=\"btn\" href=\"/users/127326141/card\">Cancel</a>\n      </div>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "name": "invalid_presence",
+      "fields": {
+        "presence": "away",
+        "emoji": "🚀",
+        "text": "Shipping Rust",
+        "errors": {
+          "presence_setting": [
+            "is not included in the list"
+          ]
+        }
+      },
+      "html": "<turbo-frame id=\"user_card\">\n  <div class=\"status-popup\">\n    <h2 class=\"status-popup__title\">Set a status</h2>\n\n    <form class=\"flex flex-column\" data-action=\"turbo:submit-end-&gt;profile-card#statusSaved\" action=\"/users/me/status\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/status\" />\n      <div class=\"flex align-center gap pad-block-half\">\n  <div class=\"field_with_errors\"><label class=\"txt-medium\" for=\"status_popup_presence_setting\">Presence</label></div>\n  <div class=\"field_with_errors\"><select class=\"input\" id=\"status_popup_presence_setting\" name=\"user[presence_setting]\"><option value=\"auto\">Automatic</option>\n<option value=\"dnd\">Do not disturb</option>\n<option value=\"invisible\">Invisible (appear offline)</option></select></div>\n</div>\n  <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">Presence is not included in the list.</p>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_custom_status_emoji\">Emoji</label>\n  <input class=\"input\" maxlength=\"8\" placeholder=\"😀\" autocomplete=\"off\" size=\"6\" id=\"status_popup_custom_status_emoji\" type=\"text\" value=\"🚀\" name=\"user[custom_status_emoji]\" />\n  <label class=\"txt-medium for-screen-reader\" for=\"status_popup_custom_status_text\">Status text</label>\n  <input class=\"input flex-item-grow\" maxlength=\"100\" placeholder=\"Working from the train…\" autocomplete=\"off\" id=\"status_popup_custom_status_text\" size=\"100\" type=\"text\" value=\"Shipping Rust\" name=\"user[custom_status_text]\" />\n</div>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_custom_status_expires_in\">Clear after</label>\n  <select class=\"input\" id=\"status_popup_custom_status_expires_in\" name=\"user[custom_status_expires_in]\"><option value=\"minutes_30\">30 minutes</option>\n<option value=\"hour_1\">1 hour</option>\n<option value=\"hours_4\">4 hours</option>\n<option value=\"today\">Today</option>\n<option value=\"week\">This week</option>\n<option selected=\"selected\" value=\"never\">Never</option></select>\n</div>\n\n\n      <div class=\"status-popup__actions\">\n        <button name=\"button\" type=\"submit\" class=\"btn btn--reversed\">Save</button>\n        <button name=\"user[clear_custom_status]\" type=\"submit\" value=\"1\" class=\"btn\">Clear status</button>\n        <a class=\"btn\" href=\"/users/127326141/card\">Cancel</a>\n      </div>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "name": "invalid_text",
+      "fields": {
+        "presence": "auto",
+        "emoji": "😀😀😀😀😀😀😀😀😀",
+        "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "errors": {
+          "custom_status_emoji": [
+            "is too long (maximum is 8 characters)"
+          ],
+          "custom_status_text": [
+            "is too long (maximum is 100 characters)"
+          ]
+        }
+      },
+      "html": "<turbo-frame id=\"user_card\">\n  <div class=\"status-popup\">\n    <h2 class=\"status-popup__title\">Set a status</h2>\n\n    <form class=\"flex flex-column\" data-action=\"turbo:submit-end-&gt;profile-card#statusSaved\" action=\"/users/me/status\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/status\" />\n      <div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_presence_setting\">Presence</label>\n  <select class=\"input\" id=\"status_popup_presence_setting\" name=\"user[presence_setting]\"><option selected=\"selected\" value=\"auto\">Automatic</option>\n<option value=\"dnd\">Do not disturb</option>\n<option value=\"invisible\">Invisible (appear offline)</option></select>\n</div>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <div class=\"field_with_errors\"><label class=\"txt-medium\" for=\"status_popup_custom_status_emoji\">Emoji</label></div>\n  <div class=\"field_with_errors\"><input class=\"input\" maxlength=\"8\" placeholder=\"😀\" autocomplete=\"off\" size=\"6\" id=\"status_popup_custom_status_emoji\" type=\"text\" value=\"😀😀😀😀😀😀😀😀😀\" name=\"user[custom_status_emoji]\" /></div>\n  <div class=\"field_with_errors\"><label class=\"txt-medium for-screen-reader\" for=\"status_popup_custom_status_text\">Status text</label></div>\n  <div class=\"field_with_errors\"><input class=\"input flex-item-grow\" maxlength=\"100\" placeholder=\"Working from the train…\" autocomplete=\"off\" id=\"status_popup_custom_status_text\" size=\"100\" type=\"text\" value=\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\" name=\"user[custom_status_text]\" /></div>\n</div>\n    <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">Custom status is too long (maximum is 8 characters).</p>\n    <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">Custom status is too long (maximum is 100 characters).</p>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_custom_status_expires_in\">Clear after</label>\n  <select class=\"input\" id=\"status_popup_custom_status_expires_in\" name=\"user[custom_status_expires_in]\"><option value=\"minutes_30\">30 minutes</option>\n<option value=\"hour_1\">1 hour</option>\n<option value=\"hours_4\">4 hours</option>\n<option value=\"today\">Today</option>\n<option value=\"week\">This week</option>\n<option selected=\"selected\" value=\"never\">Never</option></select>\n</div>\n\n\n      <div class=\"status-popup__actions\">\n        <button name=\"button\" type=\"submit\" class=\"btn btn--reversed\">Save</button>\n        <button name=\"user[clear_custom_status]\" type=\"submit\" value=\"1\" class=\"btn\">Clear status</button>\n        <a class=\"btn\" href=\"/users/127326141/card\">Cancel</a>\n      </div>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "name": "invalid_expiry",
+      "fields": {
+        "presence": "auto",
+        "emoji": "🚀",
+        "text": "Shipping Rust",
+        "errors": {
+          "custom_status_expires_in": [
+            "is not valid"
+          ]
+        }
+      },
+      "html": "<turbo-frame id=\"user_card\">\n  <div class=\"status-popup\">\n    <h2 class=\"status-popup__title\">Set a status</h2>\n\n    <form class=\"flex flex-column\" data-action=\"turbo:submit-end-&gt;profile-card#statusSaved\" action=\"/users/me/status\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/users/me/status\" />\n      <div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_presence_setting\">Presence</label>\n  <select class=\"input\" id=\"status_popup_presence_setting\" name=\"user[presence_setting]\"><option selected=\"selected\" value=\"auto\">Automatic</option>\n<option value=\"dnd\">Do not disturb</option>\n<option value=\"invisible\">Invisible (appear offline)</option></select>\n</div>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <label class=\"txt-medium\" for=\"status_popup_custom_status_emoji\">Emoji</label>\n  <input class=\"input\" maxlength=\"8\" placeholder=\"😀\" autocomplete=\"off\" size=\"6\" id=\"status_popup_custom_status_emoji\" type=\"text\" value=\"🚀\" name=\"user[custom_status_emoji]\" />\n  <label class=\"txt-medium for-screen-reader\" for=\"status_popup_custom_status_text\">Status text</label>\n  <input class=\"input flex-item-grow\" maxlength=\"100\" placeholder=\"Working from the train…\" autocomplete=\"off\" id=\"status_popup_custom_status_text\" size=\"100\" type=\"text\" value=\"Shipping Rust\" name=\"user[custom_status_text]\" />\n</div>\n\n<div class=\"flex align-center gap pad-block-half\">\n  <div class=\"field_with_errors\"><label class=\"txt-medium\" for=\"status_popup_custom_status_expires_in\">Clear after</label></div>\n  <div class=\"field_with_errors\"><select class=\"input\" id=\"status_popup_custom_status_expires_in\" name=\"user[custom_status_expires_in]\"><option value=\"minutes_30\">30 minutes</option>\n<option value=\"hour_1\">1 hour</option>\n<option value=\"hours_4\">4 hours</option>\n<option value=\"today\">Today</option>\n<option value=\"week\">This week</option>\n<option selected=\"selected\" value=\"never\">Never</option></select></div>\n</div>\n  <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">Clear after is not valid.</p>\n\n\n      <div class=\"status-popup__actions\">\n        <button name=\"button\" type=\"submit\" class=\"btn btn--reversed\">Save</button>\n        <button name=\"user[clear_custom_status]\" type=\"submit\" value=\"1\" class=\"btn\">Clear status</button>\n        <a class=\"btn\" href=\"/users/127326141/card\">Cancel</a>\n      </div>\n</form>  </div>\n</turbo-frame>"
+    }
+  ],
+  "http": [
+    {
+      "name": "frame_save",
+      "path": "/users/me/status",
+      "params": {
+        "presence_setting": "dnd",
+        "custom_status_emoji": "🚂",
+        "custom_status_text": "On a train",
+        "custom_status_expires_in": "hour_1"
+      },
+      "frame": true,
+      "status": 303,
+      "location": "http://campfire.test/users/127326141/card",
+      "state": {
+        "presence_setting": "dnd",
+        "custom_status_emoji": "🚂",
+        "custom_status_text": "On a train",
+        "custom_status_expires_at": "2026-03-02 17:00:00 UTC"
+      }
+    },
+    {
+      "name": "page_save",
+      "path": "/users/me/status",
+      "params": {
+        "presence_setting": "invisible"
+      },
+      "frame": false,
+      "status": 302,
+      "location": "http://campfire.test/users/me/profile",
+      "state": {
+        "presence_setting": "invisible",
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      }
+    },
+    {
+      "name": "frame_clear",
+      "path": "/users/me/status",
+      "params": {
+        "clear_custom_status": "1"
+      },
+      "frame": true,
+      "status": 303,
+      "location": "http://campfire.test/users/127326141/card",
+      "state": {
+        "presence_setting": "auto",
+        "custom_status_emoji": null,
+        "custom_status_text": null,
+        "custom_status_expires_at": null
+      }
+    },
+    {
+      "name": "frame_bad_presence",
+      "path": "/users/me/status",
+      "params": {
+        "presence_setting": "away"
+      },
+      "frame": true,
+      "status": 422,
+      "location": null,
+      "state": {
+        "presence_setting": "auto",
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      }
+    },
+    {
+      "name": "frame_bad_expiry",
+      "path": "/users/me/status",
+      "params": {
+        "custom_status_expires_in": "wrong"
+      },
+      "frame": true,
+      "status": 422,
+      "location": null,
+      "state": {
+        "presence_setting": "auto",
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Shipping Rust",
+        "custom_status_expires_at": null
+      }
+    },
+    {
+      "name": "foreign_path",
+      "path": "/users/149087659/status",
+      "params": {
+        "custom_status_text": "Self only"
+      },
+      "frame": true,
+      "status": 303,
+      "location": "http://campfire.test/users/127326141/card",
+      "state": {
+        "presence_setting": "auto",
+        "custom_status_emoji": "🚀",
+        "custom_status_text": "Self only",
+        "custom_status_expires_at": null
+      }
+    }
+  ]
+}

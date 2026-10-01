@@ -1,0 +1,19 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "user": false,
+    "agent": false,
+    "webhook": 0,
+    "credential": true,
+    "grant": true,
+    "grant_revoked": true,
+    "own_message": false,
+    "other_message": true,
+    "pins": 0,
+    "boosts": 0,
+    "saves": 0,
+    "thread": false,
+    "survivor_owner": null,
+    "memberships": 0
+  }
+}

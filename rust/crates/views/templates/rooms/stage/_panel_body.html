@@ -1,0 +1,7 @@
+<div id="{{ stage.dom_id("stage_panel") }}" class="stage-panel__body"
+     data-viewer-stage-role="{{ stage.viewer().role }}"
+     data-viewer-membership-id="{{ stage.viewer().id }}">
+{% if rejoin %}    <span data-controller="stage-rejoin" data-stage-rejoin-room-id-value="{{ stage.room_id }}" hidden></span>
+{% endif %}  {{ stage.render("controls")|safe }}
+  {{ stage.render("roster")|safe }}
+</div>{{ "\n" }}

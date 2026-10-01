@@ -1,0 +1,876 @@
+[
+  {
+    "name": "pat",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "pat",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-pasted",
+      "refresh_token": null,
+      "token_expires_at": null
+    },
+    "profile": "octocat",
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "blank",
+    "token": "  ",
+    "request_body": {
+      "access_token": "  "
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "alert": "Paste a token to connect GitHub."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [],
+    "audit": []
+  },
+  {
+    "name": "rejected",
+    "user_status": 401,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "alert": "GitHub rejected that token. Check it and try again."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": []
+  },
+  {
+    "name": "network",
+    "user_status": 500,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "alert": "Could not reach GitHub. Try again."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": []
+  },
+  {
+    "name": "profile_replace",
+    "profile": "octocat",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "pat",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-pasted",
+      "refresh_token": null,
+      "token_expires_at": null
+    },
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "release_unverified",
+    "claimant": "OctoCat",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "pat",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-pasted",
+      "refresh_token": null,
+      "token_expires_at": null
+    },
+    "profile": "octocat",
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "verified_conflict",
+    "claimant": "octocat",
+    "claimant_verified": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub connected as octocat. Another member's linked GitHub account already uses that username, so your profile username was left unchanged."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "pat",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-pasted",
+      "refresh_token": null,
+      "token_expires_at": null
+    },
+    "profile": null,
+    "claimant_login": "octocat",
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "relink_disconnected",
+    "preset": "pat",
+    "initially_disconnected": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "pat",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-pasted",
+      "refresh_token": null,
+      "token_expires_at": null
+    },
+    "profile": "octocat",
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "pat_replaces_app",
+    "preset": "app",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "pat",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-pasted",
+      "refresh_token": null,
+      "token_expires_at": null
+    },
+    "profile": "octocat",
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ],
+      [
+        "DELETE",
+        "/applications/fixture-client/token",
+        "fixture-old-token"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "delete_pat",
+    "method": "DELETE",
+    "preset": "pat",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub disconnected."
+    },
+    "account": null,
+    "profile": "old-login",
+    "claimant_login": null,
+    "requests": [],
+    "audit": [
+      {
+        "action": "github.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "old-login"
+        }
+      }
+    ]
+  },
+  {
+    "name": "delete_app",
+    "method": "DELETE",
+    "preset": "app",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub disconnected."
+    },
+    "account": null,
+    "profile": "old-login",
+    "claimant_login": null,
+    "requests": [
+      [
+        "DELETE",
+        "/applications/fixture-client/grant",
+        "fixture-old-token"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "old-login"
+        }
+      }
+    ]
+  },
+  {
+    "name": "delete_expired_app",
+    "method": "DELETE",
+    "preset": "app",
+    "expired": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub disconnected."
+    },
+    "account": null,
+    "profile": "old-login",
+    "claimant_login": null,
+    "requests": [
+      [
+        "POST",
+        "/login/oauth/access_token",
+        "fixture-old-refresh"
+      ],
+      [
+        "DELETE",
+        "/applications/fixture-client/grant",
+        "fixture-fresh-token"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "old-login"
+        }
+      }
+    ]
+  },
+  {
+    "name": "delete_refresh_error",
+    "method": "DELETE",
+    "preset": "app",
+    "expired": true,
+    "refresh_error": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub disconnected."
+    },
+    "account": null,
+    "profile": "old-login",
+    "claimant_login": null,
+    "requests": [
+      [
+        "POST",
+        "/login/oauth/access_token",
+        "fixture-old-refresh"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.disconnect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "old-login"
+        }
+      }
+    ]
+  },
+  {
+    "name": "delete_missing",
+    "method": "DELETE",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub disconnected."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [],
+    "audit": []
+  },
+  {
+    "name": "bot",
+    "bot": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/account/bots/813/edit",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "pat",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-pasted",
+      "refresh_token": null,
+      "token_expires_at": null
+    },
+    "profile": null,
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "agent.github.connect",
+        "actor_id": 811,
+        "target_type": "Agent",
+        "target_id": 881,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "bot_relink",
+    "bot": true,
+    "preset": "pat",
+    "initially_disconnected": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/account/bots/813/edit",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "pat",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-pasted",
+      "refresh_token": null,
+      "token_expires_at": null
+    },
+    "profile": null,
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "agent.github.connect",
+        "actor_id": 811,
+        "target_type": "Agent",
+        "target_id": 881,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "bot_blank",
+    "bot": true,
+    "token": " ",
+    "request_body": {
+      "access_token": " "
+    },
+    "status": 302,
+    "location": "http://example.org/account/bots/813/edit",
+    "flash": {
+      "alert": "Paste a token to connect GitHub."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [],
+    "audit": []
+  },
+  {
+    "name": "bot_rejected",
+    "bot": true,
+    "user_status": 401,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/account/bots/813/edit",
+    "flash": {
+      "alert": "GitHub rejected that token. Check it and try again."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": []
+  },
+  {
+    "name": "bot_network",
+    "bot": true,
+    "user_status": 500,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/account/bots/813/edit",
+    "flash": {
+      "alert": "Could not reach GitHub. Try again."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [
+      [
+        "GET",
+        "/user",
+        "fixture-pasted"
+      ]
+    ],
+    "audit": []
+  },
+  {
+    "name": "bot_unlink",
+    "bot": true,
+    "method": "DELETE",
+    "preset": "pat",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/account/bots/813/edit",
+    "flash": {
+      "notice": "GitHub disconnected."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [],
+    "audit": [
+      {
+        "action": "agent.github.disconnect",
+        "actor_id": 811,
+        "target_type": "Agent",
+        "target_id": 881,
+        "details": {
+          "github_login": "old-login"
+        }
+      }
+    ]
+  },
+  {
+    "name": "callback",
+    "callback": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "app",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-app-token",
+      "refresh_token": "fixture-refresh",
+      "token_expires_at": "2026-01-01T20:00:00Z"
+    },
+    "profile": "octocat",
+    "claimant_login": null,
+    "requests": [
+      [
+        "POST",
+        "/login/oauth/access_token",
+        "fixture-code",
+        "http://example.org/github/app/callback"
+      ],
+      [
+        "GET",
+        "/user",
+        "fixture-app-token"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "callback_relink",
+    "callback": true,
+    "preset": "app",
+    "expired": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "notice": "GitHub connected as octocat."
+    },
+    "account": {
+      "github_login": "octocat",
+      "token_source": "app",
+      "disconnected_reason": null,
+      "last_error": null,
+      "access_token": "fixture-app-token",
+      "refresh_token": "fixture-refresh",
+      "token_expires_at": "2026-01-01T20:00:00Z"
+    },
+    "profile": "octocat",
+    "claimant_login": null,
+    "requests": [
+      [
+        "POST",
+        "/login/oauth/access_token",
+        "fixture-code",
+        "http://example.org/github/app/callback"
+      ],
+      [
+        "GET",
+        "/user",
+        "fixture-app-token"
+      ],
+      [
+        "DELETE",
+        "/applications/fixture-client/token",
+        "fixture-old-token"
+      ]
+    ],
+    "audit": [
+      {
+        "action": "github.account.connect",
+        "actor_id": 811,
+        "target_type": "User",
+        "target_id": 811,
+        "details": {
+          "github_login": "octocat"
+        }
+      }
+    ]
+  },
+  {
+    "name": "callback_stale",
+    "callback": true,
+    "bad_state": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "alert": "GitHub connection expired. Try again."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [],
+    "audit": []
+  },
+  {
+    "name": "callback_wrong_session",
+    "callback": true,
+    "wrong_session": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "alert": "GitHub connection expired. Try again."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [],
+    "audit": []
+  },
+  {
+    "name": "callback_error",
+    "callback": true,
+    "error": "access_denied",
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "alert": "GitHub connection was not approved."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [],
+    "audit": []
+  },
+  {
+    "name": "callback_oauth_error",
+    "callback": true,
+    "oauth_error": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "alert": "GitHub rejected the connection. Try again."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [
+      [
+        "POST",
+        "/login/oauth/access_token",
+        "fixture-code",
+        "http://example.org/github/app/callback"
+      ]
+    ],
+    "audit": []
+  },
+  {
+    "name": "callback_user_rejected",
+    "callback": true,
+    "user_status": 401,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 302,
+    "location": "http://example.org/users/me/profile",
+    "flash": {
+      "alert": "GitHub rejected the connection. Try again."
+    },
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [
+      [
+        "POST",
+        "/login/oauth/access_token",
+        "fixture-code",
+        "http://example.org/github/app/callback"
+      ],
+      [
+        "GET",
+        "/user",
+        "fixture-app-token"
+      ]
+    ],
+    "audit": []
+  },
+  {
+    "name": "callback_unconfigured",
+    "callback": true,
+    "unconfigured": true,
+    "request_body": {
+      "access_token": "fixture-pasted"
+    },
+    "status": 404,
+    "location": null,
+    "flash": {},
+    "account": null,
+    "profile": null,
+    "claimant_login": null,
+    "requests": [],
+    "audit": []
+  }
+]

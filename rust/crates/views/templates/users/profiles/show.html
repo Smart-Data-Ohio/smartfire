@@ -15,7 +15,7 @@
       </button>
 {% endfilter %}  </div>
 {% endblock %}
-{% block content %}<section class="panel flex flex-column gap" style="view-transition-name: avatar-{{ user.id }}">
+{% block content %}{{ "\n\n" }}<section class="panel profile-settings flex flex-column gap" style="view-transition-name: avatar-{{ user.id }}">
   {% include "pwa/_install_instructions.html" %}
 
   <div class="align-center center avatar__form gap" data-controller="upload-preview">
@@ -61,7 +61,7 @@
 {% if has_password %}        <div class="flex align-center gap">
           <label class="flex align-center gap flex-item-grow input input--actor">
             {{ h::legacy_tag("input", h::attrs().type_("password").name("user[current_password]").id("user_current_password").class("input txt-large").autocomplete("current-password").placeholder("Current password (to change email)").maxlength(72).attr("aria-label", "Current password, required to change your email address")) }}
-            {{ h::image_tag(ctx, "password.svg", h::attrs().aria_hidden().size(24)) }}
+            {{ h::image_tag(ctx, "password.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
           </label>
         </div>
 {% endif %}{% if let Some(error) = current_password_error %}        <p class="txt-small margin-none" style="color: var(--color-negative)">
@@ -86,21 +86,32 @@
         </label>
       </div>
 
-      {{ h::profile_form_submit_button(ctx) }}
+{% include "users/profiles/_inbox_calls.html" %}      {{ h::profile_form_submit_button(ctx) }}
     </div>
 {% endfilter %}
+  {% include "users/profiles/_status.html" %}
+
+  {{ self.notification_form() }}
+
+  {{ self.appearance_panel() }}
+
+  {% include "users/profiles/_integrations.html" %}
+
+
   <div class="margin-block pad-inline pad-block fill-shade border-radius">
     <menu class="flex flex-column gap margin-none pad">
       {% for membership in shared_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}
+
 {% if !direct_memberships.is_empty() && !shared_memberships.is_empty() %}        <hr class="separator full-width" style="--border-style: solid">
 {% endif %}
-      {% for membership in direct_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}    </menu>
+      {% for membership in direct_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}
+    </menu>
   </div>
 
-  {{ self.security_panel() }}
+  {% if !user.bot() %}{{ self.security_panel() }}{% endif %}
 
   {% include "users/profiles/_sessions.html" %}
 
   {% include "users/profiles/_transfer.html" %}
-</section>
+{{ "\n" }}</section>
 {% endblock %}

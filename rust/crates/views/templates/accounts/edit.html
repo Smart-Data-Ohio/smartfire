@@ -10,12 +10,26 @@
         {{ h::image_tag(ctx, "bot.svg", h::attrs().aria_hidden().size(20)) }}
         <span class="for-screen-reader">Set up chat bots</span>
 {% endfilter %}
+      {% filter link_to(h::routes::account_icons(), h::attrs().class("btn").style("view-transition-name: workspace-icons")) %}
+        {{ h::image_tag(ctx, "boost.svg", h::attrs().aria_hidden().size(20)) }}
+        <span class="for-screen-reader">Manage workspace icons</span>
+{% endfilter %}
       {% filter link_to(h::routes::edit_account_custom_styles(), h::attrs().class("btn").style("view-transition-name: custom-styles")) %}
         {{ h::image_tag(ctx, "art.svg", h::attrs().size(20).aria_hidden()) }}
         <span class="for-screen-reader">Custom styles</span>
+{% endfilter %}
+      {% filter link_to(h::routes::account_audit_log(), h::attrs().class("btn").style("view-transition-name: audit-log")) %}
+        {{ h::image_tag(ctx, "common-file-text.svg", h::attrs().size(20).aria_hidden()) }}
+        <span class="for-screen-reader">Audit log</span>
+{% endfilter %}
+      {% filter link_to(h::routes::account_slack_import(), h::attrs().class("btn").style("view-transition-name: slack-import")) %}
+        {{ h::image_tag(ctx, "download.svg", h::attrs().size(20).aria_hidden()) }}
+        <span class="for-screen-reader">Slack import</span>
 {% endfilter %}    </div>
 {% endif %}{% endblock %}
-{% block content %}<section class="panel txt-align-center flex flex-column gap" style="view-transition-name: account-settings">
+{% block content %}
+
+<section class="panel txt-align-center flex flex-column gap" style="view-transition-name: account-settings">
 {% if ctx.can_administer() %}    <div class="align-center center avatar__form gap" data-controller="upload-preview">
 {% let form = h::form_with(self.account_action()).model("account").method("patch").class("txt--medium").data("controller", "form") %}      {% filter form_with(form) %}
         <label class="btn input--file">
@@ -54,6 +68,7 @@
         <div class="flex-item-grow flex align-center gap txt-align-start">
           {{ h::image_tag(ctx, "crown.svg", h::attrs().class("colorize--black").aria_hidden().size(18)) }} Must be admin to create new rooms
         </div>
+{{ "        " }}
 {% let settings_form = form.fields_for("settings") %}          {{ settings_form.hidden_field("restrict_room_creation_to_administrators", None, h::attrs().value((!restrict_room_creation_to_administrators).to_string())) }}
 
         <label class="switch">
@@ -79,13 +94,20 @@
     <menu class="flex flex-column gap margin-none pad">
       <turbo-frame id="account_users">
         {% for user in administrators %}{% include "accounts/users/_user.html" %}{% endfor %}
-{% if !administrators.is_empty() && !members.is_empty() %}          <hr class="separator full-width" style="--border-style: solid">
+{% if !administrators.is_empty() && !members.is_empty() %}
+          <hr class="separator full-width" style="--border-style: solid">
 {% endif %}
-        {% for user in members %}{% include "accounts/users/_user.html" %}{% endfor %}        {% if let Some(page) = next_page %}{% include "accounts/users/_next_page_container.html" %}{% endif %}
+        {% for user in members %}{% include "accounts/users/_user.html" %}{% endfor %}
+        {% if let Some(page) = next_page %}{% include "accounts/users/_next_page_container.html" %}{% endif %}
       </turbo-frame>
     </menu>
   </div>
 </section>
+
+{% if ctx.can_administer() %}  <section class="panel txt-align-center">
+    {{ h::link_to_text("Integration health", h::routes::account_integrations_health().as_str(), h::attrs().class("btn")) }}
+  </section>
+{% endif %}
 {% endblock %}
-{% block footer %}  <div class="txt-align-center center margin-block-double txt-subtle">Campfire&trade; version {{ h::version_badge(ctx) }}</div>
+{% block footer %}  <div class="txt-align-center center margin-block-double txt-subtle">Smartfire&trade; version {{ h::version_badge(ctx) }}</div>
 {% endblock %}

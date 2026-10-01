@@ -1,0 +1,1552 @@
+[
+  {
+    "name": "comments_success",
+    "linked": true,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": "Comment posted on GitHub as @oracle.",
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__notice\" role=\"status\">Comment posted on GitHub as @oracle.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/issues/12/comments",
+        {
+          "body": "Nice work"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "comments_stream_success",
+    "linked": true,
+    "stream": true,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": "Comment posted on GitHub as @oracle.",
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 200,
+    "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+    "body": "<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_817\"><template><turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__notice\" role=\"status\">Comment posted on GitHub as @oracle.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame></template></turbo-stream>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/issues/12/comments",
+        {
+          "body": "Nice work"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "comments_unlinked",
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": false,
+      "usable": false,
+      "login": "",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <p class=\"github-pr-write__connect\">\n      <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Connect GitHub</a> to comment and review from here as yourself.\n    </p>\n</turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "comments_disconnected",
+    "linked": true,
+    "initially_disconnected": true,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": false,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <p class=\"github-pr-write__connect\">\n      GitHub rejected your token. <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Reconnect GitHub</a> to comment and review from here.\n    </p>\n</turbo-frame>",
+    "requests": [],
+    "disconnected": "Disconnected"
+  },
+  {
+    "name": "comments_unauthorized",
+    "linked": true,
+    "api_status": 401,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": false,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub rejected your token. Reconnect to post.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub rejected your token. Reconnect to post.</p>\n\n\n    <p class=\"github-pr-write__connect\">\n      GitHub rejected your token. <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Reconnect GitHub</a> to comment and review from here.\n    </p>\n</turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/issues/12/comments",
+        {
+          "body": "Nice work"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": "GitHub rejected the linked token (401)"
+  },
+  {
+    "name": "comments_refused",
+    "linked": true,
+    "api_status": 403,
+    "stream": true,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub refused: Denied <review> @​[Member] Try again",
+      "comment_body": "Nice work",
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 422,
+    "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+    "body": "<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_817\"><template><turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub refused: Denied &lt;review&gt; @​[Member] Try again</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\nNice work</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame></template></turbo-stream>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/issues/12/comments",
+        {
+          "body": "Nice work"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "comments_invalid",
+    "linked": true,
+    "api_status": 422,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub refused: Denied <review> @​[Member] Try again",
+      "comment_body": "Nice work",
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub refused: Denied &lt;review&gt; @​[Member] Try again</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\nNice work</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/issues/12/comments",
+        {
+          "body": "Nice work"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "comments_network",
+    "linked": true,
+    "api_status": 500,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub returned 500",
+      "comment_body": "Nice work",
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub returned 500</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\nNice work</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/issues/12/comments",
+        {
+          "body": "Nice work"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "comments_nonmember",
+    "member": false,
+    "linked": true,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 404,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "comments_unmapped",
+    "mapping": false,
+    "linked": true,
+    "action": "comments",
+    "submitted": {
+      "body": " Nice work "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": " Nice work "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 404,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "reviews_success",
+    "linked": true,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": "Approved on GitHub as @oracle.",
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__notice\" role=\"status\">Approved on GitHub as @oracle.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/reviews",
+        {
+          "event": "APPROVE"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "reviews_stream_success",
+    "linked": true,
+    "stream": true,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": "Approved on GitHub as @oracle.",
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 200,
+    "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+    "body": "<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_817\"><template><turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__notice\" role=\"status\">Approved on GitHub as @oracle.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame></template></turbo-stream>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/reviews",
+        {
+          "event": "APPROVE"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "reviews_unlinked",
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": false,
+      "usable": false,
+      "login": "",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <p class=\"github-pr-write__connect\">\n      <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Connect GitHub</a> to comment and review from here as yourself.\n    </p>\n</turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "reviews_disconnected",
+    "linked": true,
+    "initially_disconnected": true,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": false,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <p class=\"github-pr-write__connect\">\n      GitHub rejected your token. <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Reconnect GitHub</a> to comment and review from here.\n    </p>\n</turbo-frame>",
+    "requests": [],
+    "disconnected": "Disconnected"
+  },
+  {
+    "name": "reviews_unauthorized",
+    "linked": true,
+    "api_status": 401,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": false,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub rejected your token. Reconnect to post.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub rejected your token. Reconnect to post.</p>\n\n\n    <p class=\"github-pr-write__connect\">\n      GitHub rejected your token. <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Reconnect GitHub</a> to comment and review from here.\n    </p>\n</turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/reviews",
+        {
+          "event": "APPROVE"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": "GitHub rejected the linked token (401)"
+  },
+  {
+    "name": "reviews_refused",
+    "linked": true,
+    "api_status": 403,
+    "stream": true,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub refused: Denied <review> @​[Member] Try again",
+      "comment_body": null,
+      "review_body": "",
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+    "body": "<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_817\"><template><turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub refused: Denied &lt;review&gt; @​[Member] Try again</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame></template></turbo-stream>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/reviews",
+        {
+          "event": "APPROVE"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "reviews_invalid",
+    "linked": true,
+    "api_status": 422,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub refused: Denied <review> @​[Member] Try again",
+      "comment_body": null,
+      "review_body": "",
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub refused: Denied &lt;review&gt; @​[Member] Try again</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/reviews",
+        {
+          "event": "APPROVE"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "reviews_network",
+    "linked": true,
+    "api_status": 500,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub returned 500",
+      "comment_body": null,
+      "review_body": "",
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub returned 500</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/reviews",
+        {
+          "event": "APPROVE"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "reviews_nonmember",
+    "member": false,
+    "linked": true,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 404,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "reviews_unmapped",
+    "mapping": false,
+    "linked": true,
+    "action": "reviews",
+    "submitted": {
+      "event": "APPROVE"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "APPROVE"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 404,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "review_requests_success",
+    "linked": true,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": "Requested review from @alice, @bob on GitHub as @oracle.",
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__notice\" role=\"status\">Requested review from @alice, @bob on GitHub as @oracle.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/requested_reviewers",
+        {
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "review_requests_stream_success",
+    "linked": true,
+    "stream": true,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": "Requested review from @alice, @bob on GitHub as @oracle.",
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 200,
+    "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+    "body": "<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_817\"><template><turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__notice\" role=\"status\">Requested review from @alice, @bob on GitHub as @oracle.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame></template></turbo-stream>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/requested_reviewers",
+        {
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "review_requests_unlinked",
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": false,
+      "usable": false,
+      "login": "",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <p class=\"github-pr-write__connect\">\n      <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Connect GitHub</a> to comment and review from here as yourself.\n    </p>\n</turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "review_requests_disconnected",
+    "linked": true,
+    "initially_disconnected": true,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": false,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <p class=\"github-pr-write__connect\">\n      GitHub rejected your token. <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Reconnect GitHub</a> to comment and review from here.\n    </p>\n</turbo-frame>",
+    "requests": [],
+    "disconnected": "Disconnected"
+  },
+  {
+    "name": "review_requests_unauthorized",
+    "linked": true,
+    "api_status": 401,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": false,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub rejected your token. Reconnect to post.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub rejected your token. Reconnect to post.</p>\n\n\n    <p class=\"github-pr-write__connect\">\n      GitHub rejected your token. <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Reconnect GitHub</a> to comment and review from here.\n    </p>\n</turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/requested_reviewers",
+        {
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": "GitHub rejected the linked token (401)"
+  },
+  {
+    "name": "review_requests_refused",
+    "linked": true,
+    "api_status": 403,
+    "stream": true,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub refused: Denied <review> @​[Member] Try again",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": " @Alice,alice @BOB,bob "
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+    "body": "<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_817\"><template><turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub refused: Denied &lt;review&gt; @​[Member] Try again</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" value=\" @Alice,alice @BOB,bob \" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame></template></turbo-stream>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/requested_reviewers",
+        {
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "review_requests_invalid",
+    "linked": true,
+    "api_status": 422,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub refused: Denied <review> @​[Member] Try again",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": " @Alice,alice @BOB,bob "
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub refused: Denied &lt;review&gt; @​[Member] Try again</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" value=\" @Alice,alice @BOB,bob \" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/requested_reviewers",
+        {
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "review_requests_network",
+    "linked": true,
+    "api_status": 500,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub returned 500",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": " @Alice,alice @BOB,bob "
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub returned 500</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" value=\" @Alice,alice @BOB,bob \" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/requested_reviewers",
+        {
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "review_requests_nonmember",
+    "member": false,
+    "linked": true,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 404,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "review_requests_unmapped",
+    "mapping": false,
+    "linked": true,
+    "action": "review_requests",
+    "submitted": {
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " @Alice,alice @BOB,bob "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 404,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "comment_blank",
+    "action": "comments",
+    "linked": true,
+    "submitted": {
+      "body": "  "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "Write a comment first.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "body": "  "
+    },
+    "path": "/rooms/815/github/pull_request_comments",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">Write a comment first.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "review_note",
+    "action": "reviews",
+    "linked": true,
+    "submitted": {
+      "event": "REQUEST_CHANGES",
+      "body": " Fix the typo "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": "Requested changes on GitHub as @oracle.",
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "REQUEST_CHANGES",
+      "body": " Fix the typo "
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__notice\" role=\"status\">Requested changes on GitHub as @oracle.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/reviews",
+        {
+          "event": "REQUEST_CHANGES",
+          "body": "Fix the typo"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "review_blank",
+    "action": "reviews",
+    "linked": true,
+    "stream": true,
+    "submitted": {
+      "event": "REQUEST_CHANGES",
+      "body": " "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "Add a note describing the requested changes.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "REQUEST_CHANGES",
+      "body": " "
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/vnd.turbo-stream.html; charset=utf-8",
+    "body": "<turbo-stream action=\"replace\" target=\"github_write_actions_channel_thread_817\"><template><turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">Add a note describing the requested changes.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame></template></turbo-stream>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "review_event",
+    "action": "reviews",
+    "linked": true,
+    "submitted": {
+      "event": "COMMENT"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "Choose Approve or Request changes.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "COMMENT"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">Choose Approve or Request changes.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "review_failed_note",
+    "action": "reviews",
+    "linked": true,
+    "api_status": 422,
+    "submitted": {
+      "event": "REQUEST_CHANGES",
+      "body": "Fix the typo"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "GitHub refused: Denied <review> @​[Member] Try again",
+      "comment_body": null,
+      "review_body": "Fix the typo",
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "event": "REQUEST_CHANGES",
+      "body": "Fix the typo"
+    },
+    "path": "/rooms/815/github/pull_request_reviews",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">GitHub refused: Denied &lt;review&gt; @​[Member] Try again</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\nFix the typo</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [
+      [
+        "POST",
+        "/repos/rails/rails/pulls/12/reviews",
+        {
+          "event": "REQUEST_CHANGES",
+          "body": "Fix the typo"
+        },
+        "fixture-viewer-token"
+      ]
+    ],
+    "disconnected": null
+  },
+  {
+    "name": "reviewers_invalid",
+    "action": "review_requests",
+    "linked": true,
+    "submitted": {
+      "reviewers": "alice, bob!!"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "Enter GitHub usernames separated by commas.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": "alice, bob!!"
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": "alice, bob!!"
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">Enter GitHub usernames separated by commas.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" value=\"alice, bob!!\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "reviewers_empty",
+    "action": "review_requests",
+    "linked": true,
+    "submitted": {
+      "reviewers": " "
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "Enter GitHub usernames separated by commas.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": " "
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": " "
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">Enter GitHub usernames separated by commas.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" value=\" \" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "reviewers_many",
+    "action": "review_requests",
+    "linked": true,
+    "submitted": {
+      "reviewers": "user1, user2, user3, user4, user5, user6, user7, user8, user9, user10, user11, user12, user13, user14, user15, user16"
+    },
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": "Enter GitHub usernames separated by commas.",
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": "user1, user2, user3, user4, user5, user6, user7, user8, user9, user10, user11, user12, user13, user14, user15, user16"
+    },
+    "request_body": {
+      "pull_request_id": 816,
+      "reviewers": "user1, user2, user3, user4, user5, user6, user7, user8, user9, user10, user11, user12, user13, user14, user15, user16"
+    },
+    "path": "/rooms/815/github/pull_request_review_requests",
+    "status": 422,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n    <p class=\"github-pr-write__error\" role=\"alert\">Enter GitHub usernames separated by commas.</p>\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" value=\"user1, user2, user3, user4, user5, user6, user7, user8, user9, user10, user11, user12, user13, user14, user15, user16\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "show_linked",
+    "linked": true,
+    "action": "show",
+    "submitted": {},
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": true,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816
+    },
+    "path": "/rooms/815/github/pull_request_write_actions/816",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <form class=\"github-pr-write__comment\" action=\"/rooms/815/github/pull_request_comments\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" required=\"required\" class=\"input\" placeholder=\"Comment on GitHub as @oracle…\" aria-label=\"Comment on GitHub\" name=\"body\" id=\"body\">\n</textarea>\n      <input type=\"submit\" name=\"commit\" value=\"Comment on GitHub\" class=\"btn\" data-disable-with=\"Comment on GitHub\" />\n</form>\n    <form class=\"github-pr-write__request-review\" action=\"/rooms/815/github/pull_request_review_requests\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <input class=\"input\" placeholder=\"GitHub usernames\" aria-label=\"GitHub usernames\" type=\"text\" name=\"reviewers\" id=\"reviewers\" />\n      <input type=\"submit\" name=\"commit\" value=\"Request review\" class=\"btn\" data-disable-with=\"Request review\" />\n</form>\n    <form class=\"github-pr-write__review\" action=\"/rooms/815/github/pull_request_reviews\" accept-charset=\"UTF-8\" method=\"post\">\n      <input type=\"hidden\" name=\"pull_request_id\" id=\"pull_request_id\" value=\"816\" />\n      <textarea rows=\"2\" class=\"input\" placeholder=\"Review note (required to request changes)\" aria-label=\"Review note\" name=\"body\" id=\"body\">\n</textarea>\n      <div class=\"github-pr-write__review-buttons\">\n        <button name=\"event\" type=\"submit\" value=\"APPROVE\" class=\"btn\">Approve</button>\n        <button name=\"event\" type=\"submit\" value=\"REQUEST_CHANGES\" class=\"btn btn--negative\">Request changes</button>\n      </div>\n</form></turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "show_unlinked",
+    "action": "show",
+    "submitted": {},
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": false,
+      "usable": false,
+      "login": "",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816
+    },
+    "path": "/rooms/815/github/pull_request_write_actions/816",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <p class=\"github-pr-write__connect\">\n      <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Connect GitHub</a> to comment and review from here as yourself.\n    </p>\n</turbo-frame>",
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "show_disconnected",
+    "linked": true,
+    "initially_disconnected": true,
+    "action": "show",
+    "submitted": {},
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": true,
+      "usable": false,
+      "login": "oracle",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816
+    },
+    "path": "/rooms/815/github/pull_request_write_actions/816",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\">\n\n\n    <p class=\"github-pr-write__connect\">\n      GitHub rejected your token. <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Reconnect GitHub</a> to comment and review from here.\n    </p>\n</turbo-frame>",
+    "requests": [],
+    "disconnected": "Disconnected"
+  },
+  {
+    "name": "show_nonmember",
+    "member": false,
+    "action": "show",
+    "submitted": {},
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": false,
+      "usable": false,
+      "login": "",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816
+    },
+    "path": "/rooms/815/github/pull_request_write_actions/816",
+    "status": 404,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "requests": [],
+    "disconnected": null
+  },
+  {
+    "name": "show_unmapped",
+    "mapping": false,
+    "action": "show",
+    "submitted": {},
+    "render_data": {
+      "thread_id": 817,
+      "room_id": 815,
+      "pull_request_id": 816,
+      "linked": false,
+      "usable": false,
+      "login": "",
+      "notice": null,
+      "alert": null,
+      "comment_body": null,
+      "review_body": null,
+      "reviewers_body": null
+    },
+    "request_body": {
+      "pull_request_id": 816
+    },
+    "path": "/rooms/815/github/pull_request_write_actions/816",
+    "status": 404,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "requests": [],
+    "disconnected": null
+  }
+]

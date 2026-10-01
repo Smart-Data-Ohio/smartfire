@@ -1035,6 +1035,16 @@
       "action": "defined"
     },
     {
+      "verb": "GET",
+      "spec": "/users/:user_id/status/edit(.:format)",
+      "endpoint": "users/statuses#edit",
+      "name": "edit_user_status",
+      "defaults": {
+        "user_id": "me"
+      },
+      "action": "defined"
+    },
+    {
       "verb": "PATCH",
       "spec": "/users/:user_id/status(.:format)",
       "endpoint": "users/statuses#update",
@@ -7911,6 +7921,61 @@
           },
           "default_override": "user_id",
           "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/push_subscriptions/2/edit?q=kept"
+        }
+      ]
+    },
+    {
+      "name": "edit_user_status",
+      "verb": "GET",
+      "spec": "/users/:user_id/status/edit(.:format)",
+      "endpoint": "users/statuses#edit",
+      "arguments": [],
+      "optional_parts": [
+        "format"
+      ],
+      "defaults": {
+        "user_id": "me"
+      },
+      "samples": [
+        {
+          "args": [],
+          "options": {},
+          "path": "/users/me/status/edit"
+        },
+        {
+          "args": [],
+          "options": {
+            "format": "json"
+          },
+          "path": "/users/me/status/edit.json"
+        },
+        {
+          "args": [],
+          "options": {
+            "q": "x y&z",
+            "a": "1",
+            "empty": "",
+            "gone": null
+          },
+          "path": "/users/me/status/edit?a=1&empty=&q=x+y%26z"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "7",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/7/status/edit?q=kept"
+        },
+        {
+          "args": [],
+          "options": {
+            "user_id": "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é",
+            "q": "kept"
+          },
+          "default_override": "user_id",
+          "path": "/users/a%20b%2Fc%3Fd%23e%25f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v%20%C3%A9/status/edit?q=kept"
         }
       ]
     },

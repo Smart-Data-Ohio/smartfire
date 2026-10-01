@@ -1,0 +1,7 @@
+{
+  "app/controllers/users_controller.rb": "744c1b27bb60c818830ea940708546212a6bdbd35be8ac4249f6a46be9a83d8b",
+  "app/views/users/new.html.erb": "f8cbd0c897d2fe6ad65558e9eefa0ae499ad02842e4b60c8baf2921fe68adf2d",
+  "app/helpers/users_helper.rb": "f696fbaedebbf60841a45dc96824ed0deb74e9a82a78c51f13531641ffd80b76",
+  "app/models/user.rb": "41c18c8325200bf8034554c4b107cc722d7b89aba32ade9d9944a7055587dd5b",
+  "app/controllers/concerns/authentication.rb": "1272a3b32303ba2002cf7b1602588d333b9ee5f164face014f387efc2961cf04"
+}

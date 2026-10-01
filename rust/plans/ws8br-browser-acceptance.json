@@ -1,0 +1,83 @@
+{
+  "reference": "d7c7de92",
+  "phase": "behaviour only; no screenshot or pixel comparisons",
+  "counting": "These are interacting browser probes on two independently copied seeds, not Rails Minitest execution counts or complete per-file system mappings.",
+  "probes": [
+    {
+      "script": "reference-tools/rooms/dm_browser.py",
+      "status": "passed from fresh clone at ad4ffef1",
+      "interactions": [
+        "case-insensitive filtering and empty state",
+        "Enter with retained hidden selection",
+        "Clear and count bars",
+        "persisted group membership after real form submission",
+        "rename, invalid-name 422 and reload persistence",
+        "reuse and start-huddle redirect",
+        "Escape"
+      ]
+    },
+    {
+      "script": "reference-tools/rooms/room_browser.py",
+      "status": "passed from fresh clone at ad4ffef1",
+      "actor": "JZ",
+      "interactions": [
+        "Control K and keyboard room jump",
+        "recent rooms",
+        "Arrow Down/Up/End active option",
+        "Escape",
+        "keyboard person selection among matching group rooms and new accessible DM",
+        "desktop and phone member drawer",
+        "focus trap and focus return",
+        "header menu Arrow Down/Escape and outside dismissal",
+        "thread panel open/close returns focus to More",
+        "lazy native pins open/load/close"
+      ]
+    },
+    {
+      "script": "reference-tools/rooms/inbound_browser.py",
+      "status": "passed from fresh clone at ad4ffef1",
+      "interactions": [
+        "create email address",
+        "cancel rotation submits no POST",
+        "confirm rotation changes the address",
+        "Rails 302 redirect to undeclared generic-edit 404",
+        "flash",
+        "reload persistence",
+        "authenticated non-admin with valid CSRF cannot rotate",
+        "denied rotation preserves the address",
+        "direct settings exclude the section"
+      ]
+    },
+    {
+      "script": "reference-tools/rooms/quick_switcher_browser.py",
+      "status": "passed from fresh clone at ad4ffef1",
+      "interactions": [
+        "all five original QuickSwitcher declarations",
+        "global Room.count exactly +1 on each actual server database"
+      ]
+    },
+    {
+      "script": "reference-tools/rooms/sidebar_organize_browser.py",
+      "status": "passed from fresh clone at ad4ffef1",
+      "interactions": [
+        "favorite menu moves section",
+        "Shift F10 and Move up",
+        "original synthetic HTML5 drag reorder",
+        "category creation, assignment, collapse and persisted reload",
+        "category rename and delete returns members to Channels"
+      ],
+      "remaining": [
+        "muted rooms dim and stay quiet until mentioned"
+      ]
+    }
+  ],
+  "discrimination": [
+    "DM wrong hidden member selection must fail persisted-member assertions",
+    "Inbound administrator substituted for ordinary member must fail the non-admin denial assertion"
+  ],
+  "remaining": "Full original system-declaration mappings and configured huddle interactions remain open. Controller mapping counts are kept separately in ws8br-rails-cases.json. Geometry and screenshot assertions are outside this phase.",
+  "discrimination_status": {
+    "DM": "passed from fresh clone at ad4ffef1",
+    "inbound": "Rails setup navigation failed with net::ERR_ABORTED before the candidate mutation assertion; not retried and no timing thresholds changed; positive valid-CSRF denial probe passed"
+  }
+}

@@ -13,6 +13,10 @@
   {% block room_form %}{% endblock %}
 </section>
 
+{{ github.render() }}
+
+{{ form.room.inbound_email_html(ctx, form.can_administer) }}
+
 {%- if form.can_administer %}
   <section class="panel txt-align-center">
     {{ crate::rooms::button_to_delete_room(ctx, self.room_id(), form.room.display_name()) }}

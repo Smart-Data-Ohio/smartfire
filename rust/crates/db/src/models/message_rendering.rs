@@ -74,6 +74,7 @@ pub struct RenderingRecords {
     pub quotes: HashMap<i64, Vec<(i64, i64)>>,
     pub rooms: HashMap<i64, Room>,
     pub direct_names: HashMap<i64, Vec<String>>,
+    pub direct_members: HashMap<i64, Vec<User>>,
     pub room_icons: HashMap<i64, Option<String>>,
     pub bodies: HashMap<i64, Option<String>>,
     pub boosts: HashMap<i64, Vec<Boost>>,
@@ -219,13 +220,14 @@ impl RenderingRecords {
             .filter(|r| r.direct())
             .map(|r| r.id)
             .collect();
-        for (id, name) in rows(
+        for (id, user) in rows(
             conn,
-            "SELECT memberships.room_id,users.name FROM users JOIN memberships ON users.id=memberships.user_id WHERE memberships.room_id IN ($ids)",
+            "SELECT memberships.room_id,users.* FROM users JOIN memberships ON users.id=memberships.user_id WHERE memberships.room_id IN ($ids)",
             &directs,
-            |r| Ok((r.get(0)?, r.get(1)?)),
+            |r| Ok((r.get(0)?, User::from_row(r)?)),
         )? {
-            data.direct_names.entry(id).or_default().push(name);
+            data.direct_names.entry(id).or_default().push(user.name.clone());
+            data.direct_members.entry(id).or_default().push(user);
         }
         for boost in rows(
             conn,

@@ -161,6 +161,7 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
   end
 
   test "a throttled refresh enqueues one delayed follow-up" do
+    freeze_time
     Calendar::MeetingCache.create!(user: @user, fetched_at: 30.seconds.ago)
     stub = stub_list_events(items: [])
 
@@ -171,7 +172,7 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
       .select { |job| job[:job] == Calendar::MeetingRefreshJob }
     assert_equal 1, followups.size
     assert_equal [ @user.id ], followups.first[:args]
-    assert_in_delta Calendar::MeetingRefresh::PUSH_THROTTLE.from_now.to_f, followups.first[:at], 5
+    assert_equal Calendar::MeetingRefresh::PUSH_THROTTLE.from_now.to_f, followups.first[:at]
   end
 
   test "a second throttled refresh inside the window enqueues no further follow-up" do

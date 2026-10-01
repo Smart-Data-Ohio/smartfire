@@ -1,0 +1,1004 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "caps": [
+    {
+      "field": "daily_message_cap",
+      "input": null,
+      "permitted": true,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "",
+      "permitted": true,
+      "value": null,
+      "before_type_cast": "",
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": " ",
+      "permitted": true,
+      "value": null,
+      "before_type_cast": " ",
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12",
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": " 12 ",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": " 12 ",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "+12",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "+12",
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "012",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "012",
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12.0",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12.0",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12.5",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12.5",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12e1",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12e1",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "12x",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12x",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "x12",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "x12",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "abc",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "abc",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "0",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "0",
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "-1",
+      "permitted": true,
+      "value": -1,
+      "before_type_cast": "-1",
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "1_000",
+      "permitted": true,
+      "value": 1000,
+      "before_type_cast": "1_000",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "0x10",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "0x10",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "9223372036854775807",
+      "permitted": true,
+      "value": 9223372036854775807,
+      "before_type_cast": "9223372036854775807",
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": "9223372036854775808",
+      "permitted": true,
+      "value": 9223372036854775808,
+      "before_type_cast": "9223372036854775808",
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": 12,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": 12.0,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12.0,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": 12.5,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12.5,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": true,
+      "permitted": true,
+      "value": 1,
+      "before_type_cast": true,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": false,
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": false,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_message_cap",
+      "input": [],
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": [
+        "12"
+      ],
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_message_cap",
+      "input": {
+        "value": "12"
+      },
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": null,
+      "permitted": true,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "",
+      "permitted": true,
+      "value": null,
+      "before_type_cast": "",
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": " ",
+      "permitted": true,
+      "value": null,
+      "before_type_cast": " ",
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12",
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": " 12 ",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": " 12 ",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "+12",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "+12",
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "012",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "012",
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12.0",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12.0",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12.5",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12.5",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12e1",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12e1",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "12x",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12x",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "x12",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "x12",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "abc",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "abc",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "0",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "0",
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "-1",
+      "permitted": true,
+      "value": -1,
+      "before_type_cast": "-1",
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "1_000",
+      "permitted": true,
+      "value": 1000,
+      "before_type_cast": "1_000",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "0x10",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "0x10",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "9223372036854775807",
+      "permitted": true,
+      "value": 9223372036854775807,
+      "before_type_cast": "9223372036854775807",
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": "9223372036854775808",
+      "permitted": true,
+      "value": 9223372036854775808,
+      "before_type_cast": "9223372036854775808",
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": 12,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": 12.0,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12.0,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": 12.5,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12.5,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": true,
+      "permitted": true,
+      "value": 1,
+      "before_type_cast": true,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": false,
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": false,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": [],
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": [
+        "12"
+      ],
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_board_post_cap",
+      "input": {
+        "value": "12"
+      },
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": null,
+      "permitted": true,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "",
+      "permitted": true,
+      "value": null,
+      "before_type_cast": "",
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": " ",
+      "permitted": true,
+      "value": null,
+      "before_type_cast": " ",
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12",
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": " 12 ",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": " 12 ",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "+12",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "+12",
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "012",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "012",
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12.0",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12.0",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12.5",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12.5",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12e1",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12e1",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "12x",
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": "12x",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "x12",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "x12",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "abc",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "abc",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "0",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "0",
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "-1",
+      "permitted": true,
+      "value": -1,
+      "before_type_cast": "-1",
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "1_000",
+      "permitted": true,
+      "value": 1000,
+      "before_type_cast": "1_000",
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "0x10",
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": "0x10",
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "9223372036854775807",
+      "permitted": true,
+      "value": 9223372036854775807,
+      "before_type_cast": "9223372036854775807",
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": "9223372036854775808",
+      "permitted": true,
+      "value": 9223372036854775808,
+      "before_type_cast": "9223372036854775808",
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": 12,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": 12.0,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12.0,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": 12.5,
+      "permitted": true,
+      "value": 12,
+      "before_type_cast": 12.5,
+      "errors": [
+        "must be an integer"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": true,
+      "permitted": true,
+      "value": 1,
+      "before_type_cast": true,
+      "errors": [
+        "is not a number"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": false,
+      "permitted": true,
+      "value": 0,
+      "before_type_cast": false,
+      "errors": [
+        "must be greater than 0"
+      ]
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": [],
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": [
+        "12"
+      ],
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    },
+    {
+      "field": "daily_external_action_cap",
+      "input": {
+        "value": "12"
+      },
+      "permitted": false,
+      "value": null,
+      "before_type_cast": null,
+      "errors": []
+    }
+  ],
+  "icons": [
+    {
+      "input": null,
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": "",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": " ",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": ":",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": "::",
+      "permitted": true,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": ":openai:",
+      "permitted": true,
+      "value": "openai",
+      "errors": []
+    },
+    {
+      "input": " ::: OpenAI ::: ",
+      "permitted": true,
+      "value": "openai",
+      "errors": []
+    },
+    {
+      "input": "OPENAI",
+      "permitted": true,
+      "value": "openai",
+      "errors": []
+    },
+    {
+      "input": "openai",
+      "permitted": true,
+      "value": "openai",
+      "errors": []
+    },
+    {
+      "input": ":robot:",
+      "permitted": true,
+      "value": "robot",
+      "errors": []
+    },
+    {
+      "input": "notanicon",
+      "permitted": true,
+      "value": "notanicon",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": ":notanicon:",
+      "permitted": true,
+      "value": "notanicon",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": " open ai ",
+      "permitted": true,
+      "value": "open ai",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": "😀",
+      "permitted": true,
+      "value": "😀",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": " :openai: ",
+      "permitted": true,
+      "value": " :openai: ",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": 12,
+      "permitted": true,
+      "value": "12",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": true,
+      "permitted": true,
+      "value": "t",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": false,
+      "permitted": true,
+      "value": "f",
+      "errors": [
+        "is not a known icon"
+      ]
+    },
+    {
+      "input": [],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": [
+        "openai"
+      ],
+      "permitted": false,
+      "value": null,
+      "errors": []
+    },
+    {
+      "input": {
+        "name": "openai"
+      },
+      "permitted": false,
+      "value": null,
+      "errors": []
+    }
+  ],
+  "brand_names": [
+    "amazonaws",
+    "anthropic",
+    "apple",
+    "aws",
+    "azure",
+    "claude",
+    "cloudflare",
+    "cursor",
+    "deepseek",
+    "discord",
+    "docker",
+    "figma",
+    "gemini",
+    "github",
+    "githubcopilot",
+    "google",
+    "googlegemini",
+    "gpt",
+    "grok",
+    "hf",
+    "huggingface",
+    "kubernetes",
+    "linear",
+    "linux",
+    "meta",
+    "microsoft",
+    "mistralai",
+    "msft",
+    "notion",
+    "nvidia",
+    "ollama",
+    "openai",
+    "perplexity",
+    "slack",
+    "stripe",
+    "vercel",
+    "x",
+    "xai"
+  ],
+  "icon_write": {
+    "value": "openai",
+    "timestamp_changed": true
+  },
+  "icon_noop": {
+    "value": "openai",
+    "timestamp_changed": false
+  },
+  "icon_clear": null,
+  "unknown_create": [
+    "is not a known icon"
+  ],
+  "unknown_update": {
+    "saved": false,
+    "errors": [
+      "is not a known icon"
+    ],
+    "persisted": null
+  },
+  "secrets": [
+    {
+      "input": null,
+      "values": [
+        null,
+        null,
+        null
+      ],
+      "ciphertext_unchanged": true,
+      "timestamp_unchanged": true
+    },
+    {
+      "input": "",
+      "values": [
+        "",
+        "",
+        ""
+      ],
+      "ciphertext_unchanged": true,
+      "timestamp_unchanged": true
+    },
+    {
+      "input": " ",
+      "values": [
+        " ",
+        " ",
+        " "
+      ],
+      "ciphertext_unchanged": true,
+      "timestamp_unchanged": true
+    },
+    {
+      "input": "fixture-read-only-secret",
+      "values": [
+        "fixture-read-only-secret",
+        "fixture-read-only-secret",
+        "fixture-read-only-secret"
+      ],
+      "ciphertext_unchanged": true,
+      "timestamp_unchanged": true
+    }
+  ]
+}

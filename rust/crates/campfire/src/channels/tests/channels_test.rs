@@ -88,7 +88,7 @@ async fn presence_subscribes_and_marks_the_membership_connected() {
     assert_eq!(membership.unread_at, None);
 
     client.unsubscribe(&presence).await;
-    eventually(|| async { !app.membership("designers", "david").await.unwrap().is_connected(app.clock.now()) }).await;
+    eventually("room unsubscribe to clear connected membership", || async { !app.membership("designers", "david").await.unwrap().is_connected(app.clock.now()) }).await;
     let membership = app.membership("designers", "david").await.unwrap();
     assert_eq!((membership.connections, membership.connected_at), (0, None));
 }
@@ -107,11 +107,11 @@ async fn presence_counts_connections_and_refreshes() {
     app.clock.travel(jiff::SignedDuration::from_secs(61));
     assert!(!app.membership("designers", "david").await.unwrap().is_connected(app.clock.now()));
     first.perform(&presence, json!({ "action": "refresh" })).await;
-    eventually(|| async { app.membership("designers", "david").await.unwrap().is_connected(app.clock.now()) }).await;
+    eventually("room action to connect membership", || async { app.membership("designers", "david").await.unwrap().is_connected(app.clock.now()) }).await;
     assert_eq!(app.membership("designers", "david").await.unwrap().connections, 1);
 
     second.unsubscribe(&presence).await;
-    eventually(|| async { app.membership("designers", "david").await.unwrap().connected_at.is_none() }).await;
+    eventually("room disconnect to clear connected_at", || async { app.membership("designers", "david").await.unwrap().connected_at.is_none() }).await;
 }
 
 #[tokio::test]

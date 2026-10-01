@@ -1,0 +1,1034 @@
+[
+  {
+    "mode": "create",
+    "input": null,
+    "status": 400,
+    "exception": "ActionController::ParameterMissing"
+  },
+  {
+    "mode": "create",
+    "input": {},
+    "status": 400,
+    "exception": "ActionController::ParameterMissing"
+  },
+  {
+    "mode": "create",
+    "input": false,
+    "status": 500,
+    "exception": "NoMethodError"
+  },
+  {
+    "mode": "create",
+    "input": true,
+    "status": 500,
+    "exception": "NoMethodError"
+  },
+  {
+    "mode": "create",
+    "input": "scalar",
+    "status": 500,
+    "exception": "NoMethodError"
+  },
+  {
+    "mode": "create",
+    "input": [],
+    "status": 400,
+    "exception": "ActionController::ParameterMissing"
+  },
+  {
+    "mode": "create",
+    "input": {
+      "title": "  spaced  "
+    },
+    "fact": {
+      "title": "  spaced  ",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "description": null,
+      "starts_at": "2026-10-05T13:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "title": false,
+      "description": true
+    },
+    "fact": {
+      "title": "f",
+      "description": "t",
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "title": [
+        "hidden"
+      ],
+      "starts_at": {
+        "bad": "shape"
+      },
+      "time_zone": [
+        "UTC"
+      ]
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": ""
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": "junk"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-06-01T00:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": "tomorrow"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": "9:00"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-09-22T09:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": "2026-03-08T02:30",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-03-08T07:30:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": "2026-11-01T01:30",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-11-01T05:30:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": "2026-10-05T09:00:00+02:00",
+      "time_zone": "Hawaii"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-10-05T07:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Hawaii",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": "Unknown/Zone"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-10-05T19:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Unknown/Zone",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": ""
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-10-05T09:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "title": "  ",
+      "starts_at": "2026-02-30T09:00"
+    },
+    "fact": {
+      "title": "  ",
+      "description": null,
+      "starts_at": "2026-03-02T09:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "recurrence_until": "bad",
+      "venue_room_id": "junk",
+      "meet_link_requested": "off"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": 0,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "create",
+    "input": {
+      "recurrence_until": "2026-02-30",
+      "venue_room_id": "",
+      "meet_link_requested": "0"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": null,
+    "status": 400,
+    "exception": "ActionController::ParameterMissing"
+  },
+  {
+    "mode": "update",
+    "input": {},
+    "status": 400,
+    "exception": "ActionController::ParameterMissing"
+  },
+  {
+    "mode": "update",
+    "input": false,
+    "status": 500,
+    "exception": "NoMethodError"
+  },
+  {
+    "mode": "update",
+    "input": true,
+    "status": 500,
+    "exception": "NoMethodError"
+  },
+  {
+    "mode": "update",
+    "input": "scalar",
+    "status": 500,
+    "exception": "NoMethodError"
+  },
+  {
+    "mode": "update",
+    "input": [],
+    "status": 400,
+    "exception": "ActionController::ParameterMissing"
+  },
+  {
+    "mode": "update",
+    "input": {
+      "title": "  spaced  "
+    },
+    "fact": {
+      "title": "  spaced  ",
+      "description": "Before description",
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "description": "Before description",
+      "starts_at": "2026-10-05T13:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "title": false,
+      "description": true
+    },
+    "fact": {
+      "title": "f",
+      "description": "t",
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "title": [
+        "hidden"
+      ],
+      "starts_at": {
+        "bad": "shape"
+      },
+      "time_zone": [
+        "UTC"
+      ]
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": ""
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": "junk"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": "2026-06-01T04:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": "tomorrow"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": "9:00"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": "2026-09-22T13:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": "2026-03-08T02:30",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": "2026-03-08T07:30:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": "2026-11-01T01:30",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": "2026-11-01T05:30:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": "2026-10-05T09:00:00+02:00",
+      "time_zone": "Hawaii"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": "2026-10-05T07:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": "Unknown/Zone"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": "2026-10-05T13:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": ""
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": "2026-10-05T13:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "title": "  ",
+      "starts_at": "2026-02-30T09:00"
+    },
+    "fact": {
+      "title": "  ",
+      "description": "Before description",
+      "starts_at": "2026-03-02T14:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "recurrence_until": "bad",
+      "venue_room_id": "junk",
+      "meet_link_requested": "off"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": 0,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "update",
+    "input": {
+      "recurrence_until": "2026-02-30",
+      "venue_room_id": "",
+      "meet_link_requested": "0"
+    },
+    "fact": {
+      "title": "Before",
+      "description": "Before description",
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": null,
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {},
+    "status": 400,
+    "exception": "ActionController::ParameterMissing"
+  },
+  {
+    "mode": "prefill",
+    "input": false,
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": true,
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": "scalar",
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": [],
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "title": "  spaced  "
+    },
+    "fact": {
+      "title": "spaced",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "description": null,
+      "starts_at": "2026-10-05T19:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "title": false,
+      "description": true
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "title": [
+        "hidden"
+      ],
+      "starts_at": {
+        "bad": "shape"
+      },
+      "time_zone": [
+        "UTC"
+      ]
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": ""
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": "junk"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-06-01T10:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": "tomorrow"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": "9:00"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-09-22T19:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": "2026-03-08T02:30",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-03-08T12:30:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": "2026-11-01T01:30",
+      "time_zone": "Eastern Time (US & Canada)"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-11-01T11:30:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Eastern Time (US & Canada)",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": "2026-10-05T09:00:00+02:00",
+      "time_zone": "Hawaii"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-10-05T07:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "Hawaii",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": "Unknown/Zone"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-10-05T19:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "starts_at": "2026-10-05T09:00",
+      "time_zone": ""
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-10-05T19:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "title": "  ",
+      "starts_at": "2026-02-30T09:00"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": "2026-03-02T19:00:00.000000Z",
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "recurrence_until": "bad",
+      "venue_room_id": "junk",
+      "meet_link_requested": "off"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  },
+  {
+    "mode": "prefill",
+    "input": {
+      "recurrence_until": "2026-02-30",
+      "venue_room_id": "",
+      "meet_link_requested": "0"
+    },
+    "fact": {
+      "title": "",
+      "description": null,
+      "starts_at": null,
+      "ends_at": null,
+      "time_zone": "UTC",
+      "venue_room_id": null,
+      "recurrence_rule": null,
+      "recurrence_until": null,
+      "meet_link_requested": false
+    }
+  }
+]

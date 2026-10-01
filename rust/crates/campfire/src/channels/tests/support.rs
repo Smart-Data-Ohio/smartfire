@@ -22,6 +22,8 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::channels::{self, Broadcasts, Cable, Deps, Partials, sink};
 
+pub use crate::test_support::{WAIT, bind_listener, eventually, wait};
+
 pub const SECRET_KEY_BASE: &str = "channels-test-secret-key-base";
 
 /// Delivers the cable's events (`DisconnectUser`, `Broadcast`) with `channels::sink`, as the app's
@@ -59,6 +61,7 @@ pub async fn start() -> TestApp {
         sink: sink.clone(),
         rich_text: Arc::new(BasicRichText),
         bcrypt_cost: 4,
+        ..campfire_db::Env::default()
     };
     let mut config = campfire_db::Config::new(dir.path().join("test.sqlite3"));
     config.readers = 2;
@@ -106,26 +109,6 @@ pub async fn start() -> TestApp {
         origin: format!("http://{addr}"),
         _dir: dir,
     }
-}
-
-/// Restricts listening ports on a shared worker host; unset, lets the OS choose.
-pub async fn bind_listener() -> tokio::net::TcpListener {
-    let Ok(range) = std::env::var("CABLE_TEST_PORT_RANGE") else {
-        return tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    };
-    let (start, end) = range
-        .split_once('-')
-        .expect("CABLE_TEST_PORT_RANGE=start-end");
-    let (start, end): (u16, u16) = (start.parse().unwrap(), end.parse().unwrap());
-    assert!(start > 0 && start <= end, "invalid test port range");
-    for port in start..=end {
-        match tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
-            Ok(listener) => return listener,
-            Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => continue,
-            Err(error) => panic!("binding {port}: {error}"),
-        }
-    }
-    panic!("no free listening port in {range}");
 }
 
 pub fn count(conn: &campfire_db::Connection, sql: &str, id: i64) -> campfire_db::Result<i64> {
@@ -247,7 +230,7 @@ impl TestApp {
         if let Some(cookie) = cookie {
             headers.insert("cookie", cookie.parse().unwrap());
         }
-        let (socket, _) = tokio_tungstenite::connect_async(request)
+        let (socket, _) = wait("WebSocket upgrade", tokio_tungstenite::connect_async(request))
             .await
             .expect("upgrade");
         Client { socket }
@@ -386,7 +369,7 @@ async fn lease_inspection_retains_its_snapshot_during_unsubscribe() {
         .await
         .unwrap()
     });
-    listing.await.unwrap();
+    wait("lease snapshot enumeration", listing).await.unwrap();
     // Commit a real WAL write between enumeration and row lookup, as unsubscribe does.
     assert_eq!(
         app.sql(
@@ -397,7 +380,7 @@ async fn lease_inspection_retains_its_snapshot_during_unsubscribe() {
         1
     );
     resume.send(()).unwrap();
-    let snapshot = read.await.unwrap();
+    let snapshot = wait("lease snapshot lookup", read).await.unwrap();
     assert_eq!(snapshot.len(), 1);
     assert_eq!(snapshot[0].id, lease.id);
     assert_eq!(snapshot[0].connection_id, lease.connection_id);
@@ -469,8 +452,7 @@ pub enum Frame {
 
 impl Client {
     pub async fn send(&mut self, command: Value) {
-        self.socket
-            .send(WsMessage::Text(command.to_string().into()))
+        wait("cable command send", self.socket.send(WsMessage::Text(command.to_string().into())))
             .await
             .unwrap();
     }
@@ -516,9 +498,9 @@ impl Client {
 
     /// The next frame, skipping pings.
     pub async fn next(&mut self) -> Frame {
-        self.next_before(tokio::time::Instant::now() + Duration::from_secs(5))
+        self.next_before(tokio::time::Instant::now() + WAIT)
             .await
-            .expect("a frame within 5s")
+            .unwrap_or_else(|_| panic!("no non-ping WebSocket frame within {WAIT:?}"))
     }
 
     async fn next_before(
@@ -548,45 +530,48 @@ impl Client {
 
     /// Asserts nothing arrives (pings aside) for a moment.
     pub async fn assert_silent(&mut self) {
-        let result = tokio::time::timeout(Duration::from_millis(250), self.next()).await;
+        let result = self.next_before(tokio::time::Instant::now() + Duration::from_millis(250)).await;
         assert!(result.is_err(), "expected no frame, got {result:?}");
     }
 
-    /// Reads until the server closes the socket, returning the text frames before the close.
-    /// Panics if it's still open after 10 s (pings would otherwise keep it reading forever).
+    /// Reads until the closing handshake finishes, with one deadline across all frames/pings.
     pub async fn until_closed(&mut self) -> Vec<String> {
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        self.until_closed_before(tokio::time::Instant::now() + WAIT)
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    async fn until_closed_before(&mut self, deadline: tokio::time::Instant) -> Result<Vec<String>, String> {
         let mut frames = Vec::new();
         loop {
-            let frame = self
-                .next_before(deadline)
-                .await
-                .unwrap_or_else(|_| panic!("the socket is still open; frames so far: {frames:?}"));
+            let frame = self.next_before(deadline).await.map_err(|_| {
+                format!("the socket is still open at the close deadline; frames so far: {frames:?}")
+            })?;
             match frame {
                 Frame::Text(text) => frames.push(text),
-                // Keep reading so the client's close reply goes out and the server finishes
-                // closing (unsubscribing everything) without waiting out its close timeout.
+                // Reading on flushes the client's close reply and lets the server unsubscribe.
                 Frame::Close => {}
-                Frame::End => return frames,
+                Frame::End => return Ok(frames),
             }
         }
     }
-}
 
-/// Waits until `check` holds, for state the server changes after a frame is sent (unsubscribe
-/// has no reply to wait for).
-pub async fn eventually<F, Fut>(mut check: F)
-where
-    F: FnMut() -> Fut,
-    Fut: std::future::Future<Output = bool>,
-{
-    for _ in 0..100 {
-        if check().await {
-            return;
+    /// Independent subscription streams can arrive in either order. Compare every full frame,
+    /// preserving multiplicity, with a single deadline for the whole set.
+    pub async fn assert_texts(&mut self, expected: &[String]) {
+        let deadline = tokio::time::Instant::now() + WAIT;
+        let mut frames = Vec::new();
+        for _ in expected {
+            match self.next_before(deadline).await {
+                Ok(Frame::Text(text)) => frames.push(text),
+                other => panic!("waiting for frames {expected:?}; received {frames:?}; next: {other:?}"),
+            }
         }
-        tokio::time::sleep(Duration::from_millis(20)).await;
+        frames.sort();
+        let mut expected = expected.to_vec();
+        expected.sort();
+        assert_eq!(frames, expected, "broadcast deliveries");
     }
-    panic!("condition never held");
 }
 
 /// A JSON string literal the way ActiveSupport encodes HTML in it: quotes and backslashes
@@ -602,25 +587,32 @@ pub fn html_json(html: &str) -> String {
     format!("\"{escaped}\"")
 }
 
-/// A healthy socket emits pings forever. They must not keep the close waiter alive forever.
+/// Exercise the same close waiter with frequent real socket pings, without catching a panic.
 #[tokio::test]
 async fn until_closed_bounds_a_socket_that_keeps_pinging() {
-    use futures_util::FutureExt;
-
-    let app = start().await;
-    let mut client = app.connect("david").await;
-    let wait = std::panic::AssertUnwindSafe(client.until_closed()).catch_unwind();
-    let result = tokio::time::timeout(Duration::from_secs(11), wait).await;
-    let panic = result
-        .expect("until_closed exceeded its overall deadline")
-        .expect_err("the open socket must fail");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap();
-    assert!(
-        message.contains("the socket is still open"),
-        "unexpected failure: {message}"
-    );
+    let listener = bind_listener().await;
+    let addr = listener.local_addr().unwrap();
+    let (pinged, mut pings) = tokio::sync::mpsc::unbounded_channel();
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut socket = tokio_tungstenite::accept_async(stream).await.unwrap();
+        loop {
+            if socket.send(WsMessage::Text(r#"{"type":"ping"}"#.into())).await.is_err() {
+                break;
+            }
+            let _ = pinged.send(());
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    });
+    let (socket, _) = wait("pinging WebSocket upgrade", tokio_tungstenite::connect_async(format!("ws://{addr}"))).await.unwrap();
+    let mut client = Client { socket };
+    // Make sure this is a pinging socket before measuring the close wait.
+    for _ in 0..2 {
+        wait("server ping", pings.recv()).await.unwrap();
+    }
+    let result = wait("the close waiter's overall deadline", client.until_closed_before(tokio::time::Instant::now() + Duration::from_millis(100))).await;
+    let error = result.expect_err("the open socket must fail");
+    assert!(error.contains("the socket is still open"), "unexpected failure: {error}");
+    server.abort();
+    assert!(wait("pinging server cancellation", server).await.unwrap_err().is_cancelled());
 }

@@ -7,7 +7,7 @@ use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permi
 use campfire_views::messages::json;
 
 use super::{
-    MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message, destroy_message, release_webhooks,
+    MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message_with_agent_policy, destroy_message, release_webhooks,
     ensure_can_administer, find_paged_messages, present, set_message, update_message,
 };
 use crate::app::AppCtx;
@@ -20,7 +20,9 @@ fn before() -> Before {
 
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
+    deny_bot_reply_token(c)?;
     let room = set_room(c).await?;
+    concerns::ensure_agent_capability(c, "read_messages", room.id).await?;
     let messages = find_paged_messages(c, &room).await?;
     set_pagination_headers(c, &room, &messages).await?;
     c.respond_to(&[&format::JSON])?;
@@ -36,12 +38,39 @@ pub async fn index(c: &mut Ctx) -> Result {
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
     let room = set_room(c).await?;
+    concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
     ensure_body_or_attachment_present(c)?;
-    // MessagesController#create
-    let attributes = message_params(c)?;
-    let message = create_message(c, &room, attributes).await?;
-    broadcast_create(c, &room, &message).await?;
-    release_webhooks(c, &message).await;
+    if room.board() {
+        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
+    }
+    let input=c.params.get("message").and_then(|p|p.get("client_message_id")).map(Param::to_json);
+    let client_id=campfire_db::models::agent_posting::client_ids::ClientId::from_json(input.as_ref());
+    let client_message_id=client_id.stored;
+    // Posting's replay/budget checks precede attachment validation and staging. The final
+    // write repeats the check in its transaction so concurrent posts cannot overrun a cap.
+    let (user_id, room_id, replay_id) = (require_current_user(c)?.id, room.id, client_message_id.clone());
+    let lookup=client_id.lookup.clone();
+    let preflight = c.app().db.write(move |tx| campfire_db::models::agent_posting::prepare_for_user_with_lookup(tx, user_id, room_id, replay_id.as_deref(), &lookup)).await.map_err(db_error)?;
+    match preflight {
+        Some(campfire_db::models::agent_posting::PostingCheck::Replay(message)) => {
+            let location = c.url_for(&campfire_routes::message(message.id));
+            return c.head_with_location(StatusCode::CREATED, &location);
+        }
+        Some(campfire_db::models::agent_posting::PostingCheck::Budget(payload)) => return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &format::JSON, payload.to_string())),
+        _ => {},
+    }
+    let mut attributes = message_params(c)?;
+    attributes.client_message_id = client_message_id;
+    attributes.client_message_lookup = client_id.lookup;
+    let message = match create_message_with_agent_policy(c, &room, attributes, true).await? {
+        campfire_db::models::agent_posting::PostingOutcome::Created(message) => {
+            broadcast_create(c, &room, &message).await?;
+            release_webhooks(c, &message).await;
+            message
+        }
+        campfire_db::models::agent_posting::PostingOutcome::Replay(message) => message,
+        campfire_db::models::agent_posting::PostingOutcome::Budget(payload) => return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &format::JSON, payload.to_string())),
+    };
 
     let location = c.url_for(&campfire_routes::message(message.id));
     c.head_with_location(StatusCode::CREATED, &location)
@@ -49,9 +78,11 @@ pub async fn create(c: &mut Ctx) -> Result {
 
 pub async fn update(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
+    deny_bot_reply_token(c)?;
     let room = set_room(c).await?;
     let message = set_message(c, &room).await?;
-    ensure_can_administer(c, &message)?;
+    ensure_can_manage_bot_message(c, &message)?;
+    concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
     // MessagesController#update
     let attributes = message_params(c)?;
     let message = update_message(c, message, attributes).await?;
@@ -67,11 +98,28 @@ pub async fn update(c: &mut Ctx) -> Result {
 
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
+    deny_bot_reply_token(c)?;
     let room = set_room(c).await?;
     let message = set_message(c, &room).await?;
-    ensure_can_administer(c, &message)?;
+    ensure_can_manage_bot_message(c, &message)?;
+    concerns::ensure_agent_capability(c, "post_messages", room.id).await?;
     destroy_message(c, &room, &message).await?;
     Ok(c.head(StatusCode::NO_CONTENT))
+}
+
+/// `deny_bot_reply_token`: a short-lived webhook reply token authenticates create only.
+pub(crate) fn deny_bot_reply_token(c: &Ctx) -> Result<()> {
+    if concerns::authenticated_by(c) == concerns::AuthenticatedBy::BotReply {
+        return halt(concerns::head(StatusCode::FORBIDDEN));
+    }
+    Ok(())
+}
+
+fn ensure_can_manage_bot_message(c: &mut Ctx, message: &Message) -> Result<()> {
+    if message.system_note {
+        return halt(concerns::head(StatusCode::FORBIDDEN));
+    }
+    ensure_can_administer(c, message)
 }
 
 /// `set_room`: `Current.user.rooms.find_by(id: params[:room_id])`, else `head :not_found`.
@@ -100,9 +148,9 @@ fn ensure_body_or_attachment_present(c: &mut Ctx) -> Result<()> {
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     if c.params.get("attachment").is_some_and(|p| !p.is_null()) {
         let permitted = c.params.permit(&permit_keys(&["attachment"]));
-        Ok(MessageParams { attachment: attachment_assignment(&permitted)?, ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, ..MessageParams::default() })
     } else {
-        Ok(MessageParams { body: Some(raw_request_body(c)), ..MessageParams::default() })
+        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), ..MessageParams::default() })
     }
 }
 
@@ -124,7 +172,7 @@ async fn set_pagination_headers(c: &mut Ctx, room: &Room, messages: &[Message]) 
         .app()
         .db
         .read(move |conn| {
-            let count = Message::count_in_room(conn, room_id)?;
+            let count = Message::count_roots_in_room(conn, room_id)?;
             let next_page = match (first, last) {
                 (Some(_), Some(last)) if after => {
                     Message::exists_after(conn, Timeline::Room(room_id), &last)?.then_some(("after", last.id))

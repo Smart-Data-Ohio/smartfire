@@ -17,11 +17,11 @@
 //! | stuck GitHub claims | 30 s | WS15 |
 //! | stuck Fizzy claims | 30 s | WS15 |
 //! | calendar push channels | 1 h (`Calendar::PushChannel::RENEW_INTERVAL`) | WS14 |
-//! | clear plaintext bot tokens | 24 h, its work once per process | WS11 registers it; ported here ([`clear_plaintext_bot_tokens_task`]), see below |
+//! | clear plaintext bot tokens | 24 h, its work once per process | registered ([`clear_plaintext_bot_tokens_task`]) |
 //! | retention prune | `RETENTION_PRUNE_INTERVAL` (24 h) | WS8 |
 //! | presence leases | 1 min | WS17 |
-//! | meeting status | 1 min | WS14 |
-//! | out of office | 1 min | WS14 |
+//! | meeting status | 1 min | WS17 (WS14 refresh execution) |
+//! | out of office | 1 min | WS17 (WS14 refresh execution) |
 //! | board sla nudges | 5 min | WS12 |
 //! | board stale digests | 1 h | WS12 |
 //! | streaming messages | 30 s | WS11 |
@@ -30,13 +30,8 @@
 //! The huddle reconciler's steps (overdue invitations, stale streams) belong to WS13, and are
 //! registered in [`huddle_reconciler`].
 //!
-//! Clearing plaintext bot tokens is ported but not registered: WS11 owns the task and registers
-//! it. Production's rows were healed long ago by Rails' own `bin/periodic`, but the parity seed
-//! (`parity/seeds/default.rb`) still writes plaintext tokens that disagree with the digests, and
-//! the parity reference doesn't run `bin/periodic`: registered now, it would re-key the seed's
-//! bots at boot, and the bot API's parity screens and seeded tests would fail on the port alone.
-//! WS11 fixes the seed (no stale plaintext tokens), regenerates the cable golden vectors that
-//! record them, and then registers [`clear_plaintext_bot_tokens_task`] in [`periodic`].
+//! The plaintext scrub runs once per process, retrying failures. Parity seeds store only
+//! digests, so booting the scheduler preserves their deterministic test keys.
 //!
 //! An invalid interval disables only the loop that reads it, as it aborts only the Rails process
 //! that reads it (`bin/periodic` for `EVENT_REMINDERS_INTERVAL` and `RETENTION_PRUNE_INTERVAL`,
@@ -122,6 +117,13 @@ impl Loops {
 /// Messaging tasks with domain implementations; notification policy is owned by WS17.
 pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     let mut periodic = Periodic::new("Periodic");
+    periodic.task(clear_plaintext_bot_tokens_task());
+    periodic.task(Task::new("stranded agent webhooks", Duration::from_secs(30), |app: App| async move {
+        stranded_agent_webhooks(&app.db).await
+    }));
+    periodic.task(Task::new("event reminders", intervals.reminders, |app: App| async move {
+        event_reminders(&app.db).await
+    }));
     periodic.task(Task::new(
         "saved item reminders",
         intervals.reminders,
@@ -141,9 +143,33 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         app.db.write(|tx|campfire_db::models::room_delete::reenqueue_stuck(tx,600)).await?;
         Ok(())
     }));
+    use crate::integrations::action_claims;
+    periodic.task(Task::new("stuck GitHub claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
+        action_claims::recover_stuck_claims(&app.db, action_claims::GITHUB, app.db.env().now()).await;
+        Ok(())
+    }));
+    periodic.task(Task::new("stuck Fizzy claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
+        action_claims::recover_stuck_claims(&app.db, action_claims::FIZZY, app.db.env().now()).await;
+        Ok(())
+    }));
     periodic.task(Task::new("retention prune", intervals.retention, |app: App| async move {
         app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
         Ok(())
+    }));
+    periodic.task(Task::new("presence leases", Duration::from_secs(MINUTE), |app: App| async move {
+        app.db.write(|tx| campfire_db::WorkspacePresenceLease::prune(tx, 100)).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("meeting status", Duration::from_secs(MINUTE), |app: App| async move {
+        campfire_db::models::calendar_dispatch::dispatch_meetings(&app.db, app.db.env().now()).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("out of office", Duration::from_secs(MINUTE), |app: App| async move {
+        campfire_db::models::calendar_dispatch::dispatch_ooo(&app.db, app.db.env().now()).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("streaming messages", Duration::from_secs(30), |app: App| async move {
+        streaming_messages(&app.db).await
     }));
     periodic
 }
@@ -158,6 +184,17 @@ pub(crate) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
             .await
         {
             tracing::error!(id,%error,"Saved item reminder failed");
+        }
+    }
+    Ok(())
+}
+
+pub(super) async fn event_reminders(db: &Database) -> anyhow::Result<()> {
+    let now = db.env().now();
+    let ids = db.read(move |conn| campfire_db::CalendarEvent::due_reminder_ids(conn, now)).await?;
+    for id in ids {
+        if let Err(error) = db.write(move |tx| campfire_db::CalendarEvent::dispatch_reminder(tx, id, now)).await {
+            tracing::error!(id, %error, "Event reminder failed");
         }
     }
     Ok(())
@@ -194,21 +231,23 @@ pub(super) async fn poll_closing(db: &Database) -> anyhow::Result<()> {
 }
 
 /// `Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once)`.
-#[allow(dead_code, reason = "WS11 registers it once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
 pub fn clear_plaintext_bot_tokens_task() -> Task<App> {
     Task::once("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, |app: App| async move { clear_plaintext_bot_tokens(&app.db).await.map(drop) })
 }
 
 /// `Huddle::Reconciler`'s steps, every `HUDDLE_RECONCILE_INTERVAL`, each isolated from the
-/// others' failures. None is ported yet.
-pub fn huddle_reconciler(_interval: Duration) -> Periodic<App> {
-    Periodic::new("Huddle reconciliation")
+/// others' failures: overdue invitations, stale presenters, then due LiveKit cleanups.
+pub fn huddle_reconciler(interval: Duration) -> Periodic<App> {
+    let mut periodic = Periodic::new("Huddle reconciliation");
+    periodic.task(Task::new("huddle reconciliation", interval, |app: App| async move {
+        super::huddle::reconcile(&app.db, crate::huddle::RoomService::new(crate::huddle::Config::from_env())).await.map(drop)
+    }));
+    periodic
 }
 
 /// `Bots::ClearPlaintextTokens.run!`: for every user that still has a plaintext `bot_token`, the
 /// digest is recomputed from it and the plaintext nulled, one conditional update per row (a key
 /// reset between the read and the write wins). Returns how many rows it healed.
-#[allow(dead_code, reason = "WS11 registers it once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
 pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> {
     let tokens: Vec<(i64, String)> = db
         .read(|conn| {
@@ -218,16 +257,64 @@ pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> 
         .await?;
     let mut healed = 0;
     for (id, plaintext) in tokens {
-        let digest = campfire_db::user::digest_bot_token(&plaintext);
-        let updated = db
-            .write(move |tx| {
-                Ok(tx.conn().execute_cached(
-                    r#"UPDATE "users" SET "bot_token_digest" = ?1, "bot_token" = NULL WHERE "id" = ?2 AND "bot_token" = ?3"#,
-                    rusqlite::params![digest, id, plaintext],
-                )?)
-            })
-            .await?;
-        healed += updated;
+        if heal_plaintext_bot_token(db, id, plaintext).await? { healed += 1; }
     }
     Ok(healed)
+}
+
+/// `Bots::ClearPlaintextTokens.heal`: a reset after the snapshot wins the CAS.
+pub(crate) async fn heal_plaintext_bot_token(db: &Database, id: i64, plaintext: String) -> anyhow::Result<bool> {
+    let digest = campfire_db::user::digest_bot_token(&plaintext);
+    Ok(db.write(move |tx| {
+        Ok(tx.conn().execute_cached(
+            r#"UPDATE "users" SET "bot_token_digest" = ?1, "bot_token" = NULL WHERE "id" = ?2 AND "bot_token" = ?3"#,
+            rusqlite::params![digest, id, plaintext],
+        )? == 1)
+    }).await?)
+}
+
+/// Rails rescues each recovery enqueue independently. Each row's job and stamp still commit
+/// atomically on the durable queue, including when a different candidate's queue write fails.
+pub(crate) async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
+    use campfire_db::models::agent_delivery as domain;
+    let now=db.env().now();
+    let candidates=db.read(move |c|domain::recovery_candidates(c,now)).await?;
+    db.write(move |tx|domain::fail_exhausted(tx,now)).await?;
+    for candidate in candidates {
+        if let Err(error)=db.write(move |tx|domain::recover_one(tx,candidate)).await {
+            tracing::error!(%error,"Stranded agent delivery recovery failed");
+        }
+    }
+    Ok(())
+}
+
+/// Each stream gets its own writer transaction; one failed finalize cannot stop the sweep.
+pub(crate) async fn streaming_messages(db:&Database)->anyhow::Result<()> {
+    let now=db.env().now();
+    let ids=db.write(move |tx|campfire_db::models::agent_streaming::overdue_ids(tx,now)).await?;
+    for id in ids {
+        if let Err(error)=db.write(move |tx| {
+            let Some(mut message)=campfire_db::Message::find_by_id(tx.conn(),id)? else {return Ok(());};
+            if message.thread_id.map(|id|campfire_db::ChannelThread::find_by_id(tx.conn(),id)).transpose()?.flatten().is_some_and(|t|t.locked_at.is_some()) {return Ok(());}
+            message.finalize_stream(tx)?;Ok(())
+        }).await {tracing::error!(message_id=id,%error,"stream finalize failed");}
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod ws17_tests {
+    use super::*;
+    #[test]
+    fn ws17_calendar_sweeps_are_registered_once_each_minute() {
+        let tasks = periodic(PeriodicIntervals {
+            reminders: Duration::from_secs(30),
+            retention: Duration::from_secs(24 * HOUR),
+        });
+        for name in ["meeting status", "out of office"] {
+            let matching: Vec<_> = tasks.tasks().filter(|task| task.name() == name).collect();
+            assert_eq!(matching.len(), 1, "{name}");
+            assert_eq!(matching[0].interval(), Duration::from_secs(MINUTE));
+        }
+    }
 }

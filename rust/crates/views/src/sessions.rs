@@ -24,6 +24,27 @@ pub struct New<'a> {
     pub email_address: Option<String>,
     /// `User.administrator.first`, for `accounts/_help_contact`.
     pub help_contact: Option<HelpContact>,
+    /// Google::SignIn.allowed_domains when configured; WS14g supplies provider configuration.
+    pub google_sign_in_domains: Vec<String>,
+}
+
+impl New<'_> {
+    fn google_sign_in(&self) -> h::Html {
+        if self.google_sign_in_domains.is_empty() { h::empty() } else {
+            h::raw(GoogleSignIn {domains: self.google_sign_in_domains.clone()}.render().unwrap())
+        }
+    }
+}
+
+#[derive(Template)]
+#[template(path = "sessions/_google_sign_in.html")]
+pub struct GoogleSignIn {
+    pub domains: Vec<String>,
+}
+impl GoogleSignIn {
+    fn domain_sentence(&self) -> String {
+        h::to_sentence(&self.domains.iter().map(|domain| format!("@{domain}")).collect::<Vec<_>>(), " and ")
+    }
 }
 
 impl Page for New<'_> {
