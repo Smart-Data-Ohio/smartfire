@@ -218,3 +218,78 @@ fn review_owner_id(tx: &mut Tx<'_>) -> Result<()> {
     tx.conn().execute_batch("PRAGMA defer_foreign_keys=ON; UPDATE users SET id=811 WHERE id=1; UPDATE slack_workspaces SET configured_by_id=811 WHERE configured_by_id=1; UPDATE slack_connections SET user_id=811 WHERE user_id=1; UPDATE slack_imports SET user_id=811 WHERE user_id=1")?;
     Ok(())
 }
+
+#[tokio::test]
+async fn slack_query_order_matches_rails_before_and_after_analyze() {
+    use sha2::Digest;
+
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/query_order.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    db.write(|tx| {
+        tx.conn().execute_batch("PRAGMA defer_foreign_keys=ON; UPDATE slack_workspaces SET id=851 WHERE id=1; UPDATE slack_connections SET slack_workspace_id=851 WHERE slack_workspace_id=1; UPDATE slack_imports SET slack_workspace_id=851 WHERE slack_workspace_id=1")?;
+        Ok(())
+    }).await.unwrap();
+    let run = run(&db, id).await;
+    let failures = db.write(move |tx| {
+        for record in oracle["records"].as_array().unwrap().iter().rev() {
+            tx.conn().execute("INSERT INTO users(id,name,created_at,updated_at) VALUES(?,?,?,?)",params![record["user_id"].as_i64().unwrap(),record["name"].as_str().unwrap(),tx.now(),tx.now()])?;
+            tx.conn().execute("INSERT INTO slack_import_records(id,slack_workspace_id,slack_import_id,slack_kind,slack_key,record_type,record_id,created_record,created_at,updated_at) VALUES(?,?,?,'user',?,'User',?,1,?,?)",params![record["record_id"].as_i64().unwrap(),run.slack_workspace_id,run.id,record["key"].as_str().unwrap(),record["user_id"].as_i64().unwrap(),tx.now(),tx.now()])?;
+        }
+        let mut failures = Vec::new();
+        let mut groups = Vec::new();
+        let mut analyzed = false;
+        for case in oracle["cases"].as_array().unwrap() {
+            if case["analyzed"] == true && !analyzed {
+                tx.conn().execute_batch("ANALYZE")?;
+                analyzed = true;
+            }
+            let mut ids = case["mapped_ids"].as_array().unwrap().clone();
+            ids.extend((0..case["missing_count"].as_u64().unwrap()).map(|i| json!(format!("MISSING{i:05}"))));
+            let normalized = ids.iter().map(string).filter(|id| !id.trim().is_empty()).collect();
+            let (sql, bindings) = users_query(run.slack_workspace_id, &normalized);
+            assert_eq!(json!(format!("{:x}",sha2::Sha256::digest(sql.as_bytes()))),case["sql_sha256"],"{} SQL",case["name"]);
+            let values: Vec<_> = bindings.iter().map(|value| match value {
+                rusqlite::types::Value::Integer(value) => json!(value),
+                rusqlite::types::Value::Text(value) => json!(value),
+                _ => panic!("Unexpected mapping binding"),
+            }).collect();
+            assert_eq!(json!(values),case["binds"],"{} bindings",case["name"]);
+            let mut statement = tx.conn().prepare(&format!("EXPLAIN QUERY PLAN {sql}"))?;
+            let plan = statement.query_map(rusqlite::params_from_iter(bindings),|row|row.get::<_,String>(3))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            assert_eq!(json!(plan),case["plan"],"{} plan",case["name"]);
+            drop(statement);
+            let mapped = users_for(tx.conn(), &run, &ids)?;
+            let keys: Vec<_> = mapped.keys().cloned().collect();
+            if json!(keys) != case["expected_keys"] {
+                println!("Slack query mismatch {}: Rails={:?}; Rust={:?}",case["name"],case["expected_keys"].as_array().unwrap().iter().take(8).collect::<Vec<_>>(),keys.iter().take(8).collect::<Vec<_>>());
+                failures.push(case["name"].as_str().unwrap().to_owned());
+            }
+            if case["name"].as_str().unwrap().ends_with("all_1600_real_mappings") {
+                groups.push((case.clone(),ids,mapped));
+            }
+        }
+        // Resolve only after ANALYZE/query checks: membership writes must not change
+        // the 1600-row mapping table or its statistics before the plan comparisons.
+        for (case,ids,mapped) in groups {
+            let conversation = if case["analyzed"] == true { "GANALYZED" } else { "GFRESH" };
+            let group = super::super::conversations::resolve(tx,&run,&json!({"id":conversation,"is_mpim":true}),&ids,&mapped,false)?;
+            let name = group.room.unwrap().name.unwrap();
+            println!("Slack query group {}: Rails={}; Rust={name:?}",case["name"],case["group_name"]);
+            if json!(name) != case["group_name"] {
+                failures.push(format!("{}_group",case["name"].as_str().unwrap()));
+            }
+        }
+        println!("Slack executed SQL parity: 20 SQL fingerprints, bindings and query plans matched");
+        println!("Slack query-order parity: 20 query cases; 2 group names; {} mismatches",failures.len());
+        Ok(failures)
+    }).await.unwrap();
+    assert!(
+        failures.is_empty(),
+        "query-order mismatch: {}",
+        failures.join(", ")
+    );
+}

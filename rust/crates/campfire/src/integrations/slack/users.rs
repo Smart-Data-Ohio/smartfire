@@ -42,14 +42,10 @@ pub fn users_for(
     if ids.is_empty() {
         return Ok(users);
     }
-    // Keep UserMapper#users_for's pluck order with the same indexed IN predicate.
-    // One JSON binding also handles sets beyond SQLite's bound-variable limit.
-    let ids = json!(ids.into_iter().collect::<Vec<_>>()).to_string();
-    let mut statement = conn.prepare(
-        "SELECT slack_key,record_id FROM slack_import_records WHERE slack_workspace_id=? AND slack_kind='user' AND slack_key IN (SELECT value FROM json_each(?))"
-    )?;
+    let (sql, bindings) = users_query(run.slack_workspace_id, &ids);
+    let mut statement = conn.prepare(&sql)?;
     let mappings = statement
-        .query_map(params![run.slack_workspace_id, ids], |row| {
+        .query_map(rusqlite::params_from_iter(bindings), |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -59,6 +55,46 @@ pub fn users_for(
         }
     }
     Ok(users)
+}
+
+fn users_query(workspace: i64, ids: &IndexSet<String>) -> (String, Vec<rusqlite::types::Value>) {
+    use rusqlite::types::Value as SqlValue;
+
+    // UserMapper#records_for, with the pinned SQLite adapter's 999-bind limit.
+    // Rails inlines the entire relation above that limit. The SQL shape matters:
+    // after ANALYZE, large IN lists can scan rows instead of the identity index.
+    let bound = ids.len() + 2 <= 999;
+    let (workspace, kind, bindings, values) = if bound {
+        let mut bindings = vec![SqlValue::Integer(workspace), SqlValue::Text("user".into())];
+        bindings.extend(ids.iter().cloned().map(SqlValue::Text));
+        (
+            "?".to_owned(),
+            "?".to_owned(),
+            bindings,
+            vec!["?".to_owned(); ids.len()],
+        )
+    } else {
+        // SQLite3::Database.quote doubles single quotes; backslashes stay literal.
+        let values = ids
+            .iter()
+            .map(|id| format!("'{}'", id.replace('\'', "''")))
+            .collect();
+        (
+            workspace.to_string(),
+            "'user'".to_owned(),
+            Vec::new(),
+            values,
+        )
+    };
+    let predicate = if values.len() == 1 {
+        format!("= {}", values[0])
+    } else {
+        format!("IN ({})", values.join(", "))
+    };
+    let sql = format!(
+        r#"SELECT "slack_import_records"."slack_key", "slack_import_records"."record_id" FROM "slack_import_records" WHERE "slack_import_records"."slack_workspace_id" = {workspace} AND "slack_import_records"."slack_kind" = {kind} AND "slack_import_records"."slack_key" {predicate}"#
+    );
+    (sql, bindings)
 }
 pub fn ensure_author(tx: &mut Tx<'_>, run: &SlackImport, key: &str) -> Result<User> {
     if let Some(id) = mapped_id(tx.conn(), run.slack_workspace_id, "user", key)?
