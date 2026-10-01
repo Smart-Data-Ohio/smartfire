@@ -44,7 +44,7 @@ async fn state(test: &Test, id: i64) -> AgentApproval {
         .unwrap()
 }
 #[tokio::test]
-async fn owner_approves_generic_action_with_atomic_inbox_ledger_and_audit() {
+async fn owner_approves_generic_action_with_atomic_inbox_ledger_then_audit() {
     let test = boot_seed("default").await.expect("default seed");
     let id = approval(&test, "deploy").await;
     let mut owner = test.browser("198.51.100.201");
@@ -275,7 +275,7 @@ async fn html_decisions_use_303_and_flash_with_same_host_referer_policy() {
         )
         .await;
     assert_eq!(response.status, StatusCode::SEE_OTHER);
-    assert_eq!(response.location(), "http://campfire.test/activity_items");
+    assert_eq!(response.location(), "http://campfire.test/activity");
     use campfire_kit::Crypto;
     let key = campfire_kit::session::SESSION_KEY;
     let raw = percent_encoding::percent_decode_str(admin.cookies.get(key).unwrap())
@@ -287,7 +287,7 @@ async fn html_decisions_use_303_and_flash_with_same_host_referer_policy() {
     assert_eq!(data["flash"]["flashes"]["notice"], "Request denied.");
 }
 #[tokio::test]
-async fn audit_failure_rolls_back_decision_inbox_and_ledger() {
+async fn audit_failure_preserves_rails_committed_decision_inbox_and_ledger() {
     let test = boot_seed("default").await.expect("default seed");
     let id = approval(&test, "deploy").await;
     test.booted.app.db.write(|tx| { tx.conn().execute_batch("CREATE TRIGGER reject_approval_audit BEFORE INSERT ON audit_logs WHEN NEW.action='agent.approval.decide' BEGIN SELECT RAISE(ABORT, 'reject test audit'); END;")?; Ok(()) }).await.unwrap();
@@ -304,10 +304,11 @@ async fn audit_failure_rolls_back_decision_inbox_and_ledger() {
             .status,
         StatusCode::INTERNAL_SERVER_ERROR
     );
-    assert_eq!(state(&test, id).await.status, "pending");
+    assert_eq!(state(&test, id).await.status, "approved");
     test.booted.app.db.read(move |conn| {
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",[id],|r|r.get::<_,i64>(0))?, 0);
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NOT NULL",[id],|r|r.get::<_,i64>(0))?, 0); Ok(())
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",[id],|r|r.get::<_,i64>(0))?, 1);
+        assert!(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NOT NULL",[id],|r|r.get::<_,i64>(0))? > 0);
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.approval.decide' AND target_id=?",[id],|r|r.get::<_,i64>(0))?, 0); Ok(())
     }).await.unwrap();
 }
 
@@ -392,6 +393,6 @@ async fn html_external_approve_is_303_for_owner_with_alert_and_safe_referer() {
         )
         .await;
     assert_eq!(response.status, StatusCode::SEE_OTHER);
-    assert_eq!(response.location(), "http://campfire.test/activity_items");
+    assert_eq!(response.location(), "http://campfire.test/activity");
     assert_eq!(state(&test, id).await.status, "pending");
 }

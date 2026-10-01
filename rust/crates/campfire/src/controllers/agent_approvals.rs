@@ -85,22 +85,29 @@ pub async fn update(c: &mut Ctx) -> Result {
         ip_address: Some(c.request.remote_ip()?.to_string()),
         user_agent: c.request.user_agent().map(str::to_owned),
     };
-    let (decision_result, payload) = c.app().db.write(move |tx| {
+    let (decision_result, payload, audit) = c.app().db.write(move |tx| {
         let mut approval = approval;
         let result = approval.decide_authorized(tx, &decision, &actor, note.as_deref())?;
-        if result == ApprovalDecision::Applied {
+        let audit = if result == ApprovalDecision::Applied {
             let mut changes = json!({"decision": campfire_db::models::audit_log::pair(json!("pending"), json!(approval.status))});
             if let Some(note) = &approval.decision_note { changes["note"] = json!(note); }
-            AuditLog::record(tx, NewAuditLog {
+            Some(NewAuditLog {
                 action: "agent.approval.decide".into(),
                 target: Some(Target {record_type:"AgentApproval".into(), id:approval.id, label:Some(format!("{} approval #{}",approval.action,approval.id))}),
                 changes:Some(changes), ..Default::default()
-            }, &context)?;
-        }
+            })
+        } else { None };
         let mut payload = approval.payload(tx.conn(), tx.now())?;
         payload.as_object_mut().unwrap().retain(|k,_| ["id", "status", "decided_by", "decided_by_id", "decided_at", "decision_note", "note"].contains(&k.as_str()));
-        Ok((result,payload))
+        Ok((result,payload,audit))
     }).await.map_err(Error::internal)?;
+    // Rails commits decide! (including inbox/ledger callbacks) before the
+    // independent audit insert. An audit failure returns 500 with that decision
+    // preserved; it must not roll the owner mutation back.
+    if let Some(audit) = audit {
+        c.app().db.write(move |tx| AuditLog::record(tx, audit, &context))
+            .await.map_err(Error::internal)?;
+    }
     match decision_result {
         ApprovalDecision::Forbidden => Err(Error::NotFound),
         ApprovalDecision::Invalid(errors) => {
@@ -134,7 +141,7 @@ fn redirect(c: &mut Ctx, message: &str, alert: bool) -> Result {
     } else {
         c.flash().set_notice(message);
     }
-    let mut response = c.redirect_back_or_to("/activity_items")?;
+    let mut response = c.redirect_back_or_to("/activity")?;
     response.status = StatusCode::SEE_OTHER;
     Ok(response)
 }
