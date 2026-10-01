@@ -300,6 +300,10 @@ fn preflight(
             if op == "set_result" && !args.as_object().is_some_and(|a| a.contains_key("markdown")) {
                 return Ok(fail("Markdown can't be blank", 422));
             }
+            if op!="get_work" {
+                let thread=campfire_db::ChannelThread::find(tx.conn(),number(&args,"work_id"))?;
+                if let Some(denial)=super::work_validation::check(tx,&thread,op,&args)? {return Ok(denial);}
+            }
         }
         "list_work" | "list_rooms" => {}
         _ => {
@@ -416,6 +420,17 @@ async fn rest(c: &mut Ctx, settings: Action) -> Result {
     }
 
     let mut args = args;
+    if op=="update_work" {
+        for key in ["work_status","tags","run_url"] {
+            if args.get(key).is_none() && let Some(value)=args.get("work").and_then(|work|work.get(key)).cloned() {args[key]=value;}
+        }
+        if args.get("note").is_none_or(blank) {
+            if let Some(work)=args.get("work") && !work.is_null() && !work.is_object() {
+                return Err(Error::internal(anyhow::anyhow!("work does not support dig")));
+            }
+            if let Some(note)=args.get("work").and_then(|work|work.get("note")).cloned() {args["note"]=note;}
+        }
+    }
     for key in ["message_id", "poll_id", "work_id"] {
         if matches!(
             op,

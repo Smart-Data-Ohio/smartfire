@@ -11,6 +11,7 @@ pub mod pending;
 pub mod conversations;
 mod reads;
 mod reactions;
+mod work_validation;
 mod pins;
 mod polls;
 pub mod integrations;
