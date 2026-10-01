@@ -1006,6 +1006,7 @@ async fn ws8_quote_refresh_does_not_wait_for_future_maintenance() {
     assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
     assert!(rows.iter().any(|row| row.class == "Retention::PruneJob" && row.run_at > campfire_db::Timestamp::from_jiff(app.clock.now())), "{rows:?}");
     booted.jobs.shutdown(WAIT).await;
+
 }
 
 #[test]

@@ -9,7 +9,7 @@ impl Presenter<'_> {
         let base = self.cache_base_url.as_deref().ok_or(campfire_db::Error::Other("room list needs request origin".into()))?;
         let items = self.messages(records)?;
         let account = campfire_db::Account::first(self.conn)?;
-        page::render_detached_at(self.app, account.as_ref(), base, |ctx| {
+        page::render_detached_in_zone(self.app, account.as_ref(), base, &self.render_zone, |ctx| {
             campfire_views::messages::RoomIndex { ctx, messages: &items,
                 unread_index: divider_id.and_then(|id| records.iter().position(|record| record.id == id)), unread_count }.render()
                 // The room's invitation expression contributes its empty line before

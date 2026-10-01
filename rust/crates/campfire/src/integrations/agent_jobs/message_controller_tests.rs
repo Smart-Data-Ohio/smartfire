@@ -75,6 +75,6 @@ async fn root_legacy_bot_without_agent_enqueues_and_posts_only_the_legacy_webhoo
         assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Bot::WebhookJob' AND json_extract(arguments,'$.bot_id')=?",[bot],|r|r.get::<_,i64>(0))?,1);
         assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Agent::DeliveryJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())
     }).await.unwrap();
-    crate::integrations::jobs::deliver_webhook_on(app.booted.app.clone(),crate::jobs::WebhookJob{bot_id:bot,message_id:message},&net).await.unwrap();
+    crate::integrations::jobs::deliver_webhook_with_network(&app.booted.app,crate::jobs::WebhookJob{bot_id:bot,message_id:message},&net).await.unwrap();
     let received=server.received();assert_eq!(received.len(),1);let body:Value=serde_json::from_slice(&received[0].body).unwrap();assert!(body.get("agent").is_none());
 }

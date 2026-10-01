@@ -58,7 +58,9 @@ async fn creation_app() -> TestApp {
     let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
         "2026-03-02T16:00:00Z".parse().unwrap(),
     ));
-    let app = TestApp::boot_with_clock(clock)
+    // sockets.rb configures Rails' route defaults explicitly; reproduce that
+    // input instead of relying on the unrelated mail URL fallback.
+    let app = TestApp::boot_with_clock_and_env(clock, &[("APP_URL", "http://example.com")])
         .await
         .expect("pinned default seed");
     // Match Rails' before_create fixture inputs before Message::create reloads the row.

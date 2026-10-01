@@ -1,0 +1,138 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": {
+    "revoke_membership": {
+      "scoped_revoked": true,
+      "extra_revoked": false,
+      "member": false,
+      "can_post": false,
+      "can_react": false
+    },
+    "revoke_workspace": {
+      "scoped_revoked": null,
+      "extra_revoked": false,
+      "member": false,
+      "can_post": true,
+      "can_react": false
+    },
+    "revoke_rollback": {
+      "scoped_revoked": true,
+      "extra_revoked": false,
+      "member": false,
+      "can_post": false,
+      "can_react": true
+    },
+    "revoke_rollback_after": {
+      "scoped_revoked": false,
+      "extra_revoked": false,
+      "member": true,
+      "can_post": true,
+      "can_react": true
+    },
+    "revoke_room": {
+      "scoped_revoked": true,
+      "extra_revoked": false,
+      "member": false,
+      "can_post": false,
+      "can_react": true
+    },
+    "revoke_suspend": {
+      "scoped_revoked": true,
+      "extra_revoked": true,
+      "member": true,
+      "can_post": false,
+      "can_react": false
+    },
+    "revoke_deactivate": {
+      "scoped_revoked": true,
+      "extra_revoked": true,
+      "member": false,
+      "can_post": false,
+      "can_react": false
+    },
+    "revoke_ban": {
+      "scoped_revoked": true,
+      "extra_revoked": true,
+      "member": true,
+      "can_post": false,
+      "can_react": false
+    },
+    "revoke_destroy": {
+      "scoped_revoked": true,
+      "extra_revoked": true,
+      "member": false,
+      "can_post": null,
+      "can_react": null
+    },
+    "kill": {
+      "cancelled": 1,
+      "suspended": true,
+      "statuses": [
+        "cancelled",
+        "expired",
+        "approved"
+      ],
+      "presence": null,
+      "active_grants": 0,
+      "audits": [
+        {
+          "action": "agent.suspend",
+          "details": {}
+        },
+        {
+          "action": "agent.kill_switch",
+          "details": {
+            "pending_approvals_cancelled": 1
+          }
+        }
+      ]
+    },
+    "kill_inbox": {
+      "handled": true
+    },
+    "kill_repeat": {
+      "cancelled": 0,
+      "suspended": true,
+      "suspend_audits": 1,
+      "kill_audits": 2
+    },
+    "kill_external": {
+      "status": "failed",
+      "message": "Agent is suspended or deactivated",
+      "events": 1
+    },
+    "quiet_kill": {
+      "streaming": false,
+      "suspended": true,
+      "activity": 0,
+      "events": 0,
+      "search": [],
+      "unread": null,
+      "jobs": 0,
+      "message_broadcasts": 1,
+      "unread_broadcasts": 0
+    },
+    "quiet_suspend": {
+      "streaming": false,
+      "suspended": true,
+      "activity": 0,
+      "events": 0,
+      "search": [],
+      "unread": null,
+      "jobs": 0,
+      "message_broadcasts": 1,
+      "unread_broadcasts": 0
+    },
+    "quiet_rollback": {
+      "streaming": true,
+      "suspended": false,
+      "activity": 0,
+      "events": 0,
+      "search": [],
+      "unread": null,
+      "jobs": 0,
+      "message_broadcasts": 0,
+      "unread_broadcasts": 0
+    }
+  }
+}
