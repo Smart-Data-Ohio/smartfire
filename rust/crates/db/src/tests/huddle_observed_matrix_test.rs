@@ -13,13 +13,15 @@ fn room() -> i64 {crate::fixtures::identify("david_and_jason")}
 
 fn collect(db: &TestDb, pending: &mut Vec<crate::JobRequest>, frames: &mut Vec<Value>, pushes: &mut Vec<Value>) {
     for event in db.sink.take() {
-        if let Some(crate::broadcasts::Broadcast::Cable {stream,payload}) = event.as_broadcast() {
-            if (stream == format!("user_{}_activity",recipient()) && !payload["huddleInvitation"].is_null()) || (stream == format!("user_{}_huddle_notices",recipient()) && !payload["huddleJoinNotice"].is_null()) {
-                frames.push(json!({"stream":stream,"payload":payload}));
-            }
+        if let Some(crate::broadcasts::Broadcast::Cable {stream,payload}) = event.as_broadcast()
+            && ((stream == format!("user_{}_activity",recipient()) && !payload["huddleInvitation"].is_null())
+                || (stream == format!("user_{}_huddle_notices",recipient()) && !payload["huddleJoinNotice"].is_null())) {
+            frames.push(json!({"stream":stream,"payload":payload}));
         }
         if let Event::Job(job) = event {
             if [PushInvitationJob::CLASS,JoinNoticeJob::CLASS,PresenceJob::CLASS].contains(&job.class) {pending.push(job);}
+            // A selected source-job drain runs its actual WS17 adapter through
+            // the push-pool handoff. External transport is outside the oracle.
             else if job.class == PushRequest::CLASS {
                 let request = serde_json::from_value(job.arguments).unwrap();
                 db.write(move |tx| notification_push::enqueue_huddle_request(tx,request));
