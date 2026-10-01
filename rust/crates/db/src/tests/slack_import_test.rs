@@ -498,9 +498,9 @@ fn slack_import_undo_overlap_covers_crash_mapping_but_not_skip() {
         Ok(())
     });
     assert!(
-        t.read(move |c| Ok(SlackImport::find(c, first)?
+        t.read(move |c| SlackImport::find(c, first)?
             .unwrap()
-            .later_overlapping_import(c)?))
+            .later_overlapping_import(c))
             .is_none()
     );
     t.write(move |tx| {

@@ -3,10 +3,10 @@
   "secret_key_base": "5335c3b1ad35b4ad170c3413bd651ef3b6ed64e257261871a6de3f978cf3868ee417a927040935fb30b0f7debdedb34a2a403e9f34b16cf594c917c2ecd4a995",
   "workspace": {
     "plaintext": "fixture-slack-secret",
-    "ciphertext": "{\"p\":\"qdknKPLgBrQ+eeCEbQwrtRccuNM=\",\"h\":{\"iv\":\"Bb2YUfzDQORgCoYe\",\"at\":\"Rc7WxIdzN1tMlLIM4XiB9w==\"}}"
+    "ciphertext": "{\"p\":\"peel3wRn6CFNXWknyVdmeierIoU=\",\"h\":{\"iv\":\"w5keszraMmtkfr3n\",\"at\":\"NDgTjJ1LI4viTevJ6NUJEg==\"}}"
   },
   "connection": {
     "plaintext": "fixture-slack-user-token",
-    "ciphertext": "{\"p\":\"GNnA1dPCDZmDOL/AJtbi4L0102Y+7ris\",\"h\":{\"iv\":\"LNtr8osxf1GmE0h9\",\"at\":\"/jVS37dCUGq13r64J6RNNw==\"}}"
+    "ciphertext": "{\"p\":\"HN955zNmApB7iTmMJJO19Omx4vtmJHYA\",\"h\":{\"iv\":\"LTBVY0lSzBkrwZZX\",\"at\":\"pfOMZr8oSNkP8fW+Wf64hQ==\"}}"
   }
 }

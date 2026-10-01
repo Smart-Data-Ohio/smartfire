@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""List every Rails Slack test and the exact partial-delivery boundary."""
+from pathlib import Path
+import re
+
+root = Path(__file__).resolve().parents[3]
+model_ports = {
+ 'cancel! stops queued and running runs at their boundary',
+ 'undo! enqueues the undo job and resets progress tracking',
+ 'undo! refuses dry runs and active runs',
+ 'claim_running! lets a single queued run through while none runs',
+ 'claim_running! refuses while another run is undoing',
+ 'claim_running! refuses while a cancelled run holds a fresh step lease',
+ 'a stale step lease no longer blocks claims',
+ 'a second acquire fails while a fresh lease is held',
+ 'a stale lease can be taken over without losing saved progress',
+ 'releasing with the wrong token keeps the lease',
+ 'refresh_step_lease! renews a held lease without touching other state',
+ 'refresh_step_lease! refuses a token that no longer holds the lease',
+ 'a lease-looking state on a completed run does not block claims',
+ 'step lease stamps are written in UTC even under a user time zone',
+ 'fresh leases block and stale leases pass under user time zones',
+ 'undo! refuses with no status change while another run is queued, running or undoing',
+ 'the undo claim itself refuses a fresh lease held outside an active status',
+ 'undo_blocked_reason is nil when nothing else is active',
+ 'undo waits while the run itself holds a fresh step lease',
+ 'undo waits while another run holds a fresh step lease',
+ 'the later-overlap answer refreshes after reload',
+ 'record_issue! caps issues with a suppression notice',
+ 'sweep re-enqueues stale running runs',
+ 'sweep starts the oldest queued run only when nothing runs or undoes',
+ 'sweep never enqueues a second job for a run with one pending',
+ 'sweep re-enqueues stalled undoing runs',
+}
+client_deferred = {
+ 'network errors retry then raise': 'Exact Ruby transport exception class/message remains unported; retry count and final RequestError are covered.',
+ 'a 5xx that recovers returns the payload': 'Fixture server sequence recovery still needed.',
+ 'history fixtures arrive newest-first like conversations.history': 'Fixture byte identity is covered; explicit ordering assertion still needed.',
+ 'on_request fires once per attempt for api call counts': 'Callback counts tested for failed retries; recovery sequence still needed.',
+}
+paths = sorted(set(root.glob('test/models/*slack*_test.rb')) | set(root.glob('test/models/slack/*_test.rb')) | set(root.glob('test/jobs/slack_import/*_test.rb')) | set(root.glob('test/controllers/slack/*_test.rb')) | set(root.glob('test/controllers/accounts/*slack*_test.rb')) | {root / 'test/system/slack_import_test.rb'})
+lines = ['# WS16 Rails test inventory — partial', '',
+ 'Owner for every deferred or partial row: **WS16 continuation**. No tests are reassigned to other workstreams.', '',
+ 'Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Controller, job and real Message-save tests remain deferred.', '']
+counts = {'covered': 0, 'partial': 0, 'deferred': 0}
+for path in paths:
+    tests = re.findall(r'^\s*test "((?:[^"\\]|\\.)*)"', path.read_text(), re.M)
+    lines += ['## ' + str(path.relative_to(root)), '', '| Rails test | State | Coverage or remaining work |', '|---|---|---|']
+    for name in tests:
+        state, note = 'deferred', 'WS16 continuation: implement and exercise the original behavior.'
+        if '/models/slack/markdown_converter_test.rb' in str(path) and not name.startswith('rendering:'):
+            state, note = 'covered', 'Rails-generated converter vectors; crafted-token timing guard is a Rust test.'
+        elif '/models/slack/client_test.rb' in str(path):
+            if name in client_deferred:
+                state, note = 'partial', client_deferred[name]
+            else:
+                state, note = 'covered', 'Local TLS fixture requests, Rails error vectors, retry and pacing tests.'
+        elif path.name == 'slack_import_test.rb' and path.parent.name == 'models' and name in model_ports:
+            state, note = 'covered', 'Database lifecycle tests; independent writers for claims, leases, undo and sweeps.'
+        elif path.name == 'slack_import_test.rb' and path.parent.name == 'models' and name.startswith('start! creates'):
+            state, note = 'partial', 'Creation/enqueue covered; options normalization remains deferred.'
+        elif path.name == 'workspace_import_test.rb' and name == 'undo is last-in, first-out per conversation':
+            state, note = 'partial', 'Eligibility/blocking checked in DB; actual import and destructive undo not implemented.'
+        elif 'undo is blocked' in name or 'later import' in name:
+            note = 'WS16 continuation: controller behavior deferred; domain overlap/naming checks exist.'
+        counts[state] += 1
+        lines.append('| ' + name.replace('|', '\\|') + ' | ' + state + ' | ' + note + ' |')
+    lines.append('')
+lines += ['## Totals', '', ', '.join(f'{value} {key}' for key, value in counts.items()) + f'; {sum(counts.values())} Rails tests inventoried.', '']
+(root / 'rust/plans/ws16-test-inventory.md').write_text('\n'.join(lines))
+print('Slack Rails test inventory: ' + ', '.join(f'{value} {key}' for key, value in counts.items()) + f'; {sum(counts.values())} total')

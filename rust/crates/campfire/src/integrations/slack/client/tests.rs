@@ -75,8 +75,8 @@ fn slack_client_matches_rails_error_vectors() {
                 assert_eq!(kind, expected["kind"]);
                 assert_eq!(error.message, expected["message"]);
                 if error.kind == ErrorKind::Scope {
-                    assert_eq!(error.needed, expected["needed"]);
-                    assert_eq!(error.provided, expected["provided"]);
+                    assert_eq!(*error.needed, expected["needed"]);
+                    assert_eq!(*error.provided, expected["provided"]);
                 }
                 if error.kind == ErrorKind::RateLimited {
                     assert_eq!(error.retry_after, expected["retry_after"].as_u64());

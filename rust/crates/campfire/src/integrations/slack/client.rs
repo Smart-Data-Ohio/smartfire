@@ -31,8 +31,8 @@ pub struct Error {
     pub kind: ErrorKind,
     pub message: String,
     pub retry_after: Option<u64>,
-    pub needed: Value,
-    pub provided: Value,
+    pub needed: Box<Value>,
+    pub provided: Box<Value>,
 }
 impl Error {
     fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
@@ -41,8 +41,8 @@ impl Error {
             kind,
             message: message.into(),
             retry_after,
-            needed: Value::Null,
-            provided: Value::Null,
+            needed: Box::new(Value::Null),
+            provided: Box::new(Value::Null),
         }
     }
 }
@@ -180,10 +180,10 @@ impl Client {
         if !self.pacing {
             return;
         }
-        if let Some(last) = self.last_call_at.get(&tier) {
-            if let Some(wait) = tier.interval().checked_sub(last.elapsed()) {
-                tokio::time::sleep(wait).await;
-            }
+        if let Some(last) = self.last_call_at.get(&tier)
+            && let Some(wait) = tier.interval().checked_sub(last.elapsed())
+        {
+            tokio::time::sleep(wait).await;
         }
         self.last_call_at.insert(tier, Instant::now());
     }
@@ -202,7 +202,10 @@ impl Client {
                         && attempt + 1 < MAX_ATTEMPTS =>
                 {
                     if self.pacing {
-                        tokio::time::sleep(Duration::from_secs(BACKOFF[attempt])).await;
+                        tokio::time::sleep(Duration::from_secs(
+                            BACKOFF.get(attempt).copied().unwrap_or(4),
+                        ))
+                        .await;
                     }
                 }
                 Err(mut error) if error.kind == ErrorKind::Network => {
@@ -363,8 +366,8 @@ fn check_ok(payload: Value, method: &str) -> Result<Value, Error> {
         ),
     };
     if error.kind == ErrorKind::Scope {
-        error.needed = payload["needed"].clone();
-        error.provided = payload["provided"].clone();
+        error.needed = Box::new(payload["needed"].clone());
+        error.provided = Box::new(payload["provided"].clone());
     }
     Err(error)
 }
