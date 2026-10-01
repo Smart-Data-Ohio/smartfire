@@ -17,8 +17,9 @@ pub async fn broadcast_thread_edit(c: &Ctx, room: &Room, message: &Message, driv
 
 async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given: bool, thread_scoped: bool) -> Result<()> {
     let (app, room, message, base) = (c.app().clone(), room.clone(), message.clone(), page::renderer_base_url(c));
-    c.app().db.read(move |conn| {
-        let view = Presenter::new(conn, &app, None).message(&message)?;
+    let refreshes = c.app().db.read(move |conn| {
+        let presenter = Presenter::new(conn, &app, None);
+        let view = presenter.message(&message)?;
         let account = campfire_db::Account::first(conn)?;
         let parts = page::render_detached_at(&app, account.as_ref(), &base, |ctx| {
             let mut parts = vec![
@@ -40,8 +41,10 @@ async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given:
                     &message_dom_id(&message, Some(part)), Some(&html), true);
             } else { app.broadcasts.message_part_replace(&room, &message, part, &html); }
         }
-        Ok(())
-    }).await.map_err(db_error)
+        Ok(presenter.take_github_refreshes())
+    }).await.map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(())
 }
 
 pub async fn broadcast_tombstones(c: &Ctx, ids: Vec<i64>) -> Result<()> {

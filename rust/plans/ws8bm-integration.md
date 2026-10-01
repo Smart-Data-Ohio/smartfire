@@ -76,31 +76,29 @@ and makes the complete pane comparison use the real child provider. Apply it aft
 owner merge. It is a patch because the feature module is absent from the WS8bm baseline;
 the worker branch still has an explicitly empty schedule call site.
 
-`owner-integration-check.py` and `owner-schedule-integration.patch` describe the earlier
-published shell `27990da2851f4c056db71c6b430c894307bc6bfe`. They are historical integration
-tools, not verification of the current owner branch. Refresh their conflict handling and
-patch before using them against the newer shell `6dc741c9bd42922914d619f3d87889c63e5b839d`.
-That merge has six overlapping files: `channels/sink.rs`, `controllers/channel_threads.rs`,
-`controllers/messages.rs`, `controllers/fizzy_message_cards/tests.rs`,
-`controllers/presenters/test_support.rs` and `jobs/tests.rs`. Retain main's atomic
-attachment APIs and ready-listener test helpers, the message worker's in-transaction
-thread post (wrapped in M2's `PostingOutcome::Created`), both queue invariants, and the
-owner's feature dispatch, Picker availability and schedule child. Do not select an
-entire side of these files. Full merged live chrome, populated PR cards and real schedule
-provider parity remain separate integration work; no whole combined-page pass is claimed.
+`owner-integration-check.py`, `owner-schedule-integration.patch` and
+`owner-current-integration.patch` are historical integration aids for the earlier
+published shell revisions `27990da2851f4c056db71c6b430c894307bc6bfe` and
+`6dc741c9bd42922914d619f3d87889c63e5b839d`. Refresh their merge handling before using
+them with the current main/worker revisions; the old automated checker is not current
+acceptance evidence. The patch records the real schedule child, M2's batched pre-cache
+fetch intent, sanitized preloaded filenames, old lifecycle payload decoding and verbatim
+list/pending-template mounts. Preserve both sides' agent replay/budget policy and
+root-versus-thread attachment commit boundaries when resolving overlaps.
 
-The current `reference-tools/messaging/owner-current-integration.patch` records the
-tested small adapters after resolving that merge: the real schedule child and assertions,
-request fetch intent before cached message rendering (using M2's batched references),
-sanitized filenames in M2's preloaded text, the legacy quiet-stream payload decoder,
-and verbatim list/pending-template mounts. It preserves the list's invitation whitespace;
-the shell must not prepend that line again or append a newline to `PendingTemplate`.
-The isolated merge passes 17 thread tests with the real schedule provider and five native
-room tests. Its separate strict component checker passes eight of nine byte comparisons
-and fails on Designers' missing populated GitHub PR card (1,089 bytes), with no mask.
-Fizzy, LinkedIn and generic card bodies match. Refresh the old automated merge checker
-before using it for this revision; this patch requires the six merge overlaps above to
-be resolved first. The main worker branch still has the flagged schedule/PR call sites.
+The earlier isolated owner merge had eight of nine exact room-component comparisons;
+its only difference was Designers' missing 1,089-byte GitHub card. Main #167 is now merged
+via `e32d20ab`, and `4955cfb0` verifies the owned card using WS15g's real renderer.
+`complete_github_containers_match_rails_in_room_lists_on_cold_and_warm_caches` compares
+every complete GitHub container in the three seed room lists, including empty containers,
+against the actual pinned Rails room responses on cold and warm fragment caches.
+Removing the real provider reproduces the precise 1,089-byte difference. No shell
+template change or copied provider markup is needed for WS8b-r to consume the card.
+This closes the owned GitHub slot; the complete current owner merge still needs a new
+nine-component check. The unmerged M2 message-link placeholder is a separate 157-byte
+full-list difference on this worker branch, so these card comparisons do not claim a
+whole-list or whole-page pass. The schedule call site remains explicitly empty here
+until the lead merges M2's actual provider.
 
 ## Standalone thread show and PR integration
 
@@ -112,18 +110,34 @@ template/layout goldens cover ordinary, empty, stale, closed, locked, deleted-st
 Turbo-frame cases. The full layout comes from the explicitly approved Rails #163
 revision `2e20b24c`; every other oracle field is cross-checked unchanged against
 `d7c7de92`. `check-goldens.py` regenerates both references and rejects content drift.
-Live HTTP retains its real session tokens; its owned body and headers
-are checked separately. Chrome is an explicit owner input in full-layout goldens; current
-`Layout::load` still needs the owner's icons/Google/presence facts for full live-page parity.
+Live HTTP retains its real session tokens; its owned body and headers are checked
+separately. `Layout::load` now supplies ordered brand/alias/custom icon names and the
+current viewer's latest ten searches through the existing domain provider. Real thread
+GETs compare the complete icon meta value and token-free recent-search child against
+Rails for two viewers, before and after custom icons. The Clear form keeps its real
+request token. Remaining Google/presence/shell inputs require merged owner acceptance;
+these scoped comparisons do not claim full live-page parity.
 
 The clearly named WS15g call site is
 `controllers/channel_threads.rs::render_thread_pull_request_header`. Its output becomes
 `campfire_views::channel_threads::Show.pull_request_header`, directly after the thread header
-and before its starter, with Rails's surrounding whitespace. Main at the inspected baseline
-does not contain WS15g's provider. The call site is explicitly flagged and currently empty;
-after the lead's owner merge, resolve `github_pr_thread_pull_request(thread)` there and render
-WS15g's `campfire_views::github::thread_header(ctx, room_id, thread_id, card)` with the proper
-request context. Do not treat an empty PR slot as acceptance of a populated PR thread.
+and before its starter, with Rails's surrounding whitespace. It now calls
+`Presenter::github_thread_header`, which scopes the mapping by both thread and parent
+room, delegates to WS15g's private-safe `presenters::github::thread_header` and uses the
+verified request origin. The controller authorizes room/thread access before rendering.
+Stale PR refresh intent is collected during the read and enqueued after the reader is
+released, alongside existing message refreshes. WS15g's real lazy write frame is retained.
+Actual thread GETs compare complete owned bodies for public, private and unknown PRs;
+a signed-in non-member gets 404 without PR content. Card omission is not accepted as
+populated-provider parity.
+
+The shared root/thread rendered edit path also takes WS15g's stale refresh intent from
+the presenter and enqueues after releasing its reader. This matters even when the human
+edit submits only ignored fields and saves unchanged legacy text: Rails still renders the
+card and requests a refresh. The existing twelve concurrent message/room-refresh caller
+checks are preserved; three actual Rails edits cover a bodyless legacy root and unchanged
+rich-text root/thread bodies, with complete responses/row/claim/job comparisons. Durable
+queue rejection preserves the successful edit response and rolls back the refresh claim.
 
 Work and board HTML show and pane content routes return an authorized 501 pending WS12;
 their JSON show read details retain the existing API. No work/board shell or control policy
