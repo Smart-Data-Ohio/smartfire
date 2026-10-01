@@ -1071,71 +1071,88 @@
       "declared_cases": [
         {
           "name": "room create is recorded",
-          "line": 8
+          "line": 8,
+          "owner": "WS8br"
         },
         {
           "name": "failed room create writes no row",
-          "line": 21
+          "line": 21,
+          "owner": "WS8br"
         },
         {
           "name": "opening an existing direct room writes no row",
-          "line": 29
+          "line": 29,
+          "owner": "WS8br"
         },
         {
           "name": "room destroy is recorded with the room name",
-          "line": 41
+          "line": 41,
+          "owner": "WS8br"
         },
         {
           "name": "admin membership changes are recorded with names",
-          "line": 54
+          "line": 54,
+          "owner": "WS8br"
         },
         {
           "name": "re-saving unchanged membership writes no row",
-          "line": 73
+          "line": 73,
+          "owner": "WS8br"
         },
         {
           "name": "adding group members is recorded with the added users",
-          "line": 81
+          "line": 81,
+          "owner": "WS8br"
         },
         {
           "name": "adding no new members writes no row",
-          "line": 94
+          "line": 94,
+          "owner": "WS8br"
         },
         {
           "name": "the last member out destroys the group and records it",
-          "line": 102
+          "line": 102,
+          "owner": "WS8br"
         },
         {
           "name": "leaving without destroying the group writes no row",
-          "line": 120
+          "line": 120,
+          "owner": "WS8br"
         },
         {
           "name": "leaving a channel is recorded with the leaver as actor",
-          "line": 128
+          "line": 128,
+          "owner": "WS8br"
         },
         {
           "name": "leaving a group without destroying it is recorded",
-          "line": 143
+          "line": 143,
+          "owner": "WS8br"
         },
         {
           "name": "account settings changes are recorded",
-          "line": 156
+          "line": 156,
+          "owner": "WS8br2"
         },
         {
           "name": "logo removal is recorded",
-          "line": 173
+          "line": 173,
+          "owner": "WS8br2"
         },
         {
           "name": "custom styles changes are recorded as size and digest",
-          "line": 183
+          "line": 183,
+          "owner": "WS8br2"
         },
         {
           "name": "unchanged custom styles write no row",
-          "line": 199
+          "line": 199,
+          "owner": "WS8br2"
         },
         {
           "name": "workspace icon create and destroy are recorded",
-          "line": 207
+          "line": 207,
+          "owner": "WS8br2"
         }
       ],
       "declared_count": 17,
@@ -2655,7 +2672,7 @@
     },
     {
       "file": "test/system/mobile_layout_test.rb",
-      "owner": "WS8br",
+      "owner": "WS8br drawer destinations; WS8br2 pages outside the workspace",
       "reference_file_present": true,
       "source_sha256": "1397e2d10e2f98eef646ebe49b8c57471e5a65328318ce205ac44fbc8c2757ca",
       "declared_cases": [
@@ -2692,7 +2709,7 @@
     },
     {
       "file": "test/system/motion_test.rb",
-      "owner": "WS8br",
+      "owner": "WS8br room/member/drawer interactions; WS8br2 people-directory interactions; style assertions excluded",
       "reference_file_present": true,
       "source_sha256": "5c88aad84b6fe9f518e3512cf33c0c40854bad5a59f9f722c400b5bb5b2235d7",
       "declared_cases": [
@@ -2754,7 +2771,7 @@
     },
     {
       "file": "test/system/people_group_dms_test.rb",
-      "owner": "WS8br",
+      "owner": "WS8br DM/member shell; WS8br2 people/profile; WS13 configured calls; WS11 agents",
       "reference_file_present": true,
       "source_sha256": "4e4e8311e972e3eb75eb8014d21add10f17fef1e8c6e00c51fd2baf778b8b35f",
       "declared_cases": [
@@ -2869,33 +2886,46 @@
         {
           "name": "keyboard-only room jump filters and opens with enter",
           "line": 9,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/quick_switcher_browser.py"
         },
         {
           "name": "arrow keys move the active option",
           "line": 20,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/quick_switcher_browser.py"
         },
         {
           "name": "escape closes the switcher",
           "line": 43,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/quick_switcher_browser.py"
         },
         {
           "name": "empty query leads with recent rooms",
           "line": 51,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/quick_switcher_browser.py"
         },
         {
           "name": "choosing a person without a DM opens a new one",
           "line": 62,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/quick_switcher_browser.py"
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "status": "5 original interactions passed on Rails and Rust; 0 behaviour cases remaining; not Rails Minitest executions",
+      "browser_cases_run": 5,
+      "browser_pass_count": 5,
+      "browser_cases_remaining": []
     },
     {
       "file": "test/system/room_header_test.rb",
@@ -2985,17 +3015,23 @@
         {
           "name": "favouriting from the room menu moves the room to Favourites",
           "line": 7,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/sidebar_organize_browser.py"
         },
         {
           "name": "favourites reorder from the keyboard with move up and down",
           "line": 23,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/sidebar_organize_browser.py"
         },
         {
           "name": "favourites reorder with drag and drop",
           "line": 44,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/sidebar_organize_browser.py"
         },
         {
           "name": "muted rooms dim and stay quiet until mentioned",
@@ -3005,18 +3041,27 @@
         {
           "name": "channel categories organize, collapse and persist",
           "line": 84,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/sidebar_organize_browser.py"
         },
         {
           "name": "categories rename and delete",
           "line": 114,
-          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+          "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+          "browser_result": "passed on Rails and Rust",
+          "browser_runner": "rust/reference-tools/rooms/sidebar_organize_browser.py"
         }
       ],
       "declared_count": 6,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "status": "5 original interactions passed on Rails and Rust; 1 behaviour cases remaining; not Rails Minitest executions",
+      "browser_cases_run": 5,
+      "browser_pass_count": 5,
+      "browser_cases_remaining": [
+        "muted rooms dim and stay quiet until mentioned"
+      ]
     },
     {
       "file": "test/system/sidebar_room_menu_test.rb",

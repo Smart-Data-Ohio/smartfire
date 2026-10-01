@@ -1,7 +1,8 @@
-# Room owner integration contract — native adapters mounted, byte acceptance partial
+# Room owner integration contract — native full pages and owner seams
 
-Main is merged through `76e54ad5` (#169/#170/#171), including WS15e (#166), the shared
-asset-golden helper (#168), board drift (#164/#165), and the updated WS17 code.
+Main is merged through `65ad0d39` (#167), including WS15e (#166), the shared
+asset-golden helper (#168), board drift (#164/#165), WS17 (#170), attachments (#171),
+and the held-listener deflake (#173). The latest merge commit is `2912fe66`.
 Earlier merge commits brought in WS11 `18c9219c`, WS8bm `b14759da` and WS8bm2
 `d24317e8`. WS9 authentication and request concerns remain the main implementations.
 WS8br2 is not merged or implemented here. Its presenter entry points and shell fields
@@ -27,7 +28,10 @@ bytes for three rooms and two viewers; no membership or presence write occurs.
 
 ## Exact room shell inputs
 
-`controllers/rooms::render_show` supplies the native owner entry points with:
+`controllers/rooms::render_show` and the full-page acceptance test both call the same
+read-only `presenters::room_native::load(conn, app, room, user, message_id,
+request_host, cache_base_url)` factory. It returns `NativePage { show, composer,
+link_fetches, twitter_fetches, github_refreshes }`. The native owner inputs are:
 
 1. A reader connection, actual merged app state, request host, verified request origin
    as `cache_base_url`, and the app's shared fragment store.
@@ -39,9 +43,12 @@ bytes for three rooms and two viewers; no membership or presence write occurs.
    `divider.message_id: Option<i64>` and `divider.count: i64`. The exact call is
    `room_native::message_list(&presenter, &messages, divider.message_id, divider.count)` under
    `fragment_cache::with(&app.fragment_cache, ...)`. Its returned string is assigned
-   unchanged to `ShowView.shell.message_list = Some(list)`. The adapter calls the unchanged
+   to `ShowView.shell.message_list = Some(list)`. The adapter calls the unchanged
    owner `presenter.room_message_list` seam and contributes the exact rooms/show prefix
-   `"\n    \n"`; standalone owner list callers receive no extra bytes. Viewer dividers remain
+   `"\n    \n"` for populated roots. The owner list seam is also invoked on an empty
+   collection; the shell uses Rails' exact empty-room `"\n"` placeholder until the
+   message owner supplies identical empty bytes. Standalone owner callers receive
+   no extra bytes. Viewer dividers remain
    outside the shared per-message cache.
 4. `ShowView.room`: ID, owner `RoomKind` (Open/Closed/Direct; voice/stage/board currently
    use Closed until their screen-owner integration), persisted name, viewer display name, resolved
@@ -63,7 +70,10 @@ Picker availability comes from WS13's configuration adapter: all of
 be nonblank, and the viewer must be human. The same facts populate the layout
 meta tags and the root/thread composer input. Eight complete root composer
 captures match Rails, with public client-ID escaping checked through actual HTTP.
-Stored account tokens and client secrets are never read by this adapter.
+The public configuration adapter reads no account tokens or client secrets. The
+existing linked-account scope predicate is factored into token-free
+`Presenter::google_drive_consent`; both composer selection and layout preferences
+now use it for the Rails `google-drive-previews` meta fact.
 
 Inside the request rendering scope, `room_native::components` renders:
 
@@ -84,7 +94,7 @@ The shell now mounts the unchanged WS13 `66e4c66d` thread/poll templates through
 `rooms::panels::{ThreadPanel,PollBuilder}` and WS8bm2 `1fdf42a6`'s actual
 `pins::PanelPartial`. The thread factory receives the original room view plus
 `Presenter::room_display_name(&room,None)` (neutral, including the viewer in an
-unnamed DM). The shell contributes Rails' two-space content_for prefix. PollBuilder
+unnamed DM). The shell contributes Rails' two-space content_for prefix and its trailing newline. PollBuilder
 receives the same room ID and current request ViewContext; token generation stays
 inside that rendering scope. Pins receives room ID, the full header STI param key
 and `MessagePin::count_for_room` from the reader. The count/list/policy remain M2's.
@@ -92,7 +102,14 @@ The templates are copied without edits from the owning branches. Fourteen comple
 thread/poll/pin captures match the pinned Rails corpus, separately from the real
 HTTP viewer-token ownership test and original collapsed work-guide declaration.
 
-Configured WS13 huddle header/sidebar adapters remain integration work.
+Configured WS13 huddle header/sidebar adapters remain integration work. The real
+`huddle::Config`, `HuddleGrant::participants_for`,
+`controllers::rooms::call_navigation::model`, and stage/participant callback APIs
+are absent from merged main. Their pinned inspection source is WS13 `498aa4e6`.
+The existing readiness-only boolean is not a replacement for these APIs.
+`ShellComponents.huddle_header` remains the stable trusted-HTML entry point;
+`LayoutChrome.huddle_configured` is still false. All eight original huddle sidebar
+controller declarations stay deferred to WS13; no local grant-policy copy is added.
 The public Picker configuration seam is now connected; Google OAuth/token flow
 and transport remain WS14's. No huddle policy, grant issuance or message/composer internals
 are reproduced locally.
@@ -117,41 +134,56 @@ for its viewer and rejected for another viewer. No response bytes are normalized
 `Presenter::renderable_message` calls main's `link_embeds::components(self, message)`
 for persisted Twitter, Fizzy, generic-link and LinkedIn facts, and retains WS8bm2's
 `quote_references` alongside them. Its preloaded child presenters share pending fetch
-sets and Twitter facts with their parent, so the caller receives every requested ID.
+sets, GitHub refresh IDs and Twitter facts with their parent, so the caller receives every requested ID.
 `PageResolver` delegates Twitter existence and signed image paths to main's resolver.
 The existing preload pass also batches Fizzy cards, link references and Twitter posts
 for selected messages and their quote/reply sources. Card/reference order comes from
 the owners' read-only batch seams; frame/card rendering still uses their factories.
 Empty provider facts are remembered, so preloaded quote rendering stays query-free
 and four versus sixteen complete search-message renders use the same query count.
-Root `render_show` returns pending link and Twitter IDs from its reader closure and
-calls main's `enqueue_render_fetches` on the writer before returning the page.
+Root `render_show` returns pending link/Twitter IDs and GitHub refresh IDs from
+`NativePage`, then calls main's `enqueue_render_fetches` and
+`pull_requests::refresh_after_render` on the writer before returning the page.
 A rejected enqueue clears the incomplete rendered fragment cache so a retry can
 register those requests again. Actual provider jobs, claims, policy and broadcasts
 remain in WS15e. WS11's suspension/fanout and WS17's status callbacks are retained;
 main's linked-account disconnect hook runs in the existing user transaction.
 
+## GitHub merge wiring boundary
+
+The main WS15g factory `presenters::github::message_cards(conn, app, message)` and
+`cache_stamp(conn, message)` supply existing `MessageComponents.github_cards_html`
+and `github_cards_stamp`. There is no new card template or GitHub policy. Main's
+factory fills the previously missing public card slot. `Presenter` children share
+an `Rc<RefCell<BTreeSet<i64>>>` refresh set; selected message rendering drains it
+once. The active M1 `messages::rendered::broadcast_edit_in` uses these same component
+bytes and main's refresh-after-render writer seam.
+
+M2 preload integration batches the selected/quote-source message IDs with persisted
+GitHub references once, remembers empty facts for unlinked messages, and calls the
+unchanged main factories only for linked messages. `GithubRendering` carries
+`html`, `stamp`, and stale PR `refreshes`; registration occurs when a fragment is
+actually rendered, rather than on preload. Per-linked-message domain reads remain
+main's. M1 should reconcile these adapter fields/shared sets with its in-flight
+message work; WS8br does not duplicate that work.
+
 ## Acceptance boundary
 
-The strict native comparison checks three seeded room root collections and all nine
-complete list/composer/pending-template regions. It deliberately exits nonzero on
-any difference, with no masks, allowlists, ignored app cases or substituted fragments.
-All six composer/template regions and both DM list regions now match exactly.
-The remaining populated Designers list differs only in the empty GitHub PR card slot. WS15g's
-unmerged adapter exposes `github::message_cards(conn, app, message)` and
-`github::cache_stamp(conn, message)`, carried by `MessageComponents.github_cards_html`
-and `github_cards_stamp`. Those fields/factories are not on main yet; reconcile them
-with the merged provider and quote components rather than replacing either.
-Fizzy, generic link embed and LinkedIn now call the WS15e factories merged on main;
-their complete container bytes are also asserted through the real room-page HTTP path. `ws8br-native-residual.json` retains
-each exact Rails/Rust region; the strict checker still exits 1. The owner message
-list and composer internals are unchanged. The app suite proves native
-mounting and controller behavior, not byte-identical full-page acceptance.
+The four full-page fixtures come only from a Rails controller renderer at pinned
+`d7c7de92`, with the approved `2e20b24c` application layout. They cover Designers
+(David), the David/Kevin pair (David), the seeded group DM (Kevin), and empty HQ
+(JZ). Real controller `show` assigns supply membership/unread/OOO/root selection;
+Rust calls the same fact factory as its HTTP controller. Actual message list,
+composer, pending template, thread/poll/pin panels, layout, shell, head, chrome and
+meta tags render natively. No Rails component is substituted in the Rust path.
+Global/per-form tokens (`GLOBAL`, `method:action`) and CSP `NONCE` are deterministic
+renderer inputs on both targets. Real HTTP token ownership is tested separately.
+Full-page comparison uses main's shared asset-golden helper: each live asset digest
+must validate against compiled local assets; all surrounding bytes stay exact.
 
-Headless browser interaction probes now pass on Rails and Rust for DM selection/forms,
-keyboard room/person switching, member drawers/focus, header/thread/pin panels, and
-inbound-email create/cancel/rotate/authorization/persistence. Their exact interactions
-and discrimination checks are in `ws8br-browser-acceptance.json`. These are probes,
-not complete original Rails system-file mappings. No screenshot or pixel comparison
-is performed. The controller source inventory distinguishes named native passes from
-actual pinned Rails Minitest runs and unexecuted system declarations.
+The separate strict native comparison checks all nine seeded complete message-list,
+composer and pending-template regions without masks. The former 1089-byte GitHub
+slot now comes from main's unchanged factory; there is no GitHub exception in the
+Rust test. Configured huddle pages and original system-declaration coverage remain
+open. Browser receipts and declaration mappings are separate inventories; no
+screenshots, geometry-only comparisons or pixel work are included.

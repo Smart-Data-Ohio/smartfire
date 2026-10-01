@@ -13,7 +13,7 @@
         "choosing a person without a DM opens a new one"
       ],
       "database_assertion": "Global Room.count increases by exactly one on each target, checked on the actual server databases after all five interactions; sidebar accessible-room count is also checked.",
-      "status": "pending current fresh-clone execution"
+      "status": "passed from fresh clone at ad4ffef1"
     },
     {
       "file": "test/system/sidebar_organize_test.rb",
@@ -25,7 +25,7 @@
         "channel categories organize, collapse and persist",
         "categories rename and delete"
       ],
-      "status": "pending current fresh-clone execution",
+      "status": "passed from fresh clone at ad4ffef1",
       "setup": "Replace original fixture favorites/category writes with actual UI setup; restore favorites and remove categories through real controllers between declarations. Synthetic HTML5 drag events are the original Rails interaction.",
       "remaining": [
         "muted rooms dim and stay quiet until mentioned"

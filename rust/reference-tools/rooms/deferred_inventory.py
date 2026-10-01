@@ -11,6 +11,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument('--reference',default='d7c7de92',help='Git reference whose Rails declarations are inventoried')
 parser.add_argument('--test-log',type=Path,help='raw cargo test output for the named one-to-one Rust Rails cases')
 parser.add_argument('--rails-log',type=Path,help='raw per-file output from check_controller_files.py')
+parser.add_argument('--system-log',type=Path,action='append',default=[],help='raw successful browser interaction log with original mapping and pinned source hash')
 args=parser.parse_args()
 root=Path(__file__).resolve().parents[3]
 reference=Path(os.environ.get('CAMPFIRE_REFERENCE',root))
@@ -93,6 +94,9 @@ mixed_pixels={
 }
 def owner(file):
     if file=='test/controllers/audit_log/rooms_audit_test.rb': return 'WS8br room cases; WS8br2 account cases'
+    if file=='test/system/people_group_dms_test.rb': return 'WS8br DM/member shell; WS8br2 people/profile; WS13 configured calls; WS11 agents'
+    if file=='test/system/mobile_layout_test.rb': return 'WS8br drawer destinations; WS8br2 pages outside the workspace'
+    if file=='test/system/motion_test.rb': return 'WS8br room/member/drawer interactions; WS8br2 people-directory interactions; style assertions excluded'
     if file.startswith('test/controllers/users/') and '/sidebars_' not in file: return 'WS8br2'
     if file.startswith('test/controllers/accounts/'): return 'WS8br2'
     base=Path(file).stem.removesuffix('_controller_test').removesuffix('_test')
@@ -111,6 +115,9 @@ for file in files:
     cases=[]
     for match in re.finditer(r"^\s*(?:test\s+([\"'])(.*?)\1\s+do|def\s+(test_\w+))",source,re.M):
         cases.append(dict(name=match[2] or match[3],line=source.count('\n',0,match.start())+1))
+    if file=='test/controllers/audit_log/rooms_audit_test.rb':
+        for case in cases:
+            case['owner']='WS8br2' if case['name'].startswith(('account settings','logo removal','custom styles','unchanged custom styles','workspace icon')) else 'WS8br'
     if file.startswith('test/system/'):
         for case in cases:
             if case['name'] in pixel_only:
@@ -188,5 +195,23 @@ if args.rails_log:
         entry.update(rails_tests_run=int(runs),rails_pass_count=int(runs),rails_assertions=int(assertions))
     output['note']='Source declarations are distinct from actual executions. Rails reference passes are recorded per file from the supplied raw log; they do not imply Rust case completion. Named Rust ports require their own cargo receipts.'
     print(f'Rails controller reference receipts: {len(receipts)} files, {sum(int(row[1]) for row in receipts)} passes, 0 failures, 0 errors, 0 skips; reference only')
+if args.system_log:
+    browser_receipts='\n'.join(path.read_text() for path in args.system_log)
+    mapped=json.loads((root/'rust/plans/ws8br-system-mappings.json').read_text())
+    labels={'test/system/quick_switcher_test.rb':'QuickSwitcher','test/system/sidebar_organize_test.rb':'SidebarOrganize'}
+    for mapping in mapped['files']:
+        label=labels[mapping['file']]
+        file=next(entry for entry in result if entry['file']==mapping['file'])
+        names=set(mapping['original_cases'])
+        assert names <= {case['name'] for case in file['declared_cases']},'browser mapping differs from pinned declarations'
+        expected=len(names)
+        assert f'{label} original mapping: {expected} passed on Rails; {expected} passed on Rust; 0 failed;' in browser_receipts,'missing successful original interaction receipt'
+        assert f'{label} pinned source SHA256: {file["source_sha256"]}' in browser_receipts,'wrong browser reference source'
+        for case in file['declared_cases']:
+            if case['name'] in names:
+                case.update(browser_result='passed on Rails and Rust',browser_runner=mapping['runner'])
+        remaining=[case['name'] for case in file['declared_cases'] if case['name'] not in names and not case.get('acceptance_phase','').startswith('outside current phase')]
+        file.update(browser_cases_run=expected,browser_pass_count=expected,browser_cases_remaining=remaining,status=f'{expected} original interactions passed on Rails and Rust; {len(remaining)} behaviour cases remaining; not Rails Minitest executions')
+        print(f'Original system mapping receipts: {mapping["file"]}: {expected} Rails/Rust browser cases passed, {len(remaining)} behaviour cases remaining; Rails Minitest execution count stays zero')
 (root/'rust/plans/ws8br-rails-cases.json').write_text(json.dumps(output,indent=2)+'\n')
 print(f'Rails deferred inventory: {len(result)} files, {sum(r["declared_count"] for r in result)} source-declared cases; {sum(r["rails_tests_run"] for r in result)} Rails tests run, {sum(r["rails_pass_count"] for r in result)} Rails reference passes; Rust mappings separate')
