@@ -132,16 +132,30 @@ impl ActivityItem {
         read_at: Option<Timestamp>,
         handled_at: Option<Timestamp>,
     ) -> Result<Self> {
-        // Rails dirty tracking skips a save (including updated_at and the callback) with no change.
-        if self.read_at == read_at && self.handled_at == handled_at {
+        let read_changed = self.read_at != read_at;
+        let handled_changed = self.handled_at != handled_at;
+        // Rails writes only dirty columns from the loaded instance, preserving concurrent changes
+        // to other columns. No dirty state also leaves updated_at and the callback untouched.
+        if !read_changed && !handled_changed {
             return Self::find(tx.conn(), self.id);
         }
         self.validate_event_type()?;
         let now = tx.now();
-        tx.conn().execute_cached(
-            "UPDATE activity_items SET read_at=?,handled_at=?,updated_at=? WHERE id=?",
-            params![read_at, handled_at, now, self.id],
-        )?;
+        match (read_changed, handled_changed) {
+            (true, true) => tx.conn().execute_cached(
+                "UPDATE activity_items SET read_at=?,handled_at=?,updated_at=? WHERE id=?",
+                params![read_at, handled_at, now, self.id],
+            )?,
+            (true, false) => tx.conn().execute_cached(
+                "UPDATE activity_items SET read_at=?,updated_at=? WHERE id=?",
+                params![read_at, now, self.id],
+            )?,
+            (false, true) => tx.conn().execute_cached(
+                "UPDATE activity_items SET handled_at=?,updated_at=? WHERE id=?",
+                params![handled_at, now, self.id],
+            )?,
+            (false, false) => unreachable!(),
+        };
         Self::broadcast_change(tx, self.user_id, self.id)?;
         Self::find(tx.conn(), self.id)
     }
@@ -247,13 +261,8 @@ impl ActivityItem {
     /// `mark_handled!`: preserve an existing read timestamp when accepting a late invite.
     pub fn mark_handled(&self, tx: &mut Tx<'_>) -> Result<Self> {
         self.validate_event_type()?;
-        // Rails' saved-change callback watches the state timestamps. Repeating
-        // an answer at the same timestamp is a no-op (activity_item.rb:215-218).
-        if self.read_at.is_none() || self.handled_at != Some(tx.now()) {
-            tx.conn().execute_cached("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),tx.now(),self.id])?;
-            Self::broadcast_change(tx, self.user_id, self.id)?;
-        }
-        Self::find(tx.conn(), self.id)
+        let now = tx.now();
+        self.save_state(tx, self.read_at.or(Some(now)), Some(now))
     }
 
     fn validate_event_type(&self) -> Result<()> {
@@ -278,9 +287,7 @@ impl ActivityItem {
             Self::from_row,
         )?;
         for item in items {
-            item.validate_event_type()?;
-            tx.conn().execute("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?",params![tx.now(),tx.now(),tx.now(),item.id])?;
-            Self::broadcast_change(tx, item.user_id, item.id)?;
+            item.mark_handled(tx)?;
         }
         Ok(())
     }
