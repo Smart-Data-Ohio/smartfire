@@ -1,18 +1,18 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 123 of 156 declarations have scoped evidence; 33 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 137 of 156 declarations have scoped evidence; 19 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
-56 named declarations; 36 have scoped Rust evidence below, and 20 await attribution/signoff. Reference execution counts are in the main report.
+56 named declarations; 48 have scoped Rust evidence below, and 8 await attribution/signoff. Reference execution counts are in the main report.
 
 - index returns the last page by default — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (complete pinned Rails page/response comparisons).
 - index is not found for a soft-deleted room — WS8bm. Attributed to `messages::http_tests::deleted_room_is_inaccessible_even_with_a_lingering_membership` (actual requests with retained membership).
 - index returns a page before the specified message — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (actual before-cursor requests against Rails).
 - index returns a page after the specified message — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (actual after-cursor requests against Rails).
 - index returns no_content when there are no messages — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (empty-edge status and exact response headers).
-- index etag changes when an off-page reply source is edited — WS8bm.
-- index etag changes when a card fetch completes — WS15g / WS15e; WS8bm render integration.
+- index etag changes when an off-page reply source is edited — WS8bm. `messages::declaration_tests::page_validators_change_for_off_page_replies_and_provider_fetches_without_message_touches`: real conditional GET and off-page source PATCH; exact Rails ETags/statuses.
+- index etag changes when a card fetch completes — WS15g / WS15e; WS8bm render integration. `messages::declaration_tests::page_validators_change_for_off_page_replies_and_provider_fetches_without_message_touches`: real conditional GET after provider rows change; exact Rails ETags/statuses without touching the message.
 - index etag changes when an author is renamed — WS8bm. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (author cache stamp invalidates the existing validator).
 - index etag changes when the older of two pins is removed — WS8b-m2; WS8bm cache integration. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (actual older-pin removal invalidates the prior HTTP validator; M2 owns pin endpoints).
 - get renders a single message belonging to the user — WS8bm. Attributed to `messages::root_tests::standalone_message_wrapper_matches_rails_bytes` (four complete standalone Rails view bodies).
@@ -36,20 +36,20 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - messages render empty card containers for future broadcasts — WS15g / WS15e; WS8bm render integration. Same provider socket regression: actual root SHOW mounts the exact empty GitHub/Twitter container bytes from Rails replacement fixtures.
 - admin cannot update a message belonging to another user — WS8bm. Attributed to `messages::http_tests::author_only_edits_even_for_an_administrator` (admin edit/update denied).
 - destroy destroys a message belonging to the user — WS8bm. Attributed to `messages::paging_tests::root_formats_and_destroy_side_effects_match_rails` (own deletes across Rails formats remove rows).
-- admin destroy destroys a message belonging to another user — WS8bm.
+- admin destroy destroys a message belonging to another user — WS8bm. `messages::http_tests::administrator_can_delete_another_authors_ordinary_root_message`: real other-author DELETE succeeds and removes the row.
 - destroy broadcasts tombstone updates to replies — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (HTTP destroy with root and thread replies; complete captured Rails tombstone frames).
 - destroying a thread parent broadcasts a thread summary refresh — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (HTTP destroy of the parent; complete captured Rails indicator frames).
 - edited messages show an edited marker with the edit time — WS8bm. Attributed to `messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits` (complete edited_text and edited_image HTML including time attribute).
-- the edited marker renders the same UTC time in every time zone — WS8bm.
+- the edited marker renders the same UTC time in every time zone — WS8bm. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
 - editing a message broadcasts its meta so other clients see the edited marker — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (HTTP update; complete captured Rails meta frame).
-- identical and attachment-only saves do not mark a message edited — WS8bm.
-- identical rich-text saves do not mark a message edited — WS8bm.
-- a blank body on a bodyless message does not mark it edited — WS8bm.
-- formatting-only rich-text edits still mark a message edited — WS8bm.
-- reactions do not mark a message edited — WS8bm.
-- card fetches do not mark a message edited — WS15g / WS15e; WS8bm render integration.
-- reply tombstones do not mark the reply edited — WS8bm.
-- ensure non-admin can't update a message belonging to another user — WS8bm.
+- identical and attachment-only saves do not mark a message edited — WS8bm. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
+- identical rich-text saves do not mark a message edited — WS8bm. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
+- a blank body on a bodyless message does not mark it edited — WS8bm. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
+- formatting-only rich-text edits still mark a message edited — WS8bm. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
+- reactions do not mark a message edited — WS8bm. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
+- card fetches do not mark a message edited — WS15g / WS15e; WS8bm render integration. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
+- reply tombstones do not mark the reply edited — WS8bm. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
+- ensure non-admin can't update a message belonging to another user — WS8bm. `messages::http_tests::non_author_non_admin_cannot_edit_or_delete`: actual PATCH is forbidden and the complete saved row remains unchanged.
 - ensure non-admin can't destroy a message belonging to another user — WS8bm. Attributed to `messages::http_tests::non_author_non_admin_cannot_edit_or_delete` (other member delete denied).
 - mentioning a bot triggers a webhook — WS11; WS8bm HTTP integration.
 - mentioning a bot from Markdown triggers a webhook — WS11; WS8bm HTTP integration.
@@ -97,10 +97,10 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/messages/legacy_presentation_cache_test.rb
 
-2 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+2 named declarations; both have scoped Rust evidence below. Reference execution counts are in the main report.
 
-- fragments cached before the autolink fix aren't served after it — WS8bm.
-- pages validated before the autolink fix aren't revalidated after it — WS8bm.
+- fragments cached before the autolink fix aren't served after it — WS8bm. `messages::declaration_tests::legacy_v2_fragment_and_page_validators_cannot_serve_the_vulnerable_autolink_render`: store the real vulnerable Rails v2 fragment in the actual cache; exact safe v3 bytes are rendered instead.
+- pages validated before the autolink fix aren't revalidated after it — WS8bm. Same legacy-cache regression: actual requests with old ETag and Last-Modified return 200 with the exact Rails validator and safe fragment.
 
 ## test/controllers/messages/boosts_controller_test.rb
 

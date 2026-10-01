@@ -23,6 +23,8 @@ mod collection_tests;
 #[cfg(test)]
 mod csrf_tests;
 #[cfg(test)]
+mod declaration_tests;
+#[cfg(test)]
 mod room_list_tests;
 #[cfg(test)]
 mod github_integration_tests;
