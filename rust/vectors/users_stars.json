@@ -1,0 +1,244 @@
+{
+  "reference": "d7c7de92",
+  "fragments": [
+    {
+      "starred": false,
+      "html": "<turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><button class=\"btn full-width\" type=\"submit\">☆ Star</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/users/712064548/star\" /></form>\n</turbo-frame>",
+      "stream": "<turbo-stream action=\"replace\" target=\"star_user_712064548\"><template><turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><button class=\"btn full-width\" type=\"submit\">☆ Star</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/users/712064548/star\" /></form>\n</turbo-frame></template></turbo-stream>"
+    },
+    {
+      "starred": true,
+      "html": "<turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn full-width\" type=\"submit\">★ Unstar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/users/712064548/star\" /></form>\n</turbo-frame>",
+      "stream": "<turbo-stream action=\"replace\" target=\"star_user_712064548\"><template><turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn full-width\" type=\"submit\">★ Unstar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/users/712064548/star\" /></form>\n</turbo-frame></template></turbo-stream>"
+    }
+  ],
+  "validations": [
+    {
+      "user_id": 127326141,
+      "starred_user_id": 127326141,
+      "errors": {
+        "starred_user": [
+          "must be someone else"
+        ]
+      }
+    },
+    {
+      "user_id": 394959859,
+      "starred_user_id": 394959859,
+      "errors": {
+        "starred_user": [
+          "must be someone else"
+        ]
+      }
+    },
+    {
+      "user_id": 127326141,
+      "starred_user_id": null,
+      "errors": {
+        "starred_user": [
+          "must exist"
+        ]
+      }
+    },
+    {
+      "user_id": null,
+      "starred_user_id": 712064548,
+      "errors": {
+        "user": [
+          "must exist"
+        ]
+      }
+    }
+  ],
+  "http": [
+    {
+      "viewer_id": 127326141,
+      "method": "post",
+      "target": 712064548,
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"starred\":true}",
+      "count": 1
+    },
+    {
+      "viewer_id": 127326141,
+      "method": "post",
+      "target": 712064548,
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"starred\":true}",
+      "count": 1
+    },
+    {
+      "viewer_id": 127326141,
+      "method": "delete",
+      "target": 712064548,
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"starred\":false}",
+      "count": 0
+    },
+    {
+      "viewer_id": 127326141,
+      "method": "delete",
+      "target": 712064548,
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"starred\":false}",
+      "count": 0
+    },
+    {
+      "viewer_id": 127326141,
+      "method": "post",
+      "target": 394959859,
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "body": "{\"starred\":true}",
+      "count": 1
+    },
+    {
+      "viewer_id": 127326141,
+      "method": "post",
+      "target": 127326141,
+      "status": 422,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": 127326141,
+      "method": "post",
+      "target": -1,
+      "status": 404,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": 394959859,
+      "method": "post",
+      "target": 712064548,
+      "status": 403,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": 394959859,
+      "method": "post",
+      "target": 712064548,
+      "status": 403,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": 394959859,
+      "method": "delete",
+      "target": 712064548,
+      "status": 403,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": 394959859,
+      "method": "delete",
+      "target": 712064548,
+      "status": 403,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": 394959859,
+      "method": "post",
+      "target": 394959859,
+      "status": 422,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": 394959859,
+      "method": "post",
+      "target": 394959859,
+      "status": 422,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": 394959859,
+      "method": "post",
+      "target": -1,
+      "status": 404,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": null,
+      "method": "post",
+      "target": 712064548,
+      "status": 401,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": null,
+      "method": "post",
+      "target": 712064548,
+      "status": 401,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": null,
+      "method": "delete",
+      "target": 712064548,
+      "status": 401,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": null,
+      "method": "delete",
+      "target": 712064548,
+      "status": 401,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": null,
+      "method": "post",
+      "target": 394959859,
+      "status": 401,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": null,
+      "method": "post",
+      "target": 127326141,
+      "status": 401,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    },
+    {
+      "viewer_id": null,
+      "method": "post",
+      "target": -1,
+      "status": 401,
+      "content_type": "text/html",
+      "body": "",
+      "count": 0
+    }
+  ]
+}

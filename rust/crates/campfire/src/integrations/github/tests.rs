@@ -1038,6 +1038,72 @@ async fn verified_logins_displace_unverified_claimants_but_keep_verified_ones() 
 }
 
 #[tokio::test]
+async fn unicode_parity_verified_login_claim_uses_ruby_downcase() {
+    let test = test_database().await;
+    let crypto = crypto();
+    test.db
+        .write(move |tx| {
+            let mut data = input(TestDb::id("david"), "pat");
+            data.github_login = " ΟΣ ";
+            Account::create(tx, &crypto, &data)?;
+            let login: String = tx.conn().query_row(
+                "SELECT github_login FROM users WHERE id=?",
+                [TestDb::id("david")],
+                |r| r.get(0),
+            )?;
+            assert_eq!(login, "οσ");
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn unicode_parity_verified_claimant_identity_uses_full_fold() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/unicode_casing_parity.json"
+    ))
+    .unwrap();
+    for case in oracle["comparisons"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| ["ß", "ς"].contains(&case["left"].as_str().unwrap()))
+    {
+        let test = test_database().await;
+        let crypto = crypto();
+        let existing = case["left"].as_str().unwrap().to_owned();
+        let incoming = case["right"].as_str().unwrap().to_owned();
+        test.db
+            .write(move |tx| {
+                let mut claimant = input(TestDb::id("jason"), "pat");
+                claimant.github_login = &existing;
+                Account::create(tx, &crypto, &claimant)?;
+                // Legacy manual profile value reaches Rails' unchanged SQL LOWER predicate.
+                tx.conn().execute(
+                    "UPDATE users SET github_login=? WHERE id=?",
+                    rusqlite::params![
+                        rails_compat::unicode::downcase(&incoming),
+                        TestDb::id("jason")
+                    ],
+                )?;
+                let mut newcomer = input(TestDb::id("david"), "pat");
+                newcomer.github_login = &incoming;
+                Account::create(tx, &crypto, &newcomer)?;
+                let login: Option<String> = tx.conn().query_row(
+                    "SELECT github_login FROM users WHERE id=?",
+                    [TestDb::id("david")],
+                    |r| r.get(0),
+                )?;
+                assert_eq!(login, None, "verified claimant must keep its identity");
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+}
+
+#[tokio::test]
 async fn repository_access_caches_grants_denials_but_not_transport_failures() {
     for status in [200, 403, 500, 401] {
         let test = test_database().await;

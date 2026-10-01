@@ -386,7 +386,7 @@ async fn leaving_removes_only_your_membership_and_the_group_keeps_working() {
 }
 #[tokio::test]
 async fn the_last_member_out_destroys_the_group() {
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     let id = group(&app, &[JASON], JASON).await;
     root(
         &app.sign_in(JASON)
@@ -432,7 +432,7 @@ async fn a_removed_member_loses_access_to_the_group() {
 }
 #[tokio::test]
 async fn destroy_only_allowed_for_all_room_users() {
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     root(
         &app.sign_in(KEVIN)
             .await
@@ -549,7 +549,7 @@ async fn the_non_admin_creator_cannot_delete_a_group_dm_through_the_generic_room
 }
 #[tokio::test]
 async fn an_administrator_can_delete_a_group_dm() {
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     let id = group(&app, &[DAVID, JASON, KEVIN], DAVID).await;
     root(
         &app.david()

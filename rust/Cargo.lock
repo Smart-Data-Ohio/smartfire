@@ -536,6 +536,7 @@ dependencies = [
  "lettre",
  "mailparse",
  "md-5",
+ "rails_compat",
  "rand 0.9.5",
  "regex",
  "rusqlite",
