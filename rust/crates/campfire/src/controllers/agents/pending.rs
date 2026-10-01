@@ -78,7 +78,7 @@ async fn dispatch(
     if reader && result.is_ok() {
         super::reads::operation(c, agent_id, operation, args).await
     } else if matches!(operation, "create_poll" | "get_poll") && result.is_ok() {
-        super::polls::operation(c, agent_id, operation, args).await
+        super::polls::operation(c, agent_id, operation, args, rest).await
     } else {
         Ok(result)
     }

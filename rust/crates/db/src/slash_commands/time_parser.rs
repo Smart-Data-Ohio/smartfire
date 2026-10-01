@@ -405,10 +405,8 @@ pub(crate) fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Ti
                 r"(?i)\b(?P<month>{names})[ -]+(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?\b(?:[, -]+(?P<year>[0-9]{{4}}))?"
             )),
         ];
-        if let Some(c) = month_year.captures(&date_text) {
-            date = normalized_date(c["year"].parse().ok()?, month(&c["month"])?, 1)?;
-            found = true;
-        } else if let Some(c) = patterns.iter().find_map(|p| p.captures(&date_text)) {
+        // A day-bearing form wins over its embedded month/year ("3 Mar 2026").
+        if let Some(c) = patterns.iter().find_map(|p| p.captures(&date_text)) {
             date = normalized_date(
                 c.name("year")
                     .map(|y| y.as_str().parse::<i16>())
@@ -418,6 +416,9 @@ pub(crate) fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Ti
                 month(&c["month"])?,
                 c["day"].parse().ok()?,
             )?;
+            found = true;
+        } else if let Some(c) = month_year.captures(&date_text) {
+            date = normalized_date(c["year"].parse().ok()?, month(&c["month"])?, 1)?;
             found = true;
         }
     }

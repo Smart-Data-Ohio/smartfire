@@ -11,6 +11,27 @@ add = ->(name,method,path,body=nil,setup={}) { cases << {name:name,method:method
 tool = ->(name,args={},setup={},label=name) { add.call("mcp_#{label}",:post,"/agents/mcp",{jsonrpc:"2.0",id:13,method:"tools/call",params:{name:name,arguments:args}},setup) }
 question="Choose α & β"
 variants=[{}, {multiple:"TRUE",anonymous:"off"}, {multiple:0,anonymous:"yes"}, {closes_at:"2026-03-03T16:00:00Z"}, {closes_at:"2026-03-03"}, {closes_at:"17:00"}, {closes_at:false}, {closes_at:"bad",options:[]}, {closes_at:"2026-03-02T16:00:00Z"}, {options:[" A ","",nil,"B"]}, {options:[true,false,3]}, {options:[["A"],{x:"B"}]}, {options:["same","same"]}, {options:["x"*200,"B"]}, {options:["x"*201,"B"]}, {options:["A"]}, {options:(1..10).map(&:to_s)}, {options:(1..11).map(&:to_s)}, {question:" "}, {question:false}, {question:true}, {question:["A","B"]}, {question:{x:1}}, {options:["\u00a0A\u00a0","B"]}, {options:["\0A\0","B"]}, {question:1}, {question:1.5}]
+# Date._parse grammar and request coercions, exercised through both transports.
+variants += [
+ {closes_at:"March 3, 2026 5pm"}, {closes_at:"3 Mar 2026 17:00 UTC"},
+ {closes_at:"2026/03/03 17:00"}, {closes_at:"03/03/2026 17:00"},
+ {closes_at:"Tue, 03 Mar 2026 17:00:00 GMT"}, {closes_at:"2026-03-03T17:00:00+05:30"},
+ {closes_at:"2026-03-03 17:00 EST"}, {closes_at:"2026-03-03 17:00 PDT"},
+ {closes_at:"2026-03-03 17:00 MART"}, {closes_at:"2026-03-03 24:00"},
+ {closes_at:"2026-03-03 17:00:60"}, {closes_at:"2026-02-30 17:00"},
+ {closes_at:"2026-03-00"}, {closes_at:"2026-13-03"}, {closes_at:"2026-03-32"},
+ {closes_at:"March 2027"}, {closes_at:"Dec"}, {closes_at:"junk"}, {closes_at:"Tuesday"},
+ {closes_at:"03"}, {closes_at:"17:30"}, {closes_at:"5pm"}, {closes_at:"17:00 UTC+0530"},
+ {closes_at:"17:00 -05:00"}, {closes_at:"17:00 bananas"},
+ {closes_at:"2026-03-03 17:00:00.123456789"},
+ {closes_at:[]}, {closes_at:{}}, {closes_at:3}, {closes_at:true}, {closes_at:["2026-03-03"]},
+ {closes_at:"\u00a0"}, {closes_at:"\0"},
+ {options:nil}, {options:"A"}, {options:false}, {options:{A:"x",B:"y"}},
+ {options:["\u00a0","A","B"]}, {options:["\0","A","B"]},
+ {options:["α"*200,"B"]}, {options:["α"*201,"B"]},
+ {question:"\u00a0"}, {question:"\0"}, {question:nil},
+ {multiple:[],anonymous:{}}, {multiple:"False",anonymous:"Off"}
+]
 variants.each_with_index do |variant,i|
  args={room_id:room,question:question,options:["A","B"]}.merge(variant)
  add.call("poll_create_#{i}",:post,"/rooms/#{room}/agents/polls",args)

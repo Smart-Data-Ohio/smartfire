@@ -15,6 +15,7 @@ pub(super) async fn operation(
     agent_id: i64,
     op: &str,
     args: Value,
+    rest: bool,
 ) -> Result<ServiceResult> {
     let poll = if op == "get_poll" {
         let room_id = args.get("room_id").map_or(0, ruby_i64);
@@ -28,8 +29,12 @@ pub(super) async fn operation(
         let raw = args.get("closes_at").filter(|value| !blank(value));
         let closes_at = if let Some(raw) = raw {
             let zone = features::user_zone(c).await?;
-            match features::parse_time(&text(Some(raw)).unwrap_or_default(), &zone, c.now()) {
-                Ok(Some(time)) => Some(time),
+            // Polls uses Time.zone.parse (Date._parse), shared with Calendar forms.
+            match campfire_db::slash_commands::time_parser::parse_calendar_time(
+                &text(Some(raw)).unwrap_or_default(), zone.name(), zone.name(),
+                campfire_db::Timestamp::from_jiff(c.now()),
+            ) {
+                Some(time) => Some(time),
                 _ => return Ok(ServiceResult::fail("closes_at is invalid", 422)),
             }
         } else {
@@ -44,6 +49,9 @@ pub(super) async fn operation(
                 .iter()
                 .map(|value| text(Some(value)).unwrap_or_default())
                 .collect(),
+            // REST supplies ActionController::Parameters, whose Array conversion is a
+            // single element. MCP supplies a Ruby Hash, whose Array conversion is pairs.
+            Some(value @ Value::Object(_)) if rest => vec![text(Some(value)).unwrap()],
             Some(Value::Object(values)) => values
                 .iter()
                 .map(|(key, value)| text(Some(&serde_json::json!([key, value]))).unwrap())
