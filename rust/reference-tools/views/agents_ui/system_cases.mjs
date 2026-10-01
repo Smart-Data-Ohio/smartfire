@@ -61,9 +61,7 @@ try {
   });
   await run('agent_streaming_test.rb','agent steps render as a collapsible list','david',async page => {
     await joinRoom(page, labels['system.room']);
-    const message = page.locator(`#message_${labels['system.message']}`);
-    console.log(`Steps paging: expected ${JSON.stringify(labels['system.last_page_ids'])}; rendered ${JSON.stringify(await page.locator('.message[id]').evaluateAll(nodes=>nodes.map(n=>n.id)))}`);
-    console.log(`Steps DOM: ${await message.count()} target(s); ${await message.locator('details.agent-steps').count()} details; ${await message.textContent({timeout:2000}).catch(() => 'target absent')}`);
+    const message = page.locator(`#${labels['system.message_dom_id']}`);
     await contains(message.locator('details.agent-steps summary'),'Steps (2)');
     await message.locator('details.agent-steps > summary').click();
     for (const text of ['Run tests','Deploy','Done','All green','Ship it']) await contains(message,text);

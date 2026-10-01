@@ -7,7 +7,8 @@ This runner compares behavior; it captures no screenshots and performs no
 pixel work. Rails uses the pin plus exactly the approved status-popup layout.
 The pinned Rails models create the original Bender message, steps and approval,
 including all parent timestamps and callback-created activity. A SQLite backup
-copies that exact persisted state to Rust before boot. Failure counts are reported per original
+copies that exact persisted state to Rust before boot. The fixture records the
+Rails DOM identifier too: messages use their client ID rather than database ID. Failure counts are reported per original
 Rails file and cause a nonzero exit, even when the other runtime passes.
 
 The directory case includes the agent profile page; the inbox case includes
