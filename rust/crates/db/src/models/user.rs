@@ -14,7 +14,7 @@ use crate::error::{OptionalExt, Result};
 use crate::events::Event;
 use crate::models::{Ban, Membership, Message, Session, Webhook};
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
-use crate::time::{SQLITE_NOW, Timestamp};
+use crate::time::Timestamp;
 
 pub mod presentation;
 pub mod profile_settings;
@@ -892,6 +892,7 @@ const DUMMY_DIGEST: &str = "$2a$12$FiKmSp4UhLvSB4Sd/ZUjQunyKP6.NjDRHdr5LnKUVk.BU
 
 /// `after_create_commit :grant_membership_to_open_rooms`: `Rooms::Open.alive` (`app/models/user.rb`).
 fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
+    let sqlite_now = tx.env().sqlite_now_sql();
     let room_ids: Vec<i64> = query_all(
         tx.conn(),
         r#"SELECT "rooms"."id" FROM "rooms" WHERE "rooms"."type" = ? AND "rooms"."deleted_at" IS NULL"#,
@@ -901,7 +902,7 @@ fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
     for room_ids in room_ids.chunks(crate::models::room::MEMBERSHIP_INSERT_BATCH) {
         let rows: Vec<String> = room_ids
             .iter()
-            .map(|_| format!("({SQLITE_NOW}, ?, {SQLITE_NOW}, ?)"))
+            .map(|_| format!("({sqlite_now}, ?, {sqlite_now}, ?)"))
             .collect();
         let sql = format!(
             r#"INSERT INTO "memberships" ("created_at","room_id","updated_at","user_id") VALUES {} ON CONFLICT  DO NOTHING RETURNING "id""#,

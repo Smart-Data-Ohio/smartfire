@@ -2,14 +2,17 @@
 use super::{User, removal::DependencyPhase};
 use crate::sql::query_all;
 use crate::{Event, Result, Tx};
-use rusqlite::params;
 
 impl User {
     pub fn destroy_for_slack_undo(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.destroy_with_dependencies(tx, |tx, user, phase| {
             match phase {
                 DependencyPhase::BeforeDestroy => {
-                    tx.conn().execute("UPDATE huddle_grants SET revoked_at=?1,updated_at=?1 WHERE user_id=?2 AND revoked_at IS NULL", params![tx.now(),user.id])?;
+                    crate::models::huddle_grant::HuddleGrant::revoke_for_user(
+                        tx,
+                        user.id,
+                        &crate::models::room_delete::HuddleConfig::from_env(),
+                    )?;
                 }
                 DependencyPhase::Connections => user.destroy_slack_dependencies(tx)?,
             }
@@ -50,6 +53,7 @@ impl User {
     }
 }
 fn delete(tx: &Tx<'_>, table: &str, key: &str, user: i64) -> Result<()> {
-    tx.conn().execute(&format!("DELETE FROM {table} WHERE {key}=?"), [user])?;
+    tx.conn()
+        .execute(&format!("DELETE FROM {table} WHERE {key}=?"), [user])?;
     Ok(())
 }

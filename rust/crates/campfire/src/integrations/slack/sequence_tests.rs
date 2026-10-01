@@ -164,6 +164,29 @@ async fn compare_sequence(personal: bool, source: &str) {
     let id = create(&db, personal, options).await;
     import(&db, crypto.clone(), id, network.clone()).await;
     let imported = snapshot(&db, oracle["json_columns"].clone()).await;
+    if let Some(mutations) = oracle.get("mutations") {
+        let mutations = mutations.clone();
+        db.write(move |tx| {
+            for mutation in mutations.as_array().unwrap() {
+                tx.conn().execute(
+                    mutation["sql"].as_str().unwrap(),
+                    rusqlite::params_from_iter(
+                        mutation["params"].as_array().unwrap().iter().map(input),
+                    ),
+                )?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+        let changed = snapshot(&db, oracle["json_columns"].clone()).await;
+        assert!(
+            first_difference(&oracle["changed"], &changed, "common inputs").is_none(),
+            "{}: {}",
+            oracle["retained"],
+            first_difference(&oracle["changed"], &changed, "common inputs").unwrap_or_default()
+        );
+    }
     undo(&db, id).await;
     let undone = snapshot(&db, oracle["json_columns"].clone()).await;
     let options = oracle["reimported"]["slack_imports"][1]["options"].clone();
@@ -208,7 +231,9 @@ async fn compare_sequence(personal: bool, source: &str) {
     );
     println!(
         "Slack DB differential ({}): import -> undo -> reimport; {} tables x 3 snapshots; every row and field matched",
-        if personal { "personal" } else { "workspace" },
+        oracle["retained"]
+            .as_str()
+            .unwrap_or(if personal { "personal" } else { "workspace" }),
         oracle["json_columns"].as_object().unwrap().len()
     );
 }
@@ -234,4 +259,23 @@ async fn create(db: &Database, personal: bool, options: Value) -> i64 {
     })
     .await
     .unwrap()
+}
+
+#[tokio::test]
+async fn slack_retained_undo_reimport_matches_rails_saved_poll_schedules_threads_and_claims() {
+    for source in [
+        include_str!("../../../../../vectors/slack/sequence_keep_saved_reply.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_poll_reply.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_pending_quoted_reply.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_sent_reply.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_foreign_thread.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_room_event_schedule.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_claimed_session.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_claimed_google_account.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_claimed_google_identity.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_claimed_password.json"),
+        include_str!("../../../../../vectors/slack/sequence_keep_placeholder_authorship.json"),
+    ] {
+        compare_sequence(false, source).await;
+    }
 }
