@@ -31,13 +31,10 @@ pub struct State {
     reader: RwLock<Option<Arc<dyn RepositoryReader>>>,
 }
 impl State {
-    pub fn live(db: Database, crypto: Arc<rails_compat::ar_encryption::ArEncryption>) -> Self {
+    /// Share the booted owner service, including its configured network.
+    pub fn live(accounts: super::github::accounts::Accounts) -> Self {
         let state = Self::default();
-        state.install(Arc::new(super::github::accounts::Accounts::new(
-            db,
-            crypto,
-            super::github::client::AppClient::from_env(),
-        )));
+        state.install(Arc::new(accounts));
         state
     }
     #[cfg(test)]

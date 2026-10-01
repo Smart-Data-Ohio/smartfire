@@ -165,6 +165,7 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
             std::env::var("GITHUB_APP_CLIENT_SECRET").ok(), subscription_network.clone(),
         ), subscription_network.clone(),
     );
+    let agent_repositories = crate::integrations::agent_repositories::State::live(github_accounts.clone());
     let app = Arc::new(AppState {
         config,
         secrets,
@@ -177,7 +178,7 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
         jobs,
         mail,
         agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
-        agent_repositories: crate::integrations::agent_repositories::State::default(),
+        agent_repositories,
         github_accounts,
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
@@ -186,7 +187,6 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
         fragment_cache,
     });
 
-    app.agent_repositories.install(Arc::new(app.github_accounts.clone()));
     let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);
 
     let kit = Kit::new(kit_config, crypto, clock, app.clone());
