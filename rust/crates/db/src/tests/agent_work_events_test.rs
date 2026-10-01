@@ -25,6 +25,99 @@ fn gold() -> Value {
     ))
     .unwrap()
 }
+
+#[test]
+fn ws11_deletion_indicator_precedes_failed_ledger_without_webhook() {
+    deletion_indicator_before_ledger(false);
+}
+
+#[test]
+fn ws11_deletion_indicator_precedes_failed_ledger_with_webhook() {
+    deletion_indicator_before_ledger(true);
+}
+
+fn deletion_indicator_before_ledger(webhook: bool) {
+    use crate::broadcasts::{Broadcast, Partial};
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/agents_deletion_indicator_contract.json"
+    ))
+    .unwrap();
+    for reject in [false, true] {
+        let t = setup();
+        let key = format!("webhook_{webhook}_reject_{reject}");
+        let client_id = format!("ws11-deletion-indicator-{key}");
+        let parent = t.write(move |tx| {
+            crate::Message::create(
+                tx,
+                crate::NewMessage {
+                    client_message_id: Some(client_id),
+                    ..super::channel_thread_test::markdown("watercooler", "david", "Parent")
+                },
+            )
+        });
+        let thread = t.write(move |tx| {
+            let mut thread = ChannelThread::create(tx, crate::NewChannelThread {
+                room_id: id("watercooler"), creator_id: id("david"),
+                parent_message_id: Some(parent.id), name: Some("Indicator deletion".into()),
+                work_status: Some("planned".into()), ..Default::default()
+            })?;
+            tx.conn().execute("UPDATE channel_threads SET work_owner_id=? WHERE id=?", params![id("bender"),thread.id])?;
+            if !webhook { tx.conn().execute("DELETE FROM webhooks WHERE user_id=?", [id("bender")])?; }
+            thread.post_message(tx, id("david"), super::channel_thread_test::markdown("watercooler", "david", "Reply"))?;
+            tx.conn().execute("DELETE FROM agent_events", [])?;
+            if reject {
+                tx.conn().execute_batch(&format!("CREATE TEMP TRIGGER ws11_reject_indicator_ledger BEFORE INSERT ON agent_events WHEN NEW.event_type='work_unassigned' AND json_extract(NEW.metadata,'$.thread_id')={} BEGIN SELECT RAISE(ABORT,'WS11 rejected indicator ledger'); END", thread.id))?;
+            }
+            Ok(thread)
+        });
+        t.sink.take();
+        let thread_id = thread.id;
+        let result = t.try_write(move |tx| ChannelThread::find(tx.conn(), thread_id)?.destroy(tx));
+        assert_eq!(result.is_err(), reject);
+        let state = t.read(|conn| Ok(json!({
+            "error": if result.is_err() {Some("statement_invalid")} else {None},
+            "thread_exists": ChannelThread::find_by_id(conn,thread_id)?.is_some(),
+            "parent_exists": crate::Message::find_by_id(conn,parent.id)?.is_some(),
+            "replies_remaining": conn.query_row("SELECT COUNT(*) FROM messages WHERE thread_id=?",[thread_id],|r|r.get::<_,i64>(0))?,
+            "deletion_events": conn.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='work_unassigned'",[],|r|r.get::<_,i64>(0))?
+        })));
+        let mut expected = oracle["results"][&key].clone();
+        let frames = expected
+            .as_object_mut()
+            .unwrap()
+            .remove("indicator_frames")
+            .unwrap();
+        assert_eq!(state, expected, "{key}: committed state");
+        let indicators: Vec<_> = t
+            .sink
+            .take()
+            .iter()
+            .filter_map(|event| match event.as_broadcast()? {
+                Broadcast::Turbo(stream) => match stream.partial {
+                    Some(Partial::ThreadIndicator { reply_count, .. }) => {
+                        Some((stream.target.clone(), reply_count, stream.maintain_scroll))
+                    }
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            indicators.len(),
+            frames.as_array().unwrap().len(),
+            "{key}: Rails broadcasts before the failing ledger callback"
+        );
+        assert_eq!(
+            indicators,
+            vec![(
+                format!("thread_indicator_message_{}", parent.client_message_id),
+                0,
+                true
+            )]
+        );
+    }
+}
+
 fn capture(tx: &Tx<'_>, events: &[AgentEvent]) -> Result<Value> {
     let mut result = Vec::new();
     for event in events {

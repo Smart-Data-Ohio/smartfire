@@ -828,11 +828,13 @@ impl ChannelThread {
                 params![tx.now(), parent_id],
             )?;
         }
-        super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         let parent_message_id = self.parent_message_id;
+        // Rails registers the indicator before emit_deleted_work_unassigned.
+        // A ledger failure must not suppress the already-committed deletion's UI update.
         tx.after_commit_record("channel_threads", self.id, move |tx| {
             Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)
         });
+        super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         Ok(())
     }
 
