@@ -7,10 +7,14 @@ use crate::{
 use campfire_db::{Connection, Message, Room};
 
 pub fn frames(conn: &Connection, message: &Message) -> campfire_db::Result<Vec<String>> {
-    Ok(Card::for_message(conn, message.id)?.iter().map(|card| {
+    Ok(frames_from_cards(message, &Card::for_message(conn, message.id)?))
+}
+/// Render the same owner frame body from already loaded shared card rows.
+pub fn frames_from_cards(message: &Message, cards: &[Card]) -> Vec<String> {
+    cards.iter().map(|card| {
         let src = campfire_routes::ROOM_FIZZY_CARD.path_with(&[&message.room_id, &card.id], None, &[("message_id", Some(&message.id.to_string()))]);
         format!("\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_{}_fizzy_card_{}\" src=\"{}\"></turbo-frame>\n",message.id,card.id,campfire_views::helpers::escape(&src))
-    }).collect())
+    }).collect()
 }
 pub fn container(conn: &Connection, message: &Message) -> campfire_db::Result<String> {
     Ok(format!(

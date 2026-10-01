@@ -1,0 +1,59 @@
+{
+  "reference": "d7c7de92",
+  "states": [
+    {
+      "name": "state_0",
+      "id": 201306877,
+      "can_administer": true,
+      "emailable": true,
+      "enabled": false,
+      "address": null,
+      "html": "  <section class=\"panel txt-align-center\" id=\"inbound-email\">\n    <div class=\"pad-inline-double center\">\n      <h2 class=\"margin-none\">Email to room</h2>\n        <p class=\"txt-small margin-none-block-start\">\n          Inbound email is not configured for this workspace. Set <code>INBOUND_EMAIL_DOMAIN</code> and the relay ingress password to enable forward-to-room.\n        </p>\n    </div>\n  </section>\n"
+    },
+    {
+      "name": "state_1",
+      "id": 201306877,
+      "can_administer": true,
+      "emailable": true,
+      "enabled": true,
+      "address": null,
+      "html": "  <section class=\"panel txt-align-center\" id=\"inbound-email\">\n    <div class=\"pad-inline-double center\">\n      <h2 class=\"margin-none\">Email to room</h2>\n          <p class=\"txt-small margin-none-block-start\">\n            No email address yet. Create one to post forwarded mail in this room.\n          </p>\n          <form class=\"button_to\" method=\"post\" action=\"/rooms/201306877/inbound_email_address\"><button class=\"btn txt-small\" type=\"submit\">Create email address</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/201306877/inbound_email_address\" /></form>\n    </div>\n  </section>\n"
+    },
+    {
+      "name": "state_2",
+      "id": 201306877,
+      "can_administer": true,
+      "emailable": true,
+      "enabled": true,
+      "address": "room-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.campfire.test",
+      "html": "  <section class=\"panel txt-align-center\" id=\"inbound-email\">\n    <div class=\"pad-inline-double center\">\n      <h2 class=\"margin-none\">Email to room</h2>\n          <p class=\"txt-small margin-none-block-start\">\n            Forward email to this address to post it in the room. Mail from a member's address posts as them; everything else posts as the Email bot with the sender named.\n          </p>\n          <p><code>room-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.campfire.test</code></p>\n          <form data-turbo-confirm=\"Rotate this room&#39;s email address? The old address stops working.\" class=\"button_to\" method=\"post\" action=\"/rooms/201306877/inbound_email_address\"><button class=\"btn btn--negative txt-small\" type=\"submit\">Rotate address</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/201306877/inbound_email_address\" /></form>\n    </div>\n  </section>\n"
+    },
+    {
+      "name": "state_3",
+      "id": 201306877,
+      "can_administer": true,
+      "emailable": true,
+      "enabled": true,
+      "address": "room-a<&>@mail.campfire.test",
+      "html": "  <section class=\"panel txt-align-center\" id=\"inbound-email\">\n    <div class=\"pad-inline-double center\">\n      <h2 class=\"margin-none\">Email to room</h2>\n          <p class=\"txt-small margin-none-block-start\">\n            Forward email to this address to post it in the room. Mail from a member's address posts as them; everything else posts as the Email bot with the sender named.\n          </p>\n          <p><code>room-a&lt;&amp;&gt;@mail.campfire.test</code></p>\n          <form data-turbo-confirm=\"Rotate this room&#39;s email address? The old address stops working.\" class=\"button_to\" method=\"post\" action=\"/rooms/201306877/inbound_email_address\"><button class=\"btn btn--negative txt-small\" type=\"submit\">Rotate address</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/201306877/inbound_email_address\" /></form>\n    </div>\n  </section>\n"
+    },
+    {
+      "name": "state_4",
+      "id": 201306877,
+      "can_administer": false,
+      "emailable": true,
+      "enabled": true,
+      "address": "room-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@mail.campfire.test",
+      "html": ""
+    },
+    {
+      "name": "state_5",
+      "id": 186869642,
+      "can_administer": true,
+      "emailable": false,
+      "enabled": true,
+      "address": null,
+      "html": ""
+    }
+  ]
+}

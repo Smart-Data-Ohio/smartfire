@@ -292,6 +292,30 @@ impl Room {
         Ok(room)
     }
 
+    /// Room HTTP's narrow icon seam. Resolve through the application's existing icon
+    /// catalog on this connection, before insert/grants or any after-commit callback.
+    pub fn create_for_with_icon(
+        tx: &mut Tx<'_>, room_type: RoomType, name: Option<&str>, icon_name: Option<&str>,
+        creator_id: i64, user_ids: &[i64], resolves: impl FnOnce(&Connection, &str) -> Result<bool>,
+    ) -> Result<Self> {
+        let icon_name = Self::normalize_icon_name(icon_name);
+        validate_icon(tx.conn(), icon_name.as_deref(), resolves)?;
+        let mut room = Self::create_for(tx, room_type, name, creator_id, user_ids)?;
+        if icon_name.is_some() {
+            tx.conn().execute_cached("UPDATE rooms SET icon_name=? WHERE id=?", params![icon_name, room.id])?;
+            room.icon_name = icon_name;
+        }
+        Ok(room)
+    }
+
+    /// `Icons.normalize_name`: Ruby String#strip, edge colons, strip again, downcase,
+    /// then Active Support presence. Unicode whitespace is blank but is not stripped.
+    pub fn normalize_icon_name(name: Option<&str>) -> Option<String> {
+        fn strip(c: char) -> bool { matches!(c, '\0' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ') }
+        let name = name.unwrap_or_default().trim_matches(strip).trim_matches(':').trim_matches(strip).to_lowercase();
+        (!name.chars().all(char::is_whitespace)).then_some(name)
+    }
+
     /// The rest of `Rooms::Stage.create_for`: `memberships.where(stage_role: nil)
     /// .update_all(stage_role: :listener)`, then the creator's membership (created if the
     /// creator wasn't among the users) is updated to host.
@@ -474,6 +498,23 @@ impl Room {
         if room_type == Some(RoomType::Open) && self.deleted_at.is_none() {
             let id = self.id;
             tx.after_commit(move |tx| grant_to_active_users(tx, id));
+        }
+        Ok(())
+    }
+
+    /// `icon_name_changed?` validation precedes name/type conversion. Unchanged legacy
+    /// unknown names remain writable; omitted icons and normalized no-ops stay untouched.
+    pub fn update_with_icon(
+        &mut self, tx: &mut Tx<'_>, name: Option<Option<&str>>, room_type: Option<RoomType>,
+        icon_name: Option<Option<&str>>, resolves: impl FnOnce(&Connection, &str) -> Result<bool>,
+    ) -> Result<()> {
+        let icon_name = icon_name.map(Self::normalize_icon_name).filter(|name| *name != self.icon_name);
+        if let Some(icon_name) = &icon_name { validate_icon(tx.conn(), icon_name.as_deref(), resolves)?; }
+        self.update(tx, name, room_type)?;
+        if let Some(icon_name) = icon_name {
+            self.updated_at = tx.now();
+            tx.conn().execute_cached("UPDATE rooms SET icon_name=?,updated_at=? WHERE id=?", params![icon_name, self.updated_at, self.id])?;
+            self.icon_name = icon_name;
         }
         Ok(())
     }
@@ -766,6 +807,12 @@ fn set_direct_member_key(tx: &Tx<'_>, room_id: i64, key: &str) -> Result<()> {
         params![key, room_id],
     )?;
     Ok(())
+}
+
+fn validate_icon(conn: &Connection, name: Option<&str>, resolves: impl FnOnce(&Connection, &str) -> Result<bool>) -> Result<()> {
+    let mut errors = Errors::default();
+    if let Some(name) = name && !resolves(conn, name)? { errors.add("icon_name", "is not a known icon"); }
+    errors.into_result()
 }
 
 /// `memberships.grant_to(User.active)`, from `Rooms::Open`'s `after_save_commit`, unless the

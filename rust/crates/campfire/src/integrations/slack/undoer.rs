@@ -195,7 +195,7 @@ impl Undo<'_> {
                                     "user",
                                     user.id,
                                     || format!("Could not remove placeholder user {}", user.id),
-                                    |tx| user.destroy(tx),
+                                    |tx| user.destroy_for_slack_undo(tx),
                                 )?;
                             }
                         }

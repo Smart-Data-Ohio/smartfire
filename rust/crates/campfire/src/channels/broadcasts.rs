@@ -223,6 +223,16 @@ impl Broadcasts {
         self.server.broadcast(broadcasting, payload)
     }
 
+    /// `Rooms::ReadsController#destroy`: the requester's other sessions mark the row unread.
+    pub fn mark_room_unread(&self, user_id: i64, room_id: i64) -> usize {
+        #[derive(Serialize)]
+        struct UnreadRoom {
+            #[serde(rename = "roomId")]
+            room_id: i64,
+        }
+        self.channel(&unread_rooms::stream_name_for(user_id), &UnreadRoom { room_id })
+    }
+
     // Message::Broadcasts (reference/app/models/message/broadcasts.rb)
 
     /// `message.broadcast_create`: append the message to its conversation (`thread || room`),
