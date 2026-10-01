@@ -133,4 +133,19 @@ end
 approval = AgentApproval.find_by!(external_id:'ws11-review-owner-first')
 result[:approval] = {error:error,owner:owner.id,deciders:approval.deciders.map(&:id),notified_users:ActivityItem.where(source:approval).order(:id).pluck(:user_id),status:approval.status}
 conn.execute('DROP TRIGGER ws11_reject_second_recipient')
+# A captured belongs_to can outlive an Agent deleted in the outer transaction.
+# Rails writes the orphan ledger row (there is no FK), rather than reloading it.
+Webhook.where(user_id:agent.user_id).delete_all
+thread=ChannelThread.create!(room:room,creator:human,name:'Outer agent removal ledger')
+thread.update_columns(work_owner_id:agent.user_id)
+error=nil
+begin
+  ActiveRecord::Base.transaction do
+    thread.destroy!
+    agent.delete
+  end
+rescue => e
+  error=e.class.name
+end
+result[:deletion_removed_agent]={error:error,thread_exists:ChannelThread.exists?(thread.id),agent_exists:Agent.exists?(agent.id),events:AgentEvent.where("json_extract(metadata,'$.thread_id')=?",thread.id).count}
 puts JSON.pretty_generate({reference:'d7c7de92',results:result}.as_json)

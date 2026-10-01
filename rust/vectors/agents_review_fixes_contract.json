@@ -713,6 +713,12 @@
         712064548
       ],
       "status": "pending"
+    },
+    "deletion_removed_agent": {
+      "error": null,
+      "thread_exists": false,
+      "agent_exists": false,
+      "events": 1
     }
   }
 }

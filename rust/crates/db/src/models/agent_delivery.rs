@@ -108,7 +108,7 @@ impl AgentEvent {
         )
     }
     pub fn create(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
-        Self::create_with_id(tx,None,a)
+        Self::create_record(tx,None,a,false)
     }
     /// Reserve the identity of an after-commit deletion event so its durable
     /// job can be persisted with deletion without inserting the ledger early.
@@ -120,7 +120,14 @@ impl AgentEvent {
         }
         Ok(id)
     }
-    pub(crate) fn create_with_id(tx: &Tx<'_>, id: Option<i64>, mut a: NewEvent) -> Result<Self> {
+    /// Thread's after_destroy_commit keeps its already-loaded belongs_to Agent,
+    /// even if the outer transaction deleted that row. Rails has no ledger FK.
+    /// This is only for an identity captured by the deletion callback; ordinary
+    /// event creation still validates an agent_id against the database.
+    pub(crate) fn create_captured(tx: &Tx<'_>, id: Option<i64>, a: NewEvent) -> Result<Self> {
+        Self::create_record(tx,id,a,true)
+    }
+    fn create_record(tx: &Tx<'_>, id: Option<i64>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
         let mut errors = Errors::default();
         if !DELIVERABLE_TYPES.contains(&a.event_type.as_str())
             && !["posted", "delivery_suppressed_rate_limit", "delivery_suppressed_hop_limit", "delivery_suppressed_revoked"].contains(&a.event_type.as_str())        {
@@ -137,6 +144,7 @@ impl AgentEvent {
         }
         for (table, field, id) in [("agents", "agent", Some(a.agent_id))] {
             if let Some(id) = id
+                && !captured_agent
                 && !exists(
                     tx.conn(),
                     &format!("SELECT 1 FROM {table} WHERE id=?"),

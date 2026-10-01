@@ -216,10 +216,7 @@ pub(crate) fn record_deleted(
             ..Default::default()
         };
         tx.after_commit(move|tx|crate::database::run_write(tx.conn(),tx.env(),move|tx| {
-            // A removed agent no longer owns this callback, like Rails' fresh
-            // agent_for_work_owner lookup after the enclosing removal commits.
-            if Agent::find(tx.conn(),event.agent_id)?.is_none() {return Ok(());}
-            let event=AgentEvent::create_with_id(tx,reserved,event)?;
+            let event=AgentEvent::create_captured(tx,reserved,event)?;
             if reserved.is_some() {
                 tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",params![tx.now(),event.id])?;
             } else {enqueue_webhook(tx,&event)?;}

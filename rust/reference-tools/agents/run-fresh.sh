@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-FRESH="$ROOT/.scratch/fresh-ws11-review-176"
+FRESH="$ROOT/.scratch/fresh-ws11-review-176-ledger"
 test ! -e "$FRESH"
 SOURCE_SHA=$(git -C "$ROOT" rev-parse HEAD)
 REMOTE_SHA=$(git -C "$ROOT" ls-remote origin refs/heads/rust/ws11-agents | cut -f1)

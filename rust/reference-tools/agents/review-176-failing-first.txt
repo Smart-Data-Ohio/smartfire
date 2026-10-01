@@ -16,3 +16,8 @@ REVIEW approval-recipient failure: owner=712064548 notified_users=[127326141]
 test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 888 filtered out; finished in 0.15s
 
 Repository regression: Rails z/a/m disconnect-at-first redacted all private fields. Baseline posted Private a/Private m and their private head/base branches; paths were /repos/a/private,/repos/m/private,/repos/z/private. The regression ran all 18 initial matrix cases and reported seven order-dependent mismatches.
+
+Additional boundary audit, baseline 7d12a9346a0415f4a2648f6345da5a7fc3cbecc7:
+WS11 captured-agent deletion event: {"error":null,"thread_exists":false,"agent_exists":false,"events":0}
+Pinned Rails preserves events=1 when the same outer transaction deletes the Agent after destroying its thread.
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 890 filtered out; finished in 0.11s

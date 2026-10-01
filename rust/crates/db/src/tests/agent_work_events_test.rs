@@ -133,3 +133,19 @@ fn ws11_review_deleted_ledger_failure_keeps_deletion() {
     let gold: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/agents_review_fixes_contract.json")).unwrap();
     assert_eq!(exists, gold["results"]["deletion"]["thread_exists"].as_bool().unwrap());
 }
+
+#[test]
+fn ws11_review_deletion_event_preserves_captured_agent_after_outer_removal() {
+    let t=setup();
+    t.write(|tx| {tx.conn().execute("DELETE FROM webhooks WHERE user_id=?",[id("bender")])?;Ok(())});
+    let result=t.try_write(|tx| {
+        ChannelThread::find(tx.conn(),THREAD)?.destroy(tx)?;
+        tx.conn().execute("DELETE FROM agents WHERE id=?",[id("bender_agent")])?;
+        Ok(())
+    });
+    assert!(result.is_ok());
+    let actual=t.read(|c|Ok(json!({"error":null,"thread_exists":ChannelThread::find_by_id(c,THREAD)?.is_some(),"agent_exists":crate::Agent::find(c,id("bender_agent"))?.is_some(),"events":c.query_row("SELECT COUNT(*) FROM agent_events WHERE json_extract(metadata,'$.thread_id')=?",[THREAD],|r|r.get::<_,i64>(0))?})));
+    let gold:Value=serde_json::from_str(include_str!("../../../../vectors/agents_review_fixes_contract.json")).unwrap();
+    println!("WS11 captured-agent deletion event: {actual}");
+    assert_eq!(actual,gold["results"]["deletion_removed_agent"]);
+}
