@@ -40,7 +40,7 @@ pub fn cards(conn: &Connection, message_id: i64) -> Result<String> {
     let entries = campfire_views::events::card_entries(
         &events,
         &message.id.to_string(),
-        &campfire_views::time::Zone::utc(),
+        &super::page::renderer_time_zone(),
     );
     campfire_views::events::Cards {
         message_key: &message.client_message_id,
