@@ -76,6 +76,9 @@ def run_browser(script: str, args: tuple[str, ...] = ()):
                     source = subprocess.check_output(['git','show','d7c7de92:test/system/quick_switcher_test.rb'],cwd=root)
                     print('QuickSwitcher original mapping: 5 passed on Rails; 5 passed on Rust; 0 failed; exact global Room.count delta +1 on each', flush=True)
                     print('QuickSwitcher pinned source SHA256: ' + hashlib.sha256(source).hexdigest(), flush=True)
+                if script == 'sidebar_organize_browser.mjs':
+                    source = subprocess.check_output(['git','show','d7c7de92:test/system/sidebar_organize_test.rb'],cwd=root)
+                    print('SidebarOrganize pinned source SHA256: ' + hashlib.sha256(source).hexdigest(), flush=True)
             finally:
                 if process is not None:
                     process.terminate()
