@@ -1,0 +1,170 @@
+{
+  "reference": "d7c7de92",
+  "ruby": "ruby 3.4.10 (2026-06-30 revision 2b0b7728dc) +PRISM [x86_64-linux]",
+  "unicode": "15.0.0",
+  "sqlite": "3.53.2",
+  "casing": [
+    {
+      "input": "ΟΣ",
+      "downcase": "οσ",
+      "fold": "οσ"
+    },
+    {
+      "input": "ΟΣ@example.com",
+      "downcase": "οσ@example.com",
+      "fold": "οσ@example.com"
+    },
+    {
+      "input": "ΟΣ@local",
+      "downcase": "οσ@local",
+      "fold": "οσ@local"
+    },
+    {
+      "input": "Éxample.com",
+      "downcase": "éxample.com",
+      "fold": "éxample.com"
+    },
+    {
+      "input": "ß",
+      "downcase": "ß",
+      "fold": "ss"
+    },
+    {
+      "input": "ς",
+      "downcase": "ς",
+      "fold": "σ"
+    },
+    {
+      "input": "σ",
+      "downcase": "σ",
+      "fold": "σ"
+    },
+    {
+      "input": "İ",
+      "downcase": "i̇",
+      "fold": "i̇"
+    },
+    {
+      "input": "a\u0000Z",
+      "downcase": "a\u0000z",
+      "fold": "a\u0000z"
+    },
+    {
+      "input": "Ᲊ",
+      "downcase": "Ᲊ",
+      "fold": "Ᲊ"
+    }
+  ],
+  "comparisons": [
+    {
+      "left": "ß",
+      "right": "SS",
+      "equal": true
+    },
+    {
+      "left": "ς",
+      "right": "σ",
+      "equal": true
+    },
+    {
+      "left": "ΟΣ",
+      "right": "οσ",
+      "equal": true
+    },
+    {
+      "left": "É",
+      "right": "é",
+      "equal": true
+    },
+    {
+      "left": "é",
+      "right": "é",
+      "equal": false
+    },
+    {
+      "left": "a\u0000z",
+      "right": "A\u0000Z",
+      "equal": true
+    }
+  ],
+  "auth": [
+    {
+      "header": "mx.mail.test; dkim=pass header.d=Éxample.com",
+      "relay": "mx.mail.test",
+      "address": "alice@éxample.com",
+      "expected": true
+    },
+    {
+      "header": "mx.mail.test; dmarc=pass header.from=οσ.example",
+      "relay": "mx.mail.test",
+      "address": "alice@ΟΣ.example",
+      "expected": true
+    },
+    {
+      "header": "mx.mail.test; spf=pass smtp.mailfrom=bob@ΟΣ.example",
+      "relay": "mx.mail.test",
+      "address": "alice@οσ.example",
+      "expected": true
+    },
+    {
+      "header": "mx.ß.example; dkim=pass header.d=example.com",
+      "relay": "mx.ss.example",
+      "address": "alice@example.com",
+      "expected": true
+    },
+    {
+      "header": "mx.ς.example; dkim=pass header.d=example.com",
+      "relay": "mx.σ.example",
+      "address": "alice@example.com",
+      "expected": true
+    },
+    {
+      "header": "mx.mail.test; dkim=pass header.d=ss.example",
+      "relay": "mx.mail.test",
+      "address": "alice@ß.example",
+      "expected": false
+    },
+    {
+      "header": "mx.mail.test; dkim=pass header.d=ς.example",
+      "relay": "mx.mail.test",
+      "address": "alice@σ.example",
+      "expected": false
+    }
+  ],
+  "names": {
+    "input": [
+      "ΟΣ",
+      "οςa",
+      "É",
+      "é",
+      "ß",
+      "SS"
+    ],
+    "sorted": [
+      "SS",
+      "ß",
+      "É",
+      "é",
+      "οςa",
+      "ΟΣ"
+    ]
+  },
+  "sigma_names": [
+    "οςa",
+    "ΟΣ"
+  ],
+  "sql_names": {
+    "input": [
+      "a\u0000z",
+      "A\u0000a",
+      "É",
+      "é"
+    ],
+    "sorted": [
+      "A\u0000a",
+      "a\u0000z",
+      "É",
+      "é"
+    ]
+  }
+}

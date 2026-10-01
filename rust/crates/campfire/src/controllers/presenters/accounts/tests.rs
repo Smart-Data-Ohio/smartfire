@@ -45,6 +45,41 @@ mod member_panel;
 #[path = "tests/member_polling.rs"]
 mod member_polling;
 
+#[test]
+fn unicode_parity_sidebar_direct_names_use_ruby_sort_order() {
+    let t = crate::integrations::test_support::TestDb::new();
+    let names = ["ΟΣ", "οςa"];
+    let secrets = rails_compat::Secrets::new("unicode-fixture-secret");
+    let members =
+        t.db.read_blocking(|c| {
+            ["david", "jason"]
+                .into_iter()
+                .zip(names)
+                .map(|(label, name)| {
+                    let mut user = campfire_db::User::find(
+                        c,
+                        crate::integrations::test_support::TestDb::id(label),
+                    )?;
+                    user.name = name.into();
+                    Ok(super::super::user_summary(&secrets, &user))
+                })
+                .collect::<campfire_db::Result<Vec<_>>>()
+        })
+        .unwrap();
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/unicode_casing_parity.json"
+    ))
+    .unwrap();
+    let expected = oracle["sigma_names"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect::<Vec<_>>()
+        .join(", ");
+    assert_eq!(super::sidebar_direct_label(None, &members), expected);
+}
+
 struct Test {
     booted: Booted,
     labels: serde_json::Value,

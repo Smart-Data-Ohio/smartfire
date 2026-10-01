@@ -6,6 +6,7 @@ use jiff::{
     civil::{Date, Time},
     tz::TimeZone,
 };
+use rails_compat::unicode;
 use regex::Regex;
 use rusqlite::types::Value;
 use serde::Serialize;
@@ -63,7 +64,7 @@ fn squish(s: &str) -> String {
 fn like(s: &str) -> String {
     format!(
         "%{}%",
-        s.to_lowercase()
+        unicode::downcase(s)
             .replace('\\', "\\\\")
             .replace('%', "\\%")
             .replace('_', "\\_")

@@ -3,6 +3,7 @@
 use campfire_db::{Database, Errors, Result, Timestamp, Tx};
 use jiff::SignedDuration;
 use rails_compat::ar_encryption::ArEncryption;
+use rails_compat::unicode;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::Value;
 use std::{
@@ -177,7 +178,7 @@ impl Account {
         if !self.connected() {
             return Ok(());
         }
-        let login = ruby_strip(&self.github_login).to_lowercase();
+        let login = unicode::downcase(ruby_strip(&self.github_login));
         if blank(&login) {
             return Ok(());
         }
@@ -197,7 +198,7 @@ impl Account {
         for claimant in &claimants {
             if let Some(account) = Self::for_user(tx.conn(), *claimant)?
                 && account.connected()
-                && account.github_login.to_lowercase() == login
+                && unicode::fold(&account.github_login) == unicode::fold(&login)
             {
                 return Ok(());
             }

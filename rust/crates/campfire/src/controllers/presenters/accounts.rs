@@ -18,6 +18,7 @@ use campfire_views::users::{
 use campfire_views::Platform;
 use rails_compat::Secrets;
 use rails_compat::global_id::{self, GlobalId};
+use rails_compat::unicode;
 use rusqlite::{params, OptionalExtension};
 
 use super::{attachments, epoch_string, to_fs_number, user_summary};
@@ -364,7 +365,7 @@ pub fn sidebar_direct_label(name: Option<&str>, members: &[UserSummary]) -> Stri
     if let Some(name)=name.filter(|s|!campfire_richtext::ruby::is_blank(s)){return name.into();}
     if members.len()<=1 {return members.first().map(|u|sidebar_first_name(&u.name)).unwrap_or_default().to_string();}
     let mut names: Vec<&str>=members.iter().map(|m|m.name.as_str()).collect();
-    names.sort_by_key(|n|n.to_lowercase());
+    names.sort_by_key(|n|unicode::downcase(n));
     let label=names.iter().take(3).map(|n|sidebar_first_name(n)).collect::<Vec<_>>().join(", ");
     if names.len()>3 {format!("{label} +{}",names.len()-3)}else{label}
 }

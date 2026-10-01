@@ -4,6 +4,7 @@ pub mod browsing;
 use crate::sql::{count, exists, query_one};
 use crate::{Account, Connection, Result, Room, Timestamp, Tx, User};
 use campfire_richtext::ruby::{is_blank, strip, truncate};
+use rails_compat::unicode;
 use regex::Regex;
 use rusqlite::{Row, params};
 use serde_json::{Value, json};
@@ -179,7 +180,7 @@ impl AuditLog {
             if exists(
                 tx.conn(),
                 "SELECT 1 FROM audit_logs WHERE action='session.sign_in.failure' AND ip_address=? AND created_at>=? AND LOWER(actor_label)=?",
-                params![ip, cutoff, label.to_lowercase()],
+                params![ip, cutoff, unicode::downcase(&label)],
             )? {
                 return Ok(None);
             }
@@ -309,7 +310,7 @@ pub fn failure_actor_label(conn: &Connection, email: Option<&str>) -> Result<Str
         || exists(
             conn,
             "SELECT 1 FROM users WHERE LOWER(email_address)=?",
-            [typed.to_lowercase()],
+            [unicode::downcase(typed)],
         )?;
     Ok(if known {
         truncate(typed, 254, "...")
