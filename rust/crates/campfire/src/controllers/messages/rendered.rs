@@ -88,7 +88,10 @@ pub fn domain_partial(app: &App, partial: &campfire_db::broadcasts::Partial) -> 
         let message = Message::find(conn, id)?;
         let mut view = Presenter::new(conn, app, None).message(&message)?;
         let account = campfire_db::Account::first(conn)?;
-        page::render_detached(app, account.as_ref(), |ctx| {
+        // WS14e's event announcements use the configured background renderer origin.
+        // Ordinary message callbacks retain Rails' detached-controller default.
+        let origin = if view.components.event_views.is_empty() { "http://example.org" } else { &app.db.env().default_url_origin };
+        page::render_detached_at(app, account.as_ref(), origin, |ctx| {
             if let Some(count) = count {
                 view.details.reply_count = count.try_into().map_err(|_| campfire_db::Error::Other("negative reply count".into()))?;
                 views::ThreadIndicatorPartial { ctx, message: &view }.render().map(Some).map_err(|error| campfire_db::Error::Other(error.to_string()))
