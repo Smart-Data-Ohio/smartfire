@@ -9,6 +9,6 @@ docker run --rm --name "ws14e-pages-$$" --cpus 2 --user "$(id -u):$(id -g)" \
   --env-file "$ROOT/parity/.env.reference" -e PARITY_REDIS=1 \
   -v "$(realpath "$STORE/db"):/rails/storage/db" \
   -v "$(realpath "$STORE/storage"):/rails/storage/files" \
-  -v "$ROOT:/work:ro" "${PARITY_IMAGE:-ws14e-reference:d7c7de92}" \
+  -v "$ROOT:/work:ro" "${PARITY_IMAGE:-ws14e-reference:pages-2e20b24c}" \
   bash -c 'bin/rails db:prepare >/dev/null && bin/rails runner /work/reference-tools/events/pages.rb'
 cp "$STORE/db/event-pages.json" "$ROOT/crates/views/tests/golden/event-pages.json"
