@@ -149,3 +149,43 @@ fn ws11_review_deletion_event_preserves_captured_agent_after_outer_removal() {
     println!("WS11 captured-agent deletion event: {actual}");
     assert_eq!(actual,gold["results"]["deletion_removed_agent"]);
 }
+
+#[test]
+fn ws11_publication_deletion_id_follows_events_committed_in_parent() {
+    use crate::models::agent_event_polling;
+    use std::sync::{Arc, Mutex};
+    let t = setup();
+    let observed = Arc::new(Mutex::new(None));
+    let capture = observed.clone();
+    let later = t.write(move |tx| {
+        assert!(crate::Webhook::find_by_user(tx.conn(), id("bender"))?.is_some());
+        tx.after_commit(move |tx| {
+            let page = agent_event_polling::poll(tx.conn(), id("bender_agent"), None, None,
+                tx.now(), &Default::default(), |message| Ok(json!({"id":message.id})))?;
+            *capture.lock().unwrap() = Some(page);
+            Ok(())
+        });
+        ChannelThread::find(tx.conn(), THREAD)?.destroy(tx)?;
+        Ok(AgentEvent::create(tx, NewEvent {agent_id:id("bender_agent"),
+            room_id:Some(id("watercooler")), event_type:"github_action_completed".into(),
+            outcome:Some("delivered".into()), metadata:json!({"status":"completed"}),
+            ..Default::default()})?.id)
+    });
+    let first = observed.lock().unwrap().take().unwrap();
+    let actual = t.read(move |conn| {
+        let deleted = AgentEvent::for_agent(conn, id("bender_agent"))?.into_iter()
+            .find(|event| event.event_type == "work_unassigned").unwrap();
+        let resumed = agent_event_polling::poll(conn,id("bender_agent"),Some(&first["next_since"]),None,
+            Timestamp::parse_db("2026-03-02 16:00:00").unwrap(),&Default::default(),|message| Ok(json!({"id":message.id})))?;
+        Ok(json!({"first_types":first["events"].as_array().unwrap().iter().map(|e|e["event_type"].clone()).collect::<Vec<_>>(),
+            "first_cursor_is_committed_event":first["next_since"]==later,
+            "deletion_id_after_committed_event":deleted.id>later,
+            "resumed_types":resumed["events"].as_array().unwrap().iter().map(|e|e["event_type"].clone()).collect::<Vec<_>>(),
+            "resumed_cursor_is_deletion":resumed["next_since"]==deleted.id,
+            "deletion_count":conn.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='work_unassigned'",[],|r|r.get::<_,i64>(0))?,
+            "thread_exists":ChannelThread::find_by_id(conn,THREAD)?.is_some()}))
+    });
+    println!("WS11 deletion publication same transaction: {actual}");
+    let oracle:Value=serde_json::from_str(include_str!("../../../../vectors/agents_deletion_publication_contract.json")).unwrap();
+    assert_eq!(actual,oracle["results"]["same_transaction"]);
+}

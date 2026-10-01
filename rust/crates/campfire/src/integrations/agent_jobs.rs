@@ -667,6 +667,9 @@ mod tests {
 }
 
 #[cfg(test)]
+mod publication_tests;
+
+#[cfg(test)]
 #[test]
 fn ws11_retry_after_and_response_policy_match_rails_vectors() {
     let vectors: serde_json::Value = serde_json::from_str(include_str!(
