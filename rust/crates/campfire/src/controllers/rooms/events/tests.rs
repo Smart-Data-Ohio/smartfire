@@ -39,8 +39,6 @@ async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
         })
         .await
         .unwrap();
-    // Rails uses the test queue adapter here: inspect producer rows before consumption.
-    app.booted.jobs.stop(std::time::Duration::from_secs(5)).await;
     let mut david = app.david();
     for case in oracle["attendance"].as_array().unwrap() {
         let head = event(&app).await;
@@ -516,7 +514,7 @@ async fn event_snapshot(app: &TestApp) -> Vec<Vec<String>> {
 
 #[tokio::test]
 async fn event_create_update_cancel_keep_zone_and_calendar_jobs() {
-    let Some(mut app) = TestApp::boot_with_clock_and_env(
+    let Some(app) = TestApp::boot_with_clock_and_env(
         seed_clock(),
         &[("APP_URL", "https://calendar.smartfire.test:8443")],
     )
@@ -710,7 +708,7 @@ async fn descriptions_and_private_calendar_copies_match_rails() {
         return;
     };
     // Rails uses the test queue adapter here: inspect producer rows before consumption.
-    app.booted.jobs.stop(std::time::Duration::from_secs(5)).await;
+    let app = app.without_job_runner().await;
     let e = event(&app).await;
     let id = e.id;
     app.db().write(move|tx| {
