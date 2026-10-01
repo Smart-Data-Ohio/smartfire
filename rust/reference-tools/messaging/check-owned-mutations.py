@@ -9,6 +9,14 @@ SCRATCH.mkdir(parents=True, exist_ok=True)
 env = dict(os.environ, CI='1', CARGO_BUILD_JOBS='2', RUST_TEST_THREADS='8',
            CABLE_TEST_PORT_RANGE='52000-52049', MAIL_TEST_PORT_RANGE='52000-52049')
 mutations = [
+    ('cached-token-leak', 'rust/crates/campfire/src/controllers/presenters.rs',
+     '.map(std::sync::Arc::new).map_err',
+     '.map(|mut html| { html.push_str(r#"<input type="hidden" name="authenticity_token" value="foreign-session" />"#); std::sync::Arc::new(html) }).map_err',
+     'cached_pages_refreshes_and_thread_pages'),
+    ('csrf-check-bypassed', 'rust/crates/kit/src/ctx.rs',
+     'if valid_origin && self.any_authenticity_token_valid() {',
+     'if valid_origin && { let _ = self.any_authenticity_token_valid(); true } {',
+     'cached_owned_forms_submit'),
     ('github-card-omitted', 'rust/crates/campfire/src/controllers/presenters.rs',
      'let github_cards_html = github::message_cards(self.conn, self.app, message)?;',
      'let github_cards_html = format!("<div id=\\\"github_pr_cards_message_{}\\\" class=\\\"github-pr-cards\\\"></div>\\n", message.client_message_id);',
@@ -34,4 +42,4 @@ for name, file, before, after, test in mutations:
         print(f'{name}: {summary[-1]}', flush=True)
     finally:
         path.write_text(source)
-print('WS8bm owned mutations: 2 rejected; 0 survived; production files restored', flush=True)
+print('WS8bm owned mutations: 4 rejected; 0 survived; production files restored', flush=True)

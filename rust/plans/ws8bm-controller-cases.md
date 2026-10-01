@@ -1,6 +1,6 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 103 of 156 declarations have scoped evidence; 53 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 106 of 156 declarations have scoped evidence; 50 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
@@ -88,12 +88,12 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/messages/cached_fragment_csrf_test.rb
 
-4 named declarations; case-level Rust attribution/signoff pending. Reference execution counts are in the main report.
+4 named declarations; 3 have scoped cache/security evidence; the all-form submission declaration remains owner-blocked. Reference execution counts are in the main report.
 
-- a cached message page serves no viewer's tokens to the next — WS8bm.
-- a cached refresh serves no viewer's tokens to the next — WS8bm.
-- a cached thread page serves no viewer's tokens to the next — WS8bm.
-- every form in a cached message submits with the page's header token — WS8bm.
+- a cached message page serves no viewer's tokens to the next — WS8bm. `messages::csrf_tests::cached_pages_refreshes_and_thread_pages_reuse_tokenless_fragments_across_sessions`: actual two-viewer HTTP, pointer-identical cache hits, exact Rails reaction/legacy/poll/GitHub fragments, no session-bound values. Production token-leak mutation rejected.
+- a cached refresh serves no viewer's tokens to the next — WS8bm. Same actual two-viewer refresh/cache/byte assertions in `messages::csrf_tests`.
+- a cached thread page serves no viewer's tokens to the next — WS8bm. Same actual two-viewer thread index/cache/byte assertions in `messages::csrf_tests`.
+- every form in a cached message submits with the page's header token — WS8bm integration; BLOCKED on M2 poll endpoints and WS8b-r room-shell header. `cached_owned_forms_submit_with_real_page_header_and_reject_foreign_or_missing_tokens` covers all four rendered reaction/legacy/GitHub forms with a real thread-page header, exact Rails statuses, missing/foreign token refusal and unchanged row counts; production CSRF-bypass mutation rejected. This is scoped evidence, not all-form signoff.
 
 ## test/controllers/messages/legacy_presentation_cache_test.rb
 
