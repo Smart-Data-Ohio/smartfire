@@ -1,104 +1,69 @@
-# WS16 Wave 4 report — partial, run controllers and retained-undo completion
+# WS16 Wave 4 — owned scope complete; Google claim interaction owner-blocked
 
-Status: **partial; WS16-owned work remains. This is not the only-owner-blocked handoff.** No product decision or approval is blocking this slice. The exact remaining declarations and response-comparison boundary are below; none is claimed completed because another owner merged. The lead should not infer PR readiness from the completed controller slice.
+All requested WS16-owned continuation work is complete. **Only the first-Google-sign-in placeholder-claim interaction remains blocked on WS14g.** The lead can open the WS16 PR with that dependency stated explicitly. This report supersedes the prior partial report; the declaration ledger has 244 covered, zero partial and zero deferred original Rails tests. Covered means executable behavior coverage, not that the original Ruby test classes ran against Rust.
 
-Assigned worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws16`, branch `rust/ws16-slack-import`. Prior foundations and OAuth/setup/manifest are retained and exercised in the final workspace run. This report supersedes the previous OAuth-only report.
+Worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws16`; branch `rust/ws16-slack-import`. Main `2b05160758307effa035b7d2581618014c46b755` was merged first with merge commit `b4ed4e87`, including #172, #177, #179 and #180. No stash or rebase. Pushed slices: `dca7647a` closes complete run HTTP bodies and the personal Slack interaction; `906efac51ac6b50762b20bd84407bff5f599b5ed` closes the lifecycle/model/converter/client/payload cases. The final reply identifies the pushed report-only SHA.
 
-Rails reference: `d7c7de9264c63015be398001d7a1094e7695a6db`, with the shared approved layout/assets drift from `_common.md`. The source checker verifies all 21 Slack reference files against the actual image and confirms no Slack drift on `origin/main`. Main through `b908ebc2` is merged, including #177 users/accounts (`72fc8b05`) and #172 huddles. Merge commits are `e12fef93` and `40e06f02`; no rebase or stash was used. Locked/offline metadata validates all 13 workspace members.
+Rails reference: `d7c7de9264c63015be398001d7a1094e7695a6db`. All 21 Slack source files match the actual reference image and remain unchanged on merged main, so the approved importer-undo drift contingency did not apply. Complete application pages use exactly the three approved `2e20b24c` inputs: application layout, `people.css`, and `profile_card_controller.js`. `reference-tools/slack/build_approved_reference.py` obtains those bytes with `git show`, overlays the pinned image and recompiles Rails assets. No Rust output supplied a golden; no response mask, comparison exclusion or fingerprint allowlist was added.
 
-Pushed slices:
+## What changed
 
-- `3f1ab564`: all fifteen run/import actions, body goldens, HTTP session/CSRF comparisons, Ruby option/date normalization.
-- `47304761`: eleven retained undo/reimport scenarios, shared huddle destruction callbacks and atomic rollback, bulk membership fixture clock.
-- `942e724f`: Ruby client coercions, local TLS recovery/history ordering, catch-up/finishing regressions, undo-view SQL count, security mutation guard and declaration inventory.
-- `4f94fd73`: reproducible Rails-only sequence encryption entropy and all thirteen regenerated sequence vectors. Initial full-suite source was this commit. `c04ab8bc` then removes a redundant `Ok(...?)` in plan sample rendering found by clippy; final full-suite/clippy/release gates use that source. The final report-only SHA is given in the worker reply.
-
-## Changed files and behavior
-
-| Files | Result |
+| Files under `rust/` | Behavior and evidence |
 |---|---|
-| `crates/campfire/src/controllers.rs`, `controllers/slack/{runs,run_tests}.rs` | All nine admin actions (`index`, `create`, `show`, `status`, `plan`, `start_import`, `catch_up`, `cancel`, `undo`) and all six personal actions (`index`, `create`, `show`, `status`, `cancel`, `undo`) are routed. Rails role/ownership/order, connected/workspace/active checks, per-user single-flight with global queuing, mode branches, selection/target/date filtering, exact notices/alerts/audits and durable queue effects are compared. Both undo controls use one later-stats scan, measured by SQLite trace. |
-| `crates/views/src/slack.rs`, templates under `accounts/slack_import_runs/`, `slack/imports/` and `slack/import_runs/` | Index, plan, personal opt-in state, progress, issues, cancellation, undo, later-import naming and queued-behind rendering. Eighty-three complete owned Rails template bodies compare byte for byte. This covers all status/kind/mode branches, escaped malicious samples/names, room selectors, empty/nonempty lists, connection states and 55 issues over three pages. |
-| `crates/campfire/src/integrations/slack/options.rs`, `crates/db/src/models/slack_import.rs` | Thirty-three actual Ruby coercion/time vectors, including `Array`, uniqueness/presence/default private behavior, room-target forms, ISO case/offset/fraction/day rollover/hour-24/second-60 handling and exact invalid-time errors. Controller enqueue timestamps follow the requester's time zone; lease stamps remain UTC. |
-| `integrations/slack/client.rs`, `client/tests.rs` | Ruby `error.to_s`, `Array(needed).join`, nested/hash/bool/number scopes and Ruby blankness. Thirty-two actual Rails success/error mappings; local TLS 503→502→200, interrupted-dial recovery and per-attempt callback accounting, explicit recorded history ordering. The generic exhausted network error still lacks Rails' class/detail text; it remains partial. |
-| `integrations/slack/store/tests.rs` | Native runner/store over local TLS: three-year/three-page history with zero step budget; middle-year bounded then full import; subsequent exact 30-day catch-up; coverage invalidation after native undo; fresh roots/late replies and deleted mapped thread; finishing earlier-created rooms, preserved newer read pointers and unread members; heartbeat/lease refresh and an actual identity-index range seek. |
-| `integrations/slack/sequence_tests.rs`, `reference-tools/slack/sequence_vectors.rb`, `vectors/slack/sequence*.json` | The existing workspace/personal differentials plus eleven retained variants. Common SQL input mutations are applied identically and checked before undo. Saved reply, poll reply, pending quoted reply, sent schedule, foreign thread, room event/schedule, session, Google account, Google identity, password and placeholder authorship then compare every field in 89 tables after import, undo and reimport. Google-account removal versus identity/session/password retention follows the actual Rails result. |
-| `crates/db/src/models/user.rs` | Automatic open-room bulk membership insertions use the existing `Env::sqlite_now_sql()` provider, already used elsewhere. Production still uses the same SQLite expression; fixture runs now use the same frozen input as Rails. No timestamps are discarded from comparisons. |
-| `crates/db/src/models/user/destruction.rs`, `crates/db/src/tests/slack_test.rs`, `reference-tools/slack/undo_huddle.rb`, `vectors/slack/undo_huddle.json` | Slack undo reuses main's typed `HuddleGrant::revoke_for_user` before placeholder destruction. All rows/fields in six affected Rails tables match, with stream and presence events asserted. A rejected cleanup insert proves rollback of grants, streams, memberships, user and events. Shared room/session destruction continues to use main's callbacks. |
-| `crates/campfire/Cargo.toml` | SQLite tracing is enabled only as a dev dependency for the query-count regression. |
-| `reference-tools/slack/{run_views,runs_http,options_vectors,client_vectors,check_run_mutations,write_test_inventory}.*`, matching vectors and `plans/ws16-test-inventory.md` | Actual Rails oracle producers, failing-first security/body mutations, and a declaration-by-declaration coverage/remaining ledger. |
+| `crates/campfire/src/integrations/slack/store/lifecycle_tests.rs`, runner/store/undoer tests | The remaining 13 lifecycle and four workspace declarations: nonmember mention fallback; deleted mapped room; large-group automatic/explicit/personal/dry targets; personal target exclusion; room/membership rollback and successful resumption; exact microsecond bounds on every history page; scope/auth/transient failure and retained mappings; public-only discovery; deleted queued parent; truncated reactors; completion/undo queue handoff. Tests execute native transactional stores and durable job functions over local recorded TLS fixtures. |
+| `crates/campfire/src/integrations/slack/store.rs`, `jobs.rs`, runner and undoer tests | The remaining eight model declarations: heartbeat and owned lease refresh, unleased runner preserving another lease, undo heartbeat/lease save, lease-only uniqueness conflict versus actual progress, atomic undo claim after a queued run arrives, failed/cancelled handoff, cancelled finishing remaining stopped and successful finishing handing off. Production jobs still supply a lease token; the direct runner also supports Rails' no-token invocation. |
+| `crates/db/src/models/slack_import.rs`, `crates/db/src/tests/slack_import_test.rs` | Extract the existing atomic undo UPDATE/enqueue seam, without removing the public eligibility/LIFO precheck. A separate stale-precheck test introduces a queued run before that UPDATE and verifies no status change or events. |
+| `crates/campfire/src/integrations/slack/client.rs`, `client/tests.rs`, new `payload.rs`; mapper/converter/writer modules | Close the original network-retry declaration and malformed payload edges. Preserve Ruby access/coercion exceptions, their classes/messages, mapped-user validation order, HTTP-null distinctions, retry counts and unrescued TLS exceptions. Reuse the existing Ruby JSON comment parser. Actual Rails goldens contain 92 rows: 12 client roots, 23 converter inputs, 23 user-mapper inputs, 12 conversation inputs, 11 transport faults and 11 real status/body/retry cases. Actual native dial failure retries four times and retains the final Rails error text. This is the tested fixture boundary; it does not claim exhaustive parity for arbitrary malformed values or every platform-specific socket diagnostic. |
+| `crates/campfire/src/integrations/slack/writer/tests.rs`, `reference-tools/slack/rendering_vectors.rb`, `vectors/slack/rendering.json` | Close all four real-save converter declarations. Four actual Rails persisted ActionText bodies and mentionee lists match byte for byte through the real native imported-message save; broadcasts remain absent. Nonmember mapped mentions remain tokens and unknown labels fall back. |
+| `crates/campfire/src/controllers/slack/{runs,run_tests,tests}.rs`, `crates/views/src/slack.rs`, `crates/views/templates/slack/imports/index.html`, `reference-tools/slack/runs_http.rb`, `vectors/slack/runs_http.json` | All 109 action observations now compare the entire response body, including application wrapper and error bodies, through real TCP HTTP, signed sessions and CSRF middleware. This exposed and fixed the scoped `/users/me/profile` link and Rails' empty personal `head :not_found` response. Status, redirects, flash/session values, every run field, audit rows and durable queue requests remain checked. The combined personal interaction executes opt-in, password sudo, local-fixture Slack OAuth/state, preview, native import, progress, rejected CSRF undo, accepted undo and final page/data state. |
+| `reference-tools/slack/{payload_vectors,check_lifecycle_mutations,build_approved_reference}.*`, vectors and `plans/ws16-test-inventory.md` | Reproducible Rails-only producers, deliberately failing guards and the complete declaration mapping. |
 
-## Comparison boundaries and design
+The HTTP byte claim is **109 complete response bodies**, plus 83 detached run template bodies and 11 setup bodies. Rendering CSRF/CSP entropy is supplied before rendering; request CSRF verification and signing remain real. Redirect/status/session semantics are compared separately; randomized encrypted Set-Cookie strings are not asserted byte-identical wire serialization. No substring-only body comparison or post-render rewrite is used.
 
-The real HTTP oracle enables Rails forgery protection and supplies signed sessions and actual CSRF values. The 109 cases compare status, redirect location, flash, every persisted run field, audit rows and durable job requests. Rust reaches the real Axum HTTP stack with the same session/CSRF inputs; fake Slack receives no requests for those run-control actions. The combined interaction executes setup credentials → real sudo password/session → preview → plan → bounded import → status poll → undo, with actual HTTP controls. Separate real HTTP checks verify newest-first/all-owner ordering, pagination of 55 issues and the personal undo page.
+Prior foundations remain exercised: durable single-worker `slack_import` queue, 25-second steps, Tier 2/3 pacing, Retry-After re-enqueue, 30-second stalled sweep, claimable placeholders, quiet bulk messages/threads/replies, data-deleting per-conversation LIFO undo naming the later importer, catch-up/finishing, token encryption/scopes and setup/manifest/OAuth. The thirteen workspace/personal/retained differentials still compare every field in 89 tables after import, undo and reimport. Retained variants are saved reply, poll reply, pending quoted reply, sent scheduled reply, foreign thread, room event/schedule, session, Google account, Google identity, password and placeholder authorship. Real huddle destruction callbacks, six-table Rails rows, events and rollback remain covered. Schema bookkeeping and FTS shadow exclusions are unchanged; encrypted columns remain compared.
 
-The exact HTML claim is **83 complete owned template bodies**, in addition to the previously ported 11 setup bodies. CSRF inputs are shared before rendering; no HTML normalization or output masking was added. **Complete application-wrapped HTTP response bytes have not yet been compared**, and the complete personal opt-in → account claim → import → undo browser interaction remains a WS16 integration check. Personal opt-in/connection states, create modes and owner guards already have body/HTTP coverage; this does not replace that combined interaction.
+## Declaration coverage and exact remaining dependency
 
-The thirteen sequence differentials compare all application tables, including empty tables, actual search rows and `sqlite_sequence`. JSON columns compare as JSON values and row sorting is presentation only. Schema bookkeeping and FTS shadow tables remain the original exclusions; no exclusion or allowlist was added or loosened. Every opaque encrypted column remains compared. The Rails producer fixes clock, UUID and initial fixture encryption IV entropy; real Rails key derivation/encryption/authentication/serialization remain active, and Rust loads the resulting initial ciphertext unchanged. Repeated fresh-clone regeneration reproduced every vector byte exactly. Production randomness is unchanged.
+All 30 previously partial/deferred declarations are now covered: 13 lifecycle, four workspace, one client, four converter and eight model cases. The full per-declaration mapping is `plans/ws16-test-inventory.md`.
 
-Huddle cleanup stays inside the shared callback/transaction seam, with remote cleanup intent persisted for after-commit delivery; there is no network call inside the SQLite writer. The Rails oracle unsets LiveKit inputs; the pinned Rust tests receive none. Tests never dial Slack or LiveKit. Headers are constructed at test time from fake inputs. WS3's durable single-worker queue, 25-second step budget, Tier 2/3 pacing, Retry-After continuation and 30-second sweep remain in place.
+| Rails file | Covered declarations |
+|---|---:|
+| Admin runs | 33 |
+| Admin setup | 10 |
+| Slack disconnect | 6 |
+| Personal imports | 20 |
+| OAuth | 22 |
+| Lifecycle jobs | 29 |
+| Workspace jobs | 34 |
+| Client | 18 |
+| Converter | 30 |
+| SlackImport model | 41 |
+| System workflow | 1 |
+| Total | 244 |
 
-## Exact remaining scope — WS16 continuation
+**Owner-blocked, WS14g:** run the actual first Google sign-in start/callback for an imported, allowlisted active placeholder, verify the claim preserves its historical author/mapping, then complete the combined personal claim/opt-in/import/undo interaction against Rails. Merged main has no `sessions/google#...` handler bindings in `controllers.rs`; `controllers/sessions.rs` explicitly assigns those configured-provider/start/callback handlers to WS14g. Its branch is not merged here. Slack eligibility and session/Google-identity/password retention already have real row differentials; injecting those DB rows does not verify the missing first-sign-in callback. No WS16-owned implementation or original declaration remains deferred. No product ruling is requested.
 
-The inventory has **214 covered, 4 partial, 26 deferred; 244 Rails declarations**. Covered maps executable behavior and does not claim the original Ruby test class ran against Rust. No remaining declaration is reassigned to another workstream. In addition to the complete HTTP-wrapper/personal account-claim interaction boundary above, every partial/deferred declaration is listed here:
-
-- `test/jobs/slack_import/run_lifecycle_test.rb`: mentions of mapped users outside the channel render as tokens, unknown ids fall back (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: a conversation whose mapped room was deleted is skipped with an issue (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: workspace runs never auto-merge a large group DM by name (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: workspace runs merge a large group DM only into its room target (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: personal runs never auto-merge a large group DM by name (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: dry runs preview a targeted large group DM as a merge (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: personal runs ignore room target ids (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: room setup is atomic: a crash while recording memberships leaves nothing behind (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: date bounds keep every row in range and are sent to Slack (partial).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: scope errors fail with the missing scope and leave the connection (partial).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: transient failures past the retry budget fail the run (partial).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: failed runs stay resumable: a new run continues from the mapping (deferred).
-- `test/jobs/slack_import/run_lifecycle_test.rb`: workspace runs exclude private channels when asked (deferred).
-- `test/jobs/slack_import/workspace_import_test.rb`: import skips a thread whose parent message was deleted mid-run (deferred).
-- `test/jobs/slack_import/workspace_import_test.rb`: completing a run kicks the next queued run (deferred).
-- `test/jobs/slack_import/workspace_import_test.rb`: undoing a run kicks the next queued run (deferred).
-- `test/jobs/slack_import/workspace_import_test.rb`: truncated reaction lists import the listed users with one issue per message (deferred).
-- `test/models/slack/client_test.rb`: network errors retry then raise (partial).
-- `test/models/slack/markdown_converter_test.rb`: rendering: mentions resolve to attachments through a real save (deferred).
-- `test/models/slack/markdown_converter_test.rb`: rendering: broadcast mentions create no attachments or notifications (deferred).
-- `test/models/slack/markdown_converter_test.rb`: rendering: fenced first-line code and bare urls render as intended (deferred).
-- `test/models/slack/markdown_converter_test.rb`: rendering: emphasis, links, bullets and quotes render as markdown (deferred).
-- `test/models/slack_import_test.rb`: a runner step refreshes its lease wherever it refreshes the heartbeat (deferred).
-- `test/models/slack_import_test.rb`: a runner without a lease token leaves the lease alone (deferred).
-- `test/models/slack_import_test.rb`: an undoer step refreshes its lease when it saves undo state (deferred).
-- `test/models/slack_import_test.rb`: another job's lease write is not mistaken for progress on conflict (deferred).
-- `test/models/slack_import_test.rb`: the undo claim itself refuses a queued run that slips in after the pre-check (deferred).
-- `test/models/slack_import_test.rb`: failed and cancelled runs kick the next queued run (deferred).
-- `test/models/slack_import_test.rb`: step_finishing does not overwrite a cancelled run (deferred).
-- `test/models/slack_import_test.rb`: step_finishing completes a running run and kicks the next queued one (deferred).
-
-Remaining malformed root/scalar payload and mapper/converter normalization cases must also be exercised against Rails. The transport class/message gap is a known implementation limit, not an owner block. Already covered Rational/float boundary and scalar error/scope vectors do not establish arbitrary payload parity.
-
-Per-file declaration counts: admin runs 33 covered; setup 10; disconnect 6; personal imports 20; OAuth 22; run lifecycle 16 covered/3 partial/10 deferred; workspace import 30/0/4; client 17/1/0; converter 26/0/4; SlackImport model 33/0/8; system interaction 1/0/0.
+Cross-workstream seams: WS1 encryption/signing, WS3 jobs, WS4 session/CSRF, WS5 rich text, merged users/accounts and huddles are consumed. The small DB undo-seam extraction retains the original transaction and guards. Main's cache and PR refresh fixes are included. No Google authentication implementation, real Slack/Google/LiveKit call, pixel work or Python model-server operation occurred.
 
 ## Failing-first evidence
 
-`check_run_mutations.py` ran in the pinned image on the fresh clone at `942e724f`; the authorization and template guards are unchanged in the final source. It simultaneously disabled the admin role gate, admitted another user's personal run and changed plan bytes. The three independent assertions failed, including both real HTTP cases; its `finally` restored all source files. The final suite uses restored sources. Raw output is included below.
+Complete HTTP comparison failed before the two response fixes: the personal back link differed, then a foreign personal run returned the public 404 body instead of Rails' empty body. Both corrections pass every full HTTP body case afterward. The new mutation script separately changes malformed-root errors into null, erases the transport exception class, and changes the atomic undo exclusion so a queued run is admitted. Each must reach its own failing runtime assertion; compilation errors are not accepted as evidence. Its `finally` restores the exact source bytes, and final source cleanliness is checked.
 
-The new huddle tests initially failed both the Rails-row callback comparison and cleanup rollback before the raw grant update was replaced by the shared huddle seam. The added Ruby client vectors initially failed on numeric `error` before its Ruby coercion fix. Those historical failures informed the fixes; they are not presented as runnable commands on the fixed source. The final workspace run rechecks both paths.
+## Fresh verification and exact commands
 
-## Cross-workstream touches and open questions
+Independent HTTPS GitHub clone: `.scratch/ws16-continuation-final`, with no object alternates, at the executable source SHA above. Fresh pinned Rails `default` and `first_run` seeds validate 29 and four checks respectively. The user-mapper oracle uses `default` to preserve the fixture's existing user's bio and claim flag; all other producers use `first_run`. An initial regeneration with the wrong mapper seed correctly failed the unchanged-vector guard; correcting the input reproduces all golden bytes without updating any expected output.
 
-WS1 verifier/encryption, WS3 queue, WS4 sessions/CSRF, WS5 rich text and the merged view/page APIs are reused. Main's users/accounts removal and huddle callbacks are consumed rather than copied. The only shared User change outside the Slack adapter is the existing fixture SQL-clock provider in open-room membership insertion. The huddle adapter now uses the merged huddle domain seam and does not leave a WS13-owned callback stub. No new broadcast/notifications or per-message saves were introduced. There is no owner-blocked item to hand off in place of the unfinished WS16 checks above.
+Canonical image: `sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2`. Actual observed versions:
 
-## Verification environment and commands
+```text
+rustc 1.98.1 (48a229cea 2026-09-01)
+libvips 8.16.1
+ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers
+```
 
-An independent fresh GitHub clone at `.scratch/ws16-runs-final2` has the GitHub HTTPS remote and no alternates. It was fast-forwarded to final executable source `c04ab8bc`. Its pinned Rails archive and fresh `default`/`first_run` seeds were built there, then Rails validated 29 default and four first-run assertions. `CI=1` makes missing seeds fail. Source and regenerated vectors were clean before the final run.
+Pinned Cargo commands run with Docker network `none`, uid 1000, four CPUs, offline/locked Cargo, `CI=1`, two build jobs, at most eight test threads, and both listener ranges 53300–53399. The wrapper mounts the host's `/tmp/rust-port-rustc-slots` and configured slot-count file; the compiler loop holds the same `flock` descriptor through rustc. The throttle is unchanged. Only one extra scratch Cargo target exists during verification; the worktree's normal `rust/target` is preserved.
 
-Pinned image: `sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2`; observed Rust 1.98.1, libvips 8.16.1 and ffmpeg 7.1.5. The image has the vips shared library, without the CLI; its version was read through `vips_version_string`. Docker networking is `none`; local fixture listeners stay in 53300–53399. Cargo runs offline/locked with two build jobs and eight test threads. The host rustc slot loop is mounted into containers and holds the same machine-wide locks. Only one extra scratch target exists; the worktree's normal `rust/target` is preserved.
-
-The `.scratch/pinned-runs-final.sh NAME COMMAND...` wrapper mounts the fresh clone at `/src`, registry read-only at its Cargo home, a rustc wrapper at `/rustc-wrapper`, `/tmp/rust-port-rustc-slots` at `/rustc-slots`, and the host slot-count file at `/slot-count`. It sets `RUSTC_WRAPPER=/rustc-wrapper`, `TMPDIR=/src/tmp-review`, `CI=1`, `CARGO_BUILD_JOBS=2`, test/dev debug=0 and both test port-range variables. Docker uses user 1000:1000, four CPUs and the exact image above. The rustc wrapper loops over the configured host slots with `flock`, holding its descriptor through the real compiler.
-
-Commands are run from the assigned worktree unless noted. Oracle producer commands use the fresh clone's `rust/` root, `PARITY_IMAGE=ws16-reference:d7c7de92`, `PARITY_OWNER=ws16`, an isolated `ws16-runs-final` namespace and `CAMPFIRE_REFERENCE` pointing at its pinned archive. Each uses `runner --seed first_run --time 2026-03-02T16:00:00Z --freeze`, then the named producer under `reference-tools/slack/`: `run_views.rb`, `runs_http.rb`, `options_vectors.rb`, `client_vectors.rb`, `undo_huddle.rb`, and `sequence_vectors.rb workspace|personal` with all eleven retained scenario arguments listed above. The orchestrator verifies `git diff --exit-code -- rust/vectors/slack` after all regeneration; it adds no mask.
-
-
-The exact wrapper and compiler-slot loop used for all pinned Cargo commands:
+The exact `.scratch/pinned-continuation.sh NAME COMMAND...` wrapper and compiler loop:
 
 ```sh
 #!/bin/bash
@@ -106,7 +71,7 @@ set -euo pipefail
 root=$(git rev-parse --show-toplevel)
 name="$1"; shift
 docker run --rm --name "$name" --network none --cpus 4 --user 1000:1000 \
-  -v "$root/.scratch/ws16-runs-final2:/src" \
+  -v "$root/.scratch/ws16-continuation-final:/src" \
   -v "$root/.scratch/rustc-wrapper.sh:/rustc-wrapper:ro" \
   -v /tmp/rust-port-rustc-slots:/rustc-slots \
   -v /home/riels/.cache/rust-port/rustc-slots:/slot-count:ro \
@@ -118,8 +83,9 @@ docker run --rm --name "$name" --network none --cpus 4 --user 1000:1000 \
   --env RUST_TEST_THREADS=8 --env CABLE_TEST_PORT_RANGE=53300-53399 \
   --env INTEGRATION_TEST_PORT_RANGE=53300-53399 \
   sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2 "$@"
+```
 
-# /rustc-wrapper (read-only mount):
+```sh
 #!/bin/bash
 rustc="$1"; shift
 case " $* " in *" --crate-name "*) ;; *) exec "$rustc" "$@" ;; esac
@@ -134,49 +100,62 @@ while :; do
 done
 ```
 
-Rails regeneration orchestration (executed as `python3 .scratch/ws16-rerun-oracles.py`):
-
-```python
-from pathlib import Path
-import subprocess,os
-root=Path.cwd()/'.scratch/ws16-runs-final2'
-rust=root/'rust'
-env=dict(os.environ,PARITY_NAMESPACE='ws16-runs-final',PARITY_OWNER='ws16',PARITY_IMAGE='ws16-reference:d7c7de92',CAMPFIRE_REFERENCE=str(rust/'parity/.ci/reference'))
-for script,args in [('run_views',[]),('runs_http',[]),('options_vectors',[]),('client_vectors',[]),('undo_huddle',[])]+[('sequence_vectors',['workspace']),('sequence_vectors',['personal'])]+[('sequence_vectors',['workspace',name]) for name in ['saved_reply','poll_reply','pending_quoted_reply','sent_reply','foreign_thread','room_event_schedule','claimed_session','claimed_google_account','claimed_google_identity','claimed_password','placeholder_authorship']]:
-    subprocess.run([str(rust/'parity/bin/reference'),'runner','--seed','first_run','--time','2026-03-02T16:00:00Z','--freeze',str(rust/f'reference-tools/slack/{script}.rb'),*args],env=env,check=True)
-subprocess.run(['git','-C',str(root),'diff','--exit-code','--','rust/vectors/slack'],check=True)
-print('Slack regenerated oracle bytes: all controller/client/huddle and thirteen sequence vectors unchanged')
-```
-
-The first full workspace run with `--nocapture` had 3405 passing tests, zero failures and 12 explicit ignores. Its summary tool additionally rejected the single literal "skipping locally" diagnostic. Inspection of `controllers/presenters/test_support.rs:119` and the adjacent passing test line shows it is `missing_seed_may_skip_locally`, which deliberately passes a newly empty temporary directory and `ci=false`. The paired `missing_seed_fails_in_ci` also passed. All actual seed lookup uses the set `CI` flag and fails if seeds are absent; fresh seed validation passed. No skip-detection rule or parity mask was loosened. The final run retains standard libtest capture and reruns the full workspace after the clippy fix.
-
-Clippy initially failed on the owned sample renderer's redundant result wrapping at `runs.rs:754`. `c04ab8bc` removes only the outer `Ok` and trailing `?`; error conversion and rendering are unchanged. Both production and all-target checks are repeated, without suppressing the lint.
-
-Commands used for the final Cargo gates and source/ledger checks:
+Commands were actually rerun in this continuation; summarized raw output follows. Assigned worktree is the default cwd. Source/image checks use the fresh clone. The oracle orchestrator runs the real reference runner for `setup_views`, `connections_http`, `oauth_vectors`, `markdown_vectors`, `mapper_vectors`, `run_views`, `runs_http`, `options_vectors`, `client_vectors`, `undo_huddle`, `payload_vectors`, `rendering_vectors` and all thirteen `sequence_vectors` arguments listed above, then requires unchanged tracked vector bytes. Its environment is `PARITY_NAMESPACE=ws16-continuation-final`, `PARITY_OWNER=ws16`, the pinned image (approved-layout image for `runs_http` only), the fresh pinned Rails archive, clock `2026-03-02T16:00:00Z --freeze`, and the seed distinction above.
 
 ```sh
-.scratch/pinned-runs-final.sh ws16-runs-suite cargo test --offline --locked --workspace --exclude html5ever --no-fail-fast -- --test-threads=8
-python3 .scratch/summarize-suite.py .scratch/ws16-pinned-workspace.log
-.scratch/pinned-runs-final.sh ws16-runs-clippy cargo clippy --offline --locked --workspace --all-targets -- -D warnings
-.scratch/pinned-runs-final.sh ws16-runs-release bash ci/with-release-inputs.sh cargo build --offline --locked --bin campfire
-.scratch/pinned-runs-final.sh ws16-runs-metadata cargo metadata --offline --locked --format-version 1
-python3 .scratch/ws16-runs-final2/rust/reference-tools/slack/check_reference.py
-python3 .scratch/ws16-runs-final2/rust/reference-tools/slack/write_test_inventory.py
-.scratch/pinned-runs-final.sh ws16-runs-mutations env WS16_CARGO=cargo python3 reference-tools/slack/check_run_mutations.py
+# Fresh GitHub clone; fetch main for the source drift check.
+git clone --single-branch --branch rust/ws16-slack-import https://github.com/Smart-Data-Ohio/smartfire.git .scratch/ws16-continuation-final
+git -C .scratch/ws16-continuation-final fetch origin main:refs/remotes/origin/main
+# Populate rust/parity/.ci/reference from the exact pin using git archive.
+# Source/image checks and inventory run from the fresh clone:
+python3 rust/reference-tools/slack/check_reference.py
+python3 rust/reference-tools/slack/build_approved_reference.py
+python3 rust/reference-tools/slack/write_test_inventory.py
+# From the assigned worktree:
+PARITY_NAMESPACE=ws16-continuation-final PARITY_OWNER=ws16 PARITY_IMAGE=ws16-reference:d7c7de92 CAMPFIRE_REFERENCE="$PWD/.scratch/ws16-continuation-final/rust/parity/.ci/reference" .scratch/ws16-continuation-final/rust/parity/bin/seed build default first_run
+python3 .scratch/ws16-continuation-verify-seeds.py
+python3 .scratch/ws16-continuation-oracles.py
+.scratch/pinned-continuation.sh ws16-continuation-metadata cargo metadata --offline --locked --no-deps --format-version 1
+.scratch/pinned-continuation.sh ws16-continuation-workspace cargo test --offline --locked --workspace --exclude html5ever --no-fail-fast -- --test-threads=8
+python3 .scratch/summarize-suite.py .scratch/continuation-workspace.log
+.scratch/pinned-continuation.sh ws16-continuation-mutations env WS16_CARGO=cargo python3 reference-tools/slack/check_lifecycle_mutations.py
+.scratch/pinned-continuation.sh ws16-continuation-clippy cargo clippy --offline --locked --workspace --all-targets -- -D warnings
+.scratch/pinned-continuation.sh ws16-continuation-release bash ci/with-release-inputs.sh cargo build --offline --locked --bin campfire
 ```
-
-The full workspace test command follows `rust/AGENTS.md` and excludes only vendored `html5ever`; final clippy includes every workspace member and all targets. No executable test filter is used in the full run. The initial `--nocapture` run supplies the extra body/HTTP/DB differential lines below; the final standard-capture run supplies the final raw totals. No original test assertions were removed.
-
-Raw source/ledger and repeated Rails oracle summary lines:
 
 ```text
 Slack Rails reference: 21 source files match d7c7de9264c63015be398001d7a1094e7695a6db; no Slack drift on origin/main
-Slack Rails test inventory: 214 covered, 4 partial, 26 deferred; 244 total
+
+Slack Rails HTTP oracle: pinned d7c7de92 plus exactly three approved 2e20b24c layout inputs
+Slack Rails test inventory: 244 covered, 0 partial, 0 deferred; 244 total
+Locked/offline metadata: valid; workspace members: 13
+
+seed: building default
+seed: default -> parity/.seed/default (6.1M)
+seed: building first_run
+seed: first_run -> parity/.seed/first_run (1.5M)
+
+Seed assertions (default, then first_run):
+  "passed": 29,
+  "failed": 0
+WS16 fresh seed validated: default
+  "passed": 4,
+  "failed": 0
+WS16 fresh seed validated: first_run
+
+Oracle summary lines:
+Slack setup views: 11 complete Rails template bodies generated with shared deterministic CSRF inputs
+Slack connection HTTP oracle: 37 real Rails callback/disconnect/setup/remove cases generated
+Slack OAuth vectors: 41 real Rails exchange/revoke/team cases, 4 authorization URLs, manifest and signed state generated
+Slack markdown vectors: 481 cases generated from Rails
+Slack mapper vectors: 9 fixture users; preview, import and repeat recorded
 Slack run views: 83 complete Rails template bodies generated with shared deterministic CSRF inputs
 Slack run HTTP oracle: 109 real Rails action cases with signed sessions and verified CSRF generated
 Slack options oracle: 33 Ruby coercion and ISO time-bound cases generated
 Slack client vectors: 32 Rails error and success mappings generated
 Slack undo huddle oracle: real Rails User.destroy callbacks; all rows and fields in six affected tables generated
+Slack payload edges: 12 client, 23 converter, 23 mapper, 12 conversation, 11 transport, 11 HTTP cases generated
+Slack real-save rendering: 4 persisted body and mention goldens generated
 Slack Rails sequence (workspace): import -> undo -> reimport; 89 tables per snapshot; 20 recorded API requests
 Slack Rails sequence (personal): import -> undo -> reimport; 89 tables per snapshot; 18 recorded API requests
 Slack Rails sequence (saved_reply): import -> undo -> reimport; 89 tables per snapshot; 20 recorded API requests
@@ -190,105 +169,116 @@ Slack Rails sequence (claimed_google_account): import -> undo -> reimport; 89 ta
 Slack Rails sequence (claimed_google_identity): import -> undo -> reimport; 89 tables per snapshot; 20 recorded API requests
 Slack Rails sequence (claimed_password): import -> undo -> reimport; 89 tables per snapshot; 20 recorded API requests
 Slack Rails sequence (placeholder_authorship): import -> undo -> reimport; 89 tables per snapshot; 20 recorded API requests
-Slack regenerated oracle bytes: all controller/client/huddle and thirteen sequence vectors unchanged
+Slack fresh-clone oracle regeneration: 25 producers; all vector bytes unchanged
+
+Deliberately broken sources (expected failures; restored before clippy/build):
+test integrations::slack::payload::tests::slack_malformed_payloads_match_actual_rails_classes_messages_and_results ... FAILED
+test integrations::slack::client::tests::slack_client_transport_classes_messages_and_retryability_match_rails ... FAILED
+test result: FAILED. 74 passed; 4 failed; 0 ignored; 0 measured; 1680 filtered out; finished in 12.19s
+test tests::slack_import_test::slack_import_atomic_undo_claim_refuses_queue_arriving_after_precheck ... FAILED
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 981 filtered out; finished in 0.06s
+Slack lifecycle mutation guards: malformed root, erased transport class and stale undo precheck rejected; sources restored
+
+Final clippy and crates-only production build:
+    Finished `dev` profile [unoptimized] target(s) in 59.14s
+    Finished `dev` profile [unoptimized] target(s) in 1m 07s
 ```
 
-Raw seed validator summaries:
+The exact seed validator and regeneration orchestrators used above:
 
-```text
-  "passed": 29,
-  "failed": 0
-WS16 fresh seed validated: default
-  "passed": 4,
-  "failed": 0
-WS16 fresh seed validated: first_run
+```python
+from pathlib import Path
+import subprocess, os
+rust=Path.cwd()/'.scratch/ws16-continuation-final/rust'
+env=dict(os.environ,PARITY_NAMESPACE='ws16-continuation-final',PARITY_OWNER='ws16',
+ PARITY_IMAGE='ws16-reference:d7c7de92',CAMPFIRE_REFERENCE=str(rust/'parity/.ci/reference'))
+for seed in ['default','first_run']:
+ subprocess.run([str(rust/'parity/bin/reference'),'runner','--seed',seed,'--time',
+  '2026-03-02T16:00:00Z','--freeze',str(rust/'reference-tools/campfire/verify_parity_seed.rb'),seed],env=env,check=True)
+ print('WS16 fresh seed validated: '+seed,flush=True)
 ```
 
-Raw failing-first run HTTP/body mutation output:
+```python
+from pathlib import Path
+import os
+import subprocess
 
-```text
-test controllers::slack::tests::run_tests::slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails ... FAILED
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1728 filtered out; finished in 1.88s
-test controllers::slack::tests::run_tests::slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails ... FAILED
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1728 filtered out; finished in 1.45s
-test controllers::slack::tests::run_tests::slack_run_views_match_every_rails_body_byte ... FAILED
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1728 filtered out; finished in 0.82s
-Slack run mutation guards: member-admin and foreign-personal access, and plan bytes rejected; sources restored
+root = Path.cwd() / '.scratch/ws16-continuation-final'
+rust = root / 'rust'
+env = dict(os.environ, PARITY_NAMESPACE='ws16-continuation-final', PARITY_OWNER='ws16',
+           PARITY_IMAGE='ws16-reference:d7c7de92',
+           CAMPFIRE_REFERENCE=str(rust / 'parity/.ci/reference'))
+producers = [(name, []) for name in ['setup_views', 'connections_http', 'oauth_vectors',
+    'markdown_vectors', 'mapper_vectors', 'run_views', 'runs_http', 'options_vectors',
+    'client_vectors', 'undo_huddle', 'payload_vectors', 'rendering_vectors']]
+producers += [('sequence_vectors', ['workspace']), ('sequence_vectors', ['personal'])]
+producers += [('sequence_vectors', ['workspace', name]) for name in ['saved_reply',
+    'poll_reply', 'pending_quoted_reply', 'sent_reply', 'foreign_thread',
+    'room_event_schedule', 'claimed_session', 'claimed_google_account',
+    'claimed_google_identity', 'claimed_password', 'placeholder_authorship']]
+for name, args in producers:
+    current_env = dict(env)
+    if name == 'runs_http':
+        current_env['PARITY_IMAGE'] = 'ws16-reference:d7c7de92-layout-2e20b24c'
+    subprocess.run([str(rust / 'parity/bin/reference'), 'runner', '--seed', 'default' if name == 'mapper_vectors' else 'first_run',
+        '--time', '2026-03-02T16:00:00Z', '--freeze',
+        str(rust / f'reference-tools/slack/{name}.rb'), *args], env=current_env, check=True)
+subprocess.run(['git', '-C', str(root), 'diff', '--exit-code', '--', 'rust/vectors/slack'], check=True)
+print('Slack fresh-clone oracle regeneration: 25 producers; all vector bytes unchanged')
 ```
 
-Additional owned parity lines from the initial full workspace run at `4f94fd73` (the final run repeats these same tests at `c04ab8bc`):
+All final seeded cases actually ran under `CI=1`. The vendored third-party `html5ever` test package is excluded by the established workspace command; application crates remain included. The explicit ignored tests are listed in the raw suite output below. The huddle gateway Node harness is an upstream ignore; huddle callback/row/event/rollback coverage is exercised here, without claiming that ignored gateway harness ran.
 
 ```text
-Slack run view parity: 83 complete Rails template bodies matched byte for byte
-Slack DB differential (personal): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (workspace): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (saved_reply): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (poll_reply): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (pending_quoted_reply): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (sent_reply): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (foreign_thread): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (room_event_schedule): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (claimed_session): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (claimed_google_account): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (claimed_google_identity): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (claimed_password): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack DB differential (placeholder_authorship): import -> undo -> reimport; 89 tables x 3 snapshots; every row and field matched
-Slack run HTTP parity: 109 Rails action cases matched sessions, CSRF, redirects, flashes, rows, audits and durable jobs
-Slack undo huddle parity: six Rails affected tables matched every row and field; stream/presence callbacks emitted
-```
-
-Final full workspace totals, all raw libtest summaries and every explicit ignore, in execution order:
-
-```text
-Pinned workspace totals: 58 summary blocks; 3405 passed; 0 failed; 12 ignored
+Pinned workspace totals: 58 summary blocks; 3435 passed; 0 failed; 12 ignored
 Raw libtest summaries:
-test result: ok. 1726 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 873.10s
+test result: ok. 1755 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 666.51s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.42s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.71s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
-test result: ok. 977 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 123.73s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.69s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
-test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.04s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 978 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 77.67s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.38s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.58s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.20s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 33.86s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.93s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.93s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.45s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.44s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.52s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.14s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.30s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.79s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.39s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.58s
 test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.85s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.41s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -315,48 +305,18 @@ test crates/kit/src/error.rs - error::halt (line 91) ... ignored
 test crates/kit/src/lib.rs - (line 7) ... ignored
 ```
 
-Final clippy and crates-only restricted-input binary build:
-
-```text
-    Finished `dev` profile [unoptimized] target(s) in 51.01s
-    Finished `dev` profile [unoptimized] target(s) in 1m 01s
-```
-
-All final commands returned zero. The huddle gateway Node suite is an explicit upstream ignore; the huddle result here claims the Rust callback/row/event/rollback coverage, not that ignored gateway suite. No actual seed-dependent case skipped, and no measured or filtered test occurred in the final full run.
-
-Seed validation was repeated from the fresh clone using the following exact orchestration (stdout provided above):
-
-```python
-from pathlib import Path
-import subprocess, os
-rust = Path.cwd() / ".scratch/ws16-runs-final2/rust"
-env = dict(os.environ, PARITY_NAMESPACE="ws16-seed-final", PARITY_OWNER="ws16",
-           PARITY_IMAGE="ws16-reference:d7c7de92",
-           CAMPFIRE_REFERENCE=str(rust / "parity/.ci/reference"))
-for seed in ["default", "first_run"]:
-    subprocess.run([str(rust / "parity/bin/reference"), "runner", "--seed", seed,
-                    "--time", "2026-03-02T16:00:00Z", "--freeze",
-                    str(rust / "reference-tools/campfire/verify_parity_seed.rb"), seed],
-                   env=env, check=True)
-    print("WS16 fresh seed validated: " + seed, flush=True)
-```
-
-Locked/offline metadata: valid; workspace members: 13
-
 ## Cleanup and remote state
 
-After all gates passed, native Cargo cleanup removed the sole extra target. Checked removal was limited to an empty target directory if one remained; fixture/source artifacts and the original worktree `rust/target` cache are preserved. Recursive scratch target inventory and WS16 container/port inventories are zero. No verification process remains.
+After all gates passed, native Cargo cleanup removed the sole extra target. Removal after Cargo cleanup was limited to an empty target directory if one remained. Fixture/source/oracle artifacts and the normal worktree `rust/target` cache are preserved. No WS16 verification process, container or listener remains. The report-only commit is pushed and its remote SHA is read back before the final reply; executable source remains exactly the verified code SHA.
 
 ```sh
-.scratch/pinned-runs-final.sh ws16-runs-clean cargo clean --offline --locked
+.scratch/pinned-continuation.sh ws16-continuation-clean cargo clean --offline --locked
 ```
-
 ```text
-     Removed 19658 files, 11.4GiB total
+Removed 21020 files, 11.9GiB total
+
 Scratch Cargo targets remaining: 0
 Original worktree rust/target preserved: yes
 WS16 verification containers running: 0
 Listeners in WS16 port range: 0
 ```
-
-The final report-only commit is pushed and its remote SHA is read back before the worker reply. No executable source changes follow verified `c04ab8bc`.
