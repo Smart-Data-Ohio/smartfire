@@ -47,7 +47,7 @@ const mutations=new Map([
     'the standalone thread page keeps menus and focusability',
     'the standalone message page keeps its menu and focusability',
   ].map(name=>[name,[list,'message.setAttribute("aria-haspopup", "menu")','message.setAttribute("aria-haspopup", "dialog")']]),
-  ['the message-list top padding does not apply to search results',['messages-','.messages:not(.searches__results) {','.messages {']],
+  ['the message-list top padding does not apply to search results',['messages-','.messages:not(.searches__results)','.messages']],
   ['the viewport allows pinch zoom',['viewport-response']],
   ['profile message and ban buttons have accessible names',['profile-button-response']],
   ['flash persists its 5-second minimum under reduced motion',['flash-','animation-duration: 5s !important;','animation-duration: 2s !important;']],
@@ -82,6 +82,9 @@ export async function installMutation(page,caseName,probe) {
   await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());
     const [asset,needle,replacement]=mutation;
+    // Icons share names with stylesheets. Never mutate an SVG whose name
+    // happens to start with messages- or flash-.
+    if((asset==='messages-'||asset==='flash-')&&!url.pathname.endsWith('.css')) return route.continue();
     const refresh=asset==='refresh-content-type'&&url.searchParams.get('reason')==='connection';
     const mention=asset==='mention-response'&&url.pathname.includes('/autocompletable/users');
     const search=asset==='search-page-response'&&url.pathname==='/searches'&&url.searchParams.has('before');

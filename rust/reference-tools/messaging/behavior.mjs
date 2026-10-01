@@ -26,7 +26,10 @@ async function acceptance(base,caseName,probe={}) {
   try {
     async function viewer(name) {
       const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
-      const context=await browser.newContext({viewport:{width:1440,height}});
+      // Mutation routes must remain observable across navigations; a service
+      // worker can otherwise fetch/cache the original asset outside page.route.
+      // Positive acceptance retains the app's actual service worker.
+      const context=await browser.newContext({viewport:{width:1440,height},...(negative?{serviceWorkers:'block'}:{})});
       contexts.push(context);
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
