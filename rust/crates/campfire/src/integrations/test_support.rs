@@ -236,18 +236,7 @@ impl Drop for FakeServer {
     }
 }
 
-/// Isolated HTTP matrices use distinct ports at the end of their worker's reserved range.
-pub fn fixture_http_base(default_port: u16, offset: u16) -> String {
-    let port = std::env::var("INTEGRATION_TEST_PORT_RANGE").map(|range| {
-        let (first, last) = range.split_once('-').expect("INTEGRATION_TEST_PORT_RANGE=start-end");
-        let first: u16 = first.parse().unwrap();
-        let last: u16 = last.parse().unwrap();
-        let port = last.checked_sub(offset).expect("fixture port offset outside range");
-        assert!(first <= port, "fixture port offset outside range");
-        port
-    }).unwrap_or(default_port);
-    format!("http://127.0.0.1:{port}")
-}
+
 
 pub async fn ws15e_listener() -> TcpListener {
     if std::env::var_os("CABLE_TEST_PORT_RANGE").is_some() {
