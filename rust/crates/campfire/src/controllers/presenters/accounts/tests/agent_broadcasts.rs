@@ -1,6 +1,6 @@
 //! Real socket coverage for WS11 callbacks rendered by WS11-ui after commit.
 use super::*;
-use futures_util::{SinkExt, StreamExt};
+use futures_util::{SinkExt, Stream, StreamExt};
 use serde_json::{Value, json};
 use tokio_tungstenite::{
     MaybeTlsStream, WebSocketStream,
@@ -105,9 +105,22 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
             Ok(approval.id)
         }).await.unwrap();
         // WS11 now fans out in a separate after-commit writer, as Rails does.
-        let item_id = test.booted.app.db.read(move |conn| {
-            Ok(campfire_db::ActivityItem::find_by_user_and_source(conn,owner_id,"AgentApproval",approval_id)?.expect("committed inbox fanout").id)
-        }).await.unwrap();
+        let item_id = test
+            .booted
+            .app
+            .db
+            .read(move |conn| {
+                Ok(campfire_db::ActivityItem::find_by_user_and_source(
+                    conn,
+                    owner_id,
+                    "AgentApproval",
+                    approval_id,
+                )?
+                .expect("committed inbox fanout")
+                .id)
+            })
+            .await
+            .unwrap();
         let created = receive(&mut owner_socket).await;
         assert_eq!(created["message"], json!({"activityItemId":item_id}));
         let response = owner
@@ -161,19 +174,49 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
             StatusCode::UNPROCESSABLE_ENTITY
         );
         for socket in [&mut owner_socket, &mut other_socket] {
-            assert!(
-                tokio::time::timeout(std::time::Duration::from_millis(150), socket.next())
-                    .await
-                    .is_err(),
-                "duplicate or another user's activity reached the socket"
-            );
+            assert_no_activity(socket).await;
         }
     }
     owner_socket.close(None).await.unwrap();
     other_socket.close(None).await.unwrap();
     server.abort();
 }
-async fn receive(socket: &mut Socket) -> Value {
+async fn assert_no_activity<S, E>(socket: &mut S)
+where
+    S: Stream<Item = Result<Message, E>> + Unpin,
+    E: std::fmt::Debug,
+{
+    // ActionCable heartbeats are connection traffic, not an ActivityChannel
+    // broadcast. Bound the entire ping-filtering read by the original deadline.
+    let received =
+        tokio::time::timeout(std::time::Duration::from_millis(150), receive(socket)).await;
+    assert!(
+        received.is_err(),
+        "duplicate or another user's activity reached the socket: {received:?}"
+    );
+}
+
+#[tokio::test]
+async fn approval_silence_filters_heartbeats_without_hiding_private_activity() {
+    let ping = Message::Text(json!({"type":"ping","message":1}).to_string().into());
+    let mut heartbeats =
+        futures_util::stream::iter([Ok::<_, tokio_tungstenite::tungstenite::Error>(ping.clone())])
+            .chain(futures_util::stream::pending());
+    assert_no_activity(&mut heartbeats).await;
+
+    let private = json!({"identifier":"ActivityChannel","message":{"activityItemId":1}});
+    let mut activity = futures_util::stream::iter([
+        Ok::<_, tokio_tungstenite::tungstenite::Error>(ping),
+        Ok(Message::Text(private.to_string().into())),
+    ]);
+    assert_eq!(receive(&mut activity).await, private);
+}
+
+async fn receive<S, E>(socket: &mut S) -> Value
+where
+    S: Stream<Item = Result<Message, E>> + Unpin,
+    E: std::fmt::Debug,
+{
     loop {
         let frame = tokio::time::timeout(std::time::Duration::from_secs(2), socket.next())
             .await
