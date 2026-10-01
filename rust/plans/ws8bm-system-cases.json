@@ -111,8 +111,8 @@
         },
         {
           "name": "browses active and closed threads and can join or leave a closed one",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: separate JZ/David browsers; active and closed lists; real close/join/leave controls; retained message bodies, creator IDs, closure timestamp and membership rows checked on both apps"
         },
         {
           "name": "tracks work, assigns an owner, completes and reopens it without losing the conversation",
@@ -146,13 +146,13 @@
         },
         {
           "name": "rejects an external thread deep link before fetching it",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: real external query URL; invalid-link status; no external browser request/resource or thread content; unchanged message/thread/membership counts on both apps"
         },
         {
           "name": "renders untrusted thread metadata as text",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: actual create form with the pinned malicious name; literal title, no image node or script execution; exact saved name and message source on both apps"
         },
         {
           "name": "opens a shared thread message link around an older post",

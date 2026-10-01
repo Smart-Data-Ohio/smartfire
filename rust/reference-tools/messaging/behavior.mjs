@@ -18,7 +18,12 @@ async function acceptance(base) {
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
       const page=await context.newPage();
-      page.on('pageerror',error=>console.error('WS8bm browser JavaScript:',error.message));
+      page.on('pageerror',error=>console.error('WS8bm browser JavaScript:',base,error.stack));
+      page.on('requestfailed',request=>{
+        const failure=request.failure()?.errorText;
+        // Navigation cancels background fetches; diagnose actual network failures.
+        if(failure!=='net::ERR_ABORTED') console.error('WS8bm browser failed request:',request.url(),failure);
+      });
       const response=await page.goto(base+'/rooms/654632876');
       assert.equal(response.status(),200);
       assert.equal(new URL(page.url()).pathname,'/rooms/654632876');
@@ -53,12 +58,15 @@ async function acceptance(base) {
     }
     if (file==='threads') {
       const panel=author.locator('#thread-panel');
-      async function create(name,first,parent=true) {
+      async function create(name,first,parent=true,page=author) {
+        const panel=page.locator('#thread-panel');
         if(parent) {
-          await author.locator('.message[data-message-id="607264868"]').click({button:'right'});
-          await author.getByRole('menuitem',{name:'Create thread',exact:true}).click();
+          const root=page.locator('.message[data-message-id="607264868"]');
+          await page.locator('.message[data-message-id="607264868"][aria-haspopup="menu"]').waitFor();
+          await root.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
+          await page.getByRole('menuitem',{name:'Create thread',exact:true}).click();
         } else {
-          await author.locator('[data-thread-panel-target="browserToggle"]:visible').click();
+          await page.locator('[data-thread-panel-target="browserToggle"]:visible').click();
           await panel.getByRole('button',{name:'New thread',exact:true}).click();
         }
         await panel.locator('[data-thread-panel-target="create"]').waitFor();
@@ -69,7 +77,8 @@ async function acceptance(base) {
         assert.match(await firstField.evaluate(input=>input.closest('label')?.textContent||''),/First message/);
         await firstField.fill(first);
       }
-      async function finishCreate(name) {
+      async function finishCreate(name,page=author) {
+        const panel=page.locator('#thread-panel');
         await panel.locator('[data-thread-panel-target="createSubmit"]').click();
         await panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name}).waitFor();
         await panel.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]').waitFor({state:'attached'});
@@ -89,7 +98,55 @@ async function acceptance(base) {
         await message.locator('[data-message-edit-format], [data-reply-target="body"]').first().click({button:'right'});
         await author.locator('#message-actions-menu:not([hidden])').waitFor();
       }
-      if(caseName==='a stray create re-entry does not wipe the half-filled thread name') {
+      async function close(page) {
+        await page.getByRole('button',{name:'Close threads',exact:true}).click();
+        await page.waitForFunction(()=>!document.body.classList.contains('thread-panel-open'));
+      }
+      if(caseName==='rejects an external thread deep link before fetching it') {
+        const external='https://attacker.invalid/rooms/1/threads/999';
+        const requests=[];
+        author.on('request',request=>requests.push(request.url()));
+        const response=await author.goto(base+'/rooms/654632876?thread='+encodeURIComponent(external));
+        assert.equal(response.status(),200);
+        await author.locator('#thread-panel[aria-hidden="false"]').waitFor();
+        await panel.locator('[data-thread-panel-target="threadStatus"]').filter({hasText:'This thread link is invalid.'}).waitFor();
+        assert.equal(await panel.locator('.thread-panel__thread-content .message').count(),0);
+        assert.equal(requests.some(url=>url.startsWith('https://attacker.invalid/')),false);
+        assert.equal(await author.evaluate(()=>performance.getEntriesByType('resource').some(entry=>entry.name.startsWith('https://attacker.invalid/'))),false);
+      } else if(caseName==='renders untrusted thread metadata as text') {
+        const malicious='<img src=x onerror="window.__threadXss = true">';
+        await create(malicious,'A safe thread body.',false);await finishCreate(malicious);
+        const title=panel.locator('[data-thread-panel-target="conversationTitle"]');
+        assert.equal((await title.textContent()).trim(),malicious);
+        assert.equal(await title.locator('img').count(),0);
+        assert.equal(await author.evaluate(()=>window.__threadXss),undefined);
+        await threadMessage('A safe thread body.').waitFor();
+      } else if(caseName==='browses active and closed threads and can join or leave a closed one') {
+        await create('Active planning thread','The active planning conversation.',false);await finishCreate('Active planning thread');await close(author);
+        const david=await viewer('David');
+        await create('Closed planning thread','The closed planning conversation.',false,david);await finishCreate('Closed planning thread',david);
+        const other=david.locator('#thread-panel');
+        await other.locator('[data-thread-panel-target="manage"] summary').click();
+        await other.locator('[data-thread-panel-target="closeThread"]').click();
+        await other.locator('[data-thread-panel-target="threadStatus"]').filter({hasText:/Closed thread/}).waitFor();
+        await close(david);
+        await author.locator('[data-thread-panel-target="browserToggle"]:visible').click();
+        await panel.locator('[data-thread-panel-target="browser"]').waitFor();
+        const items=panel.locator('[data-thread-panel-target="browserList"] .thread-panel__thread-item');
+        await items.filter({hasText:'Active planning thread'}).waitFor();
+        assert.equal(await items.filter({hasText:'Closed planning thread'}).count(),0);
+        await panel.locator('[data-thread-panel-target="filter"]').selectOption('closed');
+        await items.filter({hasText:'Closed planning thread'}).click();
+        await panel.locator('[data-thread-panel-target="conversation"]').waitFor();
+        await panel.locator('[data-thread-panel-target="join"]').waitFor();
+        assert.equal(await panel.locator('[data-thread-panel-target="leave"]').isVisible(),false);
+        await panel.getByRole('button',{name:'Join',exact:true}).click();
+        await panel.locator('[data-thread-panel-target="leave"]').waitFor();
+        assert.equal(await panel.locator('[data-thread-panel-target="join"]').isVisible(),false);
+        await panel.getByRole('button',{name:'Leave',exact:true}).click();
+        await panel.locator('[data-thread-panel-target="join"]').waitFor();
+        assert.equal(await panel.locator('[data-thread-panel-target="leave"]').isVisible(),false);
+      } else if(caseName==='a stray create re-entry does not wipe the half-filled thread name') {
         await create('Survives a stray reset','The name survives the re-entry.',false);
         await author.evaluate(()=>window.dispatchEvent(new CustomEvent('message:thread',{detail:{}})));
         await finishCreate('Survives a stray reset');

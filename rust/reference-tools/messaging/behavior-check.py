@@ -32,6 +32,9 @@ CASES = {
         "creates a thread from a channel message and keeps the channel draft separate",
         "the thread root counts its replies live and hides the count when none remain",
         "a stray create re-entry does not wipe the half-filled thread name",
+        "browses active and closed threads and can join or leave a closed one",
+        "rejects an external thread deep link before fetching it",
+        "renders untrusted thread metadata as text",
     ],
 }
 parser = argparse.ArgumentParser(description=__doc__)
@@ -71,6 +74,9 @@ finally:
     for reservation in reservations:
         reservation.close()
 
+with sqlite3.connect(RUST / "parity/.seed/default/db/production.sqlite3") as conn:
+    protected_counts = {table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                        for table in ["channel_threads", "messages", "thread_memberships"]}
 passed = 0
 for file in files:
     source = subprocess.check_output(["git", "show", f"{PIN}:test/system/{file}_test.rb"], cwd=ROOT)
@@ -139,6 +145,23 @@ for file in files:
                                 thread = conn.execute("SELECT id,parent_message_id FROM channel_threads WHERE name='Indicator thread'").fetchone()
                                 assert thread is not None and thread[1] == 607264868
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE thread_id=?", (thread[0],)).fetchone()[0] == 0
+                            elif case == "browses active and closed threads and can join or leave a closed one":
+                                active = conn.execute("SELECT id,closed_at,creator_id FROM channel_threads WHERE name='Active planning thread'").fetchone()
+                                closed = conn.execute("SELECT id,closed_at,creator_id FROM channel_threads WHERE name='Closed planning thread'").fetchone()
+                                assert active is not None and active[1:] == (None, 773523953)
+                                assert closed is not None and closed[1] is not None and closed[2] == 127326141
+                                assert conn.execute("SELECT COUNT(*) FROM thread_memberships WHERE thread_id=? AND user_id=773523953", (closed[0],)).fetchone()[0] == 0
+                                assert conn.execute("SELECT COUNT(*) FROM thread_memberships WHERE thread_id=? AND user_id=127326141", (closed[0],)).fetchone()[0] == 1
+                                for thread, body in [(active, "The active planning conversation."), (closed, "The closed planning conversation.")]:
+                                    assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [(body,)]
+                            elif case == "rejects an external thread deep link before fetching it":
+                                for table, count in protected_counts.items():
+                                    assert conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == count
+                            elif case == "renders untrusted thread metadata as text":
+                                name = '<img src=x onerror="window.__threadXss = true">'
+                                thread = conn.execute("SELECT id FROM channel_threads WHERE name=?", (name,)).fetchone()
+                                assert thread is not None
+                                assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [("A safe thread body.",)]
                             elif case == CASES["threads"][2]:
                                 thread = conn.execute("SELECT id FROM channel_threads WHERE name='Survives a stray reset'").fetchone()
                                 assert thread is not None
