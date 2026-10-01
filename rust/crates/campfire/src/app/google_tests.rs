@@ -86,11 +86,14 @@ async fn app() -> (TestApp, Arc<Recorded>) {
     (app, recorded)
 }
 fn token(claims: Value) -> String {
+    token_with_key(claims, "fixture", include_bytes!("../integrations/google/signing.der"))
+}
+fn token_with_key(claims: Value, kid: &str, key_bytes: &[u8]) -> String {
     use ring::signature::{RSA_PKCS1_SHA256, RsaKeyPair};
-    let key = RsaKeyPair::from_pkcs8(include_bytes!("../integrations/google/signing.der")).unwrap();
+    let key = RsaKeyPair::from_pkcs8(key_bytes).unwrap();
     let input = format!(
         "{}.{}",
-        URL_SAFE_NO_PAD.encode(br#"{"alg":"RS256","kid":"fixture"}"#),
+        URL_SAFE_NO_PAD.encode(serde_json::to_vec(&json!({"alg":"RS256","kid":kid})).unwrap()),
         URL_SAFE_NO_PAD.encode(serde_json::to_vec(&claims).unwrap())
     );
     let mut signature = vec![0; key.public().modulus_len()];

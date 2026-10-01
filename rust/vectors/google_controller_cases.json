@@ -6554,6 +6554,186 @@
       "index": 83,
       "spec": {
         "purpose": "sign_in",
+        "scenario": "predecessor",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "This account is no longer active. Contact your administrator or sign in with email and password."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "legacy-deactivated-fixture@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy-deactivated-fixture@smartdata.net",
+            "role": "administrator",
+            "status": "deactivated"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 84,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "rotation",
+        "lifecycle": true
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "page": {
+          "status": 200,
+          "google_mark": true,
+          "domain_sentence": "@smartdata.net and @cnbssoftware.com"
+        },
+        "bound_entropy": {
+          "nonce": true,
+          "state": true,
+          "pkce": true
+        },
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/two_factor_challenge",
+        "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "keys",
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-member",
+            "email": "LEGACY@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "legacy@smartdata.net",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "google.sign_in.link",
+            "actor_id": 712064548,
+            "target_id": 712064548,
+            "target_type": "User",
+            "target_label": "Kevin <legacy@smartdata.net>",
+            "details": {
+              "email": "LEGACY@smartdata.net"
+            }
+          }
+        ],
+        "lifecycle": {
+          "user": {
+            "id": 712064548,
+            "name": "Kevin",
+            "email_address": "legacy@smartdata.net",
+            "role": "administrator",
+            "status": "active"
+          },
+          "password_present": true,
+          "memberships": [
+            201306877,
+            340026324,
+            654632876,
+            699448325,
+            699448326,
+            699448327,
+            699448329,
+            699448330,
+            699448331
+          ],
+          "history_preserved": true
+        }
+      }
+    },
+    {
+      "index": 85,
+      "spec": {
+        "purpose": "sign_in",
         "scenario": "forged_state"
       },
       "actor_id": 712064548,
@@ -6601,7 +6781,7 @@
       }
     },
     {
-      "index": 84,
+      "index": 86,
       "spec": {
         "purpose": "sign_in",
         "scenario": "missing_state"
@@ -6651,7 +6831,7 @@
       }
     },
     {
-      "index": 85,
+      "index": 87,
       "spec": {
         "purpose": "sign_in",
         "scenario": "replay"
@@ -6779,7 +6959,7 @@
       }
     },
     {
-      "index": 86,
+      "index": 88,
       "spec": {
         "purpose": "sign_in",
         "scenario": "unconfigured_password"
@@ -6837,5 +7017,17 @@
         }
       }
     }
-  ]
+  ],
+  "rotated_jwks": {
+    "keys": [
+      {
+        "kty": "RSA",
+        "kid": "rotated",
+        "n": "wVwIghcf6-4I5QFd8oHXQK40sqrnSnhr5wgcBvekA3c6LubwGFG2JmDrXFnv281CPVC4iGVsTdMqQdWoDzNSfcVEKN0h0VeZhIAg0Kq-K7dqtmUHoz7m7WNmAdI3hlzy903RMICmI8vg-1k-N4DZ4oIcwNYd1wcgge1HsZ7RnQSX5dfstnTOF-RvLGZGHzlFbjPUlVUR8k75goSO1j0RUYKyJexKIv1Srtkn1YqQ14IeriMloddZ1lFhfOCuj6yoEGOaTCyNrjom4BkV0KYyioCNT2VtFJ2Cj4W5ka28qUszEy0ywU3IUqCHgHV7seQg-rWQp1YLu6mQB5J1WOUI-Q",
+        "e": "AQAB"
+      }
+    ]
+  },
+  "identity_token_columns": [],
+  "filtered_code": "[FILTERED]"
 }

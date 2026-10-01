@@ -108,6 +108,17 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
         "../../../../../vectors/google_controller_cases.json"
     ))
     .unwrap();
+    run_cases(oracle).await;
+}
+#[tokio::test]
+async fn google_callback_rotation_and_predecessor_match_pinned_rails() {
+    let mut oracle:Value = serde_json::from_str(include_str!("../../../../../vectors/google_controller_cases.json")).unwrap();
+    oracle["rows"].as_array_mut().unwrap().retain(|row|matches!(row["spec"]["scenario"].as_str(), Some("rotation" | "predecessor")));
+    assert_eq!(oracle["rows"].as_array().unwrap().len(), 2);
+    run_cases(oracle).await;
+}
+async fn run_cases(oracle: Value) {
+    assert_eq!(json!(crate::security::parameter_filter().filter(&json!({"code":"private-code-fixture"}))["code"]), oracle["filtered_code"]);
     let domains = regex::Regex::new("Google sign-in for (.*?) accounts").unwrap();
     for row in oracle["rows"].as_array().unwrap() {
         let now = jiff::Timestamp::from_second(oracle["now"].as_i64().unwrap()).unwrap();
@@ -153,6 +164,7 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
                     let scenario = owned_scenario.as_str();
                     tx.conn().execute("UPDATE users SET email_address='legacy@smartdata.net',role=1,google_email_link_allowed=1,email_self_changed_at=NULL WHERE id=?",[KEVIN])?;
                     if scenario=="external_password" {tx.conn().execute("UPDATE users SET email_address='legacy@external.test' WHERE id=?",[KEVIN])?;}
+                    if scenario=="predecessor" {tx.conn().execute("UPDATE users SET status=1,email_address='legacy-deactivated-fixture@smartdata.net' WHERE id=?",[KEVIN])?;}
                     if scenario=="bot" {tx.conn().execute("UPDATE users SET role=2 WHERE id=?",[KEVIN])?;}
                     if matches!(scenario,"self_changed"|"admin_allowed") {tx.conn().execute("UPDATE users SET google_email_link_allowed=0,email_self_changed_at=? WHERE id=?",rusqlite::params![tx.now(),KEVIN])?;}
                     if scenario=="linking_disabled" {tx.conn().execute("UPDATE users SET google_email_link_allowed=0 WHERE id=?",[KEVIN])?;}
@@ -350,7 +362,12 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             if scenario == "wrong_domain" {
                 claims["hd"] = json!("wrong.test");
             }
-            answer(&r, claims);
+            *r.response.lock().unwrap() = Ok((200, serde_json::to_vec(&json!({"access_token":"signin-access-token","refresh_token":"signin-refresh-token","id_token":token(claims.clone())})).unwrap()));
+            if scenario == "rotation" {
+                a.booted.app.google.sign_in().verify(&token(claims.clone()), &q["nonce"], "sign_in", now.as_second()).await.unwrap();
+                *r.certs.lock().unwrap() = Some(Ok((200, serde_json::to_vec(&oracle["rotated_jwks"]).unwrap())));
+                *r.response.lock().unwrap() = Ok((200, serde_json::to_vec(&json!({"access_token":"signin-access-token","refresh_token":"signin-refresh-token","id_token":token_with_key(claims, "rotated", include_bytes!("../../integrations/google/rotated-signing.der"))})).unwrap()));
+            }
             if scenario == "token_shape" {
                 *r.response.lock().unwrap() =
                     Ok((200, serde_json::to_vec(&row["spec"]["payload"]).unwrap()));
@@ -473,6 +490,10 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             }
             observed
         };
+        let token_columns = a.db().read(|c| {
+            Ok(c.prepare("PRAGMA table_info(google_identities)")?.query_map([], |r| r.get::<_,String>(1))?.collect::<rusqlite::Result<Vec<_>>>()?.into_iter().filter(|name|matches!(name.as_str(), "access_token" | "refresh_token")).collect::<Vec<_>>())
+        }).await.unwrap();
+        assert_eq!(json!(token_columns), oracle["identity_token_columns"]);
         assert_eq!(started, row["start"], "{}: authorize", row["spec"]);
         assert_eq!(
             actual, row["result"],

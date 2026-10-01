@@ -11,6 +11,8 @@ BASE = Time.utc(2026,3,2,16)
 $controller_now = BASE
 Time.define_singleton_method(:current) { $controller_now }
 KEY = OpenSSL::PKey.read(File.binread(File.join(ENV.fetch('PARITY_WORK'),'crates/campfire/src/integrations/google/signing.der')))
+ROTATED_KEY = OpenSSL::PKey.read(File.binread(File.join(ENV.fetch('PARITY_WORK'),'crates/campfire/src/integrations/google/rotated-signing.der')))
+ROTATED_JWKS = { 'keys' => [{ 'kty'=>'RSA','kid'=>'rotated','n'=>Base64.urlsafe_encode64(ROTATED_KEY.n.to_s(2),padding:false),'e'=>Base64.urlsafe_encode64(ROTATED_KEY.e.to_s(2),padding:false) }] }
 JWKS = JSON.parse(File.read(File.join(ENV.fetch('PARITY_WORK'),'crates/campfire/src/integrations/google/test-jwks.json')))
 $controller_calls = []
 $controller_token_payload = nil
@@ -83,6 +85,8 @@ end
 [nil,[],42,{'keys'=>nil},{'keys'=>'unexpected'},{'keys'=>[nil,42,'invalid',{'kty'=>'RSA','kid'=>[],'n'=>{},'e'=>42}]}].each { |payload| specs << {purpose:'sign_in',scenario:'key_shape',payload:} }
 %w[consume_backup consume_device consume_all_devices consume_disable before_reauth_expiry at_reauth_expiry after_reauth_expiry wrong_credential_preserves].each { |scenario|specs << {purpose:'reauth',scenario:} }
 %w[legacy_password provision provision_secondary provision_secondary_hosted provision_org external_password immutable_email deactivated banned bot retained_deactivated retained_banned different_subject self_changed admin_allowed linking_disabled policy_changed].each { |scenario|specs << {purpose:'sign_in',scenario:,lifecycle:true} }
+specs << {purpose:'sign_in',scenario:'predecessor',lifecycle:true}
+specs << {purpose:'sign_in',scenario:'rotation',lifecycle:true}
 specs += %w[forged_state missing_state replay unconfigured_password].map { |scenario| {purpose:'sign_in',scenario:} }
 rows=[]
 specs.each_with_index do |spec,index|
@@ -109,6 +113,7 @@ specs.each_with_index do |spec,index|
       kevin.update_columns(status:1) if %w[deactivated retained_deactivated].include?(scenario)
       kevin.update_columns(status:2) if %w[banned retained_banned].include?(scenario)
       kevin.update_columns(role:2) if scenario=='bot'
+      kevin.update_columns(status:1,email_address:'legacy-deactivated-fixture@smartdata.net') if scenario=='predecessor'
       kevin.update_columns(email_self_changed_at:BASE,google_email_link_allowed:false) if %w[self_changed admin_allowed].include?(scenario)
       kevin.update_columns(google_email_link_allowed:false) if scenario=='linking_disabled'
       kevin.update!(email_self_changed_at:nil,google_email_link_allowed:true) if scenario=='admin_allowed'
@@ -171,11 +176,16 @@ specs.each_with_index do |spec,index|
       claims['hd']='example.org' if scenario=='provision_org'
       claims['hd']='external.test' if scenario=='external_password'
       claims.delete('auth_time') if scenario=='missing_auth'
-      $controller_token_payload={'id_token'=>JWT.encode(claims,KEY,'RS256',{kid:'fixture'})}
+      $controller_token_payload={'access_token'=>'signin-access-token','refresh_token'=>'signin-refresh-token','id_token'=>JWT.encode(claims,KEY,'RS256',{kid:'fixture'})}
       $controller_token_payload=spec[:payload] if scenario=='token_shape'
       $controller_key_payload=spec[:payload] if scenario=='key_shape'
       $controller_transport=scenario=='unavailable'
-      call_before=$controller_calls.length
+      if scenario=='rotation'
+        Google::SignIn::KeyStore.public_key_for('fixture')
+        $controller_key_payload=ROTATED_JWKS
+        $controller_token_payload={'access_token'=>'signin-access-token','refresh_token'=>'signin-refresh-token','id_token'=>JWT.encode(claims,ROTATED_KEY,'RS256',{kid:'rotated'})}
+      end
+      call_before=0
       client.get('/session/google/callback',params:{state:scenario=='forged_state' ? 'forged' : scenario=='missing_state' ? nil : query['state'],code:'fixture-code',**(scenario=='cancelled' ? {error:'access_denied'} : {})})
       result=observation(client,before,call_before)
       if spec[:lifecycle]
@@ -229,4 +239,4 @@ specs.each_with_index do |spec,index|
     FileUtils.rm_f(snapshot)
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',now:BASE.to_i,rows:})
+puts JSON.pretty_generate({reference:'d7c7de92',now:BASE.to_i,rows:,rotated_jwks:ROTATED_JWKS,identity_token_columns:GoogleIdentity.column_names & %w[access_token refresh_token],filtered_code:ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter_param('code','private-code-fixture')})
