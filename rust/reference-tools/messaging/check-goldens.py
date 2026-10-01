@@ -67,8 +67,10 @@ for name in names:
         print("WS8bm thread layout: #163 Rails layout; every non-layout field identical to d7c7de92", flush=True)
     files = [f"{name}.json"] + (["message-template-digest.txt"] if name == "rendered-dependencies" else []) + (["index-template-digest.txt"] if name == "paging" else [])
     for file in files:
+        target = (ROOT / "rust/crates/views/src/messages/rails-template-digest.txt" if file == "message-template-digest.txt"
+                  else ROOT / "rust/vectors/messaging" / file)
         if options.write:
-            shutil.copyfile(SCRATCH / "out" / file, ROOT / "rust/vectors/messaging" / file)
-        assert (SCRATCH / "out" / file).read_bytes() == (ROOT / "rust/vectors/messaging" / file).read_bytes(), f"{file}: golden bytes differ"
+            shutil.copyfile(SCRATCH / "out" / file, target)
+        assert (SCRATCH / "out" / file).read_bytes() == target.read_bytes(), f"{file}: golden bytes differ"
         file_count += 1
 print(f"WS8bm golden check: {len(names)} Rails oracles re-run; {file_count} golden files byte-identical", flush=True)

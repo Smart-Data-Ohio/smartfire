@@ -637,7 +637,7 @@ fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str, stamp: &
 /// Collection fragments carry the domain's full presentation key. The Index/MessageItem API
 /// stays unchanged; presenters return its existing Fragment variant on both misses and hits.
 pub fn collection_fragment_key(presentation_key: &str, base_url: &str) -> String {
-    format!("views/messages/_message:{}/{presentation_key}/{base_url}", include_str!("../../../vectors/messaging/message-template-digest.txt").trim_end())
+    format!("views/messages/_message:{}/{presentation_key}/{base_url}", include_str!("messages/rails-template-digest.txt").trim_end())
 }
 
 /// Retained record-version API for existing view consumers. Rails' HTML partial

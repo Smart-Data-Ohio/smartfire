@@ -1,6 +1,7 @@
 # PR #182 review fixes
 
-Reviewed input: `9883d3fa1d2f797f84fd3e96e9e7e8472435cdb9`.
+Initial reviewed input: `9883d3fa1d2f797f84fd3e96e9e7e8472435cdb9`.
+Latest reviewed input: `8cc1e9393f6c75d34f27d323e6eacaa353668a80`.
 The PR was conflicting, so `origin/main` was merged in `2139a2b6` before the fixes.
 The one thread-header conflict retains the owner's adapter and main's render-zone behavior.
 Rails oracle: `d7c7de92`, with the approved #163 layout/assets drift unchanged.
@@ -112,7 +113,7 @@ Rails itself needs no such array for its uncached initial room render.
 | Reply source existence/id, author name, text, forward-note text, attachment fallback filename, permalink/thread id | `app/views/messages/_context.html.erb:1`; `app/models/message.rb:262`; `app/helpers/messages_helper.rb:111` | Source Message/RichText/Room versions, source-author and source-mentioned User versions, attachment/blob identities; existing page validator includes reply source edited stamp. |
 | Forward flag/note and lazy source endpoint | `app/views/messages/_context.html.erb:16` | Forwarding Message version; original source contents/access are fetched separately and are not embedded here. |
 | Legacy/Markdown body, sanitized HTML, emoji/icon rendering, rich-text embedded blobs and mentions | `app/views/messages/_presentation.html.erb:5`; `app/helpers/messages_helper.rb:163`, `:188`; `app/views/users/_mention.html.erb:1`; `lib/rails_ext/action_text_attachables.rb:18` | Message/RichText versions and touch chain; every resolved mentioned User version, including reply/quote bodies (`app/models/message/mention_preloader.rb:66`); workspace icon record set/versions. |
-| File presence/type, filename/base, metadata width/height, signed blob/variant URLs, download/share labels | `app/helpers/messages/attachment_presentation.rb:6`, `:29`, `:40`, `:58`, `:76`, `:88`, `:94`, `:100`; `app/models/message/attachment.rb:8` | Attachment/blob identities have no changing version; Rails blob updates touch attachments, then owner, then Room. Source owner versions protect filename previews. Variant transforms are fixed code/config; no variant row fields render. |
+| File presence/type, filename/base, metadata width/height, signed blob/variant URLs, download/share labels | `app/helpers/messages/attachment_presentation.rb:6`, `:29`, `:40`, `:58`, `:76`, `:88`, `:94`, `:100`; `app/helpers/broadcasts_helper.rb:6`; `app/models/message/attachment.rb:8` | Attachment/blob identities have no changing version; Rails blob updates touch attachments, then owner, then Room. Source owner versions protect filename previews. Variant transforms are fixed code/config; no variant row fields render. |
 | Sound asset path, text/image and dimensions | `app/helpers/messages_helper.rb:221` | Message/body version; sound catalog/assets immutable for the app instance, presentation version 3. |
 | Agent step order/count, name/status, duration, input/output summaries | `app/views/agent_steps/_steps.html.erb:5`; `app/models/agent_step.rb:24` | Exact newest-step helper slot plus independent step record set/versions. Agent's own profile is not rendered in the steps. |
 | Poll identity/options/labels/order, counts/percentages, voter ids/names, anonymity/multiple choice, close time/state, token-free forms | `app/views/polls/_poll.html.erb:15`, `:21`, `:35`, `:44`, `:59` | Original separate poll timestamp; individual Poll/Option/Vote/User versions. Also `Poll#closed?`'s boolean (`app/models/poll.rb:68`) so room reload matches Rails at the deadline before the periodic closer writes. |
@@ -139,7 +140,7 @@ Paths below are relative to that tree when prefixed `gem:`.
 | Dependency | Rails source and effect |
 | --- | --- |
 | Every timestamped record in the dependency array | `gem:activerecord/lib/active_record/integration.rb:97`, `:114`: `model_name.cache_key/id-UTC_updated_at_usec`; individual records, not Relation count/max keys. Expansion calls each record's versioned key. |
-| STI Room / namespaced records | Same `gem:activerecord/lib/active_record/integration.rb:72`; the Rails oracle records `rooms/closeds`, `rooms/directs`, `github/pull_requests`, `twitter/posts`, `fizzy/cards`, `action_text/rich_texts`, `active_storage/attachments`, `active_storage/blobs` stems. |
+| STI Room / namespaced records | Same `gem:activerecord/lib/active_record/integration.rb:72`; the individual Rails keys use `rooms/closeds`, `rooms/directs`, `github/pull_requests`, `twitter/posts`, `fizzy/cards`, `action_text/rich_texts`, `active_storage/attachments`, `active_storage/blobs` stems. |
 | Blob, Attachment, DriveAttachment | No `updated_at` column: `cache_version` is nil and `cache_key_with_version` uses plain `model_name.cache_key/id` (`gem:activerecord/lib/active_record/integration.rb:79`, `:100`, `:117`; `gem:activerecord/lib/active_record/timestamp.rb:163`). `created_at` is **not** substituted as a changing version. |
 | Message → Room | `app/models/message.rb:17`, `touch: true`. Creator, reply, forwarded source and thread associations at `:18` through `:21` do not touch the Message when their rows change. |
 | Boost → Message → Room | `app/models/boost.rb:2`, `touch: true`; booster at `:3` has no touch. A User rename does not update any Boost or Message. |
@@ -168,7 +169,7 @@ adds `digest_path_from_template` before expanding the callable key.
 hash of the partial and its dependency tree, including explicit dependencies;
 `:267` combines it with the key array. The recorded pinned digest is
 **`4bc70e94df311f86c11d03b24ea441ae`**. The mounted collection prefix now uses that
-literal Rails digest from `vectors/messaging/message-template-digest.txt`.
+literal Rails digest from `crates/views/src/messages/rails-template-digest.txt`.
 The store is app-local and cannot survive Rust binary/template/helper changes.
 
 The exact discovered tree is recorded in the oracle JSON. Every real entry's
@@ -205,7 +206,7 @@ version touch chain and still pass. Previous source-edit/author-rename regressio
 All changes/renames happen 125 ms after warm-up. The oracle reproduces byte for byte;
 its fixture rows contain no user/session credentials or scanner-shaped secrets.
 
-Final-round commands and raw summaries are recorded below after the gates finish.
+Final-round commands and raw summaries are recorded at the end of this report.
 
 ## Previous round verification (8cc1e939)
 
@@ -346,6 +347,130 @@ WS8bm golden check: 1 Rails oracles re-run; 1 golden files byte-identical
 Pinned Rails source verification:
 
 ```text
+WS8bm reference source check: 63 controller, model, helper, template and icon files match d7c7de92
+WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
+```
+
+## Final round verification
+
+Final code includes the conflict-only merge of main `59ad94de` in `0748d8ed`.
+Fresh `default` and `first_run` seeds were generated from the pinned Rails image.
+The digest artifact lives inside the views crate, so the production build needs
+no top-level vectors. Rails reproduction verifies both the JSON and this exact
+artifact's bytes. The source-only release-input build and strict clippy passed;
+locked metadata exited 0. The final workspace run followed the packaging fix:
+**3707 passed, 0 failed, 12 existing ignores**, across all 60 summaries, including
+`html5ever` and doctests. No missing-seed skips occurred. Both final-source mutation
+probes reached their assertions and were rejected; production bytes were restored.
+The unchanged machine-wide rustc limit is four; the release build holds one slot
+with one compiler. Scratch targets and duplicate Cargo caches were deleted after
+verification; logs were retained outside the worktree.
+
+Commands (all Rust 1.98.1; CI=1 for tests):
+
+```sh
+cargo test --locked --workspace --no-fail-fast
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo metadata --locked --format-version 1
+bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
+PARITY_IMAGE=triage-reference-d7c7de92 python3 rust/reference-tools/messaging/check-goldens.py rendered-dependencies cache-reaction-review
+python3 rust/reference-tools/messaging/check-owned-mutations.py cached-token-leak github-card-omitted
+```
+
+Raw failing-first / targeted passing summaries (before the main merge):
+
+```text
+test result: FAILED. 2 passed; 12 failed; 0 ignored; 0 measured; 1716 filtered out; finished in 5.28s
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 1716 filtered out; finished in 6.57s
+```
+
+Raw final mutation summaries:
+
+```text
+cached-token-leak: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1855 filtered out; finished in 1.16s
+github-card-omitted: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1855 filtered out; finished in 0.79s
+WS8bm owned mutations: 2 rejected; 0 survived; production files restored
+```
+
+Raw final workspace summaries:
+
+```text
+test result: ok. 1853 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 569.29s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.47s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.13s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
+test result: ok. 1143 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 75.72s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.38s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.64s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.24s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.43s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.53s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.13s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.74s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.70s
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.46s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Raw strict clippy / locked metadata / release-input build summaries
+(only terminal color escapes removed from the release line):
+
+```text
+    Finished `dev` profile [unoptimized] target(s) in 52.38s
+cargo metadata --locked: exit 0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 57.54s
+```
+
+Raw Rails reproduction/source verification summaries:
+
+```text
+WS8bm rendered dependencies: 14 warm-room update/reload pairs from pinned Rails
+WS8bm golden check: 2 Rails oracles re-run; 3 golden files byte-identical
 WS8bm reference source check: 63 controller, model, helper, template and icon files match d7c7de92
 WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
 ```
