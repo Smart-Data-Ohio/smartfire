@@ -267,13 +267,8 @@ pub fn item(
             };
         }
         "TwoFactorCredential" => {
-            // FLAGGED WS9 credential timestamp reader; the activity domain owns permission checks.
-            let created: campfire_db::Timestamp = conn.query_row(
-                "SELECT created_at FROM two_factor_credentials WHERE id=?",
-                [item.source_id],
-                |r| r.get(0),
-            )?;
-            result.created_at = Some(created.jiff());
+            let credential = campfire_db::TwoFactorCredential::find(conn, item.source_id)?;
+            result.created_at = Some(credential.created_at.jiff());
             result.title = "Two-step sign-in".into();
             result.body = "Several wrong sign-in codes were entered for your account.".into();
         }

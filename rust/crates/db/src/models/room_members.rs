@@ -1,5 +1,5 @@
 //! Read projection for `Rooms::MembersController`. Agent behavior remains in WS11;
-//! human status/presence uses the flagged, imported WS17 readers.
+//! human status/presence and viewer-qualified stars use their owner APIs.
 use rusqlite::Connection;
 
 use super::{
