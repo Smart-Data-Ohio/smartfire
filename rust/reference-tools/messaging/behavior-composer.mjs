@@ -72,10 +72,15 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
   } else if(caseName==='clicking a reply preview falls back to the permalink when the target is not loaded') {
     const message=await reply('A reply for preview fallback');await root.evaluate(node=>node.remove());await root.waitFor({state:'detached'});
     await page.evaluate(()=>{
-      window.__composerTestUrls=[];
+      window.__composerTestUrls=[];window.__composerTestVisits=[];
       document.addEventListener('turbo:before-fetch-request',event=>window.__composerTestUrls.push(String(event.detail.url)));
+      document.addEventListener('turbo:before-visit',event=>window.__composerTestVisits.push(String(event.detail.url)));
     });
+    const permalink=await message.locator('.message__reply-preview-link').getAttribute('href');
     await message.locator('.message__reply-preview-link').click();
+    // A hover prefetch also emits before-fetch-request. Require the actual
+    // visit so a click handler that blocks navigation cannot pass on prefetch.
+    await page.waitForFunction(href=>window.__composerTestVisits.some(url=>new URL(url,location.origin).href===new URL(href,location.origin).href),permalink);
     await page.waitForFunction(()=>window.__composerTestUrls.some(url=>url.includes('/@')));
     assert.equal(await page.locator('.message--reply-target').count(),0);
   } else if(caseName==='deleting a replied-to message turns open reply previews into a tombstone') {
