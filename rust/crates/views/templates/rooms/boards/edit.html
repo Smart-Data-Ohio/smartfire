@@ -1,0 +1,7 @@
+{% extends "rooms/layouts/_edit.html" %}
+{% block room_form %}{% include "rooms/boards/_form.html" %}{% endblock %}
+{% block after_room_edit %}
+{% if form.can_administer %}  <section class="panel txt-align-center">
+    {{ h::link_to_text("Board automations", h::routes::board_automations(self.room_id()).as_str(), h::attrs().class("btn")) }}
+  </section>
+{% endif %}{% endblock %}

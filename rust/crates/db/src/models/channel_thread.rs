@@ -28,6 +28,9 @@ use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
 
+mod board;
+pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, board_page_number};
+
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
 pub const AUTO_ARCHIVE_OPTIONS: [i64; 4] = [60, 1_440, 4_320, 10_080];
 pub const DEFAULT_AUTO_ARCHIVE_AFTER_MINUTES: i64 = 4_320;
@@ -313,6 +316,7 @@ impl ChannelThread {
             ],
             |r| r.get(0),
         )?;
+        Self::register_board_creation(tx, id, &room);
         for name in tag_names.unwrap_or_default() {
             ThreadTag::create(tx, id, &name)?;
         }
@@ -451,7 +455,10 @@ impl ChannelThread {
                 self.id
             ],
         )?;
+        let status_changed = changed.work_status != self.work_status;
+        let row_changed = status_changed || changed.name != self.name || changed.work_owner_id != self.work_owner_id || changed.last_activity_at != self.last_activity_at;
         *self = changed;
+        self.register_board_update(tx, &room, row_changed, status_changed)?;
         Ok(())
     }
 
@@ -787,9 +794,8 @@ impl ChannelThread {
         let fresh = Self::find(tx.conn(), self.id)?;
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
         crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
-        for tag in ThreadTag::for_thread(tx.conn(), self.id)? {
-            tag.destroy(tx)?;
-        }
+        // Rails suppresses a dependent tag's row replacement while its parent is destroyed.
+        tx.conn().execute_cached("DELETE FROM thread_tags WHERE channel_thread_id=?", [self.id])?;
         for message in Message::in_thread(tx.conn(), self.id)? {
             message.destroy_with_conversation(tx)?;
         }
@@ -824,6 +830,7 @@ impl ChannelThread {
             )?;
         }
         super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
+        fresh.register_board_destruction(tx)?;
         let parent_message_id = self.parent_message_id;
         tx.after_commit(move |tx| {
             Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)

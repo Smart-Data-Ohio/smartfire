@@ -57,6 +57,7 @@ pub enum RoomKind {
     Open,
     Closed,
     Direct,
+    Board,
 }
 
 impl RoomKind {
@@ -66,6 +67,7 @@ impl RoomKind {
             RoomKind::Open => "rooms_open",
             RoomKind::Closed => "rooms_closed",
             RoomKind::Direct => "rooms_direct",
+            RoomKind::Board => "rooms_board",
         }
     }
 

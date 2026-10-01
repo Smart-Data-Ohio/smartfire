@@ -6,6 +6,7 @@ use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
+use crate::ChannelThread;
 use crate::sql::{self, CachedStatements, query_all, query_one};
 use crate::time::Timestamp;
 
@@ -47,6 +48,11 @@ impl ThreadTag {
         )
     }
 
+    pub fn for_threads(conn: &Connection, thread_ids: &[i64]) -> Result<Vec<Self>> {
+        if thread_ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn, &format!("SELECT * FROM thread_tags WHERE channel_thread_id IN ({}) ORDER BY name", crate::sql::placeholders(thread_ids.len())), rusqlite::params_from_iter(thread_ids), Self::from_row)
+    }
+
     /// `thread.tags.create!(name:)`
     pub fn create(tx: &mut Tx<'_>, thread_id: i64, name: &str) -> Result<Self> {
         Self::validate(tx.conn(), thread_id, name)?.into_result()?;
@@ -56,6 +62,7 @@ impl ThreadTag {
             params![thread_id, now, name, now],
             |r| r.get(0),
         )?;
+        Self::register_row_callback(tx, id, thread_id);
         Self::find(tx.conn(), id)
     }
 
@@ -63,6 +70,9 @@ impl ThreadTag {
     /// uniqueness: { scope: :channel_thread_id }` for a new tag.
     pub fn validate(conn: &Connection, thread_id: i64, name: &str) -> Result<Errors> {
         let mut errors = Errors::default();
+        if ChannelThread::find_by_id(conn, thread_id)?.is_none() {
+            errors.add("channel_thread", "must exist");
+        }
         if name.trim().is_empty() {
             errors.add("name", "can't be blank");
         }
@@ -86,7 +96,17 @@ impl ThreadTag {
     /// `destroy`
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         tx.conn().execute_cached(r#"DELETE FROM "thread_tags" WHERE "thread_tags"."id" = ?"#, [self.id])?;
+        Self::register_row_callback(tx, self.id, self.channel_thread_id);
         Ok(())
+    }
+
+    fn register_row_callback(tx: &mut Tx<'_>, id: i64, thread_id: i64) {
+        tx.after_commit_record("thread_tag_board_row", id, move |tx| {
+            if let Some(thread) = ChannelThread::find_by_id(tx.conn(), thread_id)? && thread.board_post(tx.conn())? {
+                thread.broadcast_board_row_replace(tx)?;
+            }
+            Ok(())
+        });
     }
 }
 

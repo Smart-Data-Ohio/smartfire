@@ -25,6 +25,7 @@ mod audit_log_test;
 mod callbacks_test;
 mod calendar_dispatch_test;
 mod channel_thread_test;
+mod board_test;
 mod calendar_event_test;
 mod differential_test;
 mod direct_room_test;

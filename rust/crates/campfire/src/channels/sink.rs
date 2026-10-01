@@ -110,6 +110,16 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
     let Broadcast::Turbo(frame) = broadcast else { unreachable!() };
     let app = app.ok_or_else(|| anyhow::anyhow!("app is not booted for partial rendering"))?;
     let html = match &frame.partial {
+        Some(campfire_db::broadcasts::Partial::BoardRow {thread_id, column}) => {
+            Some(app.db.read_blocking(|conn| {
+                let thread = campfire_db::ChannelThread::find(conn, *thread_id)?;
+                let presenter = crate::controllers::presenters::Presenter::new(conn, app, None);
+                let rows = crate::controllers::presenters::boards::rows(&presenter, thread.room_id, &[thread])?;
+                crate::controllers::presenters::page::render_detached_at(app, None, "http://example.org", |ctx| {
+                    campfire_views::rooms::boards::RowPartial {ctx, row:&rows[0], column:*column}.render().map_err(|error| campfire_db::Error::Other(error.to_string()))
+                })
+            })?)
+        }
         Some(campfire_db::broadcasts::Partial::EventCards { message_id }) => {
             Some(app.db.read_blocking(|conn| crate::controllers::presenters::events::cards(conn, *message_id))?)
         }
