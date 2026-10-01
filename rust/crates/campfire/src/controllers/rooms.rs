@@ -790,6 +790,8 @@ mod huddle_declaration_tests;
 
 #[cfg(test)]
 mod call_channel_tests;
+#[cfg(test)]
+mod review_tests;
 
 #[cfg(test)]
 mod call_channel_declaration_tests;

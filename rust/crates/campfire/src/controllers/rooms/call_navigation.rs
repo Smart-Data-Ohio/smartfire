@@ -1,5 +1,5 @@
 //! Request data for the room header. Domain signatures remain unchanged.
-use crate::controllers::presenters::{Presenter, avatar_path, room_kind};
+use crate::controllers::presenters::{Presenter, avatar_path};
 use campfire_db::{CachedStatements, Membership, Room, User};
 use campfire_views::{helpers::IconSource, rooms::navigation::Navigation};
 
@@ -40,19 +40,7 @@ pub(crate) fn model(
         |r| r.get(0),
     )?;
     Ok(Navigation {
-        room: campfire_views::rooms::RoomView {
-            header: None,
-            involvement: "mentions".into(),
-            id: room.id,
-            kind: room_kind(room.room_type),
-            name: room.name.clone(),
-            display_name: if room.direct() {
-                room.direct_display_name(conn, Some(user), None)?
-                    .unwrap_or_default()
-            } else {
-                room.name.clone().unwrap_or_default()
-            },
-        },
+        room: Presenter::new(conn, app, None).room_view(room, user)?,
         icon: room
             .icon_name
             .as_deref()

@@ -38,7 +38,7 @@ async fn active(test: &TestApp, room: i64, user: i64) -> HuddleGrant {
 }
 #[tokio::test]
 async fn remaining_gateway_steady_state_has_no_transaction_and_denial_revokes_once() {
-    let Some(mut test) = TestApp::boot_with_huddle(configured()).await else {
+    let Some(test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
     let test = test.without_job_runner().await;
@@ -105,7 +105,7 @@ async fn remaining_gateway_steady_state_has_no_transaction_and_denial_revokes_on
 }
 #[tokio::test]
 async fn remaining_presence_uses_one_grants_query_and_one_batched_user_preload() {
-    let Some(mut test) = TestApp::boot_with_huddle(configured()).await else {
+    let Some(test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
     let test = test.without_job_runner().await;
@@ -151,7 +151,7 @@ async fn remaining_presence_uses_one_grants_query_and_one_batched_user_preload()
 }
 #[tokio::test]
 async fn remaining_stage_edit_checks_hosts_and_inserts_members_in_the_same_immediate_transaction() {
-    let Some(mut test) = TestApp::boot_with_huddle(configured()).await else {
+    let Some(test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
     let test = test.without_job_runner().await;
@@ -219,7 +219,7 @@ async fn remaining_stage_edit_checks_hosts_and_inserts_members_in_the_same_immed
 }
 #[tokio::test]
 async fn remaining_huddle_membership_revocation_between_scope_and_issue_is_a_controlled_denial() {
-    let Some(mut test) = TestApp::boot_with_huddle(configured()).await else {
+    let Some(test) = TestApp::boot_with_huddle(configured()).await else {
         return;
     };
     let test = test.without_job_runner().await;

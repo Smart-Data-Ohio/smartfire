@@ -22,6 +22,7 @@ pub(super) fn load(
         .transpose()?
         .flatten();
     let direct_members = direct_members(conn, user.id)?;
+    let call_facts = call_facts(app, conn, user.id)?;
     let mut favorites = Vec::new();
     let mut channels = Vec::new();
     let mut boards = Vec::new();
@@ -38,7 +39,7 @@ pub(super) fn load(
         })
         .collect();
     for (membership, room) in Membership::visible_with_ordered_room(conn, user.id)? {
-        let row = row(app, conn, user, &membership, &room, &direct_members)?;
+        let row = row(app, conn, user, &membership, &room, &direct_members, Some(&call_facts))?;
         if membership.favorited() {
             favorites.push((membership.favorite_position, membership.id, row));
             continue;
@@ -109,6 +110,7 @@ fn row(
     membership: &Membership,
     room: &Room,
     direct_members: &std::collections::BTreeMap<i64, Vec<User>>,
+    call_facts: Option<&std::collections::BTreeMap<i64, CallFacts>>,
 ) -> campfire_db::Result<Row> {
     let mut members = if room.direct() {
         direct_members
@@ -141,7 +143,12 @@ fn row(
     } else {
         room.name.clone().unwrap_or_default()
     };
-    let mut call = call_channels::row(app, conn, room)?;
+    let mut call = if let Some(facts) = call_facts {
+        let facts = facts.get(&room.id).cloned().unwrap_or_default();
+        call_channels::row_with_call_facts(app, conn, room, facts.participants, facts.live, facts.live_name)
+    } else {
+        call_channels::row(app, conn, room)?
+    };
     call.name = name.clone();
     call.unread = membership.unread();
     call.muted = membership.involvement == Some(Involvement::Muted);
@@ -162,6 +169,42 @@ fn row(
         members: members.iter().map(|u| person(app, u)).collect(),
         call,
     })
+}
+
+#[derive(Clone, Default)]
+struct CallFacts {
+    participants: Vec<campfire_views::huddle::Participant>,
+    live: bool,
+    live_name: String,
+}
+
+fn call_facts(app: &App, conn: &Connection, user_id: i64) -> campfire_db::Result<std::collections::BTreeMap<i64, CallFacts>> {
+    use campfire_db::models::huddle_grant::IN_CALL_WINDOW;
+    use rusqlite::params;
+    let mut result = std::collections::BTreeMap::<i64, CallFacts>::new();
+    // Users::SidebarHelper loads participants once for all the viewer's rooms,
+    // deduplicates devices, and sorts by case-insensitive display name.
+    if app.config.huddle.configured() {
+        let mut statement = conn.prepare_cached("SELECT DISTINCT g.room_id,u.* FROM huddle_grants g JOIN users u ON u.id=g.user_id WHERE g.revoked_at IS NULL AND g.last_seen_at>? AND g.room_id IN (SELECT room_id FROM memberships WHERE user_id=?)")?;
+        let rows = statement.query_map(params![app.db.env().now().ago(jiff::SignedDuration::from_secs(IN_CALL_WINDOW)), user_id], |r| Ok((r.get::<_, i64>("room_id")?, User::from_row(r)?)))?.collect::<Result<Vec<_>, _>>()?;
+        let mut users = std::collections::BTreeMap::<i64, Vec<User>>::new();
+        for (room_id, user) in rows { users.entry(room_id).or_default().push(user); }
+        for (room_id, mut users) in users {
+            users.sort_by_key(|u| u.name.to_lowercase());
+            result.entry(room_id).or_default().participants = users.iter().map(|u| campfire_views::huddle::Participant {id: u.id, name: u.name.clone(), avatar_path: presenters::avatar_path(&app.secrets,u)}).collect();
+        }
+    }
+    // Users::SidebarsController preloads Stage live_streams and their presenter.
+    let mut statement = conn.prepare_cached("SELECT s.room_id,u.name FROM streams s LEFT JOIN users u ON u.id=s.user_id WHERE s.ended_at IS NULL AND s.room_id IN (SELECT m.room_id FROM memberships m JOIN rooms r ON r.id=m.room_id WHERE m.user_id=? AND r.type='Rooms::Stage') ORDER BY s.id")?;
+    let rows = statement.query_map([user_id], |r| Ok((r.get::<_,i64>(0)?,r.get::<_,Option<String>>(1)?)))?.collect::<Result<Vec<_>, _>>()?;
+    for (room_id, name) in rows {
+        let facts = result.entry(room_id).or_default();
+        if !facts.live {
+            facts.live = true;
+            facts.live_name = name.ok_or(campfire_db::Error::RecordNotFound("User"))?;
+        }
+    }
+    Ok(result)
 }
 
 fn direct_members(
@@ -240,6 +283,7 @@ pub(crate) fn for_membership(
         membership,
         &room,
         &std::collections::BTreeMap::from([(room.id, members)]),
+        None,
     )?;
     if let Some(legacy) = legacy {
         composed.epoch = legacy.updated_at_epoch;

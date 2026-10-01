@@ -64,7 +64,7 @@ pub(crate) fn load(conn: &campfire_db::Connection, app: &crate::app::AppState,
     let composer=presenter.composer_facts(room,user,None,drive)?;
     let list=super::room_native::message_list(&presenter,&messages,divider.message_id,divider.count)?;
     let show = campfire_views::rooms::ShowView {
-        navigation: app.config.huddle.configured().then(||crate::controllers::rooms::call_navigation::model(app,conn,room,user)).transpose()?,
+        navigation: (room.stage() || app.config.huddle.configured()).then(||crate::controllers::rooms::call_navigation::model(app,conn,room,user)).transpose()?,
         shell:campfire_views::rooms::ShellComponents{message_list:Some(list),pins_count:campfire_db::MessagePin::count_for_room(conn,room.id)?,thread_panel_name:Some(presenter.room_display_name(room,None)?),..Default::default()},scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,unread_divider_index:messages.iter().position(|message|Some(message.id)==divider.message_id),
         room: presenter.room_view(room, user)?,
         updated_at: room.updated_at.jiff(),

@@ -18,6 +18,9 @@ pub struct Navigation {
 }
 impl Navigation {
     pub fn identity(&self, ctx: &ViewContext) -> String {
+        if self.room.header.is_some() {
+            return self.room.header_html(ctx).to_string();
+        }
         Identity { ctx, nav: self }.render().expect("room identity")
     }
     pub fn render(&self, ctx: &ViewContext) -> String {
@@ -55,12 +58,7 @@ impl Identity<'_> {
 }
 impl Nav<'_> {
     fn identity(&self) -> String {
-        Identity {
-            ctx: self.ctx,
-            nav: self.nav,
-        }
-        .render()
-        .unwrap()
+        self.nav.identity(self.ctx)
     }
     fn live_badge(&self) -> String {
         self.nav

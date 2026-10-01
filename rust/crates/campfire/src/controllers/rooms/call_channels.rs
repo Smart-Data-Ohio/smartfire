@@ -313,7 +313,18 @@ pub(crate) fn row(
         .map(|s| User::find(conn, s.user_id).map(|u| u.name))
         .transpose()?
         .unwrap_or_default();
-    Ok(CallRow {
+    Ok(row_with_call_facts(app, conn, room, participants, live.is_some(), live_name))
+}
+
+pub(crate) fn row_with_call_facts(
+    app: &crate::app::App,
+    conn: &campfire_db::Connection,
+    room: &Room,
+    participants: Vec<campfire_views::huddle::Participant>,
+    live: bool,
+    live_name: String,
+) -> CallRow {
+    CallRow {
         id: room.id,
         name: room.name.clone().unwrap_or_default(),
         stage: room.stage(),
@@ -322,7 +333,7 @@ pub(crate) fn row(
             .as_deref()
             .and_then(|n| Presenter::new(conn, app, None).resolve_avatar_icon(n)),
         participants,
-        live: live.is_some(),
+        live,
         live_name,
         unread: false,
         muted: false,
@@ -331,7 +342,7 @@ pub(crate) fn row(
         favorite_position: None,
         category_id: None,
         can_delete: false,
-    })
+    }
 }
 async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
     let app = c.app().clone();
@@ -385,8 +396,15 @@ pub async fn destroy(c: &mut Ctx, room: Room) -> Result {
     let deleted = room.clone();
     c.app()
         .db
+        .write(move |tx| campfire_db::models::room_delete::begin_destroy(tx, &deleted, &config))
+        .await
+        .map_err(db_error)?;
+    // RoomsController#destroy audits after its marking transaction commits.
+    // An unavailable audit sink must not resurrect a deleted call room.
+    let deleted = room.clone();
+    c.app()
+        .db
         .write(move |tx| {
-            campfire_db::models::room_delete::begin_destroy(tx, &deleted, &config)?;
             AuditLog::record(
                 tx,
                 NewAuditLog {
