@@ -284,3 +284,6 @@ mod full_room_tests;
 mod row_broadcast_tests;
 #[path = "rooms/ws17_ooo_tests.rs"]
 mod ws17_ooo_tests;
+
+#[cfg(test)]
+mod system_browser_tests;

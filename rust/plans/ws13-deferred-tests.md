@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. All 548 original declarations remain inventoried across 33 Rails files: 263 passed, 285 open. All 226 WS13 controller/integration declarations have complete assertions. WS13b owns the 216 model/job/service declarations, whose historical 37 passed and 179 open counts remain unchanged. WS17 owns Notifications::Policy and push transport; their payload/enqueue seams remain unchanged. All 106 system declarations await the end-to-end phase: 71 stubbed browser cases and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. Thirty-six complete room pages (20 empty and 16 actual seeded/populated/unread scenarios) and 38 message-shell renders now match the frozen Rails fixtures; the complete sidebar frame retains 17 post-#163 Rails renders. Two retained Designers whole-page fixtures await shared GitHub PR and message-link integration; the shared post-#163 application-layout reconciliation remains open. Runtime layout adapters now read recent searches, Drive scope and Picker configuration, manual/presence DND, quiet hours, meeting intervals and manual/calendar OOO from persisted state and configuration. Counts refer to complete original declarations, not vector or Rust-test counts.
+Status: partial. All 548 original declarations remain inventoried across 33 Rails files: 274 passed, 274 open. All 226 WS13 controller/integration declarations have complete assertions. WS13b owns the 216 model/job/service declarations, whose historical 37 passed and 179 open counts remain unchanged pending PR #172; that branch has not been merged. WS17's public seams stay unchanged. Eleven Stage browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 95 system declarations remain open: 60 ordinary browser cases and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -43,7 +43,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/controllers/rooms/stage_view_test.rb` | 16 | 16 | 0 |
 | `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 15 | 0 |
-| `test/system/stage_test.rb` | 15 | 0 | 15 |
+| `test/system/stage_test.rb` | 15 | 11 | 4 |
 | `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
 | `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
 | `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
@@ -60,7 +60,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **263** | **285** |
+| **Total** | **548** | **274** | **274** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -740,23 +740,23 @@ Owner: WS13. Deferred: all 31 declarations require LIVEKIT_SYSTEM_TESTS=1 and a 
 
 ## test/system/stage_test.rb
 
-Owner: WS13. Partial/deferred: 11 browser declarations remain WS13 public-controller/HTML/browser-harness work. Four declarations explicitly skip unless LIVEKIT_SYSTEM_TESTS=1 with a real server: subscribe-only listener/host publishing, role-change reconnect publishing, host server-mute/unmute reconnect, and full listener reconnect.
+Owner: WS13. Complete browser coverage: 11/15 original declarations passed with their full assertions. Four declarations remain open because they require a real LiveKit server: subscribe-only listener/host publishing, role-change reconnect publishing, host server-mute/unmute reconnect, and full listener reconnect.
 
-- stage rooms list in their own section with distinct creation controls and a stage panel
-- a listener raises and lowers their hand without seeing host controls
-- raised hands appear in the host's panel live, in order
-- a host invites a listener to speak and moves them back to the audience
-- a host lowers a raised hand without promoting
-- the last host cannot demote themselves from the panel
-- join stage dispatches huddle:join and toggles while connected
-- a listener joins without a microphone or device check
-- a demoted speaker retries as a listener without entering prejoin
-- stage rooms carry ordinary text chat
+- **Passed:** stage rooms list in their own section with distinct creation controls and a stage panel
+- **Passed:** a listener raises and lowers their hand without seeing host controls
+- **Passed:** raised hands appear in the host's panel live, in order
+- **Passed:** a host invites a listener to speak and moves them back to the audience
+- **Passed:** a host lowers a raised hand without promoting
+- **Passed:** the last host cannot demote themselves from the panel
+- **Passed:** join stage dispatches huddle:join and toggles while connected
+- **Passed:** a listener joins without a microphone or device check
+- **Passed:** a demoted speaker retries as a listener without entering prejoin
+- **Passed:** stage rooms carry ordinary text chat
 - a listener joins subscribe-only while the host publishes
 - inviting a listener to speak rejoins them publishing, and moving them back removes publish
 - a host server-mutes a speaker and they rejoin muted, then unmutes them
 - a listener survives a full reconnect and stays subscribe-only
-- a muted speaker is told and rejoins without microphone prejoin
+- **Passed:** a muted speaker is told and rejoins without microphone prejoin
 
 ## test/system/voice_channels_test.rb
 
@@ -794,3 +794,11 @@ All 226 controller/integration declarations are complete. WS13b retains the 216 
 ## Complete sidebar composition continuation
 
 The parent sidebar is now native Rust markup with plain request inputs. The Rails recorder captures the full turbo frame, not a selected region, and does not normalize HTML. Each configuration scenario clears its isolated Rails cache before rendering, so enabled startup configurations do not reuse disabled-process fragments. DM avatar association order and collection whitespace match Rails; the label is independently sorted. Existing WS13b/WS17 signatures are unchanged. The exact #163 parent template is tracked in a private oracle build context, making regeneration possible from a fresh clone without merging main or using untracked files.
+
+## Designers, layout and Stage browser continuation
+
+Both previously retained Designers renders are now in the 38-page acceptance set. The parent quote renderer keeps cross-room sources in viewer-authorized lazy frames and renders same-room native cards; complete card partials are recorded independently. The exact approved #163 application-layout source is part of the private oracle context and its SHA256 is checked against `2e20b24c`.
+
+`parity/system/ws13` explicitly runs eleven complete original Stage declarations in the pinned Playwright image against the production Rust router/assets/Cable over signed sessions. The private fixture/state routes exist only in the ignored external-test launcher, never in the shipped binary. Microphone and credential failure injections remain at the same boundary as the original declarations. The synthetic join/leave declaration holds external SDK signaling pending so the isolated capture proxy cannot misroute its TLS connection to Rust HTTP; its original event, label, no-second-join and idle assertions remain intact. The original selector and explicit broadcast/connection waits are unchanged. Selenium's empty inline-stack visibility is checked through CSS display/visibility because Playwright's nonzero-box predicate disagrees for Rails' whitespace-only target. No screenshots or image comparisons are used.
+
+The previous continuation paragraphs are historical: Designers and application-layout reconciliation are closed, and Stage ordinary cases have advanced from 0/11 to 11/11. The current table and retained title markers are authoritative; 95/106 system declarations remain, including all 35 real LiveKit declarations.
