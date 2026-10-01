@@ -160,6 +160,14 @@ pub struct TestApp {
 }
 
 impl TestApp {
+    /// Stop and join job workers before arranging assertions about committed enqueues.
+    /// HTTP routes and the durable queue sink stay active. Tests of job execution should
+    /// keep the default runner instead.
+    pub async fn without_job_runner(mut self) -> Self {
+        self.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+        self
+    }
+
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
         Self::boot_with_clock(seed_clock()).await

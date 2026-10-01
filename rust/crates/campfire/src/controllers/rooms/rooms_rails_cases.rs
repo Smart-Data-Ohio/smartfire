@@ -126,7 +126,7 @@ async fn shows_records_the_last_room_visited_in_a_cookie() {
 async fn destroy_removes_the_room_from_everyone_and_enqueues_its_deletion() {
     use crate::channels::tests::support::{Client, identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     let id = closed(&app).await;
     let mut david = app.david();
     let listener = crate::channels::tests::support::bind_listener().await;
@@ -164,7 +164,7 @@ async fn destroy_removes_the_room_from_everyone_and_enqueues_its_deletion() {
 }
 #[tokio::test]
 async fn destroy_stamps_the_sweep_claim() {
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     let id = closed(&app).await;
     root(&app.david().write(destroy(id)).await);
     assert!(
@@ -184,7 +184,7 @@ async fn destroyed_room_is_inaccessible_while_deletion_is_pending() {
 }
 #[tokio::test]
 async fn destroy_finishes_through_the_enqueued_job() {
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     let id = closed(&app).await;
     root(&app.david().write(destroy(id)).await);
     pending_destroy(&app, id).await;
@@ -201,7 +201,7 @@ async fn destroy_finishes_through_the_enqueued_job() {
 }
 #[tokio::test]
 async fn destroy_only_allowed_for_creators_or_those_who_can_administer() {
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     let id = closed(&app).await;
     let mut jz = app.sign_in(JZ).await;
     assert_eq!(jz.write(destroy(id)).await.status, StatusCode::FORBIDDEN);
@@ -224,7 +224,7 @@ async fn destroy_only_allowed_for_creators_or_those_who_can_administer() {
 }
 #[tokio::test]
 async fn destroy_answers_the_sidebar_menu_with_json_and_no_redirect() {
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     let id = closed(&app).await;
     let reply = app
         .david()

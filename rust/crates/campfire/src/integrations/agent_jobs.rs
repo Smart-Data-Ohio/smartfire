@@ -698,7 +698,7 @@ fn ws11_retry_after_and_response_policy_match_rails_vectors() {
 #[tokio::test]
 async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
     use crate::controllers::presenters::test_support::{BENDER, TestApp};
-    let test = TestApp::boot().await.expect("default seed");
+    let test = TestApp::boot().await.expect("default seed").without_job_runner().await;
     let db = test.db();
     let (first,second)=db.write(|tx| {
         let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
