@@ -11,6 +11,8 @@ pub(crate) mod write_tests;
 mod content_tests;
 #[cfg(test)]
 mod github_tests;
+#[cfg(test)]
+mod chrome_tests;
 
 use askama::Template;
 use campfire_db::{ChannelThread, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, Timestamp};

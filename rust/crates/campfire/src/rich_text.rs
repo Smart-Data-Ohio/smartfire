@@ -44,6 +44,15 @@ struct Brand {
 const ICON_CONFIG: &str = include_str!("../vendor/icons.yml");
 static BRANDS: LazyLock<Vec<Brand>> =
     LazyLock::new(|| serde_yaml::from_str(ICON_CONFIG).expect("vendored config/icons.yml"));
+/// `Icons.client_icon_names`: configured brands/aliases followed by ordered workspace names.
+/// Layout metadata uses the same vendored registry as Markdown and optimistic messages.
+pub(crate) fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> {
+    let mut names = BRANDS.iter().flat_map(|brand| std::iter::once(brand.name.clone()).chain(brand.aliases.clone())).collect::<Vec<_>>();
+    let mut stmt = conn.prepare_cached("SELECT name FROM workspace_icons ORDER BY name")?;
+    names.extend(stmt.query_map([], |row| row.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?);
+    Ok(names)
+}
+
 fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     let mut icons = IconCatalog::default();
     for brand in BRANDS.iter() {

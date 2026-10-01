@@ -55,7 +55,7 @@ impl Layout {
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
         let app_now = app.db.env().now();
-        let (account, has_logo, mut preferences) = app
+        let (account, has_logo, mut preferences, brand_icon_names, recent_searches) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
@@ -70,7 +70,15 @@ impl Layout {
                     Some(user_id) => user_preferences(conn, user_id, app_now)?,
                     None => UserPreferences::default(),
                 };
-                Ok((account, has_logo, preferences))
+                let brand_icon_names = crate::rich_text::client_icon_names(conn)?;
+                // Application layout's global search reads the viewer's existing history;
+                // search creation/clear endpoints remain WS8b-m2's responsibility.
+                let recent_searches = match user_id {
+                    Some(id) => campfire_db::Search::ordered_for_user(conn, id)?.into_iter().take(10)
+                        .map(|s| campfire_views::layouts::RecentSearch {id:s.id, query:s.query}).collect(),
+                    None => Vec::new(),
+                };
+                Ok((account, has_logo, preferences, brand_icon_names, recent_searches))
             })
             .await
             .map_err(Error::internal)?;
@@ -94,11 +102,11 @@ impl Layout {
         });
         let chrome = Chrome {
             service_worker_auto_register: true,
-            brand_icon_names: Vec::new(),
+            brand_icon_names,
             google_picker: None,
             huddle_configured: false,
             global_search_query: None,
-            recent_searches: Vec::new(),
+            recent_searches,
         };
         Ok(Self {
             current_user,

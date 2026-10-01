@@ -1,0 +1,267 @@
+{
+  "reference": "d7c7de92",
+  "inputs": [
+    {
+      "id": 845978997,
+      "user_id": 127326141,
+      "query": "Chrome 0/0 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:00.000000Z",
+      "updated_at": "2026-03-02T16:00:00.000000Z"
+    },
+    {
+      "id": 845978998,
+      "user_id": 127326141,
+      "query": "Chrome 0/1 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:01.000000Z",
+      "updated_at": "2026-03-02T16:00:01.000000Z"
+    },
+    {
+      "id": 845978999,
+      "user_id": 127326141,
+      "query": "Chrome 0/2 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:02.000000Z",
+      "updated_at": "2026-03-02T16:00:02.000000Z"
+    },
+    {
+      "id": 845979000,
+      "user_id": 127326141,
+      "query": "Chrome 0/3 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:03.000000Z",
+      "updated_at": "2026-03-02T16:00:03.000000Z"
+    },
+    {
+      "id": 845979001,
+      "user_id": 127326141,
+      "query": "Chrome 0/4 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:04.000000Z",
+      "updated_at": "2026-03-02T16:00:04.000000Z"
+    },
+    {
+      "id": 845979002,
+      "user_id": 127326141,
+      "query": "Chrome 0/5 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:05.000000Z",
+      "updated_at": "2026-03-02T16:00:05.000000Z"
+    },
+    {
+      "id": 845979003,
+      "user_id": 127326141,
+      "query": "Chrome 0/6 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:06.000000Z",
+      "updated_at": "2026-03-02T16:00:06.000000Z"
+    },
+    {
+      "id": 845979004,
+      "user_id": 127326141,
+      "query": "Chrome 0/7 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:07.000000Z",
+      "updated_at": "2026-03-02T16:00:07.000000Z"
+    },
+    {
+      "id": 845979005,
+      "user_id": 127326141,
+      "query": "Chrome 0/8 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:08.000000Z",
+      "updated_at": "2026-03-02T16:00:08.000000Z"
+    },
+    {
+      "id": 845979006,
+      "user_id": 127326141,
+      "query": "Chrome 0/9 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:09.000000Z",
+      "updated_at": "2026-03-02T16:00:09.000000Z"
+    },
+    {
+      "id": 845979007,
+      "user_id": 127326141,
+      "query": "Chrome 0/10 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:10.000000Z",
+      "updated_at": "2026-03-02T16:00:10.000000Z"
+    },
+    {
+      "id": 845979008,
+      "user_id": 127326141,
+      "query": "Chrome 0/11 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:11.000000Z",
+      "updated_at": "2026-03-02T16:00:11.000000Z"
+    },
+    {
+      "id": 845979009,
+      "user_id": 127326141,
+      "query": "Chrome 0/12 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:12.000000Z",
+      "updated_at": "2026-03-02T16:00:12.000000Z"
+    },
+    {
+      "id": 845979010,
+      "user_id": 149087659,
+      "query": "Chrome 1/0 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:00.000000Z",
+      "updated_at": "2026-03-02T16:00:00.000000Z"
+    },
+    {
+      "id": 845979011,
+      "user_id": 149087659,
+      "query": "Chrome 1/1 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:01.000000Z",
+      "updated_at": "2026-03-02T16:00:01.000000Z"
+    },
+    {
+      "id": 845979012,
+      "user_id": 149087659,
+      "query": "Chrome 1/2 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:02.000000Z",
+      "updated_at": "2026-03-02T16:00:02.000000Z"
+    },
+    {
+      "id": 845979013,
+      "user_id": 149087659,
+      "query": "Chrome 1/3 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:03.000000Z",
+      "updated_at": "2026-03-02T16:00:03.000000Z"
+    },
+    {
+      "id": 845979014,
+      "user_id": 149087659,
+      "query": "Chrome 1/4 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:04.000000Z",
+      "updated_at": "2026-03-02T16:00:04.000000Z"
+    },
+    {
+      "id": 845979015,
+      "user_id": 149087659,
+      "query": "Chrome 1/5 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:05.000000Z",
+      "updated_at": "2026-03-02T16:00:05.000000Z"
+    },
+    {
+      "id": 845979016,
+      "user_id": 149087659,
+      "query": "Chrome 1/6 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:06.000000Z",
+      "updated_at": "2026-03-02T16:00:06.000000Z"
+    },
+    {
+      "id": 845979017,
+      "user_id": 149087659,
+      "query": "Chrome 1/7 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:07.000000Z",
+      "updated_at": "2026-03-02T16:00:07.000000Z"
+    },
+    {
+      "id": 845979018,
+      "user_id": 149087659,
+      "query": "Chrome 1/8 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:08.000000Z",
+      "updated_at": "2026-03-02T16:00:08.000000Z"
+    },
+    {
+      "id": 845979019,
+      "user_id": 149087659,
+      "query": "Chrome 1/9 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:09.000000Z",
+      "updated_at": "2026-03-02T16:00:09.000000Z"
+    },
+    {
+      "id": 845979020,
+      "user_id": 149087659,
+      "query": "Chrome 1/10 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:10.000000Z",
+      "updated_at": "2026-03-02T16:00:10.000000Z"
+    },
+    {
+      "id": 845979021,
+      "user_id": 149087659,
+      "query": "Chrome 1/11 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:11.000000Z",
+      "updated_at": "2026-03-02T16:00:11.000000Z"
+    },
+    {
+      "id": 845979022,
+      "user_id": 149087659,
+      "query": "Chrome 1/12 <&> \"quote\"",
+      "created_at": "2026-03-02T16:00:12.000000Z",
+      "updated_at": "2026-03-02T16:00:12.000000Z"
+    }
+  ],
+  "rows": [
+    {
+      "custom": [],
+      "user_id": 127326141,
+      "brand_meta": "<meta name=\"brand-icon-names\" content=\"openai,gpt,anthropic,claude,googlegemini,gemini,google,apple,meta,nvidia,github,x,mistralai,huggingface,hf,perplexity,cursor,slack,discord,linux,docker,kubernetes,githubcopilot,ollama,vercel,cloudflare,stripe,notion,figma,linear,microsoft,msft,azure,aws,amazonaws,xai,grok,deepseek\">",
+      "recent_html": "<div class=\"global-search__panel-header\">\n  <span id=\"global-search-recents-label\" class=\"global-search__panel-title\">Recent searches</span>\n    <form class=\"global-search__clear-form\" data-turbo-confirm=\"Are you sure you want to clear your recent searches?\" method=\"post\" action=\"/searches/clear\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn global-search__clear\" aria-label=\"Clear recent searches\" type=\"submit\">\n      <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/broom-13d30a95.svg\" width=\"16\" height=\"16\" />\n      <span>Clear</span>\n</button></form></div>\n\n<ul id=\"global-search-listbox\" class=\"global-search__options\" role=\"listbox\" aria-labelledby=\"global-search-recents-label\">\n    <li id=\"global_search_option_search_845979009\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F12+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/12 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/12 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979008\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F11+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/11 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/11 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979007\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F10+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/10 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/10 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979006\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F9+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/9 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/9 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979005\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F8+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/8 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/8 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979004\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F7+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/7 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/7 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979003\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F6+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/6 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/6 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979002\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F5+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/5 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/5 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979001\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F4+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/4 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/4 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979000\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F3+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/3 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/3 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n</ul>\n\n<p class=\"global-search__empty\" data-global-search-target=\"empty\" hidden>\n  No recent searches match.\n</p>\n",
+      "search_ids": [
+        845979009,
+        845979008,
+        845979007,
+        845979006,
+        845979005,
+        845979004,
+        845979003,
+        845979002,
+        845979001,
+        845979000
+      ]
+    },
+    {
+      "custom": [],
+      "user_id": 149087659,
+      "brand_meta": "<meta name=\"brand-icon-names\" content=\"openai,gpt,anthropic,claude,googlegemini,gemini,google,apple,meta,nvidia,github,x,mistralai,huggingface,hf,perplexity,cursor,slack,discord,linux,docker,kubernetes,githubcopilot,ollama,vercel,cloudflare,stripe,notion,figma,linear,microsoft,msft,azure,aws,amazonaws,xai,grok,deepseek\">",
+      "recent_html": "<div class=\"global-search__panel-header\">\n  <span id=\"global-search-recents-label\" class=\"global-search__panel-title\">Recent searches</span>\n    <form class=\"global-search__clear-form\" data-turbo-confirm=\"Are you sure you want to clear your recent searches?\" method=\"post\" action=\"/searches/clear\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn global-search__clear\" aria-label=\"Clear recent searches\" type=\"submit\">\n      <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/broom-13d30a95.svg\" width=\"16\" height=\"16\" />\n      <span>Clear</span>\n</button></form></div>\n\n<ul id=\"global-search-listbox\" class=\"global-search__options\" role=\"listbox\" aria-labelledby=\"global-search-recents-label\">\n    <li id=\"global_search_option_search_845979022\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F12+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/12 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/12 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979021\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F11+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/11 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/11 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979020\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F10+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/10 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/10 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979019\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F9+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/9 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/9 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979018\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F8+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/8 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/8 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979017\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F7+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/7 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/7 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979016\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F6+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/6 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/6 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979015\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F5+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/5 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/5 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979014\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F4+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/4 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/4 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979013\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F3+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/3 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/3 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n</ul>\n\n<p class=\"global-search__empty\" data-global-search-target=\"empty\" hidden>\n  No recent searches match.\n</p>\n",
+      "search_ids": [
+        845979022,
+        845979021,
+        845979020,
+        845979019,
+        845979018,
+        845979017,
+        845979016,
+        845979015,
+        845979014,
+        845979013
+      ]
+    },
+    {
+      "custom": [
+        "zeta_chrome",
+        "alpha_chrome"
+      ],
+      "user_id": 127326141,
+      "brand_meta": "<meta name=\"brand-icon-names\" content=\"openai,gpt,anthropic,claude,googlegemini,gemini,google,apple,meta,nvidia,github,x,mistralai,huggingface,hf,perplexity,cursor,slack,discord,linux,docker,kubernetes,githubcopilot,ollama,vercel,cloudflare,stripe,notion,figma,linear,microsoft,msft,azure,aws,amazonaws,xai,grok,deepseek,alpha_chrome,zeta_chrome\">",
+      "recent_html": "<div class=\"global-search__panel-header\">\n  <span id=\"global-search-recents-label\" class=\"global-search__panel-title\">Recent searches</span>\n    <form class=\"global-search__clear-form\" data-turbo-confirm=\"Are you sure you want to clear your recent searches?\" method=\"post\" action=\"/searches/clear\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn global-search__clear\" aria-label=\"Clear recent searches\" type=\"submit\">\n      <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/broom-13d30a95.svg\" width=\"16\" height=\"16\" />\n      <span>Clear</span>\n</button></form></div>\n\n<ul id=\"global-search-listbox\" class=\"global-search__options\" role=\"listbox\" aria-labelledby=\"global-search-recents-label\">\n    <li id=\"global_search_option_search_845979009\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F12+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/12 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/12 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979008\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F11+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/11 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/11 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979007\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F10+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/10 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/10 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979006\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F9+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/9 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/9 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979005\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F8+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/8 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/8 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979004\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F7+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/7 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/7 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979003\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F6+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/6 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/6 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979002\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F5+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/5 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/5 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979001\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F4+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/4 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/4 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979000\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+0%2F3+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 0/3 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 0/3 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n</ul>\n\n<p class=\"global-search__empty\" data-global-search-target=\"empty\" hidden>\n  No recent searches match.\n</p>\n",
+      "search_ids": [
+        845979009,
+        845979008,
+        845979007,
+        845979006,
+        845979005,
+        845979004,
+        845979003,
+        845979002,
+        845979001,
+        845979000
+      ]
+    },
+    {
+      "custom": [
+        "zeta_chrome",
+        "alpha_chrome"
+      ],
+      "user_id": 149087659,
+      "brand_meta": "<meta name=\"brand-icon-names\" content=\"openai,gpt,anthropic,claude,googlegemini,gemini,google,apple,meta,nvidia,github,x,mistralai,huggingface,hf,perplexity,cursor,slack,discord,linux,docker,kubernetes,githubcopilot,ollama,vercel,cloudflare,stripe,notion,figma,linear,microsoft,msft,azure,aws,amazonaws,xai,grok,deepseek,alpha_chrome,zeta_chrome\">",
+      "recent_html": "<div class=\"global-search__panel-header\">\n  <span id=\"global-search-recents-label\" class=\"global-search__panel-title\">Recent searches</span>\n    <form class=\"global-search__clear-form\" data-turbo-confirm=\"Are you sure you want to clear your recent searches?\" method=\"post\" action=\"/searches/clear\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn global-search__clear\" aria-label=\"Clear recent searches\" type=\"submit\">\n      <img aria-hidden=\"true\" class=\"colorize--black\" src=\"/assets/broom-13d30a95.svg\" width=\"16\" height=\"16\" />\n      <span>Clear</span>\n</button></form></div>\n\n<ul id=\"global-search-listbox\" class=\"global-search__options\" role=\"listbox\" aria-labelledby=\"global-search-recents-label\">\n    <li id=\"global_search_option_search_845979022\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F12+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/12 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/12 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979021\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F11+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/11 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/11 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979020\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F10+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/10 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/10 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979019\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F9+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/9 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/9 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979018\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F8+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/8 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/8 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979017\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F7+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/7 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/7 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979016\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F6+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/6 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/6 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979015\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F5+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/5 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/5 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979014\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F4+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/4 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/4 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n    <li id=\"global_search_option_search_845979013\" class=\"global-search__option\" role=\"option\" aria-selected=\"false\"\n        data-global-search-target=\"option\"\n        data-url=\"/searches?q=Chrome+1%2F3+%3C%26%3E+%22quote%22\"\n        data-query=\"Chrome 1/3 &lt;&amp;&gt; &quot;quote&quot;\"\n        data-action=\"mousedown->global-search#keepFocus click->global-search#choose\">\n      <img aria-hidden=\"true\" class=\"colorize--black global-search__option-icon\" src=\"/assets/search-5f29565f.svg\" width=\"14\" height=\"14\" />\n      <span class=\"overflow-ellipsis\">Chrome 1/3 &lt;&amp;&gt; &quot;quote&quot;</span>\n    </li>\n</ul>\n\n<p class=\"global-search__empty\" data-global-search-target=\"empty\" hidden>\n  No recent searches match.\n</p>\n",
+      "search_ids": [
+        845979022,
+        845979021,
+        845979020,
+        845979019,
+        845979018,
+        845979017,
+        845979016,
+        845979015,
+        845979014,
+        845979013
+      ]
+    }
+  ]
+}
