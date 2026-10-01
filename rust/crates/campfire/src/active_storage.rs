@@ -153,7 +153,7 @@ pub(crate) async fn processed_variant_with(
 
     let storage = app.storage.clone();
     let (source, digested) = (blob.clone(), variation.clone());
-    let image = process_media(move || transform(&storage, &source, &digested)).await?;
+    let image = process_media(move || transform(&storage, &source, &digested)).await?.defer_analysis();
 
     let storage = app.storage.clone();
     app.db
@@ -161,6 +161,7 @@ pub(crate) async fn processed_variant_with(
             let conn = tx.conn();
             match storage.record_variant(conn, &blob, &variation, &image, tx.now().jiff()).map_err(storage_error)? {
                 Some(recorded) => {
+                    crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
                     keep_after_commit(tx, image);
                     Ok(recorded)
                 }
@@ -204,12 +205,22 @@ async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
 /// Analyze an attached blob off the writer, then update metadata and touch its records.
 /// Re-delivery after success (or deletion) has no side effects.
 pub async fn analyze(app: &App, blob_id: i64) -> anyhow::Result<Option<Blob>> {
+    analyze_with(app, blob_id, true).await
+}
+
+/// Message#process_attachment calls Blob#analyze explicitly, including its save/touch
+/// callbacks on an already analyzed blob. Durable job retries keep their no-op boundary.
+pub(crate) async fn analyze_explicit(app: &App, blob_id: i64) -> anyhow::Result<Option<Blob>> {
+    analyze_with(app, blob_id, false).await
+}
+
+async fn analyze_with(app: &App, blob_id: i64, skip_analyzed: bool) -> anyhow::Result<Option<Blob>> {
     let blob = app
         .db
         .read(move |conn| Blob::find(conn, blob_id).map_err(storage_db_error))
         .await?;
     let Some(blob) = blob else { return Ok(None) };
-    if blob.is_analyzed() {
+    if skip_analyzed && blob.is_analyzed() {
         return Ok(Some(blob));
     }
     let storage = app.storage.clone();
@@ -222,7 +233,7 @@ pub async fn analyze(app: &App, blob_id: i64) -> anyhow::Result<Option<Blob>> {
             let Some(mut blob) = Blob::find(tx.conn(), blob_id).map_err(storage_db_error)? else {
                 return Ok(None);
             };
-            if blob.is_analyzed() {
+            if skip_analyzed && blob.is_analyzed() {
                 return Ok(Some(blob));
             }
             blob.metadata.merge(&metadata);

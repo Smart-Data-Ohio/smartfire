@@ -21,6 +21,15 @@ async fn content_scopes_room_and_anchor_without_joining_and_denies_bots() {
 use std::sync::Arc;
 use campfire_kit::clock::FrozenClock;
 use serde_json::Value;
+use crate::controllers::presenters::{Presenter, page};
+use campfire_db::{Room, User};
+use campfire_views::helpers::{self as h, request_forgery::{self, AuthenticityTokens, RequestSecrets}};
+use askama::Template;
+struct FixedTokens;
+impl AuthenticityTokens for FixedTokens {
+    fn global(&self) -> String { "GLOBAL".into() }
+    fn for_form(&self, action: &str, method: &str) -> String { format!("{method}:{action}") }
+}
 
 fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors/messaging/thread-content.json")).unwrap() }
 async fn fixture() -> (TestApp, i64) {
@@ -52,6 +61,20 @@ async fn conversation_and_room_composer_match_rails_bytes_through_http() {
         let expected = row["body"].as_str().unwrap();
         if response.text() != expected { rails_mismatch(&response.text(), expected, row["name"].as_str().unwrap()); }
     }
+    let runtime = app.booted.app.clone();
+    let (html,footer,pending) = app.db().read(move |conn| {
+        let p = Presenter::new(conn, &runtime, None);
+        let composer = p.composer_facts(&Room::find(conn, ALL_TALK)?, &User::find(conn, DAVID)?, None, p.composer_drive_flow(&User::find(conn, DAVID)?, false)?)?;
+        let scheduled_control = h::raw(oracle()["room_schedule"].as_str().unwrap());
+        page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| request_forgery::rendering_with(RequestSecrets {tokens: Box::new(FixedTokens), csp_nonce: None}, || {
+            Ok::<_,askama::Error>((campfire_views::messages::composer::Composer {ctx, facts: &composer, scheduled_control: &scheduled_control}.render()?,
+                campfire_views::messages::composer::FooterComposer {ctx, facts: &composer, scheduled_control: &scheduled_control}.render()?,
+                campfire_views::channel_threads::PendingTemplate {ctx,user: &p.user_view(DAVID).unwrap()}.render()?))
+        })).map_err(|e| campfire_db::Error::Other(e.to_string()))
+    }).await.unwrap();
+    if html != oracle()["room_composer"].as_str().unwrap() {rails_mismatch(&html, oracle()["room_composer"].as_str().unwrap(), "room composer");}
+    if footer != oracle()["room_footer"].as_str().unwrap() {rails_mismatch(&footer,oracle()["room_footer"].as_str().unwrap(),"room footer");}
+    if pending != oracle()["pending_template"].as_str().unwrap() {rails_mismatch(&pending,oracle()["pending_template"].as_str().unwrap(),"pending template");}
     let response = with_fixed_render_secrets(browser.get(&format!("/rooms/{ALL_TALK}"))).await;
     assert_eq!(response.status, StatusCode::OK);
     // rooms/show contributes two spaces before the partial's first line, as Rails does.

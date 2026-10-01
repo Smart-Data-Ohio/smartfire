@@ -1,0 +1,782 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "scope": "135 behavior declarations; no pixel work; mapped Playwright equivalents, not execution of original Ruby system files",
+  "excluded_file_owners": {
+    "test/system/keyboard_shortcuts_test.rb": "WS8b-r (14)",
+    "test/system/content_security_policy_test.rb": "WS8b-r (5)",
+    "test/system/timezone_detection_test.rb": "WS8br2 (2)"
+  },
+  "files": [
+    {
+      "file": "test/system/boosting_messages_test.rb",
+      "source_sha256": "5456542ed9ee1b3685552bcb1cca4acf6c0d8e62b47f5bf792370fd3dfef15be",
+      "cases": [
+        {
+          "name": "boosting a message",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "deleting a boost",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "message update preserves the input state",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "boost by another user preserves the input state",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/code_highlighting_test.rb",
+      "source_sha256": "bd8e2522a1fab8e0054b401d199acc3a942f4e4be866b7b1c011de650bed2014",
+      "cases": [
+        {
+          "name": "language fences highlight common code without changing its text",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "unlabelled code is detected while text unknown languages and inline code stay literal",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "search results highlight code on initial load and after returning to the channel",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "code and copying remain available when the highlighter cannot load",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "editing a code block replaces its language colors and copied source",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "thread code stays readable in both themes and scrolls within a narrow screen",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/sending_messages_test.rb",
+      "source_sha256": "4c637558cc041e470c6378f43e67d9d5b5b483ed0aae746c50eb64221027d116",
+      "cases": [
+        {
+          "name": "sending messages between two users",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: isolated seed per case; two actual viewer browsers, real HTTP/Cable, edit/reload and exact persistent row checks on both apps"
+        },
+        {
+          "name": "editing messages",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: isolated seed per case; two actual viewer browsers, real HTTP/Cable, edit/reload and exact persistent row checks on both apps"
+        },
+        {
+          "name": "deleting messages",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py sending_messages: isolated seed per case; two actual viewer browsers, real HTTP/Cable, edit/reload and exact persistent row checks on both apps"
+        }
+      ]
+    },
+    {
+      "file": "test/system/threads_test.rb",
+      "source_sha256": "e927613f9e78905aa072e0530339678b8443166b6f6d3c052d22cb3b797faafc",
+      "cases": [
+        {
+          "name": "creates a thread from a channel message and keeps the channel draft separate",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted"
+        },
+        {
+          "name": "the thread root counts its replies live and hides the count when none remain",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted"
+        },
+        {
+          "name": "a stray create re-entry does not wipe the half-filled thread name",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: original ordinary create/draft/reply/edit/reaction, preference and archive setting flow; live room reply indicators through 1/2/hidden for two viewers; same-context create re-entry; raw persisted rows on both seeded apps; screenshots omitted"
+        },
+        {
+          "name": "browses active and closed threads and can join or leave a closed one",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: separate JZ/David browsers; active and closed lists; real close/join/leave controls; retained message bodies, creator IDs, closure timestamp and membership rows checked on both apps"
+        },
+        {
+          "name": "tracks work, assigns an owner, completes and reopens it without losing the conversation",
+          "status": "blocked_ws12",
+          "evidence": null
+        },
+        {
+          "name": "shows work-thread guidance in the new-thread form and on the work page",
+          "status": "blocked_ws12",
+          "evidence": null
+        },
+        {
+          "name": "keeps the new-thread guidance usable on a phone",
+          "status": "blocked_ws12",
+          "evidence": null
+        },
+        {
+          "name": "shows work assignment activity to the owner and opens the exact thread",
+          "status": "blocked_ws12",
+          "evidence": null
+        },
+        {
+          "name": "keeps the thread drawer usable on a phone and preserves the channel",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "marks a joined thread read only while the conversation is visible",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "rejects an external thread deep link before fetching it",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: real external query URL; invalid-link status; no external browser request/resource or thread content; unchanged message/thread/membership counts on both apps"
+        },
+        {
+          "name": "renders untrusted thread metadata as text",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py threads: actual create form with the pinned malicious name; literal title, no image node or script execution; exact saved name and message source on both apps"
+        },
+        {
+          "name": "opens a shared thread message link around an older post",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "keeps an anchored older thread unread when a new reply arrives",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "discusses a pull request from its card",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/workspace_markdown_test.rb",
+      "source_sha256": "b7b47897db51c2603fb733e90ecc7d2bf611a0f6d600926550ac80732e7b61fd",
+      "cases": [
+        {
+          "name": "Markdown messages reach other users and editing preserves the original source",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: isolated seeds, two live viewers, original source payloads, real editor/menu/keyboard and raw persistent source checks (multipart edit CRLF observed in Rails)"
+        },
+        {
+          "name": "desktop keyboard composition keeps line breaks and sends once after composition ends",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: isolated seeds, two live viewers, original source payloads, real editor/menu/keyboard and raw persistent source checks (multipart edit CRLF observed in Rails)"
+        },
+        {
+          "name": "untrusted markup stays inert in the delivered message",
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: isolated seeds, two live viewers, original source payloads, real editor/menu/keyboard and raw persistent source checks (multipart edit CRLF observed in Rails)"
+        },
+        {
+          "name": "Markdown replies and file attachments remain usable",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "mention suggestions select a room member without sending the unfinished message",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a rejected message can be recovered corrected and sent",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "sending preserves the submitted source and a newer draft",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "workspace follows the system theme and mobile navigation remains reachable",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/composer_test.rb",
+      "source_sha256": "3e0e8d3ec17deb224bb32e04551a2d740e56e020082db2f8072af9318e7878ca",
+      "cases": [
+        {
+          "name": "blurring an open autocomplete does not leave a zombie that swallows Enter",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a stale icon response does not poison the suggestion commit",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "mention queries are URL-encoded",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "composer autocomplete exposes combobox semantics over a polite listbox",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "composing text does not commit a suggestion or send the message",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "clicking a reply preview scrolls to the loaded message instead of navigating",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "clicking a reply preview falls back to the permalink when the target is not loaded",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "deleting a replied-to message turns open reply previews into a tombstone",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "two typers with the same name do not merge",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "composer drafts persist per room and clear on send",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "thread drafts persist per thread without touching the channel draft",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/composer_attach_menu_test.rb",
+      "source_sha256": "1c8f431e79e272d8fc3794d902c7c979d632b515297a4bbe8938624b96ca6dfb",
+      "cases": [
+        {
+          "name": "+ shows both attach options when Drive is available",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "From this device triggers the file input",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "From Google Drive starts the legacy picker flow",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "From Google Drive starts the enhanced share flow when sharing is configured",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "+ opens the file picker directly without Drive",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "arrow keys move between items and Escape closes back onto +",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a tap outside closes the menu",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "phone layout keeps the menu above the composer with no horizontal overflow",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "device files, paste, and drag-and-drop still preview uploads",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/message_interactions_test.rb",
+      "source_sha256": "4c867b252b0697ea694a9a3637b4242195638e261b62ccfe6e90ff21ea20d8db",
+      "cases": [
+        {
+          "name": "opens message actions from context menu and keyboard, and cancels a moving long press",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a release click landing on the just-opened menu does not activate it",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "shows the message action menu as a bottom sheet on phones",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "edits through the normal composer and restores the saved draft on cancel and success",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a duplicate delivery does not replace the message while its actions are open",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "keeps newer typing through an asynchronous edit and leaves failures in edit mode",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "replies with notify off and renders a tombstone when the target is deleted",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "copies message text and link and forwards to a server-provided thread destination",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "forwarding twice in a row submits only once",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "groups emoji reactions, updates the live count, and highlights the current user",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/message_actions_mobile_test.rb",
+      "source_sha256": "4d930fbf29081825c2696f1be81ec062b0e6968031b93fef02d47b08818e856d",
+      "cases": [
+        {
+          "name": "message action menu is a bottom sheet with touch-sized targets on phones",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "message action menu stays a floating popover on desktop",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/message_toolbar_test.rb",
+      "source_sha256": "d0e63bfb2c31db13f5786afd5ff28728f7dffead32468143fe3cb513598fdc12",
+      "cases": [
+        {
+          "name": "the toolbar stays hidden until hover or focus and labels every action",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "quick-react creates a boost from the toolbar",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "reply and thread buttons drive the composer and the thread panel",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the more button opens the shared menu for its message",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "keyboard users reach the toolbar from a focused message",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the emoji picker searches and reacts",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the picker shows category tabs and switches between them",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the picker loads its emoji data only on first open",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the picker remembers recent reactions",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the picker Custom tab reacts with a workspace icon",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the picker reacts with a brand icon shortcode",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "picker arrows move through options, Enter selects, and Escape returns focus",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "picker tabs move with arrow keys and switch the grid",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/message_list_a11y_test.rb",
+      "source_sha256": "9c17b5c9dccb9b10eb3c56e52aed5583c43e0a47166218ecfd9c0ec2bdd169fa",
+      "cases": [
+        {
+          "name": "the message list is a single tab stop with a roving tabindex",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "arrow keys move between messages",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a stream replacing the focused message keeps focus and the tab stop on its replacement",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "deleting the focused message moves focus to the surviving tab stop",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "deleting an older focused message hands focus to its neighbour, not the newest",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a focus move during a stream render survives Turbo's focus restore",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a no-change room refresh does not yank focus back to the composer",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the ContextMenu key opens the shared menu and Escape returns focus",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a late composer autofocus does not steal focus from a message",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "up arrow from an empty composer still edits my last message",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "up-arrow-to-edit shows an error when the actions endpoint fails",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "forward reuses the menu-open metadata request instead of fetching again",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "a menu opened while an action waits does not redirect the pending action",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the menu closes before Turbo caches the page",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the main message list is a live log",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "paginated history stays quiet past the insert, then the live region comes back",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "an edit replacement is not announced as an addition",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "an own message is not re-announced when its broadcast replaces the pending copy",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "search results keep their menus and focusability",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the message-list top padding does not apply to search results",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the standalone thread page keeps menus and focusability",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the standalone message page keeps its menu and focusability",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the viewport allows pinch zoom",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "text fields stay at 16px on touch devices without changing the desktop look",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "profile message and ban buttons have accessible names",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "flash persists its 5-second minimum under reduced motion",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "flash dismisses on demand under reduced motion",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/drive_attachments_test.rb",
+      "source_sha256": "aa6726f1390fff3f109728409de8bac23f2cbb9266e223cce307da005a833c8d",
+      "cases": [
+        {
+          "name": "attach Drive files from the picker, send textless, and remove through edit",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "edit a room message in the composer and remove one of two attachments",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "attach a Drive file from the thread composer",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/unread_divider_test.rb",
+      "source_sha256": "006147f6e9ffb9066a4e82e8b50e841f150ce7c079047833efcf560f93546a1e",
+      "cases": [
+        {
+          "name": "few unread render the divider above the first new message and keep the bottom scroll",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "many unread scroll the room to the divider",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "the jump pill shows while the divider is off-screen and returns to it",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "unread older than the last page keeps the last page and the pill links to the first unread",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "mark unread from the message menu points the divider at that message",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/search_forward_edit_test.rb",
+      "source_sha256": "60c7ecfe60cd0a51ec1235f547795c2400e8f02a830ef0991af9dea833d89366",
+      "cases": [
+        {
+          "name": "search tolerates operators, shows an empty state and pages older results",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "forwarded Markdown keeps tables and code blocks",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "editing to add a URL renders its card live and the edited marker on load",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/motion_test.rb",
+      "source_sha256": "5c88aad84b6fe9f518e3512cf33c0c40854bad5a59f9f722c400b5bb5b2235d7",
+      "cases": [
+        {
+          "name": "motion is off by default in the test environment",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "mobile drawer animates in, lands in place, and returns focus with motion on",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "member selection mode moves no rows and resizes nothing",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "people directory bar shifts no rows when toggling",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "people directory bar stays stuck while scrolling",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "room menu measures at full scale when clamping to the viewport edge",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "mobile drawer keeps the room list scroll position across close and reopen",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "mobile drawer reveals a current room far down the list on first open",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "mobile drawer reopens on the current room when it is already in view",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "file": "test/system/mobile_layout_test.rb",
+      "source_sha256": "1397e2d10e2f98eef646ebe49b8c57471e5a65328318ce205ac44fbc8c2757ca",
+      "cases": [
+        {
+          "name": "the profile page fits phone widths without scrolling sideways",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "headers outside the workspace shell stay opaque over scrolled content",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "headers outside the workspace shell never cover the page or its scrollbar",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "pages outside the workspace shell show no drawer toggle that opens nothing",
+          "status": "deferred",
+          "evidence": null
+        },
+        {
+          "name": "every drawer destination has one toggle that opens the drawer on itself",
+          "status": "deferred",
+          "evidence": null
+        }
+      ]
+    }
+  ]
+}

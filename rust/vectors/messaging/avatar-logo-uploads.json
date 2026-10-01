@@ -1,0 +1,620 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "kind": "avatar",
+      "mode": "signed",
+      "input": {
+        "kind": "filename_slash",
+        "filename": "file.png/",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png/",
+        "sanitized": "file.png-",
+        "identified_content_type": "application/octet-stream",
+        "analyzer": "ActiveStorage::Analyzer::NullAnalyzer",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        },
+        "analysis_jobs": 0
+      },
+      "path": "/users/me/profile",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/users/me/profile"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png-",
+      "raw_filename": "file.png/",
+      "content_type": "application/octet-stream",
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      },
+      "analysis_jobs": 0,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "avatar",
+      "mode": "multipart",
+      "input": {
+        "kind": "filename_slash",
+        "filename": "file.png/",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png/",
+        "sanitized": "file.png-",
+        "identified_content_type": "application/octet-stream",
+        "analyzer": "ActiveStorage::Analyzer::NullAnalyzer",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        },
+        "analysis_jobs": 0
+      },
+      "path": "/users/me/profile",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/users/me/profile"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "avatar",
+      "mode": "signed",
+      "input": {
+        "kind": "filename_space",
+        "filename": "file.png ",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png ",
+        "sanitized": "file.png",
+        "identified_content_type": "image/png",
+        "analyzer": "ActiveStorage::Analyzer::ImageAnalyzer::Vips",
+        "metadata": {
+          "identified": true
+        },
+        "analysis_jobs": 1
+      },
+      "path": "/users/me/profile",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/users/me/profile"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png ",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "avatar",
+      "mode": "multipart",
+      "input": {
+        "kind": "filename_space",
+        "filename": "file.png ",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png ",
+        "sanitized": "file.png",
+        "identified_content_type": "image/png",
+        "analyzer": "ActiveStorage::Analyzer::ImageAnalyzer::Vips",
+        "metadata": {
+          "identified": true
+        },
+        "analysis_jobs": 1
+      },
+      "path": "/users/me/profile",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/users/me/profile"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png ",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "avatar",
+      "mode": "signed",
+      "input": {
+        "kind": "real_image",
+        "filename": "icon.png",
+        "content_type": "image/png",
+        "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+      },
+      "path": "/users/me/profile",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/users/me/profile"
+      },
+      "record_name": "Attachment parity",
+      "filename": "icon.png",
+      "raw_filename": "icon.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+    },
+    {
+      "kind": "avatar",
+      "mode": "multipart",
+      "input": {
+        "kind": "real_image",
+        "filename": "icon.png",
+        "content_type": "image/png",
+        "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+      },
+      "path": "/users/me/profile",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/users/me/profile"
+      },
+      "record_name": "Attachment parity",
+      "filename": "icon.png",
+      "raw_filename": "icon.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+    },
+    {
+      "kind": "bot",
+      "mode": "signed",
+      "input": {
+        "kind": "filename_slash",
+        "filename": "file.png/",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png/",
+        "sanitized": "file.png-",
+        "identified_content_type": "application/octet-stream",
+        "analyzer": "ActiveStorage::Analyzer::NullAnalyzer",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        },
+        "analysis_jobs": 0
+      },
+      "path": "/account/bots/394959859",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/bots"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png-",
+      "raw_filename": "file.png/",
+      "content_type": "application/octet-stream",
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      },
+      "analysis_jobs": 0,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "bot",
+      "mode": "multipart",
+      "input": {
+        "kind": "filename_slash",
+        "filename": "file.png/",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png/",
+        "sanitized": "file.png-",
+        "identified_content_type": "application/octet-stream",
+        "analyzer": "ActiveStorage::Analyzer::NullAnalyzer",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        },
+        "analysis_jobs": 0
+      },
+      "path": "/account/bots/394959859",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/bots"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "bot",
+      "mode": "signed",
+      "input": {
+        "kind": "filename_space",
+        "filename": "file.png ",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png ",
+        "sanitized": "file.png",
+        "identified_content_type": "image/png",
+        "analyzer": "ActiveStorage::Analyzer::ImageAnalyzer::Vips",
+        "metadata": {
+          "identified": true
+        },
+        "analysis_jobs": 1
+      },
+      "path": "/account/bots/394959859",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/bots"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png ",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "bot",
+      "mode": "multipart",
+      "input": {
+        "kind": "filename_space",
+        "filename": "file.png ",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png ",
+        "sanitized": "file.png",
+        "identified_content_type": "image/png",
+        "analyzer": "ActiveStorage::Analyzer::ImageAnalyzer::Vips",
+        "metadata": {
+          "identified": true
+        },
+        "analysis_jobs": 1
+      },
+      "path": "/account/bots/394959859",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/bots"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png ",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "bot",
+      "mode": "signed",
+      "input": {
+        "kind": "real_image",
+        "filename": "icon.png",
+        "content_type": "image/png",
+        "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+      },
+      "path": "/account/bots/394959859",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/bots"
+      },
+      "record_name": "Attachment parity",
+      "filename": "icon.png",
+      "raw_filename": "icon.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+    },
+    {
+      "kind": "bot",
+      "mode": "multipart",
+      "input": {
+        "kind": "real_image",
+        "filename": "icon.png",
+        "content_type": "image/png",
+        "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+      },
+      "path": "/account/bots/394959859",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/bots"
+      },
+      "record_name": "Attachment parity",
+      "filename": "icon.png",
+      "raw_filename": "icon.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+    },
+    {
+      "kind": "logo",
+      "mode": "signed",
+      "input": {
+        "kind": "filename_slash",
+        "filename": "file.png/",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png/",
+        "sanitized": "file.png-",
+        "identified_content_type": "application/octet-stream",
+        "analyzer": "ActiveStorage::Analyzer::NullAnalyzer",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        },
+        "analysis_jobs": 0
+      },
+      "path": "/account",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/edit"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png-",
+      "raw_filename": "file.png/",
+      "content_type": "application/octet-stream",
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      },
+      "analysis_jobs": 0,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "logo",
+      "mode": "multipart",
+      "input": {
+        "kind": "filename_slash",
+        "filename": "file.png/",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png/",
+        "sanitized": "file.png-",
+        "identified_content_type": "application/octet-stream",
+        "analyzer": "ActiveStorage::Analyzer::NullAnalyzer",
+        "metadata": {
+          "identified": true,
+          "analyzed": true
+        },
+        "analysis_jobs": 0
+      },
+      "path": "/account",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/edit"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "logo",
+      "mode": "signed",
+      "input": {
+        "kind": "filename_space",
+        "filename": "file.png ",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png ",
+        "sanitized": "file.png",
+        "identified_content_type": "image/png",
+        "analyzer": "ActiveStorage::Analyzer::ImageAnalyzer::Vips",
+        "metadata": {
+          "identified": true
+        },
+        "analysis_jobs": 1
+      },
+      "path": "/account",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/edit"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png ",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "logo",
+      "mode": "multipart",
+      "input": {
+        "kind": "filename_space",
+        "filename": "file.png ",
+        "data_base64": "aGVsbG8=",
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "content_type": "application/octet-stream",
+        "status": 302,
+        "stored_filename": "file.png ",
+        "sanitized": "file.png",
+        "identified_content_type": "image/png",
+        "analyzer": "ActiveStorage::Analyzer::ImageAnalyzer::Vips",
+        "metadata": {
+          "identified": true
+        },
+        "analysis_jobs": 1
+      },
+      "path": "/account",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/edit"
+      },
+      "record_name": "Attachment parity",
+      "filename": "file.png",
+      "raw_filename": "file.png ",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "aGVsbG8="
+    },
+    {
+      "kind": "logo",
+      "mode": "signed",
+      "input": {
+        "kind": "real_image",
+        "filename": "icon.png",
+        "content_type": "image/png",
+        "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+      },
+      "path": "/account",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/edit"
+      },
+      "record_name": "Attachment parity",
+      "filename": "icon.png",
+      "raw_filename": "icon.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+    },
+    {
+      "kind": "logo",
+      "mode": "multipart",
+      "input": {
+        "kind": "real_image",
+        "filename": "icon.png",
+        "content_type": "image/png",
+        "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+      },
+      "path": "/account",
+      "response": {
+        "status": 302,
+        "body": "",
+        "content_type": "text/html; charset=utf-8",
+        "cache_control": "no-cache",
+        "location": "http://campfire.test/account/edit"
+      },
+      "record_name": "Attachment parity",
+      "filename": "icon.png",
+      "raw_filename": "icon.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 1,
+      "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC"
+    }
+  ]
+}
