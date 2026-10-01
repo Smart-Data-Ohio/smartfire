@@ -90,13 +90,12 @@ pub async fn create(c: &mut Ctx) -> Result {
                 },
                 &context,
             )?;
-            let pending = attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
-            Ok((bot, pending))
+            attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
+            Ok(bot)
         })
         .await;
     match result {
-        Ok((bot, pending)) => {
-            attachments::analyze_later(c.app(), pending);
+        Ok(bot) => {
             c.set_header("cache-control", "no-store");
             c.set_header("pragma", "no-cache");
             let key = bot.bot_key();
@@ -225,10 +224,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         attachments::assign(tx, Record::user(bot.id), "avatar", avatar)
     }).await;
     match result {
-        Ok(pending) => {
-            attachments::analyze_later(c.app(), pending);
-            redirect_to_bots(c)
-        }
+        Ok(()) => redirect_to_bots(c),
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             let bot = set_bot(c).await?;
             let mut form = edit_form(c, &bot).await?;
