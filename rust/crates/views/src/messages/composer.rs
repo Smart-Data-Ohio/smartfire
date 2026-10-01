@@ -73,3 +73,13 @@ pub struct Composer<'a> {
     /// Rendered by WS8b-m2; empty until its branch is merged and the caller mounts it.
     pub scheduled_control: &'a h::Html,
 }
+
+/// The same composer captured by Rails's `content_for :footer` instead of `inline: true`.
+/// This is an additive shell slot; the existing pane/inline entry point is unchanged.
+#[derive(Template)]
+#[template(path = "messages/_footer_composer.html")]
+pub struct FooterComposer<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub facts: &'a Facts,
+    pub scheduled_control: &'a h::Html,
+}

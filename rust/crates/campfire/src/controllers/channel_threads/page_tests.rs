@@ -47,9 +47,7 @@ async fn pull_request_thread_pages_match_four_rails_http_responses() {
 
 #[tokio::test]
 async fn pull_request_thread_without_starter_refreshes_once_and_survives_queue_failure() {
-    let mut app = TestApp::boot_frozen().await.expect("default seed required");
-    // Observe committed enqueues before a worker can consume them or mark the PR fresh.
-    app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    let app = TestApp::boot_frozen().await.expect("default seed required").without_job_runner().await;
     app.db().write(|tx| {
         tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE channel_threads SET parent_message_id=NULL WHERE id=8; UPDATE github_pull_requests SET fetched_at=NULL,fetch_requested_at=NULL WHERE id IN (SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=8)")?;
         Ok(())
@@ -203,6 +201,8 @@ async fn ordinary_work_html_remains_pending_and_board_posts_render() {
     let (app, _, threads) = fixture().await;
     assert_eq!(app.sign_in(KEVIN).await.get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::NOT_FOUND);
     assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(app.sign_in(KEVIN).await.get(&format!("/rooms/{ALL_TALK}/threads/{}/content", threads[5])).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}/content", threads[5])).await.status, StatusCode::NOT_IMPLEMENTED);
     let (room, thread) = app.db().write(|tx| {
         let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Board, Some("Board seam"), DAVID, &[DAVID])?;
         let thread = ChannelThread::create(tx, NewChannelThread {room_id: room.id, creator_id: DAVID, name: Some("Board post".into()), work_status: Some("planned".into()), ..Default::default()})?;
@@ -211,6 +211,7 @@ async fn ordinary_work_html_remains_pending_and_board_posts_render() {
     let response = app.david().get(&format!("/rooms/{room}/threads/{thread}")).await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(response.text().contains("class=\"board-post\""));
+    assert_eq!(app.david().get(&format!("/rooms/{room}/threads/{thread}/content")).await.status, StatusCode::NOT_IMPLEMENTED);
 }
 
 #[tokio::test]

@@ -225,3 +225,33 @@ async fn positive_forward_responses_and_snapshot_rows_match_rails_without_masks(
         }).await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn forward_picker_excludes_boards_names_directs_and_keeps_query_count_constant() {
+    let app=fixture().await;
+    let source=oracle()["source_id"].as_i64().unwrap();
+    let path=format!("/messages/{source}/forwards/destinations.json");
+    let mut viewer=app.david();viewer.authenticity_token().await;
+    let capture=|app:&TestApp|app.db().capture_read_queries();
+    let log=capture(&app);
+    let response=viewer.get(&path).await;
+    app.db().stop_capturing_read_queries();
+    assert_eq!(response.status,StatusCode::OK);
+    assert_eq!(response.header("cache-control"),Some("no-store"));
+    let rows=response.json()["destinations"].as_array().unwrap().clone();
+    let board=oracle()["board_id"].as_i64().unwrap();
+    assert!(rows.iter().all(|row|row["room_id"]!=board),"board never offered");
+    assert_eq!(rows.iter().find(|row|row["room_id"]==DIRECT_DAVID_JASON).unwrap()["name"],"Jason");
+    let small=log.lock().unwrap().len();assert!(small>0);
+    app.db().write(|tx| {
+        for i in 0..6 {
+            let room=Room::create_for(tx,RoomType::Closed,Some(&format!("Query destination {i}")),DAVID,&[DAVID,JASON])?;
+            ChannelThread::create(tx,NewChannelThread {room_id:room.id,creator_id:DAVID,name:Some(format!("Destination thread {i}")),..Default::default()})?;
+        }
+        Ok(())
+    }).await.unwrap();
+    let log=capture(&app);let response=viewer.get(&path).await;app.db().stop_capturing_read_queries();
+    assert_eq!(response.status,StatusCode::OK);
+    assert_eq!(response.json()["destinations"].as_array().unwrap().len(),rows.len()+6);
+    let large=log.lock().unwrap().len();assert_eq!(small,large,"forward picker reader queries grow: {small} to {large}");
+}

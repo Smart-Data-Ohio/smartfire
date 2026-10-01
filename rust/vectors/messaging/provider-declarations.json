@@ -1,0 +1,254 @@
+{
+  "reference": "d7c7de92",
+  "root_id": 935962058,
+  "thread_id": 9,
+  "reply_id": 935962059,
+  "rows": [
+    {
+      "name": "root_add",
+      "time": "2026-03-02T16:00:01Z",
+      "path": "/rooms/486777696/messages/935962058",
+      "input": {
+        "markdown_source": "see https://github.com/rails/rails/pull/511"
+      },
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696/messages/935962058",
+      "github": [
+        [
+          "rails",
+          "rails",
+          511
+        ]
+      ],
+      "twitter": [],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-root\"><template><div id=\"presentation_message_provider-root\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>see <a href=\"https://github.com/rails/rails/pull/511\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://github.com/rails/rails/pull/511</a></p></div>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"meta_message_provider-root\"><template><div class=\"message__meta\" id=\"meta_message_provider-root\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"David\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <strong data-reply-target=\"author\">David</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962058\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n      <time class=\"message__edited\" datetime=\"2026-03-02T16:00:01Z\" data-local-time-target=\"title\" title=\"Edited March 02, 2026 16:00\">(edited)</time>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962058\">All Talk</a>\n    </span>\n  </h3>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"github_pr_cards_message_provider-root\"><template><div id=\"github_pr_cards_message_provider-root\" class=\"github-pr-cards\">\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#511\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">rails/rails</span>\n    <span class=\"github-pr-card__number\">#511</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Seeded PR card</p>\n\n    <div class=\"github-pr-card__meta\">\n\n\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--none\">No checks</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/rails/rails/pull/511\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/486777696/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"935962058\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"2\" /></form>\n  </footer>\n</article>\n\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"twitter_cards_message_provider-root\"><template>  <div id=\"twitter_cards_message_provider-root\" class=\"x-post-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"message_link_cards_message_provider-root\"><template><div id=\"message_link_cards_message_provider-root\" class=\"message-link-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"fizzy_cards_message_provider-root\"><template><div id=\"fizzy_cards_message_provider-root\" class=\"fizzy-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"linkedin_cards_message_provider-root\"><template>  <div id=\"linkedin_cards_message_provider-root\" class=\"linkedin-post-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"link_embed_cards_message_provider-root\"><template>  <div id=\"link_embed_cards_message_provider-root\" class=\"link-embed-cards\"></div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "name": "root_remove",
+      "time": "2026-03-02T16:00:02Z",
+      "path": "/rooms/486777696/messages/935962058",
+      "input": {
+        "markdown_source": "never mind"
+      },
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696/messages/935962058",
+      "github": [],
+      "twitter": [],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-root\"><template><div id=\"presentation_message_provider-root\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>never mind</p></div>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"meta_message_provider-root\"><template><div class=\"message__meta\" id=\"meta_message_provider-root\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"David\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <strong data-reply-target=\"author\">David</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962058\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n      <time class=\"message__edited\" datetime=\"2026-03-02T16:00:02Z\" data-local-time-target=\"title\" title=\"Edited March 02, 2026 16:00\">(edited)</time>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962058\">All Talk</a>\n    </span>\n  </h3>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"github_pr_cards_message_provider-root\"><template><div id=\"github_pr_cards_message_provider-root\" class=\"github-pr-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"twitter_cards_message_provider-root\"><template>  <div id=\"twitter_cards_message_provider-root\" class=\"x-post-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"message_link_cards_message_provider-root\"><template><div id=\"message_link_cards_message_provider-root\" class=\"message-link-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"fizzy_cards_message_provider-root\"><template><div id=\"fizzy_cards_message_provider-root\" class=\"fizzy-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"linkedin_cards_message_provider-root\"><template>  <div id=\"linkedin_cards_message_provider-root\" class=\"linkedin-post-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"link_embed_cards_message_provider-root\"><template>  <div id=\"link_embed_cards_message_provider-root\" class=\"link-embed-cards\"></div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "name": "thread_add",
+      "time": "2026-03-02T16:00:03Z",
+      "path": "/rooms/486777696/threads/9/messages/935962059",
+      "input": {
+        "markdown_source": "see https://x.com/jack/status/112233"
+      },
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696/threads/9/messages/935962059",
+      "github": [],
+      "twitter": [
+        "112233"
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-reply\"><template><div id=\"presentation_message_provider-reply\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>see <a href=\"https://x.com/jack/status/112233\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://x.com/jack/status/112233</a></p></div>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"meta_message_provider-reply\"><template><div class=\"message__meta\" id=\"meta_message_provider-reply\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"David\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <strong data-reply-target=\"author\">David</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696?message_id=935962059&amp;thread=9\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n      <time class=\"message__edited\" datetime=\"2026-03-02T16:00:03Z\" data-local-time-target=\"title\" title=\"Edited March 02, 2026 16:00\">(edited)</time>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696?message_id=935962059&amp;thread=9\">All Talk</a>\n    </span>\n  </h3>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"github_pr_cards_message_provider-reply\"><template><div id=\"github_pr_cards_message_provider-reply\" class=\"github-pr-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"twitter_cards_message_provider-reply\"><template>  <div id=\"twitter_cards_message_provider-reply\" class=\"x-post-cards\">\n    <article class=\"x-post-card\" data-twitter-post=\"112233\">\n    <p class=\"x-post-card__loading\">Loading post…</p>\n</article>\n\n  </div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"message_link_cards_message_provider-reply\"><template><div id=\"message_link_cards_message_provider-reply\" class=\"message-link-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"fizzy_cards_message_provider-reply\"><template><div id=\"fizzy_cards_message_provider-reply\" class=\"fizzy-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"linkedin_cards_message_provider-reply\"><template>  <div id=\"linkedin_cards_message_provider-reply\" class=\"linkedin-post-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"link_embed_cards_message_provider-reply\"><template>  <div id=\"link_embed_cards_message_provider-reply\" class=\"link-embed-cards\"></div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "name": "thread_remove",
+      "time": "2026-03-02T16:00:04Z",
+      "path": "/rooms/486777696/threads/9/messages/935962059",
+      "input": {
+        "markdown_source": "never mind"
+      },
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696/threads/9/messages/935962059",
+      "github": [],
+      "twitter": [],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-reply\"><template><div id=\"presentation_message_provider-reply\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>never mind</p></div>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"meta_message_provider-reply\"><template><div class=\"message__meta\" id=\"meta_message_provider-reply\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"David\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <strong data-reply-target=\"author\">David</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696?message_id=935962059&amp;thread=9\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n      <time class=\"message__edited\" datetime=\"2026-03-02T16:00:04Z\" data-local-time-target=\"title\" title=\"Edited March 02, 2026 16:00\">(edited)</time>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696?message_id=935962059&amp;thread=9\">All Talk</a>\n    </span>\n  </h3>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"github_pr_cards_message_provider-reply\"><template><div id=\"github_pr_cards_message_provider-reply\" class=\"github-pr-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"twitter_cards_message_provider-reply\"><template>  <div id=\"twitter_cards_message_provider-reply\" class=\"x-post-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"message_link_cards_message_provider-reply\"><template><div id=\"message_link_cards_message_provider-reply\" class=\"message-link-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"fizzy_cards_message_provider-reply\"><template><div id=\"fizzy_cards_message_provider-reply\" class=\"fizzy-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"linkedin_cards_message_provider-reply\"><template>  <div id=\"linkedin_cards_message_provider-reply\" class=\"linkedin-post-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"link_embed_cards_message_provider-reply\"><template>  <div id=\"link_embed_cards_message_provider-reply\" class=\"link-embed-cards\"></div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    {
+      "name": "legacy_resync",
+      "time": "2026-03-02T16:00:05Z",
+      "path": "/rooms/486777696/messages/935962058",
+      "input": {
+        "body": "<div>see https://github.com/rails/rails/pull/512 and https://x.com/jack/status/424242</div>"
+      },
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696/messages/935962058",
+      "github": [
+        [
+          "rails",
+          "rails",
+          512
+        ]
+      ],
+      "twitter": [
+        "424242"
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_provider-root\"><template><div id=\"presentation_message_provider-root\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"trix-content\">\n  <div>see <a target=\"_blank\" href=\"https://github.com/rails/rails/pull/512\">https://github.com/rails/rails/pull/512</a> and <a target=\"_blank\" href=\"https://x.com/jack/status/424242\">https://x.com/jack/status/424242</a></div>\n</div>\n\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"meta_message_provider-root\"><template><div class=\"message__meta\" id=\"meta_message_provider-root\">\n  <h3 class=\"message__heading\">\n    <span class=\"message__author\" title=\"David\">\n      <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n        <strong data-reply-target=\"author\">David</strong>\n</button>    </span>\n    <a target=\"_top\" class=\"message__permalink\" href=\"http://campfire.test/rooms/486777696/@935962058\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n      <time class=\"message__edited\" datetime=\"2026-03-02T16:00:05Z\" data-local-time-target=\"title\" title=\"Edited March 02, 2026 16:00\">(edited)</time>\n    <span class=\"message__room\">\n      <a target=\"_top\" data-reply-target=\"link\" href=\"http://campfire.test/rooms/486777696/@935962058\">All Talk</a>\n    </span>\n  </h3>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"github_pr_cards_message_provider-root\"><template><div id=\"github_pr_cards_message_provider-root\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_935962058_github_pull_request_3\" src=\"/rooms/486777696/github/pull_requests/3/card?message_id=935962058\"></turbo-frame>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"twitter_cards_message_provider-root\"><template>  <div id=\"twitter_cards_message_provider-root\" class=\"x-post-cards\">\n    <article class=\"x-post-card\" data-twitter-post=\"424242\">\n    <p class=\"x-post-card__loading\">Loading post…</p>\n</article>\n\n  </div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"message_link_cards_message_provider-root\"><template><div id=\"message_link_cards_message_provider-root\" class=\"message-link-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"fizzy_cards_message_provider-root\"><template><div id=\"fizzy_cards_message_provider-root\" class=\"fizzy-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"linkedin_cards_message_provider-root\"><template>  <div id=\"linkedin_cards_message_provider-root\" class=\"linkedin-post-cards\"></div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"link_embed_cards_message_provider-root\"><template>  <div id=\"link_embed_cards_message_provider-root\" class=\"link-embed-cards\"></div>\n</template></turbo-stream>"
+        }
+      ]
+    }
+  ]
+}

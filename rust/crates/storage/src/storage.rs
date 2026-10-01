@@ -47,6 +47,14 @@ impl Staged {
         &self.blob
     }
 
+    /// A generated attachment is identified now and analyzed by its after-commit
+    /// attachment callback. Keep that boundary when persisting a variant for HTTP.
+    pub fn defer_analysis(mut self) -> Self {
+        self.blob.metadata = Json::object();
+        self.blob.metadata.set("identified", Json::Bool(true));
+        self
+    }
+
     /// Inserts the blob's row.
     pub fn insert(&self, conn: &Connection, now: jiff::Timestamp) -> Result<Blob> {
         self.blob.clone().insert(conn, now)

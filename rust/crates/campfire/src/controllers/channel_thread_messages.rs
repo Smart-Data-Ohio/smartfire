@@ -94,14 +94,16 @@ pub async fn create(c: &mut Ctx) -> Result {
 }
 
 async fn create_action(c: &mut Ctx, room: Room, thread: ChannelThread) -> Result {
-    let client_id = c.params.get("message").and_then(|message| message.get("client_message_id")).filter(|id| id.is_present()).and_then(|id| id.to_s());
+    let raw_client_id = c.params.get("message").and_then(|message| message.get("client_message_id"));
+    let client_id = raw_client_id.and_then(messages::string_column);
+    let lookup_id = raw_client_id.filter(|id| id.is_present()).and(client_id.clone());
     let (room_id, creator_id) = (room.id, require_current_user(c)?.id);
-    let duplicate = if let Some(client_id) = client_id {
+    let duplicate = if let Some(client_id) = lookup_id {
         c.app().db.read(move |conn| Message::find_duplicate(conn, room_id, creator_id, &client_id)).await.map_err(db_error)?
     } else { None };
     let message = if let Some(message) = duplicate { message }
         else {
-            let attributes = messages::human_message_params(c, None).await?;
+            let attributes = messages::human_message_params_with_client_id(c, None, client_id).await?;
             let message = messages::create_message_into(c, &room, Some(thread.clone()), attributes).await?;
             messages::broadcast_create(c, &room, &message).await?;
             message

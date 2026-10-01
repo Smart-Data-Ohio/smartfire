@@ -13,6 +13,12 @@ pub use writes::{create, destroy, new, update};
 pub(crate) mod write_tests;
 #[cfg(test)]
 mod content_tests;
+#[cfg(test)]
+mod github_tests;
+#[cfg(test)]
+mod chrome_tests;
+#[cfg(test)]
+mod declaration_tests;
 
 use askama::Template;
 use campfire_db::{ChannelThread, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, Timestamp};
@@ -48,19 +54,25 @@ pub async fn index(c: &mut Ctx) -> Result {
         return render_json(c, StatusCode::OK, &payload);
     }
     let (room_name, rows) = messages::present(c, move |p| {
-        let rows = threads.iter().map(|thread| {
-            let owner = thread.work_owner_id.map(|id| p.user(id)).transpose()?;
-            let payload = messages::payload::thread(p, thread, &viewer, &base)?;
-            let owner_label = match &owner {
-                None => "Unassigned".into(),
-                Some(owner) if payload["work_owner_active"] == true => owner.name.clone(),
-                Some(owner) => format!("Owner unavailable ({})", owner.name),
+        // The index displays only these facts. Loading a full per-thread JSON
+        // payload here made its query cost grow with each row.
+        let owner_ids=threads.iter().filter_map(|thread|thread.work_owner_id).collect::<std::collections::BTreeSet<_>>().into_iter().collect::<Vec<_>>();
+        let owners=campfire_db::User::where_ids(p.conn,&owner_ids)?.into_iter().map(|user|(user.id,user)).collect::<std::collections::HashMap<_,_>>();
+        let members=p.conn.prepare("SELECT user_id FROM memberships WHERE room_id=?")?.query_map([room.id],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<std::collections::HashSet<_>>>()?;
+        let eligible_agents=p.conn.prepare("SELECT agents.user_id FROM agents WHERE agents.suspended_at IS NULL AND (NOT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=agents.id) OR EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=agents.id AND revoked_at IS NULL AND capability='post_messages' AND (room_id IS NULL OR room_id=?)))")?.query_map([room.id],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<std::collections::HashSet<_>>>()?;
+        let counts=p.conn.prepare("SELECT thread_id,COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NOT NULL GROUP BY thread_id")?.query_map([room.id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,i64>(1)?)))?.collect::<rusqlite::Result<std::collections::HashMap<_,_>>>()?;
+        let rows=threads.iter().map(|thread| {
+            let owner=thread.work_owner_id.and_then(|id|owners.get(&id));
+            let active=owner.is_some_and(|owner|owner.is_active()&&members.contains(&owner.id)&&(!owner.is_bot()||room.deleted_at.is_none()&&eligible_agents.contains(&owner.id)));
+            let owner_label=match owner {
+                None=>"Unassigned".into(),
+                Some(owner) if active=>owner.name.clone(),
+                Some(owner)=>format!("Owner unavailable ({})",owner.name),
             };
-            Ok(campfire_views::channel_threads::ListRow { id: thread.id, name: thread.name.clone(),
-                status: thread.status(p.conn, Timestamp::from_jiff(p.now))?.name().into(),
-                message_count: thread.message_count(p.conn)?, work_label: work_status_label(thread.work_status.as_deref()).map(str::to_string),
-                owner_label, agent: owner.is_some_and(|owner| owner.is_bot()) })
-        }).collect::<campfire_db::Result<Vec<_>>>()?;
+            campfire_views::channel_threads::ListRow {id:thread.id,name:thread.name.clone(),status:thread.status_in_room(&room,Timestamp::from_jiff(p.now)).name().into(),
+                message_count:counts.get(&thread.id).copied().unwrap_or(0),work_label:work_status_label(thread.work_status.as_deref()).map(str::to_string),
+                owner_label,agent:owner.is_some_and(|owner|owner.is_bot())}
+        }).collect::<Vec<_>>();
         Ok((p.room_display_name(&room, Some(&viewer))?, rows))
     }).await?;
     page::titled_content(c, StatusCode::OK, &format!("Threads in {room_name}"), |ctx| campfire_views::channel_threads::Index { ctx, room_id, room_name: &room_name, threads: &rows }.render()).await
@@ -96,6 +108,10 @@ pub async fn show(c: &mut Ctx) -> Result {
 pub async fn content(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (room, thread) = scope(c).await?;
+    if room.board() || thread.work() {
+        // WS12 owns work/board conversation controls and history, including pane content.
+        return Ok(c.head(StatusCode::NOT_IMPLEMENTED));
+    }
     let id = thread.id;
     let anchor = c.params.get("message_id").filter(|value| value.is_present()).cloned();
     let (records, anchor) = c.app().db.read(move |conn| {
@@ -113,12 +129,17 @@ pub async fn content(c: &mut Ctx) -> Result {
         p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, picker_available && !viewer.is_bot())?)?))).await?;
     c.set_header("x-thread-content-at-latest", if anchor.is_none() {"true"} else {"false"});
     page::bare(c, StatusCode::OK, &format::HTML, |ctx| {
-        let scheduled_control = campfire_views::helpers::raw(campfire_views::scheduled_messages::ComposerButton {
-            ctx, room_id: composer.room_id, thread_id: Some(id),
-        }.render()?);
+        let scheduled_control = render_thread_schedule_control(ctx, composer.room_id, id)?;
         campfire_views::channel_threads::Conversation {ctx, thread_id: id,
             room_updated_at: updated_at, anchor, messages: &messages, user: &user, steps: &steps, composer: &composer, scheduled_control: &scheduled_control}.render()
     }).await
+}
+
+/// Stable M2 provider seam: room and thread scope must both reach the schedule child.
+fn render_thread_schedule_control(ctx: &campfire_views::ViewContext<'_>, room_id: i64, thread_id: i64) -> askama::Result<campfire_views::helpers::Html> {
+    Ok(campfire_views::helpers::raw(campfire_views::scheduled_messages::ComposerButton {
+        ctx, room_id, thread_id: Some(thread_id),
+    }.render()?))
 }
 
 async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {
@@ -128,22 +149,15 @@ async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Mess
         Ok((parent, p.messages(&records)?, thread.message_count(p.conn)?, thread.status(p.conn, Timestamp::from_jiff(p.now))?.name(),
             render_thread_pull_request_header(p, &thread)?))
     }).await?;
-    // The standalone thread uses the same stable collection entry point as the room's list.
+    // Work/board sections remain WS12 seams. The standalone PR header uses WS15g. The ordinary standalone
+    // thread uses the same stable collection entry point as the room's message list.
     page::titled_content(c, response_status, &name, |ctx| campfire_views::channel_threads::Show { ctx,
         name: &name, status, count, pull_request_header: &pull_request_header, parent: parent.as_ref(), messages: &items }.render()).await
 }
 
+/// Named WS15g integration call site, after authorizing the parent room and scoped thread.
 fn render_thread_pull_request_header(p: &crate::controllers::presenters::Presenter<'_>, thread: &ChannelThread) -> campfire_db::Result<campfire_views::helpers::Html> {
-    use rusqlite::OptionalExtension;
-    // Rails refreshes a rendered header even when the thread has no starter message.
-    // messages::present performs the durable enqueue after releasing this reader.
-    if let Some(id) = p.conn.query_row("SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=? AND room_id=?",
-        (thread.id, thread.room_id), |row| row.get::<_, i64>(0)).optional()? {
-        p.remember_github_refresh(id);
-    }
-    page::render_detached_in_zone(p.app(), None, p.cache_base_url.as_deref().unwrap_or("http://example.org"), &p.render_zone, |ctx| {
-        crate::controllers::presenters::github::thread_header(p.conn, ctx, thread).map(campfire_views::helpers::raw)
-    })
+    p.github_thread_header(thread)
 }
 
 fn work_status_label(status: Option<&str>) -> Option<&'static str> {
