@@ -14,6 +14,10 @@ async fn signed_root_and_thread_attachments_match_rails_response_and_blob_rows()
     assert_eq!(oracle()["thread_id"],id);
     for row in oracle()["rows"].as_array().unwrap() {
         clock.set(row["now"].as_str().unwrap().parse().unwrap());
+        if let Some(filename) = row["blob_filename"].as_str() {
+            let filename = filename.to_string();
+            app.db().write(move |tx| {tx.conn().execute("UPDATE active_storage_blobs SET filename = ? WHERE id = 13", [filename])?;Ok(())}).await.unwrap();
+        }
         let response = app.david().write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),row["path"].as_str().unwrap())
             .header("content-type","application/json").header("accept","application/json").body(row["input"].to_string())).await;
         let name = row["name"].as_str().unwrap();

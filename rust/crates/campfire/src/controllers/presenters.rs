@@ -289,7 +289,7 @@ impl<'a> Presenter<'a> {
         // Message#plain_text_body applies these after Markdown.plain_text, including
         // attachment-only Markdown and a forward note. forwarded_markdown is not markdown?.
         if campfire_views::helpers::is_blank(&text) {
-            text = message.attachment(self.conn)?.map(|(_, blob)| blob.filename).unwrap_or_default();
+            text = message.attachment(self.conn)?.map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string()).unwrap_or_default();
         }
         Ok(match message.forward_note.as_deref().filter(|note| !campfire_views::helpers::is_blank(note)) {
             Some(note) if campfire_views::helpers::is_blank(&text) => note.to_string(),

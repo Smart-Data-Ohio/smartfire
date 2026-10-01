@@ -52,5 +52,11 @@ capture.call('thread_file_reattach', :patch, "/rooms/#{room.id}/threads/#{thread
   capture.call("#{name}_root_edit", :patch, "/rooms/#{room.id}/messages/#{root.id}.json", {message: {client_message_id: 'signed-root', attachment: capability, markdown_source: 'Rejected root edit'}})
   capture.call("#{name}_thread_edit", :patch, "/rooms/#{room.id}/threads/#{thread.id}/messages/#{child.id}.json", {message: {client_message_id: 'signed-thread', attachment: capability, markdown_source: 'Rejected thread edit'}})
 end
+['  folder/unsafe:<file>\\name?.txt  ', "\u00a0unicode—name?.txt\u00a0"].each_with_index do |filename, index|
+  ActiveStorage::Blob.find(13).update_columns(filename:)
+  capture.call("filename_#{index}_root", :post, "/rooms/#{room.id}/messages.turbo_stream", {message: {client_message_id: "filename-#{index}-root", markdown_source: '', attachment: file}})
+  capture.call("filename_#{index}_thread", :post, "/rooms/#{room.id}/threads/#{thread.id}/messages.json", {message: {client_message_id: "filename-#{index}-thread", attachment: file}})
+  rows.last(2).each { |row| row[:blob_filename] = filename }
+end
 File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', thread_id: thread.id, rows:) + "\n")
 puts "WS8bm signed-attachments oracle: #{rows.size} actual root/thread requests; attach/replace/delete, expiry/purpose/missing-blob rejection, expired retries and failed-edit preservation"
