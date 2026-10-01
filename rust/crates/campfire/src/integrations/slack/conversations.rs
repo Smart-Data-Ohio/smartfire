@@ -221,6 +221,19 @@ pub fn resolve(
     users: &HashMap<String, User>,
     dry: bool,
 ) -> Result<Target> {
+    let normalized = super::payload::fields(
+        c,
+        &[
+            "id",
+            "name",
+            "is_im",
+            "is_mpim",
+            "is_private",
+            "is_archived",
+            "user",
+        ],
+    )?;
+    let c = &normalized;
     let target = choice(run, &string(&c["id"]));
     if target == Choice::Skip {
         return Ok(Target::skip(if dry {

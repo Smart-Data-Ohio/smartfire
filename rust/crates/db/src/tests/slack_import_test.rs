@@ -56,6 +56,24 @@ fn status(t: &TestDb, id: i64, status: &str) {
 fn lease(t: &TestDb, id: i64) -> String {
     t.write(move |tx| Ok(SlackImport::acquire_step_lease(tx, id, StepStatus::Running)?.unwrap()))
 }
+
+#[test]
+fn slack_import_atomic_undo_claim_refuses_queue_arriving_after_precheck() {
+    let t = setup();
+    let first = start(&t);
+    status(&t, first, "completed");
+    let original = run(&t, first);
+    assert!(
+        t.read(|c| original.undo_blocked_reason(c, original.created_at))
+            .is_none()
+    );
+    let queued = start(&t);
+    let before = t.events().len();
+    assert!(!t.write(move |tx| SlackImport::claim_undo(tx, first)));
+    assert_eq!(run(&t, first).status, "completed");
+    assert_eq!(run(&t, queued).status, "queued");
+    assert_eq!(t.events().len(), before);
+}
 fn race<T: Send + 'static>(
     a: Database,
     b: Database,

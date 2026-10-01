@@ -106,6 +106,63 @@ fn route(path: &str, body: &str) -> Route {
 }
 
 #[tokio::test]
+async fn slack_runner_lease_only_conflict_is_not_mistaken_for_saved_progress() {
+    struct Conflict(Database, bool);
+    impl Store for Conflict {
+        async fn load(&self, id: i64) -> anyhow::Result<Option<SlackImport>> {
+            Ok(self.0.read(move |c| SlackImport::find(c, id)).await?)
+        }
+        async fn commit(&self, p: Progress, _: Operation) -> anyhow::Result<Option<Progress>> {
+            let id = p.run.id;
+            let saved = self.1;
+            self.0.write(move |tx|{
+                tx.conn().execute("UPDATE slack_imports SET state=json_set(state,'$.step_lease_token','replacement','$.step_started_at','later') WHERE id=?",[id])?;
+                if saved {tx.conn().execute("UPDATE slack_imports SET state=json_set(state,'$.phase','messages') WHERE id=?",[id])?;}
+                Ok(())
+            }).await?;
+            Err(campfire_db::Error::Sqlite(rusqlite::Error::SqliteFailure(
+                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE),
+                Some("fixture identity conflict".into()),
+            ))
+            .into())
+        }
+    }
+    for saved in [false, true] {
+        let (db, _, _dir) = setup().await;
+        let id = started(&db, json!({"phase":"users","users_done":true}), json!({})).await;
+        // Rails transition_to saves the state defaults before the competing lease write.
+        let state = Progress::new(run(&db, id).await).state;
+        db.write(move |tx| {
+            tx.conn().execute(
+                "UPDATE slack_imports SET state=? WHERE id=?",
+                rusqlite::params![state.to_string(), id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        let result = Runner::new(
+            Conflict(db.clone(), saved),
+            Client::new("fixture-conflict-grant".into(), None),
+            run(&db, id).await,
+        )
+        .step()
+        .await;
+        if saved {
+            assert_eq!(result.unwrap(), Outcome::Continue);
+        } else {
+            assert!(
+                result
+                    .unwrap_err()
+                    .downcast_ref::<campfire_db::Error>()
+                    .unwrap()
+                    .is_record_not_unique()
+            );
+        }
+    }
+}
+
+#[tokio::test]
 async fn slack_runner_users_cursor_defaults_and_explicit_transition() {
     let (db, _, _dir) = setup().await;
     let id = started(&db, json!({}), json!({})).await;

@@ -12,7 +12,7 @@ use std::collections::HashSet;
 #[derive(Clone)]
 pub struct SqlStore {
     pub db: Database,
-    pub lease: String,
+    pub lease: Option<String>,
     pub allowed_domains: HashSet<String>,
 }
 impl Store for SqlStore {
@@ -28,7 +28,7 @@ impl Store for SqlStore {
         let domains = self.allowed_domains.clone();
         Ok(self.db.write(move |tx|{
             let Some(fresh)=SlackImport::find(tx.conn(),progress.run.id)?else{return Ok(None);};
-            if fresh.status!="running"||fresh.state["step_lease_token"]!=lease{return Ok(None);}
+            if fresh.status!="running"||lease.as_ref().is_some_and(|token|fresh.state["step_lease_token"]!=*token){return Ok(None);}
             progress.run=fresh.clone();
             // Lease fields are changed by separate JSON mutations, never by a stale progress
             // snapshot. A heartbeat refresh cannot erase a page committed by another step.
@@ -43,7 +43,7 @@ impl Store for SqlStore {
             }else{
                 tx.conn().execute("UPDATE slack_imports SET state=?,stats=?,heartbeat_at=?,updated_at=? WHERE id=? AND status='running'",
                     params![progress.state.to_string(),progress.stats.to_string(),tx.now(),tx.now(),progress.run.id])?;
-                SlackImport::refresh_step_lease(tx,progress.run.id,&lease)?;
+                if let Some(lease)=lease {SlackImport::refresh_step_lease(tx,progress.run.id,&lease)?;}
             }
             Ok(Some(progress))
         }).await?)
@@ -450,3 +450,6 @@ pub fn allowed_domains() -> HashSet<String> {
 
 #[cfg(test)]
 pub(crate) mod tests;
+
+#[cfg(test)]
+mod lifecycle_tests;

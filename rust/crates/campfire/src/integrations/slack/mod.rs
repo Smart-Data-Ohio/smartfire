@@ -4,6 +4,7 @@ pub mod connections;
 pub mod markdown;
 pub mod oauth;
 pub mod options;
+mod payload;
 
 pub mod conversations;
 pub mod jobs;

@@ -24,6 +24,7 @@ pub enum ErrorKind {
     Request,
     Http,
     Network,
+    Exception(&'static str),
 }
 #[derive(Debug, thiserror::Error)]
 #[error("{message}")]
@@ -35,6 +36,16 @@ pub struct Error {
     pub provided: Box<Value>,
 }
 impl Error {
+    pub(super) fn ruby_class(&self) -> &'static str {
+        match self.kind {
+            ErrorKind::Auth => "Slack::Client::AuthError",
+            ErrorKind::Scope => "Slack::Client::ScopeError",
+            ErrorKind::RateLimited => "Slack::Client::RateLimited",
+            ErrorKind::Http => "Slack::Client::HttpError",
+            ErrorKind::Exception(class) => class,
+            _ => "Slack::Client::RequestError",
+        }
+    }
     pub(super) fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
         let retry_after = (kind == ErrorKind::RateLimited).then_some(DEFAULT_RETRY_AFTER);
         Self {
@@ -251,12 +262,7 @@ impl Client {
             ],
         )
         .transport(false, &endpoint);
-        let transport_error = |_: http::HttpError| {
-            Error::new(
-                ErrorKind::Network,
-                format!("Slack network error for {method}"),
-            )
-        };
+        let transport_error = |error: http::HttpError| network_error(method, error);
         let response = http::exchange(
             &self.network,
             &endpoint,
@@ -292,19 +298,28 @@ impl Client {
             Body::Complete(bytes) => bytes,
             Body::TooLarge => unreachable!("fixed-host unbounded body"),
         };
-        let payload: Value = serde_json::from_slice(&body).map_err(|_| {
-            if (200..300).contains(&status) {
-                Error::new(
-                    ErrorKind::Http,
-                    format!("Slack returned invalid JSON for {method}"),
-                )
-            } else {
-                Error::new(
-                    ErrorKind::Request,
-                    format!("Slack HTTP {status} for {method}"),
-                )
-            }
-        })?;
+        let payload = std::str::from_utf8(&body)
+            .ok()
+            .and_then(campfire_richtext::ruby::json_parse)
+            .ok_or_else(|| {
+                if (200..300).contains(&status) {
+                    Error::new(
+                        ErrorKind::Http,
+                        format!("Slack returned invalid JSON for {method}"),
+                    )
+                } else {
+                    Error::new(
+                        ErrorKind::Request,
+                        format!("Slack HTTP {status} for {method}"),
+                    )
+                }
+            })?;
+        if !(200..300).contains(&status) && payload.is_null() {
+            return Err(Error::new(
+                ErrorKind::Request,
+                format!("Slack HTTP {status} for {method}"),
+            ));
+        }
         check_ok(payload, method)
     }
 }
@@ -323,11 +338,60 @@ fn retry_after(header: Option<&str>) -> u64 {
         .filter(|s| *s > 0)
         .unwrap_or(DEFAULT_RETRY_AFTER)
 }
-fn check_ok(payload: Value, method: &str) -> Result<Value, Error> {
-    if !payload["ok"].is_null() && payload["ok"] != false {
+fn network_error(method: &str, error: http::HttpError) -> Error {
+    use http::HttpError;
+    let (class, message, retry) = match error {
+        HttpError::OpenTimeout => ("Net::OpenTimeout", "execution expired".into(), true),
+        HttpError::ReadTimeout => ("Net::ReadTimeout", "Net::ReadTimeout".into(), true),
+        HttpError::WriteTimeout => ("Net::WriteTimeout", "Net::WriteTimeout".into(), true),
+        HttpError::Unresolvable(message) => ("SocketError", message, true),
+        HttpError::ConnectionClosed => ("EOFError", "end of file reached".into(), true),
+        HttpError::Tls(message) => ("OpenSSL::SSL::SSLError", message, false),
+        HttpError::Inflate(message) => ("Zlib::Error", message, false),
+        HttpError::Http(message) => ("Net::HTTPBadResponse", message, false),
+        HttpError::Io(error) => {
+            let (class, prefix) = match error.kind() {
+                std::io::ErrorKind::ConnectionReset => {
+                    ("Errno::ECONNRESET", Some("Connection reset by peer"))
+                }
+                std::io::ErrorKind::ConnectionRefused => {
+                    ("Errno::ECONNREFUSED", Some("Connection refused"))
+                }
+                std::io::ErrorKind::BrokenPipe => ("Errno::EPIPE", Some("Broken pipe")),
+                std::io::ErrorKind::Interrupted => {
+                    ("Errno::EINTR", Some("Interrupted system call"))
+                }
+                std::io::ErrorKind::UnexpectedEof => ("EOFError", None),
+                std::io::ErrorKind::TimedOut => ("Timeout::Error", None),
+                _ => ("IOError", None),
+            };
+            let message = match prefix {
+                Some(prefix) if error.raw_os_error().is_none() => format!("{prefix} - {error}"),
+                Some(prefix) => prefix.to_owned(),
+                None => error.to_string(),
+            };
+            (class, message, true)
+        }
+    };
+    if retry {
+        Error::new(
+            ErrorKind::Network,
+            format!("Slack network error for {method}: {class}: {message}"),
+        )
+    } else {
+        Error::new(ErrorKind::Exception(class), message)
+    }
+}
+pub(super) fn check_ok(payload: Value, method: &str) -> Result<Value, Error> {
+    let at = |key| {
+        super::payload::at(&payload, key)
+            .map_err(|error| Error::new(ErrorKind::Exception(error.class), error.message))
+    };
+    let ok = at("ok")?;
+    if !ok.is_null() && ok != false {
         return Ok(payload);
     }
-    let code = campfire_richtext::ruby::json_value_to_s(&payload["error"]);
+    let code = campfire_richtext::ruby::json_value_to_s(&at("error")?);
     let mut error = match code.as_str() {
         "invalid_auth" | "token_revoked" | "account_inactive" | "not_authed" => Error::new(
             ErrorKind::Auth,

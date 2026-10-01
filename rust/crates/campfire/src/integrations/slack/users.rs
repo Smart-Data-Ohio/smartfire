@@ -1,7 +1,7 @@
 //! Workspace-wide Slack author mapping (`app/models/slack/user_mapper.rb`).
 use std::collections::{HashMap, HashSet};
 
-use super::runner::{array, present, string, truthy};
+use super::runner::{present, string, truthy};
 use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Connection, NewUser, Result, Tx, User};
@@ -136,14 +136,53 @@ pub fn map_page(
     allowed_domains: &HashSet<String>,
 ) -> Result<Value> {
     let mut delta = json!({"matched":0,"placeholders":0,"deactivated":0,"bots":0,"total":0});
-    let members = array(members);
+    let members = super::payload::array(members);
+    for member in &members {
+        super::payload::at(member, "id")?;
+    }
     // Rails preloads known keys and email matches once, before creating any new placeholder.
     // Duplicate fresh Slack ids/emails therefore remain genuine uniqueness failures.
     let mut known = HashSet::new();
-    for member in members {
+    for member in &members {
         let id = string(&member["id"]);
         if mapped_id(tx.conn(), run.slack_workspace_id, "user", &id)?.is_some() {
             known.insert(id);
+        }
+    }
+    // Rails excludes already mapped identities before looking up profile emails. Dry
+    // previews also inspect blank-id rows while building their email index; real imports
+    // discard those rows first.
+    for member in &members {
+        if known.contains(&string(&member["id"]))
+            || (!dry && present(&member["id"]).is_none())
+            || placeholder_only(member)
+        {
+            continue;
+        }
+        if member.is_string() {
+            return Err(super::payload::no_method("dig", member).into());
+        }
+        if let Some(profile) = member.get("profile").filter(|p| !p.is_null())
+            && !profile.is_object()
+        {
+            return Err(if profile.is_array() {
+                super::payload::type_error()
+            } else {
+                super::payload::Error {
+                    class: "TypeError",
+                    message: format!(
+                        "{} does not have #dig method",
+                        match profile {
+                            Value::Bool(false) => "FalseClass",
+                            Value::Bool(true) => "TrueClass",
+                            Value::String(_) => "String",
+                            Value::Number(n) if n.is_f64() => "Float",
+                            _ => "Integer",
+                        }
+                    ),
+                }
+            }
+            .into());
         }
     }
     let fresh: Vec<_> = members

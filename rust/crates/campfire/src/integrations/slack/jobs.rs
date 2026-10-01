@@ -53,7 +53,7 @@ async fn import_step(
             super::runner::Runner::new(
                 super::store::SqlStore {
                     db,
-                    lease,
+                    lease: Some(lease),
                     allowed_domains: super::store::allowed_domains(),
                 },
                 super::client::Client::with_network(token, None, pacing, network),
@@ -162,7 +162,12 @@ where
                 .filter(|e| e.kind == ErrorKind::RateLimited)
                 .and_then(|e| e.retry_after);
             let auth = slack.is_some_and(|e| e.kind == ErrorKind::Auth);
-            let message = error.to_string();
+            let message = match slack {
+                Some(e) if matches!(e.kind, ErrorKind::Exception(_)) => {
+                    format!("{}: {error}", e.ruby_class())
+                }
+                _ => error.to_string(),
+            };
             db.write(move |tx| {
                 let Some(run) = SlackImport::find(tx.conn(), id)? else { return Ok(()); };
                 if run.status == "running" {

@@ -57,7 +57,7 @@ fn text(value: &Value) -> String {
     match value {
         Value::Null => String::new(),
         Value::String(s) => s.clone(),
-        other => other.to_string(),
+        other => campfire_richtext::ruby::json_value_to_s(other),
     }
 }
 fn unescape(s: &str) -> String {
@@ -200,6 +200,38 @@ pub fn convert(message: &Value, users: &HashMap<String, String>) -> Converted {
         truncated,
         files_linked,
     }
+}
+
+/// The importer propagates Ruby access errors rather than dropping malformed fields.
+pub fn try_convert(
+    message: &Value,
+    users: &HashMap<String, String>,
+) -> Result<Converted, super::payload::Error> {
+    let mut normalized = super::payload::fields(
+        message,
+        &["text", "attachments", "files", "subtype", "bot_id"],
+    )?;
+    for (field, keys) in [
+        ("attachments", &["pretext", "text", "fallback"][..]),
+        (
+            "files",
+            &[
+                "name",
+                "title",
+                "permalink",
+                "permalink_public",
+                "url_private",
+            ][..],
+        ),
+    ] {
+        normalized[field] = Value::Array(
+            super::payload::array(&normalized[field])
+                .iter()
+                .map(|v| super::payload::fields(v, keys))
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+    }
+    Ok(convert(&normalized, users))
 }
 fn prose(s: &str, users: &HashMap<String, String>) -> String {
     let p = &*PATTERNS;

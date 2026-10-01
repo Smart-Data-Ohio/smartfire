@@ -412,6 +412,12 @@ impl SlackImport {
         if !run.undo_eligible() || run.undo_blocked_reason(tx.conn(), tx.now())?.is_some() {
             return Ok(false);
         }
+        Self::claim_undo(tx, id)
+    }
+
+    /// The status claim rechecks queue/lease exclusion even after a caller's pre-check.
+    pub(crate) fn claim_undo(tx: &mut Tx<'_>, id: i64) -> Result<bool> {
+        require_transaction(tx)?;
         let now = tx.now();
         let claimed = tx.conn().execute(&format!("UPDATE slack_imports SET status = 'undoing', state = '{{\"phase\":\"undo\"}}', stats = json_set(stats, '$.phase', 'undo'), heartbeat_at = ?, finished_at = NULL, updated_at = ? WHERE id = ? AND status IN ('completed','failed','cancelled') AND NOT EXISTS (SELECT 1 FROM slack_imports WHERE id != ? AND (status = 'queued' OR {BLOCKING}))"),
             params![now, now, id, id, lease_stamp(now.ago(STALE_HEARTBEAT))])? == 1;

@@ -3,6 +3,92 @@ use super::*;
 use campfire_jobs::inspect;
 
 #[tokio::test]
+async fn slack_converter_real_saves_match_rails_bodies_and_mentionees() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/rendering.json"
+    ))
+    .unwrap();
+    let (db, _, _dir) = super::super::jobs::tests::setup_sequence().await;
+    db.write(move |tx| {
+        let jane = User::create(
+            tx,
+            campfire_db::NewUser {
+                name: "Jane Doe".into(),
+                email_address: Some("conv-jane@example.com".into()),
+                ..Default::default()
+            },
+        )?;
+        assert_eq!(jane.id, 2);
+        let room = Room::create_for(
+            tx,
+            campfire_db::RoomType::Closed,
+            Some("Render fixture"),
+            1,
+            &[1, 2],
+        )?;
+        let users = serde_json::from_value(oracle["users"].clone()).unwrap();
+        for case in oracle["cases"].as_array().unwrap() {
+            let source =
+                super::super::markdown::convert(&json!({"text":case["text"]}), &users).markdown;
+            assert_eq!(source, case["markdown"]);
+            let message = Message::create_imported(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: room.id,
+                    creator_id: 1,
+                    markdown_source: Some(source),
+                    ..Default::default()
+                },
+                tx.now(),
+                None,
+            )?;
+            assert_eq!(
+                message.body_html(tx.conn())?.unwrap(),
+                case["body"],
+                "{}",
+                case["text"]
+            );
+            let mentioned = message
+                .mentionees(tx.conn(), tx.rich_text())?
+                .into_iter()
+                .map(|u| u.id)
+                .collect::<Vec<_>>();
+            assert_eq!(json!(mentioned), case["mentionees"]);
+        }
+        assert_eq!(
+            tx.conn()
+                .query_row("SELECT COUNT(*) FROM activity_items", [], |r| r
+                    .get::<_, i64>(0))?,
+            0
+        );
+        Ok(())
+    })
+    .await
+    .unwrap();
+    println!(
+        "Slack real-save rendering: 4 persisted body and mention goldens matched byte for byte"
+    );
+}
+
+#[tokio::test]
+async fn slack_writer_mapped_nonmember_mentions_render_tokens_and_unknown_labels_fall_back() {
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    db.write(move |tx| {
+        let jane=User::create_slack_placeholder(tx,campfire_db::NewUser{name:"Robin Returner".into(),..Default::default()},false,None,false)?;
+        users::record(tx,&run,"user","URET","User",jane.id,true)?;
+        let room=Room::create_for(tx,campfire_db::RoomType::Closed,Some("secret"),1,&[1])?;
+        let mut mapped=HashMap::new();
+        history(tx,&run,&room,"CPRIV",&[json!({"type":"message","user":"UOWNER","text":"hi <@URET|robin> and <@U999|ghost>","ts":"1700000031.000031"})],Bounds::default(),&mut mapped)?;
+        let message=Message::for_room(tx.conn(),room.id)?.pop().unwrap();
+        assert_eq!(message.markdown_source.as_deref(),Some("hi @[Robin Returner] and @ghost"));
+        assert!(message.body_html(tx.conn())?.unwrap().contains("@[Robin Returner]"));
+        assert!(message.mentionees(tx.conn(),tx.rich_text())?.is_empty());Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
 async fn slack_writer_history_replies_pins_reactions_are_quiet_and_keep_microseconds() {
     let (db, _, _dir) = setup().await;
     let id = start(&db).await;

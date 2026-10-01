@@ -187,7 +187,7 @@ fn prepare(
         .iter()
         .map(|(id, user)| (id.clone(), user.name.clone()))
         .collect();
-    let converted = markdown::convert(&source, &names);
+    let converted = markdown::try_convert(&source, &names)?;
     if converted.markdown.trim().is_empty() {
         add(&mut counts["skipped"], 1);
         return Ok(None);
@@ -664,7 +664,7 @@ pub fn dry_history(
             add(&mut counts["skipped"], 1);
             continue;
         }
-        let converted = markdown::convert(&message, &names);
+        let converted = markdown::try_convert(&message, &names)?;
         if converted.markdown.trim().is_empty() {
             add(&mut counts["skipped"], 1);
             continue;

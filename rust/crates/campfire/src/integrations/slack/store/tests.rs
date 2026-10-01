@@ -93,7 +93,7 @@ pub(crate) async fn import(
                 Runner::new(
                     SqlStore {
                         db: store_db,
-                        lease,
+                        lease: Some(lease),
                         allowed_domains: ["example.com".into()].into(),
                     },
                     Client::with_network(token, None, false, network),
@@ -211,7 +211,7 @@ async fn slack_sql_store_rejects_cancelled_or_replaced_lease_before_domain_write
     let p = Progress::new(row);
     let wrong = SqlStore {
         db: db.clone(),
-        lease: "wrong owner".into(),
+        lease: Some("wrong owner".into()),
         allowed_domains: HashSet::new(),
     };
     assert!(
@@ -229,7 +229,7 @@ async fn slack_sql_store_rejects_cancelled_or_replaced_lease_before_domain_write
         .unwrap();
     let store = SqlStore {
         db: db.clone(),
-        lease,
+        lease: Some(lease),
         allowed_domains: HashSet::new(),
     };
     assert!(

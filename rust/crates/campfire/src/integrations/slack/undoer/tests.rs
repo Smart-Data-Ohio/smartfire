@@ -48,6 +48,38 @@ async fn imported() -> (
     import(&db, crypto.clone(), id, network).await;
     (db, crypto, dir, id)
 }
+
+#[tokio::test]
+async fn slack_undo_saved_state_refreshes_heartbeat_and_owned_lease() {
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let token=db.write(move |tx| {
+        tx.conn().execute("UPDATE slack_imports SET status='undoing',state='{\"phase\":\"undo\",\"undo_step\":\"leaves\",\"undo_cursor\":0}' WHERE id=?",[id])?;
+        let token=SlackImport::acquire_step_lease(tx,id,campfire_db::models::slack_import::StepStatus::Undoing)?.unwrap();
+        tx.conn().execute("UPDATE slack_imports SET state=json_set(state,'$.step_started_at','2026-03-02T15:57:00.000000Z'),heartbeat_at='2026-03-02 15:57:00' WHERE id=?",[id])?;
+        Ok(token)
+    }).await.unwrap();
+    let before = run(&db, id).await;
+    assert_eq!(
+        Undoer {
+            db: db.clone(),
+            id,
+            lease: token.clone()
+        }
+        .step()
+        .await
+        .unwrap(),
+        Outcome::Continue
+    );
+    let after = run(&db, id).await;
+    assert_eq!(after.state["step_lease_token"], token);
+    assert_eq!(after.state["undo_step"], "messages");
+    assert!(
+        after.state["step_started_at"].as_str().unwrap()
+            > before.state["step_started_at"].as_str().unwrap()
+    );
+    assert!(after.heartbeat_at > before.heartbeat_at);
+}
 #[tokio::test]
 async fn slack_undo_deletes_data_search_and_mappings_then_reimports_fixture() {
     let (db, crypto, _dir, id) = imported().await;

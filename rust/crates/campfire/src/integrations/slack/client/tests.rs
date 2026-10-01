@@ -87,6 +87,104 @@ fn client(network: Network) -> Client {
     Client::with_network("fixture-slack-user-token".into(), None, false, network)
 }
 
+#[tokio::test]
+async fn slack_client_malformed_http_bodies_and_json_comments_match_rails() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/payloads.json"
+    ))
+    .unwrap();
+    let cases = oracle["http"].as_array().unwrap();
+    for row in cases {
+        let (server, network) = fake(vec![route(
+            "/api/users.list?limit=200",
+            row["status"].as_u64().unwrap() as u16,
+            row["body"].as_str().unwrap(),
+        )])
+        .await;
+        match client(network).users_list(None, 200).await {
+            Ok(value) => assert_eq!(value, row["expected"]["result"]),
+            Err(error) => {
+                assert_eq!(error.ruby_class(), row["expected"]["class"], "{row}");
+                assert_eq!(error.message, row["expected"]["message"], "{row}");
+            }
+        }
+        assert_eq!(
+            server.received().len(),
+            row["attempts"].as_u64().unwrap() as usize
+        );
+    }
+    println!(
+        "Slack malformed HTTP parity: {} Rails status/body/retry cases matched",
+        cases.len()
+    );
+}
+
+#[test]
+fn slack_client_transport_classes_messages_and_retryability_match_rails() {
+    use crate::integrations::net::http::HttpError;
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/payloads.json"
+    ))
+    .unwrap();
+    for row in oracle["transport"].as_array().unwrap() {
+        let message = row["input_message"].as_str().unwrap();
+        let io = |kind, s: &str| HttpError::Io(std::io::Error::new(kind, s.to_owned()));
+        let error = match row["input_class"].as_str().unwrap() {
+            "IOError" => io(std::io::ErrorKind::Other, message),
+            "EOFError" => io(std::io::ErrorKind::UnexpectedEof, message),
+            "SocketError" => HttpError::Unresolvable(message.into()),
+            "Net::OpenTimeout" => HttpError::OpenTimeout,
+            "Net::ReadTimeout" => HttpError::ReadTimeout,
+            "Net::WriteTimeout" => HttpError::WriteTimeout,
+            "Timeout::Error" => io(std::io::ErrorKind::TimedOut, message),
+            "Errno::ECONNRESET" => io(std::io::ErrorKind::ConnectionReset, "fixture reset"),
+            "Errno::ECONNREFUSED" => io(std::io::ErrorKind::ConnectionRefused, "fixture refused"),
+            "Errno::EPIPE" => io(std::io::ErrorKind::BrokenPipe, "fixture pipe"),
+            "OpenSSL::SSL::SSLError" => HttpError::Tls(message.into()),
+            _ => unreachable!(),
+        };
+        let mut error = network_error("users.list", error);
+        if error.kind == ErrorKind::Network {
+            error.kind = ErrorKind::Request;
+        }
+        assert_eq!(error.message, row["expected"]["message"]);
+        assert_eq!(error.ruby_class(), row["expected"]["class"]);
+        assert_eq!(
+            row["attempts"],
+            if matches!(error.kind, ErrorKind::Exception(_)) {
+                1
+            } else {
+                4
+            }
+        );
+    }
+}
+
+#[tokio::test]
+async fn slack_client_network_final_message_matches_rails_through_actual_dialer() {
+    struct Fail(AtomicUsize);
+    impl crate::integrations::net::Dialer for Fail {
+        fn connect(
+            &self,
+            _: std::net::SocketAddr,
+        ) -> crate::integrations::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
+        {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async { Err(std::io::Error::other("fixture io")) })
+        }
+    }
+    let (_server, mut network) = fake(vec![]).await;
+    let dialer = Arc::new(Fail(AtomicUsize::new(0)));
+    network.dialer = dialer.clone();
+    let error = client(network).users_list(None, 200).await.unwrap_err();
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/payloads.json"
+    ))
+    .unwrap();
+    assert_eq!(error.message, oracle["transport"][0]["expected"]["message"]);
+    assert_eq!(dialer.0.load(Ordering::SeqCst), 4);
+}
+
 #[test]
 fn slack_client_matches_rails_error_vectors() {
     let corpus: Value =
