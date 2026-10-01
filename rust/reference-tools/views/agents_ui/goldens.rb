@@ -76,6 +76,8 @@ class GoldenController
 end
 agent = bender.agent.reload
 request = AgentApproval.create!(agent:, action: "deploy", summary: "Ship <this> & notify")
+agent.update!(daily_message_cap: 1)
+AgentBudgetNotice.record_for!(agent, "messages")
 result[:inboxes] = {}
 %w[unread read handled].each do |filter|
   request.decide!(decision: "approved", by: david) if filter == "handled"

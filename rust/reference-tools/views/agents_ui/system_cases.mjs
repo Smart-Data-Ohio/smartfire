@@ -6,12 +6,12 @@ const require = createRequire(path.resolve('rust/parity/package.json'));
 const { chromium } = require('playwright');
 // Playwright's assertion library lives in @playwright/test, which this harness
 // deliberately does not add. Poll the same selector/text predicates directly.
-const [base, labelsFile, database] = process.argv.slice(2);
+const [base, labelsFile, database, scenario] = process.argv.slice(2);
 const labels = JSON.parse(fs.readFileSync(labelsFile, 'utf8'));
 const browser = await chromium.launch({executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox']});
 let passed = 0, failed = 0;
 const groups = new Map();
-const frozen = Date.parse('2026-03-02T16:00:00Z');
+const frozen = Date.parse(scenario === 'budget' ? '2026-03-03T16:00:00Z' : '2026-03-02T16:00:00Z');
 async function contains(locator, text, timeout = 2000) {
   await locator.filter({hasText: text}).first().waitFor({state: 'visible', timeout});
 }
@@ -36,6 +36,33 @@ async function run(file, name, user, check) {
   finally { await context.close(); }
 }
 try {
+  if (scenario === 'budget') {
+    await run('agent_streaming_test.rb','owner sees budgets, one budget item, and hits the kill switch','kevin',async page => {
+      const editUrl=`${base}/account/bots/${labels['users.bender']}/edit`;
+      const editReply=await page.request.get(editUrl);
+      if (editReply.status()!==200) throw new Error(`bot edit HTTP ${editReply.status()}`);
+      await visit(page,editUrl);
+      await contains(page.locator('body'),"Today's usage: 0/1 messages · 0/10 board posts");
+      if (await page.getByLabel('Board posts per day',{exact:true}).inputValue() !== '10') throw new Error('wrong board post cap');
+      const endpoint = `${base}/rooms/${labels['system.room']}/${labels['system.bot_key']}/messages`;
+      for (const expected of [201,429,429]) {
+        const response = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain'},body:'Only post'});
+        if (response.status !== expected) throw new Error(`bot message status ${response.status}, wanted ${expected}`);
+      }
+      await visit(page,`${base}/activity`);
+      const notices=page.locator('.activity-item').filter({hasText:'Budget exceeded'});
+      await contains(notices,'hit its daily messages budget');
+      if (await notices.count() !== 1) throw new Error('duplicate budget notices');
+      await visit(page,`${base}/account/bots/${labels['users.bender']}/edit`);
+      page.once('dialog',dialog => dialog.accept());
+      await page.getByRole('button',{name:'Kill switch: suspend agent',exact:true}).click();
+      await contains(page.locator('body'),'Agent suspended');
+      if (await page.getByRole('button',{name:'Kill switch: suspend agent',exact:true}).count()) throw new Error('suspend button still shown');
+      const {spawnSync}=await import('node:child_process');
+      const result=spawnSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); assert c.execute('SELECT suspended_at FROM agents WHERE user_id=?',(sys.argv[2],)).fetchone()[0] is not None",database,String(labels['users.bender'])]);
+      if (result.status !== 0) throw new Error('agent was not suspended');
+    });
+  } else {
   await run('agents_test.rb', 'member opens the agent directory and an agent profile', 'kevin', async page => {
     await joinRoom(page, labels['rooms.designers']);
     await page.getByRole('link', {name: 'Agents', exact: true}).click();
@@ -86,9 +113,10 @@ try {
     await contains(page.locator('.flash'),'Confirmation failed',10000);await visit(page,`${base}/account/edit`);
     if (await page.locator('#invite_url').inputValue() !== before) throw new Error('wrong password replayed the mutation');
   });
+  }
   for (const [file,[ok,bad]] of groups) console.log(`${file}: ${ok} passed; ${bad} failed`);
-  console.log('agent_streaming_test.rb: 2 deferred (live message mutation API; budget inbox page)');
+  console.log('agent_streaming_test.rb: 1 deferred (live message mutation API)');
   console.log('agent_work_assignment_test.rb: 1 deferred (work mutation API)');
-  console.log(`Agent system behavior: ${passed} passed; ${failed} failed; 3 deferred`);
+  console.log(`Agent system behavior: ${passed} passed; ${failed} failed; 2 deferred`);
 } finally {await browser.close();}
 process.exitCode = failed ? 1 : 0;

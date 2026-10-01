@@ -12,7 +12,7 @@
 {% endif %}  </div>
 
   <div class="activity-item__actions">
-    {{ self.action("open","Open",None) }}
+    {{ self.open_action() }}
 
 {% if item.state == "unread" %}      {{ self.action("read","Mark read",Some("read")) }}
 {% else %}      {{ self.action("read","Mark unread",Some("unread")) }}

@@ -108,6 +108,33 @@ pub fn item(
                 }
             }
         }
+        "AgentBudgetNotice" => {
+            // FLAGGED WS11 read seam: AgentBudgetNotice has no exported reader.
+            // Writes and fan-out stay in owner agent_posting::check_budget.
+            let (agent_id, cap, created): (i64, String, campfire_db::Timestamp) = conn.query_row(
+                "SELECT agent_id,cap,created_at FROM agent_budget_notices WHERE id=?",
+                [item.source_id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )?;
+            let agent = campfire_db::Agent::find(conn, agent_id)?.ok_or_else(|| {
+                campfire_db::Error::Other("Budget notice agent is missing".into())
+            })?;
+            let user = campfire_db::User::find(conn, agent.user_id)?;
+            let (label, limit) = match cap.as_str() {
+                "messages" => ("messages", agent.daily_message_cap),
+                "board_posts" => ("board posts", agent.daily_board_post_cap),
+                "external_actions" => ("external actions", agent.daily_external_action_cap),
+                _ => (cap.as_str(), None),
+            };
+            result.created_at = Some(created.jiff());
+            result.title = format!("{} · daily {label} budget", user.name);
+            result.body = format!(
+                "{} hit its daily {label} budget ({}/day).",
+                user.name,
+                limit.map(|v| v.to_string()).unwrap_or_default()
+            );
+            result.author = Some(user.name);
+        }
         "Event" => {
             type EventFacts = (
                 campfire_db::Timestamp,

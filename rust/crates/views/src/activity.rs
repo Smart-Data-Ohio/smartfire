@@ -142,9 +142,9 @@ impl List<'_> {
         .render()
         .map(|html| {
             h::raw(if item.approval.is_some() {
-                format!("    {html}\n\n\n")
+                format!("  {html}\n\n\n")
             } else {
-                html
+                format!("{html}\n")
             })
         })
     }
@@ -159,6 +159,18 @@ struct ItemView<'a> {
     now: jiff::Timestamp,
 }
 impl ItemView<'_> {
+    fn open_action(&self) -> h::Html {
+        let form = self.action("open", "Open", None);
+        h::raw(format!(
+            "{}{}",
+            if self.item.approval.is_some() {
+                ""
+            } else {
+                "  "
+            },
+            form
+        ))
+    }
     fn timestamp(&self) -> h::Html {
         self.item
             .created_at
