@@ -27,6 +27,7 @@ run account_views default vectors/users_account_views.json account-views
 run audit_logs default vectors/users_audit_logs.json audit-logs
 run icons default vectors/users_icons.json icons
 run attachment_endpoints default vectors/users_attachment_endpoints.json attachment-endpoints
+run account_audit_failures default vectors/users_account_audit_failures.json account-audit-failures
 run first_run_attachment_failure first_run vectors/users_first_run_attachment_failure.json first-run-attachment-failure
 run logos default vectors/users_logos.json logos
 run onboarding first_run vectors/users_first_run.json first-run
@@ -45,7 +46,7 @@ run pwa first_run vectors/users_pwa_first_run.json pwa-first-run
 run zones first_run crates/db/src/slash_commands/rails_zone_identifiers.json zones
 run zones first_run crates/db/src/slash_commands/rails_named_zones.json named-zones named
 if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then
-  echo 'WS8br2 oracle generation: 31 fresh unnormalized files written'
+  echo 'WS8br2 oracle generation: 32 fresh unnormalized files written'
 else
-  echo 'WS8br2 oracle verification: all 31 fresh files match byte for byte; no masks or normalization'
+  echo 'WS8br2 oracle verification: all 32 fresh files match byte for byte; no masks or normalization'
 fi

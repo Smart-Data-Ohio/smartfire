@@ -31,11 +31,17 @@ pub async fn update(c: &mut Ctx) -> Result {
         value => value.to_s(),
     });
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    c.app()
+    let (before, account) = c.app()
         .db
-        .write(move |tx| crate::account_security::update_styles(tx, &mut account, custom_styles.as_ref().map(|styles| styles.as_deref()), &audit))
+        .write(move |tx| {
+            let before = account.clone();
+            account.update(tx, None, custom_styles.as_ref().map(|styles| styles.as_deref()), None)?;
+            Ok((before, account))
+        })
         .await
         .map_err(Error::internal)?;
+    // Rails update! and all save callbacks return before auditing the changed styles.
+    c.app().db.write(move |tx| crate::account_security::styles_changed(tx, &before, &account, &audit)).await.map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account_custom_styles());
     c.redirect_to_with(&location, Redirect { notice: Some("✓".into()), ..Redirect::default() })
 }

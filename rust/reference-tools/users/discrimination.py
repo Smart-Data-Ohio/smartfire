@@ -18,7 +18,25 @@ account_audit_block = account_source[account_start:account_end]
 early_audit = account_audit_block[:account_audit_block.index("    // Rails record_settings_changes")]
 early_audit = early_audit.replace("    let (before, account, before_logo, after_logo) = c", "    c")
 early_audit = early_audit.replace("            Ok((before, account, before_logo, after_logo))", "            crate::account_security::settings_changed(tx, &before, &account, before_logo, after_logo, &audit)?;\n            Ok(())")
+def account_block(relative, start):
+    source = (root / relative).read_text()
+    return source[source.index(start):source.index("    let location =", source.index(start))]
+join_path = "crates/campfire/src/controllers/accounts/join_codes.rs"
+join_block = account_block(join_path, "    let account = c.app().db.write")
+early_join = "    c.app().db.write(move |tx| {\n        account.reset_join_code(tx)?;\n        crate::account_security::join_code_reset(tx, &account, &audit)\n    }).await.map_err(Error::internal)?;\n"
+styles_path = "crates/campfire/src/controllers/accounts/custom_styles.rs"
+styles_block = account_block(styles_path, "    let (before, account) = c.app()")
+early_styles = styles_block[:styles_block.index("    // Rails update!")].replace("    let (before, account) = c.app()", "    c.app()").replace("            Ok((before, account))", "            crate::account_security::styles_changed(tx, &before, &account, &audit)")
+logo_path = "crates/campfire/src/controllers/accounts/logos.rs"
+logo_source = (root / logo_path).read_text()
+logo_start = logo_source.index("    c.app()", logo_source.index("pub async fn destroy"))
+logo_block = logo_source[logo_start:logo_source.index("    let location =", logo_start)]
+early_logo = logo_block[:logo_block.index("    // Rails destroys")].replace("            Ok(())", "            crate::account_security::logo_removed(tx, &account, &audit)")
+failure_test = "account_audit_failure_preserves_rails_committed_settings_code_styles_and_logo"
 mutations = [
+    ("join-audit-rollback", join_path, join_block, early_join, failure_test),
+    ("styles-audit-rollback", styles_path, styles_block, early_styles, failure_test),
+    ("logo-audit-rollback", logo_path, logo_block, early_logo, failure_test),
     ("account-audit-order", "crates/campfire/src/controllers/accounts.rs", account_audit_block, early_audit, "logo_null_analysis_and_audit_failures_match_rails_after_commit_boundaries"),
     ("logo-null-analysis", "crates/campfire/src/controllers/presenters/attachments.rs", "if !blob.is_analyzed() {", "if false {", "logo_null_analysis_and_audit_failures_match_rails_after_commit_boundaries"),
     ("fizzy-token-usability", "crates/campfire/src/controllers/presenters/fizzy_profile.rs", "let usable = account.usable_token(tx, &crypto)?.is_some();", "let usable = true;", "blank"),
