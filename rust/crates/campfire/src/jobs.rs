@@ -43,6 +43,7 @@ use crate::config::Config;
 
 pub mod periodic;
 mod messaging;
+pub(crate) mod huddle;
 mod notifications;
 mod peer_callbacks;
 #[cfg(test)]
@@ -179,6 +180,7 @@ pub fn registry() -> Registry {
     registry.register(analyze_blob);
     registry.register(quote_cards_refresh);
     messaging::register(&mut registry);
+    huddle::register(&mut registry);
     notifications::register(&mut registry);
     // Room::PushMessageJob and Bot::WebhookJob
     crate::integrations::register_jobs(&mut registry);
@@ -478,3 +480,9 @@ mod tests;
 
 #[cfg(test)]
 mod peer_callback_tests;
+#[cfg(test)]
+mod huddle_render_tests;
+#[cfg(test)]
+mod huddle_policy_integration_tests;
+#[cfg(test)]
+mod huddle_neighbor_mention_test;

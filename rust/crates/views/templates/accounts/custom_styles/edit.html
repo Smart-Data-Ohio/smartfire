@@ -5,7 +5,9 @@
     {{ h::link_back_to(ctx, h::routes::edit_account()) }}
   </div>
 {% endblock %}
-{% block content %}<section class="panel panel--wide txt-align-center flex flex-column position-relative" style="view-transition-name: custom-styles">
+{% block content %}
+
+<section class="panel panel--wide txt-align-center flex flex-column position-relative" style="view-transition-name: custom-styles">
 {% let form = h::form_with(ctx.url(h::routes::account_custom_styles().as_str())).model("account").method("patch").class("flex flex-column gap").data("controller", "form").data("action", "keydown.ctrl+enter->form#submit keydown.meta+enter->form#submit") %}  {% filter form_with(form) %}
     <div class="panel__button">
       {{ h::translation_button(ctx, "custom_styles") }}

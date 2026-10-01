@@ -13,10 +13,12 @@ mod huddle_readiness;
 mod picker_configuration;
 mod controllers;
 mod integrations;
+mod huddle;
 mod jobs;
 mod mail;
 mod rich_text;
 mod messaging;
+mod public_policy;
 mod security;
 
 /// jemalloc: the room page alone makes thousands of allocations per request, across as many

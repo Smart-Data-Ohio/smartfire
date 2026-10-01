@@ -1,7 +1,7 @@
 {% extends "layouts/application.html" %}
 {%- block head %}{% endblock %}
 
-{% block content %}{% let form = h::form_with(h::routes::first_run()).model("user").class("center max-width") %}{% filter form_with(form) %}
+{% block content %}{{ "\n" }}{% let form = h::form_with(h::routes::first_run()).model("user").class("center max-width") %}{% filter form_with(form) %}
   <section class="nametag u-relative">
     <div class="flex justify-center align-center pad-block">
       {{ h::image_tag(ctx, "lanyard.svg", h::attrs().class("nametag__lanyard").aria_hidden()) }}

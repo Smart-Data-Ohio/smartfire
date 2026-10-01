@@ -195,6 +195,11 @@ impl FormWith {
         self.with_field_error(method, self.builder().input_field("text", method, value, options))
     }
 
+    /// `Tags::DateField#render`, with the caller's canonical Date value.
+    pub fn date_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
+        self.builder().input_field("date", method, value, options)
+    }
+
     pub fn email_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
         self.builder().input_field("email", method, value, options)
     }

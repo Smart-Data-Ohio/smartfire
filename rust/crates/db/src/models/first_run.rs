@@ -21,12 +21,22 @@ impl FirstRun {
         password_digest: PasswordDigest,
     ) -> Result<User> {
         Account::create(tx, Self::ACCOUNT_NAME)?;
+        Self::create_administrator(tx, name, Some(email_address), Some(password_digest))
+    }
+
+    /// The room save follows Account.create!'s independent commit in the Rails service.
+    pub fn create_administrator(
+        tx: &mut Tx<'_>,
+        name: &str,
+        email_address: Option<&str>,
+        password_digest: Option<PasswordDigest>,
+    ) -> Result<User> {
         let administrator = User::create(
             tx,
             NewUser {
                 name: name.into(),
-                email_address: Some(email_address.into()),
-                password_digest: Some(password_digest),
+                email_address: email_address.map(str::to_owned),
+                password_digest,
                 role: Role::Administrator,
                 ..Default::default()
             },

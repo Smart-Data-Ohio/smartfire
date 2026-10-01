@@ -4,7 +4,7 @@ use super::*;
 use rusqlite::types::Value as SqlValue;
 use std::collections::HashMap;
 
-pub(super) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
+pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     let mut stmt = tx.conn().prepare("SELECT * FROM users WHERE id=?")?;
     let columns = stmt
         .column_names()

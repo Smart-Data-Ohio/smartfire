@@ -65,8 +65,7 @@ pub fn settings_changed(
     Ok(())
 }
 
-pub fn reset_join_code(tx: &mut Tx<'_>, account: &mut Account, context: &Context) -> Result<()> {
-    account.reset_join_code(tx)?;
+pub fn join_code_reset(tx: &Tx<'_>, account: &Account, context: &Context) -> Result<()> {
     record(tx, account, "account.join_code.reset", json!({}), context)
 }
 
@@ -76,21 +75,19 @@ fn style_summary(styles: Option<&str>) -> Value {
     let digest = format!("{:x}", Sha256::digest(styles.as_bytes()));
     json!({"size":styles.len(),"digest":&digest[..12]})
 }
-pub fn update_styles(
-    tx: &mut Tx<'_>,
-    account: &mut Account,
-    styles: Option<Option<&str>>,
+pub fn styles_changed(
+    tx: &Tx<'_>,
+    before: &Account,
+    account: &Account,
     context: &Context,
 ) -> Result<()> {
-    let before = account.custom_styles.clone();
-    account.update(tx, None, styles, None)?;
-    if before != account.custom_styles {
+    if before.custom_styles != account.custom_styles {
         record(
             tx,
             account,
             "account.custom_styles.change",
             json!({"custom_styles":{
-                "before":style_summary(before.as_deref()),"after":style_summary(account.custom_styles.as_deref())
+                "before":style_summary(before.custom_styles.as_deref()),"after":style_summary(account.custom_styles.as_deref())
             }}),
             context,
         )?;

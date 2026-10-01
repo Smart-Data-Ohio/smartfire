@@ -626,8 +626,18 @@ impl Ctx {
         }
         let flash = self.flash();
         if !flash.is_empty() {
-            let flashes: Vec<String> = flash.keys().map(|k| format!("{k}={:?}", flash.get(k))).collect();
-            parts.push(flashes.join("&"));
+            // WS8br2 logo uploads exercise EtagWithFlash: Cache.expand_cache_key
+            // recursively expands FlashHash#to_a, retaining insertion order.
+            fn expand(value: &serde_json::Value) -> String {
+                match value {
+                    serde_json::Value::Null => String::new(),
+                    serde_json::Value::String(value) => value.clone(),
+                    serde_json::Value::Array(values) => values.iter().map(expand).collect::<Vec<_>>().join("/"),
+                    serde_json::Value::Object(values) => values.iter().map(|(key,value)|format!("{key}/{}",expand(value))).collect::<Vec<_>>().join("/"),
+                    value => value.to_string(),
+                }
+            }
+            parts.push(flash.keys().map(|key|format!("{key}/{}",expand(flash.get(key).unwrap()))).collect::<Vec<_>>().join("/"));
         }
         // Rails installs the template/flash etaggers before turbo-rails' FrameRequest.
         if self.is_turbo_frame_request() {
@@ -636,7 +646,8 @@ impl Ctx {
         hex::encode(&Sha256::digest(parts.join("/"))[..16])
     }
 
-    fn is_fresh(&self) -> bool {
+    /// Rails `request.fresh?(response)` for controllers with an explicit ETag (WS8br2 icons).
+    pub fn is_fresh(&self) -> bool {
         let header = |name| self.headers.get(name).and_then(|v: &HeaderValue| v.to_str().ok());
         is_fresh(&self.request, header(header::ETAG), header(header::LAST_MODIFIED))
     }

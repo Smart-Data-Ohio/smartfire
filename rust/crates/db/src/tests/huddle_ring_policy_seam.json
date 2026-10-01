@@ -1,0 +1,698 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "default",
+      "title": "an invitation rings a member who is not in do-not-disturb",
+      "outcomes": [
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dnd",
+      "title": "do-not-disturb silences the ring",
+      "outcomes": [
+        {
+          "setup_sql": "UPDATE users SET presence_setting='dnd',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "dnd",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "allowed_dnd",
+      "title": "a caller allowed during do-not-disturb still rings",
+      "outcomes": [
+        {
+          "setup_sql": "UPDATE users SET presence_setting='dnd',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659);",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "dnd",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        },
+        {
+          "setup_sql": "UPDATE users SET presence_setting='dnd',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659);",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "dnd",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 712064548,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 712064548,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "Kevin",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "quiet_override",
+      "title": "a quiet check override replaces the policy",
+      "outcomes": [
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": null,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": true,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        },
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=127326141; DELETE FROM dnd_allowed_users WHERE user_id=127326141; DELETE FROM calendar_meeting_caches WHERE user_id=127326141;",
+          "context": {
+            "recipient": {
+              "id": 127326141,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": null,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": true,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_127326141_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "Jason",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "meeting",
+      "title": "quiet-during-meetings silences the ring during a busy interval",
+      "outcomes": [
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=1,meeting_dnd_enabled=1,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO calendar_meeting_caches(id,busy_intervals,created_at,fetch_error,fetched_at,in_meeting_broadcast,ooo_intervals,refresh_pending_at,updated_at,user_id) VALUES(1,'[[\"2026-09-23T11:55:00Z\",\"2026-09-23T12:55:00Z\"]]','2026-09-23 12:00:00',NULL,'2026-09-23 12:00:00',NULL,'[]',NULL,'2026-09-23 12:00:00',149087659);",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": true,
+              "meeting_dnd_enabled": true,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": {
+              "id": 1,
+              "busy_intervals": [
+                [
+                  "2026-09-23T11:55:00Z",
+                  "2026-09-23T12:55:00Z"
+                ]
+              ],
+              "created_at": "2026-09-23 12:00:00 UTC",
+              "fetch_error": null,
+              "fetched_at": "2026-09-23 12:00:00 UTC",
+              "in_meeting_broadcast": null,
+              "ooo_intervals": [],
+              "refresh_pending_at": null,
+              "updated_at": "2026-09-23 12:00:00 UTC",
+              "user_id": 149087659
+            }
+          },
+          "sound_allowed": false,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "allowed_meeting",
+      "title": "a caller allowed during do-not-disturb still rings through a meeting",
+      "outcomes": [
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=1,meeting_dnd_enabled=1,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659); INSERT INTO calendar_meeting_caches(id,busy_intervals,created_at,fetch_error,fetched_at,in_meeting_broadcast,ooo_intervals,refresh_pending_at,updated_at,user_id) VALUES(1,'[[\"2026-09-23T11:55:00Z\",\"2026-09-23T12:55:00Z\"]]','2026-09-23 12:00:00',NULL,'2026-09-23 12:00:00',NULL,'[]',NULL,'2026-09-23 12:00:00',149087659);",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": true,
+              "meeting_dnd_enabled": true,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": {
+              "id": 1,
+              "busy_intervals": [
+                [
+                  "2026-09-23T11:55:00Z",
+                  "2026-09-23T12:55:00Z"
+                ]
+              ],
+              "created_at": "2026-09-23 12:00:00 UTC",
+              "fetch_error": null,
+              "fetched_at": "2026-09-23 12:00:00 UTC",
+              "in_meeting_broadcast": null,
+              "ooo_intervals": [],
+              "refresh_pending_at": null,
+              "updated_at": "2026-09-23 12:00:00 UTC",
+              "user_id": 149087659
+            }
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        },
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=1,meeting_dnd_enabled=1,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659); INSERT INTO calendar_meeting_caches(id,busy_intervals,created_at,fetch_error,fetched_at,in_meeting_broadcast,ooo_intervals,refresh_pending_at,updated_at,user_id) VALUES(1,'[[\"2026-09-23T11:55:00Z\",\"2026-09-23T12:55:00Z\"]]','2026-09-23 12:00:00',NULL,'2026-09-23 12:00:00',NULL,'[]',NULL,'2026-09-23 12:00:00',149087659);",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": true,
+              "meeting_dnd_enabled": true,
+              "ooo_until": null,
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 712064548,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": {
+              "id": 1,
+              "busy_intervals": [
+                [
+                  "2026-09-23T11:55:00Z",
+                  "2026-09-23T12:55:00Z"
+                ]
+              ],
+              "created_at": "2026-09-23 12:00:00 UTC",
+              "fetch_error": null,
+              "fetched_at": "2026-09-23 12:00:00 UTC",
+              "in_meeting_broadcast": null,
+              "ooo_intervals": [],
+              "refresh_pending_at": null,
+              "updated_at": "2026-09-23 12:00:00 UTC",
+              "user_id": 149087659
+            }
+          },
+          "sound_allowed": false,
+          "sender_id": 712064548,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "Kevin",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ooo",
+      "title": "out of office silences the ring unless the member keeps notifications on",
+      "outcomes": [
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until='2026-09-24 12:00:00',ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": "2026-09-24 12:00:00 UTC",
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        },
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until='2026-09-24 12:00:00',ooo_notify_enabled=1 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": "2026-09-24 12:00:00 UTC",
+              "ooo_notify_enabled": true
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "allowed_ooo",
+      "title": "a caller allowed during do-not-disturb still rings through out of office",
+      "outcomes": [
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until='2026-09-24 12:00:00',ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659);",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": "2026-09-24 12:00:00 UTC",
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 127326141,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": null
+          },
+          "sound_allowed": true,
+          "sender_id": 127326141,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          }
+        },
+        {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until='2026-09-24 12:00:00',ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659);",
+          "context": {
+            "recipient": {
+              "id": 149087659,
+              "presence_setting": "auto",
+              "dnd_enabled": false,
+              "dnd_until": null,
+              "quiet_hours_enabled": false,
+              "quiet_hours_start_minute": null,
+              "quiet_hours_end_minute": null,
+              "time_zone": null,
+              "meeting_status_enabled": false,
+              "meeting_dnd_enabled": false,
+              "ooo_until": "2026-09-24 12:00:00 UTC",
+              "ooo_notify_enabled": false
+            },
+            "caller_id": 712064548,
+            "kind": "huddle",
+            "now": 1790164800,
+            "quiet_override": false,
+            "allowed_user_ids": [
+              127326141
+            ],
+            "meeting_cache": null
+          },
+          "sound_allowed": false,
+          "sender_id": 712064548,
+          "broadcast": {
+            "stream": "user_149087659_activity",
+            "payload": {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "Kevin",
+                "readPath": "",
+                "handledPath": "",
+                "silent": true
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
