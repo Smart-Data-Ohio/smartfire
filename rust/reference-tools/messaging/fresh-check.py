@@ -50,9 +50,9 @@ done
     Path("/tmp/rust-port-rustc-slots").mkdir(exist_ok=True)
     print(f"WS8bm pinned processing: {options.toolchain_image}; shared machine rustc flock slots", flush=True)
 
-def pinned_command(command):
+def pinned_command(command, name):
     cargo = command[command.index("cargo"):]
-    result = ["docker", "run", "--rm", "--cpus", "2", "--user", f"{os.getuid()}:{os.getgid()}",
+    result = ["docker", "run", "--rm", "--name", f"{clone.name}-{name}", "--cpus", "2", "--user", f"{os.getuid()}:{os.getgid()}",
               "--workdir", "/src", "-v", f"{clone}:/src",
               "-v", f"{Path.home() / '.cargo/registry'}:/src/.scratch/cargo-home/registry",
               "-v", "/tmp/rust-port-rustc-slots:/tmp/rust-port-rustc-slots",
@@ -73,7 +73,7 @@ commands = [
 failures = []
 for name, command in commands:
     if name in ["workspace", "clippy"] and not options.native:
-        command = pinned_command(command)
+        command = pinned_command(command, name)
     with (clone / ".scratch" / f"{name}.log").open("w") as log:
         result = subprocess.run(command, cwd=clone, env=env, stdout=log, stderr=subprocess.STDOUT)
     output = (clone / ".scratch" / f"{name}.log").read_text()
