@@ -56,19 +56,19 @@ def replace_body(source, marker, body):
 
 
 mutations = [
-    ("quote-renderer-origin-binding-bypassed", ROOT / "rust/crates/views/src/messages.rs", lambda s: replace_once(s, "body.replace(&from, &to)", "{ let _=(&from,&to); body.clone() }"), "campfire", "warm_quote_parent_refreshes_legacy_edits_and_source_names"),
-    ("quote-source-cache-dependencies-bypassed", ROOT / "rust/crates/campfire/src/controllers/presenters.rs", lambda s: replace_once(s, "if !quote_stamp.is_empty() {", "if false && !quote_stamp.is_empty() {"), "campfire", "warm_quote_parent_refreshes_legacy_edits_and_source_names"),
-    ("cross-room-quote-cache-leaks-private-source", ROOT / "rust/crates/campfire/src/controllers/presenters/message_links.rs", lambda s: replace_once(s, "if source.room_id != message.room_id {", "if false && source.room_id != message.room_id {"), "campfire", "cross_room_quote_parent_never_renders_private_source_facts"),
-    ("room-populated-collection-rendering-bypassed", ROOT / "rust/crates/views/templates/rooms/show.html", lambda s: replace_once(s, "{{ self.timeline()|safe }}", "{{ \"\" }}"), "campfire", "full_room_pages_match_thirty_eight_complete_rails_pages"),
-    ("room-row-callback-rendering-bypassed", Z, lambda s: replace_once(s, "super::room_composition::deliver(app,&broadcast)?", "false && super::room_composition::deliver(app,&broadcast)?"), "campfire", "composed_sidebar_ooo_after_commit_updates_and_clears_real_subscriptions"),
+    ("quote-renderer-origin-binding-bypassed", ROOT / "rust/crates/views/templates/messages/message_links/_card.html", lambda s: replace_once(s, '&format!("{}{}", self.ctx.base_url, self.card.message_path)', '&self.card.message_path'), "campfire", "warm_quote_parent_refreshes_legacy_edits_and_source_names"),
+    ("quote-source-cache-dependencies-bypassed", ROOT / "rust/crates/campfire/src/controllers/presenters/message_cache.rs", lambda s: replace_once(s, "WHERE ref.message_id=? ORDER BY ref.id", "WHERE ref.message_id=? AND 0 ORDER BY ref.id"), "campfire", "warm_quote_parent_refreshes_legacy_edits_and_source_names"),
+    ("cross-room-quote-cache-leaks-private-source", ROOT / "rust/crates/campfire/src/controllers/presenters.rs", lambda s: replace_once(s, "if source.room_id == message.room_id {", "if true || source.room_id == message.room_id {"), "campfire", "cross_room_quote_parent_never_renders_private_source_facts"),
+    ("room-populated-collection-rendering-bypassed", ROOT / "rust/crates/views/templates/rooms/show.html", lambda s: replace_once(s, "{{ crate::rooms::room_message_list(ctx, show) }}", "{{ \"\" }}"), "campfire", "full_room_pages_match_thirty_eight_complete_rails_pages"),
+    ("room-row-callback-rendering-bypassed", Z, lambda s: replace_once(s, "super::room_composition::deliver(app, &broadcast)?", "false && super::room_composition::deliver(app, &broadcast)?"), "campfire", "composed_sidebar_ooo_after_commit_updates_and_clears_real_subscriptions"),
     ("room-shell-invisible-notice-leaks", ROOT / "rust/crates/campfire/src/controllers/rooms/shell.rs", lambda s: replace_once(s, 'presence != "invisible"', 'presence != "never-invisible"'), "campfire", "room_shell_ooo_request_adapter_matches_recorded_calendar_and_manual_states"),
     ("room-shell-scroll-threshold-corrupted", ROOT / "rust/crates/campfire/src/controllers/rooms/shell.rs", lambda s: replace_once(s, 'state.unread_count > 5', 'state.unread_count > 4'), "campfire", "room_shell_unread_pointer_matches_count_threshold_deleted_cursor_and_off_page_jump"),
 
-    ("full-sidebar-request-composition-bypassed", ROOT / "rust/crates/campfire/src/controllers/users/sidebars.rs", lambda s: replace_once(s, "composition: Some(sidebar)", "composition: None"), "campfire", "full_sidebar_request_composes_workspace_destinations_and_profile_card_trigger"),
-    ("full-sidebar-menu-viewer-flags-corrupted", ROOT / "rust/crates/views/src/users/sidebar.rs", lambda s: replace_once(s, '.data("menu_can_delete", self.call.can_delete)', '.data("menu_can_delete", false)'), "campfire", "full_sidebar_matches_seventeen_complete_post_fix_rails_renders"),
+    ("full-sidebar-request-composition-bypassed", ROOT / "rust/crates/campfire/src/controllers/users/sidebars.rs", lambda s: replace_once(s, "if c.app().config.huddle.configured() {", "if false && c.app().config.huddle.configured() {"), "campfire", "full_sidebar_request_composes_workspace_destinations_and_profile_card_trigger"),
+    ("full-sidebar-menu-viewer-flags-corrupted", ROOT / "rust/crates/views/src/users/sidebar.rs", lambda s: replace_once(s, '.data("menu_can_delete", self.menu_can_delete)', '.data("menu_can_delete", false)'), "campfire", "full_sidebar_matches_seventeen_complete_post_fix_rails_renders"),
     ("room-composition-room-binding-corrupted", ROOT / "rust/crates/views/templates/rooms/composition/_composer_none.html", lambda s: replace_once(s, 'data-typing-notifications-room-id-value="{{ room.id }}"', 'data-typing-notifications-room-id-value="0"'), "campfire", "room_composition_matches_thirty_complete_rails_partials"),
-    ("room-composition-request-panels-bypassed", ROOT / "rust/crates/views/templates/rooms/show.html", lambda s: replace_once(s, '{{ self.composition("member_panel")|safe }}', ''), "campfire", "room_composition_replaces_the_upstream_composer_with_rails_markdown"),
-    ("runtime-chrome-request-adapter-bypassed", ROOT / "rust/crates/campfire/src/controllers/presenters/view_context.rs", lambda s: replace_once(s, "Some(user_id) => user_preferences_at(conn, user_id, now)?,", "Some(user_id) => { let mut p=user_preferences_at(conn, user_id, now)?; p.notification_sounds=Default::default(); p },"), "campfire", "runtime_chrome_reads_twenty_three_recorded_rails_sound_and_drive_states"),
+    ("room-composition-request-panels-bypassed", ROOT / "rust/crates/views/templates/rooms/show.html", lambda s: replace_once(s, '{% include "rooms/show/_member_panel.html" %}', ''), "campfire", "room_composition_replaces_the_upstream_composer_with_rails_markdown"),
+    ("runtime-chrome-request-adapter-bypassed", ROOT / "rust/crates/campfire/src/controllers/presenters/view_context.rs", lambda s: replace_once(s, "user_preferences(conn,user_id,now.jiff())", "{ let mut p=user_preferences(conn,user_id,now.jiff())?; p.notification_sounds=Default::default(); Ok(p) }"), "campfire", "runtime_chrome_reads_twenty_three_recorded_rails_sound_and_drive_states"),
     ("remaining-stage-type-isolation-bypassed", R, lambda s: replace_once(s, "if room.stage() =>", "if !room.direct() =>"), "campfire", "remaining_call_security_keeps_stage_actions_private_and_type_scoped"),
     ("remaining-internal-steady-check-writes", I, lambda s: replace_once(s, "if !authorized || seen_due {", "if true || !authorized || seen_due {"), "campfire", "remaining_gateway_steady_state_has_no_transaction_and_denial_revokes_once"),
     ("remaining-personal-roster-bypassed", B, lambda s: replace_body(s, "pub(crate) fn stage_roster(", "Ok(())"), "campfire", "remaining_hands_roles_and_mute_deliver_exact_personalized_frames"),
@@ -86,7 +86,7 @@ mutations = [
     ("call-channel-sole-host-check-bypassed", K, lambda s: replace_once(s,"if room.stage() && has_remaining_ids {","if false && room.stage() && has_remaining_ids {"),"campfire","stage_member_edit_cannot_remove_the_sole_host_or_commit_the_rename"),
     ("call-channel-broadcast-bypassed", K, lambda s: replace_body(s,"async fn broadcast(","Ok(())"),"campfire","call_channel_create_and_member_revision_deliver_ordered_sidebar_and_header_frames"),
     ("call-channel-removal-header-bypassed", Z, lambda s: replace_once(s,"app.config.huddle.configured()","false && app.config.huddle.configured()"),"campfire","call_channel_create_and_member_revision_deliver_ordered_sidebar_and_header_frames"),
-    ("call-channel-deletion-seam-bypassed", K, lambda s: replace_once(s,"campfire_db::models::room_delete::begin_destroy(tx, &deleted, &config)?;","deleted.destroy(tx)?;"),"campfire","deleting_a_call_channel_uses_ws8a_marking_and_ends_grants_and_streams_before_reply"),
+    ("call-channel-deletion-seam-bypassed", K, lambda s: replace_once(s,"campfire_db::models::room_delete::begin_destroy(tx, &deleted, &config)","deleted.destroy(tx)"),"campfire","deleting_a_call_channel_uses_ws8a_marking_and_ends_grants_and_streams_before_reply"),
     ("public-auth-overrides-bypassed", F, lambda s: replace_once(s,"Some(request_authentication),","None,"),"campfire","public_huddle_authentication_errors_precede_csrf_and_configuration"),
     ("public-cache-prepend-bypassed", F, lambda s: replace_once(s,'c.set_header("cache-control", "no-store");',""),"campfire","public_huddle_authentication_errors_precede_csrf_and_configuration"),
     ("public-deleted-room-exposed", F, lambda s: replace_once(s,"if !room.deleted()","if true"),"campfire","public_huddle_http_matches_production_rails"),
@@ -166,33 +166,63 @@ mutations = [
     ("cleanup-worker-bypassed", J, lambda s: replace_body(s, "async fn cleanup(", "Ok(Outcome::Done)"), "campfire", "huddle::tests::cleanup_background_queue_and_http_enqueue_rollback"),
 ]
 
-environment = dict(os.environ, TMPDIR=str(ROOT / ".scratch"), CARGO_TARGET_DIR=str(ROOT / "rust/target"),
-                   CI="1", CABLE_TEST_PORT_RANGE="52300-52349", MAIL_TEST_PORT_RANGE="52350-52399")
-if len(sys.argv)>1:
-    if sys.argv[1]=="--only":
-        assert len(sys.argv)==3, "usage: --only REGEX"
-        mutations=[entry for entry in mutations if re.search(sys.argv[2],entry[0])]
-        assert mutations
-    else:
-        selected=set(sys.argv[1:])
-        assert selected <= {entry[0] for entry in mutations},selected
-        mutations=[entry for entry in mutations if entry[0] in selected]
-for name, path, mutate, package, test in mutations:
-    original = path.read_text()
-    try:
-        path.write_text(mutate(original))
-        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "2",
-                   "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", package]
-        if package == "campfire":
-            command += ["--bin", "campfire"]
-        command += [test, "--", "--nocapture", "--test-threads=8"]
-        result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
-        output = result.stdout + result.stderr
-        (SCRATCH / f"{name}.log").write_text(output)
-        summaries = re.findall(r"^test result: FAILED\..*$", output, re.M)
-        assert result.returncode != 0 and summaries and "could not compile" not in output, output[-5000:]
-        assert "panicked at" in output, output[-5000:]
-        print(f"{name}: {summaries[-1]}", flush=True)
-    finally:
-        path.write_text(original)
-print(f"WS13 discrimination: {len(mutations)} compiled regressions detected; sources restored", flush=True)
+def preflight(entries):
+    errors = []
+    for name, path, mutate, _, _ in entries:
+        try:
+            original = path.read_text()
+            assert mutate(original) != original, "mutation did not change the source"
+        except (AssertionError, ValueError) as error:
+            errors.append(f"{name}: {error}")
+    return errors
+
+
+def main():
+    global mutations
+    environment = dict(os.environ, TMPDIR=str(ROOT / ".scratch"), CARGO_TARGET_DIR=os.environ.get("CARGO_TARGET_DIR", str(ROOT / "rust/target")),
+                       CI="1", CABLE_TEST_PORT_RANGE="52300-52349", MAIL_TEST_PORT_RANGE="52350-52399")
+    if len(sys.argv)>1:
+        if sys.argv[1]=="--only":
+            assert len(sys.argv)==3, "usage: --only REGEX"
+            mutations=[entry for entry in mutations if re.search(sys.argv[2],entry[0])]
+            assert mutations
+        else:
+            selected=set(sys.argv[1:])
+            assert selected <= {entry[0] for entry in mutations},selected
+            mutations=[entry for entry in mutations if entry[0] in selected]
+    errors = preflight(mutations)
+    if errors:
+        for error in errors:
+            print(f"INVALID MUTATION: {error}", file=sys.stderr)
+        raise SystemExit(f"WS13 preflight: {len(errors)} invalid mutations; no sources changed")
+    failures = []
+    rejected = 0
+    for name, path, mutate, package, test in mutations:
+        original = path.read_text()
+        try:
+            path.write_text(mutate(original))
+            command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "2",
+                       "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", package]
+            if package == "campfire":
+                command += ["--bin", "campfire"]
+            command += [test, "--", "--nocapture", "--test-threads=8"]
+            result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
+            output = result.stdout + result.stderr
+            (SCRATCH / f"{name}.log").write_text(output)
+            summaries = re.findall(r"^test result: FAILED\..*$", output, re.M)
+            assert result.returncode != 0 and summaries and "could not compile" not in output, output[-5000:]
+            assert "panicked at" in output, output[-5000:]
+            rejected += 1
+            print(f"{name}: {summaries[-1]}", flush=True)
+        except (AssertionError, ValueError) as error:
+            failures.append(name)
+            print(f"NOT REJECTED: {name}: {error}", flush=True)
+        finally:
+            path.write_text(original)
+    print(f"WS13 discrimination: {rejected}/{len(mutations)} compiled regressions detected; sources restored", flush=True)
+    if failures:
+        raise SystemExit(f"Unproven mutations: {failures}")
+
+
+if __name__ == "__main__":
+    main()
