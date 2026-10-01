@@ -994,6 +994,7 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
     assert!(rows.iter().any(|row| row.class == "Retention::PruneJob" && row.run_at > campfire_db::Timestamp::from_jiff(app.clock.now())), "{rows:?}");
     booted.jobs.shutdown(WAIT).await;
+
 }
 
 #[test]

@@ -1,0 +1,17 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": {
+    "success": {
+      "error": null,
+      "user": false,
+      "github": false,
+      "fizzy": false
+    },
+    "failure": {
+      "error": "peer deletion failed",
+      "user": true,
+      "github": true,
+      "fizzy": true
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "reference_pin": "d7c7de92",
+  "presence": {
+    "ttl": {
+      "text": "Running tests…",
+      "stored": "Running tests…",
+      "expires_at": "2026-03-02T16:05:00.000Z"
+    },
+    "blank": {
+      "text": null,
+      "stored": null,
+      "expires_at": null
+    },
+    "expired": {
+      "text": null,
+      "stored": "Thinking…",
+      "expires_at": "2026-03-02T16:05:00.000Z"
+    },
+    "limit": {
+      "working_presence": [
+        "is too long (maximum is 140 characters)"
+      ]
+    },
+    "service": [
+      {
+        "status": 200,
+        "payload": {
+          "working_presence": "Thinking…"
+        },
+        "error": null
+      },
+      {
+        "status": 200,
+        "payload": {
+          "working_presence": null
+        },
+        "error": null
+      }
+    ],
+    "service_limit": {
+      "status": 422,
+      "payload": {
+        "errors": {
+          "working_presence": [
+            "is too long (maximum is 140 characters)"
+          ]
+        }
+      },
+      "error": "Working presence is too long (maximum is 140 characters)"
+    }
+  },
+  "commands": {
+    "register": {
+      "name": "deploy",
+      "description": "Ship it",
+      "takes_arguments": true
+    },
+    "duplicate": {
+      "name": [
+        "has already been taken"
+      ]
+    },
+    "invalid": [
+      {
+        "name": [
+          "is invalid"
+        ]
+      },
+      {
+        "name": [
+          "is invalid"
+        ]
+      },
+      {
+        "name": [
+          "is invalid"
+        ]
+      },
+      {
+        "name": [
+          "is invalid"
+        ]
+      }
+    ],
+    "builtin": {
+      "name": [
+        "is already a built-in command"
+      ]
+    },
+    "description": {
+      "description": [
+        "is too long (maximum is 140 characters)"
+      ]
+    }
+  }
+}

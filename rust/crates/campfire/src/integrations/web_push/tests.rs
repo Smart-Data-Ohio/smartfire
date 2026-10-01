@@ -409,6 +409,7 @@ async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() 
     let pool = Pool::new(service.net.clone(),vapid(),|_|Ok::<_,String>(()));
     let app = Arc::new(AppState {
         ar_encryption: original.ar_encryption.clone(),
+        agent_message_payload: Default::default(),
         agent_repositories: Default::default(),
         github_accounts: original.github_accounts.clone(),
         github_app: original.github_app.clone(),
@@ -497,6 +498,7 @@ async fn ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_
     let pool=Pool::new(service.net.clone(),vapid(),|_|Ok::<_,String>(()));
     let app=Arc::new(AppState {
         ar_encryption: original.ar_encryption.clone(),
+        agent_message_payload: Default::default(),
         agent_repositories: Default::default(),
         github_accounts: original.github_accounts.clone(),
         github_app: original.github_app.clone(),

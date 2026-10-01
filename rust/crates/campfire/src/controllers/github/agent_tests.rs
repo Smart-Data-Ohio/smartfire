@@ -11,7 +11,7 @@ use axum::{
     http::{HeaderMap, Request},
 };
 use campfire_db::{Agent, AgentApproval, AgentCredential, NewAgent, NewCredential, User};
-use rusqlite::params;
+use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
 use sha2::Digest;
 use tower::ServiceExt;
@@ -205,7 +205,8 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
     fresh.app.db.write(|tx|{tx.conn().execute_batch("CREATE TRIGGER reject_approval_inbox BEFORE INSERT ON activity_items WHEN NEW.source_type='AgentApproval' BEGIN SELECT RAISE(ABORT,'inbox unavailable'); END;")?;Ok(())}).await.unwrap();
     let mut other = body.clone();
     other["external_id"] = json!("rollback");
-    // Error pages are HTML; this request asserts the entire HTTP write rolled back.
+    // Rails commits the approval before inbox fanout. An inbox error returns
+    // HTTP 500 but preserves the pending row; durable approval jobs stay atomic.
     let response = fresh
         .router
         .clone()
@@ -221,27 +222,29 @@ async fn github_agent_http_races_fanout_rollback_expiry_and_real_approved_job() 
         )
         .await
         .unwrap();
-    assert_eq!(response.status().as_u16(), 500);
-    fresh
-        .app
-        .db
-        .write(|tx| {
-            assert_eq!(
-                tx.conn().query_row(
-                    "SELECT COUNT(*) FROM agent_approvals WHERE external_id='rollback'",
-                    [],
-                    |r| r.get::<_, i64>(0)
-                )?,
-                0
-            );
-            tx.conn()
-                .execute_batch("DROP TRIGGER reject_approval_inbox")?;
-            Ok(())
-        })
-        .await
-        .unwrap();
-    let (_, _, created) = post(&fresh, path, other, "fixture-agent-secret").await;
+    let oracle:Value=serde_json::from_str(include_str!("../../../../../vectors/agents_github_approval_inbox_http_contract.json")).unwrap();
+    let status=response.status().as_u16();
+    let (saved_id,mut snapshot)=fresh.app.db.read(move|conn| {
+        let saved=conn.query_row("SELECT id,status FROM agent_approvals WHERE external_id='rollback'",[],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?))).optional()?;
+        let count=conn.query_row("SELECT COUNT(*) FROM agent_approvals WHERE external_id='rollback'",[],|r|r.get::<_,i64>(0))?;
+        let inbox=conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id IN (SELECT id FROM agent_approvals WHERE external_id='rollback')",[],|r|r.get::<_,i64>(0))?;
+        let jobs=conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('Github::PerformAgentActionJob','Agent::EventWebhookJob')",[],|r|r.get::<_,i64>(0))?;
+        Ok((saved.as_ref().map(|a|a.0),json!({"status":status,"approvals":count,"status_after_error":saved.map(|a|a.1),"inbox":inbox,"jobs":jobs})))
+    }).await.unwrap();
+    let mut before=oracle["result"].clone();
+    for field in ["replay_status","replay_same_id","approvals_after_replay","inbox_after_replay"] {before.as_object_mut().unwrap().remove(field);}
+    assert_eq!(snapshot,before,"pinned Rails after_create_commit failure");
+    fresh.app.db.write(|tx| {tx.conn().execute_batch("DROP TRIGGER reject_approval_inbox")?;Ok(())}).await.unwrap();
+    let (replay_status, _, created) = post(&fresh, path, other, "fixture-agent-secret").await;
     let approval_id = created["id"].as_i64().unwrap();
+    let (count,inbox)=fresh.app.db.read(|conn| {
+        Ok((conn.query_row("SELECT COUNT(*) FROM agent_approvals WHERE external_id='rollback'",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id IN (SELECT id FROM agent_approvals WHERE external_id='rollback')",[],|r|r.get::<_,i64>(0))?))
+    }).await.unwrap();
+    snapshot["replay_status"]=json!(replay_status);
+    snapshot["replay_same_id"]=json!(saved_id==Some(approval_id));
+    snapshot["approvals_after_replay"]=json!(count);
+    snapshot["inbox_after_replay"]=json!(inbox);
+    assert_eq!(snapshot,oracle["result"],"replay must reuse the committed approval");
     fresh.app.db.write(|tx| {tx.conn().execute_batch("CREATE TRIGGER reject_approval_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::PerformAgentActionJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;Ok(())}).await.unwrap();
     let rejected = fresh
         .app

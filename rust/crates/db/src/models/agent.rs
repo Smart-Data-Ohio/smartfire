@@ -5,6 +5,9 @@ use crate::{AgentGrant, Connection, Errors, Event, Result, Timestamp, Tx, User};
 use rusqlite::{Row, params};
 use serde::{Deserialize, Serialize};
 
+pub mod cap_input;
+pub use cap_input::BudgetCapInput;
+
 pub const STATUSES: [&str; 4] = ["idle", "working", "waiting", "failed"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -94,6 +97,35 @@ pub struct AgentChanges {
     pub daily_message_cap: Option<Option<i64>>,
     pub daily_board_post_cap: Option<Option<i64>>,
     pub daily_external_action_cap: Option<Option<i64>>,
+    /// Original permitted scalar, including null. None means no raw input was submitted.
+    pub daily_message_cap_before_type_cast: Option<serde_json::Value>,
+    pub daily_board_post_cap_before_type_cast: Option<serde_json::Value>,
+    pub daily_external_action_cap_before_type_cast: Option<serde_json::Value>,
+}
+
+impl AgentChanges {
+    /// The cast value and errors are available even when update rejects the input;
+    /// callers keep this value to redisplay Rails' before-type-cast form input.
+    pub fn budget_cap_input(&self, field: &str) -> Option<BudgetCapInput> {
+        let (raw, typed) = match field {
+            "daily_message_cap" => (
+                &self.daily_message_cap_before_type_cast,
+                self.daily_message_cap,
+            ),
+            "daily_board_post_cap" => (
+                &self.daily_board_post_cap_before_type_cast,
+                self.daily_board_post_cap,
+            ),
+            "daily_external_action_cap" => (
+                &self.daily_external_action_cap_before_type_cast,
+                self.daily_external_action_cap,
+            ),
+            _ => return None,
+        };
+        raw.clone()
+            .or_else(|| typed.map(|v| serde_json::json!(v)))
+            .map(BudgetCapInput::new)
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -153,6 +185,25 @@ impl Agent {
             [id],
             Self::from_row,
         )
+    }
+    /// Read the encrypted attribute without generating or touching a secret.
+    pub fn webhook_signing_secret(
+        &self,
+        conn: &Connection,
+        encryption: &rails_compat::ar_encryption::ArEncryption,
+    ) -> Result<Option<String>> {
+        let encrypted: Option<String> = conn.query_row(
+            "SELECT webhook_signing_secret FROM agents WHERE id=?",
+            [self.id],
+            |r| r.get(0),
+        )?;
+        encrypted
+            .map(|value| {
+                encryption
+                    .decrypt(&value)
+                    .map_err(|e| crate::Error::Other(e.to_string()))
+            })
+            .transpose()
     }
     pub fn for_user(conn: &Connection, user_id: i64) -> Result<Option<Self>> {
         query_one(
@@ -226,9 +277,31 @@ impl Agent {
             working_presence_expires_at: self.working_presence_expires_at,
         }
     }
-    pub fn update(&mut self, tx: &mut Tx<'_>, changes: AgentChanges) -> Result<()> {
+    /// Read-only validation for forms; raw cap inputs are checked before any bot write.
+    pub fn validate_changes(&self, conn: &Connection, changes: AgentChanges) -> Result<Errors> {
+        Ok(self.changed_candidate(conn, changes)?.1)
+    }
+    fn changed_candidate(
+        &self,
+        conn: &Connection,
+        changes: AgentChanges,
+    ) -> Result<(Self, Errors, bool)> {
         let mut candidate =
-            Self::find(tx.conn(), self.id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
+            Self::find(conn, self.id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
+        let raw_caps = [
+            (
+                "daily_message_cap",
+                changes.daily_message_cap_before_type_cast.clone(),
+            ),
+            (
+                "daily_board_post_cap",
+                changes.daily_board_post_cap_before_type_cast.clone(),
+            ),
+            (
+                "daily_external_action_cap",
+                changes.daily_external_action_cap_before_type_cast.clone(),
+            ),
+        ];
         macro_rules! assign {($($field:ident),*)=>{$(if let Some(value)=changes.$field {candidate.$field=value;})*};}
         assign!(
             owner_id,
@@ -243,6 +316,55 @@ impl Agent {
             daily_board_post_cap,
             daily_external_action_cap
         );
+        let mut raw_errors = Errors::default();
+        let mut out_of_range = false;
+        for (field, raw) in &raw_caps {
+            if let Some(raw) = raw {
+                let input = BudgetCapInput::new(raw.clone());
+                for message in input.errors {
+                    raw_errors.add(field, message);
+                }
+                let value = input.value.as_i64();
+                out_of_range |= !input.value.is_null() && value.is_none();
+                match *field {
+                    "daily_message_cap" => candidate.daily_message_cap = value,
+                    "daily_board_post_cap" => candidate.daily_board_post_cap = value,
+                    _ => candidate.daily_external_action_cap = value,
+                }
+            }
+        }
+        let mut errors = Self::validate(conn, &candidate.attributes(), Some(candidate.id))?;
+        errors.0.retain(|(field, _)| {
+            !raw_caps
+                .iter()
+                .any(|(raw_field, raw)| raw.is_some() && field == raw_field)
+        });
+        errors.0.extend(raw_errors.0);
+        // Keep cap messages in the model's declared field order.
+        let mut caps = Vec::new();
+        errors.0.retain(|(field, message)| {
+            if raw_caps.iter().any(|(cap, _)| field == cap) {
+                caps.push((*field, message.clone()));
+                false
+            } else {
+                true
+            }
+        });
+        for (field, _) in &raw_caps {
+            errors
+                .0
+                .extend(caps.iter().filter(|(cap, _)| cap == field).cloned());
+        }
+        Ok((candidate, errors, out_of_range))
+    }
+    pub fn update(&mut self, tx: &mut Tx<'_>, changes: AgentChanges) -> Result<()> {
+        let (mut candidate, errors, out_of_range) = self.changed_candidate(tx.conn(), changes)?;
+        errors.into_result()?;
+        if out_of_range {
+            return Err(crate::Error::Other(
+                "budget cap is out of range for SQLite integer storage".into(),
+            ));
+        }
         candidate.save(tx)?;
         *self = candidate;
         Ok(())

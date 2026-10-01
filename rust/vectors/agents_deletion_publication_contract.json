@@ -1,0 +1,34 @@
+{
+  "reference": "d7c7de92",
+  "results": {
+    "same_transaction": {
+      "first_types": [
+        "github_action_completed"
+      ],
+      "first_cursor_is_committed_event": true,
+      "deletion_id_after_committed_event": true,
+      "resumed_types": [
+        "work_unassigned"
+      ],
+      "resumed_cursor_is_deletion": true,
+      "deletion_count": 1,
+      "thread_exists": false
+    },
+    "concurrent_commits": {
+      "first_types": [
+        "github_action_completed"
+      ],
+      "second_types": [
+        "fizzy_action_completed"
+      ],
+      "second_cursor_is_interleaved_event": true,
+      "deletion_id_after_interleaved_event": true,
+      "resumed_types": [
+        "work_unassigned"
+      ],
+      "resumed_cursor_is_deletion": true,
+      "deletion_count": 1,
+      "thread_exists": false
+    }
+  }
+}

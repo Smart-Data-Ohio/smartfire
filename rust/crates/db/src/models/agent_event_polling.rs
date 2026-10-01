@@ -27,6 +27,9 @@ pub fn poll(
             payloads.push(payload);
         }
     }
+    if !access.valid(conn)? {
+        return poll(conn,agent_id,Some(&json!(since)),limit.as_ref().map(|value|json!(value)).as_ref(),now,&RepositoryAccess::default(),presenter);
+    }
     Ok(json!({"events":payloads,"next_since":next_since}))
 }
 
@@ -159,7 +162,7 @@ impl<'a> PollContext<'a> {
                     self.conn,
                     &thread,
                     self.owner_id,
-                    self.access,
+                    &self.access.in_event(e.id),
                 )?;
                 work["thread_id"] = json!(thread.id);
                 work["status"] = json!(thread.work_status);
@@ -226,7 +229,7 @@ impl<'a> PollContext<'a> {
                 self.conn,
                 &message,
                 self.owner_id,
-                self.access,
+                &self.access.in_event(e.id),
             )?;
         }
         Ok(Some(payload))
