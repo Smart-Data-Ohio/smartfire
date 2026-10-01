@@ -46,6 +46,9 @@ fn items(db: &TestDb) -> Value {
     })
 }
 fn run_case(case: &Value) -> Vec<Value> {
+    run_case_with_duplicate(case, false)
+}
+fn run_case_with_duplicate(case: &Value, duplicate: bool) -> Vec<Value> {
     let db = TestDb::new();
     db.clock.travel_to(Timestamp::parse_db("2026-01-01 12:00:00").unwrap());
     let banner = case["spec"]["banner"].as_bool().unwrap();
@@ -148,6 +151,11 @@ fn run_case(case: &Value) -> Vec<Value> {
             if let Some(id) = next {grant = id;}
         }
         collect(&db,&mut pending,&mut frames,&mut pushes);
+        if duplicate && phases.is_empty() {
+            let job = pending.iter().find(|job| job.class == PushInvitationJob::CLASS).unwrap().clone();
+            db.write(move |tx| {tx.emit_after_commit(Event::Job(job));Ok(())});
+            collect(&db,&mut pending,&mut frames,&mut pushes);
+        }
         phases.push(json!({"frames":frames,"pushes":pushes,"items":items(&db)}));
     }
     phases
@@ -195,3 +203,24 @@ fn repeated_handled_timestamp_broadcasts_once() {named_regression("shrunk/random
 fn rejoin_answer_at_same_timestamp_broadcasts_once() {named_regression("shrunk/random/3620200082/52");}
 #[test]
 fn banner_to_inbox_repeated_answer_broadcasts_once() {named_regression("shrunk/random/388013012/802");}
+
+#[test]
+fn gate_review_r5_duplicate_push_must_fail_comparison() {
+    let oracle = oracle();
+    let case = oracle["cases"].as_array().unwrap().iter().find(|case| case["spec"]["name"] == "delayed_initial_0/item/oldest").unwrap();
+    let mut expected = case["phases"].clone();
+    for phase in expected.as_array_mut().unwrap() {phase.as_object_mut().unwrap().remove("banners");}
+    let rejected = std::panic::catch_unwind(|| assert_eq!(json!(run_case_with_duplicate(case,true)),expected)).is_err();
+    assert!(rejected,"an extra PushInvitationJob escaped the unchanged Rails expectation");
+}
+
+#[test]
+fn gate_review_r5_banner_dismiss_must_keep_historical_item_unread() {
+    let case = json!({"spec":{"name":"review_r5/banner_dismiss_history","banner":false,"steps":[
+        {"action":"issue","seconds":0},{"action":"banner","seconds":121},
+        {"action":"issue","seconds":0},{"action":"dismiss","seconds":0},{"action":"drain","seconds":0}
+    ]}});
+    let phases = run_case(&case);
+    assert_eq!(phases[3]["items"][0]["state"],"unread","the displayed banner has no read endpoint");
+    assert!(phases[3]["frames"].as_array().unwrap().is_empty());
+}
