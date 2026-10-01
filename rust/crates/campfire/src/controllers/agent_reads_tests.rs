@@ -80,7 +80,28 @@ pub(super) async fn check(case: &Value) {
         req
     };
     for _ in 0..case["setup"]["repeat"].as_u64().unwrap_or(0) {
-        app.anonymous().send(request()).await;
+        let warm = app.anonymous().send(request()).await;
+        if case["setup"]["transition"].is_string() {
+            assert_eq!(warm.status.as_u16(), case["warm_status"].as_u64().unwrap() as u16);
+            assert_eq!(warm.text(), case["warm_body"].as_str().unwrap(), "successful request before permission change");
+        }
+    }
+    let transition = case["setup"]["transition"].as_str().map(str::to_owned);
+    if let Some(transition) = transition {
+        app.db().write(move |tx| {
+            if transition.starts_with("owner_") { tx.conn().execute("UPDATE sessions SET ip_address='203.0.113.31' WHERE user_id=127326141", [])?; }
+            match transition.as_str() {
+                "grant" => { tx.conn().execute("UPDATE agent_grants SET revoked_at=? WHERE agent_id=?", rusqlite::params![tx.now(),AGENT])?; }
+                "membership" => { tx.conn().execute("DELETE FROM memberships WHERE room_id=486777696 AND user_id=394959859", [])?; }
+                "credential_revoked" => { tx.conn().execute("UPDATE agent_credentials SET revoked_at=? WHERE agent_id=?", rusqlite::params![tx.now(),AGENT])?; }
+                "credential_expired" => { tx.conn().execute("UPDATE agent_credentials SET expires_at='2026-03-02 15:59:59' WHERE agent_id=?", [AGENT])?; }
+                "agent_suspended" => { tx.conn().execute("UPDATE agents SET suspended_at=? WHERE id=?",rusqlite::params![tx.now(),AGENT])?; }
+                "owner_deactivated" => { let mut owner=campfire_db::User::find(tx.conn(),127326141)?; owner.deactivate(tx)?; }
+                "owner_banned" => { let mut owner=campfire_db::User::find(tx.conn(),127326141)?; owner.ban(tx)?; }
+                other => panic!("unknown transition {other}"),
+            }
+            Ok(())
+        }).await.unwrap();
     }
     let mut cable=if case["broadcasts"].is_array() {Some(super::agent_reactions_tests::subscribe(&app).await)} else {None};
     let reply = app.anonymous().send(request()).await;

@@ -21,6 +21,11 @@ for script, filename in [
     ('reads_http_contract.rb', 'agent_reads_http.json'),
     ('pins_http_contract.rb', 'agent_pins_http.json'),
     ('polls_http_contract.rb', 'agent_polls_http.json'),
+    ('polling_http_contract.rb', 'agent_polling_http.json'),
+    ('reactions_http_contract.rb', 'agent_reactions_http.json'),
+    ('bot_reactions_http_contract.rb', 'agent_bot_reactions_http.json'),
+    ('work_validation_http_contract.rb', 'agent_work_validation_http.json'),
+    ('attachments_http_contract.rb', 'agent_attachments_http.json'),
 ]:
     with (output / filename).open('w') as stdout, (output / (script + '.log')).open('w') as stderr:
         result = subprocess.run([

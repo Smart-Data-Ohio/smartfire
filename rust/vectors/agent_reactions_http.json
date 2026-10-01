@@ -683,6 +683,181 @@
         "Retry-After": null,
         "Location": null
       }
+    },
+    {
+      "name": "mcp_react_transition_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "grant"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks react capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks react capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_membership",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "membership"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Message not found\"}],\"structuredContent\":{\"error\":\"Message not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_credential_revoked",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "credential_revoked"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_credential_expired",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "credential_expired"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_agent_suspended",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "agent_suspended"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_owner_deactivated",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "owner_deactivated"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_react_transition_owner_banned",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"react\",\"arguments\":{\"message_id\":1900700001,\"content\":\"👍\"}}}",
+      "setup": {
+        "grant": [
+          "react"
+        ],
+        "repeat": 1,
+        "transition": "owner_banned"
+      },
+      "warm_status": 200,
+      "warm_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900900001,\\\"message_id\\\":1900700001,\\\"content\\\":\\\"👍\\\",\\\"created\\\":true}\"}],\"structuredContent\":{\"id\":1900900001,\"message_id\":1900700001,\"content\":\"👍\",\"created\":true},\"isError\":false}}",
+      "status": 401,
+      "response_body": "",
+      "broadcasts": [],
+      "response_headers": {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
     }
   ]
 }

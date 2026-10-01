@@ -27,6 +27,9 @@ tool.call("react",{message_id:base,content:"α"},{prior:"β"},"react_different")
  tool.call("react",{message_id:base,content:"👍"},setup,"react_authority_#{i}")
 end
 [0,"no",true,[],{},[base],"#{base}garbage",1900700003].each_with_index { |id,i| tool.call("react",{message_id:id,content:"👍"},{},"react_id_#{i}") }
+["grant", "membership", "credential_revoked", "credential_expired", "agent_suspended", "owner_deactivated", "owner_banned"].each do |transition|
+ tool.call("react",{message_id:base,content:"👍"},{grant:["react"],repeat:1,transition:transition},"react_transition_#{transition}")
+end
 travel_to Time.utc(2026,3,2,16) do
  results=cases.map do |item|
   result=nil
@@ -59,11 +62,30 @@ travel_to Time.utc(2026,3,2,16) do
     session=ActionDispatch::Integration::Session.new(Rails.application);session.host! "campfire.test"
     body=item[:body]&.to_json
     headers={"Accept"=>"application/json","Content-Type"=>"application/json","Authorization"=>["Bearer",secret].join(" ")}
-    (item[:setup][:repeat] || 0).times {session.public_send(item[:method],item[:path],params:body,headers:headers)}
+    warm={}
+    (item[:setup][:repeat] || 0).times do
+     session.public_send(item[:method],item[:path],params:body,headers:headers)
+     if item[:setup][:transition]
+      raise "warm reaction failed" unless session.response.status==200 && session.response.parsed_body.dig("result","structuredContent","created")==true
+      warm={warm_status:session.response.status,warm_body:session.response.body.dup}
+     end
+    end
+    transition_execution=Rails.application.executor.run!(reset:true) if item[:setup][:transition]
+    Session.where(user_id:127326141).update_all(ip_address:"203.0.113.31") if item[:setup][:transition]&.start_with?("owner_")
+    case item[:setup][:transition]
+    when "grant" then agent.agent_grants.update_all(revoked_at:Time.current)
+    when "membership" then Membership.where(room_id:room,user_id:agent.user_id).delete_all
+    when "credential_revoked" then agent.agent_credentials.update_all(revoked_at:Time.current)
+    when "credential_expired" then agent.agent_credentials.update_all(expires_at:Time.current-1.second)
+    when "agent_suspended" then agent.update_columns(suspended_at:Time.current)
+    when "owner_deactivated" then User.find(127326141).deactivate
+    when "owner_banned" then User.find(127326141).ban
+    end
+    transition_execution&.complete!
     $wire_reactions.clear
     session.public_send(item[:method],item[:path],params:body,headers:{"Accept"=>"application/json","Content-Type"=>"application/json","Authorization"=>["Bearer",secret].join(" ")})
     response=session.response
-    result=item.merge(body:body,status:response.status,response_body:response.body,broadcasts:$wire_reactions.dup,response_headers:%w[Content-Type Cache-Control Pragma Retry-After Location].to_h { |key| [key,response.headers[key]] })
+    result=item.merge(warm).merge(body:body,status:response.status,response_body:response.body,broadcasts:$wire_reactions.dup,response_headers:%w[Content-Type Cache-Control Pragma Retry-After Location].to_h { |key| [key,response.headers[key]] })
     raise ActiveRecord::Rollback
    end
   ensure
