@@ -4,16 +4,21 @@ import { before, after } from 'node:test';
 import { chromium } from 'playwright';
 import { startProxy } from '../capture/proxy.ts';
 import { navigate } from './ws13-browser-navigation.mjs';
-let browser, proxy, api;
+import { browserMedia } from './ws13-media-network.mjs';
+let browser, proxy, api, closeMedia;
 // Loopback is a secure browser context, like Capybara's local Rails server.
 const origin = 'http://127.0.0.1';
 const bypass = '<-loopback>'+ (process.env.WS13_LIVEKIT_GATEWAY_BYPASS ? ','+process.env.WS13_LIVEKIT_GATEWAY_BYPASS : '');
 before(async () => {
+  if(process.env.WS13_MEDIA_UPSTREAM_SOCKET) {
+    const port=Number(new URL('ws://'+process.env.WS13_LIVEKIT_GATEWAY_BYPASS).port);
+    closeMedia=await browserMedia(process.env.WS13_MEDIA_UPSTREAM_SOCKET,{tcpPorts:[port]});
+  }
   proxy = await startProxy(process.env.WS13_SYSTEM_TARGET);
   browser = await chromium.launch({headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--mute-audio',...(process.env.WS13_LIVEKIT_GATEWAY_BYPASS?['--autoplay-policy=no-user-gesture-required']:[])]});
   api = await browser.newContext({proxy:{server:proxy.server,bypass}});
 });
-after(async () => { await api?.close(); await browser?.close(); await proxy?.close(); });
+after(async () => { await api?.close(); await browser?.close(); await proxy?.close(); await closeMedia?.(); });
 async function fixture(t, names, options={}) {
   const response = await api.request.post(`${origin}/__ws13__/fixture`,{data:options});
   assert.equal(response.status(),200);

@@ -185,6 +185,12 @@ async fn run_browser(real_livekit:bool) {
         .unwrap();
     crate::test_support::eventually("browser loopback forwarder", || async { socket.exists() })
         .await;
+    let media_socket=network.path().join("media.sock");
+    let mut media_forward=if real_livekit {
+        let child=tokio::process::Command::new("node").arg(root.join("parity/system/ws13-media-network.mjs")).arg("host").arg(&media_socket).kill_on_drop(true).spawn().unwrap();
+        crate::test_support::eventually("browser loopback media forwarder",||async{media_socket.exists()}).await;
+        Some(child)
+    } else {None};
     let image = std::env::var("WS13_PLAYWRIGHT_IMAGE")
         .expect("run parity/system/ws13 to build the pinned browser image");
     let output = tokio::process::Command::new("docker")
@@ -195,7 +201,7 @@ async fn run_browser(real_livekit:bool) {
             "--name",
             "ws13-system-browser",
             "--network",
-            if real_livekit {"host"} else {"none"},
+            if real_livekit {"bridge"} else {"none"},
             "--ipc",
             "host",
             "--cpus",
@@ -220,6 +226,8 @@ async fn run_browser(real_livekit:bool) {
         .arg("--env")
         .arg(format!("PARITY_UPSTREAM_SOCKET={}", socket.display()))
         .arg("--env")
+        .arg(format!("WS13_MEDIA_UPSTREAM_SOCKET={}",if real_livekit {media_socket.display().to_string()}else{String::new()}))
+        .arg("--env")
         .arg(format!("WS13_SYSTEM_TARGET={target}"))
         .arg("--env")
         .arg(format!("WS13_LIVEKIT_GATEWAY_BYPASS={}",if real_livekit {app.config.huddle.public_url.as_deref().unwrap().trim_start_matches("ws://")} else {""}))
@@ -230,22 +238,21 @@ async fn run_browser(real_livekit:bool) {
         .args(["--test", "--test-concurrency=8"])
         .arg(root.join(if real_livekit {"parity/system/ws13-livekit-stage.test.mjs"} else {"parity/system/ws13-stage.test.mjs"}))
         .kill_on_drop(true)
-        .output()
+        .status()
         .await
         .unwrap();
-    print!("{}", String::from_utf8_lossy(&output.stdout));
-    eprint!("{}", String::from_utf8_lossy(&output.stderr));
     #[cfg(ws13b_domain_api)]
     {rings.abort();let _=rings.await;}
     forward.kill().await.unwrap();
     forward.wait().await.unwrap();
+    if let Some(mut media)=media_forward.take() {media.kill().await.unwrap();media.wait().await.unwrap();}
     if let Some(mut gateway)=gateway {gateway.kill().await.unwrap();gateway.wait().await.unwrap();}
     let _ = stop.send(());
     server.await.unwrap();
     assert!(
-        output.status.success(),
+        output.success(),
         "browser acceptance failed: {}",
-        output.status
+        output
     );
 }
 
