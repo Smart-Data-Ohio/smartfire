@@ -7,7 +7,7 @@ use crate::channels::{room_gid, user_gid};
 /// The `<turbo-stream>` a delivery frame carries.
 fn turbo_stream(frame: &str) -> String {
     let frame: Value = serde_json::from_str(frame).unwrap();
-    frame["message"].as_str().expect("a Turbo Stream string").to_string()
+    frame["message"].as_str().unwrap_or_else(|| panic!("expected a Turbo Stream string: {frame}")).to_string()
 }
 
 async fn room_messages(app: &TestApp, client: &mut Client, room: &str) -> String {
@@ -28,7 +28,7 @@ async fn turbo(app: &TestApp, client: &mut Client, streamables: &[&str]) -> Stri
 async fn message_broadcasts() {
     let app = start().await;
     let mut kevin = app.connect("kevin").await;
-    room_messages(&app, &mut kevin, "designers").await;
+    let messages = room_messages(&app, &mut kevin, "designers").await;
     let unreads = identifier(json!({ "channel": "UnreadRoomsChannel" }));
     kevin.confirm(&unreads).await;
 
@@ -36,14 +36,13 @@ async fn message_broadcasts() {
     let message = app.message("second").await;
 
     app.message_create(&designers, &message).await;
-    assert_eq!(
-        turbo_stream(&kevin.next_text().await),
-        format!(
+    kevin.assert_texts(&[
+        delivery(&messages, &html_json(&format!(
             r#"<turbo-stream action="append" target="messages_rooms_closed_{}"><template><div id="message_0002">message {}</div></template></turbo-stream>"#,
             designers.id, message.id
-        )
-    );
-    assert_eq!(kevin.next_text().await, delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, designers.id)));
+        ))),
+        delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, designers.id)),
+    ]).await;
 
     app.broadcasts.message_replace(&designers, &message, &FakePartials);
     assert_eq!(
@@ -309,4 +308,35 @@ async fn ws8_model_frames_reach_subscribers_through_ws7_sink() {
     assert!(crate::channels::sink::deliver(&app.server, None, &event));
     assert_eq!(client.next_text().await, delivery(&unread, &row["payload"].to_string()));
     client.assert_silent().await;
+}
+
+/// A real unread delivery can precede Turbo HTML on an independent subscription.
+#[tokio::test]
+async fn independent_broadcast_streams_accept_either_arrival_order() {
+    let app = start().await;
+    let mut client = app.connect("kevin").await;
+    let messages = room_messages(&app, &mut client, "designers").await;
+    let unreads = identifier(json!({ "channel": "UnreadRoomsChannel" }));
+    client.confirm(&unreads).await;
+    let room = app.room("designers").await;
+    let message = app.message("second").await;
+    let expected = [
+        delivery(&messages, &html_json(r#"<turbo-stream action="remove" target="message_0002"></turbo-stream>"#)),
+        delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, room.id)),
+    ];
+    for unread_first in [true, false] {
+        let unread = || {
+            let (broadcasts, room, message) = (app.broadcasts.clone(), room.clone(), message.clone());
+            app.db.read(move |conn| broadcasts.unread_room(conn, &room, &message, &campfire_db::rich_text::BasicRichText))
+        };
+        if unread_first {
+            unread().await.unwrap();
+            app.broadcasts.message_remove(&room, &message);
+        } else {
+            app.broadcasts.message_remove(&room, &message);
+            unread().await.unwrap();
+        }
+        client.assert_texts(&expected).await;
+        client.assert_silent().await;
+    }
 }

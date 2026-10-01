@@ -42,7 +42,7 @@ impl campfire_db::models::forwarder::BlobCopier for ForwarderCopier {
         let Some(mut blob) = campfire_storage::Blob::attached(tx.conn(), "Message", message.id, "attachment").map_err(storage_error)? else {return Ok(())};
         let metadata = self.storage.analyzed_metadata(&blob).map_err(storage_error)?;
         blob.update_metadata(tx.conn(), metadata).map_err(storage_error)?;
-        crate::controllers::messages::touch_attachment_records(tx, blob.id)?;
+        crate::active_storage::touch_attachment_records(tx, blob.id)?;
         if blob.is_video() {
             self.preview(tx, &blob, Variation::format_only("webp"))?;
         } else if blob.is_previewable() {

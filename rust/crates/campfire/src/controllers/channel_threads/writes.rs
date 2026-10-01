@@ -71,12 +71,10 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
         let markdown = initial.get("markdown_source").and_then(messages::string_column);
         if markdown.is_some() { body = None; }
         let body = match body { Some(body) => Some(messages::canonicalize_body(c.app(), body, Some(c.request.host())).await?), None => None };
-        let (assignment, existing_attachment) = messages::resolve_human_attachment(c, messages::attachment_assignment(&initial)?, initial.get("attachment")).await?;
-        let staged = match assignment {
-            Some(Assignment::Create(upload)) => Some(upload.stage(c.app()).await?),
-            Some(Assignment::Invalid) => return Err(Error::internal(anyhow::anyhow!("Could not find or build blob: expected attachable"))),
-            _ => None,
-        };
+        let assignment = messages::attachment_assignment(&initial)?.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+        if matches!(assignment, Assignment::Invalid) {
+            return Err(Error::internal(anyhow::anyhow!("invalid attachment")));
+        }
         let name = attributes.get("name").and_then(messages::string_column);
         let minutes = attributes.get("auto_archive_after_minutes").map(archive_minutes).transpose()?;
         let reply = initial.get("reply_to_message_id").filter(|value| value.is_present()).and_then(|value| value.to_s()).as_deref().and_then(cast_integer);
@@ -95,11 +93,12 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             ThreadMembership::join(tx, thread.id, creator)?;
             if !initial.is_empty() {
                 if notify == Some(None) { return Err(campfire_db::Error::Other("reply_notify_author violates NOT NULL".into())); }
-                let blob = existing_attachment.or(staged.map(|staged| messages::save_staged(tx, staged)).transpose()?);
+                let blob = messages::attachment_blob(tx, assignment)?;
                 let message = thread.post_message(tx, creator, NewMessage { body, markdown_source: markdown,
                     client_message_id: client_id,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id), reply_to_message_id: reply, reply_notify_author: notify.flatten(),
                     forward_note: initial.get("forward_note").and_then(messages::string_column), ..Default::default() })?;
+                if let Some(blob) = &blob { crate::controllers::presenters::attachments::enqueue_analysis(tx, blob); }
                 crate::messaging::process_message_attachment(tx, storage, &message)?;
             }
             Ok(thread)

@@ -42,6 +42,7 @@ pub struct AppState {
     pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
+    pub subscription_network: crate::integrations::net::Network,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
     /// and every render outside one.
     pub fragment_cache: Arc<FragmentCache>,
@@ -86,6 +87,16 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
 /// [`boot`] with its clock given rather than read from `CAMPFIRE_FROZEN_TIME`: the seeded tests
 /// run at the parity seed's instant, as the reference does (`parity/seeds/README.md`).
 pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Result<Booted> {
+    boot_with_network(config, clock, crate::integrations::net::Network::system()).await
+}
+
+pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    boot_with_services(config, clock, subscription_network, jobs::periodic::Intervals::from_env()).await
+}
+
+/// Service dependencies, including which periodic hosts run beside HTTP. The Rails parity
+/// server does not run bin/periodic; its seeded HTTP tests invoke due tasks explicitly.
+pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
@@ -95,7 +106,7 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
     let registry = jobs::registry();
     let runner_config = jobs::runner_config(&config);
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
-    let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env());
+    let loops = jobs::periodic::Loops::new(intervals);
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
     // Mail's preflight and Message::create use the same room-aware, fallible renderer.
     mail.install_renderer(Arc::new({
@@ -155,6 +166,7 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         web_push,
+        subscription_network,
         fragment_cache,
     });
 
@@ -189,26 +201,19 @@ async fn open_database(
 
 /// The HTTP service: public files, then `/cable`, then the Rails route table.
 fn router(app: &App, kit: Kit) -> Router {
+    let github_webhook = || {
+        axum::routing::post(campfire_kit::unparsed_action(controllers::github::webhooks::create))
+            .fallback(campfire_kit::unparsed_action(controllers::github::webhooks::not_found))
+    };
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
-        .merge(
-            app.cable
-                .router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH),
-        )
-        // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController
-        // routes, which reads its own body after its rate limit.
-        .route(
-            "/csp_reports",
-            axum::routing::post(campfire_kit::unparsed_action(
-                controllers::csp_reports::create,
-            )),
-        )
-        .route(
-            "/csp_reports.{format}",
-            axum::routing::post(campfire_kit::unparsed_action(
-                controllers::csp_reports::create,
-            )),
-        )
+        .merge(app.cable.router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH))
+        // API actions authenticate/rate-limit before interpreting their own raw uploads.
+        // Unmatched webhook verbs use Rails' 404 response rather than Axum's default 405.
+        .route("/github/webhooks", github_webhook())
+        .route("/github/webhooks.{format}", github_webhook())
+        .route("/csp_reports", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
+        .route("/csp_reports.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
@@ -485,3 +490,7 @@ mod round_four_security_tests;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "../../../test-support/asset_goldens.rs"]
+pub(crate) mod asset_goldens;

@@ -36,8 +36,8 @@ use campfire_views::messages as views;
 use crate::active_storage::{self, keep_after_commit};
 use crate::app::{App, AppCtx};
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
+use crate::controllers::presenters::attachments::{self, Assignment};
 use crate::controllers::presenters::page::{self, Rendered, db_error};
-use crate::controllers::presenters::attachments::Assignment;
 use crate::controllers::presenters::{DbResolver, Presenter, room_kind, storage_error};
 use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
 
@@ -225,7 +225,7 @@ pub async fn preview(c: &mut Ctx) -> Result {
     let (app, request_host) = (c.app().clone(), Some(c.request.host()));
     let html = c.app().db.read(move |conn| {
         let body = app.db.env().rich_text.render_markdown(conn, &source, room.id).map_err(campfire_db::Error::Other)?;
-        let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
+        let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
         crate::rich_text::markdown_presentation(conn, &body, &resolver.render_context(request_host)).map_err(campfire_db::Error::Other)
     }).await.map_err(db_error)?;
     let body = serde_json::to_string(&serde_json::json!({"html": html})).map_err(Error::internal)?;
@@ -266,13 +266,10 @@ pub(crate) fn ensure_can_administer(c: &mut Ctx, message: &Message) -> Result<()
 #[derive(Debug, Default, Clone)]
 pub(crate) struct MessageParams {
     pub body: Option<String>,
+    pub markdown_source: Option<String>,
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
-    /// A verified Active Storage signed ID (the direct-upload capability). This additive
-    /// human attachment seam leaves the shared avatar/assignment and bot APIs unchanged.
-    pub existing_attachment: Option<Blob>,
     pub client_message_id: Option<String>,
-    pub markdown_source: Option<String>,
     pub reply_to_message_id: Option<i64>,
     pub reply_notify_author: Option<bool>,
     pub drive_file_ids: Vec<String>,
@@ -281,10 +278,11 @@ pub(crate) struct MessageParams {
 /// `params.require(:message).permit(:body, :attachment, :client_message_id)`
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     let message = c.params.require("message")?;
-    let permitted = message.permit(&permit_keys(&["body", "attachment", "client_message_id"]));
+    let permitted = message.permit(&permit_keys(&["body", "attachment", "client_message_id", "markdown_source"]));
     let text = |key: &str| permitted.get(key).and_then(Param::as_str).map(str::to_string);
     Ok(MessageParams {
         body: text("body"),
+        markdown_source: text("markdown_source"),
         attachment: attachment_assignment(&permitted)?,
         client_message_id: text("client_message_id"),
         ..Default::default()
@@ -305,7 +303,6 @@ pub(crate) async fn human_message_params_with_client_id(c: &Ctx, root_room: Opti
         return Err(Error::internal(anyhow::anyhow!("message parameters do not support permit")));
     }
     let mut attributes = message_params(c)?;
-    (attributes.attachment, attributes.existing_attachment) = resolve_human_attachment(c, attributes.attachment, message.get("attachment")).await?;
     let permitted = message.permit(&permit_keys(&["markdown_source", "client_message_id", "reply_to_message_id", "reply_notify_author"]));
     attributes.markdown_source = permitted.get("markdown_source").and_then(string_column);
     attributes.client_message_id = client_id;
@@ -345,19 +342,6 @@ pub(crate) async fn human_message_params_with_client_id(c: &Ctx, root_room: Opti
     Ok(attributes)
 }
 
-/// Verified direct-upload capabilities shared by root/reply parameters and initial thread
-/// messages. Keep avatar/shared-presenter assignment unchanged for its owner branch.
-pub(crate) async fn resolve_human_attachment(c: &Ctx, assignment: Option<Assignment>, value: Option<&Param>) -> Result<(Option<Assignment>, Option<Blob>)> {
-    if matches!(assignment, Some(Assignment::Invalid))
-        && let Some(signed) = value.and_then(Param::as_str) {
-        let id = campfire_storage::paths::verify_signed_blob_id(&*c.app().storage.verifier, signed, c.now())
-            .ok_or_else(invalid_attachment)?;
-        let blob = c.app().db.read(move |conn| Blob::find(conn, id).map_err(storage_error)?
-            .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))).await.map_err(db_error)?;
-        Ok((Some(Assignment::Unchanged), Some(blob)))
-    } else { Ok((assignment, None)) }
-}
-
 /// `assign_attributes` + `save!` on the human edit endpoint. Bot updates keep their own seam.
 async fn update_root_message(c: &Ctx, room: &Room, message: Message) -> Result<Message> {
     update_human_message(c, Some(room), None, message).await
@@ -367,12 +351,9 @@ pub(crate) async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thre
     let attributes = human_message_params(c, root_room).await?;
     let params = c.params.require("message")?;
     let scalar = params.permit(&permit_keys(&["client_message_id", "reply_to_message_id", "reply_notify_author"]));
-    let attachment = match attributes.attachment {
-        Some(Assignment::Invalid) => return Err(invalid_attachment()),
-        Some(Assignment::Create(upload)) => Some(Some(upload.stage(c.app()).await?)),
-        Some(_) => Some(None),
-        None => None,
-    };
+    let attachment_given = attributes.attachment.is_some();
+    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    if matches!(attachment, Assignment::Invalid) { return Err(invalid_attachment()); }
     let changes = campfire_db::MessageChanges {
         clear_markdown_source: attributes.markdown_source.is_none(),
         markdown_source: attributes.markdown_source,
@@ -387,7 +368,7 @@ pub(crate) async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thre
     let id = message.id;
     let app = c.app().clone();
     let host = Some(c.request.host());
-    let (id, blob) = c.app().db.write(move |tx| {
+    let id = c.app().db.write(move |tx| {
         if let Some(thread) = thread_id
             && campfire_db::ChannelThread::find(tx.conn(), thread)?.locked_at.is_some() {
             return Err(campfire_db::Error::Other(campfire_db::channel_thread::LOCKED_MESSAGE.into()));
@@ -399,18 +380,12 @@ pub(crate) async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thre
             changes.legacy_attachment_snapshot = Some(campfire_richtext::legacy_markdown::non_mention_attachments(&body)
                 .map_err(|error| campfire_db::Error::Other(error.to_string()))?);
         }
-        let attachment_given = attachment.is_some();
-        let blob = attributes.existing_attachment.or(attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?);
+        let blob = attachment_blob(tx, attachment)?;
         if attachment_given { message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?; }
         message.edit(tx, changes)?;
-        Ok((id, blob))
+        if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
+        Ok(id)
     }).await.map_err(db_error)?;
-    if let Some(blob) = blob.filter(|blob| !blob.is_analyzed()) {
-        let app = c.app().clone();
-        c.app().jobs.perform_later("ActiveStorage::AnalyzeJob", async move {
-            analyze_attachment(&app, blob).await.map(drop).map_err(|error| anyhow::anyhow!("{error:?}"))
-        });
-    }
     c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
 }
 
@@ -513,11 +488,10 @@ pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<cam
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
     let room = room.clone();
-    let attachment = match attributes.attachment {
-        Some(Assignment::Create(upload)) => Some(upload.stage(c.app()).await?),
-        Some(Assignment::Invalid) => return Err(invalid_attachment()),
-        _ => None,
-    };
+    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    if matches!(attachment, Assignment::Invalid) {
+        return Err(invalid_attachment());
+    }
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
@@ -527,7 +501,7 @@ pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<cam
         .app()
         .db
         .write(move |tx| {
-            let blob = attributes.existing_attachment.or(attachment.map(|staged| save_staged(tx, staged)).transpose()?);
+            let blob = attachment_blob(tx, attachment)?;
             let attributes = NewMessage {
                     room_id,
                     creator_id,
@@ -542,6 +516,7 @@ pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<cam
                 };
             let message = if let Some(mut thread) = thread {
                     let message = thread.post_message(tx, creator_id, attributes)?;
+                    if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
                     crate::messaging::process_message_attachment(tx, storage, &message)?;
                     return Ok((message, None));
                 } else {
@@ -549,6 +524,7 @@ pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<cam
                     deliver_webhooks_to_bots(tx, &room, &message)?;
                     message
                 };
+            if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
             Ok((message, blob))
         })
         .await
@@ -567,6 +543,16 @@ pub(crate) fn save_staged(tx: &mut campfire_db::Tx<'_>, staged: Staged) -> campf
     Ok(blob)
 }
 
+/// Resolve a staged upload or an existing direct-upload blob inside the writer transaction.
+pub(crate) fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Blob>> {
+    match assignment {
+        Assignment::Create(staged) => save_staged(tx, staged).map(Some),
+        Assignment::Existing(blob) => attachments::save_existing(tx, blob).map(Some),
+        Assignment::Unchanged | Assignment::Delete => Ok(None),
+        Assignment::Signed(_) | Assignment::Invalid => Err(campfire_db::Error::Other("invalid attachment".into())),
+    }
+}
+
 /// [`canonical_body`] on a reader, ahead of the write that stores it.
 pub(crate) async fn canonicalize_body(app: &App, body: String, request_host: Option<String>) -> Result<String> {
     let app2 = app.clone();
@@ -576,7 +562,7 @@ pub(crate) async fn canonicalize_body(app: &App, body: String, request_host: Opt
 /// Assigning a String to a rich text attribute stores the canonicalized content
 /// (`ActionText::Content.new(body, canonicalize: true).to_html`).
 pub(crate) fn canonical_body(conn: &campfire_db::Connection, app: &App, body: &str, request_host: Option<String>) -> String {
-    let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
+    let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
     let ctx = resolver.render_context(request_host);
     Content::load(body, &ctx).map(|content| content.to_html()).unwrap_or_else(|_| body.to_string())
 }
@@ -604,65 +590,43 @@ pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
 /// `blob.analyze`: its `after_update` touches the attached records. The file is analyzed off the
 /// writer.
 async fn analyze_attachment(app: &App, blob: Blob) -> Result<Blob> {
-    let metadata = active_storage::analyzed_metadata(app, &blob).await?;
-    app.db
-        .write(move |tx| {
-            let mut blob = blob;
-            blob.update_metadata(tx.conn(), metadata).map_err(storage_error)?;
-            touch_attachment_records(tx, blob.id)?;
-            Ok(blob)
-        })
-        .await
-        .map_err(db_error)
-}
-
-/// `Blob#touch_attachments`: each attached record is touched (a message also touches its room).
-pub(crate) fn touch_attachment_records(tx: &mut campfire_db::Tx<'_>, blob_id: i64) -> campfire_db::Result<()> {
-    for (record_type, record_id) in campfire_storage::blob::attachment_records(tx.conn(), blob_id).map_err(storage_error)? {
-        if record_type == "Message" {
-            Message::find(tx.conn(), record_id)?.touch(tx)?;
-        }
-    }
-    Ok(())
+    active_storage::analyze(app, blob.id).await.map_err(Error::internal)?.ok_or(Error::NotFound)
 }
 
 /// `@message.update!(message_params)`. A new attachment replaces the old one (whose blob is purged
 /// later) without `process_attachment`: the blob is only analyzed, by `ActiveStorage::AnalyzeJob`
 /// after commit (verified against the reference with a bot's `PUT` and `attachment`).
 pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: MessageParams) -> Result<Message> {
-    let attachment = match attributes.attachment {
-        Some(Assignment::Invalid) => return Err(invalid_attachment()),
-        Some(Assignment::Create(upload)) => Some(Some(upload.stage(c.app()).await?)),
-        Some(_) => Some(None),
-        None => None,
-    };
+    let attachment_given = attributes.attachment.is_some();
+    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    if matches!(attachment, Assignment::Invalid) {
+        return Err(invalid_attachment());
+    }
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
     };
-    let (id, blob) = c
+    let id = c
         .app()
         .db
         .write(move |tx| {
             let mut message = message;
-            if let Some(body) = body {
-                message.update_body(tx, &body)?;
-            }
-            let attachment_given = attachment.is_some();
-            let blob = attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?;
+            let blob = attachment_blob(tx, attachment)?;
             if attachment_given {
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
             }
-            Ok((message.id, blob))
+            message.edit(tx, campfire_db::MessageChanges {
+                markdown_source: attributes.markdown_source,
+                body,
+                ..Default::default()
+            })?;
+            if let Some(blob) = &blob {
+                attachments::enqueue_analysis(tx, blob);
+            }
+            Ok(message.id)
         })
         .await
         .map_err(db_error)?;
-    if let Some(blob) = blob.filter(|blob| !blob.is_analyzed()) {
-        let job_app = c.app().clone();
-        c.app().jobs.perform_later("ActiveStorage::AnalyzeJob", async move {
-            analyze_attachment(&job_app, blob).await.map(drop).map_err(|e| anyhow::anyhow!("{e:?}"))
-        });
-    }
     c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
 }
 
@@ -720,6 +684,22 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
             app.broadcasts.message_replace(&room, &message, &partials);
+            let replacements = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| -> askama::Result<_> {
+                Ok([
+                    ("meta", views::MetaPartial {ctx, message: &view}.render()?),
+                    // WS15g/WS8b provide the existing MessageComponents loop bodies for these
+                    // two containers. The empty replacements still remove cards after edits.
+                    ("github_pr_cards", views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0),
+                    ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
+                    ("message_link_cards", views::cards(&view, "message_link_cards", "message-link-cards", 0, &view.components.message_link_cards).0),
+                    ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
+                    ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),
+                    ("link_embed_cards", views::cards(&view, "link_embed_cards", "link-embed-cards", 2, &view.components.link_embed_cards).0),
+                ])
+            }).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            for (part, html) in replacements {
+                app.broadcasts.message_part_replace(&room, &message, part, &html);
+            }
             Ok(())
         })
         .await
@@ -733,7 +713,7 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
 /// rows commit, or roll back, with the message; each is held for [`WEBHOOK_HOLD`] so a bot can't
 /// be told (and reply) before the room sees the message, and [`release_webhooks`] makes them due
 /// once it has been broadcast.
-fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
+pub(crate) fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
     let candidates = if room.direct() { room.active_bots(tx.conn())? } else { message.mentionees(tx.conn(), tx.rich_text())? };
     for bot in candidates.into_iter().filter(|user| user.role == Role::Bot && user.status == Status::Active && user.id != message.creator_id) {
         if bot.webhook(tx.conn())?.is_some() {
@@ -765,16 +745,21 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    c.app()
+    let (value, fetches, twitter_fetches) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
-            campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))
+            let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
+            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches()))
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
+        .await
+        .map_err(db_error)?;
+    Ok(value)
 }
 
 /// `render action: :room_not_found` (inside the layout).
@@ -793,3 +778,6 @@ mod tests;
 
 #[cfg(test)]
 mod http_tests;
+#[cfg(test)]
+#[path = "messages/ws17_activity_tests.rs"]
+mod ws17_activity_tests;

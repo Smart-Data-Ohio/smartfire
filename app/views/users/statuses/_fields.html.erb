@@ -1,0 +1,36 @@
+<%# Presence and custom status, shared by the profile page's Status section %>
+<%# and the status popup in the profile card. Each copy takes its own id %>
+<%# prefix: the popup can open over the profile page. %>
+<div class="flex align-center gap pad-block-half">
+  <%= form.label :presence_setting, "Presence", class: "txt-medium", for: "#{id_prefix}_presence_setting" %>
+  <%= form.select :presence_setting,
+        options_for_select([ [ "Automatic", "auto" ], [ "Do not disturb", "dnd" ], [ "Invisible (appear offline)", "invisible" ] ], user.presence_setting),
+        {}, { class: "input", id: "#{id_prefix}_presence_setting" } %>
+</div>
+<% if user.errors[:presence_setting].any? %>
+  <p class="txt-small margin-none" style="color: var(--color-negative)">Presence <%= user.errors[:presence_setting].to_sentence %>.</p>
+<% end %>
+
+<div class="flex align-center gap pad-block-half">
+  <%= form.label :custom_status_emoji, "Emoji", class: "txt-medium", for: "#{id_prefix}_custom_status_emoji" %>
+  <%= form.text_field :custom_status_emoji, class: "input", maxlength: User::StatusSettings::CUSTOM_STATUS_EMOJI_LIMIT,
+        placeholder: "😀", autocomplete: "off", size: 6, id: "#{id_prefix}_custom_status_emoji" %>
+  <%= form.label :custom_status_text, "Status text", class: "txt-medium for-screen-reader", for: "#{id_prefix}_custom_status_text" %>
+  <%= form.text_field :custom_status_text, class: "input flex-item-grow", maxlength: User::StatusSettings::CUSTOM_STATUS_TEXT_LIMIT,
+        placeholder: "Working from the train…", autocomplete: "off", id: "#{id_prefix}_custom_status_text" %>
+</div>
+<% %i[ custom_status_emoji custom_status_text ].each do |attribute| %>
+  <% if user.errors[attribute].any? %>
+    <p class="txt-small margin-none" style="color: var(--color-negative)">Custom status <%= user.errors[attribute].to_sentence %>.</p>
+  <% end %>
+<% end %>
+
+<div class="flex align-center gap pad-block-half">
+  <%= form.label :custom_status_expires_in, "Clear after", class: "txt-medium", for: "#{id_prefix}_custom_status_expires_in" %>
+  <%= form.select :custom_status_expires_in,
+        options_for_select(User::StatusSettings::CUSTOM_STATUS_EXPIRY_LABELS.map { |value, label| [ label, value ] }, "never"),
+        {}, { class: "input", id: "#{id_prefix}_custom_status_expires_in" } %>
+</div>
+<% if user.errors[:custom_status_expires_in].any? %>
+  <p class="txt-small margin-none" style="color: var(--color-negative)">Clear after <%= user.errors[:custom_status_expires_in].to_sentence %>.</p>
+<% end %>
