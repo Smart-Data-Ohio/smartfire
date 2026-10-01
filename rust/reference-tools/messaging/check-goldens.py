@@ -2,6 +2,7 @@
 """Re-run the pinned Rails oracles from fresh seeds and reject any changed golden bytes."""
 import os
 import argparse
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -9,6 +10,9 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[3]
 SCRATCH = ROOT / ".scratch/messaging-golden-check"
 IMAGE = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
+# _common.md explicitly accepts #163's application layout and its two assets.
+# Message/thread content still comes from d7c7de92 and is cross-checked below.
+LAYOUT_IMAGE = os.environ.get("PARITY_LAYOUT_IMAGE", "ws8br2-reference:d7c7de92-status-2e20b24c")
 ORACLES = ["preview", "fragments", "root", "paging", "broadcasts", "thread-memberships", "collection", "room-list", "message-states", "thread-message-reads", "thread-message-writes", "thread-pages", "thread-lifecycle", "thread-content", "forwards", "forward-success", "modern-boosts", "signed-attachments", "boost-pages", "thread-review", "thread-upload-coverage", "client-retries", "avatar-logo-uploads", "jpeg-boundary"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("names", nargs="*", choices=ORACLES)
@@ -36,6 +40,25 @@ for name in names:
     for line in run.stdout.splitlines():
         if line.startswith("WS8bm "):
             print(line, flush=True)
+    if name == "thread-pages":
+        shutil.copyfile(ROOT / "rust/parity/.seed/default/db/production.sqlite3", SCRATCH / "db/production.sqlite3")
+        layout_args = args.copy()
+        layout_args[-4] = LAYOUT_IMAGE
+        layout_args[-1] = "bin/rails runner --skip-executor /work/reference-tools/messaging/thread-pages.rb /out/thread-pages-layout.json"
+        layout_run = subprocess.run(layout_args, cwd=ROOT, capture_output=True, text=True)
+        (SCRATCH / "thread-pages-layout.log").write_text(layout_run.stdout + layout_run.stderr)
+        assert layout_run.returncode == 0, "thread-pages: approved layout reference failed"
+        pinned = json.loads((SCRATCH / "out/thread-pages.json").read_text())
+        layout = json.loads((SCRATCH / "out/thread-pages-layout.json").read_text())
+        full_bodies = [row.pop("full_body") for row in layout["rows"]]
+        for row in pinned["rows"]:
+            row.pop("full_body")
+        assert layout == pinned, "thread-pages: content drift outside the approved layout"
+        for row, full_body in zip(pinned["rows"], full_bodies):
+            row["full_body"] = full_body
+        pinned["layout_reference"] = "2e20b24c"
+        (SCRATCH / "out/thread-pages.json").write_text(json.dumps(pinned, ensure_ascii=False, indent=2) + "\n")
+        print("WS8bm thread layout: #163 Rails layout; every non-layout field identical to d7c7de92", flush=True)
     files = [f"{name}.json"] + (["index-template-digest.txt"] if name == "paging" else [])
     for file in files:
         if options.write:
