@@ -34,7 +34,7 @@ use crate::channels::{self, Broadcasts, Cable, Deps, sink};
 
 const GOLDEN: &str = "crates/campfire/src/channels/tests/golden/reference.json";
 /// How long a replay waits for a frame the recording says is coming.
-const EXPECTED_FRAME_WAIT: Duration = Duration::from_secs(10);
+const EXPECTED_FRAME_WAIT: Duration = crate::test_support::WAIT;
 const TRIGGER: &str = "crates/campfire/src/channels/tests/golden/trigger.rb";
 
 /// The repository root (`CAMPFIRE_REPO_ROOT` when this module is built outside the workspace).
@@ -405,17 +405,17 @@ async fn run_script(target: &Target, expected: Option<&[Exchange]>) -> Vec<Excha
                 if let Some(cookie) = cookie {
                     headers.insert("cookie", target.fixtures.cookies[cookie].parse().unwrap());
                 }
-                let (ws, _) = tokio_tungstenite::connect_async(request)
+                let (ws, _) = crate::test_support::wait("golden replay WebSocket upgrade", tokio_tungstenite::connect_async(request))
                     .await
                     .expect("upgrade");
                 sockets.insert(socket.to_string(), ws);
             }
-            Step::Send(socket, text) => sockets
-                .get_mut(socket)
-                .unwrap()
-                .send(WsMessage::Text(text.into()))
-                .await
-                .unwrap(),
+            Step::Send(socket, text) => {
+                crate::test_support::wait(
+                    "golden replay command send",
+                    sockets.get_mut(socket).unwrap().send(WsMessage::Text(text.into())),
+                ).await.unwrap();
+            }
             Step::Trigger(event, args) => {
                 let args: Vec<String> = args
                     .iter()

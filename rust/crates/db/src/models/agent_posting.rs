@@ -432,7 +432,7 @@ pub fn broadcast_unread_room(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     for m in memberships {
         if m.involvement != Some(crate::Involvement::Muted) || mentions.contains(&m.user_id) {
             tx.emit_after_commit(crate::Event::broadcast(&Broadcast::Cable {
-                stream: format!("user_{}_unread_rooms", m.user_id),
+                stream: format!("user_{}_unreads", m.user_id),
                 payload: json!({"roomId":message.room_id}),
             }));
         }

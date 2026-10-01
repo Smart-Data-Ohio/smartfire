@@ -176,7 +176,7 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
         cable,
         jobs,
         mail,
-        agent_message_payload: crate::controllers::presenters::agent_payload::State::default(),
+        agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
         agent_repositories: crate::integrations::agent_repositories::State::default(),
         github_accounts,
         sudo: crate::concerns::sudo::State::default(),

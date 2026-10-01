@@ -1,6 +1,6 @@
 //! Shared request-specific message payload adapter.
 //! WS8b-m owns MessagePayloadHelper; WS11-api calls the stable Presenter method.
-#![allow(dead_code)] // FLAGGED: WS8b-m/WS11-api install and call this adapter at merge.
+#![allow(dead_code)] // WS11-api calls the stable entry point after its HTTP branch merges.
 use super::{Presenter, Result};
 use campfire_db::{Message, User};
 use serde_json::Value;
@@ -15,11 +15,28 @@ pub trait MessagePayload: Send + Sync {
         base_url: &str,
     ) -> Result<Value>;
 }
+struct SharedPayload;
+impl MessagePayload for SharedPayload {
+    fn message(
+        &self,
+        presenter: &Presenter<'_>,
+        message: &Message,
+        viewer: &User,
+        base_url: &str,
+    ) -> Result<Value> {
+        crate::controllers::messages::payload::message(presenter, message, viewer, base_url)
+    }
+}
 #[derive(Default)]
 pub struct State {
     adapter: RwLock<Option<Arc<dyn MessagePayload>>>,
 }
 impl State {
+    pub fn live() -> Self {
+        let state = Self::default();
+        state.install(Arc::new(SharedPayload));
+        state
+    }
     pub fn install(&self, adapter: Arc<dyn MessagePayload>) {
         *self.adapter.write().unwrap_or_else(|p| p.into_inner()) = Some(adapter);
     }
@@ -36,9 +53,7 @@ impl State {
             .read()
             .unwrap_or_else(|p| p.into_inner())
             .clone();
-        // FLAGGED STUB: at merge WS8b-m installs an adapter calling
-        // controllers::messages::payload::message(presenter, message, viewer, base).
-        // Never substitute the cached stock JSON: it omits thread/reply permissions.
+        // Explicitly uninstalled custom states fail instead of returning cached stock JSON.
         adapter
             .ok_or_else(|| {
                 campfire_db::Error::Other(
@@ -111,8 +126,10 @@ mod tests {
                 );
                 p.current_user_id = Some(BENDER);
                 p.cache_base_url = Some("https://first.test".into());
+                let uninstalled = State::default();
                 assert!(
-                    p.agent_message_payload(&m)
+                    uninstalled
+                        .message(&p, &m)
                         .unwrap_err()
                         .to_string()
                         .contains("not installed")
@@ -319,3 +336,6 @@ mod reference_callback_tests {
         }).await.unwrap();
     }
 }
+
+#[cfg(test)]
+mod live_tests;

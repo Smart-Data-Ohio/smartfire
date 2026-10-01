@@ -250,12 +250,6 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn plain_text_body(&self, message: &Message) -> Result<String> {
-        if message.markdown_source.is_some() || message.forwarded_markdown {
-            let body = message.body_html(self.conn)?.unwrap_or_default();
-            let resolver = self.resolver();
-            return campfire_richtext::markdown::plain_text(&body, &resolver.render_context(self.request_host.clone()), &resolver)
-                .map_err(|error| campfire_db::Error::Other(error.to_string()));
-        }
         message.plain_text_body(self.conn, self.rich_text)
     }
 
@@ -474,6 +468,16 @@ impl<'a> Presenter<'a> {
         Ok(campfire_richtext::Content::load(&body, &ctx)
             .and_then(|content| content.to_rendered_html_with_layout(&ctx))
             .unwrap_or_default())
+    }
+
+    /// Fallible `message.body.to_s` for the shared MessagePayloadHelper reader.
+    pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
+        let Some(body) = message.body_html(self.conn)? else { return Ok(String::new()) };
+        let resolver = self.resolver();
+        let ctx = resolver.render_context(self.request_host.clone());
+        campfire_richtext::Content::load(&body, &ctx)
+            .and_then(|content| content.to_rendered_html_with_layout(&ctx))
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))
     }
 
     /// `editable_body(message)` as the editor's `value`.

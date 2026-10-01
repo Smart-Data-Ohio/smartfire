@@ -20,7 +20,10 @@ pub trait RepositoryReader: Send + Sync {
 }
 impl RepositoryReader for super::github::accounts::Accounts {
     fn readable(&self, request: RepositoryRequest) -> BoxFuture<'_, Result<bool>> {
-        Box::pin(async move { self.can_read_repository(request.account_id, &request.owner, &request.repo).await })
+        Box::pin(async move {
+            self.can_read_repository(request.account_id, &request.owner, &request.repo)
+                .await
+        })
     }
 }
 #[derive(Default)]
@@ -28,6 +31,19 @@ pub struct State {
     reader: RwLock<Option<Arc<dyn RepositoryReader>>>,
 }
 impl State {
+    pub fn live(db: Database, crypto: Arc<rails_compat::ar_encryption::ArEncryption>) -> Self {
+        let state = Self::default();
+        state.install(Arc::new(super::github::accounts::Accounts::new(
+            db,
+            crypto,
+            super::github::client::AppClient::from_env(),
+        )));
+        state
+    }
+    #[cfg(test)]
+    fn installed(&self) -> bool {
+        self.reader.read().unwrap().is_some()
+    }
     pub fn install(&self, reader: Arc<dyn RepositoryReader>) {
         *self.reader.write().unwrap_or_else(|p| p.into_inner()) = Some(reader);
     }
@@ -118,6 +134,14 @@ mod tests {
     use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
     use campfire_db::{ChannelThread, NewChannelThread};
     use std::sync::Mutex;
+    #[tokio::test]
+    async fn ws11_live_repository_reader_is_installed_at_boot() {
+        let test = TestApp::boot().await.expect("default seed");
+        assert!(
+            test.booted.app.agent_repositories.installed(),
+            "production boot must install the linked-account reader"
+        );
+    }
     struct Reader {
         db: Database,
         calls: Mutex<Vec<RepositoryRequest>>,
@@ -139,7 +163,7 @@ mod tests {
             })
         }
     }
-    async fn setup(
+    pub(super) async fn setup(
         db: &Database,
         crypto: Arc<rails_compat::ar_encryption::ArEncryption>,
     ) -> (i64, i64) {
@@ -149,7 +173,7 @@ mod tests {
             tx.conn().execute("INSERT INTO github_connected_accounts(user_id,github_login,access_token,created_at,updated_at) VALUES (?,'ws11-owner',?,?,?)", params![DAVID,crypto.encrypt("ws11-public-fake-repository-token"),tx.now(),tx.now()])?;
             let thread=ChannelThread::create(tx, NewChannelThread {room_id:ALL_TALK,creator_id:DAVID,name:Some("Private context".into()),..Default::default()})?;
             for (id,private) in [(900130001,Some(true)),(900130002,None),(900130003,Some(false))] {
-                tx.conn().execute("INSERT INTO github_pull_requests(id,owner,repo,number,title,private,created_at,updated_at) VALUES (?,'Mixed','Repo',?,'Private title',?,?,?)", params![id,id,private,tx.now(),tx.now()])?;
+                tx.conn().execute("INSERT INTO github_pull_requests(id,owner,repo,number,title,private,created_at,updated_at) VALUES (?,'mixed','repo',?,'Private title',?,?,?)", params![id,id,private,tx.now(),tx.now()])?;
                 tx.conn().execute("INSERT INTO work_thread_links(channel_thread_id,kind,github_pull_request_id,created_by_id,created_at,updated_at) VALUES (?,'pull_request',?,?,?,?)",params![thread.id,id,DAVID,tx.now(),tx.now()])?;
             }
             Ok((agent.id,thread.id))
@@ -243,3 +267,6 @@ mod tests {
         assert_eq!(reader.calls.lock().unwrap().len(), 1);
     }
 }
+
+#[cfg(test)]
+mod live_tests;

@@ -59,7 +59,7 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
                 let message = campfire_db::Message::find(conn, event.message_id)?;
                 let room = campfire_db::Room::find(conn, message.room_id)?;
                 let view = crate::controllers::presenters::Presenter::new(conn, &copy, None).message(&message)?;
-                let html = crate::controllers::presenters::page::render_detached(&copy, None, |ctx| campfire_views::messages::message(ctx, &view));
+                let html = crate::controllers::presenters::page::render_detached(&copy, None, |ctx| campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders"));
                 copy.broadcasts.turbo(&super::broadcasts::Stream::conversation(&room, &message), Action::Replace,
                     &super::broadcasts::message_dom_id(&message, None), Some(&html), false);
                 Ok(())
@@ -195,19 +195,19 @@ fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updat
 }
 
 /// WS8 domain frames share WS7's publisher and conservative Turbo guard.
-/// Stream replacements render after commit with no request/session context.
+/// Message appends and replacements render after commit without request/session context.
 fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
     use campfire_db::broadcasts::Broadcast;
     if let Broadcast::Turbo(frame) = broadcast
-        && frame.action == campfire_db::broadcasts::TurboAction::Replace
-        && let Some(campfire_db::broadcasts::Partial::MessageReplace {message_id}) = &frame.partial
+        && matches!(frame.action, campfire_db::broadcasts::TurboAction::Append | campfire_db::broadcasts::TurboAction::Replace)
+        && let Some(campfire_db::broadcasts::Partial::Message {message_id} | campfire_db::broadcasts::Partial::MessageReplace {message_id}) = &frame.partial
     {
         let app=app.ok_or_else(||anyhow::anyhow!("app not booted"))?;
         let copy=app.clone();let message_id=*message_id;
         let html=app.db.read_blocking(move|conn| {
             let message=campfire_db::Message::find(conn,message_id)?;
             let view=crate::controllers::presenters::Presenter::new(conn,&copy,None).message(&message)?;
-            Ok(crate::controllers::presenters::page::render_detached(&copy,None,|ctx|campfire_views::messages::message(ctx,&view)))
+            Ok(crate::controllers::presenters::page::render_detached(&copy,None,|ctx|campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders")))
         })?;
         if campfire_views::helpers::request_forgery::has_token_slots(&html) {
             anyhow::bail!("refusing unresolved CSRF token slots in a message replacement");
@@ -215,7 +215,8 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
         let streamables:Vec<_>=frame.streamables.iter().map(|s|s.to_param()).collect();
         let streamables:Vec<_>=streamables.iter().map(String::as_str).collect();
         let attrs:&[(&str,Option<&str>)]=if frame.maintain_scroll {&[("maintain_scroll",Some("true"))]} else {&[]};
-        cable.broadcast_action_to(&streamables,Action::Replace,Target::Target(&frame.target),Some(&html),attrs);
+        let action=if frame.action == campfire_db::broadcasts::TurboAction::Append {Action::Append} else {Action::Replace};
+        cable.broadcast_action_to(&streamables,action,Target::Target(&frame.target),Some(&html),attrs);
         return Ok(());
     }
     let (stream, payload) = template_free_broadcast(broadcast)
@@ -364,3 +365,6 @@ mod tests {
         assert!(!configured(&vars));
     }
 }
+
+#[cfg(test)]
+mod stream_tests;

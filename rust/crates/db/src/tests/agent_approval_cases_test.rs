@@ -1,5 +1,4 @@
-//! Named comparisons from pinned AgentApprovalTest. The preference-neighbour
-//! mention assertion awaits WS12's installed activity producer.
+//! Named comparisons from pinned AgentApprovalTest, including the installed ordinary mention recorder.
 use super::*;
 use crate::models::agent_delivery::EventWebhookJob;
 use crate::{AgentApproval, AgentKind, NewAgent, NewApproval, User};
@@ -434,7 +433,10 @@ fn ws11_approval_case_cancel_and_expire_handle_inbox() {
     let t = setup();
     let mut a = t.write(create);
     let aid = a.id;
-    t.write(move |tx| { assert!(a.cancel_by_agent(tx)?.is_empty()); Ok(()) });
+    t.write(move |tx| {
+        assert!(a.cancel_by_agent(tx)?.is_empty());
+        Ok(())
+    });
     let (aid, bid) = t.write(move |tx| {
         let b = AgentApproval::create(
             tx,
@@ -456,29 +458,97 @@ fn ws11r_approval_inbox_failure_retains_primary_record_like_rails() {
         tx.conn().execute_batch("CREATE TEMP TRIGGER ws11r_reject_inbox BEFORE INSERT ON activity_items WHEN NEW.source_type='AgentApproval' BEGIN SELECT RAISE(ABORT, 'ws11r inbox failure'); END")?;
         Ok(())
     });
-    let result = t.try_write(|tx| crate::AgentApproval::create(tx, crate::NewApproval {
-        agent_id: id("bender_agent"), action: "deploy".into(), summary: "ws11r inbox failure".into(), external_id: Some("ws11r-inbox-failure".into()), ..Default::default()
-    }));
+    let result = t.try_write(|tx| {
+        crate::AgentApproval::create(
+            tx,
+            crate::NewApproval {
+                agent_id: id("bender_agent"),
+                action: "deploy".into(),
+                summary: "ws11r inbox failure".into(),
+                external_id: Some("ws11r-inbox-failure".into()),
+                ..Default::default()
+            },
+        )
+    });
     assert!(result.is_err(), "inbox insert was rejected");
-    let count: i64 = t.read(|c| Ok(c.query_row("SELECT COUNT(*) FROM agent_approvals WHERE external_id='ws11r-inbox-failure'", [], |r| r.get(0))?));
+    let count: i64 = t.read(|c| {
+        Ok(c.query_row(
+            "SELECT COUNT(*) FROM agent_approvals WHERE external_id='ws11r-inbox-failure'",
+            [],
+            |r| r.get(0),
+        )?)
+    });
     println!("WS11R approval inbox failure: persisted approvals = {count}");
-    assert_eq!(count, 1, "Rails retains the approval after its after_create_commit fails");
+    assert_eq!(
+        count, 1,
+        "Rails retains the approval after its after_create_commit fails"
+    );
 }
 
 #[test]
 fn ws11_approval_inbox_recipients_commit_separately_after_primary_like_rails() {
-    let t=setup();
+    let t = setup();
     t.write(|tx| {
         tx.conn().execute_batch("CREATE TEMP TRIGGER ws11_reject_second_recipient BEFORE INSERT ON activity_items WHEN NEW.source_type='AgentApproval' AND EXISTS(SELECT 1 FROM activity_items WHERE source_type='AgentApproval' AND source_id=NEW.source_id) BEGIN SELECT RAISE(ABORT,'second recipient failure'); END")?;
         Ok(())
     });
     assert!(t.try_write(create).is_err());
     t.read(|c| {
-        assert_eq!(c.query_row("SELECT COUNT(*) FROM agent_approvals",[],|r|r.get::<_,i64>(0))?,1);
-        let count=c.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval'",[],|r|r.get::<_,i64>(0))?;
-        let oracle:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/agents_approval_partial_fanout_contract.json")).unwrap();
+        assert_eq!(
+            c.query_row("SELECT COUNT(*) FROM agent_approvals", [], |r| r
+                .get::<_, i64>(0))?,
+            1
+        );
+        let count = c.query_row(
+            "SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval'",
+            [],
+            |r| r.get::<_, i64>(0),
+        )?;
+        let oracle: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../vectors/agents_approval_partial_fanout_contract.json"
+        ))
+        .unwrap();
         println!("WS11 approval later-recipient failure: persisted inbox items = {count}");
-        assert_eq!(count,oracle["inbox_items"].as_i64().unwrap());
+        assert_eq!(count, oracle["inbox_items"].as_i64().unwrap());
         Ok(())
+    });
+}
+
+#[test]
+fn ws11_approval_case_disabled_preference_preserves_decider_and_ordinary_mentions() {
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../vectors/agents_approval_neighbour_contract.json"
+    ))
+    .unwrap();
+    let t = setup();
+    let body=oracle["body"].as_str().unwrap().to_owned();
+    let (approval, message) = t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE agents SET owner_id=? WHERE id=?",
+            params![id("kevin"), id("bender_agent")],
+        )?;
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            params![r#"{"agent_approvals":false}"#, id("kevin")],
+        )?;
+        let approval = create(tx)?;
+        let mention = crate::Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("david"),
+                body: Some(body),
+                client_message_id: Some("approval-switch-neighbour".into()),
+                ..Default::default()
+            },
+        )?;
+        Ok((approval.id, mention.id))
+    });
+    t.read(move |c| {
+        let approval=AgentApproval::find(c,approval)?.unwrap();
+        let items=c.prepare("SELECT user_id FROM activity_items WHERE source_type='AgentApproval' AND source_id=? ORDER BY user_id")?.query_map([approval.id],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        let mut deciders=approval.decider_ids(c)?;deciders.sort_unstable();
+        let mention=crate::ActivityItem::find_by_user_and_source(c,id("kevin"),"Message",message)?.unwrap().event_type;
+        assert_eq!(serde_json::json!({"items":items,"deciders":deciders,"owner_can_decide":approval.decidable_by(c,&User::find(c,id("kevin"))?)?,"mention":mention}),oracle["results"]);Ok(())
     });
 }

@@ -247,7 +247,7 @@ async fn presence_unsubscribing_marks_the_membership_disconnected() {
             .is_connected(app.clock.now())
     );
     david.unsubscribe(&presence).await;
-    eventually(|| async {
+    eventually("revocation cleanup", || async {
         !app.membership("designers", "david")
             .await
             .unwrap()
@@ -689,7 +689,7 @@ async fn workspace_presence_unsubscribing_deletes_only_this_connections_lease() 
     let channel_lease = leases.iter().find(|lease| lease.id != other.id).unwrap().id;
 
     david.unsubscribe(&workspace_presence()).await;
-    eventually(|| async {
+    eventually("workspace presence unsubscribe cleanup", || async {
         app.leases()
             .await
             .iter()
@@ -717,7 +717,7 @@ async fn workspace_presence_heartbeat_extends_the_lease() {
     david
         .perform(&workspace_presence(), json!({ "action": "heartbeat" }))
         .await;
-    eventually(|| async { app.leases().await[0].expires_at > initial.expires_at }).await;
+    eventually("workspace lease expiry refresh", || async { app.leases().await[0].expires_at > initial.expires_at }).await;
     // A heartbeat without `active: true` leaves the activity stamp; one with it moves it.
     assert_eq!(app.leases().await[0].last_active_at, initial.last_active_at);
     david
@@ -726,7 +726,7 @@ async fn workspace_presence_heartbeat_extends_the_lease() {
             json!({ "action": "heartbeat", "active": true }),
         )
         .await;
-    eventually(|| async { app.leases().await[0].last_active_at > initial.last_active_at }).await;
+    eventually("workspace lease activity refresh", || async { app.leases().await[0].last_active_at > initial.last_active_at }).await;
 }
 
 /// Puts back a deleted session row with its id, so that a subscription that wasn't rejected
@@ -821,7 +821,7 @@ async fn workspace_presence_heartbeat_replaces_a_valid_lease_that_was_pruned() {
     david
         .perform(&workspace_presence(), json!({ "action": "heartbeat" }))
         .await;
-    eventually(|| async { app.leases().await.len() == 1 }).await;
+    eventually("old workspace lease removal", || async { app.leases().await.len() == 1 }).await;
     let replacement = app.leases().await[0].clone();
     assert_ne!(replacement.id, original.id);
 
@@ -834,7 +834,7 @@ async fn workspace_presence_heartbeat_replaces_a_valid_lease_that_was_pruned() {
     david
         .perform(&workspace_presence(), json!({ "action": "heartbeat" }))
         .await;
-    eventually(|| async { app.leases().await.len() == 1 }).await;
+    eventually("workspace resubscription lease replacement", || async { app.leases().await.len() == 1 }).await;
 }
 
 /// `current_session: nil` can't happen over the wire (no session, no connection); the nearest is
