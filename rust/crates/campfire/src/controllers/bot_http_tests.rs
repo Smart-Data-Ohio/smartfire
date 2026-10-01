@@ -6,7 +6,7 @@ use campfire_kit::Method;
 use serde_json::{Value, json};
 const BASE: i64 = 1900300001;
 async fn check(case: &Value) {
-    let app = setup().await;
+    let app = setup().await.without_job_runner().await;
     let config = case["setup"].clone();
     app.db().write(move|tx|{
         tx.conn().execute("UPDATE agents SET daily_message_cap=? WHERE id=?",rusqlite::params![config["cap"].as_i64(),AGENT])?;
@@ -31,6 +31,10 @@ async fn check(case: &Value) {
                 tx.conn().execute("INSERT INTO drive_attachments(message_id,file_id,created_at) VALUES(?,'1AbcDefGhIjKlMnOpQrSt',?)",rusqlite::params![BASE+1,tx.now()])?;
             }
         }
+        for i in 0..config["fill"].as_i64().unwrap_or(0) {
+            Message::create(tx,NewMessage{room_id:486777696,creator_id:394959859,client_message_id:Some(format!("bot-contract-fill-{i}")),markdown_source:Some(format!("Filler {i}")),..Default::default()})?;
+        }
+        tx.conn().execute("UPDATE rooms SET icon_name=? WHERE id=486777696",[config["room_icon"].as_str()])?;
         if let Some(status)=config["work"].as_str(){tx.conn().execute("UPDATE channel_threads SET work_status=?,work_owner_id=? WHERE id=1900300008",rusqlite::params![status,config["owner"].as_i64()])?;}
         if config["suspended"].as_bool()==Some(true){tx.conn().execute("UPDATE agents SET suspended_at=? WHERE id=?",rusqlite::params![tx.now(),AGENT])?;}
         if config["board"].as_bool()==Some(true){tx.conn().execute("UPDATE rooms SET type='Rooms::Board' WHERE id=486777696",[])?;}
@@ -38,18 +42,20 @@ async fn check(case: &Value) {
         Ok(())
     }).await.unwrap();
     let now = app.booted.app.clock.now();
-    let key = if case["setup"]["reply"].as_bool() == Some(true) {
+    let mut key = if case["setup"]["reply"].as_bool() == Some(true) {
         rails_compat::verifiers::bot_reply::token_for(
             &app.booted.app.secrets,
             394959859,
-            486777696,
-            now,
+            case["setup"]["reply_room"].as_i64().unwrap_or(486777696),
+            if case["setup"]["reply_expired"].as_bool() == Some(true) { now.checked_sub(jiff::SignedDuration::from_mins(20)).unwrap() } else { now },
         )
     } else if case["setup"]["agent_token"].as_bool() == Some(true) {
         "credential-route".into()
     } else {
         BENDER_KEY.to_owned()
     };
+    if case["setup"]["reply_tampered"].as_bool() == Some(true) { key.push('x'); }
+    if let Some(value) = case["setup"]["key"].as_str() { key=value.to_owned(); }
     let path = case["path"].as_str().unwrap().replace("{key}", &key);
     let mut req = Req::new(
         Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
@@ -79,7 +85,7 @@ async fn check(case: &Value) {
         reply.text()
     );
     assert_eq!(
-        if reply.body.is_empty() {
+        if case["response"].is_null() {
             Value::Null
         } else {
             reply.json()
@@ -164,4 +170,9 @@ async fn bot_http_budget_overflow() {
 #[tokio::test]
 async fn bot_http_nonmember_is_hidden() {
     group(&["bot_create_nonmember"]).await;
+}
+
+#[tokio::test]
+async fn bot_http_reply_invalid_scope() {
+    group(&["bot_reply_stale", "bot_reply_tampered", "bot_reply_wrong_room"]).await;
 }

@@ -58,6 +58,33 @@ contract("bot_index_work_bot_owner",:get,"#{root}?after=#{BASE}",nil,{index:true
 contract("bot_index_work_bot_owner_without_post",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"blocked",owner:394959859,grant:"read_messages"})
 contract("bot_index_work_suspended_owner",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"blocked",owner:394959859,suspended:true})
 contract("bot_index_work_nonmember_owner",:get,"#{root}?after=#{BASE}",nil,{index:true,summary:true,work:"done",owner:712064548})
+# Exact page windows (including tied timestamps), cursor shape and reply scope.
+[
+ ["latest",root,{index:true,fill:45}],
+ ["older","#{root}?before=#{BASE+41}",{index:true,fill:45}],
+ ["newer","#{root}?after=#{BASE}",{index:true,fill:45}],
+ ["end","#{root}?after=#{BASE+47}",{index:true,fill:45}],
+ ["both","#{root}?before=#{BASE+41}&after=#{BASE}",{index:true,fill:45}],
+ ["empty_before","#{root}?before=&after=#{BASE}",{index:true,fill:45}],
+ ["ignored_limit","#{root}?after=#{BASE}&limit=2",{index:true,fill:45}],
+ ["blank_cursor","#{root}?after=%20",{index:true}],
+ ["numeric_suffix","#{root}?after=#{BASE}junk",{index:true}],
+ ["thread_cursor","#{root}?after=#{BASE+2}",{index:true}],
+ ["array","#{root}?after[]=#{BASE}",{index:true}],
+ ["array_missing","#{root}?after[]=0",{index:true}],
+ ["hash","#{root}?after[x]=#{BASE}",{index:true}],
+ ["icons","#{root}?after=#{BASE}",{index:true,icon:"openai",room_icon:"fire"}],
+ ["nonmember","/rooms/201306877/{key}/messages",{}]
+].each { |name,path,setup| contract("bot_index_page_#{name}",:get,path,nil,setup) }
+contract("bot_reply_stale",:post,root,"reply",{reply:true,reply_expired:true})
+contract("bot_reply_tampered",:post,root,"reply",{reply:true,reply_tampered:true})
+contract("bot_reply_wrong_room",:post,root,"reply",{reply:true,reply_room:201306877})
+contract("bot_create_human_key",:post,root,"reply",{key:"127326141-"})
+contract("bot_index_invalid_key",:get,root,nil,{key:"invalid-bot-key"})
+contract("bot_create_invalid_key",:post,root,"reply",{key:"invalid-bot-key"})
+contract("bot_create_empty_utf8",:post,root,"\u00a0")
+contract("bot_update_empty_body",:patch,msg,"")
+contract("bot_destroy_missing_message",:delete,"#{root}/0")
 travel_to Time.utc(2026,3,2,16) do
   agent=Agent.find(773018776)
   bot=User.find(394959859)
@@ -90,12 +117,18 @@ travel_to Time.utc(2026,3,2,16) do
         next_message.drive_attachments.create!(file_id:"1AbcDefGhIjKlMnOpQrSt")
       end
     end
+    (setup[:fill] || 0).times do |i|
+      Message.create!(id:BASE+3+i,room_id:486777696,creator_id:394959859,client_message_id:"bot-contract-fill-#{i}",markdown_source:"Filler #{i}")
+    end
+    Room.find(486777696).update_columns(icon_name:setup[:room_icon])
     thread.update_columns(work_status:setup[:work],work_owner_id:setup[:owner]) if setup[:work]
     agent.update_columns(suspended_at:Time.current) if setup[:suspended]
     Room.find(486777696).update_columns(type:"Rooms::Board") if setup[:board]
     bot.update_columns(icon_name:setup[:icon])
     Rails.cache=ActiveSupport::Cache::MemoryStore.new
-    key=setup[:reply] ? bot.reply_token_for(Room.find(486777696)) : "394959859-BenderToken1"
+    key=setup[:reply] ? bot.reply_token_for(Room.find(setup[:reply_room] || 486777696),expires_in:setup[:reply_expired] ? -1.minute : 5.minutes) : "394959859-BenderToken1"
+    key += "x" if setup[:reply_tampered]
+    key=setup[:key] if setup[:key]
     key="credential-route" if setup[:agent_token]
     session=ActionDispatch::Integration::Session.new(Rails.application)
     session.host! "campfire.test"
@@ -107,7 +140,7 @@ travel_to Time.utc(2026,3,2,16) do
     after={messages:Message.count,boosts:Boost.count}
     state=Message.find_by(id:BASE)
     created=Message.where("id > ?",BASE).order(:id).last unless setup[:index]
-    item.merge(status:response.status,response_body:response.body,response:response.body.blank? ? nil : JSON.parse(response.body),response_headers:response.headers.slice("Content-Type","Cache-Control","Pragma","X-Total-Count","Link","Location","Retry-After"),delta:after.transform_values.with_index{|v,i|v-before.values[i]},state:state && {markdown_source:state.markdown_source,plain_text:state.plain_text_body,drive_ids:state.drive_attachments.pluck(:file_id)},created:created && {plain_text:created.plain_text_body,drive_ids:created.drive_attachments.pluck(:file_id)})
+    item.merge(status:response.status,response_body:response.body,response:(JSON.parse(response.body) rescue nil),response_headers:response.headers.slice("Content-Type","Cache-Control","Pragma","X-Total-Count","Link","Location","Retry-After"),delta:after.transform_values.with_index{|v,i|v-before.values[i]},state:state && {markdown_source:state.markdown_source,plain_text:state.plain_text_body,drive_ids:state.drive_attachments.pluck(:file_id)},created:created && {plain_text:created.plain_text_body,drive_ids:created.drive_attachments.pluck(:file_id)})
   end
   puts JSON.pretty_generate({reference_pin:"d7c7de92",cases:result})
 end
