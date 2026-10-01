@@ -26,6 +26,7 @@ for script, filename in [
     ('bot_reactions_http_contract.rb', 'agent_bot_reactions_http.json'),
     ('work_validation_http_contract.rb', 'agent_work_validation_http.json'),
     ('attachments_http_contract.rb', 'agent_attachments_http.json'),
+    ('permissions_http_contract.rb', 'agent_permissions_http.json'),
 ]:
     with (output / filename).open('w') as stdout, (output / (script + '.log')).open('w') as stderr:
         result = subprocess.run([
