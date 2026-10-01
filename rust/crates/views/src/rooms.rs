@@ -428,6 +428,7 @@ pub struct ShellComponents {
 /// bytes, exactly as Rails' `render partial: "messages/message", collection: []` does.
 pub fn room_message_list(ctx:&ViewContext, show:&ShowView)->h::Html {
     if let Some(html) = &show.shell.message_list { return h::raw(html.clone()); }
+    if show.messages.is_empty() { return h::raw(String::new()); }
     // Preserve main's real message renderer when the WS8b-m whole-list seam is absent.
     h::raw(show.messages.iter().map(|message| format!("\n    {}", crate::messages::cached_message_item(ctx, message))).collect::<String>() + "\n  ")
 }
