@@ -106,7 +106,7 @@ fn permalink(message: &Message, base: &str) -> String {
 pub(crate) fn user(p: &Presenter<'_>, user: &User, base: &str) -> Result<Value> {
     let icon: Option<String> = p.conn.query_row("SELECT icon_name FROM users WHERE id = ?", [user.id], |row| row.get(0))?;
     let icon_url = icon.as_deref().and_then(|name| p.resolve_avatar_icon(name)).and_then(|icon| match icon {
-        AvatarIcon::Image {url, ..} => Some(url), _ => None,
+        AvatarIcon::Image {url, brand, ..} => Some(if brand { campfire_assets::asset_path(&url) } else { url }), _ => None,
     });
     Ok(json!({"id": user.id, "name": user.name, "role": user.role.name(),
         "avatar_url": format!("{base}{}", avatar_path(p.secrets, user)), "icon_name": icon, "icon_avatar_url": icon_url}))
