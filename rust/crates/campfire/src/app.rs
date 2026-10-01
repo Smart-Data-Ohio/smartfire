@@ -154,6 +154,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         }
     }));
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
+    jobs::huddle::recover_unregistered(&db).await?;
 
     // config/puma.rb: `Membership.disconnect_all` when the server boots.
     db.write(|tx| campfire_db::Membership::disconnect_all(tx).map(|_| ()))

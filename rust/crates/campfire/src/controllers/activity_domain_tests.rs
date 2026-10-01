@@ -47,11 +47,11 @@ async fn ws12_activity_same_instant_handling_is_a_noop_after_the_first_commit() 
     let t = ModelDb::boot().await;
     let item = t.item().await;
     t.sink.take();
-    let mut one = item.clone();
+    let one = item.clone();
     t.db.write(move |tx| one.mark_handled(tx)).await.unwrap();
     assert_eq!(t.sink.take().len(),1);
     // Read the fresh row, as the Rails controller does. At a frozen instant nothing changes.
-    let mut current = t.db.read(move |conn| ActivityItem::find(conn,item.id)).await.unwrap();
+    let current = t.db.read(move |conn| ActivityItem::find(conn,item.id)).await.unwrap();
     t.db.write(move |tx| current.mark_handled(tx)).await.unwrap();
     assert!(t.sink.take().is_empty(),"Rails after_update_commit broadcasts only saved state changes");
     t.clock.advance(jiff::SignedDuration::from_secs(1));
@@ -143,11 +143,11 @@ async fn ws12_activity_state_rows_and_dirty_broadcasts_match_frozen_rails_steps(
         let before = item.clone();
         let operation = step["operation"].as_str().unwrap().to_string();
         item = t.db.write(move |tx| {
-            match operation.as_str() {
+            item = match operation.as_str() {
                 "read"=>item.mark_read(tx)?, "handled"=>item.mark_handled(tx)?,
-                "unhandled"=>item.mark_unhandled(tx)?, "unread"=>item.mark_unread(tx)?, "initial"=>(),
+                "unhandled"=>item.mark_unhandled(tx)?, "unread"=>item.mark_unread(tx)?, "initial"=>item,
                 _=>panic!("unexpected operation"),
-            }
+            };
             Ok(item)
         }).await.unwrap();
         assert_eq!(item.state(),step["state"].as_str().unwrap());
@@ -164,7 +164,7 @@ async fn ws12_activity_state_rows_and_dirty_broadcasts_match_frozen_rails_steps(
 #[tokio::test]
 async fn ws12_activity_rollback_and_inactive_or_bot_recipients_do_not_broadcast() {
     let t = ModelDb::boot().await;
-    let mut item = t.item().await;
+    let item = t.item().await;
     let id = item.id;
     t.sink.take();
     let result = t.db.write(move |tx| {
@@ -190,7 +190,7 @@ async fn ws12_activity_cursor_follows_updated_at_and_id_and_ignores_inaccessible
     let item = t.item().await;
     let id = item.id;
     t.clock.advance(jiff::SignedDuration::from_secs(1));
-    let refreshed = t.db.write(move |tx| {let mut item=ActivityItem::find(tx.conn(),id)?;item.mark_read(tx)?;Ok(item)}).await.unwrap();
+    let refreshed = t.db.write(move |tx| ActivityItem::find(tx.conn(),id)?.mark_read(tx)).await.unwrap();
     t.db.read(move |conn| {
         let user=campfire_db::User::find(conn,DAVID)?;
         let ordered=ActivityItem::accessible_to(conn,&user)?;

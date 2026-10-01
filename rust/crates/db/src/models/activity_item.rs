@@ -101,27 +101,26 @@ impl ActivityItem {
         if self.handled() { "handled" } else if self.read_at.is_some() { "read" } else { "unread" }
     }
 
-    pub fn mark_read(&mut self, tx: &mut Tx<'_>) -> Result<()> {
-        if self.read_at.is_none() { self.save_state(tx,Some(tx.now()),self.handled_at)?; }
-        Ok(())
+    /// Return the freshly saved row for the inbox payload (also WS13's established API).
+    pub fn mark_read(&self, tx: &mut Tx<'_>) -> Result<Self> {
+        if self.read_at.is_none() { self.save_state(tx,Some(tx.now()),self.handled_at) }
+        else { Self::find(tx.conn(),self.id) }
     }
-    pub fn mark_unread(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+    pub fn mark_unread(&self, tx: &mut Tx<'_>) -> Result<Self> {
         self.save_state(tx,None,None)
     }
-    pub fn mark_unhandled(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+    pub fn mark_unhandled(&self, tx: &mut Tx<'_>) -> Result<Self> {
         self.save_state(tx,self.read_at,None)
     }
 
-    fn save_state(&mut self, tx: &mut Tx<'_>, read_at: Option<Timestamp>, handled_at: Option<Timestamp>) -> Result<()> {
+    fn save_state(&self, tx: &mut Tx<'_>, read_at: Option<Timestamp>, handled_at: Option<Timestamp>) -> Result<Self> {
         // Rails dirty tracking skips a save (including updated_at and the callback) with no change.
-        if self.read_at == read_at && self.handled_at == handled_at { return Ok(()); }
+        if self.read_at == read_at && self.handled_at == handled_at { return Self::find(tx.conn(),self.id); }
         let now = tx.now();
         tx.conn().execute_cached("UPDATE activity_items SET read_at=?,handled_at=?,updated_at=? WHERE id=?",
             params![read_at,handled_at,now,self.id])?;
-        self.read_at = read_at;
-        self.handled_at = handled_at;
-        self.updated_at = now;
-        Self::broadcast_change(tx,self.user_id,self.id)
+        Self::broadcast_change(tx,self.user_id,self.id)?;
+        Self::find(tx.conn(),self.id)
     }
 
     /// `find_or_initialize_by(user:, source:)`, then `event_type =`, unread again (`read_at` and
@@ -173,26 +172,31 @@ impl ActivityItem {
 
     /// `broadcast_activity_change`: to active humans only, on `ActivityChannel`'s stream, after
     /// commit. (Huddle items' invitation payload is WS13's.)
-    fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {
-        let human = User::find_by_id(tx.conn(), user_id)?
-            .is_some_and(|user| user.is_active() && !user.is_bot());
+    pub(crate) fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {
+        let human = User::find_by_id(tx.conn(), user_id)?.is_some_and(|user| user.is_active() && !user.is_bot());
         if human {
-            tx.emit_broadcast_once(
-                "activity_items",
-                id,
-                &Broadcast::Cable {
-                    stream: format!("user_{user_id}_activity"),
-                    payload: serde_json::json!({ "activityItemId": id }),
-                },
-            );
+            if crate::models::huddle_invitations::enqueue_item_ring(tx, id)? {
+                return Ok(());
+            }
+            tx.emit_broadcast_once("activity_items", id, &Broadcast::Cable {
+                stream: format!("user_{user_id}_activity"),
+                payload: serde_json::json!({ "activityItemId": id }),
+            });
+
         }
         Ok(())
     }
 
-    /// Event lifecycle handling reads an unread item as well as marking it handled.
-    /// app/models/activity_item.rb#mark_handled!
-    pub fn mark_handled(&mut self, tx: &mut Tx<'_>) -> Result<()> {
-        self.save_state(tx,self.read_at.or(Some(tx.now())),Some(tx.now()))
+    /// `mark_handled!`: preserve an existing read timestamp when accepting a late invite.
+    pub fn mark_handled(&self, tx: &mut Tx<'_>) -> Result<Self> {
+        // Rails' saved-change callback watches the state timestamps. Repeating
+        // an answer at the same timestamp is a no-op (activity_item.rb:215-218).
+        if self.read_at.is_none() || self.handled_at != Some(tx.now()) {
+            tx.conn().execute_cached("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),tx.now(),self.id])?;
+            Self::broadcast_change(tx,self.user_id,self.id)?;
+        }
+        Self::find(tx.conn(),self.id)
+
     }
 
     /// Approval settlement preserves an earlier read timestamp and broadcasts once
