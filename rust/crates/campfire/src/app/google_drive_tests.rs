@@ -8,8 +8,12 @@ use hyper::{Method, StatusCode};
 use serde_json::{Value, json};
 use std::sync::Arc;
 async fn app() -> (TestApp, Arc<Recorded>) {
-    let clock = Arc::new(campfire_kit::FrozenClock::new(crate::controllers::presenters::test_support::seed_clock().now()));
-    let a = TestApp::boot_with_clock(clock).await.expect("default seed required");
+    let clock = Arc::new(campfire_kit::FrozenClock::new(
+        crate::controllers::presenters::test_support::seed_clock().now(),
+    ));
+    let a = TestApp::boot_with_clock(clock)
+        .await
+        .expect("default seed required");
     let r = Recorded::new(vec![]);
     support::install(&a, r.clone()).await;
     a.booted.app.google.drive().install_picker(true);
@@ -496,7 +500,7 @@ async fn google_drive_index_rejects_unenrolled_and_stale_enrolled_sessions_befor
             .await
             .unwrap();
         if stale {
-            let enc=rails_compat::ar_encryption::ArEncryption::new(&a.booted.app.secrets);
+            let enc = rails_compat::ar_encryption::ArEncryption::new(&a.booted.app.secrets);
             a.db()
                 .write(move |tx| {
                     let c = campfire_db::TwoFactorCredential::create(
@@ -505,7 +509,10 @@ async fn google_drive_index_rejects_unenrolled_and_stale_enrolled_sessions_befor
                         DAVID,
                         "JBSWY3DPEHPK3PXP",
                     )?;
-                    tx.conn().execute("UPDATE two_factor_credentials SET confirmed_at=? WHERE id=?",rusqlite::params![tx.now(),c.id])?;
+                    tx.conn().execute(
+                        "UPDATE two_factor_credentials SET confirmed_at=? WHERE id=?",
+                        rusqlite::params![tx.now(), c.id],
+                    )?;
                     Ok(())
                 })
                 .await
@@ -543,4 +550,106 @@ async fn google_drive_index_rejects_unenrolled_and_stale_enrolled_sessions_befor
             );
         }
     }
+}
+
+#[tokio::test]
+async fn google_drive_real_agent_credentials_match_rails_request_authentication_order() {
+    const JZ: i64 = 773523953; // Rails fixture identity, shared with google_admin_links.json.
+    use campfire_db::models::{
+        agent::{Agent, NewAgent},
+        agent_credential::AgentCredential,
+    };
+    let vectors: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/google_drive_agent_auth.json"
+    ))
+    .unwrap();
+    let (mut a, r) = app().await;
+    a.booted.jobs.stop(std::time::Duration::from_secs(5)).await;
+    let (agent_id, credential_id, secret) = a
+        .db()
+        .write(|tx| {
+            let agent = Agent::create(
+                tx,
+                NewAgent {
+                    user_id: JZ,
+                    owner_id: Some(DAVID),
+                    ..Default::default()
+                },
+            )?;
+            let (credential, secret) = AgentCredential::create_with_secret(
+                tx,
+                agent.id,
+                "Drive authorization fixture",
+                DAVID,
+                None,
+            )?;
+            Ok((agent.id, credential.id, secret))
+        })
+        .await
+        .unwrap();
+    grant(&a, JZ).await;
+    // Recorded metadata is only usable if a guard regresses; the correct path makes no HTTP.
+    r.answer(200, support::vectors()["drive_file"].clone());
+    for case in vectors["cases"].as_array().unwrap() {
+        a.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE agent_credentials SET last_used_at=NULL,last_used_ip=NULL WHERE id=?",
+                    [credential_id],
+                )?;
+                tx.conn()
+                    .execute("UPDATE agents SET last_seen_at=NULL WHERE id=?", [agent_id])?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let method: Method = case["method"]
+            .as_str()
+            .unwrap()
+            .to_uppercase()
+            .parse()
+            .unwrap();
+        let path = case["path"].as_str().unwrap();
+        let mut caller = a.anonymous();
+        let reply = caller
+            .send(
+                json_req(method, path, json!({"user_ids":[DAVID]}))
+                    .header("authorization", &format!("Bearer {secret}")),
+            )
+            .await;
+        assert_eq!(
+            json!(reply.status.as_u16()),
+            case["status"],
+            "{path}: authorized agent status"
+        );
+        assert_eq!(json!(reply.text()), case["body"], "{path}: exact body");
+        let usage = a
+            .db()
+            .read(move |c| {
+                let used = c.query_row(
+                    "SELECT last_used_at IS NOT NULL FROM agent_credentials WHERE id=?",
+                    [credential_id],
+                    |r| r.get::<_, bool>(0),
+                )?;
+                let seen = c.query_row(
+                    "SELECT last_seen_at IS NOT NULL FROM agents WHERE id=?",
+                    [agent_id],
+                    |r| r.get::<_, bool>(0),
+                )?;
+                Ok((used, seen))
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            json!(usage.0),
+            case["credential_used"],
+            "{path}: credential use"
+        );
+        assert_eq!(json!(usage.1), case["agent_seen"], "{path}: agent activity");
+        assert!(
+            r.calls.lock().unwrap().is_empty(),
+            "{path}: Google must not be contacted"
+        );
+    }
+    println!("Pinned Rails real-agent Drive requests: 4 exercised; 0 skipped");
 }
