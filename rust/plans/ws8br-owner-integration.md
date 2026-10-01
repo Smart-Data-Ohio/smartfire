@@ -169,6 +169,33 @@ message work; WS8br does not duplicate that work.
 
 ## Acceptance boundary
 
+PR #175 review fixes add real thread HTTP provider calls. The content action passes
+the authorized room and thread, the selected last/around-anchor message window,
+viewer `UserView`, thread steps, room `updated_at` and `anchor: Option<i64>` to
+`Conversation`. Its composer facts use the actual viewer and Drive flow with
+`thread: Some(thread)`. Inside the request rendering scope it renders
+`scheduled_messages::ComposerButton { ctx, room_id: composer.room_id,
+thread_id: Some(thread.id) }` and supplies that Rust output as `scheduled_control`.
+The content byte test now goes through the router with no supplied child HTML.
+
+Standalone ordinary thread pages call main's `presenters::github::thread_header`
+with the reader, verified rendering origin and thread. The provider resolves the
+room/thread PR mapping and owns the public card/files, private or unknown lazy
+frame, signed stream and write-actions mount. The adapter records the mapped PR
+ID so main's `refresh_after_render` writer seam runs even without a starter.
+The real HTTP comparisons include public, private, unknown and unmapped PRs;
+queue-failure coverage checks a 200 response and atomic claim/job rollback.
+
+Seven Rails HTML inputs formerly used by two comparison tests are removed: the
+thread and root schedule controls, plus the shell's pins panel, thread panel,
+pending-message template, composer and poll builder. Four additional complete
+Rails HTTP captures cover empty channel, pair-DM, group-DM and open rooms. Their
+Rust comparisons run the router and native providers. Only rendering token/nonce
+entropy is fixed in a test task-local scope before the request; there is no HTML
+input or response rewrite. Empty fixtures preserve the seed room timestamp on
+both targets while removing messages through the respective domain callbacks.
+The original shell seam/jump unit tests retain synthetic inputs only.
+
 The four full-page fixtures come only from a Rails controller renderer at pinned
 `d7c7de92`, with the approved `2e20b24c` application layout. They cover Designers
 (David), the David/Kevin pair (David), the seeded group DM (Kevin), and empty HQ
