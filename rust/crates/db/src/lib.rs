@@ -7,6 +7,7 @@
 //! database, and the after-commit queue.
 
 pub mod broadcasts;
+pub mod callbacks;
 pub mod database;
 pub mod error;
 pub mod events;

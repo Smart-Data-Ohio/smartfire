@@ -45,6 +45,7 @@ pub mod periodic;
 mod messaging;
 pub(crate) mod huddle;
 mod notifications;
+mod peer_callbacks;
 #[cfg(test)]
 pub(crate) mod reminders;
 
@@ -207,7 +208,9 @@ pub struct Jobs {
     /// Inside a write, emit [`Event::Job`] so the job commits with it; outside one,
     /// `queue.perform_later(&db, request)` enqueues it in a write of its own.
     pub queue: JobQueue,
+    pub model_callbacks: Arc<campfire_db::callbacks::Registry>,
     #[cfg(test)]
+
     ad_hoc: mpsc::Sender<AdHocWork>,
     cable: Arc<OnceLock<Cable>>,
     /// Weak because the app holds the database, which holds this sink.
@@ -223,15 +226,19 @@ impl Jobs {
     pub fn new(registry: &Registry, config: &RunnerConfig) -> anyhow::Result<(Self, AdHocQueue)> {
         let queue = JobQueue::new(registry, config)?;
         let (ad_hoc, receiver) = mpsc::channel(AD_HOC_CAPACITY);
+        let model_callbacks = Arc::new(campfire_db::callbacks::Registry::default());
+        peer_callbacks::install(&model_callbacks);
         #[cfg(not(test))]
         drop(ad_hoc);
         Ok((Self {
             queue,
+            model_callbacks,
             #[cfg(test)]
             ad_hoc,
             cable: Arc::new(OnceLock::new()),
             app: Arc::new(OnceLock::new()),
         }, AdHocQueue(receiver)))
+
     }
 
     /// Runs best-effort work in memory. Dropped with an error log when the ad hoc queue is full,
@@ -255,20 +262,28 @@ impl Jobs {
 }
 
 impl EventSink for Jobs {
+    fn model_callback(&self, tx: &mut Tx<'_>, callback: campfire_db::callbacks::Callback) -> campfire_db::Result<()> {
+        self.model_callbacks.call(tx, callback)
+    }
+
     fn disconnect_user_accounts(&self, tx: &mut Tx<'_>, user_id: i64) -> campfire_db::Result<()> {
         if let Some(account) = crate::integrations::fizzy::accounts::Account::for_user(tx.conn(), user_id)? {
             account.mark_disconnected(tx, "Account deactivated")?;
         }
-        if let Some(account) = crate::integrations::github::accounts::Account::for_user(tx.conn(), user_id)? {
-            crate::integrations::github::accounts::Account::mark_disconnected(tx, account.id, "Account deactivated")?;
-        }
+        // GitHub deactivation uses the Env hook installed by WS15g at boot.
         Ok(())
     }
 
     fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
         let app = self.app.get().and_then(Weak::upgrade);
-        let crypto = app.as_ref().map(|app| rails_compat::ar_encryption::ArEncryption::new(&app.secrets));
-        crate::integrations::sync_message_references(tx, message, enqueue, crypto.as_ref())
+        let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
+        crate::integrations::sync_message_references(tx, message, enqueue, crypto)
+    }
+
+    fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, phase: campfire_db::callbacks::Phase, enqueue: bool) -> campfire_db::Result<()> {
+        let app = self.app.get().and_then(Weak::upgrade);
+        let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
+        crate::integrations::sync_message_reference_phase(tx,message,phase,enqueue,crypto)
     }
 
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
@@ -462,6 +477,9 @@ use crate::channels::sink::template_free_broadcast;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod peer_callback_tests;
 #[cfg(test)]
 mod huddle_render_tests;
 #[cfg(test)]

@@ -324,7 +324,7 @@ async fn stats(a: &TestApp) -> (i64, i64, i64) {
 }
 #[tokio::test]
 async fn completed_sign_ins_record_devices_first_and_known_are_quiet_new_alerts_survive_sign_out() {
-    let a = app().await;
+    let a = app().await.without_job_runner().await;
     a.db()
         .write(|tx| {
             User::find(tx.conn(), DAVID)?.reset_two_factor(tx)?;

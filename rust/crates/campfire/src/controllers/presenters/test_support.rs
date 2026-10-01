@@ -160,6 +160,14 @@ pub struct TestApp {
 }
 
 impl TestApp {
+    /// Stop and join job workers before arranging assertions about committed enqueues.
+    /// HTTP routes and the durable queue sink stay active. Tests of job execution should
+    /// keep the default runner instead.
+    pub async fn without_job_runner(mut self) -> Self {
+        self.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+        self
+    }
+
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
         Self::boot_with_clock(seed_clock()).await
@@ -224,6 +232,10 @@ impl TestApp {
             None,
         )
         .await
+    }
+
+    pub async fn boot_with_github_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+        Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network, &[], Some(crate::integrations::github::client::AppClient::new(None,None))).await
     }
 
     pub async fn boot_with_github_app(
@@ -332,7 +344,7 @@ impl TestApp {
                 clock,
                 crate::integrations::github::client::ReadClient::from_env(),
                 client,
-                crate::integrations::net::Network::system(),
+                network.clone(),
                 network,
                 intervals,
             )
@@ -343,6 +355,16 @@ impl TestApp {
                 .unwrap(),
         };
         Some(TestApp { booted, _dir: dir })
+    }
+
+    pub async fn stop_jobs(self) -> (crate::app::App, tempfile::TempDir) {
+        let Self { booted, _dir } = self;
+        let app = booted.app.clone();
+        booted
+            .jobs
+            .shutdown(std::time::Duration::from_secs(5))
+            .await;
+        (app, _dir)
     }
 
     pub fn db(&self) -> &campfire_db::Database {

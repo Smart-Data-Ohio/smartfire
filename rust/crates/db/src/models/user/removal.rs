@@ -15,7 +15,17 @@ pub enum DependencyPhase {
 }
 impl User {
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        self.destroy_with_dependencies(tx, |_, _, _| Ok(()))
+        self.destroy_with_dependencies(tx, |tx, user, phase| {
+            use crate::callbacks::Phase;
+            let phases: &[Phase] = match phase {
+                DependencyPhase::BeforeDestroy => &[Phase::UserHuddles],
+                DependencyPhase::Connections => &[Phase::UserGoogleAccount, Phase::UserCalendarMeetingCache,
+                    Phase::UserGoogleIdentity, Phase::UserGithubAccount, Phase::UserFizzyAccount,
+                    Phase::UserSlackConnection, Phase::UserSlackImports, Phase::UserEventCalendarEntries],
+            };
+            for &phase in phases { tx.model_callback(phase, user.id)?; }
+            Ok(())
+        })
     }
     /// Shared hard-removal operation. Dependency adapters must do no network I/O here.
     /// A missing peer leaves its FK rows intact: failure rolls this entire model operation back.

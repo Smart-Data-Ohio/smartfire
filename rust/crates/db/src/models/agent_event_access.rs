@@ -8,18 +8,7 @@ use crate::sql::{exists, query_all, query_one};
 use crate::{Connection, Result, Tx};
 use rusqlite::params;
 
-const DELIVERABLE: [&str; 10] = [
-    "mention",
-    "direct_message",
-    "reply",
-    "approval_decided",
-    "github_action_completed",
-    "fizzy_action_completed",
-    "work_assigned",
-    "work_unassigned",
-    "work_handed_off",
-    "slash_command",
-];
+use super::agent_delivery::DELIVERABLE_TYPES;
 
 /// Filter access in SQL before applying the page limit. A revoked row cannot hide a
 /// newer readable event, and multiple matching grants cannot duplicate a row.
@@ -78,7 +67,7 @@ pub enum Acknowledgment {
 pub fn acknowledge(tx: &Tx<'_>, agent_id: i64, id: i64) -> Result<Acknowledgment> {
     let Some(event) = AgentEvent::find(tx.conn(), id)?.filter(|e| {
         e.agent_id == agent_id
-            && DELIVERABLE.contains(&e.event_type.as_str())
+            && DELIVERABLE_TYPES.contains(&e.event_type.as_str())
             && e.outcome.as_deref().is_some_and(|o| o != "suppressed")
     }) else {
         return Ok(Acknowledgment::NotFound);

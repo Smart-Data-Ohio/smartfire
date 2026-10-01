@@ -33,6 +33,11 @@ the existing messaging behavior ledger's deferred flows retain their previous st
 
 ## Final cache dependency audit (review of 8cc1e939)
 
+PR #182 was conflicting again, so current main `59ad94de` was merged after the
+focused cache fix. The three merge overlaps retain main's typed uncached quiet-stream
+broadcast and webhook transport entry point, plus both sets of agent tests. The
+message-controller test now calls that shared transport entry point.
+
 Pinned Rails source remains `d7c7de92`; #163 changes only the approved layout/assets.
 The **initial room list is uncached in Rails** (`app/views/rooms/show.html.erb:33`,
 `:35`, `:37`). There is no `cache [message, reactors, ...]` block in
@@ -180,7 +185,10 @@ call site is listed below; all refer to `app/views/`:
 
 Rails' parser also reports three nonexistent leaf names (`inlines/inline`, `as/a`,
 `nothings/nothing`) from dependency tracking; these have no template
-bytes and remain in the recorded tree, without fabricated source files. Helper-driven
+bytes and remain in the recorded tree, without fabricated source files. Their parser inputs are respectively
+`app/views/messages/message_links/_card.html.erb:2` (render inline),
+`app/views/messages/boosts/_reactions.html.erb:16` (collection `as:`), and
+`app/views/link_embeds/_card.html.erb:3` (render nothing). Helper-driven
 mention and unrenderable renders are not discovered as explicit template render calls:
 their real sources are `app/helpers/messages_helper.rb:192` and `:88`; helper changes
 are covered by the presentation version and app lifetime, exactly as in Rails.

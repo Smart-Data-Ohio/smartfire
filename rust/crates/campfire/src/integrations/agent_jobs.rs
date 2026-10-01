@@ -20,8 +20,11 @@ impl JobKind for Delivery {
     }
 }
 #[derive(Serialize, Deserialize)]
-#[serde(transparent)]
-struct EventWebhook(domain::EventWebhookJob);
+#[serde(untagged)]
+enum EventWebhook {
+    Published(domain::EventWebhookJob),
+    Deleted(Box<campfire_db::models::agent_work_events::DeletedWorkWebhookJob>),
+}
 impl campfire_db::Job for EventWebhook {
     const CLASS: &'static str = "Agent::EventWebhookJob";
 }
@@ -40,9 +43,33 @@ async fn deliver(app: App, job: Delivery, _: Execution) -> JobResult {
         .await?;
     Ok(Outcome::Done)
 }
-async fn post(app: App, job: EventWebhook, _: Execution) -> JobResult {
-    post_with_network(&app, job.0, &Network::system()).await?;
+async fn post(app: App, job: EventWebhook, execution: Execution) -> JobResult {
+    post_deferred_with_network(&app, job, execution.id, &Network::system()).await?;
     Ok(Outcome::Done)
+}
+
+async fn post_deferred_with_network(app: &App, job: EventWebhook, job_id: i64, net: &Network) -> anyhow::Result<()> {
+    use rusqlite::OptionalExtension;
+    let job = match job {
+        EventWebhook::Published(job) => Some(job),
+        EventWebhook::Deleted(_) => app.db.write(move |tx| {
+            // A claim may have loaded the intent just before after_commit bound
+            // it. Re-read the row, so deletion of its published event stays a no-op.
+            let current: Option<serde_json::Value> = tx.conn().query_row(
+                "SELECT arguments FROM background_jobs WHERE id=? AND job_class='Agent::EventWebhookJob'",[job_id],|r|r.get(0)).optional()?;
+            let Some(current) = current else {return Ok(None)};
+            let current: EventWebhook=serde_json::from_value(current).map_err(|e|campfire_db::Error::Other(e.to_string()))?;
+            Ok(Some(match current {
+                EventWebhook::Published(job) => job,
+                // Rails never reconstructs an after_destroy_commit side effect
+                // after a process stop or callback failure. The atomic intent
+                // survives, but missing publication makes this job a no-op.
+                EventWebhook::Deleted(_) => return Ok(None),
+            }))
+        }).await?,
+    };
+    if let Some(job)=job { post_with_network(app,job,net).await?; }
+    Ok(())
 }
 
 pub(super) async fn post_with_network(
@@ -93,11 +120,12 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
         Ok(ids) => ids,
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };
-    let access = match app
-        .agent_repositories
-        .resolve_threads(&app.db, id, threads)
-        .await
-    {
+    let access_result = if campfire_db::models::agent_delivery::MESSAGE_TYPES.contains(&e.event_type.as_str()) {
+        app.agent_repositories.resolve_messages(&app.db,id,threads).await
+    } else {
+        app.agent_repositories.resolve_work(&app.db,id,threads).await
+    };
+    let access = match access_result {
         Ok(access) => access,
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };
@@ -666,6 +694,12 @@ mod tests {
 }
 
 #[cfg(test)]
+mod publication_tests;
+
+#[cfg(test)]
+mod indicator_tests;
+
+#[cfg(test)]
 #[test]
 fn ws11_retry_after_and_response_policy_match_rails_vectors() {
     let vectors: serde_json::Value = serde_json::from_str(include_str!(
@@ -698,7 +732,7 @@ fn ws11_retry_after_and_response_policy_match_rails_vectors() {
 #[tokio::test]
 async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
     use crate::controllers::presenters::test_support::{BENDER, TestApp};
-    let test = TestApp::boot().await.expect("default seed");
+    let test = TestApp::boot().await.expect("default seed").without_job_runner().await;
     let db = test.db();
     let (first,second)=db.write(|tx| {
         let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
@@ -723,6 +757,21 @@ async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
 #[cfg(test)]
 #[path = "agent_payload_tests.rs"]
 mod payload_tests;
+
+#[cfg(test)]
+mod case_tests;
+
+#[cfg(test)]
+mod webhook_cases;
+
+#[cfg(test)]
+mod recovery_cases;
+
+#[cfg(test)]
+mod delivery_path_cases;
+
+#[cfg(test)]
+mod webhook_key_cases;
 
 #[cfg(test)]
 #[path = "agent_jobs/message_controller_tests.rs"]

@@ -386,6 +386,7 @@ async fn huddle_sighting_enqueue_rejection_rolls_back_http_request() {
     let Some(app) = TestApp::boot_with_huddle(config()).await else {
         return;
     };
+    let app = app.without_job_runner().await;
     let grant = grant(&app).await;
     let token = bearer(&app, &grant, 0);
     app.db().write(|tx| Ok(tx.conn().execute_batch("CREATE TRIGGER reject_huddle_sighting BEFORE INSERT ON background_jobs WHEN NEW.job_class='Huddle::JoinNoticeJob' BEGIN SELECT RAISE(ABORT,'fixture queue failure'); END;")?)).await.unwrap();
