@@ -266,9 +266,7 @@ impl EventSink for Jobs {
         if let Some(account) = crate::integrations::fizzy::accounts::Account::for_user(tx.conn(), user_id)? {
             account.mark_disconnected(tx, "Account deactivated")?;
         }
-        if let Some(account) = crate::integrations::github::accounts::Account::for_user(tx.conn(), user_id)? {
-            crate::integrations::github::accounts::Account::mark_disconnected(tx, account.id, "Account deactivated")?;
-        }
+        // GitHub deactivation uses the Env hook installed by WS15g at boot.
         Ok(())
     }
 

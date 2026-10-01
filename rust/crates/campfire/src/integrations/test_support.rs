@@ -198,6 +198,7 @@ impl FakeServer {
     }
 
     pub async fn on_listener(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, listener: TcpListener) -> Self {
+
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
@@ -234,6 +235,19 @@ impl Drop for FakeServer {
     fn drop(&mut self) {
         self.listener_task.abort();
     }
+}
+
+/// Isolated HTTP matrices use distinct ports at the end of their worker's reserved range.
+pub fn fixture_http_base(default_port: u16, offset: u16) -> String {
+    let port = std::env::var("INTEGRATION_TEST_PORT_RANGE").map(|range| {
+        let (first, last) = range.split_once('-').expect("INTEGRATION_TEST_PORT_RANGE=start-end");
+        let first: u16 = first.parse().unwrap();
+        let last: u16 = last.parse().unwrap();
+        let port = last.checked_sub(offset).expect("fixture port offset outside range");
+        assert!(first <= port, "fixture port offset outside range");
+        port
+    }).unwrap_or(default_port);
+    format!("http://127.0.0.1:{port}")
 }
 
 pub async fn ws15e_listener() -> TcpListener {
@@ -349,8 +363,9 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
     stream.shutdown().await
 }
 
-/// Also acknowledges the first response byte, so a paused-time test can wait for real I/O
-/// before advancing its clock.
+/// A server that answers every request with `head` and then a byte of body every 50 ms, until
+/// the client hangs up. Acknowledges the first byte, so a paused-time test can wait for real
+/// I/O before advancing its clock.
 pub async fn trickling_server_with_ready(
     head: &'static str,
 ) -> (SocketAddr, tokio::sync::oneshot::Receiver<()>) {
@@ -403,7 +418,7 @@ impl TestDb {
 
     pub fn in_dir(clock: Arc<dyn campfire_db::Clock>, directory: &std::path::Path) -> Self {
         use campfire_db::{BasicRichText, Env, NullSink};
-        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 }, directory)
+        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4, ..Default::default() }, directory)
     }
 
     pub fn with_env(env: campfire_db::Env, directory: &std::path::Path) -> Self {

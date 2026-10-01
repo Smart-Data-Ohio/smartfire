@@ -403,7 +403,7 @@ pub(crate) async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> 
 pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
     let base_url = page::renderer_base_url(c);
-    c.app()
+    let refreshes = c.app()
         .db
         .read(move |conn| {
             let presenter = Presenter::new(conn, &app, None);
@@ -411,10 +411,13 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
             let account = campfire_db::Account::first(conn)?;
             let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::message(ctx, &view));
             let partials = Rendered { message: Some(html), ..Rendered::default() };
-            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)
+            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
+            Ok(presenter.take_github_refreshes())
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(())
 }
 
 /// `broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial:
@@ -422,7 +425,7 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
 pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
     let base_url = page::renderer_base_url(c);
-    c.app()
+    let refreshes = c.app()
         .db
         .read(move |conn| {
             let presenter = Presenter::new(conn, &app, None);
@@ -437,9 +440,8 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             let replacements = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| -> askama::Result<_> {
                 Ok([
                     ("meta", views::MetaPartial {ctx, message: &view}.render()?),
-                    // WS15g/WS8b provide the existing MessageComponents loop bodies for these
-                    // two containers. The empty replacements still remove cards after edits.
-                    ("github_pr_cards", views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0),
+                    // Empty containers remove their old cards after an edit.
+                    ("github_pr_cards", view.components.github_cards_html.clone().unwrap_or_else(|| views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0)),
                     ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
                     ("message_link_cards", views::cards(&view, "message_link_cards", "message-link-cards", 0, &view.components.message_link_cards).0),
                     ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
@@ -450,10 +452,12 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             for (part, html) in replacements {
                 app.broadcasts.message_part_replace(&room, &message, part, &html);
             }
-            Ok(())
+            Ok(presenter.take_github_refreshes())
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(())
 }
 
 /// `deliver_webhooks_to_bots`, in the message's transaction: every active bot in a direct room,
@@ -496,7 +500,7 @@ pub(crate) async fn present<T: Send + 'static>(
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
     let current_user_id = require_current_user(c)?.id;
-    let (value, fetches, twitter_fetches) = c.app()
+    let (value, fetches, twitter_fetches, refreshes) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
@@ -504,13 +508,14 @@ pub(crate) async fn present<T: Send + 'static>(
             presenter.current_user_id = Some(current_user_id);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
             let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
-            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches()))
+            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_github_refreshes()))
         })
         .await
         .map_err(db_error)?;
     super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
         .await
         .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
     Ok(value)
 }
 

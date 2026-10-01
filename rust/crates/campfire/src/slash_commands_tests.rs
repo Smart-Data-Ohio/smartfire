@@ -42,6 +42,7 @@ fn slash_runtime_richtext_and_index_rows_match_rails() {
                 sink: Arc::new(RecordingSink::new()),
                 rich_text: Arc::new(rich),
                 bcrypt_cost: 4,
+                ..Default::default()
             },
         )
         .unwrap();

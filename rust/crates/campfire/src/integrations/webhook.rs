@@ -268,7 +268,7 @@ mod tests {
             let url = c["url"].as_str().map(str::to_string).unwrap_or_else(|| format!("http://webhook.example:{}/{}", server.addr.port(), c["name"].as_str().unwrap()));
             async move { deliver_signed(&net, &url, r#"{"message":"hi"}"#.to_string(), None, || "2026-03-02T16:00:00Z".parse().unwrap(), false).await }
         });
-        let outcomes = futures_join_all(runs).await;
+        let outcomes = crate::test_support::wait("guarded webhook fixture replies", futures_join_all(runs)).await;
 
         for ((case, expected), outcome) in cases.iter().zip(&expected).zip(outcomes) {
             let name = case["name"].as_str().unwrap();
@@ -458,7 +458,7 @@ mod tests {
         let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
         let net = network(resolver, dialer);
         let now = "2026-03-02T16:00:00Z".parse().unwrap();
-        let (legacy, agent) = tokio::join!(deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), None, || now, false), deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), Some("test-secret"), || now, true));
+        let (legacy, agent) = crate::test_support::wait("legacy and agent webhook timeouts", async { tokio::join!(deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), None, || now, false), deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), Some("test-secret"), || now, true)) }).await;
         assert_eq!(legacy.unwrap(), WebhookDelivery { status: None, reply: WebhookReply::Text("Failed to respond within 7 seconds".into()) });
         assert!(matches!(agent, Err(WebhookError::Http(HttpError::ReadTimeout))));
     }

@@ -1,0 +1,480 @@
+{
+  "texts": [
+    {
+      "text": null,
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "plain text",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/rails/rails/pull/123",
+      "references": [
+        [
+          "rails",
+          "rails",
+          "123"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "see https://github.com/o/r/pulls/45/files?diff=split#diff-1 please",
+      "references": [
+        [
+          "o",
+          "r",
+          "45"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/pull/0007 https://github.com/o/r/pull/7",
+      "references": [
+        [
+          "o",
+          "r",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/O/R/pull/1 https://github.com/o/r/pull/1",
+      "references": [
+        [
+          "O",
+          "R",
+          "1"
+        ],
+        [
+          "o",
+          "r",
+          "1"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/pull/1 https://github.com/o/r/pull/2 https://github.com/o/r/pull/3 https://github.com/o/r/pull/4 https://github.com/o/r/pull/5 https://github.com/o/r/pull/6",
+      "references": [
+        [
+          "o",
+          "r",
+          "1"
+        ],
+        [
+          "o",
+          "r",
+          "2"
+        ],
+        [
+          "o",
+          "r",
+          "3"
+        ],
+        [
+          "o",
+          "r",
+          "4"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/pull/0",
+      "references": [
+        [
+          "o",
+          "r",
+          "0"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/foo.bar/baz-qux/pull/7",
+      "references": [
+        [
+          "foo.bar",
+          "baz-qux",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/issues/123",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/o/r/pulls/123",
+      "references": [
+        [
+          "o",
+          "r",
+          "123"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/pull/123",
+      "references": [
+        [
+          "o",
+          "r",
+          "123"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/PULL/123",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "http://github.com/o/r/pull/123",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://example.com/o/r/pull/123",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://GITHUB.com/o/r/pull/123",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/./r/pull/7",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/o/./pull/7",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/../r/pull/7",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/o/../pull/7",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/.../r/pull/7",
+      "references": [
+        [
+          "...",
+          "r",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/.../pull/7",
+      "references": [
+        [
+          "o",
+          "...",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/foo.bar/r/pull/7",
+      "references": [
+        [
+          "foo.bar",
+          "r",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/foo.bar/pull/7",
+      "references": [
+        [
+          "o",
+          "foo.bar",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/_/r/pull/7",
+      "references": [
+        [
+          "_",
+          "r",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/_/pull/7",
+      "references": [
+        [
+          "o",
+          "_",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/-/r/pull/7",
+      "references": [
+        [
+          "-",
+          "r",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/-/pull/7",
+      "references": [
+        [
+          "o",
+          "-",
+          "7"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/pull/12a",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/o/r/pull/12_",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/o/r/pull/12é",
+      "references": [],
+      "matches": false
+    },
+    {
+      "text": "https://github.com/o/r/pull/12/",
+      "references": [
+        [
+          "o",
+          "r",
+          "12"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/pull/12?",
+      "references": [
+        [
+          "o",
+          "r",
+          "12"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/pull/12#",
+      "references": [
+        [
+          "o",
+          "r",
+          "12"
+        ]
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://github.com/o/r/pull/12-",
+      "references": [
+        [
+          "o",
+          "r",
+          "12"
+        ]
+      ],
+      "matches": true
+    }
+  ],
+  "html": [
+    {
+      "html": "<p>see <code>https://github.com/o/r/pull/1</code> and https://github.com/o/r/pull/2</p><pre>https://github.com/o/r/pull/3</pre><p><a href='https://github.com/o/r/pull/4'>the PR</a></p>",
+      "text": "see  and https://github.com/o/r/pull/2\nthe PR\n\nhttps://github.com/o/r/pull/4"
+    },
+    {
+      "html": "<div>https://github.com/o/r/pull/12<br>thanks</div><p>https://github.com/o/r/pull/13</p><p>for this</p>",
+      "text": "https://github.com/o/r/pull/12\nthanks\nhttps://github.com/o/r/pull/13\nfor this\n"
+    },
+    {
+      "html": "<code><a href='https://github.com/o/r/pull/1'>hidden</a></code><a href='https://github.com/o/r/pull/2?a&amp;b'>visible</a>",
+      "text": "visible\nhttps://github.com/o/r/pull/2?a&b"
+    },
+    {
+      "html": "<address>https://github.com/o/r/pull/7</address>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<article>https://github.com/o/r/pull/7</article>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<aside>https://github.com/o/r/pull/7</aside>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<blockquote>https://github.com/o/r/pull/7</blockquote>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<dd>https://github.com/o/r/pull/7</dd>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<dialog>https://github.com/o/r/pull/7</dialog>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<div>https://github.com/o/r/pull/7</div>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<dl>https://github.com/o/r/pull/7</dl>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<dt>https://github.com/o/r/pull/7</dt>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<fieldset>https://github.com/o/r/pull/7</fieldset>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<figcaption>https://github.com/o/r/pull/7</figcaption>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<figure>https://github.com/o/r/pull/7</figure>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<footer>https://github.com/o/r/pull/7</footer>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<form>https://github.com/o/r/pull/7</form>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<h1>https://github.com/o/r/pull/7</h1>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<h2>https://github.com/o/r/pull/7</h2>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<h3>https://github.com/o/r/pull/7</h3>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<h4>https://github.com/o/r/pull/7</h4>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<h5>https://github.com/o/r/pull/7</h5>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<h6>https://github.com/o/r/pull/7</h6>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<header>https://github.com/o/r/pull/7</header>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<hgroup>https://github.com/o/r/pull/7</hgroup>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<hr>https://github.com/o/r/pull/7</hr>thanks",
+      "text": "\nhttps://github.com/o/r/pull/7thanks"
+    },
+    {
+      "html": "<li>https://github.com/o/r/pull/7</li>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<main>https://github.com/o/r/pull/7</main>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<nav>https://github.com/o/r/pull/7</nav>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<ol>https://github.com/o/r/pull/7</ol>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<p>https://github.com/o/r/pull/7</p>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<section>https://github.com/o/r/pull/7</section>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<table>https://github.com/o/r/pull/7</table>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    },
+    {
+      "html": "<td>https://github.com/o/r/pull/7</td>thanks",
+      "text": "https://github.com/o/r/pull/7thanks"
+    },
+    {
+      "html": "<th>https://github.com/o/r/pull/7</th>thanks",
+      "text": "https://github.com/o/r/pull/7thanks"
+    },
+    {
+      "html": "<tr>https://github.com/o/r/pull/7</tr>thanks",
+      "text": "https://github.com/o/r/pull/7thanks"
+    },
+    {
+      "html": "<ul>https://github.com/o/r/pull/7</ul>thanks",
+      "text": "https://github.com/o/r/pull/7\nthanks"
+    }
+  ]
+}

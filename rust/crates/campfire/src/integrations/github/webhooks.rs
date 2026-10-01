@@ -226,13 +226,13 @@ pub fn repository_owner_and_repo(payload: &Value) -> anyhow::Result<Option<(Stri
 fn shape_error() -> anyhow::Error {
     anyhow::anyhow!("Malformed GitHub webhook payload shape")
 }
-fn truthy(value: &Value) -> bool {
+pub(super) fn truthy(value: &Value) -> bool {
     !matches!(value, Value::Null | Value::Bool(false))
 }
-fn get<'a>(value: &'a Value, key: &str) -> anyhow::Result<Option<&'a Value>> {
+pub(super) fn get<'a>(value: &'a Value, key: &str) -> anyhow::Result<Option<&'a Value>> {
     Ok(value.as_object().ok_or_else(shape_error)?.get(key))
 }
-fn dig<'a>(value: &'a Value, keys: &[&str]) -> anyhow::Result<Option<&'a Value>> {
+pub(super) fn dig<'a>(value: &'a Value, keys: &[&str]) -> anyhow::Result<Option<&'a Value>> {
     let Some((key, rest)) = keys.split_first() else {
         return Ok(Some(value));
     };
@@ -251,7 +251,7 @@ fn owner_and_repo(value: &Value) -> anyhow::Result<Option<(String, String)>> {
         .split_once('/')
         .map(|(owner, repo)| (owner.to_lowercase(), repo.to_lowercase())))
 }
-fn integer_for_query(value: &Value) -> Option<i64> {
+pub(super) fn integer_for_query(value: &Value) -> Option<i64> {
     match value {
         Value::Number(number) => number
             .as_i64()
@@ -262,19 +262,8 @@ fn integer_for_query(value: &Value) -> Option<i64> {
     }
 }
 fn store_privacy(tx: &mut Tx<'_>, id: i64, value: &Value) -> campfire_db::Result<()> {
-    // ActiveModel::Type::Boolean: nil/empty string stay nil, the exact false values cast false.
-    let private = match value {
-        Value::Null => None,
-        Value::String(value) if value.is_empty() => None,
-        Value::Bool(false) => Some(false),
-        Value::Number(number) if number.as_f64() == Some(0.0) => Some(false),
-        Value::String(value)
-            if ["0", "f", "F", "false", "FALSE", "off", "OFF"].contains(&value.as_str()) =>
-        {
-            Some(false)
-        }
-        _ => Some(true),
-    };
-    tx.conn().execute("UPDATE github_pull_requests SET private = ?, updated_at = ? WHERE id = ? AND private IS NOT ?", params![private, tx.now(), id, private])?;
+    let private = super::boolean(value);
+    let changed:bool=tx.conn().query_row("SELECT private IS NOT ? FROM github_pull_requests WHERE id=?",params![private,id],|r|r.get(0))?;
+    if changed {super::pull_requests::update(tx,id,&[("private",private.map_or(rusqlite::types::Value::Null,|v|rusqlite::types::Value::Integer(i64::from(v))))])?;}
     Ok(())
 }
