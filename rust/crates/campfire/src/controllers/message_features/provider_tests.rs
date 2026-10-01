@@ -3,6 +3,45 @@ use super::quote_integration_tests::app_rows;
 use crate::controllers::presenters::{Presenter, page, test_support::*};
 use campfire_db::Message;
 use serde_json::Value;
+
+#[tokio::test]
+async fn changed_urls_run_owner_callbacks_and_private_card_endpoints_match_rails() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/provider_callbacks.json"
+    )).unwrap();
+    let app = app_rows(oracle["rows"].clone()).await;
+    let (mut client, server) = super::quote_integration_tests::stream(&app).await;
+    let mut browser = app.david();
+    let message_id = oracle["message_id"].as_i64().unwrap();
+    for step in oracle["steps"].as_array().unwrap() {
+        let response = browser.write(Req::new(axum::http::Method::PATCH,
+            &format!("/rooms/{QUIET_CORNER}/messages/{message_id}"))
+            .header("content-type", "application/json")
+            .header("accept", "application/json")
+            .body(serde_json::to_vec(&step["input"]).unwrap())).await;
+        assert_eq!(response.status.as_u16(), step["status"].as_u64().unwrap() as u16);
+        for expected in step["frames"].as_array().unwrap() {
+            let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
+            assert_eq!(frame["message"], expected["html"]);
+        }
+        let (github, embeds) = app.db().read(move |conn| {
+            let github = conn.prepare("SELECT github_pull_request_id FROM github_pull_request_references WHERE message_id=? ORDER BY id")?
+                .query_map([message_id], |r| r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            let embeds = conn.prepare("SELECT url FROM link_embed_references WHERE message_id=? ORDER BY position")?
+                .query_map([message_id], |r| r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok((github, embeds))
+        }).await.unwrap();
+        assert_eq!(serde_json::json!(github), step["github"]);
+        assert_eq!(serde_json::json!(embeds), step["embeds"]);
+    }
+    for read in oracle["reads"].as_array().unwrap() {
+        let response = browser.get(read["path"].as_str().unwrap()).await;
+        assert_eq!(response.status.as_u16(), read["status"].as_u64().unwrap() as u16);
+        assert_eq!(response.text(), read["body"].as_str().unwrap());
+    }
+    server.abort();
+    println!("WS8bm2 provider callbacks: 3 HTTP edits, 24/24 socket frames and reference sets, 3/3 scoped card endpoints match Rails");
+}
 fn oracle() -> Value {
     serde_json::from_str(include_str!(
         "../../../../../vectors/messaging/providers.json"

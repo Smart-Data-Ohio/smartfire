@@ -8,7 +8,7 @@ mod account_security;
 mod channels;
 mod concerns;
 mod config;
-// WS8bm2 readiness seam for slash launch data; WS13 owns execution.
+// Slash launch readiness delegates to the WS13 configuration API.
 mod huddle_readiness;
 mod picker_configuration;
 mod controllers;

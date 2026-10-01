@@ -56,7 +56,7 @@ pub struct Config {
     /// `LIVEKIT_URL`, whose origin the Content Security Policy allows to connect.
     pub livekit_url: Option<String>,
     pub huddle: crate::huddle::Config,
-    /// WS8bm2 readiness seam; WS13 owns launching the returned huddle.
+    /// Slash-command launch availability, resolved by the WS13 configuration API.
     pub huddles_configured: bool,
     pub google_picker: Option<campfire_views::layouts::GooglePicker>,
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
