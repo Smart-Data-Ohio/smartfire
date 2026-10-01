@@ -1,3 +1,189 @@
+# WS8br PR #175 merge follow-up — complete
+
+Merged `origin/main` at `20dc8ea3` (#174 WS14e Events and #178 Rails deflake) into `rust/ws8br-rooms-http` with merge commit `83e5c5eb`. Verification source: 38e12547ce2a96a5af5fc0fb9b1575774fe12d6b. No stash, test expectation changes, skips, timing threshold changes, or concurrency reductions were used. The existing four-thread baseline and machine-wide two-job compiler throttle were retained.
+
+## Conflict resolutions
+
+- `channels/sink.rs`: retained one generic broadcast dispatcher and all message-feature/room-directory seams; added WS14e EventCards rendering. Stream finalization continues through WS11's existing MessageReplace path, rather than main's obsolete QuietStreamFinal hook.
+- `controllers.rs`: kept the room/switcher endpoints and added all nine WS14e event/attendance endpoints to the router and ported-endpoint inventory.
+- `controllers/fizzy_connections/tests.rs`: kept the held-ephemeral-listener helper and the complete existing HTTP case matrix; removed main's stale probe-and-rebind setup.
+- `controllers/presenters.rs`: kept the shared room/search cache, quote and GitHub facts; added WS14e event facts and viewer-zone cache bypass. Event facts participate in the existing preload contract.
+- `controllers/rooms.rs`: retained the complete room shell, reads, polls, pins, slash commands, quotes and files; added the Events controller module.
+- `integrations/action_claims/tests.rs`: retained main's Env default and asserted both event reminders and streaming messages in the exact periodic task receipts.
+- `jobs/tests.rs`: included event reminders while preserving streaming tasks and GitHub/Fizzy/retention relative ordering; no credential or security assertion changed.
+- `views/src/lib.rs`: retained pins, saved items and scheduled-message modules, alongside main's events module.
+- `views/templates/messages/_message.html`: calls main's context-aware event cards and the existing quote owner seam; GitHub, X, agent, poll and other message children remain present.
+
+The Schedule send composer and real GitHub thread-provider HTTP tests were retained and passed. Event attendance, cache updates, sockets and Meet-link byte/behavior tests also passed in the complete suite.
+
+## Merge regressions found and fixed
+
+Two existing real-socket event goldens initially failed at byte 575. Rails emitted `data-actions-url="http://example.com/rooms/..."`; Rust emitted `data-actions-url="http://example.org/rooms/..."`. `c049fce4` makes event announcements use the configured detached renderer origin, while ordinary broadcasts retain their existing Rails origin. Neither golden changed. Baseline focus and fresh-clone focus receipts:
+
+```text
+test result: FAILED. 5 passed; 2 failed; 0 ignored; 0 measured; 1415 filtered out; finished in 16.77s
+    Finished `test` profile [unoptimized] target(s) in 3m 13s
+test result: FAILED. 5 passed; 2 failed; 0 ignored; 0 measured; 1415 filtered out; finished in 14.40s
+    Finished `test` profile [unoptimized] target(s) in 19.40s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 1415 filtered out; finished in 14.69s
+```
+
+The first complete fresh-clone run also caught newly introduced database reads during preloaded message rendering. Existing `preloaded_quote_cards_render_without_queries_for_distinct_direct_rooms` and search query-budget tests supplied regression coverage without altering assertions. The initial assertions observed 1 query instead of 0, and 31 versus 67 queries for four versus sixteen search messages. 38e12547 loads the real event provider facts with the shared preload layer; rendering and the event cache decision use those facts. The event provider still resolves organizer, venue, ordering and safe Meet links. Raw first-run regression receipts:
+
+```text
+test controllers::message_features::quote_integration_tests::preloaded_quote_cards_render_without_queries_for_distinct_direct_rooms ... FAILED <2.207s>
+test controllers::searches::ports::full_message_preloads_keep_queries_constant ... FAILED <8.253s>
+test result: FAILED. 1418 passed; 2 failed; 2 ignored; 0 measured; 0 filtered out; finished in 668.04s
+```
+
+Focused corrected preload, page, HTTP and socket checks:
+
+```text
+    Finished `test` profile [unoptimized] target(s) in 37.70s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 1412 filtered out; finished in 22.62s
+    Finished `test` profile [unoptimized] target(s) in 31.91s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 1412 filtered out; finished in 14.65s
+```
+
+## Rails byte checks
+
+From the assigned worktree, `PARITY_IMAGE=ws8br-reference-d7c7de92` was set for:
+
+```sh
+python3 rust/reference-tools/rooms/check_full_pages.py
+python3 rust/reference-tools/rooms/check_empty_shell_http.py
+python3 rust/reference-tools/rooms/check_thread_review.py
+python3 rust/reference-tools/messaging/check-goldens.py thread-content
+```
+
+WS14e's `reference-tools/events/fragments.rb` and `sockets.rb` were also rerun in the pinned Rails image using separate worker-owned stores, then their generated JSON files were compared byte-for-byte to the committed event-fragment and event-socket goldens. The exact Docker arguments are retained in `.scratch/merge-main/verify-goldens.py`; no recorder or expectation was edited. The room oracle scripts verify pinned d7c7de92 and explicitly approved #163 layout/assets (2e20b24c). Raw receipts:
+
+```text
+Rails full-page oracle: 4 complete pages reproduced; pinned rooms/messages and approved #163 layout verified; bytes unchanged
+Rails empty-shell HTTP oracle: 4 full responses reproduced; 8 pinned/approved source files verified; bytes unchanged
+Rails PR-thread HTTP oracle: 4 responses reproduced; 4 source files match d7c7de92; bytes unchanged
+WS8bm thread-content oracle: 9 actual requests; anchor scope and fixed-secret conversation/composer bytes
+WS8bm golden check: 1 Rails oracles re-run; 1 golden files byte-identical
+Rails event fragments oracle: golden file byte-identical
+Rails event sockets oracle: golden file byte-identical
+```
+
+## Independent fresh-clone verification
+
+`git clone --no-local --single-branch --branch rust/ws8br-rooms-http . .scratch/fresh16/repo` created the independent checkout. It was fast-forwarded to 38e12547ce2a96a5af5fc0fb9b1575774fe12d6b using its local source origin after the two integration fixes. No untracked inputs or target files were copied. The clone generated default and first-run parity seeds from the pinned Rails image itself, before running seeded tests. Docker media checks use the committed `pinned_media_runner.py` and pinned image, so the native host's media library version cannot affect the strict vectors.
+
+All commands below ran in the fresh clone with `CI=1`, `CARGO_BUILD_JOBS=2`, CARGO_PROFILE_TEST_DEBUG=0, CARGO_PROFILE_DEV_DEBUG=0, worker-owned scratch TMPDIR and Cable/mail port range 52100–52149. The seed builder used `PARITY_NAMESPACE=ws8br-fresh16-seed`, `PARITY_OWNER=ws8br`, `PARITY_IMAGE=ws8br-reference-d7c7de92`. For Cargo tests `RUSTC_BOOTSTRAP=1` enables only libtest's duration reporting; compiler-job limits remain unchanged. `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER` points to the committed pinned-media runner.
+
+```sh
+rust/parity/bin/seed build default first_run
+mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 >/dev/null
+python3 rust/reference-tools/rooms/check_workspace.py
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire --bin campfire -- --test-threads=4 preloaded_quote_cards_render_without_queries full_message_preloads_keep_queries_constant preloaded_complete_messages_match_rails_and_lazy_presenter controllers::rooms::full_page_tests channels::tests::events_test event_cards_refresh_after_an_event_edit_through_the_message_cache rails_bytes_through_http
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --no-fail-fast -- --test-threads=4 -Z unstable-options --report-time
+mise exec rust@1.98.1 -- cargo clippy --locked --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
+bash rust/ci/with-release-inputs.sh mise exec rust@1.98.1 -- cargo build --locked --workspace --bins
+```
+
+The release-input guard builds from the Docker builder's production source inputs: Cargo.toml, Cargo.lock and crates/, plus its six explicit Rails asset inputs. No vectors, parity files or reference tools are available. The guard cleans its disposable source copy and uses the clone's existing target. This catches non-test include_str!/include_bytes! escapes through a real native production build without Docker.
+
+The complete workspace ran 2866 passes, 0 failures and 11 existing ignores across 60 harnesses. No timing flake occurred. Raw seed, manifest, focus, complete workspace, clippy and release-build summaries:
+
+```text
+seed: building default
+seed: default -> parity/.seed/default (6.1M)
+seed: building first_run
+seed: first_run -> parity/.seed/first_run (1.5M)
+Cargo TOML duplicate-key check: all manifests parse; no duplicate workspace dependency keys
+    Finished `test` profile [unoptimized] target(s) in 31.91s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 1412 filtered out; finished in 14.65s
+    Finished `test` profile [unoptimized] target(s) in 25.69s
+test result: ok. 1420 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 749.21s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 44.89s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.82s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
+test result: ok. 739 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 92.04s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.61s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.05s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.36s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.28s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.78s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.52s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.38s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.57s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.47s
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.61s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.99s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    Finished `dev` profile [unoptimized] target(s) in 1m 25s
+    Finished `dev` profile [unoptimized] target(s) in 1m 29s
+```
+
+The fresh app suite took 749.21 seconds. WS14e's attendance-parameter matrix was the largest case at 147.949 seconds; Fizzy service matrices and nested-thread authorization followed. Durations overlap under four test threads. Coverage, concurrency and timing thresholds were unchanged. Raw timing evidence:
+
+```text
+test controllers::rooms::events::tests::pr174_attendance_parameter_shapes_match_pinned_rails ... ok <147.949s>
+test integrations::fizzy::agent_requests::tests::ws15e_fizzy_agent_requests_match_pinned_service_results ... ok <56.295s>
+test controllers::channel_thread_messages::tests::nested_reads_require_alive_membership_and_both_thread_and_message_scope ... ok <53.066s>
+test integrations::fizzy::agent_job::tests::ws15e_fizzy_agent_execution_rechecks_and_records_once ... ok <47.340s>
+test integrations::fizzy::agent_reads::tests::ws15e_fizzy_agent_reads_match_pinned_service_results ... ok <47.215s>
+test controllers::github::webhooks::tests::webhook_http_status_body_selection_and_privacy_match_rails ... ok <38.741s>
+test controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix ... ok <37.985s>
+test controllers::github::write_tests::github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails ... ok <36.776s>
+test controllers::messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes ... ok <34.991s>
+test controllers::messages::paging_tests::root_formats_and_destroy_side_effects_match_rails ... ok <34.553s>
+```
+
+All nine conflicts and the requested merge verification are complete. The broader workstream inventory remains in the historical report below; no browser/pixel work or unrelated domain implementation was added. Scratch clone target and disposable release-input source copies were removed after the processes finished. Logs remain under `.scratch/merge-main/` and `.scratch/fresh16/repo/.scratch/`. The report mirror and external deliverable contain identical bytes.
+
+---
+
+# Historical reports retained below
+
+The reports below describe prior slices; their commands and receipts were not rerun unless explicitly listed in the current merge verification above.
+
 # WS8br PR #175 production-input build correction — complete
 
 Baseline: `1db3e578895a69c624ff604e0fbf0f29e90eae72`. This focused follow-up fixes the production build failure without changing Rails vectors or response bytes.
