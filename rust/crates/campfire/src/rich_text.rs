@@ -10,7 +10,7 @@ use std::sync::{Arc, LazyLock};
 
 use campfire_db::{BasicRichText, Connection, RichText};
 use campfire_kit::SharedClock;
-use campfire_richtext::markdown::{self, Icon, IconCatalog};
+use campfire_richtext::markdown::{self, Icon, IconCatalog, IconResolver};
 use campfire_richtext::{AttachableResolver, GidLookup, RenderContext};
 use rails_compat::Secrets;
 use serde::Deserialize;
@@ -28,11 +28,7 @@ impl AppRichText {
     }
 
     fn with_context<T>(&self, conn: &Connection, f: impl FnOnce(&RenderContext) -> T) -> T {
-        let resolver = DbResolver {
-            conn,
-            secrets: &self.secrets,
-            now: self.clock.now(),
-        };
+        let resolver = DbResolver::new(conn, &self.secrets, self.clock.now());
         f(&resolver.render_context(None))
     }
 }
@@ -96,6 +92,19 @@ fn icons(conn: &Connection) -> Result<IconCatalog, String> {
 }
 
 impl RichText for AppRichText {
+    fn resolve_boost_content(&self, conn:&Connection, content:&str)->Result<String,String> {
+        let content=campfire_richtext::ruby::strip(content);
+        let name=content.strip_prefix(':').and_then(|s|s.strip_suffix(':')).filter(|name|!name.is_empty() && name.bytes().all(|b|b.is_ascii_lowercase() || b.is_ascii_digit() || b==b'_'));
+        if let Some(name)=name {
+            match icons(conn)?.find(name) {
+                Some(Icon::Emoji(character))=>return Ok(character),
+                Some(Icon::Brand {name,..} | Icon::Custom {name,..})=>return Ok(format!(":{name}:")),
+                None=>{},
+            }
+        }
+        Ok(content.to_owned())
+    }
+
     fn render_markdown(
         &self,
         conn: &Connection,
@@ -110,11 +119,7 @@ impl RichText for AppRichText {
             .map_err(|e| e.to_string())?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(|e| e.to_string())?;
-        let resolver = DbResolver {
-            conn,
-            secrets: &self.secrets,
-            now: self.clock.now(),
-        };
+        let resolver = DbResolver::new(conn, &self.secrets, self.clock.now());
         let mentions = |name: &str| {
             let mut matches = members
                 .iter()

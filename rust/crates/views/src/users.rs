@@ -13,6 +13,9 @@ mod summary;
 pub use summary::*;
 mod people;
 pub use people::*;
+mod settings;
+pub use settings::*;
+pub mod statuses;
 mod appearance;
 pub use appearance::*;
 
@@ -73,6 +76,27 @@ pub struct Show<'a> {
     pub user: UserSummary,
     /// `user.transfer_id`, for `users/profiles/_transfer` (shown to administrators).
     pub transfer_id: String,
+    pub profile_status: Option<statuses::ProfileStatus>,
+}
+
+impl Show<'_> {
+    fn status_section(&self, status: &statuses::ProfileStatus) -> h::Html {
+        h::raw(
+            statuses::ProfileStatusSection { status }
+                .render()
+                .expect("profile status"),
+        )
+    }
+    fn allowance(&self, status: &statuses::ProfileStatus) -> h::Html {
+        h::raw(
+            statuses::DndAllowance {
+                ctx: self.ctx,
+                status,
+            }
+            .render()
+            .expect("DND allowance"),
+        )
+    }
 }
 
 impl Page for Show<'_> {
@@ -154,6 +178,8 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
+    pub github: crate::github::connections::Connection,
+    pub settings: SettingsFormData,
     pub sections: ProfileSections,
     pub appearance: AppearanceData,
     pub has_password: bool,
@@ -169,6 +195,9 @@ pub struct ProfileShow<'a> {
 }
 
 impl<'a> ProfileShow<'a> {
+    fn notification_form(&self) -> h::Html {
+        h::raw(NotificationForm { ctx:self.ctx, data:&self.settings }.render().expect("notification form renders"))
+    }
     fn appearance_panel(&self) -> h::Html {
         h::raw(Appearance {ctx:self.ctx,data:self.appearance.clone()}.render().unwrap())
     }

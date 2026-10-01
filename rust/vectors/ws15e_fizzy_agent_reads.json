@@ -1,0 +1,352 @@
+{
+  "reference": "d7c7de92",
+  "reads": [
+    {
+      "name": "boards",
+      "operation": "boards",
+      "fields": {},
+      "status": 200,
+      "payload": [
+        {
+          "id": "board",
+          "name": "Engineering"
+        }
+      ],
+      "error": null,
+      "body": [
+        {
+          "id": "board",
+          "name": "Engineering"
+        }
+      ],
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ]
+    },
+    {
+      "name": "other_account",
+      "operation": "boards",
+      "fields": {
+        "account_id": "other"
+      },
+      "status": 200,
+      "payload": [
+        {
+          "id": "board",
+          "name": "Engineering"
+        }
+      ],
+      "error": null,
+      "body": [
+        {
+          "id": "board",
+          "name": "Engineering"
+        }
+      ],
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/other/boards.json"
+        }
+      ]
+    },
+    {
+      "name": "board",
+      "operation": "board",
+      "fields": {
+        "board_id": "board"
+      },
+      "status": 200,
+      "payload": {
+        "board": {
+          "id": "board",
+          "name": "Engineering"
+        },
+        "columns": [
+          {
+            "id": "col",
+            "name": "Working"
+          }
+        ]
+      },
+      "error": null,
+      "body": {
+        "board": {
+          "id": "board",
+          "name": "Engineering"
+        },
+        "columns": [
+          {
+            "id": "col",
+            "name": "Working"
+          }
+        ]
+      },
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards/board.json"
+        },
+        {
+          "method": "GET",
+          "path": "/897362094/boards/board/columns.json"
+        }
+      ]
+    },
+    {
+      "name": "search",
+      "operation": "search_cards",
+      "fields": {
+        "query": " hi ~ & 中文"
+      },
+      "status": 200,
+      "payload": {
+        "number": 579
+      },
+      "error": null,
+      "body": {
+        "number": 579
+      },
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/search.json?q=+hi+~+%26+%E4%B8%AD%E6%96%87"
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "operation": "card",
+      "fields": {
+        "account_id": "897362094",
+        "number": "000579"
+      },
+      "status": 200,
+      "payload": {
+        "number": 579
+      },
+      "error": null,
+      "body": {
+        "number": 579
+      },
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/cards/579.json"
+        }
+      ]
+    },
+    {
+      "name": "invalid_id",
+      "operation": "board",
+      "fields": {
+        "board_id": "../my"
+      },
+      "status": 404,
+      "payload": null,
+      "error": "Not found in Fizzy",
+      "body": {
+        "error": "Not found in Fizzy"
+      },
+      "reason": null,
+      "calls": []
+    },
+    {
+      "name": "missing_query",
+      "operation": "search_cards",
+      "fields": {
+        "query": "  "
+      },
+      "status": 422,
+      "payload": null,
+      "error": "Missing query",
+      "body": {
+        "error": "Missing query"
+      },
+      "reason": null,
+      "calls": []
+    },
+    {
+      "name": "invalid_number",
+      "operation": "card",
+      "fields": {
+        "account_id": "bad/id",
+        "number": "-1"
+      },
+      "status": 404,
+      "payload": null,
+      "error": "Invalid card number",
+      "body": {
+        "error": "Invalid card number"
+      },
+      "reason": null,
+      "calls": []
+    },
+    {
+      "name": "invalid_account",
+      "operation": "card",
+      "fields": {
+        "account_id": "../my",
+        "number": 1
+      },
+      "status": 404,
+      "payload": null,
+      "error": "Not found in Fizzy",
+      "body": {
+        "error": "Not found in Fizzy"
+      },
+      "reason": null,
+      "calls": []
+    },
+    {
+      "name": "forbidden",
+      "operation": "boards",
+      "fields": {},
+      "status": 403,
+      "payload": null,
+      "error": "Forbidden: agent lacks fizzy capability",
+      "body": {
+        "error": "Forbidden: agent lacks fizzy capability"
+      },
+      "reason": null,
+      "calls": []
+    },
+    {
+      "name": "missing_owner",
+      "operation": "boards",
+      "fields": {},
+      "status": 422,
+      "payload": null,
+      "error": "Agent has no owner recorded",
+      "body": {
+        "error": "Agent has no owner recorded"
+      },
+      "reason": null,
+      "calls": []
+    },
+    {
+      "name": "no_account",
+      "operation": "boards",
+      "fields": {},
+      "status": 422,
+      "payload": null,
+      "error": "Agent owner has no usable Fizzy account",
+      "body": {
+        "error": "Agent owner has no usable Fizzy account"
+      },
+      "reason": null,
+      "calls": []
+    },
+    {
+      "name": "disconnected",
+      "operation": "boards",
+      "fields": {},
+      "status": 422,
+      "payload": null,
+      "error": "Agent owner has no usable Fizzy account",
+      "body": {
+        "error": "Agent owner has no usable Fizzy account"
+      },
+      "reason": "Disconnected",
+      "calls": []
+    },
+    {
+      "name": "status_401",
+      "operation": "boards",
+      "fields": {},
+      "status": 422,
+      "payload": null,
+      "error": "Agent owner's Fizzy token was rejected",
+      "body": {
+        "error": "Agent owner's Fizzy token was rejected"
+      },
+      "reason": "Fizzy rejected the linked token (401)",
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ]
+    },
+    {
+      "name": "status_403",
+      "operation": "boards",
+      "fields": {},
+      "status": 404,
+      "payload": null,
+      "error": "Not found in Fizzy",
+      "body": {
+        "error": "Not found in Fizzy"
+      },
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ]
+    },
+    {
+      "name": "status_404",
+      "operation": "boards",
+      "fields": {},
+      "status": 404,
+      "payload": null,
+      "error": "Not found in Fizzy",
+      "body": {
+        "error": "Not found in Fizzy"
+      },
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ]
+    },
+    {
+      "name": "status_422",
+      "operation": "boards",
+      "fields": {},
+      "status": 422,
+      "payload": null,
+      "error": "Fizzy refused: Denied",
+      "body": {
+        "error": "Fizzy refused: Denied"
+      },
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ]
+    },
+    {
+      "name": "status_500",
+      "operation": "boards",
+      "fields": {},
+      "status": 502,
+      "payload": null,
+      "error": "Fizzy returned 500",
+      "body": {
+        "error": "Fizzy returned 500"
+      },
+      "reason": null,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/897362094/boards.json"
+        }
+      ]
+    }
+  ]
+}

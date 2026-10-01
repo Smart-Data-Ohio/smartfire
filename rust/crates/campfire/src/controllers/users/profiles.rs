@@ -30,6 +30,14 @@ async fn render_show(
     )>,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
+    if let Some((changes, _)) = &settings_error {
+        let id = user.id;
+        let mut rendered = c.app().db.read(move |conn| campfire_db::UserStatusSettings::find(conn, id)).await.map_err(Error::internal)?;
+        if let Some(value) = &changes.theme { rendered.theme = value.clone(); }
+        if let Some(value) = &changes.text_size { rendered.text_size = value.clone(); }
+        if let Some(value) = &changes.time_zone { rendered.time_zone = Some(value.clone()); }
+        c.set_current(presenters::view_context::RenderedSettings(rendered));
+    }
     let has_password = user
         .password_digest
         .as_deref()
@@ -53,6 +61,17 @@ async fn render_show(
     };
     let id = user.id;
     let now = c.now();
+    let rendered = c.current::<presenters::view_context::RenderedSettings>().cloned();
+    let owned = match rendered {
+        Some(data) => data.0,
+        None => c.app().db.read(move |conn| campfire_db::UserStatusSettings::find(conn, id)).await.map_err(Error::internal)?,
+    };
+    let owned_errors = c.current::<RenderedErrors>().map(|data| data.0.clone()).unwrap_or_default();
+    let source = owned.clone();
+    let failures = owned_errors.clone();
+    let configured = c.app().config.profile_google_calendar_configured;
+    let settings_form = c.app().db.read(move |conn| presenters::status_settings::forms(conn, &source, failures, campfire_db::Timestamp::from_jiff(now), configured)).await.map_err(Error::internal)?;
+
     let google = c.app().two_factor.google().is_some();
     let mut appearance = c
         .app()
@@ -60,6 +79,9 @@ async fn render_show(
         .read(move |conn| campfire_db::models::user::profile_settings::appearance(conn, id))
         .await
         .map_err(Error::internal)?;
+    if c.current::<presenters::view_context::RenderedSettings>().is_some() {
+        appearance.theme = owned.theme.clone(); appearance.text_size = owned.text_size.clone(); appearance.time_zone = owned.time_zone.clone();
+    }
     let preview_settings = settings_error.as_ref().map(|(changes, _)| changes.clone());
     let errors = if let Some((changes, errors)) = settings_error {
         if let Some(theme) = changes.theme {
@@ -73,7 +95,7 @@ async fn render_show(
         }
         errors
     } else {
-        campfire_db::Errors::default()
+        owned_errors.clone()
     };
     let appearance = users::AppearanceData {
         theme: appearance.theme,
@@ -148,15 +170,20 @@ async fn render_show(
             .await
             .map_err(Error::internal)?;
     }
+    sections.status = presenters::profile_sections::status_fields(&owned, &owned_errors, campfire_db::Timestamp::from_jiff(now));
+    sections.status.fetch_error = settings_form.fetch_error.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));
     if let Some(fields) = status_preview {
         sections.status = fields;
     }
     if let Some(changes) = preview_settings {
         presenters::profile_sections::preview(&mut sections, &changes, &errors);
     }
+    let github = presenters::github::connection(c.app(), user.id).await.map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
+        github: github.clone(),
+        settings: settings_form.clone(),
         sections: sections.clone(),
         appearance: appearance.clone(),
         has_password,
@@ -284,7 +311,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let preview_settings = settings.clone();
     let mut error_user = user.clone();
     assign_error_attributes(&mut error_user, &params);
-    let pending = c
+    let result = c
         .app()
         .db
         .write(move |tx| {
@@ -300,8 +327,8 @@ pub async fn update(c: &mut Ctx) -> Result {
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
         .await;
-    let pending = match pending {
-        Ok(pending) => pending,
+    match result {
+        Ok(()) => {},
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             c.set_current(concerns::CurrentUser(error_user.clone()));
             return render_show(
@@ -316,7 +343,6 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
         Err(error) => return Err(Error::internal(error)),
     };
-    attachments::analyze_later(c.app(), pending);
 
     let location = c.url_for(&campfire_routes::user_profile());
     c.redirect_to_with(
@@ -347,16 +373,20 @@ fn compact_string(params: &campfire_kit::ParamMap, key: &str) -> Option<String> 
     string_attribute(params, key).flatten()
 }
 
-/// Shared profile fallback for WS17's rejected status submissions.
-pub async fn render_status_error(c: &mut Ctx, fields: users::StatusFields) -> Result {
-    let user = concerns::require_current_user(c)?.clone();
-    render_show(
-        c,
-        StatusCode::UNPROCESSABLE_ENTITY,
-        user,
-        None,
-        Some(fields),
-        None,
-    )
-    .await
+
+#[derive(Clone)]
+struct RenderedErrors(campfire_db::Errors);
+pub(super) async fn render_settings(c: &mut Ctx, status: StatusCode, settings: campfire_db::UserStatusSettings, errors: campfire_db::Errors) -> Result {
+    if !errors.is_empty() && settings.user.role != campfire_db::Role::Bot {
+        let id = settings.user.id;
+        let enabled = c.app().db.read(move |conn| Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM two_factor_credentials WHERE user_id=? AND confirmed_at IS NOT NULL)", [id], |r| r.get::<_, bool>(0))?)).await.map_err(Error::internal)?;
+        if enabled { return Err(Error::internal(anyhow::anyhow!("profiles/two_factor: undefined method any? for nil remembered devices"))); }
+    }
+    let user = settings.user.clone();
+    c.set_current(presenters::view_context::RenderedSettings(settings));
+    c.set_current(RenderedErrors(errors));
+    render_show(c, status, user, None, None, None).await
 }
+#[cfg(test)]
+#[path = "profiles/ws17_tests.rs"]
+mod ws17_tests;

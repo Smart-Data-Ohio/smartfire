@@ -24,6 +24,9 @@ use crate::app::AppCtx;
 use crate::concerns;
 
 /// Everything the layout needs, loaded before rendering.
+#[derive(Clone)]
+pub(crate) struct RenderedSettings(pub campfire_db::UserStatusSettings);
+
 #[derive(Debug, Clone)]
 pub struct Layout {
     pub current_user: Option<CurrentUser>,
@@ -50,7 +53,7 @@ impl Layout {
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
         let now = c.now();
-        let (account, has_logo, preferences, chrome) = app
+        let (account, has_logo, mut preferences, chrome) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
@@ -69,6 +72,9 @@ impl Layout {
         let last_room_visited_id = if user.is_some() { concerns::last_room_visited(c).await?.map(|room| room.id) } else { None };
 
         let time_zone = Zone::for_user(preferences.time_zone.as_deref());
+        if let Some(RenderedSettings(settings)) = c.current::<RenderedSettings>() && Some(settings.user.id) == user_id {
+            apply_settings_preferences(&mut preferences, settings, campfire_db::Timestamp::from_jiff(now));
+        }
         let current_user = user.as_ref().map(|user| CurrentUser { preferences, ..current_user(&secrets, user) });
         Ok(Self {
             current_user,
@@ -89,6 +95,15 @@ impl Layout {
     /// `csp_meta_tag` and the importmap tags), which puts the CSRF token in the session.
     pub fn render(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
         let secrets = RequestSecrets { tokens: Box::new(KitTokens(c.authenticity_tokens())), csp_nonce: c.content_security_policy_nonce() };
+        self.render_with_secrets(c, Some(secrets), render)
+    }
+
+    /// Token-free partials use the viewer's time zone without creating a CSRF session.
+    pub fn render_without_secrets(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
+        self.render_with_secrets(c, None, render)
+    }
+
+    fn render_with_secrets(&self, c: &mut Ctx, secrets: Option<RequestSecrets>, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
         let flash_notice = c.flash().notice().map(str::to_string);
         let flash_alert = c.flash().alert().map(str::to_string);
         let base_url = c.url_for("");
@@ -98,7 +113,9 @@ impl Layout {
 
         let asset_path = |path: &str| campfire_assets::asset_path(path);
         let app_secrets = c.app().secrets.clone();
-        let signed_stream_name = move |streamables: &[&str]| rails_compat::turbo::signed_stream_name(&app_secrets, streamables);
+        let signed_stream_name = move |streamables: &[&str]| {
+            rails_compat::turbo::signed_stream_name(&app_secrets, streamables)
+        };
         let ctx = ViewContext {
             current_user: self.current_user.clone(),
             account: self.account.clone(),
@@ -120,7 +137,10 @@ impl Layout {
             time_zone: self.time_zone.clone(),
             chrome: self.chrome.clone(),
         };
-        request_forgery::rendering_with(secrets, || render(&ctx)).map_err(Error::internal)
+        match secrets {
+            Some(secrets) => request_forgery::rendering_with(secrets, || render(&ctx)),
+            None => render(&ctx),
+        }.map_err(Error::internal)
     }
 
     /// A page rendered in the application layout: `text/html`, plus the `Link` preload header
@@ -268,4 +288,51 @@ pub async fn page_or_frame_in_any_format(
 /// whatever the `Accept` header preferred.
 pub fn find_template(c: &mut Ctx, template: campfire_kit::Format) -> Result<()> {
     c.respond_to(&[template]).map(|_| ())
+}
+
+fn apply_settings_preferences(
+    preferences: &mut UserPreferences,
+    settings: &campfire_db::UserStatusSettings,
+    now: campfire_db::Timestamp,
+) {
+    preferences.theme = Some(settings.theme.clone());
+    preferences.text_size = Some(settings.text_size.clone());
+    preferences.time_zone = settings.time_zone.clone();
+    preferences.time_zone_explicit = settings.time_zone_explicit;
+    let mut sounds = campfire_views::layouts::NotificationSounds {
+        muted: settings.manual_dnd_active(now) || settings.presence_setting == "dnd",
+        quiet_hours: settings
+            .quiet_hours_enabled
+            .then(|| {
+                settings
+                    .quiet_hours_start_minute
+                    .zip(settings.quiet_hours_end_minute)
+            })
+            .flatten(),
+        ..Default::default()
+    };
+    if settings.meeting_dnd_enabled && settings.meeting_status_enabled {
+        sounds.meeting_quiet = settings
+            .meeting_cache
+            .as_ref()
+            .map(|cache| cache.quiet_window_epochs(now))
+            .unwrap_or_default();
+    }
+    if !settings.ooo_notify_enabled {
+        if settings.manual_ooo_active(now) {
+            sounds
+                .ooo_quiet
+                .push((0, settings.ooo_until.unwrap().jiff().as_second()));
+        }
+        if settings.ooo_calendar_enabled {
+            sounds.ooo_quiet.extend(
+                settings
+                    .meeting_cache
+                    .as_ref()
+                    .map(|cache| cache.ooo_window_epochs(now))
+                    .unwrap_or_default(),
+            );
+        }
+    }
+    preferences.notification_sounds = sounds;
 }

@@ -33,7 +33,7 @@ async fn show_at_a_message_pages_around_it() {
     let reply = app.david().get(&format!("/rooms/{ALL_TALK}/@{}", first.id)).await;
     assert_eq!(reply.status, StatusCode::OK);
     // The first message and the 40 after it.
-    assert_eq!(reply.text().matches(r#"data-controller="reply""#).count(), 0,"authorized empty list placeholder");
+    assert_eq!(reply.text().matches(r#"data-controller="reply""#).count(), 41,"main renders the anchor and next forty messages");
     let messages=app.db().read(move |conn|crate::controllers::presenters::room_shell::find_messages(conn,ALL_TALK,Some(first.id))).await.unwrap();
     assert_eq!(messages.len(),41,"root anchor gathers the first message and forty after it");
     assert_eq!(messages.first().unwrap().id,first.id);

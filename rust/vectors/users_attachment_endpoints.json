@@ -1,0 +1,149 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "kind": "logo",
+      "fixture": "clean.svg",
+      "filename": "clean.svg ",
+      "name": "ws8br2_logo_clean_svg_0",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "clean.svg ",
+      "sanitized": "clean.svg",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "logo",
+      "fixture": "clean.svg",
+      "filename": "clean.svg/",
+      "name": "ws8br2_logo_clean_svg_1",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "clean.svg/",
+      "sanitized": "clean.svg-",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 0
+    },
+    {
+      "kind": "logo",
+      "fixture": "square_64.png",
+      "filename": "square_64.png ",
+      "name": "ws8br2_logo_square_64_png_0",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "square_64.png ",
+      "sanitized": "square_64.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 0
+    },
+    {
+      "kind": "logo",
+      "fixture": "square_64.png",
+      "filename": "square_64.png/",
+      "name": "ws8br2_logo_square_64_png_1",
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "attached": true,
+      "raw_filename": "square_64.png/",
+      "sanitized": "square_64.png-",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 0
+    },
+    {
+      "kind": "icon",
+      "fixture": "clean.svg",
+      "filename": "clean.svg ",
+      "name": "ws8br2_icon_clean_svg_0",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "clean.svg ",
+      "sanitized": "clean.svg",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "icon",
+      "fixture": "clean.svg",
+      "filename": "clean.svg/",
+      "name": "ws8br2_icon_clean_svg_1",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "clean.svg/",
+      "sanitized": "clean.svg-",
+      "content_type": "image/svg+xml",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "icon",
+      "fixture": "square_64.png",
+      "filename": "square_64.png ",
+      "name": "ws8br2_icon_square_64_png_0",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "square_64.png ",
+      "sanitized": "square_64.png",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    },
+    {
+      "kind": "icon",
+      "fixture": "square_64.png",
+      "filename": "square_64.png/",
+      "name": "ws8br2_icon_square_64_png_1",
+      "status": 302,
+      "location": "http://campfire.test/account/icons",
+      "attached": true,
+      "raw_filename": "square_64.png/",
+      "sanitized": "square_64.png-",
+      "content_type": "image/png",
+      "metadata": {
+        "identified": true
+      },
+      "errors": [],
+      "analysis_jobs": 1,
+      "audits": 1
+    }
+  ]
+}

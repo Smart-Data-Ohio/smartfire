@@ -1,13 +1,30 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod agent;
+pub mod agent_access;
+pub mod agent_approval;
+pub mod agent_approvals;
+pub mod agent_service;
+pub mod agent_slash_command;
+pub mod agent_step;
+pub mod agent_working_presence;
+pub mod agent_credential;
+pub mod agent_grant;
+pub mod agent_delivery;
+pub mod agent_event_access;
+pub mod agent_event_polling;
+pub mod agent_payloads;
+pub mod agent_posting;
 pub mod auth_audit;
 pub mod audit_log;
 pub mod activity_item;
 pub mod active_storage;
 pub mod ban;
 pub mod boost;
+pub mod bot_webhook_fanout;
 pub mod channel_thread;
+pub mod calendar_dispatch;
 pub mod direct_room;
 pub mod first_run;
 pub mod forwarder;
@@ -18,6 +35,7 @@ pub mod message_reference;
 pub mod message;
 pub mod poll;
 pub mod push_subscription;
+pub mod notification_push;
 pub mod rich_text_record;
 pub mod saved_item;
 pub mod scheduled_message;
@@ -31,6 +49,10 @@ pub mod two_factor;
 pub mod thread_membership;
 pub mod thread_tag;
 pub mod user;
+pub mod user_status_settings;
+pub mod dnd_allowed_user;
+pub use dnd_allowed_user::DndAllowedUser;
+pub mod notification_policy;
 pub mod user_device;
 pub mod webhook;
 pub mod workspace_presence_lease;
@@ -62,6 +84,8 @@ pub use two_factor::{ChallengeFailure, TwoFactorBackupCode, TwoFactorCredential,
 pub use thread_membership::{ThreadInvolvement, ThreadMembership};
 pub use thread_tag::ThreadTag;
 pub use user::{NewUser, PasswordDigest, Role, Status, User, UserChanges};
+pub use user_status_settings::{MeetingCache, UserStatusSettings};
+pub use notification_policy::{NotificationKind, NotificationPolicy};
 pub use user_device::{DeviceSignIn, UserDevice};
 pub use webhook::Webhook;
 
@@ -69,3 +93,10 @@ pub mod room_delete;
 
 pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
+
+pub use agent_credential::{AgentCredential, NewCredential};
+pub use agent_grant::{AgentGrant, NewGrant};
+pub use agent_approval::{AgentApproval, NewApproval};
+pub use agent::{Agent,AgentChanges,AgentKind,NewAgent};
+pub use agent_slash_command::{AgentSlashCommand,NewAgentSlashCommand};
+pub use agent_step::{AgentStep,NewAgentStep,AgentStepChanges};

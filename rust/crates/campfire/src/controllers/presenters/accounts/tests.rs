@@ -217,8 +217,7 @@ impl Browser<'_> {
         for cookie in reply.set_cookies() {
             let pair = cookie.split(';').next().unwrap();
             let (name, value) = pair.split_once('=').unwrap();
-            let deleted =
-                cookie.to_ascii_lowercase().contains("max-age=0") || cookie.contains("1970");
+            let deleted = cookie_tombstone(&cookie);
             if deleted || value.is_empty() {
                 self.cookies.remove(name);
             } else {
@@ -251,6 +250,7 @@ impl Browser<'_> {
         )
         .await
     }
+
 
     async fn sign_in(&mut self, email: &str) {
         let page = self.get("/session/new").await;
@@ -756,7 +756,44 @@ async fn administers_the_account() {
 }
 
 #[tokio::test]
-#[ignore = "WS11: resetting Bender's bot key leaves the original seeded key visible in the account bot list"]
+async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
+    let test = boot_seed("default").await.expect("build default parity seed");
+    let mut admin = test.browser("198.51.100.113");
+    admin.sign_in(&test.label("emails.david")).await;
+    let bot_id: i64 = test.label("users.bender").parse().unwrap();
+    let path = format!("/account/bots/{bot_id}/key");
+    let old_key = test.label("bot_keys.bender");
+    let response = admin.form("put", &path, &[]).await;
+    assert_redirect(&response, "http://campfire.test/sudo/new");
+    assert!(test.booted.app.db.read({let old_key=old_key.clone(); move |conn| campfire_db::User::authenticate_bot(conn,&old_key)}).await.unwrap().is_some());
+    assert_eq!(admin.get("/sudo/new").await.status, StatusCode::OK);
+    let confirmed = admin.form("post", "/sudo", &[("password", PASSWORD)]).await;
+    assert_eq!(confirmed.status, StatusCode::OK);
+    confirmed.assert_form(&path);
+    assert!(confirmed.text().contains("name=\"_method\" value=\"put\""));
+    // The browser submits Rails' continuation form after confirmation.
+    let response = admin.form("put", &path, &[]).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.headers.get("cache-control").unwrap(), "no-store");
+    assert_eq!(response.headers.get("pragma").unwrap(), "no-cache");
+    let html = response.text();
+    let value = html.split("aria-label=\"Bot key\"").next().unwrap();
+    let new_key = value.rsplit("value=\"").next().unwrap().split('"').next().unwrap().to_string();
+    assert_ne!(new_key, old_key);
+    let (new_valid, old_valid, plaintext, audit) = test.booted.app.db.read({let new_key=new_key.clone(); move |conn| Ok((
+        campfire_db::User::authenticate_bot(conn,&new_key)?.is_some(),
+        campfire_db::User::authenticate_bot(conn,&old_key)?.is_some(),
+        conn.query_row("SELECT bot_token FROM users WHERE id=?",[bot_id],|r|r.get::<_,Option<String>>(0))?,
+        conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.reset'",[],|r|r.get::<_,i64>(0))?,
+    ))}).await.unwrap();
+    assert!(new_valid);
+    assert!(!old_valid);
+    assert_eq!(plaintext,None);
+    assert_eq!(audit,1);
+    assert!(!admin.get("/account/bots").await.text().contains(&new_key));
+}
+
+#[tokio::test]
 async fn manages_bots() {
     let Some(test) = boot_seed("default").await else {
         return;
@@ -766,7 +803,8 @@ async fn manages_bots() {
     admin.confirm_sudo().await;
     let index = admin.get("/account/bots").await;
     assert_eq!(index.status, StatusCode::OK);
-    assert!(index.text().contains(&test.label("bot_keys.bender")));
+    assert!(!index.text().contains(&test.label("bot_keys.bender")));
+    assert!(index.text().contains("BOT_KEY"));
 
     let new = admin.get("/account/bots/new").await;
     new.assert_form("/account/bots");
@@ -798,17 +836,14 @@ async fn manages_bots() {
     let edit = admin.get(&format!("/account/bots/{bender}/edit")).await;
     let key_action = format!("/account/bots/{bender}/key");
     edit.assert_button(&key_action, "put");
-    assert_redirect(
-        &admin.form("put", &key_action, &[]).await,
-        "http://campfire.test/account/bots",
-    );
-    assert!(
-        !admin
-            .get("/account/bots")
-            .await
-            .text()
-            .contains(&test.label("bot_keys.bender"))
-    );
+    admin.confirm_sudo().await;
+    let bender_id: i64 = bender.parse().unwrap();
+    let old_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
+    assert_eq!(admin.form("put", &key_action, &[]).await.status, StatusCode::OK);
+    let new_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
+    assert_ne!(old_digest, new_digest);
+    assert!(admin.get("/account/bots").await.text().contains(campfire_db::user::BOT_KEY_PLACEHOLDER));
+
 
     admin
         .get(&format!("/account/bots/{bender}/edit"))
@@ -1061,4 +1096,32 @@ async fn qr_codes_and_the_pwa() {
         (worker.status, worker.header("content-type")),
         (StatusCode::OK, Some("text/javascript; charset=utf-8"))
     );
+}
+
+// Set-Cookie values are opaque; only attributes determine deletion.
+fn cookie_tombstone(cookie: &str) -> bool {
+    cookie.split(';').skip(1).any(|attribute| {
+        let Some((name,value))=attribute.trim().split_once('=') else {return false};
+        (name.eq_ignore_ascii_case("max-age") && value.trim().parse::<i64>().is_ok_and(|seconds|seconds<=0))
+            || (name.eq_ignore_ascii_case("expires") && value.trim().eq_ignore_ascii_case("Thu, 01 Jan 1970 00:00:00 GMT"))
+    })
+}
+
+#[tokio::test]
+async fn browser_cookie_value_1970_is_not_an_expiry_attribute() {
+    let mut test = boot_seed("default").await.expect("pinned seed required");
+    test.booted.router = axum::Router::new().route("/cookie-probe", axum::routing::get(|| async {
+        ([(header::SET_COOKIE, "session_token=signed1970value; path=/; expires=Tue, 02 Mar 2027 16:00:00 GMT; httponly")], StatusCode::NO_CONTENT)
+    }));
+    let mut browser = test.browser("198.51.100.14");
+    browser.get("/cookie-probe").await;
+    assert_eq!(browser.cookies.get("session_token").map(String::as_str), Some("signed1970value"));
+}
+
+#[test]
+fn browser_cookie_deletion_requires_real_attribute() {
+    assert!(!cookie_tombstone("session_token=opaque1970value; expires=Tue, 02 Mar 2027 16:00:00 GMT"));
+    assert!(!cookie_tombstone("session_token=signed; max-age=01"));
+    assert!(cookie_tombstone("session_token=signed; Max-Age=0"));
+    assert!(cookie_tombstone("session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT"));
 }

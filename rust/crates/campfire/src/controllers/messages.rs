@@ -7,7 +7,7 @@ pub mod boosts;
 pub mod by_bots;
 
 use askama::Template;
-use campfire_db::{Job as _, Message, NewMessage, Role, Room, Status, Timeline};
+use campfire_db::{Job as _, Message, NewMessage, Room, Timeline};
 use campfire_kit::format;
 use campfire_kit::{Ctx, Error, Freshness, Param, Result, StatusCode, halt, permit_keys};
 use campfire_richtext::Content;
@@ -17,8 +17,8 @@ use campfire_views::messages as views;
 use crate::active_storage::{self, keep_after_commit};
 use crate::app::{App, AppCtx};
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
+use crate::controllers::presenters::attachments::{self, Assignment};
 use crate::controllers::presenters::page::{self, Rendered, db_error};
-use crate::controllers::presenters::attachments::Assignment;
 use crate::controllers::presenters::{DbResolver, Presenter, cache_key_with_version, room_kind, storage_error};
 use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
 
@@ -162,7 +162,10 @@ pub(crate) fn ensure_can_administer(c: &mut Ctx, message: &Message) -> Result<()
 /// What `create_with_attachment!`/`update!` receive.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct MessageParams {
+    pub clear_markdown_source: bool,
+    pub client_message_lookup: campfire_db::models::agent_posting::client_ids::Lookup,
     pub body: Option<String>,
+    pub markdown_source: Option<String>,
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub client_message_id: Option<String>,
@@ -171,12 +174,15 @@ pub(crate) struct MessageParams {
 /// `params.require(:message).permit(:body, :attachment, :client_message_id)`
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     let message = c.params.require("message")?;
-    let permitted = message.permit(&permit_keys(&["body", "attachment", "client_message_id"]));
+    let permitted = message.permit(&permit_keys(&["body", "attachment", "client_message_id", "markdown_source"]));
     let text = |key: &str| permitted.get(key).and_then(Param::as_str).map(str::to_string);
     Ok(MessageParams {
         body: text("body"),
+        markdown_source: text("markdown_source"),
         attachment: attachment_assignment(&permitted)?,
         client_message_id: text("client_message_id"),
+        clear_markdown_source: false,
+        client_message_lookup: Default::default(),
     })
 }
 
@@ -219,14 +225,21 @@ pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Mess
 /// `@room.messages.create!` and, in its transaction, `deliver_webhooks_to_bots`: the webhook
 /// jobs are held until the caller has broadcast the message ([`release_webhooks`]).
 pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<Message> {
+    match create_message_with_agent_policy(c, room, attributes, false).await? {
+        campfire_db::models::agent_posting::PostingOutcome::Created(message) => Ok(message),
+        _ => unreachable!("human posting does not run agent policy"),
+    }
+}
+
+pub(crate) async fn create_message_with_agent_policy(c: &Ctx, room: &Room, mut attributes: MessageParams, agent_policy: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
+    use campfire_db::models::agent_posting::{PostingOutcome, PostingCheck};
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
     let room = room.clone();
-    let attachment = match attributes.attachment {
-        Some(Assignment::Create(upload)) => Some(upload.stage(c.app()).await?),
-        Some(Assignment::Invalid) => return Err(invalid_attachment()),
-        _ => None,
-    };
+    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    if matches!(attachment, Assignment::Invalid) {
+        return Err(invalid_attachment());
+    }
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
@@ -235,7 +248,16 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
         .app()
         .db
         .write(move |tx| {
-            let blob = attachment.map(|staged| save_staged(tx, staged)).transpose()?;
+            if agent_policy {
+                match campfire_db::models::agent_posting::prepare_for_user_with_lookup(tx, creator_id, room_id, attributes.client_message_id.as_deref(), &attributes.client_message_lookup)? {
+                    Some(PostingCheck::Replay(message)) => return Ok((PostingOutcome::Replay(*message), None)),
+                    Some(PostingCheck::Budget(payload)) => return Ok((PostingOutcome::Budget(payload), None)),
+                    Some(PostingCheck::Allowed) => {},
+                    None => attributes.client_message_id = None,
+                }
+            }
+            let blob = attachment_blob(tx, attachment)?;
+
             let message = Message::create(
                 tx,
                 NewMessage {
@@ -243,20 +265,31 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                     creator_id,
                     client_message_id: attributes.client_message_id,
                     body,
+                    markdown_source: attributes.markdown_source,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                     ..Default::default()
                 },
             )?;
             deliver_webhooks_to_bots(tx, &room, &message)?;
-            Ok((message, blob))
+            if let Some(blob) = &blob {
+                attachments::enqueue_analysis(tx, blob);
+            }
+            Ok((PostingOutcome::Created(message), blob))
+
         })
         .await
         .map_err(db_error)?;
     if let Some(blob) = blob {
         process_attachment(c.app(), blob).await?;
     }
-    let id = message.id;
-    c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
+    match message {
+        PostingOutcome::Created(message) => {
+            let id = message.id;
+            let message = c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)?;
+            Ok(PostingOutcome::Created(message))
+        }
+        outcome => Ok(outcome),
+    }
 }
 
 /// Inserts a staged blob's row, keeping its file once the transaction commits.
@@ -264,6 +297,16 @@ pub(crate) fn save_staged(tx: &mut campfire_db::Tx<'_>, staged: Staged) -> campf
     let blob = staged.insert(tx.conn(), tx.now().jiff()).map_err(storage_error)?;
     keep_after_commit(tx, staged);
     Ok(blob)
+}
+
+/// Resolve a staged upload or an existing direct-upload blob inside the writer transaction.
+fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Blob>> {
+    match assignment {
+        Assignment::Create(staged) => save_staged(tx, staged).map(Some),
+        Assignment::Existing(blob) => attachments::save_existing(tx, blob).map(Some),
+        Assignment::Unchanged | Assignment::Delete => Ok(None),
+        Assignment::Signed(_) | Assignment::Invalid => Err(campfire_db::Error::Other("invalid attachment".into())),
+    }
 }
 
 /// [`canonical_body`] on a reader, ahead of the write that stores it.
@@ -275,7 +318,7 @@ pub(crate) async fn canonicalize_body(app: &App, body: String, request_host: Opt
 /// Assigning a String to a rich text attribute stores the canonicalized content
 /// (`ActionText::Content.new(body, canonicalize: true).to_html`).
 pub(crate) fn canonical_body(conn: &campfire_db::Connection, app: &App, body: &str, request_host: Option<String>) -> String {
-    let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
+    let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
     let ctx = resolver.render_context(request_host);
     Content::load(body, &ctx).map(|content| content.to_html()).unwrap_or_else(|_| body.to_string())
 }
@@ -303,65 +346,44 @@ pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
 /// `blob.analyze`: its `after_update` touches the attached records. The file is analyzed off the
 /// writer.
 async fn analyze_attachment(app: &App, blob: Blob) -> Result<Blob> {
-    let metadata = active_storage::analyzed_metadata(app, &blob).await?;
-    app.db
-        .write(move |tx| {
-            let mut blob = blob;
-            blob.update_metadata(tx.conn(), metadata).map_err(storage_error)?;
-            touch_attachment_records(tx, blob.id)?;
-            Ok(blob)
-        })
-        .await
-        .map_err(db_error)
-}
-
-/// `Blob#touch_attachments`: each attached record is touched (a message also touches its room).
-fn touch_attachment_records(tx: &mut campfire_db::Tx<'_>, blob_id: i64) -> campfire_db::Result<()> {
-    for (record_type, record_id) in campfire_storage::blob::attachment_records(tx.conn(), blob_id).map_err(storage_error)? {
-        if record_type == "Message" {
-            Message::find(tx.conn(), record_id)?.touch(tx)?;
-        }
-    }
-    Ok(())
+    active_storage::analyze(app, blob.id).await.map_err(Error::internal)?.ok_or(Error::NotFound)
 }
 
 /// `@message.update!(message_params)`. A new attachment replaces the old one (whose blob is purged
 /// later) without `process_attachment`: the blob is only analyzed, by `ActiveStorage::AnalyzeJob`
 /// after commit (verified against the reference with a bot's `PUT` and `attachment`).
 pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: MessageParams) -> Result<Message> {
-    let attachment = match attributes.attachment {
-        Some(Assignment::Invalid) => return Err(invalid_attachment()),
-        Some(Assignment::Create(upload)) => Some(Some(upload.stage(c.app()).await?)),
-        Some(_) => Some(None),
-        None => None,
-    };
+    let attachment_given = attributes.attachment.is_some();
+    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    if matches!(attachment, Assignment::Invalid) {
+        return Err(invalid_attachment());
+    }
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
     };
-    let (id, blob) = c
+    let id = c
         .app()
         .db
         .write(move |tx| {
             let mut message = message;
-            if let Some(body) = body {
-                message.update_body(tx, &body)?;
-            }
-            let attachment_given = attachment.is_some();
-            let blob = attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?;
+            let blob = attachment_blob(tx, attachment)?;
             if attachment_given {
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
             }
-            Ok((message.id, blob))
+            message.edit(tx, campfire_db::MessageChanges {
+                markdown_source: attributes.markdown_source,
+                clear_markdown_source: attributes.clear_markdown_source,
+                body,
+                ..Default::default()
+            })?;
+            if let Some(blob) = &blob {
+                attachments::enqueue_analysis(tx, blob);
+            }
+            Ok(message.id)
         })
         .await
         .map_err(db_error)?;
-    if let Some(blob) = blob.filter(|blob| !blob.is_analyzed()) {
-        let job_app = c.app().clone();
-        c.app().jobs.perform_later("ActiveStorage::AnalyzeJob", async move {
-            analyze_attachment(&job_app, blob).await.map(drop).map_err(|e| anyhow::anyhow!("{e:?}"))
-        });
-    }
     c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
 }
 
@@ -380,7 +402,7 @@ pub(crate) async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> 
 pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
     let base_url = page::renderer_base_url(c);
-    c.app()
+    let refreshes = c.app()
         .db
         .read(move |conn| {
             let presenter = Presenter::new(conn, &app, None);
@@ -388,10 +410,13 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
             let account = campfire_db::Account::first(conn)?;
             let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::message(ctx, &view));
             let partials = Rendered { message: Some(html), ..Rendered::default() };
-            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)
+            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
+            Ok(presenter.take_github_refreshes())
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(())
 }
 
 /// `broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial:
@@ -399,7 +424,7 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
 pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
     let base_url = page::renderer_base_url(c);
-    c.app()
+    let refreshes = c.app()
         .db
         .read(move |conn| {
             let presenter = Presenter::new(conn, &app, None);
@@ -411,10 +436,27 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
             app.broadcasts.message_replace(&room, &message, &partials);
-            Ok(())
+            let replacements = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| -> askama::Result<_> {
+                Ok([
+                    ("meta", views::MetaPartial {ctx, message: &view}.render()?),
+                    // Empty containers remove their old cards after an edit.
+                    ("github_pr_cards", view.components.github_cards_html.clone().unwrap_or_else(|| views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0)),
+                    ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
+                    ("message_link_cards", views::cards(&view, "message_link_cards", "message-link-cards", 0, &view.components.message_link_cards).0),
+                    ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
+                    ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),
+                    ("link_embed_cards", views::cards(&view, "link_embed_cards", "link-embed-cards", 2, &view.components.link_embed_cards).0),
+                ])
+            }).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            for (part, html) in replacements {
+                app.broadcasts.message_part_replace(&room, &message, part, &html);
+            }
+            Ok(presenter.take_github_refreshes())
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(())
 }
 
 /// `deliver_webhooks_to_bots`, in the message's transaction: every active bot in a direct room,
@@ -424,9 +466,9 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
 /// rows commit, or roll back, with the message; each is held for [`WEBHOOK_HOLD`] so a bot can't
 /// be told (and reply) before the room sees the message, and [`release_webhooks`] makes them due
 /// once it has been broadcast.
-fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
-    let candidates = if room.direct() { room.active_bots(tx.conn())? } else { message.mentionees(tx.conn(), tx.rich_text())? };
-    for bot in candidates.into_iter().filter(|user| user.role == Role::Bot && user.status == Status::Active && user.id != message.creator_id) {
+pub(crate) fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
+    let _ = room;
+    for bot in campfire_db::models::bot_webhook_fanout::recipients(tx, message)? {
         if bot.webhook(tx.conn())?.is_some() {
             tx.emit_after_commit(campfire_db::Event::job_in(WEBHOOK_HOLD, &WebhookJob { bot_id: bot.id, message_id: message.id }));
         }
@@ -456,16 +498,22 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    c.app()
+    let (value, fetches, twitter_fetches, refreshes) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
-            campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))
+            let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
+            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_github_refreshes()))
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
+        .await
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(value)
 }
 
 /// `render action: :room_not_found` (inside the layout).
@@ -476,3 +524,7 @@ async fn render_room_not_found(c: &mut Ctx) -> Result {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "messages/ws17_activity_tests.rs"]
+mod ws17_activity_tests;

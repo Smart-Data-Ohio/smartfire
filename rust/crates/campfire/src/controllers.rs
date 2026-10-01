@@ -42,6 +42,11 @@ pub mod workspace_icons;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
+pub mod fizzy_cards;
+pub mod fizzy_connections;
+pub mod fizzy_message_cards;
+pub mod github;
+pub mod message_embed_suppressions;
 pub mod messages;
 pub mod presenters;
 pub mod public_pages;
@@ -55,6 +60,7 @@ pub mod sessions;
 pub mod sudos;
 pub mod two_factor;
 pub mod unfurl_links;
+pub mod embeds;
 pub mod users;
 pub mod welcome;
 
@@ -164,6 +170,29 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "sessions#new" => arc(sessions::new),
         "sessions#create" => arc(sessions::create),
         "sessions#destroy" => arc(sessions::destroy),
+        "accounts/integrations_health#show" => arc(accounts::integrations_health::show),
+        "agents/github/pull_request_actions#create" => arc(github::agent_actions::create),
+        "github/pull_request_comments#create" => arc(github::writes::comment),
+        "github/pull_request_reviews#create" => arc(github::writes::review),
+        "github/pull_request_review_requests#create" => arc(github::writes::review_request),
+        "github/pull_request_write_actions#show" => arc(github::writes::show),
+        "github/pull_request_threads#create" => arc(github::discussions::create),
+        "github/connections#create" => arc(github::connections::create),
+        "github/connections#destroy" => arc(github::connections::destroy),
+        "github/app_connections#connect" => arc(github::connections::connect),
+        "github/app_connections#callback" => arc(github::connections::callback),
+        "accounts/bots/github_connections#create" => arc(github::connections::bot_create),
+        "accounts/bots/github_connections#destroy" => arc(github::connections::bot_destroy),
+        "github/webhooks#create" => arc(github::webhooks::create),
+        "rooms/github/pull_request_cards#show" => arc(github::cards::show),
+        "rooms/github_subscriptions#create" => arc(github::subscriptions::create),
+        "rooms/github_subscriptions#update" => arc(github::subscriptions::update),
+        "rooms/github_subscriptions#destroy" => arc(github::subscriptions::destroy),
+        "rooms/fizzy/cards#show" => arc(fizzy_cards::show),
+        "fizzy/connections#create" => arc(fizzy_connections::create),
+        "fizzy/connections#destroy" => arc(fizzy_connections::destroy),
+        "rooms/fizzy/message_cards#new" => arc(fizzy_message_cards::new),
+        "rooms/fizzy/message_cards#create" => arc(fizzy_message_cards::create),
         "two_factor/reauthentications#create" => arc(two_factor::reauthentication_create),
         "two_factor/challenges#show" => arc(two_factor::challenge_show),
         "two_factor/challenges#create" => arc(two_factor::challenge_create),
@@ -224,6 +253,10 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/push_subscriptions#index" => arc(users::push_subscriptions::index),
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),
         "users/push_subscriptions#destroy" => arc(users::push_subscriptions::destroy),
+        "users/presences#show" => arc(users::presences::show),
+        "users/dnd_allowances#create" => arc(users::dnd_allowances::create),
+        "users/dnd_allowances#destroy" => arc(users::dnd_allowances::destroy),
+        "users/notification_settings#update" => arc(users::notification_settings::update),
         "autocompletable/users#index" => arc(autocompletable::users::index),
         "messages#index" => arc(messages::index),
         "messages#create" => arc(messages::create),
@@ -281,7 +314,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "searches#index" => arc(searches::index),
         "searches#create" => arc(searches::create),
         "searches#clear" => arc(searches::clear),
+        "embeds/images#show" => arc(embeds::show),
         "unfurl_links#create" => arc(unfurl_links::create),
+        "message_embed_suppressions#create" => arc(message_embed_suppressions::create),
         "pwa#manifest" => arc(pwa::manifest),
         "pwa#service_worker" => arc(pwa::service_worker),
         "rails/health#show" => arc(health::show),
@@ -647,7 +682,7 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
-        "switchers#show",
+        "embeds/images#show", "users/presences#show", "users/dnd_allowances#create", "users/dnd_allowances#destroy", "users/notification_settings#update", "switchers#show",
         "rooms#leave", "rooms/directs#update", "rooms/directs#add_members", "rooms/directs#leave",
         "room_categories#index", "room_categories#create", "room_categories#update", "room_categories#destroy",
         "rooms/categories#update", "rooms/favorites#create", "rooms/favorites#update", "rooms/favorites#destroy", "rooms/inbound_email_addresses#create",

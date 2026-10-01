@@ -278,7 +278,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let message_id = c.param_str("message_id").and_then(cast_integer);
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let show = c
+    let (show, fetches, twitter_fetches, refreshes) = c
         .app()
         .db
         .read(move |conn| {
@@ -289,7 +289,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
             presenter.cache_base_url = Some(cache_base_url);
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
-            Ok(campfire_views::rooms::ShowView {
+            let show = campfire_views::rooms::ShowView {
                 shell:Default::default(),scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,
                 room: presenter.room_view(&room, &user)?,
                 updated_at: room.updated_at.jiff(),
@@ -299,10 +299,23 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 invitation: original && !Message::paged(conn, Timeline::Room(room.id))?,
                 join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
                 messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
-            })
+                ooo_notice_members:
+                    crate::controllers::presenters::status_settings::ooo_notice_members(
+                        conn,
+                        &app.secrets,
+                        &room,
+                        user.id,
+                        app.db.env().now(),
+                    )?,
+            };
+            Ok((show, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_github_refreshes()))
         })
         .await
         .map_err(db_error)?;
+    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
+        .await
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
     let response = page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::rooms::Show { ctx, show: &show }).await?;
     let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &show.messages, &c.url_for(""));
     Ok(response.with_cached_fragments(fragments))
@@ -313,3 +326,6 @@ mod tests;
 
 #[cfg(test)]
 mod parity_tests;
+#[cfg(test)]
+#[path = "rooms/ws17_ooo_tests.rs"]
+mod ws17_ooo_tests;

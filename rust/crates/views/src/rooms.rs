@@ -111,6 +111,9 @@ pub struct ShowView {
     pub join_code: String,
     /// `Turbo::StreamsChannel.signed_stream_name([room, :messages])`.
     pub messages_stream_name: String,
+    /// Other active human DM members, including currently off members so each live stream is mounted.
+    #[serde(default)]
+    pub ooo_notice_members: Vec<crate::users::statuses::OooNoticeMember>,
 }
 
 /// `rooms/show`.
@@ -142,6 +145,16 @@ impl Show<'_> {
     }
     fn loaded_at(&self) -> i64 {
         epoch_ms(self.show.updated_at)
+    }
+    fn ooo_notices(&self) -> h::Html {
+        h::raw(
+            crate::users::statuses::OooNotices {
+                direct: self.show.room.is_direct(),
+                members: &self.show.ooo_notice_members,
+            }
+            .render()
+            .expect("OOO notices"),
+        )
     }
 }
 
@@ -234,6 +247,7 @@ pub struct OpensNew<'a> {
 pub struct OpensEdit<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub form: &'a OpenFormView,
+    pub github: crate::github::subscriptions::Section,
 }
 
 /// `rooms/closeds/new`.
@@ -250,6 +264,7 @@ pub struct ClosedsNew<'a> {
 pub struct ClosedsEdit<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub form: &'a ClosedFormView,
+    pub github: crate::github::subscriptions::Section,
 }
 
 impl Page for OpensNew<'_> {
@@ -411,6 +426,8 @@ pub struct ShellComponents {
 }
 /// Stable WS8b-m entry point. Until its list adapter lands, an empty collection emits zero
 /// bytes, exactly as Rails' `render partial: "messages/message", collection: []` does.
-pub fn room_message_list(_ctx:&ViewContext, show:&ShowView)->h::Html {
-    show.shell.message_list.as_ref().map(|html|h::raw(html.clone())).unwrap_or_else(h::empty)
+pub fn room_message_list(ctx:&ViewContext, show:&ShowView)->h::Html {
+    if let Some(html) = &show.shell.message_list { return h::raw(html.clone()); }
+    // Preserve main's real message renderer when the WS8b-m whole-list seam is absent.
+    h::raw(show.messages.iter().map(|message| format!("\n    {}", crate::messages::cached_message_item(ctx, message))).collect::<String>() + "\n  ")
 }

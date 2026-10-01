@@ -74,6 +74,11 @@ async fn whole_profile_matches_rails_seed_without_masks() {
         presenters::view_context::user_preferences(c, DAVID, now)?,
         presenters::view_context::chrome(c, Some(DAVID))?,
     ))).await.unwrap();
+    let github = presenters::github::connection(&app.booted.app, DAVID).await.unwrap();
+    let settings = app.db().read(move |conn| {
+        let user = campfire_db::UserStatusSettings::find(conn, DAVID)?;
+        presenters::status_settings::forms(conn, &user, campfire_db::Errors::default(), campfire_db::Timestamp::from_jiff(now), false)
+    }).await.unwrap();
     let v = vectors();
     let summary = presenters::user_summary(&app.booted.app.secrets, &user);
     let transfer = presenters::accounts::transfer_id(&app.booted.app.secrets, DAVID, now);
@@ -110,6 +115,8 @@ async fn whole_profile_matches_rails_seed_without_masks() {
                         ctx: &ctx,
                         user: summary,
                         sections,
+                        github,
+                        settings,
                         appearance: data,
                         has_password: true,
                         current_password_error: None,

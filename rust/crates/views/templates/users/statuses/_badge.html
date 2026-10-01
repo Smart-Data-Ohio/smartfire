@@ -1,5 +1,5 @@
 <span class="user-status-badge">
-  {{ h::builder_tag("span",h::attrs().attr("role","img").aria("label",person.label()).class("avatar__presence").data("presence", &person.presence)) }}
-  <span class="user-status-badge__label">{{ person.label() }}</span>
-{% if let Some(status) = person.custom_status %}    <span class="user-status-badge__custom">{{ status }}</span>
+  {{ self.dot() }}
+  <span class="user-status-badge__label">{{ self.label() }}</span>
+{% if let Some(status) = status_text %}    <span class="user-status-badge__custom">{{ status }}</span>
 {% endif %}</span>{{ "\n" }}

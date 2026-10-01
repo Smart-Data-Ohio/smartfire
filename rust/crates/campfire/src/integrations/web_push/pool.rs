@@ -142,10 +142,6 @@ impl Pool {
         }
     }
 
-    pub fn vapid(&self) -> &VapidConfig {
-        &self.inner.vapid
-    }
-
     /// Queued or running deliveries.
     #[cfg(test)]
     pub fn pending(&self) -> usize {

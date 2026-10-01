@@ -80,16 +80,14 @@ pub async fn create(c: &mut Ctx) -> Result {
                 email_address.as_deref(),
                 password_digest,
             )?;
-            let pending =
-                attachments::assign(tx, Record::user(administrator.id), "avatar", avatar)?;
-            Ok((administrator, pending))
+            attachments::assign(tx, Record::user(administrator.id), "avatar", avatar)?;
+            Ok(administrator)
         })
         .await;
 
     let root = c.url_for(&campfire_routes::root());
     match result {
-        Ok((administrator, pending)) => {
-            attachments::analyze_later(c.app(), pending);
+        Ok(administrator) => {
             concerns::start_new_session_for(c, administrator).await?;
             c.redirect_to(&root)
         }

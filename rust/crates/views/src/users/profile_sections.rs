@@ -215,11 +215,6 @@ impl ProfileFormFields for ProfileShow<'_> {}
 pub struct GoogleCalendar {
     pub sections: ProfileSections,
 }
-#[derive(Template)]
-#[template(path = "users/profiles/_github_connection.html")]
-struct GithubConnection {
-    sections: ProfileSections,
-}
 impl ProfileShow<'_> {
     pub(super) fn google_calendar(&self) -> h::Html {
         h::raw(
@@ -231,17 +226,7 @@ impl ProfileShow<'_> {
         )
     }
     pub(super) fn github_connection(&self) -> h::Html {
-        // WS15g integration (PR #167, rust/ws15g-github): replace this fallback with
-        // campfire_views::github::connections::profile(&Connection).
-        // Map linked/usable/login/reason/app_token/app_configured from WS15g's domain;
-        // never infer token usability here or read decrypted credentials.
-        h::raw(
-            GithubConnection {
-                sections: self.sections.clone(),
-            }
-            .render()
-            .unwrap(),
-        )
+        h::raw(crate::github::connections::profile(&self.github))
     }
 }
 impl GoogleCalendar {

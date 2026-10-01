@@ -78,8 +78,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let icon = input.save(tx, brand, image.as_ref())?;
-            let pending =
-                attachments::assign(tx, Record::workspace_icon(icon.id), "image", assignment)?;
+            attachments::assign(tx, Record::workspace_icon(icon.id), "image", assignment)?;
             AuditLog::record(
                 tx,
                 NewAuditLog {
@@ -94,12 +93,11 @@ pub async fn create(c: &mut Ctx) -> Result {
                 },
                 &audit,
             )?;
-            Ok(pending)
+            Ok(())
         })
         .await;
     match result {
-        Ok(pending) => {
-            attachments::analyze_later(c.app(), pending);
+        Ok(()) => {
             let location = c.url_for(&campfire_routes::account_icons());
             c.redirect_to_with(
                 &location,
@@ -119,12 +117,12 @@ pub(super) async fn image_facts(
     c: &Ctx,
     assignment: &Assignment<campfire_storage::Staged>,
 ) -> Result<Option<ImageFacts>> {
-    let Assignment::Create(staged) = assignment else {
-        return Ok(None);
+    let (content_type, byte_size, key) = match assignment {
+        Assignment::Create(staged) => { let b=staged.blob(); (b.content_type.clone().unwrap_or_default(), b.byte_size, b.key.clone()) },
+        Assignment::Existing(b) => (b.content_type.clone().unwrap_or_default(), b.byte_size, b.key.clone()),
+        _ => return Ok(None),
     };
-    let blob = staged.blob();
-    let content_type = blob.content_type.clone().unwrap_or_default();
-    let path = c.app().storage.service.path_for(&blob.key);
+    let path = c.app().storage.service.path_for(&key);
     let kind = content_type.clone();
     let content_error = tokio::task::spawn_blocking(move || {
         campfire_storage::workspace_icon::content_error(&path, &kind)
@@ -133,7 +131,7 @@ pub(super) async fn image_facts(
     .map_err(Error::internal)?;
     Ok(Some(ImageFacts {
         content_type,
-        byte_size: blob.byte_size,
+        byte_size,
         content_error,
     }))
 }

@@ -1,12 +1,12 @@
 //! The front server (Thruster's job) end to end, over real sockets.
 //!
-//! The ACME tests need a local Pebble CA and are skipped unless `PEBBLE_MINICA` points at its
+//! The ignored ACME test needs a local Pebble CA; `PEBBLE_MINICA` must point at its
 //! `test/certs/pebble.minica.pem` (the root of the directory's own HTTPS certificate):
 //!
 //!   docker run -d --name pebble --network host --add-host campfire.test:127.0.0.1 \
 //!     -e PEBBLE_VA_NOSLEEP=1 -e PEBBLE_WFE_NONCEREJECT=0 ghcr.io/letsencrypt/pebble:latest
 //!   docker cp pebble:/test/certs/pebble.minica.pem /tmp/pebble.minica.pem
-//!   PEBBLE_MINICA=/tmp/pebble.minica.pem cargo test -p campfire_kit --test front acme -- --test-threads 1
+//!   PEBBLE_MINICA=/tmp/pebble.minica.pem cargo test -p campfire_kit --test front acme -- --ignored --test-threads 1
 //!
 //! Pebble validates TLS-ALPN-01 on port 5001, so the test serves HTTPS there. (HTTP-01 can't be
 //! tested this way: like autocert, the challenge handler checks the `Host` header, port included,
@@ -733,8 +733,9 @@ async fn handshake(port: u16, domain: &str) -> (Option<Vec<u8>>, String) {
 }
 
 #[tokio::test]
+#[ignore = "requires a local Pebble ACME CA, PEBBLE_MINICA root certificate and TLS ports 5001/5002"]
 async fn acme_tls_alpn_certificate_cached_and_reused() {
-    let Some(root) = pebble() else { return eprintln!("skipped: PEBBLE_MINICA isn't set") };
+    let root = pebble().expect("set PEBBLE_MINICA to the local Pebble CA root certificate");
     let storage = tempfile::tempdir().unwrap();
     let domain = "campfire.test";
     let (app, _) = test_app();

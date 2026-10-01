@@ -83,27 +83,6 @@ fn window_epochs(raw: &str) -> Vec<(i64, i64)> {
         .collect()
 }
 
-/// Profile display only: the latest cached end currently covering this member. WS17/WS14g
-/// own updates, cache refreshes, boundary broadcasts and the typed effective-status reader.
-pub(super) fn calendar_ooo_end(
-    conn: &Connection,
-    user_id: i64,
-    now: jiff::Timestamp,
-) -> Result<Option<jiff::Timestamp>> {
-    let raw: Option<String> = conn
-        .query_row(
-            "SELECT ooo_intervals FROM calendar_meeting_caches WHERE user_id=?",
-            [user_id],
-            |row| row.get(0),
-        )
-        .optional()?;
-    Ok(raw
-        .into_iter()
-        .flat_map(|raw| windows(&raw))
-        .filter_map(|(start, end)| (start <= now && now < end).then_some(end))
-        .max())
-}
-
 fn windows(raw: &str) -> Vec<(jiff::Timestamp, jiff::Timestamp)> {
     let pairs: serde_json::Value = serde_json::from_str(raw).unwrap_or_default();
     pairs

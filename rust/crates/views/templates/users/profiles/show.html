@@ -91,7 +91,7 @@
 {% endfilter %}
   {% include "users/profiles/_status.html" %}
 
-  {% include "users/profiles/_notifications.html" %}
+  {{ self.notification_form() }}
 
   {{ self.appearance_panel() }}
 

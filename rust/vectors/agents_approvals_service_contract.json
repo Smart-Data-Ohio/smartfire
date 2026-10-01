@@ -1,0 +1,172 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "forbidden": {
+      "status": 403,
+      "error": "Forbidden: agent lacks external_action capability",
+      "payload": null
+    },
+    "missing_before_grant": {
+      "status": 404,
+      "error": "Room not found",
+      "payload": null
+    },
+    "show_missing": {
+      "status": 404,
+      "error": "Approval not found",
+      "payload": null
+    },
+    "created": {
+      "status": 201,
+      "error": null,
+      "payload": {
+        "id": 900030001,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      }
+    },
+    "replay": {
+      "status": 200,
+      "error": null,
+      "payload": {
+        "id": 900030001,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      }
+    },
+    "github_blocked": {
+      "status": 422,
+      "error": "github.* actions are requested through /rooms/:room_id/agents/github/pull_request_actions",
+      "payload": null
+    },
+    "fizzy_blocked": {
+      "status": 422,
+      "error": "fizzy.* actions are requested through /agents/fizzy/card_actions",
+      "payload": null
+    },
+    "budget": {
+      "status": 429,
+      "error": "Daily external action budget exceeded (1/day)",
+      "payload": {
+        "error": "Daily external action budget exceeded (1/day)",
+        "cap": "external_actions",
+        "limit": 1,
+        "retry_after": 28799
+      }
+    },
+    "show": {
+      "status": 200,
+      "error": null,
+      "payload": {
+        "id": 900030001,
+        "action": "deploy",
+        "summary": "Ship",
+        "payload": {
+          "key": "<>&"
+        },
+        "external_id": "repeat",
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z",
+        "created_at": "2026-03-02T16:00:00.000Z"
+      }
+    },
+    "cancel": {
+      "status": 200,
+      "error": null,
+      "payload": {
+        "id": 900030001,
+        "action": "deploy",
+        "summary": "Ship",
+        "payload": {
+          "key": "<>&"
+        },
+        "external_id": "repeat",
+        "status": "cancelled",
+        "expires_at": "2026-03-03T16:00:00.000Z",
+        "created_at": "2026-03-02T16:00:00.000Z"
+      }
+    },
+    "cancel_again": {
+      "status": 422,
+      "error": "Request is already cancelled",
+      "payload": null
+    },
+    "invalid": {
+      "status": 422,
+      "error": "Action can't be blank, Action is invalid, and Summary can't be blank",
+      "payload": null
+    },
+    "pending": {
+      "status": 200,
+      "error": null,
+      "payload": [
+        {
+          "id": 900030003,
+          "action": "deploy",
+          "summary": "Fresh",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "created_at": "2026-03-02T16:00:00.000Z"
+        }
+      ]
+    },
+    "expired": {
+      "status": 200,
+      "error": null,
+      "payload": [
+        {
+          "id": 900030002,
+          "action": "deploy",
+          "summary": "Overdue",
+          "status": "expired",
+          "expires_at": "2026-03-02T16:00:00.000Z",
+          "created_at": "2026-03-02T16:00:00.000Z"
+        }
+      ]
+    },
+    "all": {
+      "status": 200,
+      "error": null,
+      "payload": [
+        {
+          "id": 900030003,
+          "action": "deploy",
+          "summary": "Fresh",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "created_at": "2026-03-02T16:00:00.000Z"
+        },
+        {
+          "id": 900030002,
+          "action": "deploy",
+          "summary": "Overdue",
+          "status": "expired",
+          "expires_at": "2026-03-02T16:00:00.000Z",
+          "created_at": "2026-03-02T16:00:00.000Z"
+        },
+        {
+          "id": 900030001,
+          "action": "deploy",
+          "summary": "Ship",
+          "payload": {
+            "key": "<>&"
+          },
+          "external_id": "repeat",
+          "status": "cancelled",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "created_at": "2026-03-02T16:00:00.000Z"
+        }
+      ]
+    },
+    "revoked_show": {
+      "status": 403,
+      "error": "Forbidden: agent lacks external_action capability",
+      "payload": null
+    },
+    "revoked_list": {
+      "status": 403,
+      "error": "Forbidden: agent lacks external_action capability",
+      "payload": null
+    }
+  }
+}

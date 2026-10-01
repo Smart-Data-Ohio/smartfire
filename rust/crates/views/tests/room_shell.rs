@@ -22,6 +22,7 @@ fn view(row: &serde_json::Value) -> rooms::ShowView {
     let fragments = &row["owner_fragments"];
     let text = |key: &str| fragments[key].as_str().unwrap().to_string();
     rooms::ShowView {
+        ooo_notice_members: Vec::new(),
         room: rooms::RoomView {
             id: row["room_id"].as_i64().unwrap(),
             kind: if row["kind"] == "direct" {

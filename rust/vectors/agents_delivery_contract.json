@@ -1,0 +1,115 @@
+{
+  "reference_pin": "d7c7de92",
+  "responses": [
+    {
+      "status": 201,
+      "webhook_status": "delivered",
+      "attempts": 1,
+      "last_error": null,
+      "next_delay": 0.0
+    },
+    {
+      "status": 200,
+      "webhook_status": "delivered",
+      "attempts": 1,
+      "last_error": null,
+      "next_delay": 0.0
+    },
+    {
+      "status": 404,
+      "webhook_status": "failed",
+      "attempts": 0,
+      "last_error": "Agent::Delivery::PermanentWebhookResponse: Webhook endpoint returned 404",
+      "next_delay": 0.0
+    },
+    {
+      "status": 302,
+      "webhook_status": "failed",
+      "attempts": 0,
+      "last_error": "Agent::Delivery::PermanentWebhookResponse: Webhook endpoint returned 302",
+      "next_delay": 0.0
+    },
+    {
+      "status": 408,
+      "webhook_status": "pending",
+      "attempts": 1,
+      "last_error": "Agent::Delivery::RetryableWebhookResponse: Webhook endpoint returned 408",
+      "next_delay": 600.0
+    },
+    {
+      "status": 429,
+      "webhook_status": "pending",
+      "attempts": 1,
+      "last_error": "Agent::Delivery::RetryableWebhookResponse: Webhook endpoint returned 429",
+      "next_delay": 600.0
+    },
+    {
+      "status": 500,
+      "webhook_status": "pending",
+      "attempts": 1,
+      "last_error": "Agent::Delivery::RetryableWebhookResponse: Webhook endpoint returned 500",
+      "next_delay": 600.0
+    }
+  ],
+  "retry_after": [
+    {
+      "hint": null,
+      "delay": 3.0
+    },
+    {
+      "hint": "45",
+      "delay": 45.0
+    },
+    {
+      "hint": "9999999999999999999999999",
+      "delay": 3600.0
+    },
+    {
+      "hint": " 0 ",
+      "delay": 0.0
+    },
+    {
+      "hint": "-1",
+      "delay": 3.0
+    },
+    {
+      "hint": "broken",
+      "delay": 3.0
+    },
+    {
+      "hint": "Mon, 02 Mar 2026 16:00:45 GMT",
+      "delay": 45.0
+    },
+    {
+      "hint": "Mon, 02 Mar 2026 15:00:00 GMT",
+      "delay": 0.0
+    }
+  ],
+  "exhaustion": [
+    {
+      "attempts": 1,
+      "status": "pending",
+      "delay": 3.0
+    },
+    {
+      "attempts": 2,
+      "status": "pending",
+      "delay": 18.0
+    },
+    {
+      "attempts": 3,
+      "status": "pending",
+      "delay": 83.0
+    },
+    {
+      "attempts": 4,
+      "status": "pending",
+      "delay": 258.0
+    },
+    {
+      "attempts": 5,
+      "status": "failed",
+      "delay": 0.0
+    }
+  ]
+}

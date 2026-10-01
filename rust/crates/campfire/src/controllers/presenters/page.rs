@@ -8,7 +8,7 @@ use campfire_views::helpers as h;
 use campfire_views::layouts::{Application, FrameLayout};
 use campfire_views::{Platform, ViewContext};
 
-use crate::app::App;
+use crate::app::AppState;
 use crate::channels::Partials;
 use crate::controllers::presenters::view_context::{Layout, account_summary, find_template};
 
@@ -74,7 +74,7 @@ pub async fn bare(c: &mut Ctx, status: StatusCode, template: Format, render: imp
 
 /// Renders with the `ViewContext` `ApplicationController.render` has: no request, no
 /// `Current.user`, no CSRF tokens, and the renderer's default host (`http://example.org`).
-pub fn render_detached<T>(app: &App, account: Option<&Account>, render: impl FnOnce(&ViewContext) -> T) -> T {
+pub fn render_detached<T>(app: &AppState, account: Option<&Account>, render: impl FnOnce(&ViewContext) -> T) -> T {
     render_detached_at(app, account, "http://example.org", render)
 }
 
@@ -89,7 +89,7 @@ pub fn renderer_base_url(c: &Ctx) -> String {
 
 /// [`render_detached`] during a request: URLs get the request's host through
 /// `default_url_options` (`SetCurrentRequest`), see [`renderer_base_url`].
-pub fn render_detached_at<T>(app: &App, account: Option<&Account>, base_url: &str, render: impl FnOnce(&ViewContext) -> T) -> T {
+pub fn render_detached_at<T>(app: &AppState, account: Option<&Account>, base_url: &str, render: impl FnOnce(&ViewContext) -> T) -> T {
     let asset_path = |path: &str| campfire_assets::asset_path(path);
     let stylesheets = crate::controllers::presenters::view_context::stylesheet_tags();
     let signed_stream_name = |streamables: &[&str]| rails_compat::turbo::signed_stream_name(&app.secrets, streamables);

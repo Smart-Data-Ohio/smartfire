@@ -36,15 +36,10 @@ impl Person {
         h::turbo_stream_from_streamables(ctx, &[&h::gid_param("User", self.user.id), "status"])
     }
     pub fn status_badge(&self) -> askama::Result<h::Html> {
-        Ok(h::raw(StatusBadge { person: self }.render()?))
+        Ok(h::raw(super::statuses::StatusBadge { presence: &self.presence, status_text: self.custom_status.as_deref() }.render()?))
     }
 }
 
-#[derive(Template)]
-#[template(path = "users/statuses/_badge.html")]
-struct StatusBadge<'a> {
-    person: &'a Person,
-}
 
 #[derive(Template)]
 #[template(path = "users/cards/show.html")]

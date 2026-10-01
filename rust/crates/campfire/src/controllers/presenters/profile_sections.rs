@@ -55,28 +55,9 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
             .split([' ', '\t', '\n', '\r', '\u{000b}', '\u{000c}'])
             .any(|s| s == "https://www.googleapis.com/auth/drive.file");
     }
-    // Read-only cached OOO projection. WS17/WS14g replace it with their shared typed reader;
-    // this profile path never refreshes Google, claims a boundary, or mutates status.
-    let (meeting,calendar,until,zone)=c.query_row("SELECT meeting_status_enabled,ooo_calendar_enabled,ooo_until,time_zone FROM users WHERE id=?",[id],|r|Ok((r.get::<_,bool>(0)?,r.get::<_,bool>(1)?,r.get::<_,Option<campfire_db::Timestamp>>(2)?,r.get::<_,Option<String>>(3)?)))?;
-    fields.status.meeting_enabled = meeting;
-    fields.status.ooo_calendar_enabled = calendar;
-    let manual_end = until.filter(|t| t.jiff() > now).map(|t| t.jiff());
-    fields.status.manual_ooo = manual_end.is_some();
-    let calendar_end = if calendar { super::layout_preferences::calendar_ooo_end(c, id, now)? } else { None };
-    if let Some(until) = manual_end.into_iter().chain(calendar_end).max() {
-        fields.status.ooo_return = Some(
-            campfire_views::time::Zone::for_user(zone.as_deref()).format(until, "%B %d, %Y"),
-        );
-    }
-    fields.status.fetch_error = c
-        .query_row(
-            "SELECT fetch_error FROM calendar_meeting_caches WHERE user_id=?",
-            [id],
-            |r| r.get::<_, Option<String>>(0),
-        )
-        .optional()?
-        .flatten()
-        .filter(|s| !is_blank(s));
+    let user = campfire_db::UserStatusSettings::find(c, id)?;
+    fields.status = status_fields(&user, &campfire_db::Errors::default(), campfire_db::Timestamp::from_jiff(now));
+    fields.status.fetch_error = c.query_row("SELECT fetch_error FROM calendar_meeting_caches WHERE user_id=?", [id], |r| r.get::<_, Option<String>>(0)).optional()?.flatten().filter(|s| !is_blank(s));
     Ok(fields)
 }
 /// Submitted non-secret fields stay visible on Rails' failed-save page.
@@ -125,4 +106,17 @@ pub fn preview(
             fields.call_errors.push(message);
         }
     }
+}
+
+pub fn status_fields(user: &campfire_db::UserStatusSettings, errors: &campfire_db::Errors, now: campfire_db::Timestamp) -> StatusFields {
+    let mut fields = StatusFields {
+        presence: user.presence_setting.clone(), emoji: user.custom_status_emoji.clone(), text: user.custom_status_text.clone(),
+        ooo_note: user.ooo_note.clone(), manual_ooo: user.manual_ooo_active(now),
+        meeting_enabled: user.meeting_status_enabled, ooo_calendar_enabled: user.ooo_calendar_enabled,
+        ooo_return: user.ooo_until_effective(now).map(|t| t.jiff().to_zoned(user.zone()).strftime("%B %d, %Y").to_string()),
+
+        ..Default::default()
+    };
+    for (key, message) in &errors.0 { fields.errors.entry(key.to_string()).or_default().push(message.clone()); }
+    fields
 }
