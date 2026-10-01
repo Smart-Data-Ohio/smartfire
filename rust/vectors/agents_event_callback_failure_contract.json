@@ -1,0 +1,73 @@
+{
+  "reference": "d7c7de92",
+  "source_sha256": {
+    "app/models/event.rb": "9cdab96224b35f60cbc0df573ecc093302d255baded6fcdef2c3fef3184287b8",
+    "app/models/event_attendance.rb": "710524343d68311da71c36900f5462e86e1583f28e197bd41d271d6b264ec52e"
+  },
+  "results": [
+    {
+      "meet": false,
+      "position": 0,
+      "error": "statement_invalid",
+      "persisted": true,
+      "invited": [],
+      "calendar_jobs": [],
+      "announcements": 0
+    },
+    {
+      "meet": false,
+      "position": 1,
+      "error": "statement_invalid",
+      "persisted": true,
+      "invited": [
+        149087659
+      ],
+      "calendar_jobs": [],
+      "announcements": 0
+    },
+    {
+      "meet": false,
+      "position": 2,
+      "error": "statement_invalid",
+      "persisted": true,
+      "invited": [
+        149087659,
+        712064548
+      ],
+      "calendar_jobs": [],
+      "announcements": 0
+    },
+    {
+      "meet": true,
+      "position": 0,
+      "error": "statement_invalid",
+      "persisted": true,
+      "invited": [],
+      "calendar_jobs": [],
+      "announcements": 0
+    },
+    {
+      "meet": true,
+      "position": 1,
+      "error": "statement_invalid",
+      "persisted": true,
+      "invited": [
+        149087659
+      ],
+      "calendar_jobs": [],
+      "announcements": 0
+    },
+    {
+      "meet": true,
+      "position": 2,
+      "error": "statement_invalid",
+      "persisted": true,
+      "invited": [
+        149087659,
+        712064548
+      ],
+      "calendar_jobs": [],
+      "announcements": 0
+    }
+  ]
+}

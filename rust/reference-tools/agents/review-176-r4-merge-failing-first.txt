@@ -1,0 +1,25 @@
+Merged production source: 71f992c012caf6e8947104edde91028e1529c315
+Only the new wakeup regression added; production unchanged.
+Command: rust/reference-tools/agents/run-focused.sh -p campfire_db --features test-support --lib ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs
+Exit: 101
+
+running 1 test
+test tests::agent_work_events_test::ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs ... FAILED
+
+failures:
+
+---- tests::agent_work_events_test::ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs stdout ----
+
+thread 'tests::agent_work_events_test::ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs' (3979979) panicked at crates/db/src/tests/agent_work_events_test.rs:316:5:
+assertion `left == right` failed
+  left: []
+ right: [Number(1), Number(2)]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tests::agent_work_events_test::ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 932 filtered out; finished in 0.18s
+
+error: test failed, to rerun pass `-p campfire_db --lib`

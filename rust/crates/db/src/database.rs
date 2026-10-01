@@ -102,6 +102,19 @@ enum AfterCommit {
     Event(Event),
 }
 
+impl AfterCommit {
+    /// Queue rows were persisted before COMMIT. Waking their runner is not a
+    /// model callback; a later callback error cannot revoke those committed jobs.
+    fn wake_committed_job(self, env: &Env) {
+        match self {
+            Self::RecordJob { event: Some(event), .. }
+            | Self::Event(event @ (Event::Job(_) | Event::PushMessage { .. } | Event::RemoveBannedContent { .. }
+                | Event::DeliverWebhook { .. } | Event::PurgeBlob { .. })) => env.sink.emit(event),
+            _ => (),
+        }
+    }
+}
+
 /// A write in progress: the writer connection inside a transaction (or, while after-commit
 /// work runs, outside one), the environment, and the queued after-commit work.
 pub struct Tx<'c> {
@@ -317,7 +330,8 @@ impl<'c> Tx<'c> {
 
 /// Runs `f` in `BEGIN IMMEDIATE`, commits, then runs the after-commit queue. An error from
 /// `f` rolls back and discards the queue. An error from an after-commit hook is returned
-/// immediately, discarding later callbacks (Rails raises it from the save that committed).
+/// after waking any remaining committed jobs, discarding later model callbacks
+/// (Rails raises it from the save that committed; durable enqueueing stays atomic).
 pub fn run_write<T>(
     conn: &Connection,
     env: &Env,
@@ -388,14 +402,16 @@ pub fn run_write<T>(
         after_commit: Vec::new(),
         persist_error: None,
     };
-    for item in queue.drain(..) {
-        match item {
+    let mut callbacks = queue.into_iter();
+    while let Some(item) = callbacks.next() {
+        let callback_error = match item {
             AfterCommit::RecordJob { event, .. } => {
                 if let Some(event) = event {
                     env.sink.emit(event);
                 }
+                None
             }
-            AfterCommit::Event(event) => env.sink.emit(event),
+            AfterCommit::Event(event) => { env.sink.emit(event); None }
             AfterCommit::RecordBroadcast { table, id, event } => {
                 // A later destroy suppresses the record's earlier update callback.
                 match conn.query_row(
@@ -407,11 +423,14 @@ pub fn run_write<T>(
                     Ok(false) => (),
                     Err(error) => tracing::warn!(%error, table, id, "broadcast callback failed"),
                 }
+                None
             }
-            AfterCommit::RecordHooks {hooks, ..} => {
-                for hook in hooks { hook(&mut after)?; }
-            }
-            AfterCommit::Hook(hook) => hook(&mut after)?,
+            AfterCommit::RecordHooks {hooks, ..} => hooks.into_iter().try_for_each(|hook| hook(&mut after)).err(),
+            AfterCommit::Hook(hook) => hook(&mut after).err(),
+        };
+        if let Some(error) = callback_error {
+            for pending in callbacks { pending.wake_committed_job(env); }
+            return Err(error);
         }
     }
     Ok(value)

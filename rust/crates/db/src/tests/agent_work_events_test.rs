@@ -284,3 +284,36 @@ fn ws11_r4_callback_savepoint_discards_rolled_back_deletion() {
         assert_eq!(callback_observation(&t),callback_order_oracle()["results"][format!("savepoint_{webhook}")]);
     }
 }
+
+#[test]
+fn ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs() {
+    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct CommittedJob { which: u8 }
+    impl crate::Job for CommittedJob { const CLASS: &'static str = "WS11::CommittedCallbackProbeJob"; }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct LaterBroadcast;
+    impl crate::Broadcast for LaterBroadcast { const KIND: &'static str = "WS11::LaterCallbackProbeBroadcast"; }
+    let t = TestDb::new();
+    let called = Arc::new(AtomicBool::new(false));
+    let marker = called.clone();
+    let result = t.try_write(move |tx| {
+        tx.after_commit(|_| Err(crate::Error::Other("WS11 callback rejected".into())));
+        tx.emit_after_commit(crate::Event::job(&CommittedJob { which: 1 }));
+        tx.emit_record_job_once("users", id("david"), &CommittedJob { which: 2 });
+        tx.emit_record_job_once("users", -1, &CommittedJob { which: 3 });
+        tx.emit_after_commit(crate::Event::PurgeBlob { blob_id: -1 });
+        tx.emit_after_commit(crate::Event::broadcast(&LaterBroadcast));
+        tx.after_commit(move |_| { marker.store(true, Ordering::SeqCst); Ok(()) });
+        Ok(())
+    });
+    assert!(result.is_err());
+    assert!(!called.load(Ordering::SeqCst), "later model callback ran");
+    let notifications: Vec<_> = t.events().into_iter().filter_map(|event| match event {
+        crate::Event::Job(job) if job.class == <CommittedJob as crate::Job>::CLASS => Some(job.arguments["which"].clone()),
+        _ => None,
+    }).collect();
+    assert_eq!(notifications, vec![json!(1), json!(2)]);
+    assert!(t.events().contains(&crate::Event::PurgeBlob { blob_id: -1 }));
+    assert!(!t.events().iter().any(|event| matches!(event, crate::Event::Broadcast(_))));
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-FRESH="$ROOT/.scratch/fresh-ws11-review-176-r4"
+FRESH="$ROOT/.scratch/fresh-ws11-review-176-r4-final"
 test ! -e "$FRESH"
 rm -f "$ROOT/.scratch/fresh-exits.log"
 SOURCE_SHA=$(git -C "$ROOT" rev-parse HEAD)
@@ -13,6 +13,8 @@ mkdir -p "$FRESH/.scratch"
 cp -a "$ROOT/rust/parity/.seed" "$FRESH/rust/parity/.seed"
 cd "$FRESH"
 export CI=1 TMPDIR="$FRESH/.scratch" CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0
+# One isolated compiler cache may be reused; Cargo rebuilds the new clone's sources.
+export CARGO_TARGET_DIR="$ROOT/.scratch/fresh-ws11-review-176-r4/rust/target"
 export CARGO_PROFILE_DEV_DEBUG=line-tables-only CARGO_PROFILE_TEST_DEBUG=line-tables-only
 export CABLE_TEST_PORT_RANGE=52200-52249 MAIL_TEST_PORT_RANGE=52200-52249
 export INTEGRATION_TEST_PORT_RANGE=52250-52298 WS15E_TEST_PORT_RANGE=52250-52298 GITHUB_TEST_PORT_RANGE=52250-52298
