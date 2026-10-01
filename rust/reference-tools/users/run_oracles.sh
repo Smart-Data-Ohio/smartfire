@@ -43,10 +43,14 @@ run dm_picker default vectors/users_dm_picker.json dm-picker
 run joining default vectors/users_joining.json joining
 run pwa default vectors/users_pwa_default.json pwa-default
 run pwa first_run vectors/users_pwa_first_run.json pwa-first-run
+"$ROOT/parity/bin/reference" exec --seed default --time 2026-03-02T16:00:00Z --freeze -- \
+  bin/rails runner --skip-executor /work/reference-tools/rooms/unread_shell.rb > "$OUT/unread-shell.json" 2> "$OUT/unread-shell.log"
+if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then cp "$OUT/unread-shell.json" "$ROOT/vectors/room_shell_unread.json"; else cmp "$OUT/unread-shell.json" "$ROOT/vectors/room_shell_unread.json"; fi
+rg '^Rails .* oracle:' "$OUT/unread-shell.log"
 run zones first_run crates/db/src/slash_commands/rails_zone_identifiers.json zones
 run zones first_run crates/db/src/slash_commands/rails_named_zones.json named-zones named
 if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then
-  echo 'WS8br2 oracle generation: 32 fresh unnormalized files written'
+  echo 'WS8br2 oracle generation: 33 fresh unnormalized files written'
 else
-  echo 'WS8br2 oracle verification: all 32 fresh files match byte for byte; no masks or normalization'
+  echo 'WS8br2 oracle verification: all 33 fresh files match byte for byte; no masks or normalization'
 fi

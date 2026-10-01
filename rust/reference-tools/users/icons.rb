@@ -35,6 +35,11 @@ second=icon(name:"zeta",title:'Zeta <&"');second.id=11002;second.save!
 pages << {name:"populated",**render_icons(WorkspaceIcon.new)}
 invalid=icon(name:"openai",title:"",file:"script.svg");invalid.valid?
 pages << {name:"invalid",**render_icons(invalid)}
+Current.user.update_columns(name:'<b>Creator & "</b>')
+first.update_columns(title:'<b>Icon & "</b>')
+second.update_columns(title:'<script>title()</script>')
+markup_icon=WorkspaceIcon.new(name:'<b>name & "</b>',title:'<i>Form title & "</i>')
+pages << {name:"review_markup",icons:WorkspaceIcon.ordered.map {|i|{id:i.id,name:i.name,title:i.title,creator_name:i.creator.name}},form:{name:markup_icon.name,title:markup_icon.title},**render_icons(markup_icon)}
 duplicate=icon(name:"ACME");duplicate.valid?
 cases << {input:{name:"ACME",duplicate:true},name:duplicate.name,title:duplicate.title,valid:false,errors:duplicate.errors.full_messages,content_type:duplicate.image.blob.content_type}
 puts JSON.pretty_generate(reference:"d7c7de92",cases:cases,pages:pages)

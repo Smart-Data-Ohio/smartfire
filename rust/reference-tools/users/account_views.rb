@@ -23,6 +23,7 @@ ensure
 end
 david=User.find(127326141); kevin=User.find(712064548); bender=User.find(394959859)
 rows=[
+ ["review_markup",david,kevin,{identity:true,name:'<b>Member & "</b>',email:'<img src=x onerror="email()">@campfire.test'}],
  ["self",david,david,{}], ["member",david,kevin,{}], ["viewer_member",kevin,david,{}],
  ["linked",david,kevin,{identity:true}], ["self_linked",kevin,kevin,{identity:true}],
  ["email_changed",david,kevin,{self_changed:true,allowed:true}], ["allowed",david,kevin,{allowed:true}],
@@ -55,7 +56,7 @@ pages=[david,kevin].map do |viewer|
   {viewer_id:viewer.id,account_id:Account.first.id,join_code:Account.first.join_code,administrator_ids:administrators.map(&:id),member_ids:members.map(&:id),**render_account(viewer,"accounts/edit",{account:Account.first,administrators:administrators,members:members,page:page})}
 end
 invites=[david,kevin].map { |viewer| {viewer_id:viewer.id,join_code:Account.first.join_code,**render_account(viewer,"accounts/invite",{},partial:true)} }
-styles=[nil,"/* é <&> */\nbody { color: red; }"].map do |css|
+styles=['</textarea><script>styles()</script> & "',nil,"/* é <&> */\nbody { color: red; }"].map do |css|
   account=Account.first; account.assign_attributes(custom_styles:css)
   {custom_styles:css,**render_account(david,"accounts/custom_styles/edit",{account:account})}
 end

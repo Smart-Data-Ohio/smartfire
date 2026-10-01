@@ -288,3 +288,6 @@ async fn profile_message_buttons_carry_the_accessible_name() {
         }
     }
 }
+
+#[tokio::test]
+async fn review_card_markup_matches_rails() {card_case("review_markup").await;}

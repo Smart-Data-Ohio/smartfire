@@ -104,7 +104,16 @@ async fn all_committed_media_and_field_validation_cases_match_rails() {
 async fn index_body_and_navigation_match_rails_empty_populated_and_error_pages() {
     let app = TestApp::boot_frozen().await.expect("seed required");
     for case in vectors()["pages"].as_array().unwrap() {
-        let icons = if case["name"] == "empty" {
+        let icons = if let Some(rows) = case["icons"].as_array() {
+            rows.iter()
+                .map(|v| views::Icon {
+                    id: v["id"].as_i64().unwrap(),
+                    name: v["name"].as_str().unwrap().into(),
+                    title: v["title"].as_str().unwrap().into(),
+                    creator_name: v["creator_name"].as_str().unwrap().into(),
+                })
+                .collect()
+        } else if case["name"] == "empty" {
             vec![]
         } else {
             vec![
@@ -122,7 +131,13 @@ async fn index_body_and_navigation_match_rails_empty_populated_and_error_pages()
                 },
             ]
         };
-        let form = if case["name"] == "invalid" {
+        let form = if case["form"].is_object() {
+            views::Form {
+                name: case["form"]["name"].as_str().map(str::to_owned),
+                title: case["form"]["title"].as_str().map(str::to_owned),
+                ..Default::default()
+            }
+        } else if case["name"] == "invalid" {
             views::Form {
                 name: Some("openai".into()),
                 title: Some("".into()),
@@ -409,4 +424,76 @@ async fn uniqueness_index_races_render_taken_and_roll_back_upload_and_audit() {
         })
         .await
         .unwrap();
+}
+
+async fn review_audit_failure(name: &str) {
+    let mut app = TestApp::boot_frozen().await.expect("seed required");
+    app.booted
+        .jobs
+        .stop(std::time::Duration::from_secs(1))
+        .await;
+    if name == "destroy" {
+        assert_eq!(
+            upload(&app, "review_icon", "Review icon", "square_64.png")
+                .await
+                .status,
+            StatusCode::FOUND
+        );
+    }
+    app.db().write(|tx| {tx.conn().execute("DELETE FROM background_jobs",[])?;tx.conn().execute("DELETE FROM audit_logs",[])?;tx.conn().execute_batch("CREATE TRIGGER reject_review_icon_audit BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT,'review audit failure'); END")?;Ok(())}).await.unwrap();
+    let response = if name == "create" {
+        let blob = super::super::attachment_tests::direct_blob(
+            &app,
+            &bytes("square_64.png"),
+            "square_64.png",
+        )
+        .await;
+        let signed = super::super::attachment_tests::signed(&app, &blob);
+        app.david()
+            .write(Req::new(Method::POST, "/account/icons").form(&[
+                ("workspace_icon[name]", "review_icon"),
+                ("workspace_icon[title]", "Review icon"),
+                ("workspace_icon[image]", &signed),
+            ]))
+            .await
+    } else {
+        let id = app
+            .db()
+            .read(|c| Ok(WorkspaceIcon::find_by_name(c, "review_icon")?.unwrap().id))
+            .await
+            .unwrap();
+        app.david()
+            .write(Req::new(Method::DELETE, &format!("/account/icons/{id}")))
+            .await
+    };
+    let saved=app.db().read(|c| {
+        let icon=WorkspaceIcon::find_by_name(c,"review_icon")?;
+        let blob=icon.as_ref().map(|icon|attachments::attached_blob(c,"WorkspaceIcon",icon.id,"image")).transpose()?.flatten();
+        Ok(serde_json::json!({
+            "icon":icon.map(|i|serde_json::json!({"name":i.name,"title":i.title,"creator_id":i.creator_id})),
+            "blob":blob.map(|b|serde_json::json!({"filename":b.filename.raw(),"content_type":b.content_type,"byte_size":b.byte_size,"checksum":b.checksum,"metadata":serde_json::from_str::<Value>(&b.metadata.encode()).unwrap()})),
+            "analysis_jobs":c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='ActiveStorage::AnalyzeJob'",[],|r|r.get::<_,i64>(0))?,
+            "purge_jobs":c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='ActiveStorage::PurgeJob'",[],|r|r.get::<_,i64>(0))?,
+            "audits":c.query_row("SELECT COUNT(*) FROM audit_logs",[],|r|r.get::<_,i64>(0))?
+        }))
+    }).await.unwrap();
+    let mut actual = saved;
+    actual["status"] = serde_json::json!(response.status.as_u16());
+    actual["location"] = serde_json::json!(response.location());
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/users_account_audit_failures.json"
+    ))
+    .unwrap();
+    assert_eq!(
+        actual, oracle["icons"][name],
+        "{name}: pinned Rails production HTTP response, committed icon/blob, and durable callback jobs"
+    );
+}
+#[tokio::test]
+async fn review_icon_create_audit_failure_matches_rails() {
+    review_audit_failure("create").await;
+}
+#[tokio::test]
+async fn review_icon_destroy_audit_failure_matches_rails() {
+    review_audit_failure("destroy").await;
 }

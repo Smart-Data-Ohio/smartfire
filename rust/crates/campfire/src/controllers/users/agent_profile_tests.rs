@@ -25,6 +25,9 @@ async fn replay(name: &str) {
                 tx.conn().execute(&format!("UPDATE agents SET {key}=? WHERE id=?"), rusqlite::params![value,agent_id])?;
             }
         }
+        for (table,id,key) in [("users",BENDER,"user_attrs"),("rooms",setup["room_id"].as_i64().unwrap(),"room_attrs")] {
+            if let Some(attrs)=setup[key].as_object() { for (field,value) in attrs { tx.conn().execute(&format!("UPDATE {table} SET {field}=? WHERE id=?"),rusqlite::params![value.as_str().unwrap(),id])?; } }
+        }
         if setup["activity"]==true {
             tx.conn().execute("INSERT INTO agent_events(agent_id,event_type,room_id,message_id,outcome,created_at) SELECT ?,'mention',room_id,id,'delivered',? FROM messages ORDER BY id LIMIT 1", rusqlite::params![agent_id,tx.now()])?;
         }
@@ -89,7 +92,7 @@ async fn replay(name: &str) {
     let response = browser.get(&format!("/users/{BENDER}")).await;
     assert_eq!(response.status, axum::http::StatusCode::OK);
     let body = response.text();
-    assert!(body.contains("Bender Bot"));
+    assert!(body.contains(&campfire_views::helpers::escape(&summary.name)));
     assert_eq!(body.contains("Manage capability grants"), manage);
     assert_eq!(
         body.contains("Last 24 hours:"),
@@ -119,3 +122,5 @@ scenario!(peer_hides_activity, "peer_hides_activity");
 scenario!(private_rooms_hidden, "private_rooms_hidden");
 scenario!(suspended, "suspended");
 scenario!(minimal_bot, "minimal_bot");
+
+scenario!(review_agent_markup_matches_rails, "review_markup");

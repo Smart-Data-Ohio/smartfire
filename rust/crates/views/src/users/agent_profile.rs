@@ -73,7 +73,7 @@ impl Show<'_> {
             agent
                 .rooms
                 .iter()
-                .map(|(id, name)| h::link_to(&h::routes::room(*id), h::attrs(), name).0)
+                .map(|(id, name)| h::link_to_text(name, &h::routes::room(*id), h::attrs()).0)
                 .collect::<Vec<_>>()
                 .join(", "),
         )

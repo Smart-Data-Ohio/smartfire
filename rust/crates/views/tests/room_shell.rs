@@ -58,6 +58,7 @@ fn view(row: &serde_json::Value) -> rooms::ShowView {
         scroll_to_unread_divider: row["scroll_to_unread_divider"].as_bool(),
         jump_to_unread_url: None,
         unread_divider_message_id: None,
+        unread_divider_index:None,
         unread_count: 0,
     }
 }

@@ -13,6 +13,9 @@ users[:jz] = User.find_by!(name: "JZ").id
 bot = User.find(394959859)
 agent = bot.agent || raise("no seeded agent")
 original = agent.attributes
+original_user = bot.attributes
+room = Room.find(486777696)
+original_room = room.attributes
 inputs = [
   {name:"admin_grants", viewer:"david"},
   {name:"owner_grants", viewer:"kevin", attrs:{owner_id:users[:kevin]}},
@@ -23,9 +26,14 @@ inputs = [
   {name:"peer_hides_activity", viewer:"jz"},
   {name:"private_rooms_hidden", viewer:"jz"},
   {name:"suspended", viewer:"kevin", attrs:{suspended_at:Time.current.iso8601}},
+  {name:"review_markup", viewer:"david", attrs:{provider:'<b>provider & "</b>',runtime:'<i>runtime</i>',description:'<script>description()</script>',status:"working",status_note:'<img src=x onerror="note()">'}, user_attrs:{name:'<b>Agent & "</b>',bio:'<i>agent bio</i>'}, room_attrs:{name:'<b>Room & "</b>'}},
   {name:"minimal_bot", viewer:"kevin", no_agent:true}
 ]
 rows = inputs.map do |input|
+  User.where(id:bot.id).update_all(original_user.except("id"))
+  Room.where(id:room.id).update_all(original_room.except("id"))
+  bot.update_columns(input[:user_attrs]) if input[:user_attrs]
+  room.update_columns(input[:room_attrs]) if input[:room_attrs]
   Agent.where(id:agent.id).update_all(original.except("id"))
   AgentEvent.where(agent_id:agent.id).delete_all
   agent.reload.update_columns(input.fetch(:attrs, {})) unless input.fetch(:attrs, {}).empty?
@@ -41,7 +49,7 @@ rows = inputs.map do |input|
   view = controller.view_context
   view.assign("user"=>bot,"dnd_allowed"=>false)
   html = view.render(template:"users/show",layout:false)
-  input.merge(viewer_id:Current.user.id, html:html, nav:view.content_for(:nav).to_s)
+  input.merge(room_id:room.id,viewer_id:Current.user.id, html:html, nav:view.content_for(:nav).to_s)
 end
 puts JSON.pretty_generate(reference:"d7c7de92", now:Time.current.iso8601, agent_id:agent.id, rows:rows)
 warn "Rails agent profile oracle: #{rows.size} complete HTML/nav states; reference d7c7de92"

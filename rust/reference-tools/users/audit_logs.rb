@@ -16,6 +16,7 @@ end
 rows[0].merge!(actor_label:"=formula",target_label:"\tunsafe",details:{name:{before:nil,after:"é <&>"},list:["one","two"],empty:{},flag:false,long:"é"*90},user_agent:"=cmd|'/c calc'!A0")
 rows[1].merge!(actor_label:nil,target_label:" ",ip_address:nil,user_agent:nil,details:{})
 rows[2].merge!(actor_label:"100%_\\ literal",target_label:"+formula",ip_address:"@formula",user_agent:"\runsafe")
+rows[3].merge!(actor_label:'<b>Actor & "</b>',target_label:'<script>target()</script>',details:{title:{before:'<b>before</b>',after:'<img src=x onerror="after()">'}},user_agent:'<i>agent & "</i>',ip_address:'<b>ip</b>')
 rows.each { |row| AuditLog.insert_all!([row.merge(updated_at:row[:created_at])]) }
 queries=[{}, {page:"2"},{page:"999"},{actor:" jason@37signals.com "},{audit_action:"user.ban",target_type:"User"},{audit_action:"user.ban",target_type:"Room"},{audit_action:"room.nuke",target_type:"Spaceship"},{from:"2026-03-02"},{to:"2026-03-01"},{from:"bad",to:"2026-02-30"},{actor:"100%"},{actor:"_"},{actor:"\\"},{actor:"\u00a0"}]
 cases=queries.map.with_index do |query,index|

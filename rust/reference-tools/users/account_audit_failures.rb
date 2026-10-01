@@ -22,6 +22,7 @@ token = Nokogiri::HTML(client.response.body).at_css('meta[name="csrf-token"]')["
 headers = {"User-Agent" => chrome, "X-CSRF-Token" => token, "Accept" => "text/html"}
 client.post "/sudo", params: {password: "secret123456"}, headers: headers
 raise "sudo: #{client.response.status}" unless client.response.status == 302
+raise "unexpected outer transaction" unless ActiveRecord::Base.connection.open_transactions.zero?
 rows = %w[settings join_reset styles logo_destroy settings_add_logo].to_h do |name|
   input = inputs.fetch("account").fetch(name)
   account = Account.first
@@ -56,5 +57,35 @@ rows = %w[settings join_reset styles logo_destroy settings_add_logo].to_h do |na
     ActiveRecord::Base.connection.execute("DROP TRIGGER ws8br2_reject_account_audit")
   end
 end
-puts JSON.pretty_generate(reference: "d7c7de92", rows: rows)
-warn "Rails account audit failure oracle: #{rows.size} production HTTP responses and committed account/blob snapshots; reference d7c7de92"
+icons = %w[create destroy].to_h do |name|
+  WorkspaceIcon.delete_all
+  AuditLog.delete_all
+  ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+  icon = WorkspaceIcon.new(name:"review_icon",title:"Review icon",creator:user) if name == "destroy"
+  if icon
+    icon.image.attach(io:StringIO.new(File.binread(File.join(ENV.fetch("PARITY_WORK"),"vectors/workspace_icons/square_64.png"))),filename:"square_64.png",content_type:"image/png")
+    icon.save!
+  end
+  ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+  ActiveRecord::Base.connection.execute("CREATE TRIGGER ws8br2_reject_icon_audit BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT,'review audit failure'); END")
+  begin
+    if name == "create"
+      image = ActiveStorage::Blob.create_and_upload!(io:StringIO.new(File.binread(File.join(ENV.fetch("PARITY_WORK"),"vectors/workspace_icons/square_64.png"))),filename:"square_64.png",content_type:"image/png")
+      client.post "/account/icons", params:{workspace_icon:{name:"review_icon",title:"Review icon",image:image.signed_id}},headers:headers
+    else
+      client.delete "/account/icons/#{icon.id}",headers:headers
+    end
+    saved = WorkspaceIcon.find_by(name:"review_icon")
+    raise "icon create failed before its audit" if name == "create" && !saved
+    blob = saved.image.blob if saved&.image&.attached?
+    [name, {status:client.response.status,location:client.response.location,
+      icon:saved&.attributes&.slice("name","title","creator_id"),
+      blob:blob&.attributes&.slice("filename","content_type","byte_size","checksum","metadata"),
+      analysis_jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.count { |j| j[:job] == ActiveStorage::AnalyzeJob },
+      purge_jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.count { |j| j[:job] == ActiveStorage::PurgeJob },audits:AuditLog.count}]
+  ensure
+    ActiveRecord::Base.connection.execute("DROP TRIGGER ws8br2_reject_icon_audit")
+  end
+end
+puts JSON.pretty_generate(reference: "d7c7de92", rows: rows, icons: icons)
+warn "Rails account audit failure oracle: #{rows.size} account and #{icons.size} icon production HTTP responses and committed account/blob snapshots; reference d7c7de92"

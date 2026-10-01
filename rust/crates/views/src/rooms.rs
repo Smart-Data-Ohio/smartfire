@@ -98,6 +98,9 @@ pub struct ShowView {
     pub unread_divider_message_id: Option<i64>,
     #[serde(default)]
     pub unread_count:i64,
+    /// Position resolved from domain message IDs before building cached message fragments.
+    #[serde(default)]
+    pub unread_divider_index:Option<usize>,
     pub room: RoomView,
     /// `room.updated_at`, the refresh controller's `loaded_at`.
     pub updated_at: Timestamp,
@@ -429,6 +432,20 @@ pub struct ShellComponents {
 pub fn room_message_list(ctx:&ViewContext, show:&ShowView)->h::Html {
     if let Some(html) = &show.shell.message_list { return h::raw(html.clone()); }
     if show.messages.is_empty() { return h::raw(String::new()); }
-    // Preserve main's real message renderer when the WS8b-m whole-list seam is absent.
-    h::raw(show.messages.iter().map(|message| format!("\n    {}", crate::messages::cached_message_item(ctx, message))).collect::<String>() + "\n  ")
+    // The divider belongs to this viewer's list, outside all shared message-cache entries.
+    let mut html=String::new();
+    for (index,message) in show.messages.iter().enumerate() {
+        let divider_here=show.unread_divider_index==Some(index);
+        if divider_here {
+            html.push_str("\n      ");
+            html.push_str(&UnreadDivider{unread_count:show.unread_count}.render().expect("unread divider renders"));
+        }
+        html.push_str(if divider_here {"\n      "} else {"\n    "});
+        html.push_str(&crate::messages::cached_message_item(ctx,message).to_string());
+    }
+    html.push_str("\n  ");
+    h::raw(html)
 }
+#[derive(Template)]
+#[template(path="messages/_unread_divider.html")]
+struct UnreadDivider {unread_count:i64}

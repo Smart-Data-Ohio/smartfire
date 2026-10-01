@@ -27,6 +27,7 @@ jason = User.find(149087659)
 kevin = User.find(712064548)
 bender = User.find(394959859)
 cases = [
+  ["review_markup", kevin, {attributes:{name:'<b>Person & "</b>',bio:'<script>bio()</script>',custom_status_text:'<img src=x onerror="status()">',custom_status_emoji:'<b>&</b>',custom_status_expires_at:1.hour.from_now}}],
   ["peer_online", jason, { lease: true }], ["peer_offline", kevin, {}],
   ["custom_status", jason, { lease: true, attributes: { custom_status_emoji: "🚂", custom_status_text: "On a train", custom_status_expires_at: 1.hour.from_now } }],
   ["own", david, {}], ["agent", bender, {}],

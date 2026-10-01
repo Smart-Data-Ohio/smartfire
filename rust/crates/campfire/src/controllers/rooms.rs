@@ -291,7 +291,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
             let show = campfire_views::rooms::ShowView {
-                shell:Default::default(),scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,
+                shell:Default::default(),scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,unread_divider_index:messages.iter().position(|message|Some(message.id)==divider.message_id),
                 room: presenter.room_view(&room, &user)?,
                 updated_at: room.updated_at.jiff(),
                 user: user_view(&app.secrets, &user),

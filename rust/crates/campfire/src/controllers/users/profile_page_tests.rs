@@ -18,9 +18,19 @@ fn vectors() -> Value {
     ))
     .unwrap()
 }
-#[tokio::test]
-async fn whole_profile_matches_rails_seed_without_masks() {
+async fn profile_case(markup:bool) {
     let app = TestApp::boot_frozen().await.expect("seed required");
+    let v = vectors();
+    if markup {
+        let setup=v["markup"]["setup"].clone();
+        app.db().write(move |tx| {
+            for table in ["users","rooms"] {for (id,attrs) in setup[table].as_object().unwrap() {for (key,value) in attrs.as_object().unwrap() {
+                tx.conn().execute(&format!("UPDATE {table} SET {key}=? WHERE id=?"),rusqlite::params![value.as_str().unwrap(),id.parse::<i64>().unwrap()])?;
+            }}}
+            for (key,value) in setup["account"].as_object().unwrap() {tx.conn().execute(&format!("UPDATE accounts SET {key}=?"),[value.as_str().unwrap()])?;}
+            Ok(())
+        }).await.unwrap();
+    }
     let now = SEED_NOW.parse().unwrap();
     let (user, account, memberships, appearance, mut sections, avatar) = app
         .db()
@@ -80,7 +90,7 @@ async fn whole_profile_matches_rails_seed_without_masks() {
         presenters::status_settings::forms(conn, &user, campfire_db::Errors::default(), campfire_db::Timestamp::from_jiff(now), false)
     }).await.unwrap();
     sections.fizzy = presenters::fizzy_profile::connection(&app.booted.app, DAVID).await.unwrap();
-    let v = vectors();
+    let expected=if markup {&v["markup"]["html"]} else {&v["html"]};
     let summary = presenters::user_summary(&app.booted.app.secrets, &user);
     let transfer = presenters::accounts::transfer_id(&app.booted.app.secrets, DAVID, now);
     let mut current = presenters::view_context::current_user(&app.booted.app.secrets, &user);
@@ -139,15 +149,19 @@ async fn whole_profile_matches_rails_seed_without_masks() {
         std::fs::write(format!("{dir}/profile.actual"), &actual).unwrap();
         std::fs::write(
             format!("{dir}/profile.expected"),
-            v["html"].as_str().unwrap(),
+            expected.as_str().unwrap(),
         )
         .unwrap();
     }
     assert!(
-        actual == v["html"].as_str().unwrap(),
+        actual == expected.as_str().unwrap(),
         "complete Rails profile bytes differ; set WS8BR2_DIFF_DIR for the raw diff"
     );
 }
+#[tokio::test]
+async fn whole_profile_matches_rails_seed_without_masks() {profile_case(false).await;}
+#[tokio::test]
+async fn review_whole_profile_markup_matches_rails() {profile_case(true).await;}
 #[tokio::test]
 async fn profile_route_renders_owner_sections_and_ws9_security_directly() {
     let app = TestApp::boot_frozen().await.expect("seed required");

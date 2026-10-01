@@ -3,6 +3,20 @@
   "status_reference": "2e20b24c",
   "cards": [
     {
+      "name": "review_markup",
+      "user_id": 712064548,
+      "setup": {
+        "attributes": {
+          "name": "<b>Person & \"</b>",
+          "bio": "<script>bio()</script>",
+          "custom_status_text": "<img src=x onerror=\"status()\">",
+          "custom_status_emoji": "<b>&</b>",
+          "custom_status_expires_at": "2026-03-02T17:00:00.000000Z"
+        }
+      },
+      "html": "<turbo-frame id=\"user_card\">\n  <div class=\"profile-card\">\n    <header class=\"profile-card__header\">\n      <span class=\"avatar profile-card__avatar\">\n        <img alt=\"\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"64\" height=\"64\" />\n      </span>\n\n      <div class=\"profile-card__identity min-width\">\n        <strong class=\"profile-card__name overflow-ellipsis\">&lt;b&gt;Person &amp; &quot;&lt;/b&gt;</strong>\n\n        <span class=\"profile-card__presence\">\n            <turbo-cable-stream-source channel=\"Turbo::StreamsChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNNVEl3TmpRMU5EZzpzdGF0dXMi--bac8b910fbcab6076d6b0958482e049a5b6c23c3342f4a1e8e751959a2175a72\"></turbo-cable-stream-source>\n            <span id=\"status_badge_user_712064548\"><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">&lt;b&gt;&amp;&lt;/b&gt; &lt;img src=x onerror=&quot;status()&quot;&gt;</span>\n</span>\n</span>\n        </span>\n\n\n      </div>\n    </header>\n\n    <div class=\"profile-card__actions\">\n        <form data-turbo-frame=\"_top\" class=\"button_to\" method=\"post\" action=\"/rooms/directs\"><button class=\"btn btn--reversed full-width\" type=\"submit\">Message</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/directs\" /><input type=\"hidden\" name=\"user_ids[]\" value=\"712064548\" /></form>\n          <form data-turbo-frame=\"_top\" class=\"button_to\" method=\"post\" action=\"/rooms/directs\"><button class=\"btn full-width\" type=\"submit\">Start call</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/directs\" /><input type=\"hidden\" name=\"start_huddle\" value=\"1\" /><input type=\"hidden\" name=\"user_ids[]\" value=\"712064548\" /></form>\n        <a class=\"btn full-width\" data-turbo-frame=\"_top\" href=\"/users/712064548\">View profile</a>\n          <button class=\"btn\" data-controller=\"copy-to-clipboard\" data-action=\"copy-to-clipboard#copy\" data-copy-to-clipboard-success-class=\"btn--success\" data-copy-to-clipboard-content-value=\"@[&lt;b&gt;Person &amp; &quot;&lt;/b&gt;]\">\n            Copy mention\n</button>    </div>\n\n      <div class=\"profile-card__star\">\n        <turbo-frame id=\"star_user_712064548\">\n    <form data-action=\"turbo:submit-end-&gt;profile-card#starToggled\" class=\"button_to\" method=\"post\" action=\"/users/712064548/star\"><button class=\"btn full-width\" type=\"submit\">☆ Star</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/users/712064548/star\" /></form>\n</turbo-frame>\n      </div>\n  </div>\n</turbo-frame>"
+    },
+    {
       "name": "peer_online",
       "user_id": 149087659,
       "setup": {

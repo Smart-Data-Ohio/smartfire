@@ -79,25 +79,34 @@ pub async fn create(c: &mut Ctx) -> Result {
         .write(move |tx| {
             let icon = input.save(tx, brand, image.as_ref())?;
             attachments::assign(tx, Record::workspace_icon(icon.id), "image", assignment)?;
-            AuditLog::record(
-                tx,
-                NewAuditLog {
-                    action: "workspace_icon.create".into(),
-                    target: Some(Target {
-                        record_type: "WorkspaceIcon".into(),
-                        id: icon.id,
-                        label: Some(icon.name.clone()),
-                    }),
-                    changes: Some(serde_json::json!({"name":icon.name,"title":icon.title})),
-                    ..Default::default()
-                },
-                &audit,
-            )?;
-            Ok(())
+            Ok(icon)
         })
         .await;
     match result {
-        Ok(()) => {
+        Ok(icon) => {
+            // Rails commits the icon and its attachment callbacks before recording the audit.
+            // An audit failure returns 500 without undoing the completed mutation.
+            c.app()
+                .db
+                .write(move |tx| {
+                    AuditLog::record(
+                        tx,
+                        NewAuditLog {
+                            action: "workspace_icon.create".into(),
+                            target: Some(Target {
+                                record_type: "WorkspaceIcon".into(),
+                                id: icon.id,
+                                label: Some(icon.name.clone()),
+                            }),
+                            changes: Some(serde_json::json!({"name":icon.name,"title":icon.title})),
+                            ..Default::default()
+                        },
+                        &audit,
+                    )?;
+                    Ok(())
+                })
+                .await
+                .map_err(Error::internal)?;
             let location = c.url_for(&campfire_routes::account_icons());
             c.redirect_to_with(
                 &location,
@@ -118,8 +127,19 @@ pub(super) async fn image_facts(
     assignment: &Assignment<campfire_storage::Staged>,
 ) -> Result<Option<ImageFacts>> {
     let (content_type, byte_size, key) = match assignment {
-        Assignment::Create(staged) => { let b=staged.blob(); (b.content_type.clone().unwrap_or_default(), b.byte_size, b.key.clone()) },
-        Assignment::Existing(b) => (b.content_type.clone().unwrap_or_default(), b.byte_size, b.key.clone()),
+        Assignment::Create(staged) => {
+            let b = staged.blob();
+            (
+                b.content_type.clone().unwrap_or_default(),
+                b.byte_size,
+                b.key.clone(),
+            )
+        }
+        Assignment::Existing(b) => (
+            b.content_type.clone().unwrap_or_default(),
+            b.byte_size,
+            b.key.clone(),
+        ),
         _ => return Ok(None),
     };
     let path = c.app().storage.service.path_for(&key);
@@ -143,12 +163,20 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .and_then(|s| s.parse::<i64>().ok())
         .ok_or(Error::NotFound)?;
     let audit = super::super::two_factor::audit_context(c)?;
-    c.app()
+    let icon = c
+        .app()
         .db
         .write(move |tx| {
             let icon = WorkspaceIcon::find(tx.conn(), id)?;
             attachments::destroy(tx, Record::workspace_icon(id), "image")?;
             icon.destroy(tx)?;
+            Ok(icon)
+        })
+        .await
+        .map_err(db_error)?;
+    c.app()
+        .db
+        .write(move |tx| {
             AuditLog::record(
                 tx,
                 NewAuditLog {
@@ -166,7 +194,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
             Ok(())
         })
         .await
-        .map_err(db_error)?;
+        .map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::account_icons());
     c.redirect_to_with(
         &location,

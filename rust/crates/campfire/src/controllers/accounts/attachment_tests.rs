@@ -9,7 +9,7 @@ fn vectors() -> Value {
     ))
     .unwrap()
 }
-async fn direct_blob(app: &TestApp, bytes: &[u8], filename: &str) -> Blob {
+pub(super) async fn direct_blob(app: &TestApp, bytes: &[u8], filename: &str) -> Blob {
     let staged = app
         .booted
         .app
@@ -28,7 +28,7 @@ async fn direct_blob(app: &TestApp, bytes: &[u8], filename: &str) -> Blob {
         Ok(blob)
     }).await.unwrap()
 }
-fn signed(app: &TestApp, blob: &Blob) -> String {
+pub(super) fn signed(app: &TestApp, blob: &Blob) -> String {
     campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, blob.id, None)
 }
 async fn hold(app: &TestApp) {
