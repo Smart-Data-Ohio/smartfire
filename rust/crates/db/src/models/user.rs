@@ -342,9 +342,14 @@ impl User {
 
     /// User.create_bot!(skip_open_room_grant: true), used by RoomMailbox.
     pub fn create_email_bot(tx: &mut Tx<'_>) -> Result<Self> {
+        Self::create_integration_bot(tx, "Email")
+    }
+
+    /// `User.create_bot!(name:, skip_open_room_grant: true)` for integration bots.
+    pub fn create_integration_bot(tx: &mut Tx<'_>, name: &str) -> Result<Self> {
         let token = generate_bot_token();
         Self::create_with_open_room_grant(tx, NewUser {
-            name: "Email".into(), role: Role::Bot,
+            name: name.into(), role: Role::Bot,
             bot_token_digest: Some(digest_bot_token(&token)), ..Default::default()
         }, false)
     }
@@ -547,6 +552,9 @@ impl User {
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
+        for disconnect in tx.env().user_deactivation_hooks.clone() {
+            disconnect(tx, self)?;
+        }
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
         lifecycle::deactivate(tx, self.id, context)?;
         let email = self.deactivated_email_address();

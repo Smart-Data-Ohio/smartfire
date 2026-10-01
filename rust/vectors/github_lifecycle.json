@@ -1,0 +1,67 @@
+[
+  {
+    "name": "human",
+    "error": null,
+    "status": "deactivated",
+    "reason": "Account deactivated",
+    "last_error": "old error",
+    "updated_at": "2026-01-01T12:00:00Z",
+    "access": "fixture-retained",
+    "refresh": "fixture-refresh-retained"
+  },
+  {
+    "name": "bot",
+    "bot": true,
+    "error": null,
+    "status": "deactivated",
+    "reason": "Account deactivated",
+    "last_error": "old error",
+    "updated_at": "2026-01-01T12:00:00Z",
+    "access": "fixture-retained",
+    "refresh": "fixture-refresh-retained"
+  },
+  {
+    "name": "already_disconnected",
+    "initial_reason": "Other reason",
+    "error": null,
+    "status": "deactivated",
+    "reason": "Account deactivated",
+    "last_error": "old error",
+    "updated_at": "2026-01-01T12:00:00Z",
+    "access": "fixture-retained",
+    "refresh": "fixture-refresh-retained"
+  },
+  {
+    "name": "same_reason",
+    "initial_reason": "Account deactivated",
+    "error": null,
+    "status": "deactivated",
+    "reason": "Account deactivated",
+    "last_error": "old error",
+    "updated_at": "2025-01-01T12:00:00Z",
+    "access": "fixture-retained",
+    "refresh": "fixture-refresh-retained"
+  },
+  {
+    "name": "invalid_account",
+    "invalid": true,
+    "error": "ActiveRecord::RecordInvalid",
+    "status": "active",
+    "reason": null,
+    "last_error": "old error",
+    "updated_at": "2025-01-01T12:00:00Z",
+    "access": "fixture-retained",
+    "refresh": "fixture-refresh-retained"
+  },
+  {
+    "name": "late_failure",
+    "reject_user": true,
+    "error": "ActiveRecord::StatementInvalid",
+    "status": "active",
+    "reason": null,
+    "last_error": "old error",
+    "updated_at": "2025-01-01T12:00:00Z",
+    "access": "fixture-retained",
+    "refresh": "fixture-refresh-retained"
+  }
+]

@@ -407,6 +407,7 @@ impl Membership {
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
         crate::models::huddle_grant::HuddleGrant::end_streams_for_membership(tx, self.room_id, self.id)?;
+        crate::models::AgentGrant::revoke_for_membership(tx, self.user_id, self.room_id)?;
         tx.conn().execute_cached(
             r#"DELETE FROM "memberships" WHERE "memberships"."id" = ?"#,
             [self.id],

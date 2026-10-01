@@ -1,0 +1,356 @@
+{
+  "reference": "d7c7de92",
+  "sources": {
+    "app/views/github/pull_requests/_thread_header.html.erb": "982ca0f51e30548d00a0b7ed92951377c2d3bce4e04fae8a02087e33b17c6936",
+    "app/views/github/pull_requests/_write_actions.html.erb": "9712afa27eaa22bcd3b422c120f02df8a683b1df9b77eb43bff74eeb372250f9",
+    "app/views/users/profiles/_github_connection.html.erb": "02c151c3129933a6705ddcb484850cd218588ba44d9d69025bcc42e94d1eb4d4",
+    "app/views/accounts/bots/edit.html.erb": "77cd851519d06e53f7e5f555794d74f617568bbf58ec60658b3d15b40b9cfaf0"
+  },
+  "bot_id": 394959859,
+  "user_id": 127326141,
+  "thread": {
+    "thread_id": 8,
+    "room_id": 654632876,
+    "pull_request_id": 1,
+    "header": "<div id=\"github_pr_header_channel_thread_8\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODQ6bWVzc2FnZXMi--1834aea5d599dd4959c85ce490d2b832632bcd92b547594cd26852d93c2ab855\"></turbo-cable-stream-source>\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"smart-data-ohio/smartfire#42\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Smart-Data-Ohio/smartfire</span>\n    <span class=\"github-pr-card__number\">#42</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Port the launch checklist</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n          parity-user\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← rust-parity\n        </span>\n\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--success\">No checks</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Smart-Data-Ohio/smartfire/pull/42\">View on GitHub</a>\n  </footer>\n</article>\n\n    <section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <p class=\"github-pr-files__loading\">Loading files…</p>\n</section>\n\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_8\" src=\"/rooms/654632876/github/pull_request_write_actions/1\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n",
+    "write_frame": "<turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_8\">\n\n\n    <p class=\"github-pr-write__connect\">\n      <a data-turbo-frame=\"_top\" href=\"/users/me/profile\">Connect GitHub</a> to comment and review from here as yourself.\n    </p>\n</turbo-frame>"
+  },
+  "connections": [
+    {
+      "name": "unlinked_false_true",
+      "app_configured": false,
+      "administrator": true,
+      "data": {
+        "linked": false,
+        "usable": false,
+        "login": "",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n      <p>Connect GitHub to comment and review from PR threads as yourself. Linking also shows you cards for private repositories your account can read.</p>\n    <form class=\"flex align-center gap\" action=\"/github/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/github/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Connect GitHub\" class=\"btn\" data-disable-with=\"Connect GitHub\" />\n</form>    <p class=\"txt-small\">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n        <p>Paste a fine-grained personal access token for a machine user dedicated to this agent, with <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. Approved write actions post as that user. The token is validated with GitHub before it is stored and is never shown again.</p>\n      <form class=\"flex align-center gap\" action=\"/account/bots/394959859/github_connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection\" />\n        <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n        <input type=\"submit\" name=\"commit\" value=\"Connect GitHub\" class=\"btn\" data-disable-with=\"Connect GitHub\" />\n</form>  </section>\n"
+    },
+    {
+      "name": "unlinked_false_false",
+      "app_configured": false,
+      "administrator": false,
+      "data": {
+        "linked": false,
+        "usable": false,
+        "login": "",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n      <p>Connect GitHub to comment and review from PR threads as yourself. Linking also shows you cards for private repositories your account can read.</p>\n    <form class=\"flex align-center gap\" action=\"/github/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/github/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Connect GitHub\" class=\"btn\" data-disable-with=\"Connect GitHub\" />\n</form>    <p class=\"txt-small\">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>No GitHub account is connected. Only an administrator can connect one.</p>\n  </section>\n"
+    },
+    {
+      "name": "pat_false_true",
+      "app_configured": false,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n      <form data-turbo-confirm=\"Disconnect GitHub? This agent will no longer be able to request PR write actions.\" class=\"button_to\" method=\"post\" action=\"/account/bots/394959859/github_connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/bots/394959859/github_connection\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "pat_false_false",
+      "app_configured": false,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n  </section>\n"
+    },
+    {
+      "name": "app_false_true",
+      "app_configured": false,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": null,
+        "app_token": true
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user through the GitHub App</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n      <form data-turbo-confirm=\"Disconnect GitHub? This agent will no longer be able to request PR write actions.\" class=\"button_to\" method=\"post\" action=\"/account/bots/394959859/github_connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/bots/394959859/github_connection\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "app_false_false",
+      "app_configured": false,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": null,
+        "app_token": true
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user through the GitHub App</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n  </section>\n"
+    },
+    {
+      "name": "disconnected_false_true",
+      "app_configured": false,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": false,
+        "login": "parity-user",
+        "reason": "Revoked <grant>&",
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n      <p>GitHub rejected the connection (Revoked &lt;grant&gt;&amp;). Reconnect below.</p>\n    <form class=\"flex align-center gap\" action=\"/github/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/github/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Reconnect GitHub\" class=\"btn\" data-disable-with=\"Reconnect GitHub\" />\n</form>    <p class=\"txt-small\">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n        <p>GitHub rejected the connection (Revoked &lt;grant&gt;&amp;). Paste a new token to reconnect.</p>\n      <form class=\"flex align-center gap\" action=\"/account/bots/394959859/github_connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection\" />\n        <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n        <input type=\"submit\" name=\"commit\" value=\"Reconnect GitHub\" class=\"btn\" data-disable-with=\"Reconnect GitHub\" />\n</form>  </section>\n"
+    },
+    {
+      "name": "disconnected_false_false",
+      "app_configured": false,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": false,
+        "login": "parity-user",
+        "reason": "Revoked <grant>&",
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n      <p>GitHub rejected the connection (Revoked &lt;grant&gt;&amp;). Reconnect below.</p>\n    <form class=\"flex align-center gap\" action=\"/github/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/github/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Reconnect GitHub\" class=\"btn\" data-disable-with=\"Reconnect GitHub\" />\n</form>    <p class=\"txt-small\">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>No GitHub account is connected. Only an administrator can connect one.</p>\n  </section>\n"
+    },
+    {
+      "name": "blank_reason_false_true",
+      "app_configured": false,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": " ",
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n      <form data-turbo-confirm=\"Disconnect GitHub? This agent will no longer be able to request PR write actions.\" class=\"button_to\" method=\"post\" action=\"/account/bots/394959859/github_connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/bots/394959859/github_connection\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "blank_reason_false_false",
+      "app_configured": false,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": " ",
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n  </section>\n"
+    },
+    {
+      "name": "escape_false_true",
+      "app_configured": false,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "<login>&",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as &lt;login&gt;&amp;</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@&lt;login&gt;&amp;</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as &lt;login&gt;&amp;</p>\n      <p>Approved write actions post from PR threads as <strong>@&lt;login&gt;&amp;</strong> on GitHub.</p>\n      <form data-turbo-confirm=\"Disconnect GitHub? This agent will no longer be able to request PR write actions.\" class=\"button_to\" method=\"post\" action=\"/account/bots/394959859/github_connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/bots/394959859/github_connection\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "escape_false_false",
+      "app_configured": false,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "<login>&",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as &lt;login&gt;&amp;</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@&lt;login&gt;&amp;</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as &lt;login&gt;&amp;</p>\n      <p>Approved write actions post from PR threads as <strong>@&lt;login&gt;&amp;</strong> on GitHub.</p>\n  </section>\n"
+    },
+    {
+      "name": "unlinked_true_true",
+      "app_configured": true,
+      "administrator": true,
+      "data": {
+        "linked": false,
+        "usable": false,
+        "login": "",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n      <p>Connect GitHub to comment and review from PR threads as yourself. Linking also shows you cards for private repositories your account can read.</p>\n      <p><a class=\"btn btn--primary\" href=\"/github/app/connect\">Connect with GitHub</a></p>\n      <details>\n        <summary>Or paste a personal access token instead</summary>\n    <form class=\"flex align-center gap\" action=\"/github/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/github/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Connect GitHub\" class=\"btn\" data-disable-with=\"Connect GitHub\" />\n</form>    <p class=\"txt-small\">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>\n      </details>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n        <p>Paste a fine-grained personal access token for a machine user dedicated to this agent, with <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. Approved write actions post as that user. The token is validated with GitHub before it is stored and is never shown again.</p>\n      <form class=\"flex align-center gap\" action=\"/account/bots/394959859/github_connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection\" />\n        <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n        <input type=\"submit\" name=\"commit\" value=\"Connect GitHub\" class=\"btn\" data-disable-with=\"Connect GitHub\" />\n</form>  </section>\n"
+    },
+    {
+      "name": "unlinked_true_false",
+      "app_configured": true,
+      "administrator": false,
+      "data": {
+        "linked": false,
+        "usable": false,
+        "login": "",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n      <p>Connect GitHub to comment and review from PR threads as yourself. Linking also shows you cards for private repositories your account can read.</p>\n      <p><a class=\"btn btn--primary\" href=\"/github/app/connect\">Connect with GitHub</a></p>\n      <details>\n        <summary>Or paste a personal access token instead</summary>\n    <form class=\"flex align-center gap\" action=\"/github/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/github/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Connect GitHub\" class=\"btn\" data-disable-with=\"Connect GitHub\" />\n</form>    <p class=\"txt-small\">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>\n      </details>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>No GitHub account is connected. Only an administrator can connect one.</p>\n  </section>\n"
+    },
+    {
+      "name": "pat_true_true",
+      "app_configured": true,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n      <form data-turbo-confirm=\"Disconnect GitHub? This agent will no longer be able to request PR write actions.\" class=\"button_to\" method=\"post\" action=\"/account/bots/394959859/github_connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/bots/394959859/github_connection\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "pat_true_false",
+      "app_configured": true,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n  </section>\n"
+    },
+    {
+      "name": "app_true_true",
+      "app_configured": true,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": null,
+        "app_token": true
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user through the GitHub App</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n      <form data-turbo-confirm=\"Disconnect GitHub? This agent will no longer be able to request PR write actions.\" class=\"button_to\" method=\"post\" action=\"/account/bots/394959859/github_connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/bots/394959859/github_connection\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "app_true_false",
+      "app_configured": true,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": null,
+        "app_token": true
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user through the GitHub App</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n  </section>\n"
+    },
+    {
+      "name": "disconnected_true_true",
+      "app_configured": true,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": false,
+        "login": "parity-user",
+        "reason": "Revoked <grant>&",
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n      <p>GitHub rejected the connection (Revoked &lt;grant&gt;&amp;). Reconnect below.</p>\n      <p><a class=\"btn btn--primary\" href=\"/github/app/connect\">Reconnect with GitHub</a></p>\n      <details>\n        <summary>Or paste a personal access token instead</summary>\n    <form class=\"flex align-center gap\" action=\"/github/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/github/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Reconnect GitHub\" class=\"btn\" data-disable-with=\"Reconnect GitHub\" />\n</form>    <p class=\"txt-small\">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>\n      </details>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n        <p>GitHub rejected the connection (Revoked &lt;grant&gt;&amp;). Paste a new token to reconnect.</p>\n      <form class=\"flex align-center gap\" action=\"/account/bots/394959859/github_connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection\" />\n        <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n        <input type=\"submit\" name=\"commit\" value=\"Reconnect GitHub\" class=\"btn\" data-disable-with=\"Reconnect GitHub\" />\n</form>  </section>\n"
+    },
+    {
+      "name": "disconnected_true_false",
+      "app_configured": true,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": false,
+        "login": "parity-user",
+        "reason": "Revoked <grant>&",
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n      <p>GitHub rejected the connection (Revoked &lt;grant&gt;&amp;). Reconnect below.</p>\n      <p><a class=\"btn btn--primary\" href=\"/github/app/connect\">Reconnect with GitHub</a></p>\n      <details>\n        <summary>Or paste a personal access token instead</summary>\n    <form class=\"flex align-center gap\" action=\"/github/connection\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/github/connection\" />\n      <input class=\"input flex-item-grow\" placeholder=\"github_pat_…\" autocomplete=\"off\" required=\"required\" aria-label=\"GitHub personal access token\" type=\"password\" name=\"access_token\" id=\"access_token\" />\n      <input type=\"submit\" name=\"commit\" value=\"Reconnect GitHub\" class=\"btn\" data-disable-with=\"Reconnect GitHub\" />\n</form>    <p class=\"txt-small\">The token needs <strong>Pull requests: Read and write</strong>, <strong>Issues: Read and write</strong>, and <strong>Metadata: Read</strong>. It is validated with GitHub before it is stored and is never shown again.</p>\n      </details>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>No GitHub account is connected. Only an administrator can connect one.</p>\n  </section>\n"
+    },
+    {
+      "name": "blank_reason_true_true",
+      "app_configured": true,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": " ",
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n      <form data-turbo-confirm=\"Disconnect GitHub? This agent will no longer be able to request PR write actions.\" class=\"button_to\" method=\"post\" action=\"/account/bots/394959859/github_connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/bots/394959859/github_connection\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "blank_reason_true_false",
+      "app_configured": true,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "parity-user",
+        "reason": " ",
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as parity-user</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@parity-user</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as parity-user</p>\n      <p>Approved write actions post from PR threads as <strong>@parity-user</strong> on GitHub.</p>\n  </section>\n"
+    },
+    {
+      "name": "escape_true_true",
+      "app_configured": true,
+      "administrator": true,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "<login>&",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as &lt;login&gt;&amp;</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@&lt;login&gt;&amp;</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as &lt;login&gt;&amp;</p>\n      <p>Approved write actions post from PR threads as <strong>@&lt;login&gt;&amp;</strong> on GitHub.</p>\n      <form data-turbo-confirm=\"Disconnect GitHub? This agent will no longer be able to request PR write actions.\" class=\"button_to\" method=\"post\" action=\"/account/bots/394959859/github_connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/account/bots/394959859/github_connection\" /></form>\n  </section>\n"
+    },
+    {
+      "name": "escape_true_false",
+      "app_configured": true,
+      "administrator": false,
+      "data": {
+        "linked": true,
+        "usable": true,
+        "login": "<login>&",
+        "reason": null,
+        "app_token": false
+      },
+      "profile": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"github-connection-title\">\n  <h2 id=\"github-connection-title\" class=\"txt-large\">GitHub</h2>\n\n\n    <p>Connected as &lt;login&gt;&amp;</p>\n    <p>Comments and reviews you post from PR threads act as <strong>@&lt;login&gt;&amp;</strong> on GitHub. Your linked account also unlocks cards for private repositories it can read.</p>\n    <form data-turbo-confirm=\"Disconnect GitHub? You will no longer be able to comment or review from PR threads.\" class=\"button_to\" method=\"post\" action=\"/github/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect GitHub</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/github/connection\" /></form>\n</section>\n",
+      "bot": "  <section aria-labelledby=\"github-connection-title\">\n    <h2 id=\"github-connection-title\" class=\"txt-large margin-block-end\">GitHub account</h2>\n\n\n      <p>Connected as &lt;login&gt;&amp;</p>\n      <p>Approved write actions post from PR threads as <strong>@&lt;login&gt;&amp;</strong> on GitHub.</p>\n  </section>\n"
+    }
+  ]
+}

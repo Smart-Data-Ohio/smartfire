@@ -150,7 +150,7 @@ impl TestApp {
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
-        Self::boot_seed_with_services("default", seed_clock(), network, &[]).await
+        Self::boot_with_clients("default", seed_clock(), network, &[], None).await
     }
 
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
@@ -161,30 +161,25 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_seed_with_services(
-            "default",
-            clock,
-            crate::integrations::net::Network::system(),
-            extra,
-        )
-        .await
+        Self::boot_with_clients("default", clock, crate::integrations::net::Network::system(), extra, None).await
+    }
+
+    pub async fn boot_with_github_app(
+        github_app: crate::integrations::github::client::AppClient,
+    ) -> Option<TestApp> {
+        Self::boot_with_clients("default", seed_clock(), crate::integrations::net::Network::system(), &[], Some(github_app)).await
     }
 
     pub async fn boot_seed(name: &str) -> Option<TestApp> {
-        Self::boot_seed_with_services(
-            name,
-            seed_clock(),
-            crate::integrations::net::Network::system(),
-            &[],
-        )
-        .await
+        Self::boot_with_clients(name, seed_clock(), crate::integrations::net::Network::system(), &[], None).await
     }
 
-    async fn boot_seed_with_services(
+    async fn boot_with_clients(
         name: &str,
         clock: campfire_kit::SharedClock,
         network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
+        github_app: Option<crate::integrations::github::client::AppClient>,
     ) -> Option<TestApp> {
         Self::boot_seed_with_huddle_services(
             name,
@@ -192,6 +187,7 @@ impl TestApp {
             network,
             extra,
             crate::huddle::Config::default(),
+            github_app,
         )
         .await
     }
@@ -202,7 +198,7 @@ impl TestApp {
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle).await
+        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None).await
     }
 
     async fn boot_seed_with_huddle_services(
@@ -211,6 +207,7 @@ impl TestApp {
         network: crate::integrations::net::Network,
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
+        github_app: Option<crate::integrations::github::client::AppClient>,
     ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
@@ -235,20 +232,15 @@ impl TestApp {
         })
         .unwrap();
         config.huddle = huddle;
-        Some(TestApp {
-            booted: boot_with_services(
-                config,
-                clock,
-                network,
-                crate::jobs::periodic::Intervals {
-                    periodic: None,
-                    huddle: None,
-                },
-            )
-            .await
-            .unwrap(),
-            _dir: dir,
-        })
+        let intervals = crate::jobs::periodic::Intervals { periodic: None, huddle: None };
+        let booted = match github_app {
+            Some(client) => crate::app::boot_with_all_services(
+                config, clock, crate::integrations::github::client::ReadClient::from_env(),
+                client, crate::integrations::net::Network::system(), network, intervals,
+            ).await.unwrap(),
+            None => boot_with_services(config, clock, network, intervals).await.unwrap(),
+        };
+        Some(TestApp { booted, _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {

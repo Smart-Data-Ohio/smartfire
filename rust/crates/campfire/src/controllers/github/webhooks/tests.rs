@@ -171,7 +171,7 @@ impl Fresh {
             if subscribed {
                 tx.conn().execute("INSERT INTO github_repository_subscriptions (room_id, owner, repo, created_at, updated_at) VALUES (?, 'rails', 'rails', ?, ?)", rusqlite::params![campfire_db::fixtures::identify("designers"), now, now])?;
             }
-            Ok(())
+            crate::integrations::github::tests::enqueue_retention_job(tx)
         }).await.unwrap();
     }
 
@@ -184,8 +184,9 @@ impl Fresh {
                     [],
                     |row| row.get(0),
                 )?;
+                // Startup can leave unrelated recurring jobs queued before shutdown.
                 let mut statement =
-                    conn.prepare("SELECT job_class FROM background_jobs ORDER BY id")?;
+                    conn.prepare("SELECT job_class FROM background_jobs WHERE job_class GLOB 'Github::*' ORDER BY id")?;
                 let jobs = statement
                     .query_map([], |row| row.get(0))?
                     .collect::<rusqlite::Result<Vec<String>>>()?;
@@ -518,7 +519,7 @@ async fn webhook_redelivered_supported_events_do_not_enqueue_again() {
             .db
             .read(move |conn| {
                 let mut statement =
-                    conn.prepare("SELECT job_class, arguments FROM background_jobs ORDER BY id")?;
+                    conn.prepare("SELECT job_class, arguments FROM background_jobs WHERE job_class GLOB 'Github::*' ORDER BY id")?;
                 let jobs = statement
                     .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
                     .collect::<rusqlite::Result<Vec<_>>>()?;

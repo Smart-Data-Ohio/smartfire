@@ -27,6 +27,8 @@ pub mod rooms;
 pub mod huddle;
 pub mod huddle_stage;
 pub mod messages;
+pub mod github;
+pub mod integration_health;
 pub mod searches;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the

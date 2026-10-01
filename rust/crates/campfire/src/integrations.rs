@@ -5,7 +5,7 @@
 //!   push services only, the endpoint resolved through the private network guard and pinned.
 //! - [`opengraph`]: `UnfurlLinksController#create` over `Opengraph::*`: every address guarded
 //!   and pinned, every redirect re-checked, 10 responses and 5MB at most.
-//! - [`webhook`]: `Webhook#deliver` for bots: intentionally unguarded, 7-second timeouts.
+//! - [`webhook`]: `Webhook#deliver` for bots: public addresses pinned, signed payloads and 7-second timeouts.
 //! - [`search`]: the query sanitizing in `SearchesController#query`.
 //! - [`register_jobs`]: `Room::PushMessageJob` and `Bot::WebhookJob` for the job runner.
 //!
@@ -21,6 +21,8 @@ pub mod action_claims;
 // Account, fetcher and notifier consumers remain staged (WS15g continuation).
 #[allow(dead_code)]
 pub mod github;
+pub mod health;
+mod agent_jobs;
 pub mod link_embed;
 #[allow(dead_code)]
 pub mod linkedin;
