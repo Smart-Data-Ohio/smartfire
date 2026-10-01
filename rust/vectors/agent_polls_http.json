@@ -1,0 +1,1301 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "poll_create_0",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_1",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"multiple\":\"TRUE\",\"anonymous\":\"off\"}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":true,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"multiple\":\"TRUE\",\"anonymous\":\"off\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":true,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":true,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_2",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"multiple\":0,\"anonymous\":\"yes\"}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":true,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"multiple\":0,\"anonymous\":\"yes\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":true,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":true,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_3",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"2026-03-03T16:00:00Z\"}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":\"2026-03-03T16:00:00.000Z\",\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"2026-03-03T16:00:00Z\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":\\\"2026-03-03T16:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":\"2026-03-03T16:00:00.000Z\",\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_4",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"2026-03-03\"}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":\"2026-03-03T00:00:00.000Z\",\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"2026-03-03\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":\\\"2026-03-03T00:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":\"2026-03-03T00:00:00.000Z\",\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_5",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"17:00\"}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":\"2026-03-02T17:00:00.000Z\",\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_5",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"17:00\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":\\\"2026-03-02T17:00:00.000Z\\\",\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":\"2026-03-02T17:00:00.000Z\",\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_6",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":false}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_6",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":false}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_7",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[],\"closes_at\":\"bad\"}",
+      "setup": {},
+      "status": 422,
+      "response_body": "{\"error\":\"closes_at is invalid\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_7",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[],\"closes_at\":\"bad\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: options\"}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_8",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"2026-03-02T16:00:00Z\"}",
+      "setup": {},
+      "status": 422,
+      "response_body": "{\"error\":\"Closes at must be in the future\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_8",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"2026-03-02T16:00:00Z\"}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Closes at must be in the future\"}],\"structuredContent\":{\"error\":\"Closes at must be in the future\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_9",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\" A \",\"\",null,\"B\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_9",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\" A \",\"\",null,\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_10",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[true,false,3]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"true\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"false\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810003,\"label\":\"3\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_10",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[true,false,3]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"true\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"false\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810003,\\\"label\\\":\\\"3\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"true\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"false\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810003,\"label\":\"3\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_11",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[[\"A\"],{\"x\":\"B\"}]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"[\\\"A\\\"]\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"{\\\"x\\\" => \\\"B\\\"}\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_11",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[[\"A\"],{\"x\":\"B\"}]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"[\\\\\\\"A\\\\\\\"]\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"{\\\\\\\"x\\\\\\\" => \\\\\\\"B\\\\\\\"}\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"[\\\"A\\\"]\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"{\\\"x\\\" => \\\"B\\\"}\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_12",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"same\",\"same\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"same\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"same\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_12",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"same\",\"same\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"same\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"same\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"same\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"same\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_13",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"B\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_13",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_14",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"B\"]}",
+      "setup": {},
+      "status": 422,
+      "response_body": "{\"error\":\"Options are limited to 200 characters\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_14",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Options are limited to 200 characters\"}],\"structuredContent\":{\"error\":\"Options are limited to 200 characters\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_15",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\"]}",
+      "setup": {},
+      "status": 422,
+      "response_body": "{\"error\":\"Poll needs between 2 and 10 options\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_15",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Poll needs between 2 and 10 options\"}],\"structuredContent\":{\"error\":\"Poll needs between 2 and 10 options\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_16",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"1\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"2\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810003,\"label\":\"3\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810004,\"label\":\"4\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810005,\"label\":\"5\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810006,\"label\":\"6\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810007,\"label\":\"7\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810008,\"label\":\"8\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810009,\"label\":\"9\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810010,\"label\":\"10\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_16",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"1\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"2\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810003,\\\"label\\\":\\\"3\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810004,\\\"label\\\":\\\"4\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810005,\\\"label\\\":\\\"5\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810006,\\\"label\\\":\\\"6\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810007,\\\"label\\\":\\\"7\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810008,\\\"label\\\":\\\"8\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810009,\\\"label\\\":\\\"9\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810010,\\\"label\\\":\\\"10\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"1\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"2\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810003,\"label\":\"3\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810004,\"label\":\"4\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810005,\"label\":\"5\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810006,\"label\":\"6\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810007,\"label\":\"7\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810008,\"label\":\"8\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810009,\"label\":\"9\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810010,\"label\":\"10\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_17",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\",\"11\"]}",
+      "setup": {},
+      "status": 422,
+      "response_body": "{\"error\":\"Poll needs between 2 and 10 options\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_17",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\",\"11\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Poll needs between 2 and 10 options\"}],\"structuredContent\":{\"error\":\"Poll needs between 2 and 10 options\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_18",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\" \",\"options\":[\"A\",\"B\"]}",
+      "setup": {},
+      "status": 422,
+      "response_body": "{\"error\":\"Question can't be blank\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_18",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\" \",\"options\":[\"A\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: question\"}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_19",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":false,\"options\":[\"A\",\"B\"]}",
+      "setup": {},
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_19",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":false,\"options\":[\"A\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32602,\"message\":\"Missing required argument: question\"}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_20",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":true,\"options\":[\"A\",\"B\"]}",
+      "setup": {},
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_20",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":true,\"options\":[\"A\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32603,\"message\":\"Internal error\"}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_21",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":[\"A\",\"B\"],\"options\":[\"A\",\"B\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"[\\\"A\\\", \\\"B\\\"]\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_21",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":[\"A\",\"B\"],\"options\":[\"A\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"[\\\\\\\"A\\\\\\\", \\\\\\\"B\\\\\\\"]\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"[\\\"A\\\", \\\"B\\\"]\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_22",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":{\"x\":1},\"options\":[\"A\",\"B\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"{\\\"x\\\" => 1}\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_22",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":{\"x\":1},\"options\":[\"A\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"{\\\\\\\"x\\\\\\\" => 1}\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"{\\\"x\\\" => 1}\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_23",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\" A \",\"B\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\" A \",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_23",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\" A \",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\" A \\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\" A \",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_24",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"\\u0000A\\u0000\",\"B\"]}",
+      "setup": {},
+      "status": 201,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_24",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"\\u0000A\\u0000\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700004,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Choose α & β\\\",\\\"multiple\\\":false,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"A\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"B\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700004,\"room_id\":486777696,\"question\":\"Choose α & β\",\"multiple\":false,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"A\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"B\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_25",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":1,\"options\":[\"A\",\"B\"]}",
+      "setup": {},
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_25",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":1,\"options\":[\"A\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32603,\"message\":\"Internal error\"}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_create_26",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":1.5,\"options\":[\"A\",\"B\"]}",
+      "setup": {},
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=UTF-8",
+        "Cache-Control": null,
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_create_26",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":1.5,\"options\":[\"A\",\"B\"]}}}",
+      "setup": {},
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"error\":{\"code\":-32603,\"message\":\"Internal error\"}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_authority_0",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"bad\"}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ]
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_authority_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"bad\"}}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ]
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks post_messages capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks post_messages capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_authority_1",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"bad\"}",
+      "setup": {
+        "grant": [
+          "post_messages"
+        ],
+        "revoked": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_authority_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"bad\"}}}",
+      "setup": {
+        "grant": [
+          "post_messages"
+        ],
+        "revoked": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks post_messages capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks post_messages capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_authority_2",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"bad\"}",
+      "setup": {
+        "remove_member": true
+      },
+      "status": 404,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_authority_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"bad\"}}}",
+      "setup": {
+        "remove_member": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Room not found\"}],\"structuredContent\":{\"error\":\"Room not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_authority_3",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"bad\"}",
+      "setup": {
+        "message_cap": 0
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily message budget exceeded (0/day)\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_authority_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{\"room_id\":486777696,\"question\":\"Choose α \\u0026 β\",\"options\":[\"A\",\"B\"],\"closes_at\":\"bad\"}}}",
+      "setup": {
+        "message_cap": 0
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Daily message budget exceeded (0/day)\"}],\"structuredContent\":{\"error\":\"Daily message budget exceeded (0/day)\",\"status\":\"too_many_requests\",\"cap\":\"messages\",\"limit\":0,\"retry_after\":28799},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_show_0",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/1900800001",
+      "body": null,
+      "setup": {
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700001,\"room_id\":486777696,\"question\":\"Source α & β\",\"multiple\":true,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"Small\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"Large\",\"votes\":0,\"voted\":false,\"voters\":[]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_show_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{\"room_id\":486777696,\"poll_id\":1900800001}}}",
+      "setup": {
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700001,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Source α & β\\\",\\\"multiple\\\":true,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":0,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"Small\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"Large\\\",\\\"votes\\\":0,\\\"voted\\\":false,\\\"voters\\\":[]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700001,\"room_id\":486777696,\"question\":\"Source α & β\",\"multiple\":true,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":0,\"options\":[{\"id\":1900810001,\"label\":\"Small\",\"votes\":0,\"voted\":false,\"voters\":[]},{\"id\":1900810002,\"label\":\"Large\",\"votes\":0,\"voted\":false,\"voters\":[]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_show_1",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/1900800001",
+      "body": null,
+      "setup": {
+        "votes": true,
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700001,\"room_id\":486777696,\"question\":\"Source α & β\",\"multiple\":true,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":3,\"options\":[{\"id\":1900810001,\"label\":\"Small\",\"votes\":2,\"voted\":true,\"voters\":[\"Bender Bot\",\"David\"]},{\"id\":1900810002,\"label\":\"Large\",\"votes\":1,\"voted\":false,\"voters\":[\"Jason\"]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_show_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{\"room_id\":486777696,\"poll_id\":1900800001}}}",
+      "setup": {
+        "votes": true,
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700001,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Source α & β\\\",\\\"multiple\\\":true,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":3,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"Small\\\",\\\"votes\\\":2,\\\"voted\\\":true,\\\"voters\\\":[\\\"Bender Bot\\\",\\\"David\\\"]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"Large\\\",\\\"votes\\\":1,\\\"voted\\\":false,\\\"voters\\\":[\\\"Jason\\\"]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700001,\"room_id\":486777696,\"question\":\"Source α & β\",\"multiple\":true,\"anonymous\":false,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":3,\"options\":[{\"id\":1900810001,\"label\":\"Small\",\"votes\":2,\"voted\":true,\"voters\":[\"Bender Bot\",\"David\"]},{\"id\":1900810002,\"label\":\"Large\",\"votes\":1,\"voted\":false,\"voters\":[\"Jason\"]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_show_2",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/1900800001",
+      "body": null,
+      "setup": {
+        "anonymous": true,
+        "votes": true,
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700001,\"room_id\":486777696,\"question\":\"Source α & β\",\"multiple\":true,\"anonymous\":true,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":3,\"options\":[{\"id\":1900810001,\"label\":\"Small\",\"votes\":2,\"voted\":true},{\"id\":1900810002,\"label\":\"Large\",\"votes\":1,\"voted\":false}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_show_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{\"room_id\":486777696,\"poll_id\":1900800001}}}",
+      "setup": {
+        "anonymous": true,
+        "votes": true,
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700001,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Source α & β\\\",\\\"multiple\\\":true,\\\"anonymous\\\":true,\\\"closes_at\\\":null,\\\"closed_at\\\":null,\\\"closed\\\":false,\\\"total_votes\\\":3,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"Small\\\",\\\"votes\\\":2,\\\"voted\\\":true},{\\\"id\\\":1900810002,\\\"label\\\":\\\"Large\\\",\\\"votes\\\":1,\\\"voted\\\":false}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700001,\"room_id\":486777696,\"question\":\"Source α & β\",\"multiple\":true,\"anonymous\":true,\"closes_at\":null,\"closed_at\":null,\"closed\":false,\"total_votes\":3,\"options\":[{\"id\":1900810001,\"label\":\"Small\",\"votes\":2,\"voted\":true},{\"id\":1900810002,\"label\":\"Large\",\"votes\":1,\"voted\":false}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_show_3",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/1900800001",
+      "body": null,
+      "setup": {
+        "closed": true,
+        "votes": true,
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900800001,\"message_id\":1900700001,\"room_id\":486777696,\"question\":\"Source α & β\",\"multiple\":true,\"anonymous\":false,\"closes_at\":null,\"closed_at\":\"2026-03-02T16:00:00.000Z\",\"closed\":true,\"total_votes\":3,\"options\":[{\"id\":1900810001,\"label\":\"Small\",\"votes\":2,\"voted\":true,\"voters\":[\"Bender Bot\",\"David\"]},{\"id\":1900810002,\"label\":\"Large\",\"votes\":1,\"voted\":false,\"voters\":[\"Jason\"]}]}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "max-age=0, private, must-revalidate",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_show_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{\"room_id\":486777696,\"poll_id\":1900800001}}}",
+      "setup": {
+        "closed": true,
+        "votes": true,
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900800001,\\\"message_id\\\":1900700001,\\\"room_id\\\":486777696,\\\"question\\\":\\\"Source α & β\\\",\\\"multiple\\\":true,\\\"anonymous\\\":false,\\\"closes_at\\\":null,\\\"closed_at\\\":\\\"2026-03-02T16:00:00.000Z\\\",\\\"closed\\\":true,\\\"total_votes\\\":3,\\\"options\\\":[{\\\"id\\\":1900810001,\\\"label\\\":\\\"Small\\\",\\\"votes\\\":2,\\\"voted\\\":true,\\\"voters\\\":[\\\"Bender Bot\\\",\\\"David\\\"]},{\\\"id\\\":1900810002,\\\"label\\\":\\\"Large\\\",\\\"votes\\\":1,\\\"voted\\\":false,\\\"voters\\\":[\\\"Jason\\\"]}]}\"}],\"structuredContent\":{\"id\":1900800001,\"message_id\":1900700001,\"room_id\":486777696,\"question\":\"Source α & β\",\"multiple\":true,\"anonymous\":false,\"closes_at\":null,\"closed_at\":\"2026-03-02T16:00:00.000Z\",\"closed\":true,\"total_votes\":3,\"options\":[{\"id\":1900810001,\"label\":\"Small\",\"votes\":2,\"voted\":true,\"voters\":[\"Bender Bot\",\"David\"]},{\"id\":1900810002,\"label\":\"Large\",\"votes\":1,\"voted\":false,\"voters\":[\"Jason\"]}]},\"isError\":false}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_show_4",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/1900800001",
+      "body": null,
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "poll": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_show_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{\"room_id\":486777696,\"poll_id\":1900800001}}}",
+      "setup": {
+        "grant": [
+          "read_messages"
+        ],
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks post_messages capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks post_messages capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_show_5",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/1900800001",
+      "body": null,
+      "setup": {
+        "remove_member": true,
+        "poll": true
+      },
+      "status": 404,
+      "response_body": "",
+      "response_headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_show_5",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{\"room_id\":486777696,\"poll_id\":1900800001}}}",
+      "setup": {
+        "remove_member": true,
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Poll not found\"}],\"structuredContent\":{\"error\":\"Poll not found\",\"status\":\"not_found\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "poll_show_6",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/1900800001",
+      "body": null,
+      "setup": {
+        "grant": [
+          "post_messages"
+        ],
+        "revoked": true,
+        "poll": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks post_messages capability\"}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Pragma": null,
+        "Retry-After": null,
+        "Location": null
+      }
+    },
+    {
+      "name": "mcp_poll_show_6",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{\"room_id\":486777696,\"poll_id\":1900800001}}}",
+      "setup": {
+        "grant": [
+          "post_messages"
+        ],
+        "revoked": true,
+        "poll": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":13,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks post_messages capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks post_messages capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+        "Retry-After": null,
+        "Location": null
+      }
+    }
+  ]
+}

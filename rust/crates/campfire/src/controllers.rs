@@ -1066,3 +1066,6 @@ mod agent_reads_tests;
 
 #[cfg(test)]
 mod agent_pins_tests;
+
+#[cfg(test)]
+mod agent_polls_tests;

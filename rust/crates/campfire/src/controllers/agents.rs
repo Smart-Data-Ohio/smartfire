@@ -11,6 +11,7 @@ pub mod pending;
 pub mod conversations;
 mod reads;
 mod pins;
+mod polls;
 pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {

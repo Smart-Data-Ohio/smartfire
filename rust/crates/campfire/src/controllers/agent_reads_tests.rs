@@ -31,6 +31,17 @@ pub(super) async fn check(case: &Value) {
                 campfire_db::MessagePin::create(tx,&message,486777696,394959859)?;
             }
         }
+        tx.conn().execute("UPDATE agents SET daily_message_cap=? WHERE id=?",rusqlite::params![config["message_cap"].as_i64(),AGENT])?;
+        tx.conn().execute("UPDATE sqlite_sequence SET seq=1900800000 WHERE name='polls'",[])?;
+        tx.conn().execute("UPDATE sqlite_sequence SET seq=1900810000 WHERE name='poll_options'",[])?;
+        if config["poll"]==true {
+            let poll=campfire_db::Poll::create_for_message(tx,&Message::find(tx.conn(),1900700001)?,campfire_db::NewPoll{labels:vec!["Small".into(),"Large".into()],multiple:true,anonymous:config["anonymous"]==true,..Default::default()})?;
+            if config["votes"]==true {
+                let options=poll.options(tx.conn())?;
+                for (user,option) in [(394959859,0),(127326141,0),(149087659,1)]{campfire_db::PollVote::create(tx,poll.id,options[option].id,user)?;}
+            }
+            if config["closed"]==true {tx.conn().execute("UPDATE polls SET closed_at=? WHERE id=?",rusqlite::params![tx.now(),poll.id])?;}
+        }
         Ok(())
     }).await.unwrap();
     let request = || {

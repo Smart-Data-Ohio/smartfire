@@ -28,6 +28,7 @@ def main():
     "app/models/agent_step.rb", "app/models/agent_slash_command.rb",
     "app/helpers/message_payload_helper.rb",
     ]
+    files += ["app/services/agents/rooms.rb", "app/services/agents/reading.rb", "app/services/agents/pins.rb", "app/services/agents/polls.rb", "app/services/agents/work_threads.rb", "app/models/message_pin.rb", "app/models/poll.rb", "app/models/poll_option.rb", "app/models/poll_vote.rb", "app/models/channel_thread.rb", "app/models/agents/work_payload.rb"]
     files += sorted(str(p.relative_to(root)) for p in (root / "app/controllers/agents").rglob("*.rb") if str(p.relative_to(root)) not in files)
     files += ["app/controllers/messages/by_bots_controller.rb", "app/controllers/messages/boosts/by_bots_controller.rb", "app/controllers/concerns/fizzy_agent_authentication.rb", "app/services/agents/fizzy_reads.rb", "app/services/agents/fizzy_card_actions.rb", "app/models/fizzy/agent_card_action.rb", "app/models/github/agent_pull_request_action.rb", "app/models/github/review_logins.rb", "app/models/github/agent_identity.rb", "app/models/github_connected_account.rb", "app/models/fizzy_connected_account.rb", "app/models/fizzy/client.rb", "app/views/users/_user.json.jbuilder", "app/views/messages/_message.json.jbuilder"]
     lines = subprocess.check_output([

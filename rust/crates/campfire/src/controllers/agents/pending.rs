@@ -76,6 +76,8 @@ async fn dispatch(
         .map_err(db_error)?;
     if reader && result.is_ok() {
         super::reads::operation(c, agent_id, operation, args).await
+    } else if matches!(operation, "create_poll" | "get_poll") && result.is_ok() {
+        super::polls::operation(c, agent_id, operation, args).await
     } else {
         Ok(result)
     }
@@ -282,28 +284,6 @@ fn preflight(
                     return Ok(fail("Owner must be a user id, me, or agents", 422));
                 }
             }
-            if op == "create_poll" {
-                let labels: Vec<_> = args
-                    .get("options")
-                    .and_then(Value::as_array)
-                    .map(|a| {
-                        a.iter()
-                            .filter_map(|v| text(Some(v)))
-                            .map(|s| s.trim().to_owned())
-                            .filter(|s| !s.is_empty())
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                if !(2..=10).contains(&labels.len()) {
-                    return Ok(fail("Poll needs between 2 and 10 options", 422));
-                }
-                if labels.iter().any(|s| s.chars().count() > 200) {
-                    return Ok(fail("Options are limited to 200 characters", 422));
-                }
-                if text(args.get("question")).is_none_or(|s| s.trim().is_empty()) {
-                    return Ok(fail("Question can't be blank", 422));
-                }
-            }
         }
         "get_work" | "update_work" | "update_board_post" | "set_result" | "handoff_work" => {
             let owned=tx.conn().query_row("SELECT t.room_id FROM channel_threads t JOIN memberships m ON m.room_id=t.room_id WHERE t.id=? AND t.work_status IS NOT NULL AND t.work_owner_id=? AND m.user_id=?",rusqlite::params![number(&args,"work_id"),agent.user_id,agent.user_id],|r|r.get::<_,i64>(0)).optional()?;
@@ -329,7 +309,13 @@ fn preflight(
     }
     if matches!(
         op,
-        "list_rooms" | "read_messages" | "list_work" | "get_work" | "list_board_posts"
+        "list_rooms"
+            | "read_messages"
+            | "list_work"
+            | "get_work"
+            | "list_board_posts"
+            | "create_poll"
+            | "get_poll"
     ) {
         return Ok(ServiceResult::ok(Value::Null, 200));
     }
