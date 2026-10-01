@@ -10,7 +10,7 @@ use campfire_kit::clock::FrozenClock;
 use serde_json::{Value,json};
 use std::{collections::HashSet,sync::{Arc,Mutex}};
 fn oracle()->Value {serde_json::from_str(include_str!("../../../../../vectors/messaging/bot-controller-declarations.json")).unwrap()}
-async fn app()->TestApp {let mut app=TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();app.booted.jobs.stop(Duration::from_secs(1)).await;app.db().write(|tx|{tx.conn().execute("UPDATE webhooks SET url='http://bots.example:8080/hook' WHERE user_id=?",[BENDER])?;Ok(())}).await.unwrap();app}
+async fn app()->TestApp {let app=TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;app.db().write(|tx|{tx.conn().execute("UPDATE webhooks SET url='http://bots.example:8080/hook' WHERE user_id=?",[BENDER])?;Ok(())}).await.unwrap();app}
 async fn net()->(FakeServer,Network) {
     let server=FakeServer::start(vec![Route::new("POST","*","/hook",200)]).await;
     let network=network(Arc::new(FakeResolver::new([("bots.example",vec!["93.184.216.34"])])),Arc::new(MappingDialer {public:HashSet::from(["93.184.216.34".parse().unwrap()]),to:server.addr,dialed:Mutex::new(vec![])}));
