@@ -1,9 +1,6 @@
 //! Rails activity presentation over the owner's permission-filtered ActivityItem APIs.
 use campfire_db::{ActivityItem, Connection, Result, User};
 use campfire_views::activity::Item;
-pub fn accessible(conn: &Connection, user: &User) -> Result<Vec<ActivityItem>> {
-    ActivityItem::accessible_to(conn, user)
-}
 pub fn item(
     conn: &Connection,
     app: &crate::app::AppState,

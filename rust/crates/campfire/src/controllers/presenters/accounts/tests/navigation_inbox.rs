@@ -69,7 +69,7 @@ async fn inbox_reader_excludes_other_owners_and_revoked_message_sources() {
         .db
         .read(move |conn| {
             let viewer = campfire_db::User::find(conn, viewer_id)?;
-            crate::controllers::presenters::activity::accessible(conn, &viewer)
+            campfire_db::ActivityItem::accessible_to(conn, &viewer)
         })
         .await
         .unwrap();
@@ -99,7 +99,7 @@ async fn inbox_reader_excludes_other_owners_and_revoked_message_sources() {
         .app
         .db
         .write(move |tx| {
-            let items = crate::controllers::presenters::activity::accessible(
+            let items = campfire_db::ActivityItem::accessible_to(
                 tx.conn(),
                 &campfire_db::User::find(tx.conn(), viewer_id)?,
             )?;
@@ -129,7 +129,7 @@ async fn inbox_reader_excludes_other_owners_and_revoked_message_sources() {
         .app
         .db
         .read(move |conn| {
-            crate::controllers::presenters::activity::accessible(
+            campfire_db::ActivityItem::accessible_to(
                 conn,
                 &campfire_db::User::find(conn, viewer_id)?,
             )
