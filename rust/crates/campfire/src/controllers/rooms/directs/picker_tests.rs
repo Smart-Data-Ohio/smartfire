@@ -26,14 +26,34 @@ async fn picker(name: &str) {
         })
         .await
         .unwrap();
-    let people = people
-        .into_iter()
-        .map(|p| crate::controllers::presenters::people::person(&app.booted.app.secrets, p))
-        .collect::<Vec<_>>();
+    let state = app.booted.app.clone();
+    let users = app
+        .db()
+        .read(move |conn| {
+            let presenter = crate::controllers::presenters::Presenter::new(conn, &state, None);
+            people
+                .into_iter()
+                .map(|p| {
+                    Ok(campfire_views::rooms::DirectPickerUser {
+                        user: presenter.user_view(p.user.id)?,
+                        bot: p.user.is_bot(),
+                        agent: p.agent.is_some(),
+                        starred: p.starred,
+                    })
+                })
+                .collect::<campfire_db::Result<Vec<_>>>()
+        })
+        .await
+        .unwrap();
     let actual = crate::controllers::users::people_tests::render_with(
         &app,
         |_| {},
-        |ctx| DirectsNew { ctx, people }.as_content().render().unwrap(),
+        |ctx| {
+            DirectsNew { ctx, users: &users }
+                .as_content()
+                .render()
+                .unwrap()
+        },
     );
     let vectors: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../../vectors/users_dm_picker.json"

@@ -16,14 +16,15 @@
 <div id="message-area" class="message-area" contents="true" data-controller="messages presence drop-target" data-action="turbo:before-stream-render@document-&gt;messages#beforeStreamRender keydown.up@document-&gt;messages#editMyLastMessage dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop visibilitychange@document-&gt;presence#visibilityChanged" data-messages-first-of-day-class="message--first-of-day" data-messages-formatted-class="message--formatted" data-messages-me-class="message--me" data-messages-mentioned-class="message--mentioned" data-messages-threaded-class="message--threaded" data-messages-page-url-value="{{ ctx.url(h::routes::room_messages(show.room.id).as_str()) }}"{% if let Some(scroll) = show.scroll_to_unread_divider %} data-messages-scroll-to-divider-value="{{ scroll }}"{% endif %}>
   {% if let Some(template) = show.shell.message_template %}{{ h::raw(template.as_str()) }}{% else %}{% let user = &show.user %}{% include "messages/_template.html" %}{% endif %}
 
-  <div id="{{ show.room.dom_id("messages") }}" class="messages" role="log" aria-live="polite" aria-relevant="additions" data-controller="maintain-scroll refresh-room message-list" data-action="turbo:before-stream-render@document-&gt;maintain-scroll#beforeStreamRender visibilitychange@document-&gt;refresh-room#visibilityChanged online@window-&gt;refresh-room#online" data-messages-target="messages" data-refresh-room-loaded-at-value="{{ self.loaded_at() }}" data-refresh-room-url-value="{{ ctx.url(h::routes::room_refresh(show.room.id).as_str()) }}">
-{% if show.invitation %}{% let join_code = show.join_code.clone() %}    {% include "rooms/show/_invitation.html" %}{% endif %}{{ crate::rooms::room_message_list(ctx, show) }}</div>
+  <div id="{{ show.room.dom_id("messages") }}" class="messages" role="log" aria-live="polite" aria-relevant="additions" data-controller="maintain-scroll refresh-room message-list" data-action="turbo:before-stream-render@document-&gt;maintain-scroll#beforeStreamRender visibilitychange@document-&gt;refresh-room#visibilityChanged online@window-&gt;refresh-room#online" data-messages-target="messages" data-refresh-room-loaded-at-value="{{ self.loaded_at() }}" data-refresh-room-url-value="{{ ctx.url(h::routes::room_refresh(show.room.id).as_str()) }}">{% if show.shell.message_list.is_none() %}
+{% endif %}{% if show.invitation %}{% let join_code = show.join_code.clone() %}    {% include "rooms/show/_invitation.html" %}{% endif %}{{ crate::rooms::room_message_list(ctx, show) }}</div>
   <turbo-cable-stream-source channel="RoomMessagesChannel" signed-stream-name="{{ show.messages_stream_name }}"></turbo-cable-stream-source>
   {% if let Some(url) = show.jump_to_unread_url %}{{ self.jump_to_unread(Some(url.as_str())) }}{% else %}{% if show.unread_divider_message_id.is_some() %}{{ self.jump_to_unread(None) }}{% endif %}{% endif %}
   <button class="message-area__return-to-latest btn" data-action="messages#returnToLatest" data-messages-target="latest" hidden="hidden"><img aria-hidden="true" src="{{ ctx.asset("arrow-down.svg") }}" width="20" height="20" /><span class="for-screen-reader">Jump to newest message</span></button>
 </div>
-
-{% if show.shell.ooo_notices.is_empty() %}{{ self.ooo_notices() }}{% else %}{{ h::raw(show.shell.ooo_notices.as_str()) }}{% endif %}
+{% if show.ooo_notice_members.is_empty() %}
+{% endif %}{% if show.shell.ooo_notices.is_empty() %}{{ self.ooo_notices() }}{% else %}{{ h::raw(show.shell.ooo_notices.as_str()) }}{% endif %}{% if !show.ooo_notice_members.is_empty() %}
+{% endif %}
 
 {{ h::raw(show.shell.poll_builder.as_str()) }}
 {% endblock %}

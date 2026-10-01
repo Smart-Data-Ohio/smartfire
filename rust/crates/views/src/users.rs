@@ -17,8 +17,8 @@ mod people;
 pub use people::*;
 mod settings;
 pub use settings::*;
-pub mod statuses;
 mod appearance;
+pub mod statuses;
 pub use appearance::*;
 
 #[derive(Clone)]
@@ -38,19 +38,35 @@ pub struct SessionsIndex<'a> {
     pub now: jiff::Timestamp,
 }
 impl Page for SessionsIndex<'_> {
-    fn page_title(&self) -> Option<String> { Some("Your sessions".into()) }
+    fn page_title(&self) -> Option<String> {
+        Some("Your sessions".into())
+    }
 }
 impl SessionsIndex<'_> {
-    fn ip<'s>(&self,s: &'s UserSession) -> Option<&'s str> { s.ip_address.as_deref().filter(|v| !v.chars().all(char::is_whitespace)) }
-    fn last_active(&self,s: &UserSession) -> String { h::time_ago_in_words(&self.ctx.time_zone,s.last_active_at,self.now) }
-    fn signed_in(&self,s: &UserSession) -> h::Html {
-        h::local_datetime_tag(&self.ctx.time_zone,s.created_at,"date",h::attrs(),&self.ctx.time_zone.to_fs(s.created_at,"short"))
+    fn ip<'s>(&self, s: &'s UserSession) -> Option<&'s str> {
+        s.ip_address
+            .as_deref()
+            .filter(|v| !v.chars().all(char::is_whitespace))
+    }
+    fn last_active(&self, s: &UserSession) -> String {
+        h::time_ago_in_words(&self.ctx.time_zone, s.last_active_at, self.now)
+    }
+    fn signed_in(&self, s: &UserSession) -> h::Html {
+        h::local_datetime_tag(
+            &self.ctx.time_zone,
+            s.created_at,
+            "date",
+            h::attrs(),
+            &self.ctx.time_zone.to_fs(s.created_at, "short"),
+        )
     }
 }
 
 #[derive(Template)]
-#[template(path="users/profiles/_sessions.html")]
-pub struct ProfileSessions<'a> { pub ctx: &'a ViewContext<'a> }
+#[template(path = "users/profiles/_sessions.html")]
+pub struct ProfileSessions<'a> {
+    pub ctx: &'a ViewContext<'a>,
+}
 
 /// `users/new.html.erb` (the join page).
 #[derive(Template)]
@@ -200,10 +216,24 @@ pub struct ProfileShow<'a> {
 
 impl<'a> ProfileShow<'a> {
     fn notification_form(&self) -> h::Html {
-        h::raw(NotificationForm { ctx:self.ctx, data:&self.settings }.render().expect("notification form renders"))
+        h::raw(
+            NotificationForm {
+                ctx: self.ctx,
+                data: &self.settings,
+            }
+            .render()
+            .expect("notification form renders"),
+        )
     }
     fn appearance_panel(&self) -> h::Html {
-        h::raw(Appearance {ctx:self.ctx,data:self.appearance.clone()}.render().unwrap())
+        h::raw(
+            Appearance {
+                ctx: self.ctx,
+                data: self.appearance.clone(),
+            }
+            .render()
+            .unwrap(),
+        )
     }
     fn security_panel(&self) -> h::Html {
         h::raw(

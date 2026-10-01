@@ -1,0 +1,6 @@
+{#- The message-owned slot copied from rooms/show.html.erb. -#}
+{%- if let Some(index) = unread_index -%}
+{{ "      " }}{{ self.portion(0, index.to_owned()) }}{{ "\n      " }}{{ self.divider() }}{{ "\n      " }}{{ self.portion(index.to_owned(), messages.len()) }}{{ "\n" }}
+{%- else -%}
+{{ "      " }}{{ self.portion(0, messages.len()) }}{{ "\n" }}
+{%- endif -%}

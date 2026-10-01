@@ -47,18 +47,28 @@ static BRANDS: LazyLock<Vec<Brand>> =
 /// Icons.client_icon_names: canonical brands and their aliases in YAML order, then custom
 /// names in database name order. Read each request so uploads/removals reach the live layout.
 pub(crate) fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> {
-    let mut names = BRANDS.iter().flat_map(|brand| std::iter::once(&brand.name).chain(&brand.aliases))
-        .cloned().collect::<Vec<_>>();
-    names.extend(conn.prepare_cached("SELECT name FROM workspace_icons ORDER BY name")?
-        .query_map([], |row| row.get::<_, String>(0))?
-        .collect::<rusqlite::Result<Vec<_>>>()?);
+    let mut names = BRANDS
+        .iter()
+        .flat_map(|brand| std::iter::once(&brand.name).chain(&brand.aliases))
+        .cloned()
+        .collect::<Vec<_>>();
+    names.extend(
+        conn.prepare_cached("SELECT name FROM workspace_icons ORDER BY name")?
+            .query_map([], |row| row.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?,
+    );
     Ok(names)
 }
 pub(crate) fn builtin_icon(name: &str) -> bool {
-    let name=campfire_richtext::ruby::strip(name).trim_matches(':').trim().to_lowercase();
-    BRANDS.iter().any(|b| b.name==name || b.aliases.contains(&name))
+    let name = campfire_richtext::ruby::strip(name)
+        .trim_matches(':')
+        .trim()
+        .to_lowercase();
+    BRANDS
+        .iter()
+        .any(|b| b.name == name || b.aliases.contains(&name))
 }
-fn icons(conn: &Connection) -> Result<IconCatalog, String> {
+pub(crate) fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     let mut icons = IconCatalog::default();
     for brand in BRANDS.iter() {
         let icon = Icon::Brand {
@@ -91,15 +101,43 @@ fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     Ok(icons)
 }
 
+/// WS8br seam: reuse WS5's data resolver for Room#icon_name_must_resolve, on the
+/// caller's transaction connection; this does not render or alter rich-text fragments.
+pub(crate) fn room_icon_resolves(conn: &Connection, name: &str) -> campfire_db::Result<bool> {
+    Ok(icons(conn)
+        .map_err(campfire_db::Error::Other)?
+        .find_normalized(name)
+        .is_some())
+}
+
+/// `MessagesHelper#markdown_message_presentation`, using the same icon catalog as writes.
+pub(crate) fn markdown_presentation(
+    conn: &Connection,
+    body: &str,
+    ctx: &RenderContext<'_>,
+) -> Result<String, String> {
+    markdown::presentation(body, ctx, &icons(conn)?, None).map_err(|error| error.to_string())
+}
+
 impl RichText for AppRichText {
-    fn resolve_boost_content(&self, conn:&Connection, content:&str)->Result<String,String> {
-        let content=campfire_richtext::ruby::strip(content);
-        let name=content.strip_prefix(':').and_then(|s|s.strip_suffix(':')).filter(|name|!name.is_empty() && name.bytes().all(|b|b.is_ascii_lowercase() || b.is_ascii_digit() || b==b'_'));
-        if let Some(name)=name {
+    fn resolve_boost_content(&self, conn: &Connection, content: &str) -> Result<String, String> {
+        let content = campfire_richtext::ruby::strip(content);
+        let name = content
+            .strip_prefix(':')
+            .and_then(|s| s.strip_suffix(':'))
+            .filter(|name| {
+                !name.is_empty()
+                    && name
+                        .bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+            });
+        if let Some(name) = name {
             match icons(conn)?.find(name) {
-                Some(Icon::Emoji(character))=>return Ok(character),
-                Some(Icon::Brand {name,..} | Icon::Custom {name,..})=>return Ok(format!(":{name}:")),
-                None=>{},
+                Some(Icon::Emoji(character)) => return Ok(character),
+                Some(Icon::Brand { name, .. } | Icon::Custom { name, .. }) => {
+                    return Ok(format!(":{name}:"));
+                }
+                None => {}
             }
         }
         Ok(content.to_owned())
@@ -248,7 +286,10 @@ mod tests {
             .map(std::path::PathBuf::from)
             .unwrap_or_else(fixtures::reference_root);
         if !check_icon_reference(&root, std::env::var_os("CI").is_some()).unwrap() {
-            eprintln!("SKIPPED icon reference comparison: no config/icons.yml at {}", root.display());
+            eprintln!(
+                "SKIPPED icon reference comparison: no config/icons.yml at {}",
+                root.display()
+            );
         }
     }
 
@@ -260,13 +301,21 @@ mod tests {
         let mut changed = ICON_CONFIG.as_bytes().to_vec();
         changed.push(b'\n');
         std::fs::write(reference.path().join("config/icons.yml"), changed).unwrap();
-        assert!(check_icon_reference(reference.path(), false).unwrap_err().contains("differs"));
+        assert!(
+            check_icon_reference(reference.path(), false)
+                .unwrap_err()
+                .contains("differs")
+        );
     }
 
     #[test]
     fn missing_icon_reference_fails_in_ci() {
         let reference = tempfile::tempdir().unwrap();
-        assert!(check_icon_reference(reference.path(), true).unwrap_err().contains("config/icons.yml"));
+        assert!(
+            check_icon_reference(reference.path(), true)
+                .unwrap_err()
+                .contains("config/icons.yml")
+        );
     }
 
     #[test]
@@ -314,7 +363,11 @@ mod tests {
                         .unwrap())
                 })
                 .unwrap();
-            assert!(crate::app::asset_goldens::compare("runtime_markdown", &actual, row["body"].as_str().unwrap()));
+            assert!(crate::app::asset_goldens::compare(
+                "runtime_markdown",
+                &actual,
+                row["body"].as_str().unwrap()
+            ));
         }
     }
     #[test]
@@ -326,7 +379,11 @@ mod tests {
                     Ok(rich.canonicalize_html(conn, row["input"].as_str().unwrap()))
                 })
                 .unwrap();
-            assert!(crate::app::asset_goldens::compare("runtime_canonicalization", &actual, row["output"].as_str().unwrap()));
+            assert!(crate::app::asset_goldens::compare(
+                "runtime_canonicalization",
+                &actual,
+                row["output"].as_str().unwrap()
+            ));
         }
     }
     #[test]
@@ -343,23 +400,61 @@ mod tests {
     }
     #[test]
     fn runtime_review_markdown_create_and_edit_store_canonical_rails_html() {
-        let cases: Value = serde_json::from_str(include_str!("../../db/src/tests/ws8_review_vectors.json")).unwrap();
+        let cases: Value =
+            serde_json::from_str(include_str!("../../db/src/tests/ws8_review_vectors.json"))
+                .unwrap();
         let (db, adapter, _dir) = fixture();
         let mut config = Config::new(db.path());
         config.prepare = false;
-        let db = Database::open(config, Env { rich_text: Arc::new(adapter), ..Env::default() }).unwrap();
+        let db = Database::open(
+            config,
+            Env {
+                rich_text: Arc::new(adapter),
+                ..Env::default()
+            },
+        )
+        .unwrap();
         let source = cases["saved"]["source"].as_str().unwrap().to_owned();
-        let mut message = db.write_blocking(move |tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: fixtures::identify("designers"), creator_id: fixtures::identify("david"),
-            markdown_source: Some(source), ..Default::default()
-        })).unwrap();
-        assert!(crate::app::asset_goldens::compare("saved", &db.read_blocking(|conn| message.body_html(conn)).unwrap().unwrap(), cases["saved"]["body"].as_str().unwrap()));
+        let mut message = db
+            .write_blocking(move |tx| {
+                campfire_db::Message::create(
+                    tx,
+                    campfire_db::NewMessage {
+                        room_id: fixtures::identify("designers"),
+                        creator_id: fixtures::identify("david"),
+                        markdown_source: Some(source),
+                        ..Default::default()
+                    },
+                )
+            })
+            .unwrap();
+        assert!(crate::app::asset_goldens::compare(
+            "saved",
+            &db.read_blocking(|conn| message.body_html(conn))
+                .unwrap()
+                .unwrap(),
+            cases["saved"]["body"].as_str().unwrap()
+        ));
         let edited = cases["edited"]["source"].as_str().unwrap().to_owned();
-        let message = db.write_blocking(move |tx| {
-            message.edit(tx, campfire_db::MessageChanges { markdown_source: Some(edited), ..Default::default() })?;
-            Ok(message)
-        }).unwrap();
-        assert!(crate::app::asset_goldens::compare("edited", &db.read_blocking(|conn| message.body_html(conn)).unwrap().unwrap(), cases["edited"]["body"].as_str().unwrap()));
+        let message = db
+            .write_blocking(move |tx| {
+                message.edit(
+                    tx,
+                    campfire_db::MessageChanges {
+                        markdown_source: Some(edited),
+                        ..Default::default()
+                    },
+                )?;
+                Ok(message)
+            })
+            .unwrap();
+        assert!(crate::app::asset_goldens::compare(
+            "edited",
+            &db.read_blocking(|conn| message.body_html(conn))
+                .unwrap()
+                .unwrap(),
+            cases["edited"]["body"].as_str().unwrap()
+        ));
     }
     #[test]
     fn runtime_scheduled_edit_and_forward_match_rails() {
@@ -416,7 +511,11 @@ mod tests {
         let observation = |msg: &Message| {
             db.read_blocking(|c|Ok(serde_json::json!({"body":msg.body_html(c)?.unwrap(),"plain":msg.plain_text_body(c,&*db.env().rich_text)?}))).unwrap()
         };
-        assert!(crate::app::asset_goldens::compare("scheduled", observation(&sent)["body"].as_str().unwrap(), g["scheduled"]["body"].as_str().unwrap()));
+        assert!(crate::app::asset_goldens::compare(
+            "scheduled",
+            observation(&sent)["body"].as_str().unwrap(),
+            g["scheduled"]["body"].as_str().unwrap()
+        ));
         assert_eq!(observation(&sent)["plain"], g["scheduled"]["plain"]);
         let edit = g["edited"]["source"].as_str().unwrap().to_owned();
         let edited = db
@@ -432,7 +531,11 @@ mod tests {
                 Ok(msg)
             })
             .unwrap();
-        assert!(crate::app::asset_goldens::compare("edited", observation(&edited)["body"].as_str().unwrap(), g["edited"]["body"].as_str().unwrap()));
+        assert!(crate::app::asset_goldens::compare(
+            "edited",
+            observation(&edited)["body"].as_str().unwrap(),
+            g["edited"]["body"].as_str().unwrap()
+        ));
         assert_eq!(observation(&edited)["plain"], g["edited"]["plain"]);
         let forwarded = db
             .write_blocking(move |tx| {
@@ -463,7 +566,11 @@ mod tests {
                 ))
             })
             .unwrap();
-        assert!(crate::app::asset_goldens::compare("forwarded", obs["body"].as_str().unwrap(), g["forwarded"]["body"].as_str().unwrap()));
+        assert!(crate::app::asset_goldens::compare(
+            "forwarded",
+            obs["body"].as_str().unwrap(),
+            g["forwarded"]["body"].as_str().unwrap()
+        ));
         obs["body"] = g["forwarded"]["body"].clone();
         assert_eq!(obs, g["forwarded"]);
     }

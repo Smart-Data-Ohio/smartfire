@@ -1,0 +1,9 @@
+<blockquote class="message-quote">
+  <div class="message-quote__meta">
+    <span class="message-quote__author">{{ card.author }}</span>
+    <span class="message-quote__room">in {{ card.room_label }}</span>
+    {{ card.datetime(ctx) }}
+  </div>
+  <p class="message-quote__excerpt">{{ card.excerpt }}</p>
+  {{ h::link_to_text("Jump to message", &format!("{}{}", self.ctx.base_url, self.card.message_path), h::attrs().class("message-quote__jump").data("turbo_frame", "_top")) }}
+</blockquote>{{ "\n" }}

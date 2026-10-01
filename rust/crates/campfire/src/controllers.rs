@@ -38,31 +38,39 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
-pub mod workspace_icons;
 pub mod autocompletable;
+pub mod channel_thread_messages;
+pub mod channel_threads;
 pub mod csp_reports;
+pub mod embeds;
 pub mod first_runs;
 pub mod fizzy_cards;
 pub mod fizzy_connections;
 pub mod fizzy_message_cards;
 pub mod github;
 pub mod message_embed_suppressions;
+pub(crate) mod message_features;
+mod message_forwards;
+#[cfg(test)]
+pub(crate) mod message_forwards_tests;
 pub mod messages;
 pub mod presenters;
 pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
-pub mod rooms;
 pub mod room_categories;
+pub mod rooms;
+pub mod saved_items;
+pub mod scheduled_messages;
 pub mod searches;
-pub mod switchers;
 pub mod sessions;
 pub mod sudos;
+pub mod switchers;
 pub mod two_factor;
 pub mod unfurl_links;
-pub mod embeds;
 pub mod users;
 pub mod welcome;
+pub mod workspace_icons;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -240,16 +248,19 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/bans#destroy" => arc(users::bans::destroy),
         "users/sidebars#show" => arc(users::sidebars::show),
         "users/statuses#edit" => arc(users::statuses::edit),
-        "users/statuses#update" => arc(users::statuses::update),
         "users/profiles#show" => arc(users::profiles::show),
         "users/profiles#update" => arc(users::profiles::update),
         "users/time_zones#update" => arc(users::time_zones::update),
         "users/tours#update" => arc(users::tours::update),
-        "users/push_subscriptions/test_notifications#create" => arc(users::push_subscriptions::test_notifications::create),
+        "users/push_subscriptions/test_notifications#create" => {
+            arc(users::push_subscriptions::test_notifications::create)
+        }
         "users/sessions#index" => arc(users::sessions::index),
         "users/sessions#destroy" => arc(users::sessions::destroy),
         "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
-        "accounts/users/two_factor_resets#create" => arc(accounts::users::two_factor_resets::create),
+        "accounts/users/two_factor_resets#create" => {
+            arc(accounts::users::two_factor_resets::create)
+        }
         "users/push_subscriptions#index" => arc(users::push_subscriptions::index),
         "users/push_subscriptions#create" => arc(users::push_subscriptions::create),
         "users/push_subscriptions#destroy" => arc(users::push_subscriptions::destroy),
@@ -257,13 +268,55 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/dnd_allowances#create" => arc(users::dnd_allowances::create),
         "users/dnd_allowances#destroy" => arc(users::dnd_allowances::destroy),
         "users/notification_settings#update" => arc(users::notification_settings::update),
+        "users/statuses#update" => arc(users::statuses::update),
+        "rooms/message_links#show" => arc(rooms::message_links::show),
+        "rooms/files#index" => arc(rooms::files::index),
+        "rooms/slash_commands#create" => arc(rooms::slash_commands::create),
+        "autocompletable/icons#index" => arc(autocompletable::icons::index),
+        "autocompletable/slash_commands#index" => arc(autocompletable::slash_commands::index),
         "autocompletable/users#index" => arc(autocompletable::users::index),
+        "scheduled_messages#index" => arc(scheduled_messages::index),
+        "scheduled_messages#create" => arc(scheduled_messages::create),
+        "scheduled_messages#update" => arc(scheduled_messages::update),
+        "scheduled_messages#destroy" => arc(scheduled_messages::destroy),
+        "scheduled_messages#send_now" => arc(scheduled_messages::send_now),
+        "saved_items#index" => arc(saved_items::index),
+        "saved_items#create" => arc(saved_items::create),
+        "saved_items#update" => arc(saved_items::update),
+        "saved_items#destroy" => arc(saved_items::destroy),
+        "rooms/polls#create" => arc(rooms::polls::create),
+        "rooms/polls#show" => arc(rooms::polls::show),
+        "rooms/polls#vote" => arc(rooms::polls::vote),
+        "messages/pins#create" => arc(messages::pins::create),
+        "messages/pins#destroy" => arc(messages::pins::destroy),
+        "rooms/pins#index" => arc(rooms::pins::index),
         "messages#index" => arc(messages::index),
         "messages#create" => arc(messages::create),
+        "messages#preview" => arc(messages::preview),
+        "messages#actions" => arc(messages::actions),
         "messages#edit" => arc(messages::edit),
         "messages#show" => arc(messages::show),
         "messages#update" => arc(messages::update),
         "messages#destroy" => arc(messages::destroy),
+        "channel_threads#index" => arc(channel_threads::index),
+        "channel_threads#show" => arc(channel_threads::show),
+        "channel_threads#content" => arc(channel_threads::content),
+        "channel_threads#new" => arc(channel_threads::new),
+        "channel_threads#create" => arc(channel_threads::create),
+        "channel_threads#update" => arc(channel_threads::update),
+        "channel_threads#destroy" => arc(channel_threads::destroy),
+        "channel_threads#join" => arc(channel_threads::join),
+        "channel_threads#leave" => arc(channel_threads::leave),
+        "channel_threads#read" => arc(channel_threads::read),
+        "message_forwards#create" => arc(message_forwards::create),
+        "message_forwards#destinations" => arc(message_forwards::destinations),
+        "message_forward_sources#forward_source" => arc(message_forwards::forward_source),
+        "channel_thread_messages#index" => arc(channel_thread_messages::index),
+        "channel_thread_messages#show" => arc(channel_thread_messages::show),
+        "channel_thread_messages#actions" => arc(channel_thread_messages::actions),
+        "channel_thread_messages#create" => arc(channel_thread_messages::create),
+        "channel_thread_messages#update" => arc(channel_thread_messages::update),
+        "channel_thread_messages#destroy" => arc(channel_thread_messages::destroy),
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
         "messages/by_bots#index" => arc(messages::by_bots::index),
@@ -275,6 +328,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts#new" => arc(messages::boosts::new),
         "messages/boosts#destroy" => arc(messages::boosts::destroy),
         "switchers#show" => arc(switchers::show),
+        "rooms/members#index" => arc(rooms::members::index),
         "rooms/events#index" => arc(rooms::events::index),
         "rooms/events#show" => arc(rooms::events::show),
         "rooms/events#new" => arc(rooms::events::new),
@@ -285,6 +339,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms/events/attendances#show" => arc(rooms::events::attendance_show),
         "rooms/events/attendances#update" => arc(rooms::events::attendance_update),
         "rooms/refreshes#show" => arc(rooms::refreshes::show),
+        "rooms/reads#create" => arc(rooms::reads::create),
+        "rooms/reads#destroy" => arc(rooms::reads::destroy),
         "room_categories#index" => arc(room_categories::index),
         "room_categories#create" => arc(room_categories::create),
         "room_categories#update" => arc(room_categories::update),
@@ -299,6 +355,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms#index" => arc(rooms::index),
         "rooms#show" => arc(rooms::show),
         "rooms#leave" => arc(rooms::leave),
+        "rooms#join" => arc(rooms::join),
         "rooms#destroy" => arc(rooms::destroy),
         "rooms/opens#index" | "rooms/closeds#index" | "rooms/directs#index" => arc(rooms::index),
         "rooms/opens#create" => arc(rooms::opens::create),
@@ -816,6 +873,29 @@ mod tests {
         "rooms/events#cancel",
         "rooms/events/attendances#show",
         "rooms/events/attendances#update",
+        "rooms#join",
+        "rooms/reads#create",
+        "rooms/reads#destroy",
+        "scheduled_messages#index",
+        "scheduled_messages#create",
+        "scheduled_messages#update",
+        "scheduled_messages#destroy",
+        "scheduled_messages#send_now",
+        "saved_items#index",
+        "saved_items#create",
+        "saved_items#update",
+        "saved_items#destroy",
+        "rooms/polls#create",
+        "rooms/polls#show",
+        "rooms/polls#vote",
+        "messages/pins#create",
+        "messages/pins#destroy",
+        "rooms/pins#index",
+        "rooms/message_links#show",
+        "rooms/files#index",
+        "rooms/slash_commands#create",
+        "autocompletable/icons#index",
+        "autocompletable/slash_commands#index",
         "action_mailbox/ingresses/sendgrid/inbound_emails#create",
         "action_mailbox/ingresses/mandrill/inbound_emails#health_check",
         "action_mailbox/ingresses/mandrill/inbound_emails#create",

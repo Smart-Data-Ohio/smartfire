@@ -55,6 +55,9 @@ pub struct Config {
     pub mail: campfire_mail::config::Config,
     /// `LIVEKIT_URL`, whose origin the Content Security Policy allows to connect.
     pub livekit_url: Option<String>,
+    /// WS8bm2 readiness seam; WS13 owns launching the returned huddle.
+    pub huddles_configured: bool,
+    pub google_picker: Option<campfire_views::layouts::GooglePicker>,
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
     pub admin_session_idle_timeout: jiff::SignedDuration,
     pub public_policy: crate::public_policy::PublicPolicy,
@@ -163,6 +166,8 @@ impl Config {
             fragment_cache_bytes: number("CAMPFIRE_FRAGMENT_CACHE_MB", campfire_views::fragment_cache::DEFAULT_MAX_BYTES >> 20)?
                 .saturating_mul(1 << 20),
             livekit_url: get("LIVEKIT_URL"),
+            huddles_configured: crate::huddle_readiness::huddles_configured(&get),
+            google_picker: crate::picker_configuration::picker(&get),
             admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),
             public_policy: crate::public_policy::PublicPolicy::from_lookup(&get),
             profile_google_calendar_configured: google_client_configured,

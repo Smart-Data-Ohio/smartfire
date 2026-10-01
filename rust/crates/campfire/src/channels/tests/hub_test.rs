@@ -19,6 +19,15 @@ const UNAUTHORIZED: &str = r#"{"type":"disconnect","reason":"unauthorized","reco
 #[path = "directory_test.rs"]
 mod directory;
 
+#[path = "reads_test.rs"]
+mod reads;
+
+#[path = "join_test.rs"]
+mod join;
+
+#[path = "channel_audits_test.rs"]
+mod channel_audits;
+
 struct Hub {
     app: TestApp,
     url: String,
@@ -29,7 +38,11 @@ struct Hub {
 /// created by Rails before two-step sign-in existed; it's marked verified here so the cable
 /// accepts it.
 async fn boot() -> Option<Hub> {
-    let app = TestApp::boot().await?;
+    boot_with_test_clock(crate::controllers::presenters::test_support::seed_clock()).await
+}
+
+async fn boot_with_test_clock(clock: campfire_kit::SharedClock) -> Option<Hub> {
+    let app = TestApp::boot_with_test_clock(clock).await?;
     app.db()
         .write(|tx| {
             tx.conn().execute(
@@ -50,6 +63,8 @@ async fn boot() -> Option<Hub> {
         origin: format!("http://{addr}"),
     })
 }
+
+mod message_parity;
 
 impl Hub {
     async fn connect(&self, cookie: &str) -> Client {

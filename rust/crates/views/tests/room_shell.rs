@@ -1,26 +1,12 @@
-//! The owned shell regions compare complete Rails bytes; owner fragments are separate inputs.
+//! Isolated shell-seam checks. Complete Rails byte acceptance runs through room HTTP tests.
 use askama::Template;
-use campfire_views::{CurrentUser, messages, rooms};
+use campfire_views::{messages, rooms};
 #[path = "support/context.rs"]
 mod common;
-use campfire_views::helpers::request_forgery::{
-    AuthenticityTokens, RequestSecrets, rendering_with,
-};
-struct Tokens;
-impl AuthenticityTokens for Tokens {
-    fn global(&self) -> String {
-        "GLOBAL".into()
-    }
-    fn for_form(&self, action: &str, method: &str) -> String {
-        format!("{method}:{action}")
-    }
-}
 fn fixtures() -> Vec<serde_json::Value> {
     serde_json::from_str(include_str!("golden/rooms/shell.json")).unwrap()
 }
 fn view(row: &serde_json::Value) -> rooms::ShowView {
-    let fragments = &row["owner_fragments"];
-    let text = |key: &str| fragments[key].as_str().unwrap().to_string();
     rooms::ShowView {
         ooo_notice_members: Vec::new(),
         room: rooms::RoomView {
@@ -47,83 +33,14 @@ fn view(row: &serde_json::Value) -> rooms::ShowView {
         invitation: false,
         join_code: String::new(),
         messages_stream_name: row["signed_stream_name"].as_str().unwrap().into(),
-        shell: rooms::ShellComponents {
-            pins_panel: text("pins_panel"),
-            thread_panel: text("thread_panel"),
-            message_template: Some(text("message_template")),
-            composer: Some(text("composer")),
-            poll_builder: text("poll_builder"),
-            ..Default::default()
-        },
+        shell: rooms::ShellComponents::default(),
         scroll_to_unread_divider: row["scroll_to_unread_divider"].as_bool(),
         jump_to_unread_url: None,
         unread_divider_message_id: None,
         unread_divider_index:None,
         unread_count: 0,
+        ooo_notice_members: vec![],
     }
-}
-#[test]
-fn empty_room_shell_regions_match_rails() {
-    let asset = |name: &str| campfire_assets::asset_path(name);
-    let signer = |_: &[&str]| String::new();
-    let mut failures = 0;
-    for row in fixtures() {
-        let show = view(&row);
-        let mut ctx = common::context(&asset, &signer);
-        ctx.platform.browser = "Mozilla".into();
-        ctx.current_user = Some(CurrentUser {
-            id: show.user.id,
-            name: show.user.name.clone(),
-            administrator: true,
-            bot: false,
-            avatar_url: show.user.avatar_url.clone(),
-            preferences: Default::default(),
-        });
-        let page = rooms::Show {
-            ctx: &ctx,
-            show: &show,
-        };
-        let parts = rendering_with(
-            RequestSecrets {
-                tokens: Box::new(Tokens),
-                csp_nonce: Some("NONCE".into()),
-            },
-            || {
-                [
-                    ("head", page.as_head().render().unwrap()),
-                    ("nav", page.as_nav().render().unwrap()),
-                    ("member_panel", page.as_member_panel().render().unwrap()),
-                    ("thread_panel", page.as_thread_panel().render().unwrap()),
-                    ("footer", page.as_footer().render().unwrap()),
-                    ("body", page.as_content().render().unwrap()),
-                ]
-            },
-        );
-        for (name, actual) in parts {
-            let expected = row["parts"][name].as_str().unwrap();
-            if actual != expected {
-                if let Ok(dir) = std::env::var("WS8BR_DIFF_DIR") {
-                    std::fs::create_dir_all(&dir).unwrap();
-                    let prefix = format!("{dir}/{}-{name}", row["name"].as_str().unwrap());
-                    std::fs::write(format!("{prefix}.actual"), &actual).unwrap();
-                    std::fs::write(format!("{prefix}.expected"), expected).unwrap();
-                }
-                let byte = actual
-                    .bytes()
-                    .zip(expected.bytes())
-                    .position(|(a, b)| a != b)
-                    .unwrap_or(actual.len().min(expected.len()));
-                eprintln!(
-                    "{} {name}: first differing byte {byte}, actual {}, Rails {}",
-                    row["name"],
-                    actual.len(),
-                    expected.len()
-                );
-                failures += 1;
-            }
-        }
-    }
-    assert_eq!(failures, 0, "owned shell region byte mismatches");
 }
 #[test]
 fn message_list_seam_renders_the_empty_collection_or_supplied_owner_output() {

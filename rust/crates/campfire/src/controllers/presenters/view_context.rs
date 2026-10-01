@@ -53,12 +53,15 @@ impl Layout {
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
         let now = c.now();
-        let (account, has_logo, mut preferences, chrome) = app
+        let (account, has_logo, mut preferences, mut chrome) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
                 let has_logo = match &account {
-                    Some(account) => super::attachments::attached_blob(conn, "Account", account.id, "logo")?.is_some(),
+                    Some(account) => {
+                        super::attachments::attached_blob(conn, "Account", account.id, "logo")?
+                            .is_some()
+                    }
                     None => false,
                 };
                 let preferences = match user_id {
@@ -69,13 +72,32 @@ impl Layout {
             })
             .await
             .map_err(Error::internal)?;
-        let last_room_visited_id = if user.is_some() { concerns::last_room_visited(c).await?.map(|room| room.id) } else { None };
+        let last_room_visited_id = if user.is_some() {
+            concerns::last_room_visited(c).await?.map(|room| room.id)
+        } else {
+            None
+        };
 
         let time_zone = Zone::for_user(preferences.time_zone.as_deref());
-        if let Some(RenderedSettings(settings)) = c.current::<RenderedSettings>() && Some(settings.user.id) == user_id {
-            apply_settings_preferences(&mut preferences, settings, campfire_db::Timestamp::from_jiff(now));
+        if let Some(RenderedSettings(settings)) = c.current::<RenderedSettings>()
+            && Some(settings.user.id) == user_id
+        {
+            apply_settings_preferences(
+                &mut preferences,
+                settings,
+                campfire_db::Timestamp::from_jiff(now),
+            );
         }
-        let current_user = user.as_ref().map(|user| CurrentUser { preferences, ..current_user(&secrets, user) });
+        let current_user = user.as_ref().map(|user| CurrentUser {
+            preferences,
+            ..current_user(&secrets, user)
+        });
+        chrome.google_picker = app.config.google_picker.clone();
+        chrome.global_search_query = if c.request.path().starts_with("/searches") {
+            crate::controllers::searches::display_query(c)
+        } else {
+            None
+        };
         Ok(Self {
             current_user,
             account: account_summary(account.as_ref(), has_logo),
@@ -93,17 +115,35 @@ impl Layout {
     /// of the request) the way the layout's `flash[:notice]` / `flash[:alert]` read it. The
     /// templates get this request's authenticity tokens and CSP nonce (`csrf_meta_tags`, forms,
     /// `csp_meta_tag` and the importmap tags), which puts the CSRF token in the session.
-    pub fn render(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
-        let secrets = RequestSecrets { tokens: Box::new(KitTokens(c.authenticity_tokens())), csp_nonce: c.content_security_policy_nonce() };
+    pub fn render(
+        &self,
+        c: &mut Ctx,
+        render: impl FnOnce(&ViewContext) -> askama::Result<String>,
+    ) -> Result<String> {
+        let secrets = RequestSecrets {
+            tokens: Box::new(KitTokens(c.authenticity_tokens())),
+            csp_nonce: c.content_security_policy_nonce(),
+        };
+        #[cfg(test)]
+        let secrets = super::test_support::fixed_render_secrets().unwrap_or(secrets);
         self.render_with_secrets(c, Some(secrets), render)
     }
 
     /// Token-free partials use the viewer's time zone without creating a CSRF session.
-    pub fn render_without_secrets(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
+    pub fn render_without_secrets(
+        &self,
+        c: &mut Ctx,
+        render: impl FnOnce(&ViewContext) -> askama::Result<String>,
+    ) -> Result<String> {
         self.render_with_secrets(c, None, render)
     }
 
-    fn render_with_secrets(&self, c: &mut Ctx, secrets: Option<RequestSecrets>, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
+    fn render_with_secrets(
+        &self,
+        c: &mut Ctx,
+        secrets: Option<RequestSecrets>,
+        render: impl FnOnce(&ViewContext) -> askama::Result<String>,
+    ) -> Result<String> {
         let flash_notice = c.flash().notice().map(str::to_string);
         let flash_alert = c.flash().alert().map(str::to_string);
         let base_url = c.url_for("");
@@ -140,15 +180,24 @@ impl Layout {
         match secrets {
             Some(secrets) => request_forgery::rendering_with(secrets, || render(&ctx)),
             None => render(&ctx),
-        }.map_err(Error::internal)
+        }
+        .map_err(Error::internal)
     }
 
     /// A page rendered in the application layout: `text/html`, plus the `Link` preload header
     /// `stylesheet_link_tag` adds (`config.action_view.preload_links_header`).
     pub fn page(&self, c: &mut Ctx, status: StatusCode, html: String) -> Response {
         let links = &stylesheet_tags().preload_links;
-        let existing = c.headers.get("link").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
-        c.set_header("link", &campfire_assets::append_preload_links(&existing, links));
+        let existing = c
+            .headers
+            .get("link")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+        c.set_header(
+            "link",
+            &campfire_assets::append_preload_links(&existing, links),
+        );
         c.render(status, &format::HTML, html)
     }
 
@@ -174,8 +223,9 @@ impl request_forgery::AuthenticityTokens for KitTokens {
 /// The layout's `stylesheet_link_tag :all, "data-turbo-track": "reload"`: the assets are fixed at
 /// build time, so it renders once per process.
 pub fn stylesheet_tags() -> &'static campfire_assets::StylesheetTags {
-    static TAGS: LazyLock<campfire_assets::StylesheetTags> =
-        LazyLock::new(|| campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")]));
+    static TAGS: LazyLock<campfire_assets::StylesheetTags> = LazyLock::new(|| {
+        campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")])
+    });
     &TAGS
 }
 
@@ -193,7 +243,11 @@ pub fn current_user(secrets: &rails_compat::Secrets, user: &User) -> CurrentUser
 
 /// Read persisted user preferences and the flagged read-only owner projections used by the
 /// actual request layout. No caller-supplied expected display facts are needed.
-pub(crate) fn user_preferences(conn: &campfire_db::Connection, user_id: i64, now: jiff::Timestamp) -> campfire_db::Result<UserPreferences> {
+pub(crate) fn user_preferences(
+    conn: &campfire_db::Connection,
+    user_id: i64,
+    now: jiff::Timestamp,
+) -> campfire_db::Result<UserPreferences> {
     let mut preferences = conn.query_row(
         "SELECT theme, text_size, time_zone, time_zone_explicit, tour_completed_at IS NOT NULL, voice_mode, push_to_talk_key \
          FROM users WHERE id = ?",
@@ -217,15 +271,24 @@ pub(crate) fn user_preferences(conn: &campfire_db::Connection, user_id: i64, now
 
 /// Icons.client_icon_names and the viewer's ten ordered recent searches. WS14g's Picker,
 /// WS13's huddle configuration and WS8b-m's searches-controller query remain flagged inputs.
-pub(crate) fn chrome(conn: &campfire_db::Connection, user_id: Option<i64>) -> campfire_db::Result<Chrome> {
+pub(crate) fn chrome(
+    conn: &campfire_db::Connection,
+    user_id: Option<i64>,
+) -> campfire_db::Result<Chrome> {
     let mut chrome = Chrome {
         service_worker_auto_register: true,
-        brand_icon_names: crate::rich_text::client_icon_names(conn)?,
+        brand_icon_names: super::client_icon_names(conn)?,
         ..Chrome::default()
     };
     if let Some(id) = user_id {
-        chrome.recent_searches = campfire_db::Search::ordered_for_user(conn, id)?.into_iter().take(10)
-            .map(|search| campfire_views::layouts::RecentSearch {id: search.id, query: search.query}).collect();
+        chrome.recent_searches = campfire_db::Search::ordered_for_user(conn, id)?
+            .into_iter()
+            .take(10)
+            .map(|search| campfire_views::layouts::RecentSearch {
+                id: search.id,
+                query: search.query,
+            })
+            .collect();
     }
     Ok(chrome)
 }
@@ -234,7 +297,9 @@ pub(crate) fn chrome(conn: &campfire_db::Connection, user_id: Option<i64>) -> ca
 /// attached.
 pub fn account_summary(account: Option<&Account>, has_logo: bool) -> AccountSummary {
     AccountSummary {
-        name: account.map(|account| account.name.clone()).unwrap_or_default(),
+        name: account
+            .map(|account| account.name.clone())
+            .unwrap_or_default(),
         logo_url: super::accounts::fresh_account_logo_path(account, None),
         has_logo,
     }

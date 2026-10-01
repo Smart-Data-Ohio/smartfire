@@ -35,3 +35,8 @@ pub use time::{Clock, SystemClock, TestClock, Timestamp};
 mod tests;
 
 pub mod slash_commands;
+
+// WS8bm2 picker metadata read seam.
+pub mod command_suggestions;
+
+pub mod autocomplete_users;

@@ -33,7 +33,7 @@ async fn frozen_hub() -> (Hub, i64) {
     )
 }
 
-async fn connect_user(hub: &Hub, user_id: i64) -> Client {
+pub(super) async fn connect_user(hub: &Hub, user_id: i64) -> Client {
     let session = hub
         .app
         .db()

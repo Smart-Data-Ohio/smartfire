@@ -1,0 +1,893 @@
+{
+  "reference": "d7c7de92",
+  "creations": [
+    {
+      "namespace": "opens",
+      "input": ":ws8br_custom:",
+      "status": 302,
+      "icon_name": "ws8br_custom",
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": " :smile: ",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": " github ",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": "slack",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": null,
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": "",
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": " \t:: GITHUB ::\r\n",
+      "status": 302,
+      "icon_name": "github",
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": ":slack:",
+      "status": 302,
+      "icon_name": "slack",
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": ":smile:",
+      "status": 302,
+      "icon_name": "smile",
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": "\u000b:SMILE:\u000b",
+      "status": 302,
+      "icon_name": "smile",
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": " ",
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": ":::",
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": "missing_icon_ws8br",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": true,
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": false,
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": 123,
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "opens",
+      "input": [],
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "opens",
+      "input": {
+        "name": "smile"
+      },
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 8,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": ":ws8br_custom:",
+      "status": 302,
+      "icon_name": "ws8br_custom",
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": " :smile: ",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": " github ",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": "slack",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": null,
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": "",
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": " \t:: GITHUB ::\r\n",
+      "status": 302,
+      "icon_name": "github",
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": ":slack:",
+      "status": 302,
+      "icon_name": "slack",
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": ":smile:",
+      "status": 302,
+      "icon_name": "smile",
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": "\u000b:SMILE:\u000b",
+      "status": 302,
+      "icon_name": "smile",
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": " ",
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": ":::",
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": "missing_icon_ws8br",
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": true,
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": false,
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": 123,
+      "status": 422,
+      "icon_name": null,
+      "delta": {
+        "rooms": 0,
+        "memberships": 0,
+        "audits": 0
+      },
+      "frames": 0
+    },
+    {
+      "namespace": "closeds",
+      "input": [],
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    },
+    {
+      "namespace": "closeds",
+      "input": {
+        "name": "smile"
+      },
+      "status": 302,
+      "icon_name": null,
+      "delta": {
+        "rooms": 1,
+        "memberships": 1,
+        "audits": 1
+      },
+      "frames": 1
+    }
+  ],
+  "updates": [
+    {
+      "namespace": "opens",
+      "input": ":smile:",
+      "status": 302,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-01-03T17:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "after": {
+        "type": "Rooms::Open",
+        "name": "Attempted",
+        "icon_name": "smile",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "frames": 2,
+      "alert": false
+    },
+    {
+      "namespace": "opens",
+      "input": "missing_icon_ws8br",
+      "status": 422,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "after": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "frames": 0,
+      "alert": true
+    },
+    {
+      "namespace": "opens",
+      "input": null,
+      "status": 302,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "after": {
+        "type": "Rooms::Open",
+        "name": "Attempted",
+        "icon_name": null,
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "frames": 2,
+      "alert": false
+    },
+    {
+      "namespace": "opens",
+      "input": [],
+      "status": 302,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "after": {
+        "type": "Rooms::Open",
+        "name": "Attempted",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "frames": 2,
+      "alert": false
+    },
+    {
+      "namespace": "opens",
+      "input": {
+        "name": "smile"
+      },
+      "status": 302,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "after": {
+        "type": "Rooms::Open",
+        "name": "Attempted",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "frames": 2,
+      "alert": false
+    },
+    {
+      "namespace": "closeds",
+      "input": ":smile:",
+      "status": 302,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956,
+          773523959
+        ],
+        "audits": 22
+      },
+      "after": {
+        "type": "Rooms::Closed",
+        "name": "Attempted",
+        "icon_name": "smile",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "frames": 14,
+      "alert": false
+    },
+    {
+      "namespace": "closeds",
+      "input": "missing_icon_ws8br",
+      "status": 422,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "after": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "frames": 0,
+      "alert": true
+    },
+    {
+      "namespace": "closeds",
+      "input": null,
+      "status": 302,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "after": {
+        "type": "Rooms::Closed",
+        "name": "Attempted",
+        "icon_name": null,
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "frames": 2,
+      "alert": false
+    },
+    {
+      "namespace": "closeds",
+      "input": [],
+      "status": 302,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "after": {
+        "type": "Rooms::Closed",
+        "name": "Attempted",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "frames": 2,
+      "alert": false
+    },
+    {
+      "namespace": "closeds",
+      "input": {
+        "name": "smile"
+      },
+      "status": 302,
+      "before": {
+        "type": "Rooms::Open",
+        "name": "Baseline",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "after": {
+        "type": "Rooms::Closed",
+        "name": "Attempted",
+        "icon_name": "github",
+        "updated_at": "2026-03-02T16:00:00.000000Z",
+        "members": [
+          127326141
+        ],
+        "audits": 23
+      },
+      "frames": 2,
+      "alert": false
+    }
+  ],
+  "legacy": {
+    "status": 302,
+    "icon_name": "legacy_unknown"
+  },
+  "forms": [
+    {
+      "kind": "open",
+      "can_administer": true,
+      "room": {
+        "id": null,
+        "name": "Form <&>",
+        "icon_name": null,
+        "errors": [],
+        "error_attributes": []
+      },
+      "html": "<form action=\"/rooms/opens\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/opens\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"Form &lt;&amp;&gt;\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    <p>Access fixture</p>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "kind": "open",
+      "can_administer": true,
+      "room": {
+        "id": null,
+        "name": "Form <&>",
+        "icon_name": "github",
+        "errors": [],
+        "error_attributes": []
+      },
+      "html": "<form action=\"/rooms/opens\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/opens\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"Form &lt;&amp;&gt;\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"><img alt=\"GitHub\" class=\"icon-avatar icon-avatar--brand\" src=\"/assets/icons/brands/github-07b84d6c.svg\" width=\"32\" height=\"32\" /></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" value=\":github:\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    <p>Access fixture</p>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "kind": "open",
+      "can_administer": true,
+      "room": {
+        "id": null,
+        "name": "Form <&>",
+        "icon_name": "smile",
+        "errors": [],
+        "error_attributes": []
+      },
+      "html": "<form action=\"/rooms/opens\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/opens\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"Form &lt;&amp;&gt;\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"><span role=\"img\" aria-label=\"Smile\" class=\"icon-avatar icon-avatar--emoji\" style=\"font-size: 32px\">😄</span></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" value=\":smile:\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    <p>Access fixture</p>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "kind": "open",
+      "can_administer": true,
+      "room": {
+        "id": null,
+        "name": "Form <&>",
+        "icon_name": "missing_icon_ws8br",
+        "errors": [
+          "Icon name is not a known icon"
+        ],
+        "error_attributes": [
+          "icon_name"
+        ]
+      },
+      "html": "<form action=\"/rooms/opens\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/opens\" />\n    <p class=\"txt-negative txt-align-center\" role=\"alert\">Icon name is not a known icon</p>\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"Form &lt;&amp;&gt;\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <div class=\"field_with_errors\"><label class=\"txt-small\" for=\"room_icon_name\">Icon</label></div>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <div class=\"field_with_errors\"><input name=\"room[icon_name]\" id=\"room_icon_name\" value=\":missing_icon_ws8br:\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" /></div>\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    <p>Access fixture</p>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "kind": "closed",
+      "can_administer": true,
+      "room": {
+        "id": null,
+        "name": "Form <&>",
+        "icon_name": null,
+        "errors": [],
+        "error_attributes": []
+      },
+      "html": "<form action=\"/rooms/closeds\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/closeds\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"Form &lt;&amp;&gt;\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    <p>Access fixture</p>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "kind": "closed",
+      "can_administer": true,
+      "room": {
+        "id": null,
+        "name": "Form <&>",
+        "icon_name": "github",
+        "errors": [],
+        "error_attributes": []
+      },
+      "html": "<form action=\"/rooms/closeds\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/closeds\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"Form &lt;&amp;&gt;\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"><img alt=\"GitHub\" class=\"icon-avatar icon-avatar--brand\" src=\"/assets/icons/brands/github-07b84d6c.svg\" width=\"32\" height=\"32\" /></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" value=\":github:\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    <p>Access fixture</p>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "kind": "closed",
+      "can_administer": true,
+      "room": {
+        "id": null,
+        "name": "Form <&>",
+        "icon_name": "smile",
+        "errors": [],
+        "error_attributes": []
+      },
+      "html": "<form action=\"/rooms/closeds\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/closeds\" />\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"Form &lt;&amp;&gt;\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <label class=\"txt-small\" for=\"room_icon_name\">Icon</label>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"><span role=\"img\" aria-label=\"Smile\" class=\"icon-avatar icon-avatar--emoji\" style=\"font-size: 32px\">😄</span></span>\n\n    <input name=\"room[icon_name]\" id=\"room_icon_name\" value=\":smile:\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" />\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    <p>Access fixture</p>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    },
+    {
+      "kind": "closed",
+      "can_administer": true,
+      "room": {
+        "id": null,
+        "name": "Form <&>",
+        "icon_name": "missing_icon_ws8br",
+        "errors": [
+          "Icon name is not a known icon"
+        ],
+        "error_attributes": [
+          "icon_name"
+        ]
+      },
+      "html": "<form action=\"/rooms/closeds\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/closeds\" />\n    <p class=\"txt-negative txt-align-center\" role=\"alert\">Icon name is not a known icon</p>\n\n  <div class=\"flex align-center gap\">\n      <details class=\"position-relative\" data-controller=\"popup\" data-action=\"keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside\" data-popup-orientation-top-class=\"popup-orientation-top\"><summary class=\"btn\" tabindex=\"-1\"><img aria-hidden=\"true\" class=\"color-icon\" src=\"/assets/globe-8c54d23b.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Translate</span></summary><div class=\"language-list-menu shadow\" data-popup-target=\"menu\"><dl class=\"language-list\"><dt>🇺🇸</dt><dd class=\"margin-none\">Name the room</dd><dt>🇪🇸</dt><dd class=\"margin-none\">Nombrar la sala</dd><dt>🇫🇷</dt><dd class=\"margin-none\">Nommez la salle</dd><dt>🇮🇳</dt><dd class=\"margin-none\">कमरे का नाम दें</dd><dt>🇩🇪</dt><dd class=\"margin-none\">Geben Sie dem Raum einen Namen</dd><dt>🇧🇷</dt><dd class=\"margin-none\">Dê um nome a essa sala</dd><dt>🇯🇵</dt><dd class=\"margin-none\">ルームに名前を付ける</dd></dl></div></details>\n\n      <label class=\"flex-item-grow txt-large\">\n        <input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\" value=\"Form &lt;&amp;&gt;\" />\n        <span class=\"for-screen-reader\">Name this room</span>\n      </label>\n  </div>\n\n    <div class=\"margin-block-start\">\n      <div data-controller=\"icon-field\" data-icon-field-url-value=\"/autocompletable/icons\">\n  <div class=\"field_with_errors\"><label class=\"txt-small\" for=\"room_icon_name\">Icon</label></div>\n\n  <div class=\"flex align-center gap\">\n    <span class=\"icon-field__preview flex-item-no-shrink\" data-icon-field-target=\"preview\"></span>\n\n    <div class=\"field_with_errors\"><input name=\"room[icon_name]\" id=\"room_icon_name\" value=\":missing_icon_ws8br:\" class=\"input flex-item-grow\" placeholder=\":shortcode:\" autocomplete=\"off\" autocorrect=\"off\" autocapitalize=\"off\" spellcheck=\"false\" data-icon-field-target=\"input\" data-action=\"input-&gt;icon-field#preview input-&gt;markdown-autocomplete#search focus-&gt;markdown-autocomplete#focus blur-&gt;markdown-autocomplete#blur\" data-controller=\"markdown-autocomplete\" data-markdown-autocomplete-icons-url-value=\"/autocompletable/icons\" type=\"text\" /></div>\n\n    <button type=\"button\" class=\"btn flex-item-no-shrink\" data-action=\"icon-field#clear\">Remove</button>\n  </div>\n\n  <p class=\"txt-small\">Type : to search the icon set. Leave blank for the default.</p>\n</div>\n\n    </div>\n\n  <hr class=\"margin-block borderless\">\n\n  <section class=\"room-access margin-block pad-inline fill-shade border-radius\">\n    <p>Access fixture</p>\n  </section>\n\n  <button name=\"button\" type=\"submit\" class=\"btn btn--reversed txt-large center\"><img aria-hidden=\"true\" src=\"/assets/check-7897ff7e.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Save</span></button>\n</form>"
+    }
+  ]
+}

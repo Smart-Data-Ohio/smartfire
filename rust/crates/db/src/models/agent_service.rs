@@ -38,3 +38,23 @@ impl ServiceResult {
             .unwrap_or_else(|| json!({"error":self.error}))
     }
 }
+
+/// RecordInvalid is a service denial, so surrounding writes such as a new DM
+/// and a budget notice can commit as Rails does.
+pub fn invalid(errors: crate::Errors) -> ServiceResult {
+    let error = crate::slash_commands::sentence(errors.full_messages());
+    let mut fields = serde_json::Map::new();
+    for (field, message) in errors.0 {
+        fields
+            .entry(field.to_owned())
+            .or_insert_with(|| json!([]))
+            .as_array_mut()
+            .expect("array")
+            .push(json!(message));
+    }
+    ServiceResult {
+        payload: Some(json!({"errors":fields})),
+        error: Some(error),
+        status: 422,
+    }
+}

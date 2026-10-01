@@ -36,9 +36,10 @@ class FirstRunTourTest < ApplicationSystemTestCase
 
     click_on "Finish"
     assert_no_selector "#tour .tour__card", visible: true
-    assert_not_nil users(:jz).reload.tour_completed_at
+    assert_tour_completed
 
     visit room_url(rooms(:designers))
+    assert_selector '#tour[data-tour-auto-start-value="false"]', visible: :all
     assert_no_selector "#tour .tour__card", visible: true
   end
 
@@ -50,9 +51,10 @@ class FirstRunTourTest < ApplicationSystemTestCase
 
     tour_send_keys(:escape)
     assert_no_selector "#tour .tour__card", visible: true
-    assert_not_nil users(:jz).reload.tour_completed_at
+    assert_tour_completed
 
     visit room_url(rooms(:designers))
+    assert_selector '#tour[data-tour-auto-start-value="false"]', visible: :all
     assert_no_selector "#tour .tour__card", visible: true
   end
 
@@ -62,6 +64,7 @@ class FirstRunTourTest < ApplicationSystemTestCase
 
     click_on "Skip tour"
     assert_no_selector "#tour .tour__card", visible: true
+    assert_tour_completed
 
     find("#help-menu-button").click
     click_on "Restart tour"
@@ -76,11 +79,23 @@ class FirstRunTourTest < ApplicationSystemTestCase
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
 
+    assert_selector '#tour[data-tour-auto-start-value="false"]', visible: :all
     assert_no_selector "#tour .tour__card", visible: true
     assert_selector "#help-menu-button", visible: true
   end
 
   private
+    def assert_tour_completed
+      # The card hides before the asynchronous completion PATCH finishes.
+      # Wait for the persisted stamp before asserting or navigating away.
+      page.document.synchronize(errors: [ Capybara::ExpectationNotMet ]) do
+        unless users(:jz).reload.tour_completed_at
+          raise Capybara::ExpectationNotMet, "expected tour completion to be persisted"
+        end
+      end
+      assert_not_nil users(:jz).tour_completed_at
+    end
+
     def tour_send_keys(*keys)
       keys.each do |key|
         find(".tour__card [data-tour-target='next']").send_keys(key)

@@ -1,0 +1,26 @@
+<article id="scheduled_message_{{ item.id }}" class="scheduled-message">
+  <div class="scheduled-message__meta">
+    <span class="scheduled-message__room">{{ item.room_name }}</span>
+{% if let Some(thread) = item.thread_name %}      <span class="scheduled-message__thread">· {{ thread }}</span>
+{% endif %}{% if stranded %}      <span class="scheduled-message__time">· No longer sendable (channel access lost)</span>
+{% else %}      <span class="scheduled-message__time">· Sends {{ item.time(ctx, false) }}</span>
+{% endif %}  </div>
+
+  {{ item.form().open() }}
+    <div>
+      {{ item.form().label("markdown_source", "Message", h::attrs().class("for-screen-reader")) }}
+      {{ item.form().text_area("markdown_source", Some(item.body.as_str()), h::attrs().attr("rows", 2).class("input").attr("maxlength", 50000)) }}
+    </div>
+    <div class="scheduled-message__row">
+      <div>
+        {{ item.form().label("send_at", "Send at", h::attrs()) }}
+        {{ item.send_field(ctx) }}
+      </div>
+      {{ item.submit() }}
+    </div>
+</form>
+  <div class="scheduled-message__actions">
+    {{ item.action(true) }}
+    {{ item.action(false) }}
+  </div>
+</article>{{ "\n" }}

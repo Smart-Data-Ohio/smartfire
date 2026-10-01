@@ -1,0 +1,502 @@
+{
+  "reference": "d7c7de92",
+  "names": [
+    {
+      "namespace": "opens",
+      "input": false,
+      "status": 302,
+      "name": "f",
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953,
+        773523956,
+        773523958,
+        773523959
+      ]
+    },
+    {
+      "namespace": "opens",
+      "input": true,
+      "status": 302,
+      "name": "t",
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953,
+        773523956,
+        773523958,
+        773523959
+      ]
+    },
+    {
+      "namespace": "opens",
+      "input": 42,
+      "status": 302,
+      "name": "42",
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953,
+        773523956,
+        773523958,
+        773523959
+      ]
+    },
+    {
+      "namespace": "opens",
+      "input": 1.25,
+      "status": 302,
+      "name": "1.25",
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953,
+        773523956,
+        773523958,
+        773523959
+      ]
+    },
+    {
+      "namespace": "opens",
+      "input": null,
+      "status": 302,
+      "name": null,
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953,
+        773523956,
+        773523958,
+        773523959
+      ]
+    },
+    {
+      "namespace": "opens",
+      "input": [
+        1
+      ],
+      "status": 302,
+      "name": null,
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953,
+        773523956,
+        773523958,
+        773523959
+      ]
+    },
+    {
+      "namespace": "opens",
+      "input": {
+        "nested": "value"
+      },
+      "status": 302,
+      "name": null,
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953,
+        773523956,
+        773523958,
+        773523959
+      ]
+    },
+    {
+      "namespace": "opens",
+      "input": " \u000b ",
+      "status": 302,
+      "name": " \u000b ",
+      "user_ids": [
+        127326141,
+        149087659,
+        394959859,
+        712064548,
+        773523953,
+        773523956,
+        773523958,
+        773523959
+      ]
+    },
+    {
+      "namespace": "closeds",
+      "input": false,
+      "status": 500,
+      "name": "f",
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "namespace": "closeds",
+      "input": true,
+      "status": 500,
+      "name": "t",
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "namespace": "closeds",
+      "input": 42,
+      "status": 500,
+      "name": "42",
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "namespace": "closeds",
+      "input": 1.25,
+      "status": 500,
+      "name": "1.25",
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "namespace": "closeds",
+      "input": null,
+      "status": 500,
+      "name": null,
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "namespace": "closeds",
+      "input": [
+        1
+      ],
+      "status": 500,
+      "name": null,
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "namespace": "closeds",
+      "input": {
+        "nested": "value"
+      },
+      "status": 500,
+      "name": null,
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "namespace": "closeds",
+      "input": " \u000b ",
+      "status": 500,
+      "name": " \u000b ",
+      "user_ids": [
+        127326141
+      ]
+    }
+  ],
+  "updates": [
+    {
+      "namespace": "opens",
+      "input": false,
+      "status": 302,
+      "name": "f"
+    },
+    {
+      "namespace": "opens",
+      "input": true,
+      "status": 302,
+      "name": "t"
+    },
+    {
+      "namespace": "opens",
+      "input": 42,
+      "status": 302,
+      "name": "42"
+    },
+    {
+      "namespace": "opens",
+      "input": 1.25,
+      "status": 302,
+      "name": "1.25"
+    },
+    {
+      "namespace": "opens",
+      "input": null,
+      "status": 302,
+      "name": null
+    },
+    {
+      "namespace": "opens",
+      "input": [
+        1
+      ],
+      "status": 302,
+      "name": "Cast baseline"
+    },
+    {
+      "namespace": "opens",
+      "input": {
+        "nested": "value"
+      },
+      "status": 302,
+      "name": "Cast baseline"
+    },
+    {
+      "namespace": "opens",
+      "input": " \u000b ",
+      "status": 302,
+      "name": " \u000b "
+    },
+    {
+      "namespace": "closeds",
+      "input": false,
+      "status": 500,
+      "name": "f"
+    },
+    {
+      "namespace": "closeds",
+      "input": true,
+      "status": 500,
+      "name": "t"
+    },
+    {
+      "namespace": "closeds",
+      "input": 42,
+      "status": 500,
+      "name": "42"
+    },
+    {
+      "namespace": "closeds",
+      "input": 1.25,
+      "status": 500,
+      "name": "1.25"
+    },
+    {
+      "namespace": "closeds",
+      "input": null,
+      "status": 500,
+      "name": null
+    },
+    {
+      "namespace": "closeds",
+      "input": [
+        1
+      ],
+      "status": 500,
+      "name": "Cast baseline"
+    },
+    {
+      "namespace": "closeds",
+      "input": {
+        "nested": "value"
+      },
+      "status": 500,
+      "name": "Cast baseline"
+    },
+    {
+      "namespace": "closeds",
+      "input": " \u000b ",
+      "status": 500,
+      "name": " \u000b "
+    }
+  ],
+  "shows": {
+    "186869642": {
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      }
+    },
+    "340026324": {
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      }
+    },
+    "9999999999": {
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      }
+    },
+    "nonsense": {
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      }
+    }
+  },
+  "ids": [
+    {
+      "input": [
+        127326141,
+        149087659
+      ],
+      "status": 500,
+      "user_ids": [
+        127326141,
+        149087659
+      ]
+    },
+    {
+      "input": 127326141,
+      "status": 500,
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "input": 127326141.75,
+      "status": 500,
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "input": null,
+      "status": 500,
+      "user_ids": []
+    },
+    {
+      "input": true,
+      "status": 500,
+      "user_ids": []
+    },
+    {
+      "input": false,
+      "status": 500,
+      "user_ids": []
+    },
+    {
+      "input": [
+        [
+          127326141
+        ]
+      ],
+      "status": 500,
+      "user_ids": [
+        127326141
+      ]
+    },
+    {
+      "input": [
+        [
+          127326141,
+          149087659
+        ]
+      ],
+      "status": 500,
+      "user_ids": [
+        127326141,
+        149087659
+      ]
+    },
+    {
+      "input": [
+        [
+          127326141
+        ],
+        149087659
+      ],
+      "status": 500,
+      "user_ids": [
+        149087659
+      ]
+    },
+    {
+      "input": [
+        [
+          127326141
+        ],
+        [
+          149087659
+        ]
+      ],
+      "status": 500,
+      "user_ids": []
+    },
+    {
+      "input": [
+        [
+          [
+            127326141,
+            149087659
+          ]
+        ]
+      ],
+      "status": 500,
+      "user_ids": [
+        127326141,
+        149087659
+      ]
+    },
+    {
+      "input": {
+        "id": 127326141
+      },
+      "status": 500,
+      "user_ids": []
+    }
+  ],
+  "formats": {
+    "application/json": 500,
+    "application/xml": 500,
+    "text/html": 302,
+    "application/json,text/html": 302,
+    "text/vnd.turbo-stream.html": 500,
+    "*/*": 302
+  },
+  "closed_json_failure_class": "ActionView::MissingTemplate",
+  "stream_cases": [
+    {
+      "name": "Format stream create",
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      },
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "frames": []
+    },
+    {
+      "name": "Format stream update",
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      },
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "frames": []
+    }
+  ],
+  "integer_casts": {
+    "true": 1,
+    "false": 0
+  }
+}

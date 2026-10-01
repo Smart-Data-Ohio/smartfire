@@ -1,6 +1,8 @@
 //! Views for `reference/app/views/rooms`, plus `RoomsHelper`, `Rooms::InvolvementsHelper` and
 //! the `MessagesHelper` tags the room screen uses.
 
+pub mod panels;
+
 mod header;
 pub use header::{HeaderIdentity, header_identity};
 
@@ -8,19 +10,28 @@ use askama::Template;
 use jiff::Timestamp;
 use serde::Deserialize;
 
+use crate::ViewContext;
 use crate::helpers as h;
 use crate::layouts::Page;
 use crate::messages::support::epoch_ms;
-use crate::messages::{room_dom_id, MessageItem, RoomKind, UserView};
-use crate::ViewContext;
+use crate::messages::{MessageItem, RoomKind, UserView, room_dom_id};
 
 /// `room_display_name(room, for_user:)`: a direct room is named after its other members
 /// (`room.users.without(for_user).pluck(:name).to_sentence`), falling back to the user's own
 /// name when they're alone in it.
-pub fn room_display_name(name: Option<&str>, direct: bool, other_member_names: &[String], for_user_name: Option<&str>) -> String {
+pub fn room_display_name(
+    name: Option<&str>,
+    direct: bool,
+    other_member_names: &[String],
+    for_user_name: Option<&str>,
+) -> String {
     if direct {
         let sentence = h::to_sentence(other_member_names, " and ");
-        if sentence.trim().is_empty() { for_user_name.unwrap_or_default().to_string() } else { sentence }
+        if sentence.trim().is_empty() {
+            for_user_name.unwrap_or_default().to_string()
+        } else {
+            sentence
+        }
     } else {
         name.unwrap_or_default().to_string()
     }
@@ -28,7 +39,10 @@ pub fn room_display_name(name: Option<&str>, direct: bool, other_member_names: &
 
 /// `mention_prompt_tag(room)`'s `src`: `autocompletable_users_path(room_id: room.id)`.
 pub fn mention_prompt_src(room_id: i64) -> String {
-    format!("{}?room_id={room_id}", campfire_routes::autocompletable_users())
+    format!(
+        "{}?room_id={room_id}",
+        campfire_routes::autocompletable_users()
+    )
 }
 
 /// A persisted room.
@@ -46,16 +60,28 @@ pub struct RoomView {
 }
 
 impl RoomView {
-    pub fn is_stage(&self)->bool { self.header.as_ref().is_some_and(|h|h.param_key=="rooms_stage") }
+    pub fn is_stage(&self) -> bool {
+        self.header
+            .as_ref()
+            .is_some_and(|h| h.param_key == "rooms_stage")
+    }
     pub fn header_html(&self, ctx: &ViewContext) -> h::Html {
         let fallback;
         let header = match &self.header {
             Some(header) => header,
             None => {
                 fallback = HeaderIdentity {
-                    id: self.id, param_key: self.kind.param_key().into(), direct: self.is_direct(),
-                    kind_label: if self.is_direct() { "Direct message" } else { "Channel" }.into(),
-                    display_name: self.display_name.clone(), icon: None,
+                    id: self.id,
+                    param_key: self.kind.param_key().into(),
+                    direct: self.is_direct(),
+                    kind_label: if self.is_direct() {
+                        "Direct message"
+                    } else {
+                        "Channel"
+                    }
+                    .into(),
+                    display_name: self.display_name.clone(),
+                    icon: None,
                 };
                 &fallback
             }
@@ -97,10 +123,10 @@ pub struct ShowView {
     #[serde(default)]
     pub unread_divider_message_id: Option<i64>,
     #[serde(default)]
-    pub unread_count:i64,
+    pub unread_count: i64,
     /// Position resolved from domain message IDs before building cached message fragments.
     #[serde(default)]
-    pub unread_divider_index:Option<usize>,
+    pub unread_divider_index: Option<usize>,
     pub room: RoomView,
     /// `room.updated_at`, the refresh controller's `loaded_at`.
     pub updated_at: Timestamp,
@@ -128,7 +154,9 @@ pub struct Show<'a> {
 }
 
 impl Page for Show<'_> {
-    fn has_sidebar(&self)->bool { true }
+    fn has_sidebar(&self) -> bool {
+        true
+    }
     fn page_title(&self) -> Option<String> {
         Some(self.show.room.display_name.clone())
     }
@@ -139,12 +167,30 @@ impl Page for Show<'_> {
 }
 
 impl Show<'_> {
-    fn multi_select_bar(&self)->h::Html { h::raw(crate::shared::MultiSelectBar{exit_button:true}.render().expect("member selection bar renders")) }
+    fn multi_select_bar(&self) -> h::Html {
+        h::raw(
+            crate::shared::MultiSelectBar { exit_button: true }
+                .render()
+                .expect("member selection bar renders"),
+        )
+    }
 
-    fn jump_to_unread(&self,url:Option<&str>)->h::Html {
-        let label=h::image_tag(self.ctx,"arrow-up.svg",h::attrs().aria_hidden().size(20)).0+&h::content_tag_text("span",h::attrs(),"Jump to unread").0;
-        let attrs=h::attrs().id("jump-to-unread").class("message-area__jump-to-unread btn");
-        match url { Some(url)=>h::link_to(url,attrs,&label),None=>h::content_tag("button",attrs.data("action","messages#jumpToUnread").attr("hidden",true),&label) }
+    fn jump_to_unread(&self, url: Option<&str>) -> h::Html {
+        let label = h::image_tag(self.ctx, "arrow-up.svg", h::attrs().aria_hidden().size(20)).0
+            + &h::content_tag_text("span", h::attrs(), "Jump to unread").0;
+        let attrs = h::attrs()
+            .id("jump-to-unread")
+            .class("message-area__jump-to-unread btn");
+        match url {
+            Some(url) => h::link_to(url, attrs, &label),
+            None => h::content_tag(
+                "button",
+                attrs
+                    .data("action", "messages#jumpToUnread")
+                    .attr("hidden", true),
+                &label,
+            ),
+        }
     }
     fn loaded_at(&self) -> i64 {
         epoch_ms(self.show.updated_at)
@@ -196,6 +242,8 @@ pub struct RefreshView {
     pub room_kind: RoomKind,
     pub new_messages: Vec<MessageItem>,
     pub updated_messages: Vec<MessageItem>,
+    #[serde(default)]
+    pub pins: Option<crate::pins::List>,
 }
 
 /// `rooms/refreshes/show.turbo_stream`.
@@ -206,12 +254,89 @@ pub struct RefreshShow<'a> {
     pub refresh: &'a RefreshView,
 }
 
+impl RefreshShow<'_> {
+    fn pins_count(&self, list: &crate::pins::List) -> h::Html {
+        h::raw(
+            crate::pins::CountPartial {
+                room_id: list.room_id,
+                room_param_key: list.room_param_key.clone(),
+                count: list.pins.len() as i64,
+            }
+            .render()
+            .expect("owner pin count renders"),
+        )
+    }
+    fn pins_list(&self, list: &crate::pins::List) -> h::Html {
+        h::raw(
+            crate::pins::ListPartial {
+                ctx: self.ctx,
+                list,
+            }
+            .render()
+            .expect("owner pin list renders"),
+        )
+    }
+}
+
 /// The room being created or edited by the open and closed room forms. `id` is `None` for a
 /// new record.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct FormRoom {
     pub id: Option<i64>,
     pub name: Option<String>,
+    #[serde(default)]
+    pub icon_name: Option<String>,
+    #[serde(default)]
+    pub icon: Option<h::AvatarIcon>,
+    #[serde(default)]
+    pub errors: Vec<String>,
+    #[serde(default)]
+    pub error_attributes: Vec<String>,
+    #[serde(default)]
+    pub inbound_email: Option<InboundEmailView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct InboundEmailView {
+    pub id: i64,
+    pub emailable: bool,
+    pub enabled: bool,
+    pub address: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "rooms/inbound_email_addresses/_section.html")]
+pub struct InboundEmailSection<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub email: &'a InboundEmailView,
+    pub can_administer: bool,
+}
+impl InboundEmailSection<'_> {
+    fn button(&self, rotate: bool) -> h::Html {
+        let options = h::attrs().class(if rotate {
+            "btn btn--negative txt-small"
+        } else {
+            "btn txt-small"
+        });
+        let form_options = if rotate {
+            h::attrs().data(
+                "turbo_confirm",
+                "Rotate this room's email address? The old address stops working.",
+            )
+        } else {
+            h::attrs()
+        };
+        h::button_to_form(
+            &campfire_routes::room_inbound_email_address(self.email.id),
+            options,
+            form_options,
+            if rotate {
+                "Rotate address"
+            } else {
+                "Create email address"
+            },
+        )
+    }
 }
 
 /// `rooms/opens/{new,edit}`.
@@ -234,6 +359,66 @@ pub struct ClosedFormView {
     pub selected_users: Vec<UserView>,
     /// The other active users.
     pub unselected_users: Vec<UserView>,
+}
+
+#[derive(Template)]
+#[template(path = "rooms/opens/_user.html")]
+struct OpenFormUser<'a> {
+    ctx: &'a ViewContext<'a>,
+    form: &'a OpenFormView,
+    user: &'a UserView,
+}
+#[derive(Template)]
+#[template(path = "rooms/closeds/_user.html")]
+struct ClosedFormUser<'a> {
+    ctx: &'a ViewContext<'a>,
+    form: &'a ClosedFormView,
+    user: &'a UserView,
+    selected: bool,
+}
+impl OpenFormView {
+    /// Rails collection rendering indents the first partial only, then concatenates bytes.
+    pub fn user_list(&self, ctx: &ViewContext) -> h::Html {
+        h::raw(
+            self.users
+                .iter()
+                .map(|user| {
+                    OpenFormUser {
+                        ctx,
+                        form: self,
+                        user,
+                    }
+                    .render()
+                    .expect("open form user renders")
+                })
+                .collect::<String>(),
+        )
+    }
+}
+impl ClosedFormView {
+    pub fn selected_list(&self, ctx: &ViewContext) -> h::Html {
+        self.user_list(ctx, &self.selected_users, true)
+    }
+    pub fn unselected_list(&self, ctx: &ViewContext) -> h::Html {
+        self.user_list(ctx, &self.unselected_users, false)
+    }
+    fn user_list(&self, ctx: &ViewContext, users: &[UserView], selected: bool) -> h::Html {
+        h::raw(
+            users
+                .iter()
+                .map(|user| {
+                    ClosedFormUser {
+                        ctx,
+                        form: self,
+                        user,
+                        selected,
+                    }
+                    .render()
+                    .expect("closed form user renders")
+                })
+                .collect::<String>(),
+        )
+    }
 }
 
 /// `rooms/opens/new`.
@@ -284,17 +469,39 @@ impl Page for ClosedsNew<'_> {
 
 impl Page for OpensEdit<'_> {
     fn page_title(&self) -> Option<String> {
-        Some(format!("Edit settings for {}", self.form.room.name.as_deref().unwrap_or_default()))
+        Some(format!(
+            "Edit settings for {}",
+            self.form.room.name.as_deref().unwrap_or_default()
+        ))
     }
 }
 
 impl Page for ClosedsEdit<'_> {
     fn page_title(&self) -> Option<String> {
-        Some(format!("Edit settings for {}", self.form.room.name.as_deref().unwrap_or_default()))
+        Some(format!(
+            "Edit settings for {}",
+            self.form.room.name.as_deref().unwrap_or_default()
+        ))
     }
 }
 
 impl FormRoom {
+    fn inbound_email_html(&self, ctx: &ViewContext, can_administer: &bool) -> h::Html {
+        self.inbound_email
+            .as_ref()
+            .map(|email| {
+                h::raw(
+                    InboundEmailSection {
+                        ctx,
+                        email,
+                        can_administer: *can_administer,
+                    }
+                    .render()
+                    .expect("inbound email section renders"),
+                )
+            })
+            .unwrap_or_else(h::empty)
+    }
     /// `form_with model: room`'s action for an open or closed room.
     fn action(&self, kind: RoomKind) -> String {
         match (self.id, kind) {
@@ -315,11 +522,22 @@ impl FormRoom {
 #[template(path = "rooms/directs/new.html", blocks = ["head", "content"])]
 pub struct DirectsNew<'a> {
     pub ctx: &'a ViewContext<'a>,
-    pub people: Vec<crate::users::Person>,
+    pub users: &'a [DirectPickerUser],
+}
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct DirectPickerUser {
+    pub user: UserView,
+    pub bot: bool,
+    pub agent: bool,
+    pub starred: bool,
 }
 impl DirectsNew<'_> {
-    fn multi_select(&self) -> askama::Result<h::Html> {
-        Ok(h::raw(crate::shared::MultiSelectBar { exit_button: false }.render()?))
+    fn multi_select_bar(&self) -> h::Html {
+        h::raw(
+            crate::shared::MultiSelectBar { exit_button: false }
+                .render()
+                .expect("picker selection bar renders"),
+        )
     }
 }
 
@@ -329,6 +547,16 @@ impl Page for DirectsNew<'_> {}
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct DirectEditView {
     pub room_id: i64,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub group_capable: bool,
+    #[serde(default)]
+    pub administrator: bool,
+    #[serde(default)]
+    pub candidates: Vec<UserView>,
+    #[serde(default)]
+    pub error_attributes: Vec<String>,
     /// `room_display_name(@room)` for `Current.user`.
     pub display_name: String,
     /// `@room.users.many? ? @room.users.without(Current.user) : @room.users`.
@@ -342,6 +570,21 @@ pub struct DirectsEdit<'a> {
     pub edit: &'a DirectEditView,
 }
 
+impl DirectsEdit<'_> {
+    fn leave_label(&self) -> &str {
+        if self.edit.group_capable {
+            "Leave group"
+        } else {
+            "Leave ping"
+        }
+    }
+    fn candidate_image(&self, user: &UserView) -> h::Html {
+        match &user.icon {
+            Some(icon) => h::icon_avatar_tag(self.ctx, Some(icon), 24, h::attrs()),
+            None => h::image_tag(self.ctx, &user.avatar_url, h::attrs().size(24)),
+        }
+    }
+}
 impl Page for DirectsEdit<'_> {
     fn page_title(&self) -> Option<String> {
         Some(format!("Edit settings for {}", self.edit.display_name))
@@ -387,6 +630,28 @@ pub struct FormLayout<'a> {
     pub content: String,
 }
 
+impl FormLayout<'_> {
+    fn errors(&self) -> String {
+        h::to_sentence(&self.room.errors, " and ")
+    }
+    fn icon_field(&self) -> h::Html {
+        let form = h::form_with(self.room.action(self.kind))
+            .model(self.kind.param_key())
+            .field_errors(self.room.error_attributes.clone());
+        h::raw(
+            crate::shared::IconField {
+                ctx: self.ctx,
+                form: &form,
+                scope: "room",
+                icon_name: self.room.icon_name.as_deref(),
+                icon: self.room.icon.as_ref(),
+            }
+            .render()
+            .expect("room icon field renders"),
+        )
+    }
+}
+
 /// Block helpers for the room templates: A's shared ones plus `rooms/layouts/_form`.
 mod filters {
     pub use crate::helpers::filters::*;
@@ -396,8 +661,8 @@ mod filters {
     use askama::{Template, Values};
 
     use super::{FormLayout, FormRoom, RoomKind};
-    use crate::helpers::Html;
     use crate::ViewContext;
+    use crate::helpers::Html;
 
     /// `render layout: "rooms/layouts/form", locals: { room: } do ... end`.
     pub fn room_form(
@@ -408,44 +673,97 @@ mod filters {
         can_administer: &bool,
         kind: RoomKind,
     ) -> askama::Result<Html> {
-        let layout = FormLayout { ctx, room, can_administer: *can_administer, kind, content: content.to_string() };
+        let layout = FormLayout {
+            ctx,
+            room,
+            can_administer: *can_administer,
+            kind,
+            content: content.to_string(),
+        };
         Ok(Html::from(askama::filters::Safe(layout.render()?)))
     }
 }
 
-fn default_involvement()->String { "mentions".into() }
+fn default_involvement() -> String {
+    "mentions".into()
+}
 /// Trusted output supplied by WS8b-m (and WS13/WS17 for configured header/OOO children).
 /// These fragments are page inputs, never a shared fragment cache or broadcast payload.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct ShellComponents {
-    pub pins_panel:String,
-    pub thread_panel:String,
-    pub huddle_header:String,
-    pub ooo_notices:String,
-    pub poll_builder:String,
-    pub message_template:Option<String>,
-    pub composer:Option<String>,
-    pub message_list:Option<String>,
+    #[serde(default)]
+    pub pins_count: i64,
+    #[serde(default)]
+    pub thread_panel_name: Option<String>,
+    pub pins_panel: String,
+    pub thread_panel: String,
+    pub huddle_header: String,
+    pub ooo_notices: String,
+    pub poll_builder: String,
+    pub message_template: Option<String>,
+    pub composer: Option<String>,
+    pub message_list: Option<String>,
 }
 /// Stable WS8b-m entry point. Until its list adapter lands, an empty collection emits zero
 /// bytes, exactly as Rails' `render partial: "messages/message", collection: []` does.
-pub fn room_message_list(ctx:&ViewContext, show:&ShowView)->h::Html {
-    if let Some(html) = &show.shell.message_list { return h::raw(html.clone()); }
-    if show.messages.is_empty() { return h::raw(String::new()); }
+pub fn room_message_list(ctx: &ViewContext, show: &ShowView) -> h::Html {
+    if let Some(html) = &show.shell.message_list {
+        return h::raw(html.clone());
+    }
+    if show.messages.is_empty() {
+        return h::raw(String::new());
+    }
     // The divider belongs to this viewer's list, outside all shared message-cache entries.
-    let mut html=String::new();
-    for (index,message) in show.messages.iter().enumerate() {
-        let divider_here=show.unread_divider_index==Some(index);
+    let mut html = String::new();
+    for (index, message) in show.messages.iter().enumerate() {
+        let divider_here = show.unread_divider_index == Some(index);
         if divider_here {
             html.push_str("\n      ");
-            html.push_str(&UnreadDivider{unread_count:show.unread_count}.render().expect("unread divider renders"));
+            html.push_str(
+                &UnreadDivider {
+                    unread_count: show.unread_count,
+                }
+                .render()
+                .expect("unread divider renders"),
+            );
         }
-        html.push_str(if divider_here {"\n      "} else {"\n    "});
-        html.push_str(&crate::messages::cached_message_item(ctx,message).to_string());
+        html.push_str(if divider_here { "\n      " } else { "\n    " });
+        html.push_str(&crate::messages::cached_message_item(ctx, message).to_string());
     }
     html.push_str("\n  ");
     h::raw(html)
 }
 #[derive(Template)]
-#[template(path="messages/_unread_divider.html")]
-struct UnreadDivider {unread_count:i64}
+#[template(path = "messages/_unread_divider.html")]
+struct UnreadDivider {
+    unread_count: i64,
+}
+
+/// `rooms/join`: alive open-room preview for a nonmember.
+#[derive(Template)]
+#[template(path = "rooms/join.html", blocks = ["head", "content", "nav"])]
+pub struct JoinPage<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub id: i64,
+    pub name: &'a str,
+}
+impl Page for JoinPage<'_> {
+    fn page_title(&self) -> Option<String> {
+        Some(format!("Join #{}", self.name))
+    }
+    fn body_class(&self) -> Option<&str> {
+        Some("sidebar room-workspace")
+    }
+    fn has_sidebar(&self) -> bool {
+        true
+    }
+}
+impl JoinPage<'_> {
+    fn join_button(&self) -> h::Html {
+        h::button_to(
+            &campfire_routes::join_room(self.id),
+            h::attrs().class("btn btn--reversed"),
+            "Join channel",
+        )
+    }
+}
