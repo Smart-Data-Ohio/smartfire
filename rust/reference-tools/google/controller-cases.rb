@@ -49,7 +49,10 @@ end
 def observation(client,before,call_before)
   user=User.find_by!(name:'Kevin')
   {
-    status:client.response.status,location:client.response.location,flash:client.request.flash.to_hash,
+    status:client.response.status,location:client.response.location,flash:client.response.redirect? ? client.request.flash.to_hash : {},
+    device_count:TwoFactorRememberedDevice.where(user_id:127326141).count,
+    backup_count:TwoFactorBackupCode.joins(:two_factor_credential).where(two_factor_credentials:{user_id:127326141},used_at:nil).count,
+    credential_enabled:User.find(127326141).two_factor_enabled?,
     calls:$controller_calls[call_before..],delta:counts.zip(before).map { |a,b| a-b },
     markers:client.request.session.to_h.slice('two_factor_reauthenticated_at','sudo_verified_at'),
     flow_present:client.request.session[:google_sign_in_request].present?,
@@ -66,6 +69,7 @@ end
 %w[success wrong_nonce wrong_domain subject_taken already_linked signed_out other_member unavailable cancelled expired_flow anonymous unconfigured].each { |scenario|specs << {purpose:'link',scenario:} }
 [nil,[],42,'unexpected',{'id_token'=>[]},{'id_token'=>{}}].each { |payload| specs << {purpose:'sign_in',scenario:'token_shape',payload:} }
 [nil,[],42,{'keys'=>nil},{'keys'=>'unexpected'},{'keys'=>[nil,42,'invalid',{'kty'=>'RSA','kid'=>[],'n'=>{},'e'=>42}]}].each { |payload| specs << {purpose:'sign_in',scenario:'key_shape',payload:} }
+%w[consume_backup consume_device consume_all_devices consume_disable before_reauth_expiry at_reauth_expiry after_reauth_expiry wrong_credential_preserves].each { |scenario|specs << {purpose:'reauth',scenario:} }
 rows=[]
 specs.each_with_index do |spec,index|
   ActiveRecord::Base.transaction(requires_new:true) do
@@ -89,6 +93,10 @@ specs.each_with_index do |spec,index|
     end
     client=ActionDispatch::Integration::Session.new(Rails.application);client.host! 'campfire.test'
     sign_in(client,actor) unless purpose=='sign_in' || scenario=='anonymous'
+    device = nil
+    if %w[consume_device consume_all_devices].include?(scenario)
+      device, = TwoFactorRememberedDevice.create_for!(actor,user_agent:"Controller fixture",ip_address:"127.0.0.1")
+    end
     before=counts
     path={'reauth'=>'/two_factor_reauthentication','sudo'=>'/sudo/google','link'=>'/user/profile/google_sign_in_link','sign_in'=>'/session/google'}.fetch(purpose)
     $controller_calls=[];$controller_transport=false;$controller_key_payload=JWKS
@@ -100,6 +108,7 @@ specs.each_with_index do |spec,index|
       if scenario=='signed_out' || scenario=='other_member'
         client.delete('/session')
         sign_in(client,jz) if scenario=='other_member'
+      client.get(scenario=='other_member' ? '/users/me/profile' : '/session/new') if %w[signed_out other_member].include?(scenario)
       end
       $controller_now=BASE+601 if scenario=='expired_flow'
       auth_offset={'stale'=>-360,'before_auth_boundary'=>-331,'at_auth_boundary'=>-330,'after_auth_boundary'=>-329}.fetch(scenario,0)
@@ -112,6 +121,24 @@ specs.each_with_index do |spec,index|
       call_before=$controller_calls.length
       client.get('/session/google/callback',params:{state:query['state'],code:'fixture-code',**(scenario=='cancelled' ? {error:'access_denied'} : {})})
       result=observation(client,before,call_before)
+      if purpose=='reauth'
+        # The UI follows the callback redirect before submitting its protected form.
+        client.get(client.response.location)
+        $controller_now=BASE+{'before_reauth_expiry'=>599,'at_reauth_expiry'=>600,'after_reauth_expiry'=>601}.fetch(scenario,0)
+        actions=case scenario
+        when 'consume_device' then [['delete',"/two_factor_remembered_devices/#{device.id}",{}]]
+        when 'consume_all_devices' then [['delete','/two_factor_remembered_devices',{}]]
+        when 'consume_disable' then [['delete','/two_factor_setup',{}]]
+        when 'consume_backup' then [['post','/two_factor_backup_codes',{}],['post','/two_factor_backup_codes',{}]]
+        when 'wrong_credential_preserves' then [['post','/two_factor_backup_codes',{reauth:'wrong-credential'}],['post','/two_factor_backup_codes',{}]]
+        else [['post','/two_factor_backup_codes',{}]]
+        end
+        result[:protected]=actions.map do |method,path,params|
+          call_before=$controller_calls.length
+          client.public_send(method,path,params:)
+          observation(client,before,call_before)
+        end
+      end
       if scenario=='replay'
         call_before=$controller_calls.length
         client.get('/session/google/callback',params:{state:query['state'],code:'fixture-code'})

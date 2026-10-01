@@ -36,7 +36,10 @@ async fn observation(
         let identities=c.prepare("SELECT user_id,subject,email,domain FROM google_identities ORDER BY user_id")?.query_map([],|r|Ok(json!({"user_id":r.get::<_,i64>(0)?,"subject":r.get::<_,String>(1)?,"email":r.get::<_,String>(2)?,"domain":r.get::<_,String>(3)?})))?.collect::<rusqlite::Result<Vec<_>>>()?;
         let audits=c.prepare("SELECT action,actor_id,target_id,target_type,target_label,details FROM audit_logs ORDER BY id")?.query_map([],|r|Ok(json!({"action":r.get::<_,String>(0)?,"actor_id":r.get::<_,Option<i64>>(1)?,"target_id":r.get::<_,Option<i64>>(2)?,"target_type":r.get::<_,Option<String>>(3)?,"target_label":r.get::<_,Option<String>>(4)?,"details":r.get::<_,Value>(5)?})))?.collect::<rusqlite::Result<Vec<_>>>()?;
         let user=campfire_db::User::find(c,KEVIN)?;
-        Ok(json!({"identities":identities,"audits":audits,"email":user.email_address,"password_preserved":user.password_digest==password}))
+        let device_count:i64=c.query_row("SELECT count(*) FROM two_factor_remembered_devices WHERE user_id=?",[DAVID],|r|r.get(0))?;
+        let backup_count:i64=c.query_row("SELECT count(*) FROM two_factor_backup_codes b JOIN two_factor_credentials c ON c.id=b.two_factor_credential_id WHERE c.user_id=? AND b.used_at IS NULL",[DAVID],|r|r.get(0))?;
+        let credential_enabled=campfire_db::TwoFactorCredential::for_user(c,DAVID)?.is_some_and(|c|c.enabled());
+        Ok(json!({"identities":identities,"audits":audits,"email":user.email_address,"password_preserved":user.password_digest==password,"device_count":device_count,"backup_count":backup_count,"credential_enabled":credential_enabled}))
     }).await.unwrap();
     let counts = a
         .db()
@@ -60,11 +63,15 @@ async fn observation(
             .get("google_sign_in_request")
             .is_some_and(|v| v.is_object())
     );
-    state["flash"] = cookie
-        .get("flash")
-        .and_then(|f| f.get("flashes"))
-        .cloned()
-        .unwrap_or(json!({}));
+    state["flash"] = if reply.status.is_redirection() {
+        cookie
+            .get("flash")
+            .and_then(|f| f.get("flashes"))
+            .cloned()
+            .unwrap_or(json!({}))
+    } else {
+        json!({})
+    };
     state["delta"] = json!(
         counts
             .iter()
@@ -150,6 +157,25 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             "/users/me/profile"
         })
         .await;
+        let device = if matches!(scenario, "consume_device" | "consume_all_devices") {
+            Some(
+                a.db()
+                    .write(move |tx| {
+                        Ok(campfire_db::TwoFactorRememberedDevice::create_for(
+                            tx,
+                            actor,
+                            Some("Controller fixture"),
+                            Some("127.0.0.1"),
+                        )?
+                        .0
+                        .id)
+                    })
+                    .await
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
         let before = a
             .db()
             .read(|c| {
@@ -195,6 +221,12 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
                 if scenario == "other_member" {
                     b = a.sign_in(jz).await;
                 }
+                b.get(if scenario == "other_member" {
+                    "/users/me/profile"
+                } else {
+                    "/session/new"
+                })
+                .await;
             }
             if scenario == "expired_flow" {
                 clock.advance(jiff::SignedDuration::from_secs(601));
@@ -258,6 +290,45 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             );
             let cb = b.get(&callback_path).await;
             let mut observed = observation(&a, &b, &cb, &before, &r, 0, &password).await;
+            if purpose == "reauth" {
+                // Follow the callback exactly as the real profile confirmation UI does.
+                b.get(cb.location().unwrap()).await;
+                clock.advance(jiff::SignedDuration::from_secs(match scenario {
+                    "before_reauth_expiry" => 599,
+                    "at_reauth_expiry" => 600,
+                    "after_reauth_expiry" => 601,
+                    _ => 0,
+                }));
+                let mut requests = match scenario {
+                    "consume_device" => vec![Req::new(
+                        Method::DELETE,
+                        &format!("/two_factor_remembered_devices/{}", device.unwrap()),
+                    )],
+                    "consume_all_devices" => {
+                        vec![Req::new(Method::DELETE, "/two_factor_remembered_devices")]
+                    }
+                    "consume_disable" => vec![Req::new(Method::DELETE, "/two_factor_setup")],
+                    "consume_backup" => vec![
+                        Req::new(Method::POST, "/two_factor_backup_codes"),
+                        Req::new(Method::POST, "/two_factor_backup_codes"),
+                    ],
+                    "wrong_credential_preserves" => vec![
+                        Req::new(Method::POST, "/two_factor_backup_codes")
+                            .form(&[("reauth", "wrong-credential")]),
+                        Req::new(Method::POST, "/two_factor_backup_codes"),
+                    ],
+                    _ => vec![Req::new(Method::POST, "/two_factor_backup_codes")],
+                };
+                let mut protected = Vec::new();
+                for request in requests.drain(..) {
+                    let call_before = r.calls.lock().unwrap().len();
+                    let response = b.write(request).await;
+                    protected.push(
+                        observation(&a, &b, &response, &before, &r, call_before, &password).await,
+                    );
+                }
+                observed["protected"] = json!(protected);
+            }
             if scenario == "replay" {
                 let calls = r.calls.lock().unwrap().len();
                 let replay = b.get(&callback_path).await;
@@ -275,5 +346,5 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
             row["spec"]
         );
     }
-    println!("Pinned Rails Google controller observations: 58 exercised; 0 skipped");
+    println!("Pinned Rails Google controller observations: 66 exercised; 0 skipped");
 }

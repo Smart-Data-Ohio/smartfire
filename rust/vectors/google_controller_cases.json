@@ -26,6 +26,9 @@
         "flash": {
           "notice": "Confirmed with Google. Continue with what you were doing."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -58,6 +61,53 @@
             "target_type": "User",
             "target_label": "David <david@37signals.com>",
             "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 200,
+            "location": null,
+            "flash": {},
+            "device_count": 1,
+            "backup_count": 10,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.backup_codes.regenerate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
           }
         ]
       }
@@ -86,6 +136,9 @@
         "flash": {
           "alert": "That Google account is not linked here. Confirm with the Google account you sign in with."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -108,7 +161,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -135,6 +220,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -157,7 +245,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -184,6 +304,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -206,7 +329,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -233,6 +388,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -255,7 +413,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -282,6 +472,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -304,7 +497,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -331,6 +556,9 @@
         "flash": {
           "notice": "Confirmed with Google. Continue with what you were doing."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -363,6 +591,53 @@
             "target_type": "User",
             "target_label": "David <david@37signals.com>",
             "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 200,
+            "location": null,
+            "flash": {},
+            "device_count": 1,
+            "backup_count": 10,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.backup_codes.regenerate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
           }
         ]
       }
@@ -391,6 +666,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -413,7 +691,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -440,6 +750,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -462,7 +775,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -489,6 +834,9 @@
         "flash": {
           "alert": "Google is unavailable right now. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -510,7 +858,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -537,6 +917,9 @@
         "flash": {
           "alert": "Google confirmation was cancelled."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -556,7 +939,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -581,6 +996,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -600,7 +1018,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -627,6 +1077,9 @@
         "flash": {
           "notice": "Confirmed with Google. Continue with what you were doing."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -661,12 +1114,60 @@
             "details": {}
           }
         ],
+        "protected": [
+          {
+            "status": 200,
+            "location": null,
+            "flash": {},
+            "device_count": 1,
+            "backup_count": 10,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.backup_codes.regenerate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ],
         "replay": {
           "status": 302,
           "location": "http://campfire.test/",
-          "flash": {
-            "notice": "Confirmed with Google. Continue with what you were doing."
-          },
+          "flash": {},
+          "device_count": 1,
+          "backup_count": 10,
+          "credential_enabled": true,
           "calls": [],
           "delta": [
             0,
@@ -674,9 +1175,7 @@
             0,
             0
           ],
-          "markers": {
-            "two_factor_reauthenticated_at": 1772467200
-          },
+          "markers": {},
           "flow_present": false,
           "identities": [
             {
@@ -691,6 +1190,14 @@
           "audits": [
             {
               "action": "two_factor.reauthenticate",
+              "actor_id": 127326141,
+              "target_id": 127326141,
+              "target_type": "User",
+              "target_label": "David <david@37signals.com>",
+              "details": {}
+            },
+            {
+              "action": "two_factor.backup_codes.regenerate",
               "actor_id": 127326141,
               "target_id": 127326141,
               "target_type": "User",
@@ -718,6 +1225,9 @@
         "flash": {
           "alert": "Google confirmation needs a linked Google account."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -750,6 +1260,9 @@
         "flash": {
           "alert": "Google confirmation needs a linked Google account."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -796,6 +1309,9 @@
         "flash": {
           "alert": "Google sign-in expired. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -815,7 +1331,37 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/session/new",
+            "flash": {},
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              -1,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -840,6 +1386,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -859,7 +1408,39 @@
         ],
         "email": "kevin@37signals.com",
         "password_preserved": true,
-        "audits": []
+        "audits": [],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": []
+          }
+        ]
       }
     },
     {
@@ -884,6 +1465,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -946,6 +1530,9 @@
         "flash": {
           "alert": "That Google account is not the one linked to your account."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1007,6 +1594,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1056,6 +1646,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1105,6 +1698,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1154,6 +1750,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1201,6 +1800,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1263,6 +1865,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1312,6 +1917,9 @@
         "flash": {
           "alert": "Google confirmation failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1361,6 +1969,9 @@
         "flash": {
           "alert": "Google is unavailable right now. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -1409,6 +2020,9 @@
         "flash": {
           "alert": "Google confirmation was cancelled."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -1453,6 +2067,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -1497,6 +2114,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1537,6 +2157,9 @@
           "status": 302,
           "location": "http://campfire.test/",
           "flash": {},
+          "device_count": 1,
+          "backup_count": 0,
+          "credential_enabled": true,
           "calls": [],
           "delta": [
             0,
@@ -1590,6 +2213,9 @@
         "flash": {
           "alert": "Google confirmation is not available for your account."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -1622,6 +2248,9 @@
         "flash": {
           "alert": "Google confirmation is not available for your account."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -1668,6 +2297,9 @@
         "flash": {
           "alert": "Google sign-in expired. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -1712,6 +2344,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -1756,6 +2391,9 @@
         "flash": {
           "notice": "Google sign-in linked to kevin.w@smartdata.net."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1814,6 +2452,9 @@
         "flash": {
           "alert": "Google linking failed. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1854,6 +2495,9 @@
         "flash": {
           "alert": "Only @smartdata.net and @cnbssoftware.com Google accounts can be linked."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1894,6 +2538,9 @@
         "flash": {
           "alert": "That Google account already signs in as another member."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -1936,6 +2583,9 @@
         "flash": {
           "notice": "Google sign-in is already linked."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -1980,6 +2630,9 @@
         "flash": {
           "alert": "Google sign-in expired. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -2015,6 +2668,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -2052,6 +2708,9 @@
         "flash": {
           "alert": "Google is unavailable right now. Try again."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -2091,6 +2750,9 @@
         "flash": {
           "alert": "Google linking was cancelled."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -2126,6 +2788,9 @@
         "status": 302,
         "location": "http://campfire.test/",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -2156,6 +2821,9 @@
         "status": 302,
         "location": "http://campfire.test/session/new",
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -2186,6 +2854,9 @@
         "status": 404,
         "location": null,
         "flash": {},
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [],
         "delta": [
           0,
@@ -2224,6 +2895,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -2264,6 +2938,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -2304,6 +2981,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -2344,6 +3024,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -2386,6 +3069,9 @@
         "flash": {
           "alert": "Google sign-in failed. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -2439,6 +3125,9 @@
         "flash": {
           "alert": "Google sign-in failed. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token"
         ],
@@ -2490,6 +3179,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -2531,6 +3223,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -2572,6 +3267,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -2615,6 +3313,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -2658,6 +3359,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -2711,6 +3415,9 @@
         "flash": {
           "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
         },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
         "calls": [
           "token",
           "keys"
@@ -2727,6 +3434,960 @@
         "email": "kevin@37signals.com",
         "password_preserved": true,
         "audits": []
+      }
+    },
+    {
+      "index": 58,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "consume_backup"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 200,
+            "location": null,
+            "flash": {},
+            "device_count": 1,
+            "backup_count": 10,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.backup_codes.regenerate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          },
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 10,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.backup_codes.regenerate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 59,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "consume_device"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "device_count": 2,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "notice": "Device forgotten. It will ask for a code at next sign-in."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 60,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "consume_all_devices"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "device_count": 2,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "notice": "All devices forgotten. Every browser will ask for a code at next sign-in."
+            },
+            "device_count": 0,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.devices.revoke_all",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 61,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "consume_disable"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/two_factor_setup",
+            "flash": {
+              "notice": "Two-step sign-in is off. Set it up again to keep signing in."
+            },
+            "device_count": 0,
+            "backup_count": 0,
+            "credential_enabled": false,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.disable",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 62,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "before_reauth_expiry"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 200,
+            "location": null,
+            "flash": {},
+            "device_count": 1,
+            "backup_count": 10,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.backup_codes.regenerate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 63,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "at_reauth_expiry"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 64,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "after_reauth_expiry"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 65,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "wrong_credential_preserves"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "device_count": 1,
+        "backup_count": 0,
+        "credential_enabled": true,
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "protected": [
+          {
+            "status": 302,
+            "location": "http://campfire.test/users/me/profile",
+            "flash": {
+              "alert": "Enter your authenticator code or password to continue."
+            },
+            "device_count": 1,
+            "backup_count": 0,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {
+              "two_factor_reauthenticated_at": 1772467200
+            },
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          },
+          {
+            "status": 200,
+            "location": null,
+            "flash": {},
+            "device_count": 1,
+            "backup_count": 10,
+            "credential_enabled": true,
+            "calls": [],
+            "delta": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "markers": {},
+            "flow_present": false,
+            "identities": [
+              {
+                "user_id": 127326141,
+                "subject": "controller-member",
+                "email": "david@smartdata.net",
+                "domain": "smartdata.net"
+              }
+            ],
+            "email": "kevin@37signals.com",
+            "password_preserved": true,
+            "audits": [
+              {
+                "action": "two_factor.reauthenticate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              },
+              {
+                "action": "two_factor.backup_codes.regenerate",
+                "actor_id": 127326141,
+                "target_id": 127326141,
+                "target_type": "User",
+                "target_label": "David <david@37signals.com>",
+                "details": {}
+              }
+            ]
+          }
+        ]
       }
     }
   ]

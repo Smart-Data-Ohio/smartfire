@@ -770,20 +770,20 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/two_factor/reauthentications_controller_test.rb (Google/Calendar/Drive cases only)
 
-- **Deferred** — create redirects linked members to Google — WS14g adapter + WS9 integration.
-- **Deferred** — create refuses members without a linked Google account — WS14g adapter + WS9 integration.
-- **Deferred** — create refuses when Google is not configured — WS14g adapter + WS9 integration.
-- **Deferred** — create forces a fresh Google sign-in — WS14g adapter + WS9 integration.
-- **Deferred** — callback refuses a different Google account — WS14g adapter + WS9 integration.
-- **Deferred** — callback refuses a stale Google authentication — WS14g adapter + WS9 integration.
+- **Ported** — create redirects linked members to Google — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete callback/audit plus real protected actions; 599/600/601-second consumption boundary).
+- **Ported** — create refuses members without a linked Google account — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete callback/audit plus real protected actions; 599/600/601-second consumption boundary).
+- **Ported** — create refuses when Google is not configured — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete callback/audit plus real protected actions; 599/600/601-second consumption boundary).
+- **Ported** — create forces a fresh Google sign-in — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete callback/audit plus real protected actions; 599/600/601-second consumption boundary).
+- **Ported** — callback refuses a different Google account — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete callback/audit plus real protected actions; 599/600/601-second consumption boundary).
+- **Ported** — callback refuses a stale Google authentication — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete callback/audit plus real protected actions; 599/600/601-second consumption boundary).
 
 ## test/controllers/two_factor/remembered_devices_controller_test.rb (Google/Calendar/Drive cases only)
 
-- **Deferred** — destroy_all accepts a completed Google re-auth — WS14g adapter + WS9 integration.
+- **Ported** — destroy_all accepts a completed Google re-auth — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete callback/audit plus real protected actions; 599/600/601-second consumption boundary).
 
 ## test/controllers/two_factor/setups_controller_test.rb (Google/Calendar/Drive cases only)
 
-- **Deferred** — destroy accepts a completed Google re-auth — WS14g adapter + WS9 integration.
+- **Ported** — destroy accepts a completed Google re-auth — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete callback/audit plus real protected actions; 599/600/601-second consumption boundary).
 
 ## test/controllers/users/profiles_two_factor_test.rb (Google/Calendar/Drive cases only)
 
@@ -832,4 +832,4 @@ The remaining session/link/step-up controller cases include account history/pass
 
 The real combined RSVP/Meet runner now uses a frozen clock, deterministic inbound-scope capture and a change-driven committed queue drain. Its original five-second deadline and normal runner concurrency remain. The application encryption provider now caches its 65536-round derivation per Secrets, matching Rails; repeated derivation was the CPU bottleneck. Thirty trials at eight concurrent tests on four CPUs passed after the fix (5/30 before it).
 
-The new controller-cases probe captures 58 complete Rails request observations, including signed-out/other-member callbacks, domain/nonce/subject checks, signed-in replay, malformed token/key payloads, and strict auth_time cutoff ±1 second for both reauth and sudo. Protected-action consumption, whole-page composition and Google-only provisioning transitions still have their own remaining ledger entries; observing markers alone does not claim those interactions.
+The new controller-cases probe captures 66 complete Rails request observations, including signed-out/other-member callbacks, domain/nonce/subject checks, signed-in replay, malformed token/key payloads, and strict auth_time cutoff ±1 second for both reauth and sudo. Reauth observations follow the callback and exercise backup rotation (including single consumption), device removal, disabling two factor, wrong credentials, and the 599/600/601-second expiration boundary. Sudo protected-action continuation, whole-page composition and Google-only provisioning transitions still have their own remaining ledger entries. Eight additional controller declarations are now fully mapped; these are outside the primary 611-case count.
