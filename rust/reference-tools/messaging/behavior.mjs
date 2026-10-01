@@ -324,6 +324,10 @@ async function acceptance(base,caseName,probe={}) {
           assert.equal(await page.evaluate(()=>window.markdownPayloadExecuted===true),false);
         }
       } else if(caseName==='Markdown replies and file attachments remain usable') {
+        const uploadResponses=[];
+        author.on('response',response=>{
+          if(response.request().method()==='POST'&&new URL(response.url()).pathname==='/rooms/654632876/messages') uploadResponses.push({status:response.status(),type:response.headers()['content-type']});
+        });
         const source='**A useful point** with `inline code`.';
         await submit(author,source);
         const parent=messages(author).filter({has:author.locator('strong').filter({hasText:'A useful point'})});
@@ -338,7 +342,13 @@ async function acceptance(base,caseName,probe={}) {
         await author.getByRole('button',{name:'Send Message',exact:true}).click();
         for(const page of [author,recipient]) {
           const attachment=messages(page).filter({has:page.locator('.message__reply-preview').filter({hasText:'A useful point'})});
-          await attachment.waitFor();
+          try {await attachment.waitFor();}
+          catch(error) {
+            console.error('WS8bm attachment preview diagnostics:',base,uploadResponses,
+              await page.locator('.message[data-message-id]').evaluateAll(rows=>rows.map(row=>({id:row.dataset.messageId,preview:row.querySelector('.message__reply-preview')?.textContent,body:row.querySelector('[data-reply-target="body"]')?.textContent}))),
+              await author.locator('#composer').evaluate(node=>({busy:node.getAttribute('aria-busy'),reply:node.querySelector('[data-composer-target="replyTo"]')?.value,feedback:node.querySelector('[data-composer-target="feedback"]')?.textContent})));
+            throw error;
+          }
           try {await attachment.getByRole('link',{name:'Download markdown-workspace-attachment.txt',exact:true}).waitFor();}
           catch(error) {console.error('WS8bm attachment delivery:',base,await attachment.textContent());throw error;}
         }
@@ -414,6 +424,9 @@ async function acceptance(base,caseName,probe={}) {
         assert.equal(await messages(author).filter({hasText:"Third time's a charm."}).count(),0);
       } else {throw new Error(`unimplemented case ${caseName}`);}
     }
+  } catch(error) {
+    console.error('WS8bm failed application:',base,caseName);
+    throw error;
   } finally {for(const context of contexts) await context.close();}
 }
 try {
