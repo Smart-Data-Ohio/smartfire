@@ -1,74 +1,132 @@
-# WS12 continuation: board rooms, lists and commit callbacks — partial
+# WS12 continuation: board post reads — partial
 
-Verified source/pushed code: `759d9d5395fa6735128da063c0cbdf33d4e405ca`, branch `rust/ws12-boards`.
-This continues the separately reviewed stars/activity slice at `6f211929` (`rust/ws12a-stars-activity`).
-The full WS12 assignment is **partial**. WS12-owned implementation remains; this is **not owner-blocked-only**.
+Branch: `rust/ws12-boards`. Post-read implementation: `8dddfd4e373a75d03cb1ae9bb4116f50e5631da4`. Verified source includes integration/fixture commit `e2e3633b7bb6fe91df421c591d5048bc321be3b0` (pushed).
 
-## What changed
+**Partial; not owner-blocked-only.** Substantial WS12-owned work remains. The room/list slice is preserved in the [previous report](https://github.com/Smart-Data-Ohio/smartfire/blob/0df11aec95f49c6f1d62dfa91a3cd3a9948e8116/rust/plans/ws12-boards-report.md). Historical commands there are not represented as rerun here.
 
-- `crates/campfire/src/controllers/rooms/boards.rs`, controller bindings and board dispatch in `rooms.rs`: board room show/new/create/edit/update, creation restrictions, creator/admin updates, memberships, room/membership audits, board-only scope, icon validation, correct forms and sidebar/header broadcasts. Board rooms retain their STI type; actors may remove their own memberships as Rails permits.
-- `crates/db/src/models/channel_thread/board.rs`: full-relation status/owner/tag filters, cumulative 50-row windows plus a probe, page clamp/coercion, grouped tags/replies/links, owner availability, and board creation/update/deletion row callbacks. New posts mark only visible, disconnected, unmuted non-creators unread and publish only those unread signals.
-- `crates/db/src/database.rs`: record callback registration/coalescing, keeping first callback position and the last save's flags; savepoint rollback restores earlier registrations. This after-commit API is for callbacks/broadcasts. Durable jobs must still be persisted inside the source transaction.
-- `crates/db/src/models/channel_thread.rs`, `thread_tag.rs`, `broadcasts.rs`: board callbacks registered from actual model writes; tag parent validation and tag create/destroy row replacements; dependent tag deletion does not replace deleted post rows. `Partial::BoardRow` supplies plain rendering inputs.
-- `crates/campfire/src/channels/sink.rs`, `controllers/presenters/boards.rs`: background row rendering through the same presenter as HTTP. Tags/reply/link counts and human owner facts are grouped. Agent availability reads use existing public Agent APIs, with one lookup per distinct agent; no WS11 code was copied.
-- `crates/views/src/rooms/boards.rs`, board index/nav/row/new/edit/form templates, `rooms.rs`, `messages.rs`, and room header overflow: explicit board kind and paths; exact list/column/form HTML; empty/filtered boards, cumulative pagination, unavailable owners, tags/counts, digest display, member panel, sidebar and real signed Cable stream. The temporary shared edit-layout extension from the first commit was removed; the shared layout now matches main again.
-- `crates/db/src/tests/board_test.rs`, `controllers/rooms/boards_{read_tests,domain_tests,rails_cases}.rs`: 14 new DB tests and 23 new app tests. The reusable socket helper in `opens_rails_cases.rs` gained a channel argument while preserving its existing Turbo-channel entry point.
-- `reference-tools/boards/{build_reference.py,source-hashes.json,read_views.rb,domain.rb,browser.py,browser.mjs,discriminate.py}` and `vectors/boards_{read,domain}.json`: real Rails reference/hash checks, complete HTTP and fragment byte vectors, callback/filter oracle, browser interactions and rejecting policy/pagination mutations.
-- `reference-tools/users/ws12_inventory.py`, `plans/ws12-rails-cases.json`: each Rails declaration is individually ported or deferred with its owner/evidence.
+## Changes by file
 
-No Rails edits, schema/dependency/lockfile changes, asset overrides, masks, normalization, allowlist changes or new ignores. No screenshots/pixel comparisons or PR. The Python model server was not touched.
+- `crates/db/src/models/channel_thread/work.rs`: shared read policies for active human parent-room members; manager/owner work controls; manager-only assignment; human/agent choices. Uses merged WS11's `Agent::for_user`, `active` and `can("post_messages", room)`, including revoked grants, suspension, membership removal and the existing legacy-grant fallback.
+- `crates/campfire/src/controllers/channel_threads.rs` and `channel_threads/writes.rs`: complete board HTML show/new forms, Turbo frames, access denial and initial Markdown query coercion. Post/work mutations remain unfinished.
+- `controllers/presenters/board_posts.rs`: result Markdown through existing rich-text APIs, run URL, owner availability, audit-history display kinds, messages/agent steps/composer, linked Drive/PR/event displays and unlinked upcoming-event choices. Private PR titles stay hidden.
+- `crates/views/src/channel_threads/board.rs`, `templates/channel_threads/{new,board_post}.html`, `templates/threads/work/links/_box.html`: exact layout/forms, tags/status/owner/lifecycle controls, pinned result, history/links, pending-message template/current-room metadata, streams and composer. `_conversation.html` preserves Rails' empty-collection whitespace and normal/anchored panes.
+- `controllers/messages/payload.rs`: shared work read policies and real Agent APIs replace duplicate eligibility SQL.
+- `crates/db/src/database.rs`, `models/channel_thread.rs`, `models/channel_thread/board.rs`, `models/thread_tag.rs`: main-merge integration preserves WS11 ordered per-record callback chains and WS12 last-save/coalescing callbacks under distinct API names. Board removal frames share the thread's ordered callback record and run before a failing agent-ledger hook. Savepoint rollback and committed-job wakeup behavior remain intact.
+- `crates/db/src/tests/work_read_test.rs`: four real DB tests for manager/owner/membership policy, agent eligibility and legacy fallback, unavailable owners, and destruction callback failure order. Fixture SQL creates read states; it does not prove owner mutations.
+- `crates/db/src/tests/agent_lifecycle_test.rs`: commit approval creation/inbox fanout before applying oracle IDs, then assert the retargeted inbox row exists. This fixes a WS11/WS12 fixture interaction without changing production validation or lifecycle expectations.
+- `controllers/channel_threads/{board_read_tests,page_tests}.rs`: 29 complete Rails HTTP responses and updated board/ordinary-work seam expectation. Response status/body comparisons are literal; mismatch files are test-created diagnostic outputs.
+- `reference-tools/boards/{post_views.rb,post-source-hashes.json,post_browser.mjs,post_discriminate.py}`, `browser.py --posts`, `vectors/boards_post_read.json`: actual Rails oracle, hash ledger, browser interactions and deliberately broken implementations. Browser selectors use stable board IDs.
+- `reference-tools/users/ws12_inventory.py`, `plans/ws12-rails-cases.json`: per-declaration owner/evidence. **488 declarations: 76 ported, 3 existing peer cases, 409 deferred.** Three newly closed declarations cover board/channel/nonmember new forms, board header/result/manage controls, and unavailable human/agent owners. Agent-candidate cases that call work writes remain deferred.
 
-## Rails reference and main integration
+No Rails, schema, dependency, lockfile, asset, mask or normalization changes, and no new ignores. No pixel work or PR. The Python model server was not touched.
 
-Reference: `d7c7de92`, plus approved status drift `2e20b24c` and board drift #162/#164/#165.
-The board/work/activity source diff from the pin to `origin/main` contains exactly:
+## Reference and merges
+
+Reference is `d7c7de92` plus approved status drift `2e20b24c` and board drift #162/#164/#165. The board/work/activity files changed since the pin are:
 
 | File | Reference |
 | --- | --- |
-| `app/models/board_automations/nudge_pusher.rb` | origin/main: approved #162 notification tag |
-| `app/views/channel_threads/_board_post.html.erb` | origin/main: approved #164 body class and #165 message template/current-room metadata |
-| `app/views/channel_threads/new.html.erb` | origin/main: approved #164 body class |
+| `app/models/board_automations/nudge_pusher.rb` | origin/main, #162 notification tag |
+| `app/views/channel_threads/_board_post.html.erb` | origin/main, #164 body class and #165 message template/current-room meta |
+| `app/views/channel_threads/new.html.erb` | origin/main, #164 body class |
 
-Those three files were copied from `origin/main` into the actual Rails image. Every other board source in the 18-file ledger is pinned to `d7c7de92`. The cached image tag `ws12-reference:boards-b908ebc2` retains its original name; the rebuilt image's sources are identical to current `origin/main` at `2b05160758307effa035b7d2581618014c46b755`. Both Ruby probes validate the full ledger before running. The approved pane/new-post files are included in the reference; implementing those responses remains below.
+Those actual origin/main files are in `ws12-reference:boards-b908ebc2`; other sources remain pinned. The post probe validates the existing 18-source ledger plus nine post/controller/helper/link/conversation hashes before generating responses. #176 and #183 contain no newer Rails drift in these files.
 
-Merged main's room timezone/cache fixes and PR-refresh deflake with merge commit `fe2048db`. Locked metadata passed after the merge; no conflict or lockfile change. #176 was checked and remains OPEN, with no merge commit. Eligible-agent owner writes and agent services still wait for that merge.
+Requested main `2b051607` was already included. Merged #176/main `7442031dfefe4454a6fc67743a74de322e978ad4` with merge commit `1709790a`, resolving callback and thread create/destroy overlaps while retaining both sides' behavior. Merged #183/main `59ad94de3d0c53dfc15cae95901453f6506a7e83` with merge commit `cb0fa7c5`; that merge only changes test-runner coordination. Locked metadata was rerun after each merge; no lockfile change.
 
-## Validation/callback boundary for written rows
+#181 remains OPEN. Its UserStar/ActivityItem dirty-column writes and operation-snapshot broadcasts remain on `rust/ws12a-stars-activity`; this branch does not duplicate those review fixes. Take main's versions when #181 merges. WS11 is merged: agent mutation integration is now unblocked.
 
-| Writer | Implemented / retained | Remaining |
+## Design and writer audit
+
+Policies/owner choices are HTML-free. Presenters gather read facts; templates format them. Session CSRF/nonces remain request-local; no new cache or broadcast carries them.
+
+| Model | Production writer/validation/callback boundary | Remaining owner |
 | --- | --- | --- |
-| Board room create/update | Existing Rails Room validations, icon normalization/resolution, STI and creator rules; explicit grantees; default mentions; membership change audit; actual room/sidebar/header broadcasts | Generic room destruction is existing WS8 code; automation-dependent cleanup remains with WS12 automations |
-| Board ChannelThread create/settings/tags/destroy | Existing creator/room/name/archive/tracking/tag validations and status creation stamp; board prepend/replace/remove and unread recipients; tag callbacks/no-op/rollback/savepoint behavior | Work status update stamp and eligible-owner writes, pinned result/event/recorder behavior, tag auto-assignment and work-deletion webhooks |
-| ThreadTag create/destroy | Required real parent, presence/format/length/per-post uniqueness; individual after-commit row replacements; no parent touch | No direct tag-update endpoint introduced; HTTP comma-separated tag handling remains with board post endpoints |
-| WorkThreadLink / BoardStaleDigest | Read/group/display only; legal rows in isolated fixture setup | No production writer added or accepted for these models in this slice |
-| SLA/nudges/digests/jobs | No production writer introduced | Full automation validations/callbacks and atomic `BoardNudgeJob` emission remain WS12 |
+| ChannelThread | Read policies/display; existing main writers retained. Destruction callback order changed and tested with a failing committed agent hook. | WS12: post/result/work mutations, full validations, status stamps, independent stale-instance events and deletion side effects |
+| User/Agent/AgentGrant/Membership | Read through existing APIs; tests use actual grant revoke and membership destruction | Existing writer owners; eligible-owner assignment validation remains WS12 |
+| WorkThreadEvent/WorkHandoff/WorkThreadLink | Legal read fixtures only; no new production writers | WS12: authorization, validations, audit writes and callbacks |
+| SLA/nudges/digests/jobs | No new writers | WS12 with WS17: validations/callbacks and source-transaction BoardNudgeJob persistence |
+| ActivityItem/recorder/UserStar | Earlier slice retained without edits; upstream review fixes awaited | WS12 full recorder; WS11-UI consumes domain APIs |
 
-Coalescing is proved for repeated saves of the same model instance and savepoint/transaction rollback. This is not acceptance of independent stale-instance work updates, which remain the next domain slice.
+Earlier board room/thread/tag validation coverage remains documented in the previous report. Read-fixture SQL does not close mutation behavior. No new enqueue is introduced; pending BoardNudgeJob must be persisted inside its source transaction.
 
-## Precise remaining work, in the lead's order
+## Precisely remaining, in requested order
 
-1. **Finish boards (WS12):** board post new/create/show/edit/update/delete HTTP behavior and thread pane, initial/reply content, tags' request coercion, tag assignment rules/auto-assignment, pinned-result write/event/recipients/rendering, run URL writes, and byte vectors for every post/pane/result fragment. Port the four original board system scenarios; the three browser scenarios below cover only the completed read/list behavior.
-2. **Human work (WS12):** convert/remove tracking, eligible human owners, manager versus owner policy, status stamps/changes, handoffs, links, work audit trail, and one event per actual stale-instance/independent-writer change. Existing WS8 helpers are not acceptance of this surface.
-3. **Automations (WS12 with WS17 contract):** SLA rules/nudges/digests and recurring dispatchers, `NudgePushJob`, and source-transaction `BoardNudgeJob { nudge_id }` persistence. Test queue-insert failure through HTTP, clocks, retries, recipients and idempotency; implement automation forms/controllers and cleanup.
-4. **Full recorder/inbox (WS12 with WS11-UI):** all source authorization and fallback association behavior; recipient/notification/agent_work/followed-member policy; grouping/repointing and source hooks; recorder concurrency; replace UI access/state adapters with the existing domain APIs; full inbox/helper/indicator/browser response parity and WS13 invitation integration.
-5. **After WS11 #176 (WS12 with WS11-API):** merge main and use WS11's real models for eligible-agent owner writes and board-post/work-thread/handoff/working-presence services; close the ten WS8b-m thread-work declarations. Read-only seed owner labels use existing APIs; no duplicate WS11 implementation.
+1. **Board mutations (WS12):** post creation with first message/owner/tags; metadata/status/owner/lifecycle/delete endpoints; result edit/clear with timestamps, events, recipients and run URL writes; tag coercion/assignment/auto-assignment. Original four board system scenarios that submit creation/result writes remain deferred; the new read browser checks do not close them.
+2. **Human work (WS12):** convert/remove tracking; eligible owner validation/writes; manager-only assignment/removal and owner status writes; status stamps; independent stale-instance events and concurrency tests; handoffs, link writes and full audit trail. Ordinary-room work HTML remains unfinished.
+3. **Automations (WS12 with WS17):** SLA rules, nudges/digests, forms/controllers, recurring dispatchers, NudgePushJob and atomic `BoardNudgeJob { nudge_id }`. Queue-insert failure through HTTP, FrozenClock timing, recipients, retries/idempotency and cleanup remain.
+4. **Recorder/inbox (WS12 with WS11-UI/WS13):** source authorization/fallback association, notification/agent_work/followed-member recipients, grouping/repointing/source hooks, concurrent idempotency, UI access/state adapter replacement, inbox/helper/indicator/browser parity and invitation integration.
+5. **Agent work (WS12 with WS11-API, now unblocked):** real WS11 board-post/work-thread/handoff/working-presence services and the ten WS8b-m thread-work declarations. Read owner choices are complete; mutations are not.
 
-The inventory contains **488 Rails declarations: 73 ported, 3 existing WS7 peer cases, 412 deferred**. This adds 33 completed declarations to the prior 40: 16 board room controller, 3 board sidebar, 4 board room model, 2 tag model and 8 board-thread declarations. Each other declaration is deferred individually with its owner. The agent grant/candidate mutation cases are explicitly not closed by seed owner-display comparisons.
+Every remaining Rails declaration has an individual owner/reason in `plans/ws12-rails-cases.json`. No unresolved product question is blocking this read slice.
 
 ## Verification receipts
 
-All commands here were rerun. `default` and `first_run` seeds are present; `CI=1` makes absence fail. Render-only oracle tokens/nonces are fixed identically at input; the response bodies are compared as raw strings with no masks or normalization. HTTP comparisons assert raw response bodies, statuses and redirect Locations. Rust write tests use real session-bound CSRF. Rails form-golden writes bypass only the oracle controller's CSRF verification so deterministic fixture token strings can be rendered; browser and actual controller tests use real security paths.
+Commands below were run for this continuation. Reference-built `default`/`first_run` seeds are present; `CI=1` rejects silent seed skips. Render-only nonce/token inputs are fixed identically on both sides, without output masks or normalization. Browser sessions and assets are real.
 
-### Actual reference and seed verification
+### Actual Rails HTTP oracle
 
 ```sh
-python3 rust/reference-tools/boards/build_reference.py
-env PARITY_NAMESPACE=ws12 PARITY_OWNER=ws12 PARITY_RUNTIME=docker PARITY_IMAGE=ws12-reference:boards-b908ebc2 rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze "$PWD/rust/reference-tools/campfire/verify_parity_seed.rb" default
-env PARITY_NAMESPACE=ws12 PARITY_OWNER=ws12 PARITY_RUNTIME=docker PARITY_IMAGE=ws12-reference:boards-b908ebc2 rust/parity/bin/reference runner --seed first_run --time 2026-03-02T16:00:00Z --freeze "$PWD/rust/reference-tools/campfire/verify_parity_seed.rb" first_run
+env PARITY_NAMESPACE=ws12 PARITY_OWNER=ws12 PARITY_RUNTIME=docker PARITY_IMAGE=ws12-reference:boards-b908ebc2 rust/parity/bin/reference exec --seed default --time 2026-03-02T16:00:00Z --freeze -- bin/rails runner --skip-executor /work/reference-tools/boards/post_views.rb > .scratch/board-post-views-final.json 2>.scratch/logs/posts-oracle-final.log
+cmp .scratch/board-post-views-final.json rust/vectors/boards_post_read.json
 ```
 
 ```text
-WS12 board reference: 18 source hashes verified; d7c7de92 plus approved status/board drift
+Rails board post read oracle: 29 complete HTTP responses; approved board drift; no masks
+```
+
+Both exit 0. Cases cover manager/member/frame/prefilled forms, channel/nonmember denial; manager/member/owner/observer post controls, closed/locked/empty/unavailable human or agent, suspended/revoked agents, result/run/history/Drive/public-private PR/event/upcoming choices; normal/anchored/empty panes. The probe requires expected 200/404 statuses, rejecting broken-fixture goldens.
+
+### Real browser behavior
+
+```sh
+env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" python3 rust/reference-tools/boards/browser.py --posts > .scratch/logs/posts-browser.log 2>&1
+```
+
+```text
+Rails board read browser scenarios:
+new-post-form-and-cancel: passed
+post-discussion-template-and-controls: passed
+real-pane-fetch-and-anchor: passed
+WS12 browser board posts: 3 passed; 0 failed; Chromium 153.0.8010.12; real signed sessions, navigation, controls and pane fetches
+Rust board read browser scenarios:
+new-post-form-and-cancel: passed
+post-discussion-template-and-controls: passed
+real-pane-fetch-and-anchor: passed
+WS12 browser board posts: 3 passed; 0 failed; Chromium 153.0.8010.12; real signed sessions, navigation, controls and pane fetches
+```
+
+Owner/tag choices, Cancel navigation, pending-message template/current-room meta, result disclosure/controls and real pane/anchor fetches ran. Unfinished write forms were not submitted. Initial selector failures also occurred on Rails; those harness fixes are not counted as product regressions.
+
+### Failing first and rejecting regressions
+
+The HTTP comparison first reached Rust's missing 501 response versus Rails 200:
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1833 filtered out; finished in 2.20s
+```
+
+```sh
+env CARGO_TARGET_DIR="$PWD/.scratch/target" LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" python3 rust/reference-tools/boards/post_discriminate.py > .scratch/logs/posts-discrimination.log 2>&1
+```
+
+```text
+WS12 post mutation assignment-policy: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1169 filtered out; finished in 0.07s
+WS12 post mutation revoked-agent-grant: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1169 filtered out; finished in 0.08s
+WS12 post mutation deletion-order: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1169 filtered out; finished in 0.09s
+WS12 post discrimination: 3 mutations rejected; sources restored
+```
+
+Mutations permit owner reassignment, ignore revoked grants or defer removal frames behind a failing ledger. Each reaches a real failing assertion; sources restore in finally. Compilation/harness failures are not counted.
+
+### Seed verification
+
+```sh
+env PARITY_NAMESPACE=ws12 PARITY_OWNER=ws12 PARITY_RUNTIME=docker PARITY_IMAGE=ws12-reference:boards-b908ebc2 rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze "$PWD/rust/reference-tools/campfire/verify_parity_seed.rb" default > .scratch/logs/posts-default-seed-check.log 2>&1
+env PARITY_NAMESPACE=ws12 PARITY_OWNER=ws12 PARITY_RUNTIME=docker PARITY_IMAGE=ws12-reference:boards-b908ebc2 rust/parity/bin/reference runner --seed first_run --time 2026-03-02T16:00:00Z --freeze "$PWD/rust/reference-tools/campfire/verify_parity_seed.rb" first_run > .scratch/logs/posts-first-run-seed-check.log 2>&1
+```
+
+```text
 default:
   "passed": 29,
   "failed": 0
@@ -77,132 +135,91 @@ first_run:
   "failed": 0
 ```
 
-### Rails byte/domain oracles
+Both exit 0; checked again against actual Rails during this continuation.
+
+### WS11 fixture integration failure and fresh main baseline
+
+The first fresh workspace run at `8dddfd4e` executed the app successfully, then three DB lifecycle tests failed in fixture setup with `RecordInvalid(Errors([("source", "must exist")]))`:
+
+```text
+test result: ok. 1831 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 799.30s
+test result: FAILED. 1163 passed; 3 failed; 4 ignored; 0 measured; 0 filtered out; finished in 140.56s
+```
+
+The WS11 fixture renamed approvals' primary keys inside their creation transaction; the captured after-commit fanout still used the now-absent original IDs. A separate no-hardlinks clone was explicitly checked out at origin/main `59ad94de`, with the same seeds, before diagnosing the interaction:
 
 ```sh
-env PARITY_NAMESPACE=ws12 PARITY_OWNER=ws12 PARITY_RUNTIME=docker PARITY_IMAGE=ws12-reference:boards-b908ebc2 rust/parity/bin/reference exec --seed default --time 2026-03-02T16:00:00Z --freeze -- bin/rails runner --skip-executor /work/reference-tools/boards/read_views.rb > .scratch/board-read-views.json 2> .scratch/logs/boards-read-oracle-final.log
-cmp .scratch/board-read-views.json rust/vectors/boards_read.json
-env PARITY_NAMESPACE=ws12 PARITY_OWNER=ws12 PARITY_RUNTIME=docker PARITY_IMAGE=ws12-reference:boards-b908ebc2 rust/parity/bin/reference exec --seed default --time 2026-03-02T16:00:00Z --freeze -- bin/rails runner --skip-executor /work/reference-tools/boards/domain.rb > .scratch/board-domain-final.json 2> .scratch/logs/boards-domain-oracle-final.log
-cmp .scratch/board-domain-final.json rust/vectors/boards_domain.json
+git clone --quiet --local --no-hardlinks --branch main . .scratch/posts-main-baseline
+git -C .scratch/posts-main-baseline checkout --detach 59ad94de3d0c53dfc15cae95901453f6506a7e83
+env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch/posts-main-baseline/.scratch" CI=1 CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499 LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" mise exec rust@1.98.1 -- cargo test --manifest-path .scratch/posts-main-baseline/rust/Cargo.toml --locked -p campfire_db agent_lifecycle_test:: -- --test-threads=4 > .scratch/logs/posts-origin-main-lifecycle.log 2>&1
 ```
 
 ```text
-Rails board read oracle: 22 row fragments and 25 complete HTTP responses; approved board drift; no masks
-Rails board domain oracle: 9 filters and 8 committed/rolled-back callback sequences; reference d7c7de92
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1144 filtered out; finished in 0.34s
 ```
 
-Both literal comparisons exit 0 without output. Full response cases include list/columns, odd array/page query shapes, filters/empty boards, cumulative pagination, digest, Turbo frames, new/edit forms for admin/member, redirects, blank-name writes and invalid-icon errors. Rows cover all four statuses, escaped titles, no owner, inactive/revoked human owners, closed/locked lifecycle and existing links. FrozenClock domain vectors compare actual filters, ordering and transaction callback sequences; the query oracle uses Rails' actual loaded relation, not a join-duplicating pluck shortcut.
-
-### Focused seeded tests
-
-```sh
-env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch" CI=1 CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499 LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" mise exec rust@1.98.1 -- cargo test --manifest-path rust/Cargo.toml --locked -p campfire boards_ -- --test-threads=8
-env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch" CI=1 CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499 LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" mise exec rust@1.98.1 -- cargo test --manifest-path rust/Cargo.toml --locked -p campfire_db board_test:: -- --test-threads=8
-```
-
-```text
-test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 1680 filtered out; finished in 35.13s
-test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 960 filtered out; finished in 0.73s
-```
-
-37 new owned Rust tests ran (23 app, 14 DB); the app filter also selects 4 existing peer tests. None skipped/ignored. The live socket test subscribes to the real authorized RoomMessagesChannel, checks create/tag/destroy HTML and rollback silence. Separate controller sockets verify memberships' sidebar/header frames.
-
-### Browser behavior (completed read slice)
-
-```sh
-env CARGO_TARGET_DIR="$PWD/.scratch/target" LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" python3 rust/reference-tools/boards/browser.py
-```
-
-```text
-Rails:
-WS12 browser board reads: 3 passed; 0 failed; Chromium 153.0.8010.12; real signed sessions, GET forms and Stimulus
-Rust:
-WS12 browser board reads: 3 passed; 0 failed; Chromium 153.0.8010.12; real signed sessions, GET forms and Stimulus
-```
-
-Real filter submissions, list/column navigation and all four columns match. The Stimulus check inserts seeded row shapes with changed status/owner/tag attributes, verifies rejection and acceptance, and uses the original controller; actual server socket delivery is tested separately. This is not a claim to have ported the original new-post/result/pane scenarios.
-
-### Rejecting regressions / fail first
-
-```sh
-env CARGO_TARGET_DIR="$PWD/.scratch/target" LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" python3 rust/reference-tools/boards/discriminate.py
-```
-
-```text
-WS12 board mutation manager: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1706 filtered out; finished in 1.10s
-WS12 board mutation room-scope: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1706 filtered out; finished in 1.03s
-WS12 board mutation page-probe: test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 973 filtered out; finished in 0.10s
-WS12 board discrimination: 3 mutations rejected; sources restored
-```
-
-Every mutation reaches a failing assertion; no compile/fixture failure is counted. Sources restore in finally. Historical pre-implementation receipts (preserved raw logs):
-
-```text
-test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 960 filtered out; finished in 0.11s
-test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 1673 filtered out; finished in 1.97s
-```
-
-Those failures expose missing creation/tag/destruction row callbacks and the ordinary-room response at the board URL; the complete HTTP mismatch was 115829 bytes versus Rails' 88063 bytes.
+This is a WS11/WS12 fixture interaction, not an inherited main failure. Commit `e2e3633b` commits normal approval creation/fanout before applying oracle IDs, and asserts real retargeted inbox rows exist. It preserves production validation and all lifecycle vectors/assertions. The complete fresh workspace rerun below includes this correction.
 
 ### Fresh-checkout broad verification
 
-A new local clone at `.scratch/boards-clean` was made from committed `759d9d53` with no hardlinks. Only the required reference-built `default`/`first_run` seeds were copied. Tests create their own transient DB/files; no fixture inputs depend on .scratch or prior targets. All builds use the same explicitly assigned worker Cargo target and `CARGO_BUILD_JOBS=2`; the fresh workspace suite uses four test threads.
+A no-hardlinks local clone at `.scratch/posts-clean` began at committed `8dddfd4e`; only the verified `default`/`first_run` seeds were copied. After main integration and the fixture correction it was fast-forwarded to committed `e2e3633b7bb6fe91df421c591d5048bc321be3b0`. No test input depends on .scratch or earlier diagnostic outputs; tests create transient DB/files themselves. All builds use one assigned Cargo target, the configured rustc throttle, two build jobs and four test threads.
 
 ```sh
-git clone --quiet --local --no-hardlinks --branch rust/ws12-boards . .scratch/boards-clean
-env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch/boards-clean/.scratch" CI=1 CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499 LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" mise exec rust@1.98.1 -- cargo test --manifest-path .scratch/boards-clean/rust/Cargo.toml --locked --workspace --no-fail-fast -- --test-threads=4
+git clone --quiet --local --no-hardlinks --branch rust/ws12-boards . .scratch/posts-clean
+git -C .scratch/posts-clean fetch origin rust/ws12-boards
+git -C .scratch/posts-clean merge --ff-only FETCH_HEAD
+env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch/posts-clean/.scratch" CI=1 CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499 LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" mise exec rust@1.98.1 -- cargo test --manifest-path .scratch/posts-clean/rust/Cargo.toml --locked --workspace --no-fail-fast -- --test-threads=4 > .scratch/logs/posts-final-workspace-test.log 2>&1
 ```
 
 ```text
-Verified board fresh checkout/source: 759d9d5395fa6735128da063c0cbdf33d4e405ca
-test result: ok. 1704 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 684.20s
+test result: ok. 1831 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 585.36s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.63s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.95s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
-test result: ok. 970 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 106.71s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.29s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
-test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 1166 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 141.99s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.49s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.98s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.03s
 test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.71s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.16s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.51s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.74s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.21s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.99s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.30s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.28s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.88s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.48s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.80s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.93s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.50s
-test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
-test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.36s
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.17s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.55s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -215,57 +232,58 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-WS12 fresh workspace totals: 3385 passed; 0 failed; 12 existing ignores; CI seeds present
+WS12 fresh workspace totals: 3708 passed; 0 failed; 12 existing ignores; CI seeds present
 ```
 
-Exit 0. All 3,385 tests executed, including the new board tests, prior stars/activity tests, all workspace unit/integration suites and doctest commands. No seeded local skips. The 12 pre-existing ignores are the app/library Rails Cable recordings, explicit Node gateway suite, push latency measurement, four Rails scenario/export/fixture/two-factor rollback cases, Pebble TLS/ACME case, mail Rails export, and two kit documentation examples. No ignores were added.
+Exit 0. All 3,708 tests executed; no seeded silent skips. This includes the 29-response test, four work-read DB tests, room/list and prior stars/activity coverage, merged WS11 tests, all workspace unit/integration suites and doctest commands. The 12 existing ignores are app/library Rails Cable recordings, explicit Node gateway suite, push latency measurement, four Rails scenario/export/fixture/two-factor rollback cases, Pebble TLS/ACME, mail Rails export, and two kit documentation examples. No ignores were added.
 
 ### Fresh Clippy
 
 ```sh
-env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch/boards-clean/.scratch" CI=1 CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499 LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" mise exec rust@1.98.1 -- cargo clippy --manifest-path .scratch/boards-clean/rust/Cargo.toml --locked --workspace --all-targets -- -D warnings
+env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch/posts-clean/.scratch" CI=1 CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499 LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" mise exec rust@1.98.1 -- cargo clippy --manifest-path .scratch/posts-clean/rust/Cargo.toml --locked --workspace --all-targets -- -D warnings > .scratch/logs/posts-fresh-clippy.log 2>&1
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 42.89s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 10s
 ```
 
-Exit 0, including html5ever and all test targets; no lint allowance/exclusion.
+Exit 0, all workspace/test targets, without allowances/exclusions.
 
 ### Production release-input guard
 
 ```sh
-env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch/boards-clean/.scratch" LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" bash .scratch/boards-clean/rust/ci/with-release-inputs.sh mise exec rust@1.98.1 -- cargo build --locked -p campfire
+env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" TMPDIR="$PWD/.scratch/posts-clean/.scratch" LD_LIBRARY_PATH="$PWD/.scratch/rails-media/native-libs" PATH="$PWD/.scratch/rails-media/usr/bin:$PATH" bash .scratch/posts-clean/rust/ci/with-release-inputs.sh mise exec rust@1.98.1 -- cargo build --locked -p campfire > .scratch/logs/posts-release-inputs.log 2>&1
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 01s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 55.71s
 ```
 
-Exit 0. The temporary copy contained only Cargo manifests/crates and the explicitly declared asset build context. Production code built without vectors, parity seeds, reference tools or other undeclared Rails files. The copy was removed by the guard. The only subsequent tooling change added an explicit ws12-prefixed name to the one-shot source-hash Docker probe; its actual build/18-hash check was rerun successfully. No Rust source changed after this fresh verification.
+Exit 0. The temporary copy contains only Cargo manifests/crates plus the declared asset build context. Production code builds without vectors, parity seeds, reference tools or undeclared Rails files. The guard removed the temporary input copy. No Rust source changed after the complete fresh verification.
 
-
-### Inventory
+### Inventory, lockfile and formatting
 
 ```sh
 python3 rust/reference-tools/users/ws12_inventory.py
+env CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR="$PWD/.scratch/target" mise exec rust@1.98.1 -- cargo metadata --manifest-path rust/Cargo.toml --locked --format-version 1 > .scratch/logs/posts-final-metadata.json
+mise exec rust@1.98.1 -- rustfmt --edition 2024 --config skip_children=true --check rust/crates/db/src/models/channel_thread/work.rs rust/crates/db/src/tests/work_read_test.rs rust/crates/db/src/tests/agent_lifecycle_test.rs rust/crates/campfire/src/controllers/channel_threads/board_read_tests.rs rust/crates/campfire/src/controllers/presenters/board_posts.rs rust/crates/views/src/channel_threads/board.rs
+git diff --check
 ```
 
 ```text
-WS12 Rails inventory: 488 declarations; 412 deferred; 3 existing peer tests; 73 ported
+WS12 Rails inventory: 488 declarations; 409 deferred; 3 existing peer tests; 76 ported
 ```
 
-Locked metadata after merging main and on final source exits 0 (13 workspace members). Rustfmt --edition 2024 --config skip_children=true --check on all eight new Rust modules and git diff --check exit 0. No Cargo.lock change. Final main/WS11 check: origin/main remains 2b051607; #176 is OPEN with no merge commit. Cleanup receipts follow.
+Metadata exits 0 (13 workspace members), formatting exits 0 on the six listed modules and diff check exits 0; the silent checks produce no summary text. No lockfile change. Final main check is `59ad94de`; #181 remains OPEN.
 
-## Cleanup and final scope
-
-Cleanup followed the completed suites, stopped browser runners and successful guard. Exact targets and raw receipts:
+## Cleanup and final boundary
 
 ```text
-WS12 board cleanup: no listeners on 53400-53499; no running parity.owner=ws12 containers
-33G	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws12/.scratch/target
-40K	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws12/.scratch/boards-clean/rust/target
-WS12 board cleanup: removed .scratch/target and .scratch/boards-clean/rust/target; moved own rust/target failure captures into .scratch/boards-response-diffs; no release-input copy remains
+WS12 post cleanup: no listeners on 53400-53499; no running ws12 containers
+34G	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws12/.scratch/target
+3.4M	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws12/rust/target
+40K	/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws12/.scratch/posts-clean/rust/target
+WS12 post cleanup: removed .scratch/target; moved rust/target and .scratch/posts-clean/rust/target captures into .scratch/posts-response-diffs; no release-input copy remains
 ```
 
-The fresh source checkout, raw logs and response mismatch captures remain in this worker's .scratch for review; Cargo targets and release-input copies are gone. All own listeners and containers stopped. The source/test/tooling commits and this report are pushed; no PR is opened. WS12-owned board post/result, human work, automation and full recorder/inbox work remains. Only the agent-owned integration is waiting for #176; this is not owner-blocked-only.
+The Cargo target is deleted; fresh/working target diagnostic outputs were moved into this worker's .scratch, so neither target directory remains. Fresh source clones, pinned media runtime, raw logs and response captures remain for review. No own listeners/containers/test processes or release-input copy remain. All code/test/tooling commits are pushed; the final report commit only changes documentation. This remains **partial and not owner-blocked-only**: the WS12-owned mutations/services listed above remain. Agent integration is unblocked by #176; #181 review fixes remain upstream.
