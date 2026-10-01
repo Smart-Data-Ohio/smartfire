@@ -282,6 +282,7 @@ mod room_shell_tests;
 mod full_room_tests;
 #[cfg(test)]
 mod row_broadcast_tests;
+#[cfg(test)]
 #[path = "rooms/ws17_ooo_tests.rs"]
 mod ws17_ooo_tests;
 
