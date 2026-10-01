@@ -239,6 +239,7 @@ async fn open_database(
         sink: Arc::new(jobs),
         rich_text,
         bcrypt_cost: 12,
+        default_url_origin: config.mail.url_origin().to_owned(),
         message_reference_syncs: vec![crate::integrations::github::references::sync],
         user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
     };

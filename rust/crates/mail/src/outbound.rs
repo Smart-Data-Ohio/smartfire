@@ -104,7 +104,7 @@ pub fn new_sign_in_alert(config: &Config, item: Option<&SignIn>) -> Option<Messa
         .to_string();
     let url = format!(
         "{}/users/me/sessions",
-        config.app_url.as_deref().unwrap_or("http://example.com")
+        config.url_origin()
     );
     let text = format!(
         "Hi {},\n\nNew sign-in to your account from {}, {date}. Wasn't you? Review your sessions:\n\n{url}\n\n",

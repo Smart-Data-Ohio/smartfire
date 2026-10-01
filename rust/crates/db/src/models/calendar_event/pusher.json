@@ -1,0 +1,146 @@
+[
+  {
+    "room": "designers",
+    "offset": -301,
+    "stale": true,
+    "payload": null
+  },
+  {
+    "room": "david_and_jason",
+    "offset": -301,
+    "stale": true,
+    "payload": null
+  },
+  {
+    "room": "designers",
+    "offset": -300,
+    "stale": false,
+    "payload": {
+      "title": "Designers",
+      "body": "Starting now: Planning session",
+      "path": "/rooms/654632876/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "david_and_jason",
+    "offset": -300,
+    "stale": false,
+    "payload": {
+      "title": "David",
+      "body": "Starting now: Planning session",
+      "path": "/rooms/186869642/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "designers",
+    "offset": 0,
+    "stale": false,
+    "payload": {
+      "title": "Designers",
+      "body": "Starting now: Planning session",
+      "path": "/rooms/654632876/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "david_and_jason",
+    "offset": 0,
+    "stale": false,
+    "payload": {
+      "title": "David",
+      "body": "Starting now: Planning session",
+      "path": "/rooms/186869642/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "designers",
+    "offset": 30,
+    "stale": false,
+    "payload": {
+      "title": "Designers",
+      "body": "Starts in 1 minute: Planning session",
+      "path": "/rooms/654632876/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "david_and_jason",
+    "offset": 30,
+    "stale": false,
+    "payload": {
+      "title": "David",
+      "body": "Starts in 1 minute: Planning session",
+      "path": "/rooms/186869642/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "designers",
+    "offset": 89,
+    "stale": false,
+    "payload": {
+      "title": "Designers",
+      "body": "Starts in 1 minute: Planning session",
+      "path": "/rooms/654632876/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "david_and_jason",
+    "offset": 89,
+    "stale": false,
+    "payload": {
+      "title": "David",
+      "body": "Starts in 1 minute: Planning session",
+      "path": "/rooms/186869642/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "designers",
+    "offset": 90,
+    "stale": false,
+    "payload": {
+      "title": "Designers",
+      "body": "Starts in 2 minutes: Planning session",
+      "path": "/rooms/654632876/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "david_and_jason",
+    "offset": 90,
+    "stale": false,
+    "payload": {
+      "title": "David",
+      "body": "Starts in 2 minutes: Planning session",
+      "path": "/rooms/186869642/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "designers",
+    "offset": 900,
+    "stale": false,
+    "payload": {
+      "title": "Designers",
+      "body": "Starts in 15 minutes: Planning session",
+      "path": "/rooms/654632876/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  },
+  {
+    "room": "david_and_jason",
+    "offset": 900,
+    "stale": false,
+    "payload": {
+      "title": "David",
+      "body": "Starts in 15 minutes: Planning session",
+      "path": "/rooms/186869642/events/EVENT",
+      "tag": "event-EVENT"
+    }
+  }
+]

@@ -31,6 +31,7 @@ pub mod messages;
 pub mod github;
 pub mod integration_health;
 pub mod searches;
+pub mod events;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the
 /// helpers read from `Current`, `request`, `flash` and the session.

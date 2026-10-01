@@ -266,7 +266,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/sessions#index" => arc(users::sessions::index),
         "users/sessions#destroy" => arc(users::sessions::destroy),
         "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
-        "accounts/users/two_factor_resets#create" => arc(accounts::users::two_factor_resets::create),
+        "accounts/users/two_factor_resets#create" => {
+            arc(accounts::users::two_factor_resets::create)
+        }
         "users/push_subscriptions/test_notifications#create" => {
             arc(users::push_subscriptions::test_notifications::create)
         }
@@ -295,6 +297,15 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts#create" => arc(messages::boosts::create),
         "messages/boosts#new" => arc(messages::boosts::new),
         "messages/boosts#destroy" => arc(messages::boosts::destroy),
+        "rooms/events#index" => arc(rooms::events::index),
+        "rooms/events#show" => arc(rooms::events::show),
+        "rooms/events#new" => arc(rooms::events::new),
+        "rooms/events#create" => arc(rooms::events::create),
+        "rooms/events#edit" => arc(rooms::events::edit),
+        "rooms/events#update" => arc(rooms::events::update),
+        "rooms/events#cancel" => arc(rooms::events::cancel),
+        "rooms/events/attendances#show" => arc(rooms::events::attendance_show),
+        "rooms/events/attendances#update" => arc(rooms::events::attendance_update),
         "rooms/refreshes#show" => arc(rooms::refreshes::show),
         "rooms/involvements#show" => arc(rooms::involvements::show),
         "rooms/involvements#update" => arc(rooms::involvements::update),
@@ -729,6 +740,7 @@ mod tests {
         "searches#create", "searches#clear", "unfurl_links#create", "embeds/images#show", "pwa#manifest", "pwa#service_worker",
         "rails/health#show", "turbo/native/navigation#recede", "turbo/native/navigation#resume",
         "turbo/native/navigation#refresh", "action_mailbox/ingresses/postmark/inbound_emails#create",
+
         "users/presences#show",
         "users/dnd_allowances#create",
         "users/dnd_allowances#destroy",
