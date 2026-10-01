@@ -47,14 +47,14 @@ class WS13bRingMatrix
   def step(action, seconds = 0) = {action: action, seconds: seconds}
 
 
-  SEEDS = [0x17209bd4, 0xd7c7de92].freeze
-  ACTIONS = %w[issue issue banner inbox retry dismiss handled end quiet_revoke regrant rejoin drain drain].freeze
+  SEEDS = JSON.parse(ENV.fetch("WS13B_SEEDS", "[388013012,3620200082]")).freeze
+  ACTIONS = %w[issue issue banner inbox retry dismiss read handled end quiet_revoke regrant rejoin drain drain].freeze
   DELAYS = [0, 1, 20, 21, 45, 46, 60, 61, 119, 120, 121, 180, 181, 600, 601].freeze
 
   def random_specs(count)
-    SEEDS.flat_map do |seed|
+    SEEDS.each_with_index.flat_map do |seed,seed_index|
       rng = Random.new(seed)
-      Array.new(count / SEEDS.size) do |index|
+      Array.new(count / SEEDS.size + (seed_index < count % SEEDS.size ? 1 : 0)) do |index|
         steps = [step("issue")]
         rng.rand(12..28).times do
           action = ACTIONS.sample(random: rng)
@@ -80,6 +80,11 @@ class WS13bRingMatrix
     cases = families.flat_map do |name, steps|
       [false,true].product([false,true]).map { |banner,newest| {name: "#{name}/#{banner}/#{newest}",banner: banner,newest_first:newest,steps: steps} }
     end
+    cases += [
+      {name:"review_r5/banner_dismiss_history",banner:false,newest_first:false,steps:[step("issue"),step("banner",121),step("issue"),step("dismiss"),step("drain")]},
+      {name:"review_r5/item_dismiss_patch",banner:false,newest_first:false,steps:[step("issue"),step("dismiss"),step("drain")]},
+      {name:"review_r5/inbox_read_behind_banner",banner:false,newest_first:false,steps:[step("issue"),step("banner",121),step("issue"),step("read"),step("drain")]}
+    ]
     cases + JSON.parse(File.read(File.join(__dir__,"ws13b_shrunk_sequences.json")),symbolize_names: true)
   end
 
@@ -111,6 +116,8 @@ class WS13bRingMatrix
     @caller, @recipient = %w[david jason].map { |key| User.find(ActiveRecord::FixtureSet.identify(key)) }
     spec[:recipient_id] = @recipient.id
     @room = Room.find(ActiveRecord::FixtureSet.identify("david_and_jason"))
+    spec[:room_id] = @room.id
+    spec[:client_ids] = [@caller.id,@recipient.id,ActiveRecord::FixtureSet.identify("kevin")].sort
     @member = @room.memberships.find_by!(user: @caller)
     @session = @caller.sessions.create!(token: "ws13b-matrix-session")
     @recipient.update!(inbox_preferences: {huddle_invitations: false}) if spec[:banner]
@@ -137,8 +144,19 @@ class WS13bRingMatrix
   def issue = @grant = HuddleGrant.issue!(session: @session, membership: @member)
   def item = ActivityItem.where(user: @recipient,source_type: "HuddleGrant").order(:id).last
 
+  # Inventory the entire adapter queue, including unexpected classes.
+  def pending_jobs = @adapter.enqueued_jobs
+  def queue_inventory
+    pending_jobs.map { |row| {class:row[:job].name,arguments:row.fetch("arguments"),scheduled_at:row["scheduled_at"]} }
+  end
+  def ui_exchange(message)
+    raise "Run with ws13b_differential.py: observed UI requests are required" unless ENV["WS13B_OBSERVED_UI"] == "1"
+    puts JSON.generate(message);STDOUT.flush
+    JSON.parse(STDIN.readline,symbolize_names:true)
+  end
+
   def drain(spec,operation)
-    jobs = @adapter.enqueued_jobs.select { |row| [Huddle::PushInvitationJob,Huddle::JoinNoticeJob,Huddle::BroadcastPresenceJob].include?(row[:job]) }
+    jobs = pending_jobs
     originals = jobs.dup
     jobs.reverse! if operation[:order] == "newest" || (!operation[:order] && spec[:newest_first])
     jobs.shuffle!(random: @rng) if operation[:order] == "shuffled"
@@ -148,6 +166,7 @@ class WS13bRingMatrix
       @adapter.enqueued_jobs.delete(row)
       ActiveJob::Base.execute(row.except(:job,:args,:queue,:priority,:at))
     end
+    raise "complete drain left pending jobs" if !operation[:limit] && pending_jobs.any?
   end
 
   def apply(action)
@@ -174,7 +193,8 @@ class WS13bRingMatrix
       member = @room.memberships.find_by!(user: @recipient)
       @recipient_session ||= @recipient.sessions.create!(token: "ws13b-recipient-session")
       HuddleGrant.issue!(session: @recipient_session,membership: member).record_seen!
-    when "read", "dismiss" then item&.mark_read!
+    when "read" then item&.mark_read!
+    when "dismiss" then nil # The real displayed controller supplies its PATCH, if any.
     when "handled" then item&.mark_handled!
     when "missed" then Huddle::InvitationResolver.resolve_overdue!(user: @recipient)
     when "unread_cycle" then item&.mark_handled!; item&.mark_unread!
@@ -191,30 +211,29 @@ class WS13bRingMatrix
     definitions = JSON.parse(ENV["WS13B_SPEC_JSON"],symbolize_names: true) if ENV["WS13B_SPEC_JSON"]
     cases = definitions.map { |spec| Marshal.load(Marshal.dump(spec)) }.each_with_index.map do |spec,index|
       setup(spec)
+      ui_exchange(ui_start:spec)
       phases = spec[:steps].map do |operation|
         travel operation[:seconds]
+        requests = ui_exchange(ui_before:operation).fetch(:requests)
+        operation[:ui_requests] = requests
+        requests.each do |request|
+          match = %r{\A/activity/(\d+)/read\?state=read\z}.match(request.fetch(:path))
+          raise "unexpected UI request" unless request[:user_id] == @recipient.id && request[:method] == "PATCH" && match
+          # ActivityItemsController#read (activity_items_controller.rb:52-60).
+          ActivityItem.accessible_to(@recipient).find(match[1]).mark_read!
+        end
         operation[:action] == "drain" ? drain(spec,operation) : apply(operation[:action])
-        {frames:@frames.shift(@frames.size),pushes:@pushes.shift(@pushes.size),items:snapshot}
+        phase = {frames:@frames.shift(@frames.size),pushes:@pushes.shift(@pushes.size),items:snapshot,queue:queue_inventory,requests:requests}
+        phase[:banners] = ui_exchange(ui_after:phase).fetch(:banners)
+        phase
       end
       warn "observed Rails #{index+1}/#{definitions.size}" if (index+1) % 100 == 0
       {spec:spec,phases:phases}
     end
-    files = %w[app/models/huddle_grant.rb app/models/activity_item.rb app/models/huddle/ring_policy.rb app/models/huddle/invitation_resolver.rb app/jobs/huddle/push_invitation_job.rb app/models/huddle/invitation_pusher.rb app/jobs/huddle/join_notice_job.rb app/models/huddle/join_notifier.rb app/models/huddle/join_pusher.rb app/javascript/controllers/huddle_invitation_controller.js]
+    files = %w[app/models/huddle_grant.rb app/models/activity_item.rb app/models/huddle/ring_policy.rb app/models/huddle/invitation_resolver.rb app/jobs/huddle/push_invitation_job.rb app/models/huddle/invitation_pusher.rb app/jobs/huddle/join_notice_job.rb app/models/huddle/join_notifier.rb app/models/huddle/join_pusher.rb app/javascript/controllers/huddle_invitation_controller.js app/controllers/activity_items_controller.rb]
     puts JSON.generate(reference_pin:"d7c7de92",source_sha256: files.to_h { |file| [file,Digest::SHA256.file(Rails.root.join(file)).hexdigest] },seeds:SEEDS,random_count:count,cases:cases)
   ensure
     travel_back
   end
 end
-if ENV["WS13B_STREAM"] == "1"
-  matrix = WS13bRingMatrix.new
-  STDIN.each_line do |line|
-    begin
-      matrix.run(JSON.parse(line,symbolize_names: true))
-    rescue StandardError => error
-      puts JSON.generate(error: error.class.name)
-    end
-    STDOUT.flush
-  end
-else
-  WS13bRingMatrix.new.run
-end
+WS13bRingMatrix.new.run

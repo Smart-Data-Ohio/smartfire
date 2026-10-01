@@ -38,10 +38,35 @@ pusher payload. Independent instances of the real pinned Stimulus controller con
 client's own recorded frames, with timers advanced after every operation. There is no pending-ring
 projection, lifecycle reducer or manually constructed expected delivery payload.
 
-The two PRNG seeds are 388013012 (0x17209bd4) and 3620200082 (0xd7c7de92).
-`ws13b_ring_matrix.rb` generates sequences; `ws13b_differential.py` regenerates,
-compares and shrinks failures. The committed corpus contains the named sequence
-matrix and 512 random sequences; a larger run uses the same seeds with 2,048
-random sequences. Job selection indices are recorded inputs, not predictions
-from Rust output. Both producer and comparator are checked by corrupting an
-observed frame, push payload and banner state.
+The queue inventory records **every** pending ActiveJob row after every operation:
+class, complete positional arguments and absolute scheduled time. Rust compares
+its corresponding pending source jobs before interpreting Rails' selected drain
+indices. A complete drain must select each pending job exactly once and leave an
+empty queue. Rust's already-delivered Cable envelopes are acknowledgements, not
+Rails jobs; the push adapter/pool is run through its actual handoff during the
+source-job execution. Unexpected Rust job classes fail instead of being ignored.
+
+Dismissal uses the actual pinned controller, not the latest inbox row:
+`app/javascript/controllers/huddle_invitation_controller.js:88-96` hides the
+currently displayed invitation and returns without fetching when its readPath is
+empty. The shown frame sets that path (`:149-157`); the real PATCH implementation
+is `:124-133`. The recorder interleaves the real controller with Rails, and only
+its observed fetch requests invoke the accessible item read action
+(`app/controllers/activity_items_controller.rb:52-60,89,120-122`). An independent
+controller replay on Rust's own frames must produce the same requests and banner
+states. The separate `read` operation represents the inbox read endpoint, even
+when a banner-only invitation is displayed. Hidden banners cannot be clicked.
+
+The committed corpus contains 209 named sequences and 512 random sequences (721
+in total). Its default seeds remain 388013012 and 3620200082. Fresh extended
+verification uses 2,048 random sequences from seeds 20261002, 2718281828 and
+4242424242, plus the 209 named sequences. `ws13b_ring_matrix.rb` generates
+sequences; `ws13b_differential.py` regenerates, compares and shrinks failures.
+Pass fresh seeds with `record COUNT OUTPUT SEED,SEED,...`. All eleven Rails/UI
+source hashes are checked against d7c7de92. No expected payload is generated from
+Rust. Eleven independent output corruptions exercise the comparison, including
+extra/missing jobs, altered job class/arguments/schedule and changed UI requests.
+`ws13b_queue_mutation.py` also duplicates the actual production PushInvitationJob
+enqueue temporarily: unchanged Rails expectations must pass before mutation,
+fail immediately at the issue step with two jobs against one, and pass after
+byte-for-byte restoration.

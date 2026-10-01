@@ -108,3 +108,37 @@ clears query caches, Current and Rails cache. A 199-case prefix agrees exactly
 with standalone replay. These were recorder repairs, not application fixes or
 comparison masks. The comparator rejects five injected output corruptions:
 lost/duplicate frames, changed metadata, changed push payload and banner state.
+
+## Fifth pass: differential gate failures, first on 35ed3a80
+
+No production mismatch was found. Two gate regressions were committed alone at
+`9f9d05ea`, before implementation or the main merge. An actual duplicate
+`PushInvitationJob` event was emitted into the test sink against the unchanged
+Rails `issue → drain` case. The old gate accepted it. The banner-dismiss case
+read a historical inbox item when the displayed banner had no read path.
+
+```sh
+CARGO_BUILD_JOBS=2 CI=1 TMPDIR="$PWD/.scratch" CABLE_TEST_PORT_RANGE=53000-53049 MAIL_TEST_PORT_RANGE=53050-53099 mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever gate_review_r5_ -- --test-threads=8 --nocapture
+```
+
+```text
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 904 filtered out; finished in 0.80s
+```
+
+The new gate compares every pending source job after every step, including class,
+complete arguments and absolute scheduled time, before using the recorded drain
+indices. Drains without a limit must select all jobs exactly once and leave none.
+Named controls exercise both invariants. The committed mutation script additionally
+duplicates the actual producer's enqueue, proves that two jobs versus Rails' one
+fails at the issue step, and restores the source before proving the baseline passes.
+
+The Rails recorder now runs the actual pinned Stimulus controller interactively.
+Its actual fetch requests drive the accessible item read action; the Rust driver
+replays those inputs and an independent controller replay on Rust frames must
+produce the same requests. The historical-item/banner scenario observes no PATCH
+and leaves the item unread. Dismissing a displayed item sends a PATCH and reads
+that item; an explicit inbox read behind a banner is a distinct operation.
+No driver infers the displayed invitation from the most recent database item.
+Three new Rails-observed named cases cover those actions. Eleven corruption
+controls now include queue and UI request changes. No production code or timing
+threshold changed for these gate fixes.

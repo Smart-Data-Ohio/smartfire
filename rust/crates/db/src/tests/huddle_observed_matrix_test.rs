@@ -11,7 +11,22 @@ fn recipient() -> i64 {crate::fixtures::identify("jason")}
 fn caller() -> i64 {crate::fixtures::identify("david")}
 fn room() -> i64 {crate::fixtures::identify("david_and_jason")}
 
-fn collect(db: &TestDb, pending: &mut Vec<crate::JobRequest>, frames: &mut Vec<Value>, pushes: &mut Vec<Value>) {
+#[derive(Debug,Clone)]
+struct PendingJob { request: crate::JobRequest, scheduled_at: Value }
+fn inventory(pending: &[PendingJob]) -> Value {
+    json!(pending.iter().map(|job| {
+        let key = match job.request.class {
+            PushInvitationJob::CLASS => "activity_item_id",
+            JoinNoticeJob::CLASS | PresenceJob::CLASS => "grant_id",
+            other => panic!("unexpected pending class {other}"),
+        };
+        let args = job.request.arguments.as_object().unwrap();
+        assert_eq!(args.len(),1,"unexpected job arguments");
+        assert!(args.contains_key(key),"missing job argument");
+        json!({"class":job.request.class,"arguments":[args[key]],"scheduled_at":job.scheduled_at})
+    }).collect::<Vec<_>>())
+}
+fn collect(db: &TestDb, pending: &mut Vec<PendingJob>, frames: &mut Vec<Value>, pushes: &mut Vec<Value>) {
     for event in db.sink.take() {
         if let Some(crate::broadcasts::Broadcast::Cable {stream,payload}) = event.as_broadcast()
             && stream.starts_with("user_")
@@ -20,7 +35,10 @@ fn collect(db: &TestDb, pending: &mut Vec<crate::JobRequest>, frames: &mut Vec<V
             frames.push(json!({"stream":stream,"payload":payload}));
         }
         if let Event::Job(job) = event {
-            if [PushInvitationJob::CLASS,JoinNoticeJob::CLASS,PresenceJob::CLASS].contains(&job.class) {pending.push(job);}
+            if [PushInvitationJob::CLASS,JoinNoticeJob::CLASS,PresenceJob::CLASS].contains(&job.class) {
+                let scheduled_at = job.wait.map_or(Value::Null,|wait| json!(format!("{:.6}",db.now().since(jiff::SignedDuration::from_micros(wait.as_micros().try_into().unwrap())).jiff())));
+                pending.push(PendingJob {request:job,scheduled_at});
+            }
             // A selected source-job drain runs its actual WS17 adapter through
             // the push-pool handoff. External transport is outside the oracle.
             else if job.class == PushRequest::CLASS {
@@ -29,7 +47,8 @@ fn collect(db: &TestDb, pending: &mut Vec<crate::JobRequest>, frames: &mut Vec<V
                 collect(db,pending,frames,pushes);
             } else if [notification_push::HuddleInvitationDeliveryJob::CLASS,notification_push::HuddleJoinDeliveryJob::CLASS].contains(&job.class) {
                 pushes.push(job.arguments);
-            }
+            } else if job.class == huddle_invitations::RingRequest::CLASS {assert_eq!(job.arguments["delivered"],1);}
+            else {panic!("unexpected job escaped the inventory: {job:?}");}
         }
     }
 }
@@ -63,12 +82,20 @@ fn run_case_with_duplicate(case: &Value, duplicate: bool) -> Vec<Value> {
     db.sink.take();
     let mut grant = 0;
     let mut recipient_session = None;
-    let mut pending = Vec::<crate::JobRequest>::new();
+    let mut pending = Vec::<PendingJob>::new();
     let mut phases = Vec::new();
     for operation in case["spec"]["steps"].as_array().unwrap() {
         db.travel(operation["seconds"].as_i64().unwrap());
         let action = operation["action"].as_str().unwrap();
         let mut frames = Vec::new();let mut pushes = Vec::new();
+        let requests = operation["ui_requests"].as_array().cloned().unwrap_or_default();
+        for request in &requests {
+            assert_eq!(action,"dismiss");
+            assert_eq!(request["user_id"],recipient());assert_eq!(request["method"],"PATCH");
+            let path = request["path"].as_str().unwrap();
+            let id:i64 = path.strip_prefix("/activity/").unwrap().strip_suffix("/read?state=read").unwrap().parse().unwrap();
+            db.write(move |tx| {let item=ActivityItem::find(tx.conn(),id)?;assert_eq!(item.user_id,recipient());item.mark_read(tx)});
+        }
         if action == "drain" {
             if operation["job_order"].is_null() && (operation["order"] == "newest" || (operation["order"].is_null() && case["spec"]["newest_first"] == true)) {pending.reverse();}
             // Rails records shuffled source-job selection; use that observed order,
@@ -78,13 +105,16 @@ fn run_case_with_duplicate(case: &Value, duplicate: bool) -> Vec<Value> {
             let jobs = if let Some(indices) = indices {
                 let old = std::mem::take(&mut pending);
                 let chosen = indices.iter().map(|v|v.as_u64().unwrap() as usize).collect::<Vec<_>>();
+                assert_eq!(chosen.len(),count,"drain omitted pending jobs: {:?}",inventory(&old));
+                let unique = chosen.iter().collect::<std::collections::HashSet<_>>();
+                assert_eq!(unique.len(),chosen.len(),"a drain selected the same job twice");
                 assert!(chosen.iter().all(|i| *i < old.len()),"{} operation {:?}: Rails chose {:?}, Rust has {:?}",case["spec"]["name"],operation,chosen,old);
                 pending = old.iter().enumerate().filter(|(i,_)|!chosen.contains(i)).map(|(_,j)|j.clone()).collect();
                 chosen.into_iter().map(|i|old[i].clone()).collect::<Vec<_>>()
             } else {pending.drain(..count).collect::<Vec<_>>()};
             for job in jobs {
-                let args = job.arguments;
-                match job.class {
+                let args = job.request.arguments;
+                match job.request.class {
                     PushInvitationJob::CLASS => {let id = args["activity_item_id"].as_i64().unwrap();db.write(move |tx| huddle_notices::push_invitation(tx,id));}
                     JoinNoticeJob::CLASS => {let id = args["grant_id"].as_i64().unwrap();db.write(move |tx| huddle_notices::notify_join(tx,id));}
                     PresenceJob::CLASS => {} // Its room stream has no invitation client frames.
@@ -92,6 +122,7 @@ fn run_case_with_duplicate(case: &Value, duplicate: bool) -> Vec<Value> {
                 }
                 collect(&db,&mut pending,&mut frames,&mut pushes);
             }
+            if operation["limit"].is_null() {assert!(pending.is_empty(),"complete drain left pending jobs: {}",inventory(&pending));}
         } else if action == "new_session" {
             session = db.write(|tx| Ok(Session::start(tx,caller(),None,None)?.id));
             grant = db.write(move |tx| HuddleGrant::issue(tx,session,member,room(),&config())).id;
@@ -131,12 +162,13 @@ fn run_case_with_duplicate(case: &Value, duplicate: bool) -> Vec<Value> {
                         }
                     }
                     "remove_recipient" => {Membership::find_by_room_and_user(tx.conn(),room(),recipient())?.unwrap().destroy(tx)?;}
-                    "read"|"dismiss"|"handled"|"unread_cycle" => {
+                    "dismiss" => {} // Only the actual displayed controller's PATCH can read an item.
+                    "read"|"handled"|"unread_cycle" => {
                         let id:Option<i64> = tx.conn().query_row("SELECT MAX(id) FROM activity_items WHERE user_id=? AND source_type='HuddleGrant'",[recipient()],|r|r.get(0))?;
                         if let Some(id) = id {
                             let item = ActivityItem::find(tx.conn(),id)?;
                             match owned.as_str() {
-                                "read"|"dismiss" => {item.mark_read(tx)?;}
+                                "read" => {item.mark_read(tx)?;}
                                 "handled" => {item.mark_handled(tx)?;}
                                 "unread_cycle" => {item.mark_handled(tx)?;ActivityItem::refresh_unread(tx,recipient(),"HuddleGrant",item.source_id,"huddle_started")?;}
                                 _ => unreachable!(),
@@ -152,11 +184,15 @@ fn run_case_with_duplicate(case: &Value, duplicate: bool) -> Vec<Value> {
         }
         collect(&db,&mut pending,&mut frames,&mut pushes);
         if duplicate && phases.is_empty() {
-            let job = pending.iter().find(|job| job.class == PushInvitationJob::CLASS).unwrap().clone();
+            let job = pending.iter().find(|job| job.request.class == PushInvitationJob::CLASS).unwrap().request.clone();
             db.write(move |tx| {tx.emit_after_commit(Event::Job(job));Ok(())});
             collect(&db,&mut pending,&mut frames,&mut pushes);
         }
-        phases.push(json!({"frames":frames,"pushes":pushes,"items":items(&db)}));
+        let queue = inventory(&pending);
+        if let Some(expected) = case["phases"][phases.len()].get("queue") {
+            assert_eq!(&queue,expected,"{} queue differs after step {} ({action})",case["spec"]["name"],phases.len());
+        }
+        phases.push(json!({"frames":frames,"pushes":pushes,"items":items(&db),"queue":queue,"requests":requests}));
     }
     phases
 }
@@ -170,7 +206,15 @@ fn partition(part: usize) {
     let mut failures = Vec::new();let mut count = 0;let mut observations = Vec::new();
     for (index,case) in oracle["cases"].as_array().unwrap().iter().enumerate() {
         if index % 8 != part {continue;}
-        let actual = run_case(case);
+        let actual = match std::panic::catch_unwind(|| run_case(case)) {
+            Ok(phases) => phases,
+            Err(error) => {
+                let message = error.downcast_ref::<String>().map(String::as_str).or_else(|| error.downcast_ref::<&str>().copied()).unwrap_or("sequence panicked");
+                failures.push(json!({"name":case["spec"]["name"],"spec":case["spec"],"error":message}));
+                count += 1;
+                continue;
+            }
+        };
         let mut expected = case["phases"].clone();
         for phase in expected.as_array_mut().unwrap() {phase.as_object_mut().unwrap().remove("banners");}
         observations.push(json!({"spec":case["spec"],"phases":actual}));
@@ -223,4 +267,21 @@ fn gate_review_r5_banner_dismiss_must_keep_historical_item_unread() {
     let phases = run_case(&case);
     assert_eq!(phases[3]["items"][0]["state"],"unread","the displayed banner has no read endpoint");
     assert!(phases[3]["frames"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn gate_review_r5_displayed_item_dismiss_sends_read_patch() {named_regression("review_r5/item_dismiss_patch");}
+#[test]
+fn gate_review_r5_inbox_read_is_separate_from_banner_dismiss() {named_regression("review_r5/inbox_read_behind_banner");}
+#[test]
+fn gate_review_r5_observed_banner_dismiss_keeps_historical_item() {named_regression("review_r5/banner_dismiss_history");}
+
+#[test]
+fn gate_review_r5_complete_drain_cannot_leave_an_extra_job() {
+    // Omit phase snapshots here to isolate the complete-drain invariant itself.
+    let case = json!({"spec":{"banner":false,"steps":[
+        {"action":"issue","seconds":0},
+        {"action":"drain","seconds":0,"job_order":[0]}
+    ]}});
+    assert!(std::panic::catch_unwind(|| run_case_with_duplicate(&case,true)).is_err(),"a complete drain left a duplicate pending");
 }
