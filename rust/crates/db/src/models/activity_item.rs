@@ -1,9 +1,8 @@
-//! `reference/app/models/activity_item.rb`, the part WS8's reminders need: an inbox row per
-//! recipient and source, refreshed unread in place, with its `user_<id>_activity` broadcast. The
-//! inbox itself (`accessible_to`, filters, grouping, mark read and handled, every other event
-//! type's writer) is WS12's.
+//! app/models/activity_item.rb: inbox sources, live accessibility, state and after-commit signals.
 
 pub mod message_recorder;
+mod access;
+pub use access::ActivityQuery;
 
 use rusqlite::{Connection, Row, params};
 
@@ -96,6 +95,35 @@ impl ActivityItem {
         self.read_at.is_none() && self.handled_at.is_none()
     }
 
+    pub fn read(&self) -> bool { self.read_at.is_some() && self.handled_at.is_none() }
+    pub fn handled(&self) -> bool { self.handled_at.is_some() }
+    pub fn state(&self) -> &'static str {
+        if self.handled() { "handled" } else if self.read_at.is_some() { "read" } else { "unread" }
+    }
+
+    pub fn mark_read(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        if self.read_at.is_none() { self.save_state(tx,Some(tx.now()),self.handled_at)?; }
+        Ok(())
+    }
+    pub fn mark_unread(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.save_state(tx,None,None)
+    }
+    pub fn mark_unhandled(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.save_state(tx,self.read_at,None)
+    }
+
+    fn save_state(&mut self, tx: &mut Tx<'_>, read_at: Option<Timestamp>, handled_at: Option<Timestamp>) -> Result<()> {
+        // Rails dirty tracking skips a save (including updated_at and the callback) with no change.
+        if self.read_at == read_at && self.handled_at == handled_at { return Ok(()); }
+        let now = tx.now();
+        tx.conn().execute_cached("UPDATE activity_items SET read_at=?,handled_at=?,updated_at=? WHERE id=?",
+            params![read_at,handled_at,now,self.id])?;
+        self.read_at = read_at;
+        self.handled_at = handled_at;
+        self.updated_at = now;
+        Self::broadcast_change(tx,self.user_id,self.id)
+    }
+
     /// `find_or_initialize_by(user:, source:)`, then `event_type =`, unread again (`read_at` and
     /// `handled_at` nil), `save!`. A new row broadcasts (`after_create_commit`); an existing one
     /// broadcasts only when its state or type changed (`broadcast_updated`).
@@ -163,13 +191,8 @@ impl ActivityItem {
 
     /// Event lifecycle handling reads an unread item as well as marking it handled.
     /// app/models/activity_item.rb#mark_handled!
-    pub fn mark_handled(&self, tx: &mut Tx<'_>) -> Result<()> {
-        tx.conn().execute_cached(
-            "UPDATE activity_items SET read_at=COALESCE(read_at,?), handled_at=?, updated_at=? WHERE id=?",
-            params![tx.now(), tx.now(), tx.now(), self.id],
-        )?;
-        Self::broadcast_change(tx, self.user_id, self.id)?;
-        Ok(())
+    pub fn mark_handled(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.save_state(tx,self.read_at.or(Some(tx.now())),Some(tx.now()))
     }
 
     /// Approval settlement preserves an earlier read timestamp and broadcasts once
