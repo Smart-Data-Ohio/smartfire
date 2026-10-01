@@ -4,7 +4,9 @@
 use campfire_db::Result;
 use campfire_richtext::ruby::is_blank;
 use campfire_views::users::*;
+use rails_compat::unicode;
 use rusqlite::{Connection, OptionalExtension};
+
 pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSections> {
     let mut fields=c.query_row("SELECT github_login,inbox_preferences,voice_mode,push_to_talk_key,presence_setting,custom_status_emoji,custom_status_text,ooo_note,dnd_enabled,dnd_until,quiet_hours_enabled,quiet_hours_start_minute,quiet_hours_end_minute,meeting_dnd_enabled,ooo_notify_enabled FROM users WHERE id=?",[id],|r| {
         let raw:Option<String>=r.get(1)?;let inbox:serde_json::Value=raw.and_then(|s|serde_json::from_str(&s).ok()).unwrap_or_default();
@@ -19,7 +21,7 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
         .query_map([id], |r| r.get::<_, String>(0))?
         .collect::<std::result::Result<Vec<_>, _>>()?
         .join("\n");
-    fields.notifications.allowed_people=c.prepare("SELECT users.id,users.name FROM users JOIN dnd_allowed_users ON users.id=dnd_allowed_users.allowed_user_id WHERE dnd_allowed_users.user_id=? ORDER BY users.name COLLATE NOCASE")?.query_map([id],|r|Ok((r.get(0)?,r.get(1)?)))?.collect::<std::result::Result<Vec<_>,_>>()?;
+    fields.notifications.allowed_people=c.prepare("SELECT users.id,users.name FROM users JOIN dnd_allowed_users ON users.id=dnd_allowed_users.allowed_user_id WHERE dnd_allowed_users.user_id=? ORDER BY LOWER(users.name)")?.query_map([id],|r|Ok((r.get(0)?,r.get(1)?)))?.collect::<std::result::Result<Vec<_>,_>>()?;
     fields.github=c.query_row("SELECT github_login,disconnected_reason,token_source FROM github_connected_accounts WHERE user_id=?",[id],|r| {
         let reason:Option<String>=r.get(1)?;Ok(if reason.as_deref().is_some_and(|s|!is_blank(s)){ConnectionPanel::Rejected{reason}}else{ConnectionPanel::Connected{name:r.get(0)?,workspace:None,app_token:r.get::<_,String>(2)?=="app"}})
     }).optional()?.unwrap_or_default();
@@ -66,7 +68,7 @@ pub fn preview(
     if !fields.github_verified
         && let Some(login) = &changes.github_login
     {
-        let login = campfire_richtext::ruby::strip(login).to_lowercase();
+        let login = unicode::downcase(campfire_richtext::ruby::strip(login));
         fields.github_login = (!is_blank(&login)).then_some(login);
     }
     if let Some(mode) = &changes.voice_mode {
@@ -116,4 +118,56 @@ pub fn status_fields(user: &campfire_db::UserStatusSettings, errors: &campfire_d
     };
     for (key, message) in &errors.0 { fields.errors.entry(key.to_string()).or_default().push(message.clone()); }
     fields
+}
+
+#[cfg(test)]
+mod unicode_tests {
+    use super::*;
+
+    #[test]
+    fn unicode_parity_dnd_exceptions_use_sql_lower_order_past_nul() {
+        let t = crate::integrations::test_support::TestDb::new();
+        let oracle: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../../vectors/unicode_casing_parity.json"
+        ))
+        .unwrap();
+        let names = oracle["sql_names"]["input"].as_array().unwrap().clone();
+        let owner = crate::integrations::test_support::TestDb::id("david");
+        t.db.write_blocking(move |tx| {
+            tx.conn().execute("DELETE FROM dnd_allowed_users WHERE user_id=?", [owner])?;
+            for name in names {
+                let user = campfire_db::User::create_integration_bot(tx, name.as_str().unwrap())?;
+                tx.conn().execute("INSERT INTO dnd_allowed_users(user_id,allowed_user_id,created_at,updated_at) VALUES(?,?,?,?)", rusqlite::params![owner, user.id, tx.now(), tx.now()])?;
+            }
+            Ok(())
+        }).unwrap();
+        let actual =
+            t.db.read_blocking(|c| load(c, owner, jiff::Timestamp::now()))
+                .unwrap();
+        assert_eq!(
+            serde_json::json!(
+                actual
+                    .notifications
+                    .allowed_people
+                    .iter()
+                    .map(|(_, name)| name)
+                    .collect::<Vec<_>>()
+            ),
+            oracle["sql_names"]["sorted"]
+        );
+    }
+
+    #[test]
+    fn unicode_parity_failed_profile_github_preview_uses_ruby_downcase() {
+        let mut fields = ProfileSections::default();
+        preview(
+            &mut fields,
+            &campfire_db::models::user::profile_settings::Changes {
+                github_login: Some(" ΟΣ ".into()),
+                ..Default::default()
+            },
+            &campfire_db::Errors::default(),
+        );
+        assert_eq!(fields.github_login.as_deref(), Some("οσ"));
+    }
 }

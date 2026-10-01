@@ -4,6 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
+rails_compat.workspace = true
 askama = { workspace = true, features = ["blocks"] }
 campfire_routes.workspace = true
 campfire_richtext.workspace = true
@@ -19,5 +20,3 @@ unicode-segmentation.workspace = true
 [dev-dependencies]
 campfire_assets.workspace = true
 campfire_storage.workspace = true
-# Signs the goldens' stream names with the parity SECRET_KEY_BASE.
-rails_compat.workspace = true
