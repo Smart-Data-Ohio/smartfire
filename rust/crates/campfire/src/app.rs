@@ -612,3 +612,6 @@ mod google_page_tests;
 
 #[cfg(test)]
 mod google_reporting_tests;
+
+#[cfg(test)]
+mod google_message_tests;

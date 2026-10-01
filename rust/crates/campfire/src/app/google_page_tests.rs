@@ -13,7 +13,12 @@ async fn google_complete_login_pages_and_configured_profile_components_match_rai
     let oracle: Value =
         serde_json::from_str(include_str!("../../../../vectors/google_full_pages.json")).unwrap();
     let mut differences = vec![];
-    let panel_patterns=["google-calendar-title","google-sign-in-title"].map(|id| regex::Regex::new(&format!(r#"(?s)<section[^>]*aria-labelledby="{id}".*?</section>"#)).unwrap());
+    let panel_patterns = ["google-calendar-title", "google-sign-in-title"].map(|id| {
+        regex::Regex::new(&format!(
+            r#"(?s)<section[^>]*aria-labelledby="{id}".*?</section>"#
+        ))
+        .unwrap()
+    });
     for row in oracle["rows"].as_array().unwrap() {
         let spec = &row["spec"];
         let name = spec["name"].as_str().unwrap();
@@ -101,7 +106,10 @@ async fn google_complete_login_pages_and_configured_profile_components_match_rai
         let actual = response.text();
         let expected = row["body"].as_str().unwrap();
         let matches = if profile {
-            let panels=panel_patterns.iter().map(|pattern|pattern.find(&actual).map(|m|m.as_str())).collect::<Vec<_>>();
+            let panels = panel_patterns
+                .iter()
+                .map(|pattern| pattern.find(&actual).map(|m| m.as_str()))
+                .collect::<Vec<_>>();
             let settings = actual
                 .lines()
                 .filter(|l| {

@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 149 ported domain/API/controller cases; 462 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 178 ported domain/API/controller cases; 433 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -22,19 +22,20 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/channel_thread_messages_drive_attachments_test.rb
 
-- **Deferred** — create with drive_file_ids stores them and reports them in JSON — WS14g association + WS8b-m2 message producer.
-- **Deferred** — create with attachments and no text is valid — WS14g association + WS8b-m2 message producer.
-- **Deferred** — create with an invalid id answers 422 and creates nothing — WS14g association + WS8b-m2 message producer.
-- **Deferred** — create with a scalar drive_file_ids answers 422 and creates nothing — WS14g association + WS8b-m2 message producer.
-- **Deferred** — create with more than 10 attachments answers 422 — WS14g association + WS8b-m2 message producer.
-- **Deferred** — update with a new set replaces the stored set — WS14g association + WS8b-m2 message producer.
-- **Deferred** — update without the key leaves the set alone — WS14g association + WS8b-m2 message producer.
-- **Deferred** — update with only the blank sentinel removes all attachments — WS14g association + WS8b-m2 message producer.
-- **Deferred** — update with an invalid id answers 422 and keeps the stored set — WS14g association + WS8b-m2 message producer.
-- **Deferred** — update with a scalar drive_file_ids answers 422 and keeps the stored set — WS14g association + WS8b-m2 message producer.
-- **Deferred** — a non-creator cannot change thread attachments — WS14g association + WS8b-m2 message producer.
-- **Deferred** — update with a submitted set broadcasts the attachments block over the thread stream — WS14g association + WS8b-m2 message producer.
-- **Deferred** — update without the key does not broadcast the attachments block — WS14g association + WS8b-m2 message producer.
+- **Ported** — create with drive_file_ids stores them and reports them in JSON — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — create with attachments and no text is valid — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — create with an invalid id answers 422 and creates nothing — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — create with a scalar drive_file_ids answers 422 and creates nothing — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — create with more than 10 attachments answers 422 — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with a new set replaces the stored set — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update without the key leaves the set alone — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with only the blank sentinel removes all attachments — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with an invalid id answers 422 and keeps the stored set — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with a scalar drive_file_ids answers 422 and keeps the stored set — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — a non-creator cannot change thread attachments — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with a submitted set broadcasts the attachments block over the thread stream — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update without the key does not broadcast the attachments block — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+
 
 ## test/controllers/google/calendar_notifications_controller_test.rb
 
@@ -116,25 +117,26 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/messages_drive_attachments_test.rb
 
-- **Deferred** — create with drive_file_ids stores them in order — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — create with attachments and no text is valid — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — create deduplicates repeated ids and strips blanks — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — create with an invalid id answers 422 and creates nothing — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — create with more than 10 attachments answers 422 — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — update with a new set replaces the stored set — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — update with a submitted set broadcasts the attachments block to the room — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — update without the key does not broadcast the attachments block — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — update with a scalar drive_file_ids answers 422 and keeps the stored set — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — update without the key leaves the set alone — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — update with only the blank sentinel removes all attachments — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — removing every attachment from a textless message answers 422 and keeps the set — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — update with an invalid id answers 422 and keeps the stored set — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — a non-creator cannot change attachments — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — JSON message shape includes drive_attachments with file_id and url only — WS14g association + WS8b-m/m2 message producer.
-- **Deferred** — JSON message shape carries an empty drive_attachments array without attachments — WS14g association + WS8b-m/m2 message producer.
+- **Ported** — create with drive_file_ids stores them in order — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — create with attachments and no text is valid — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — create deduplicates repeated ids and strips blanks — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — create with an invalid id answers 422 and creates nothing — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — create with more than 10 attachments answers 422 — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with a new set replaces the stored set — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with a submitted set broadcasts the attachments block to the room — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update without the key does not broadcast the attachments block — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with a scalar drive_file_ids answers 422 and keeps the stored set — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update without the key leaves the set alone — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with only the blank sentinel removes all attachments — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — removing every attachment from a textless message answers 422 and keeps the set — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — update with an invalid id answers 422 and keeps the stored set — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — a non-creator cannot change attachments — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — JSON message shape includes drive_attachments with file_id and url only — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
+- **Ported** — JSON message shape carries an empty drive_attachments array without attachments — `app::google_message_tests::google_drive_message_requests_and_attachment_socket_frames_match_rails` (real owner producer and fenced socket frames; exact Rails status/state/JSON/attachments).
 - **Deferred** — rendered message carries the generic chip with the open link and no file name — WS14g association + WS8b-m/m2 message producer.
 - **Deferred** — viewers with and without Drive consent receive identical attachment markup — WS14g association + WS8b-m/m2 message producer.
 - **Deferred** — edit form lists attachments as removable chips with the blank sentinel — WS14g association + WS8b-m/m2 message producer.
+
 
 ## test/controllers/rooms/drive_recipients_controller_test.rb
 
@@ -824,7 +826,7 @@ Retry budgets now persist by Rails exception-handler group, survive restarts and
 
 The profile connection/sign-in panels match seven connection and three identity states, Drive chips match empty/populated states, and administrator allow/unlink forms match eleven account rows byte for byte. Complete configured pages and interaction assertions remain WS14g work with the page/layout owners. No browser pixel-diff work is required or listed as remaining.
 
-The WS11 agent credential/authentication seam is now on merged main; it is consumed rather than reimplemented. Drive attachment message submission/JSON/thread broadcasts remain with WS8b-m/m2 and agent polling/REST delivery with WS11-api. Existing Message attachment domain validation/save/touch/cascade code remains shared. Human recipient policy and viewer metadata authorization are implemented; remaining named tests below their respective headings remain explicitly partial/deferred.
+The WS11 agent credential/authentication seam is now on merged main; it is consumed rather than reimplemented. Merged main now supplies the actual message/thread submission, replacement, JSON and broadcast APIs, which WS14g consumes in 32 pinned Rails HTTP/socket comparisons. Agent polling/REST delivery remains with WS11-api. Existing Message attachment domain validation/save/touch/cascade code remains shared. Human recipient policy and viewer metadata authorization are implemented; remaining named tests below their respective headings remain explicitly partial/deferred.
 
 The remaining session/link/step-up controller cases include account history/password preservation, domain/rotation changes across HTTP, authenticated replay, deactivation/ban races and the full original audits/page assertions. Existing representative tests do not count as completion of an unmapped Rails case. The SQL-read-count assertion for inbound preloading is also unfinished.
 
@@ -839,3 +841,5 @@ Inbound preloading now has the original one-event-read assertion, scaled from 3 
 Complete Google HTML now compares all three login HTTP pages and sixteen complete Google profile panels across eight configured/grant/link states, including complete Google Calendar notices. The injected Calendar configuration now drives settings notices; the old process-global environment read caused configured clients to render the unconfigured notice. Full profile pages remain owner-blocked: WS8b-r2 profile/status/membership composition, WS10 GitHub/inbox controls, WS13 call settings, WS15f Fizzy, WS16 Slack, and WS6 timezone ordering. The eight full Rails profile responses are retained in google_full_pages.json; no failed whole-page claim is relabeled complete and no pixel work is required.
 
 Error service reporting is now implemented through the app subscriber boundary. The Rails probe observes real report defaults and represents its execution-context ActiveJob object by class name (Ruby object pointers are not a cross-language contract); all other options, account contexts, request counts and retry emissions are compared exactly. The real error is passed to subscribers; default structured logs contain only classification/options, never snapshot tokens. Missing subscribers were reproduced after all eight committed attempts before wiring the consumer exhaustion block.
+
+The merged owner message APIs now close all 13 thread Drive declarations and 16 root message declarations, with 32 actual Rails producer observations and complete attachment socket frames. A synchronous stream fence proves both emitted and absent frames without timing windows. Attaching requires human room/write authority and valid ids, not a Google grant; non-creators cannot edit, and rejected submissions preserve rows/content. Three root display/edit-form declarations remain explicitly unmapped. Agent REST/polling endpoints are still absent on the merged main API surface (WS11-api); real Drive agent request authorization itself is already covered.

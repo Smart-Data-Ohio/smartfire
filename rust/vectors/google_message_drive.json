@@ -1,0 +1,1160 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "scope": "root",
+      "scenario": "create_order",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": null,
+      "client_id": "drive-fixture-root-create_order",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-root-create_order",
+        "drive_file_ids": [
+          "2BcdEfgHiJkLmNoPqRsTu",
+          "1AbcDefGhIjKlMnOpQrSt"
+        ]
+      },
+      "path": "/rooms/486777696/messages.turbo_stream",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          1,
+          2
+        ],
+        "files": [
+          "2BcdEfgHiJkLmNoPqRsTu",
+          "1AbcDefGhIjKlMnOpQrSt"
+        ],
+        "source": "see these",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "create_textless",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": null,
+      "client_id": "drive-fixture-root-create_textless",
+      "original": "before",
+      "params": {
+        "markdown_source": "",
+        "client_message_id": "drive-fixture-root-create_textless",
+        "drive_file_ids": [
+          "1AbcDefGhIjKlMnOpQrSt"
+        ]
+      },
+      "path": "/rooms/486777696/messages.turbo_stream",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          1,
+          1
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt"
+        ],
+        "source": "",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "create_dedupe",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": null,
+      "client_id": "drive-fixture-root-create_dedupe",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-root-create_dedupe",
+        "drive_file_ids": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "",
+          "  1AbcDefGhIjKlMnOpQrSt  ",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ]
+      },
+      "path": "/rooms/486777696/messages.turbo_stream",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          1,
+          2
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "see these",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "create_invalid",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": null,
+      "client_id": "drive-fixture-root-create_invalid",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-root-create_invalid",
+        "drive_file_ids": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "bad id"
+        ]
+      },
+      "path": "/rooms/486777696/messages.turbo_stream",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": null,
+        "source": null,
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "create_scalar",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": null,
+      "client_id": "drive-fixture-root-create_scalar",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-root-create_scalar",
+        "drive_file_ids": "2BcdEfgHiJkLmNoPqRsTu"
+      },
+      "path": "/rooms/486777696/messages.turbo_stream",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": null,
+        "source": null,
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "create_overflow",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": null,
+      "client_id": "drive-fixture-root-create_overflow",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-root-create_overflow",
+        "drive_file_ids": [
+          "overflow-file-0",
+          "overflow-file-1",
+          "overflow-file-2",
+          "overflow-file-3",
+          "overflow-file-4",
+          "overflow-file-5",
+          "overflow-file-6",
+          "overflow-file-7",
+          "overflow-file-8",
+          "overflow-file-9",
+          "overflow-file-10"
+        ]
+      },
+      "path": "/rooms/486777696/messages.turbo_stream",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": null,
+        "source": null,
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "update_replace",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-update_replace",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-update_replace",
+        "drive_file_ids": [
+          "3CdeFghIjKlMnOpQrStUv"
+        ]
+      },
+      "path": "/rooms/486777696/messages/9600000001",
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/rooms/486777696/messages/9600000001",
+        "delta": [
+          0,
+          -1
+        ],
+        "files": [
+          "3CdeFghIjKlMnOpQrStUv"
+        ],
+        "source": "after",
+        "json_drive": null,
+        "frames": [
+          {
+            "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+            "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"drive_attachments_message_drive-fixture-root-update_replace\"><template>  <div id=\"drive_attachments_message_drive-fixture-root-update_replace\" class=\"drive-attachments\" data-controller=\"drive-link\">\n      <a class=\"drive-attachment\" target=\"_blank\" rel=\"noopener\" href=\"https://drive.google.com/open?id=3CdeFghIjKlMnOpQrStUv\">\n        <span class=\"drive-attachment__icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\"/><path d=\"M9.5 1.5V5H13\"/></svg></span>\n        <span class=\"drive-attachment__text\">\n          <span class=\"drive-attachment__name\">Google Drive file</span>\n          <span class=\"drive-attachment__meta\">Open in Drive</span>\n        </span>\n</a>  </div>\n</template></turbo-stream>"
+          }
+        ]
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "update_omit",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-update_omit",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-update_omit"
+      },
+      "path": "/rooms/486777696/messages/9600000001",
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/rooms/486777696/messages/9600000001",
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "after",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "update_clear",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-update_clear",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-update_clear",
+        "drive_file_ids": [
+          ""
+        ]
+      },
+      "path": "/rooms/486777696/messages/9600000001",
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/rooms/486777696/messages/9600000001",
+        "delta": [
+          0,
+          -2
+        ],
+        "files": [],
+        "source": "after",
+        "json_drive": null,
+        "frames": [
+          {
+            "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+            "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"drive_attachments_message_drive-fixture-root-update_clear\"><template>  <div id=\"drive_attachments_message_drive-fixture-root-update_clear\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n</template></turbo-stream>"
+          }
+        ]
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "update_invalid",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-update_invalid",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-update_invalid",
+        "drive_file_ids": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "bad id"
+        ]
+      },
+      "path": "/rooms/486777696/messages/9600000001",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "before",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "update_scalar",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-update_scalar",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-update_scalar",
+        "drive_file_ids": "2BcdEfgHiJkLmNoPqRsTu"
+      },
+      "path": "/rooms/486777696/messages/9600000001",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "before",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "update_overflow",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-update_overflow",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-update_overflow",
+        "drive_file_ids": [
+          "overflow-file-0",
+          "overflow-file-1",
+          "overflow-file-2",
+          "overflow-file-3",
+          "overflow-file-4",
+          "overflow-file-5",
+          "overflow-file-6",
+          "overflow-file-7",
+          "overflow-file-8",
+          "overflow-file-9",
+          "overflow-file-10"
+        ]
+      },
+      "path": "/rooms/486777696/messages/9600000001",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "before",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "update_textless_clear",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-update_textless_clear",
+      "original": "",
+      "params": {
+        "markdown_source": "",
+        "client_message_id": "drive-fixture-root-update_textless_clear",
+        "drive_file_ids": [
+          ""
+        ]
+      },
+      "path": "/rooms/486777696/messages/9600000001",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "update_noncreator",
+      "room_id": 654632876,
+      "creator_id": 149087659,
+      "actor_id": 773523953,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-update_noncreator",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-update_noncreator",
+        "drive_file_ids": [
+          "3CdeFghIjKlMnOpQrStUv"
+        ]
+      },
+      "path": "/rooms/654632876/messages/9600000001",
+      "result": {
+        "status": 403,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "before",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "json_shape",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-json_shape",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-json_shape"
+      },
+      "path": "/rooms/486777696/messages/9600000001.json",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "after",
+        "json_drive": [
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          },
+          {
+            "file_id": "2BcdEfgHiJkLmNoPqRsTu",
+            "url": "https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu"
+          }
+        ],
+        "frames": []
+      }
+    },
+    {
+      "scope": "root",
+      "scenario": "json_empty",
+      "room_id": 486777696,
+      "creator_id": 127326141,
+      "actor_id": 127326141,
+      "thread_id": null,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-root-json_empty",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-root-json_empty"
+      },
+      "path": "/rooms/486777696/messages/9600000001.json",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [],
+        "source": "after",
+        "json_drive": [],
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "create_order",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": null,
+      "client_id": "drive-fixture-thread-create_order",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-thread-create_order",
+        "drive_file_ids": [
+          "2BcdEfgHiJkLmNoPqRsTu",
+          "1AbcDefGhIjKlMnOpQrSt"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages.json",
+      "result": {
+        "status": 201,
+        "location": null,
+        "delta": [
+          1,
+          2
+        ],
+        "files": [
+          "2BcdEfgHiJkLmNoPqRsTu",
+          "1AbcDefGhIjKlMnOpQrSt"
+        ],
+        "source": "see these",
+        "json_drive": [
+          {
+            "file_id": "2BcdEfgHiJkLmNoPqRsTu",
+            "url": "https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu"
+          },
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          }
+        ],
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "create_textless",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": null,
+      "client_id": "drive-fixture-thread-create_textless",
+      "original": "before",
+      "params": {
+        "markdown_source": "",
+        "client_message_id": "drive-fixture-thread-create_textless",
+        "drive_file_ids": [
+          "1AbcDefGhIjKlMnOpQrSt"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages.json",
+      "result": {
+        "status": 201,
+        "location": null,
+        "delta": [
+          1,
+          1
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt"
+        ],
+        "source": "",
+        "json_drive": [
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          }
+        ],
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "create_dedupe",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": null,
+      "client_id": "drive-fixture-thread-create_dedupe",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-thread-create_dedupe",
+        "drive_file_ids": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "",
+          "  1AbcDefGhIjKlMnOpQrSt  ",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages.json",
+      "result": {
+        "status": 201,
+        "location": null,
+        "delta": [
+          1,
+          2
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "see these",
+        "json_drive": [
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          },
+          {
+            "file_id": "2BcdEfgHiJkLmNoPqRsTu",
+            "url": "https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu"
+          }
+        ],
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "create_invalid",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": null,
+      "client_id": "drive-fixture-thread-create_invalid",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-thread-create_invalid",
+        "drive_file_ids": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "bad id"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages.json",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": null,
+        "source": null,
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "create_scalar",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": null,
+      "client_id": "drive-fixture-thread-create_scalar",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-thread-create_scalar",
+        "drive_file_ids": "2BcdEfgHiJkLmNoPqRsTu"
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages.json",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": null,
+        "source": null,
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "create_overflow",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": null,
+      "client_id": "drive-fixture-thread-create_overflow",
+      "original": "before",
+      "params": {
+        "markdown_source": "see these",
+        "client_message_id": "drive-fixture-thread-create_overflow",
+        "drive_file_ids": [
+          "overflow-file-0",
+          "overflow-file-1",
+          "overflow-file-2",
+          "overflow-file-3",
+          "overflow-file-4",
+          "overflow-file-5",
+          "overflow-file-6",
+          "overflow-file-7",
+          "overflow-file-8",
+          "overflow-file-9",
+          "overflow-file-10"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages.json",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": null,
+        "source": null,
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "update_replace",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-update_replace",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-update_replace",
+        "drive_file_ids": [
+          "3CdeFghIjKlMnOpQrStUv"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          0,
+          -1
+        ],
+        "files": [
+          "3CdeFghIjKlMnOpQrStUv"
+        ],
+        "source": "after",
+        "json_drive": [
+          {
+            "file_id": "3CdeFghIjKlMnOpQrStUv",
+            "url": "https://drive.google.com/open?id=3CdeFghIjKlMnOpQrStUv"
+          }
+        ],
+        "frames": [
+          {
+            "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85NzAwMDAwMDAx:messages",
+            "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"drive_attachments_message_drive-fixture-thread-update_replace\"><template>  <div id=\"drive_attachments_message_drive-fixture-thread-update_replace\" class=\"drive-attachments\" data-controller=\"drive-link\">\n      <a class=\"drive-attachment\" target=\"_blank\" rel=\"noopener\" href=\"https://drive.google.com/open?id=3CdeFghIjKlMnOpQrStUv\">\n        <span class=\"drive-attachment__icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\"/><path d=\"M9.5 1.5V5H13\"/></svg></span>\n        <span class=\"drive-attachment__text\">\n          <span class=\"drive-attachment__name\">Google Drive file</span>\n          <span class=\"drive-attachment__meta\">Open in Drive</span>\n        </span>\n</a>  </div>\n</template></turbo-stream>"
+          }
+        ]
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "update_omit",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-update_omit",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-update_omit"
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "after",
+        "json_drive": [
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          },
+          {
+            "file_id": "2BcdEfgHiJkLmNoPqRsTu",
+            "url": "https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu"
+          }
+        ],
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "update_clear",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-update_clear",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-update_clear",
+        "drive_file_ids": [
+          ""
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          0,
+          -2
+        ],
+        "files": [],
+        "source": "after",
+        "json_drive": [],
+        "frames": [
+          {
+            "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85NzAwMDAwMDAx:messages",
+            "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"drive_attachments_message_drive-fixture-thread-update_clear\"><template>  <div id=\"drive_attachments_message_drive-fixture-thread-update_clear\" class=\"drive-attachments\" data-controller=\"drive-link\">\n  </div>\n</template></turbo-stream>"
+          }
+        ]
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "update_invalid",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-update_invalid",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-update_invalid",
+        "drive_file_ids": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "bad id"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "before",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "update_scalar",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-update_scalar",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-update_scalar",
+        "drive_file_ids": "2BcdEfgHiJkLmNoPqRsTu"
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "before",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "update_overflow",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-update_overflow",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-update_overflow",
+        "drive_file_ids": [
+          "overflow-file-0",
+          "overflow-file-1",
+          "overflow-file-2",
+          "overflow-file-3",
+          "overflow-file-4",
+          "overflow-file-5",
+          "overflow-file-6",
+          "overflow-file-7",
+          "overflow-file-8",
+          "overflow-file-9",
+          "overflow-file-10"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "before",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "update_textless_clear",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-update_textless_clear",
+      "original": "",
+      "params": {
+        "markdown_source": "",
+        "client_message_id": "drive-fixture-thread-update_textless_clear",
+        "drive_file_ids": [
+          ""
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 422,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "update_noncreator",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 712064548,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-update_noncreator",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-update_noncreator",
+        "drive_file_ids": [
+          "3CdeFghIjKlMnOpQrStUv"
+        ]
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 403,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "before",
+        "json_drive": null,
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "json_shape",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-json_shape",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-json_shape"
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [
+          "1AbcDefGhIjKlMnOpQrSt",
+          "2BcdEfgHiJkLmNoPqRsTu"
+        ],
+        "source": "after",
+        "json_drive": [
+          {
+            "file_id": "1AbcDefGhIjKlMnOpQrSt",
+            "url": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+          },
+          {
+            "file_id": "2BcdEfgHiJkLmNoPqRsTu",
+            "url": "https://drive.google.com/open?id=2BcdEfgHiJkLmNoPqRsTu"
+          }
+        ],
+        "frames": []
+      }
+    },
+    {
+      "scope": "thread",
+      "scenario": "json_empty",
+      "room_id": 654632876,
+      "creator_id": 773523953,
+      "actor_id": 773523953,
+      "thread_id": 9700000001,
+      "message_id": 9600000001,
+      "client_id": "drive-fixture-thread-json_empty",
+      "original": "before",
+      "params": {
+        "markdown_source": "after",
+        "client_message_id": "drive-fixture-thread-json_empty"
+      },
+      "path": "/rooms/654632876/threads/9700000001/messages/9600000001.json",
+      "result": {
+        "status": 200,
+        "location": null,
+        "delta": [
+          0,
+          0
+        ],
+        "files": [],
+        "source": "after",
+        "json_drive": [],
+        "frames": []
+      }
+    }
+  ]
+}
