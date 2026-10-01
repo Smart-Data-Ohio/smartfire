@@ -2,6 +2,7 @@
 import assert from "node:assert/strict"
 import fs from "node:fs"
 import { chromium } from "playwright"
+import { diagnostics } from "./browser_diagnostics.mjs"
 
 const base = process.env.WS8BR2_BROWSER_URL
 const labels = JSON.parse(fs.readFileSync(process.env.WS8BR2_BROWSER_LABELS, "utf8"))
@@ -15,6 +16,7 @@ async function scenario(name, run) {
   })
   await context.addCookies([{ name: "session_token", value: labels["session_cookies.david"], url: base }])
   const page = await context.newPage()
+  const diagnose = diagnostics(page)
   page.setDefaultTimeout(12000)
   try {
     const response = await page.goto(base + "/users")
@@ -24,7 +26,7 @@ async function scenario(name, run) {
     await run(page)
     results.push(name)
     console.log(`${name}: passed`)
-  } finally { await context.close() }
+  } catch(e) {await diagnose(e);throw e} finally { await context.close() }
 }
 const box = (page, user) => page.locator(`#select_user_${labels[`users.${user}`]}`)
 const bar = page => page.locator(".people-directory").locator("..").locator("[data-multi-select-target='bar']")

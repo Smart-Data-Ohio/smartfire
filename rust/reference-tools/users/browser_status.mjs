@@ -2,6 +2,7 @@
 import assert from "node:assert/strict"
 import fs from "node:fs"
 import { chromium } from "playwright"
+import { diagnostics } from "./browser_diagnostics.mjs"
 const base=process.env.WS8BR2_BROWSER_URL
 const labels=JSON.parse(fs.readFileSync(process.env.WS8BR2_BROWSER_LABELS,"utf8"))
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"]})
@@ -10,7 +11,7 @@ async function scenario(name,run,phone=false) {
   const context=await browser.newContext({viewport:phone?{width:390,height:844}:{width:1440,height:1000}})
   await context.route("**/*",r=>new URL(r.request().url()).origin===new URL(base).origin?r.continue():r.abort())
   await context.addCookies([{name:"session_token",value:labels["session_cookies.david"],url:base}])
-  const p=await context.newPage();p.setDefaultTimeout(12000)
+  const p=await context.newPage();const diagnose=diagnostics(p);p.setDefaultTimeout(12000)
   try {
     assert.equal((await p.goto(base+"/users")).status(),200)
     await p.waitForFunction(()=>window.Stimulus?.getControllerForElementAndIdentifier(document.body,"profile-card"))
@@ -23,7 +24,7 @@ async function scenario(name,run,phone=false) {
     await p.evaluate(()=>{window.statusChanges=0;window.addEventListener("user-status:changed",()=>window.statusChanges++)})
     await run(p)
     console.log(`${name}: passed`);passed++
-  } finally {await context.close()}
+  } catch(e) {await diagnose(e);throw e} finally {await context.close()}
 }
 const text=p=>p.locator("#status_popup_custom_status_text")
 const emoji=p=>p.locator("#status_popup_custom_status_emoji")

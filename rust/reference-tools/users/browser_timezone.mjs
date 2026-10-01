@@ -2,6 +2,7 @@
 import assert from "node:assert/strict"
 import fs from "node:fs"
 import { chromium } from "playwright"
+import { diagnostics } from "./browser_diagnostics.mjs"
 
 const base = process.env.WS8BR2_BROWSER_URL
 const labels = JSON.parse(fs.readFileSync(process.env.WS8BR2_BROWSER_LABELS, "utf8"))
@@ -22,6 +23,7 @@ async function scenario(name, missingToken, run) {
     })
   }
   const page = await context.newPage()
+  const diagnose = diagnostics(page)
   page.setDefaultTimeout(15000)
   const reports = []
   page.on("request", request => {
@@ -31,7 +33,7 @@ async function scenario(name, missingToken, run) {
     await run(page, reports)
     console.log(`${name}: passed`)
     passed++
-  } finally { await context.close() }
+  } catch(e) {await diagnose(e);throw e} finally { await context.close() }
 }
 const connected = page => page.waitForFunction(() => !!window.Stimulus?.getControllerForElementAndIdentifier(document.body, "timezone"))
 async function savedZone(page) {

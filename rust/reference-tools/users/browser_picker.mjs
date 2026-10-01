@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import fs from "node:fs"
 import { chromium } from "playwright"
+import { diagnostics } from "./browser_diagnostics.mjs"
 const base=process.env.WS8BR2_BROWSER_URL
 const labels=JSON.parse(fs.readFileSync(process.env.WS8BR2_BROWSER_LABELS,"utf8"))
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"]})
@@ -9,7 +10,7 @@ async function scenario(name,run,phone=false) {
   const context=await browser.newContext({viewport:phone?{width:390,height:844}:{width:1400,height:1400}})
   await context.route("**/*",route=>new URL(route.request().url()).origin===new URL(base).origin?route.continue():route.abort())
   await context.addCookies([{name:"session_token",value:labels["session_cookies.david"],url:base}])
-  const page=await context.newPage();page.setDefaultTimeout(12000)
+  const page=await context.newPage();const diagnose=diagnostics(page);page.setDefaultTimeout(12000)
   try {
     assert.equal((await page.goto(base+"/users")).status(),200)
     if(phone) await page.getByRole("button",{name:"Open workspace navigation",exact:true}).click()
@@ -17,7 +18,7 @@ async function scenario(name,run,phone=false) {
     await page.waitForFunction(()=>window.Stimulus?.getControllerForElementAndIdentifier(document.querySelector("[data-controller~='dm-picker']"),"dm-picker"))
     await run(page)
     console.log(`${name}: passed`);passed++
-  } finally {await context.close()}
+  } catch(e) {await diagnose(e);throw e} finally {await context.close()}
 }
 const filter=p=>p.locator("#dm_picker_filter")
 const rows=p=>p.locator(".dm-picker__row:not([hidden])")

@@ -53,7 +53,15 @@ covered.update({
         "profile offers Google confirmation to linked members", "profile hides Google confirmation without a linked account",
         "profile points unenrolled users at setup", "changing the password revokes all remembered devices", "updating the name keeps remembered devices",
     },
+    "system/first_run_tour_test.rb": {
+        "a new member is walked through the tour by keyboard and finishing persists",
+        "escape skips the tour and it never auto-starts again",
+        "the tour restarts from the help menu",
+        "members who completed the tour never see it auto-start",
+    },
     "system/people_group_dms_test.rb": {
+        "clicking a message author opens their profile card and Message lands in the DM",
+        "the profile card opens by keyboard, traps focus, and returns it on Esc",
         "the new-DM picker filters as you type with no suggestion bubble or submit button",
         "picker selections survive filtering and Message starts the DM",
         "Enter in the picker filter selects the single visible match",

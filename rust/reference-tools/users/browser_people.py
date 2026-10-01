@@ -18,12 +18,14 @@ scratch = root.parent / ".scratch"
 scratch.mkdir(exist_ok=True)
 run_dir = Path(tempfile.mkdtemp(prefix="browser-people-", dir=scratch))
 seed = root / "parity/.seed/default"
+room_mode = sys.argv[1:] == ["--room"]
+tour_mode = sys.argv[1:] == ["--tour"]
 picker_mode = sys.argv[1:] == ["--picker"]
 status_mode = sys.argv[1:] == ["--status"]
 pwa_mode = sys.argv[1:] == ["--pwa"]
 audit_mode = sys.argv[1:] == ["--audit"]
 timezone_mode = sys.argv[1:] == ["--timezone"]
-assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode or audit_mode or timezone_mode, "expected --picker, --status, --pwa, --audit, --timezone or no arguments"
+assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode or audit_mode or timezone_mode or room_mode or tour_mode, "expected --picker, --status, --pwa, --audit, --timezone, --room, --tour or no arguments"
 if audit_mode:
     setup_env = os.environ.copy()
     setup_env.pop("LD_LIBRARY_PATH", None)
@@ -31,11 +33,16 @@ if audit_mode:
     subprocess.run([str(root / "parity/bin/seed"), "build", "ws8br2_browser_audit"], env=setup_env, check=True)
     seed = root / "parity/.seed/ws8br2_browser_audit"
 browser_seed = None
-if picker_mode or timezone_mode:
+if picker_mode or timezone_mode or tour_mode:
     browser_seed = root / f"parity/.seed/ws8br2-browser-{os.getpid()}"
     shutil.copytree(seed, browser_seed)
     seed = browser_seed
     with sqlite3.connect(seed / "db/production.sqlite3") as db:
+        if tour_mode:
+            input_labels = json.loads((seed / "labels.json").read_text())
+            for user in ("jz", "jason", "kevin"):
+                db.execute("UPDATE users SET tour_completed_at=NULL WHERE id=?", [input_labels[f"users.{user}"]])
+            db.execute("UPDATE users SET tour_completed_at=? WHERE id=?", [input_labels["clock.now"],input_labels["users.david"]])
         if timezone_mode:
             david = json.loads((seed / "labels.json").read_text())["users.david"]
             db.execute("UPDATE users SET time_zone=NULL,time_zone_explicit=0 WHERE id=?", [david])
@@ -95,7 +102,7 @@ try:
             subprocess.run(["docker", "run", "--rm", "--network", "host", "--label", "parity.owner=ws8br2",
                             "-v", f"{root.parent}:/work:ro", "-e", f"WS8BR2_BROWSER_URL=http://127.0.0.1:{port}",
                             "-e", f"WS8BR2_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json", image,
-                            "node", "/work/rust/reference-tools/users/" + ("browser_timezone.mjs" if timezone_mode else "browser_audit.mjs" if audit_mode else "browser_pwa.mjs" if pwa_mode else "browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
+                            "node", "/work/rust/reference-tools/users/" + ("browser_room.mjs" if room_mode else "browser_tour.mjs" if tour_mode else "browser_timezone.mjs" if timezone_mode else "browser_audit.mjs" if audit_mode else "browser_pwa.mjs" if pwa_mode else "browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
 finally:
     if server is not None:
         server.terminate()

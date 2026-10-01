@@ -2,6 +2,7 @@
 import assert from "node:assert/strict"
 import fs from "node:fs"
 import { chromium } from "playwright"
+import { diagnostics } from "./browser_diagnostics.mjs"
 
 const base = process.env.WS8BR2_BROWSER_URL
 const labels = JSON.parse(fs.readFileSync(process.env.WS8BR2_BROWSER_LABELS, "utf8"))
@@ -12,6 +13,7 @@ async function scenario(name, run, phone = false) {
   await context.route("**/*", r => new URL(r.request().url()).origin === new URL(base).origin ? r.continue() : r.abort())
   await context.addCookies([{ name: "session_token", value: labels["session_cookies.david"], url: base }])
   const page = await context.newPage()
+  const diagnose = diagnostics(page)
   page.setDefaultTimeout(15000)
   try {
     assert.equal((await page.goto(base + "/account/audit_log")).status(), 200)
@@ -19,7 +21,7 @@ async function scenario(name, run, phone = false) {
     await run(page)
     console.log(`${name}: passed`)
     passed++
-  } finally { await context.close() }
+  } catch(e) {await diagnose(e);throw e} finally { await context.close() }
 }
 try {
   await scenario("audit-filter-and-real-csv-download", async page => {

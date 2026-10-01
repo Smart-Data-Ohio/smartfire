@@ -4,6 +4,7 @@ import fs from "node:fs"
 import { spawnSync } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { chromium } from "playwright"
+import { diagnostics } from "./browser_diagnostics.mjs"
 
 const base = process.env.WS8BR2_BROWSER_URL
 const labels = JSON.parse(fs.readFileSync(process.env.WS8BR2_BROWSER_LABELS, "utf8"))
@@ -18,12 +19,13 @@ async function scenario(name, run) {
     { name: "enable_service_worker", value: "1", url: base }
   ])
   const page = await context.newPage()
+  const diagnose = diagnostics(page)
   page.setDefaultTimeout(15000)
   try {
     await run(page)
     console.log(`${name}: passed`)
     passed++
-  } finally { await context.close() }
+  } catch(e) {await diagnose(e);throw e} finally { await context.close() }
 }
 
 try {
