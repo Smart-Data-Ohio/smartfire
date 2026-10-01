@@ -813,3 +813,16 @@ fn decisions_follow_retry_on_and_discard_on() {
         Decision::Reschedule { wait: Duration::from_secs(5), error: None, reset_attempts: true }
     );
 }
+
+#[tokio::test]
+async fn google_recovery_preserves_completed_exception_group_budgets() {
+    let (registry,mut performed)=echo_registry();let h=harness(&registry,&config());let id=h.enqueue(Echo{n:123}).await;
+    h.db.write(move |tx| {
+        let args=serde_json::json!({"_campfire_retry_metadata_v1":{"arguments":{"n":123},"counts":{"[Google::Client::Unavailable]":7,"[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]":4}}}).to_string();
+        tx.conn().execute("UPDATE background_jobs SET status='running',attempts=12,claimed_by='dead-process',lease_expires_at=?,arguments=? WHERE id=?",rusqlite::params![tx.now(),args,id])?;Ok(())
+    }).await.unwrap();
+    let runner=start(h.db.clone(),h.queue.clone(),registry,(),config());
+    h.wait_for("orphan recovery outcome",|jobs|jobs.is_empty() || jobs.iter().any(|job|job.status==FAILED)).await;
+    assert!(h.job(id).is_none(),"Recovery spent the completed exception handlers' attempts again: {:?}",h.job(id));
+    assert_eq!(next(&mut performed).await,(123,13));runner.shutdown(Duration::from_secs(5)).await;
+}

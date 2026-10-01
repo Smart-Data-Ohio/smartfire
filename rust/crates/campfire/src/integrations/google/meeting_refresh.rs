@@ -19,7 +19,7 @@ pub fn register(registry: &mut Registry) {
     registry.register(perform);
 }
 async fn perform(app: App, job: Refresh, execution: Execution) -> JobResult {
-    calendar::job_result(
+    calendar::application_result(
         refresh(&app, job.0.user_id, Timestamp::from_jiff(app.clock.now()))
             .await
             .map(|_| ()),

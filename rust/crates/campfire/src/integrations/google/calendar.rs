@@ -75,23 +75,32 @@ async fn cleanup_job(app: App, job: Cleanup, execution: Execution) -> JobResult 
 pub(crate) fn finish_cleanup(
     result: api::Result<()>,
     execution: &Execution,
-    account_id: Option<i64>,
+    _account_id: Option<i64>,
 ) -> JobResult {
-    if let Err(error) = &result
-        && error.unavailable()
-        && execution.executions >= 8
+    let mut result = job_result(result, execution);
+    if let Err(JobError::RetryGroup {
+        key: GOOGLE_RETRY,
+        discard_exhausted,
+        ..
+    }) = &mut result
     {
-        tracing::error!(
-            ?account_id,
-            "Calendar::DisconnectCleanupJob failed after retries: {}",
-            error.class()
-        );
-        return Ok(Outcome::Done);
+        *discard_exhausted = true;
     }
-    job_result(result, execution)
+    result
 }
-/// Keep the inherited five-attempt SQLite/timeout policy beside the eight-attempt Google policy.
+
+pub(crate) const GOOGLE_RETRY: &str = "[Google::Client::Unavailable]";
+pub(crate) const INHERITED_RETRY: &str = "[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]";
+
+/// Rails counts each retry_on handler separately, including inherited handlers.
 pub(crate) fn job_result(result: api::Result<()>, execution: &Execution) -> JobResult {
+    match result {
+        Err(error) if error.unavailable() => Err(JobError::retry_group(error, GOOGLE_RETRY, 8)),
+        result => application_result(result, execution),
+    }
+}
+
+pub(crate) fn application_result(result: api::Result<()>, _execution: &Execution) -> JobResult {
     match result {
         Ok(()) => Ok(Outcome::Done),
         Err(error) => {
@@ -99,19 +108,15 @@ pub(crate) fn job_result(result: api::Result<()>, execution: &Execution) -> JobR
                 api::Error::Storage(e) => anyhow::Error::new(e),
                 e => anyhow::Error::new(e),
             };
-            let inherited = RetryPolicy::application_job();
-            if (inherited.retry_on)(&error) {
-                if execution.executions >= inherited.attempts {
-                    Err(JobError::fail(error))
-                } else {
-                    Err(JobError::retry(error))
-                }
+            if (RetryPolicy::application_job().retry_on)(&error) {
+                Err(JobError::retry_group(error, INHERITED_RETRY, 5))
             } else {
                 Err(error.into())
             }
         }
     }
 }
+
 pub async fn cleanup(
     app: &App,
     ids: Vec<String>,
@@ -408,7 +413,12 @@ mod tests {
                 &execution(7),
                 Some(1)
             ),
-            Err(JobError::Error(_))
+            Err(JobError::RetryGroup {
+                key: GOOGLE_RETRY,
+                attempts: 8,
+                discard_exhausted: true,
+                ..
+            })
         ));
         assert!(matches!(
             finish_cleanup(
@@ -416,7 +426,12 @@ mod tests {
                 &execution(8),
                 Some(1)
             ),
-            Ok(Outcome::Done)
+            Err(JobError::RetryGroup {
+                key: GOOGLE_RETRY,
+                attempts: 8,
+                discard_exhausted: true,
+                ..
+            })
         ));
         assert!(matches!(
             finish_cleanup(
@@ -437,11 +452,26 @@ mod tests {
         };
         assert!(matches!(
             job_result(Err(busy()), &execution(4)),
-            Err(JobError::Retry { .. })
+            Err(JobError::RetryGroup {
+                key: INHERITED_RETRY,
+                attempts: 5,
+                ..
+            })
         ));
         assert!(matches!(
             job_result(Err(busy()), &execution(5)),
-            Err(JobError::Fail(_))
+            Err(JobError::RetryGroup {
+                key: INHERITED_RETRY,
+                attempts: 5,
+                ..
+            })
+        ));
+    }
+    #[test]
+    fn google_meeting_refresh_does_not_inherit_calendar_google_retries() {
+        assert!(matches!(
+            application_result(Err(api::Error::Unavailable("timeout".into())), &execution(1)),
+            Err(JobError::Error(_))
         ));
     }
     #[test]
