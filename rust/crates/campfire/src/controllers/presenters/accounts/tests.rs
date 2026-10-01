@@ -282,6 +282,7 @@ impl Browser<'_> {
         .await
     }
 
+
     // Rails test helper's grant_sudo_access: authenticate the real encrypted cookie,
     // preserve its CSRF state, and add the same verified-at epoch value.
     fn grant_sudo_access(&mut self) {
@@ -831,7 +832,12 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
     let response = admin.form("put", &path, &[]).await;
     assert_redirect(&response, "http://campfire.test/sudo/new");
     assert!(test.booted.app.db.read({let old_key=old_key.clone(); move |conn| campfire_db::User::authenticate_bot(conn,&old_key)}).await.unwrap().is_some());
-    admin.grant_sudo_access();
+    assert_eq!(admin.get("/sudo/new").await.status, StatusCode::OK);
+    let confirmed = admin.form("post", "/sudo", &[("password", PASSWORD)]).await;
+    assert_eq!(confirmed.status, StatusCode::OK);
+    confirmed.assert_form(&path);
+    assert!(confirmed.text().contains("name=\"_method\" value=\"put\""));
+    // The browser submits Rails' continuation form after confirmation.
     let response = admin.form("put", &path, &[]).await;
     assert_eq!(response.status, StatusCode::OK);
     assert_eq!(response.headers.get("cache-control").unwrap(), "no-store");
@@ -905,12 +911,17 @@ async fn manages_bots() {
     let edit = admin.get(&format!("/account/bots/{bender}/edit")).await;
     let key_action = format!("/account/bots/{bender}/key");
     edit.assert_button(&key_action, "put");
-    admin.grant_sudo_access();
+    admin.confirm_sudo().await;
+    let bender_id: i64 = bender.parse().unwrap();
+    let old_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
     let reset = admin.form("put", &key_action, &[]).await;
     assert_eq!(reset.status, StatusCode::OK);
     assert_eq!(reset.header("cache-control"), Some("no-store"));
     assert!(!reset.text().contains(&test.label("bot_keys.bender")), "manages_bots still shows the retired key");
     assert!(!admin.get("/account/bots").await.text().contains(&test.label("bot_keys.bender")));
+    let new_digest = test.booted.app.db.read(move |conn| Ok(campfire_db::User::find(conn, bender_id)?.bot_token_digest)).await.unwrap();
+    assert_ne!(old_digest, new_digest);
+    assert!(admin.get("/account/bots").await.text().contains(campfire_db::user::BOT_KEY_PLACEHOLDER));
 
     admin
         .get(&format!("/account/bots/{bender}/edit"))

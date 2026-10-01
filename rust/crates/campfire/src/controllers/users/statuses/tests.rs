@@ -11,7 +11,12 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
 const PATH: &str = "/users/me/status";
 async fn boot() -> TestApp {
-    let app = TestApp::boot()
+    // The request vectors were recorded with --freeze. A ticking seed clock adds
+    // setup/scheduling time to relative expiries and makes them depend on CI load.
+    let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
+        crate::controllers::presenters::test_support::SEED_NOW.parse().unwrap(),
+    ));
+    let app = TestApp::boot_with_clock(clock)
         .await
         .expect("WS17 requires the actual Rails parity seed");
     app.db()
@@ -26,6 +31,23 @@ async fn boot() -> TestApp {
         .unwrap();
     app
 }
+#[tokio::test]
+async fn ws17_status_fixture_freezes_request_database_and_transaction_clocks() {
+    let app = boot().await;
+    let expected = crate::controllers::presenters::test_support::SEED_NOW
+        .parse::<jiff::Timestamp>()
+        .unwrap();
+    assert_eq!(app.booted.app.clock.now(), expected, "request clock must match frozen Rails vectors");
+    assert_eq!(app.db().env().now(), Timestamp::from_jiff(expected), "database clock must match frozen Rails vectors");
+    app.db()
+        .write(move |tx| {
+            assert_eq!(tx.now(), Timestamp::from_jiff(expected), "transaction clock must match frozen Rails vectors");
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
 async fn settings(app: &TestApp) -> UserStatusSettings {
     app.db()
         .read(|conn| UserStatusSettings::find(conn, DAVID))
@@ -138,10 +160,7 @@ async fn replay(names: &[&str]) {
             if let Some(expected) = row["stored"][key].as_str() {
                 let expected = Timestamp::from_jiff(expected.parse().unwrap());
                 let actual = time.unwrap();
-                assert!(
-                    (actual.as_microsecond() - expected.as_microsecond()).abs() < 2_000_000,
-                    "{name}/{key}: {actual:?} != {expected:?}"
-                );
+                assert_eq!(actual, expected, "{name}/{key}");
             } else {
                 assert!(time.is_none(), "{name}/{key}");
             }
@@ -308,7 +327,12 @@ async fn ws17_seeded_enabled_2fa_settings_errors_match_the_actual_rails_failure(
         "../../../../../../vectors/ws17_status_requests.json"
     ))
     .unwrap();
-    let app = TestApp::boot()
+    // The request vectors were recorded with --freeze. A ticking seed clock adds
+    // setup/scheduling time to relative expiries and makes them depend on CI load.
+    let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
+        crate::controllers::presenters::test_support::SEED_NOW.parse().unwrap(),
+    ));
+    let app = TestApp::boot_with_clock(clock)
         .await
         .expect("WS17 requires the actual Rails parity seed");
     let before = settings(&app).await;

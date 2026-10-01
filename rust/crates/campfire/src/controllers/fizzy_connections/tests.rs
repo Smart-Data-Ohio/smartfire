@@ -69,7 +69,8 @@ async fn run(case: &str) {
     } else {
         json!({"accounts":[{"slug":"/897362094","name":"Smart Data","user":{"id":"03user1","name":"David"}}]})
     };
-    let listener = tokio::net::TcpListener::bind(("127.0.0.1",case_port()))
+    let api_base = crate::integrations::fizzy::client::api_base_url();
+    let listener = tokio::net::TcpListener::bind(api_base.strip_prefix("http://").unwrap())
         .await
         .unwrap();
     let server = FakeServer::on_listener(

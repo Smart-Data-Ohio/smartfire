@@ -41,11 +41,13 @@ pub struct AppState {
     pub mail: crate::mail::State,
     pub agent_message_payload: crate::controllers::presenters::agent_payload::State,
     pub agent_repositories: crate::integrations::agent_repositories::State,
-    pub github_accounts: crate::integrations::github::accounts::Accounts,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
+    pub github_accounts: crate::integrations::github::accounts::Accounts,
+    pub github_app: crate::integrations::github::client::AppClient,
+    pub github_read: crate::integrations::github::client::ReadClient,
     pub subscription_network: crate::integrations::net::Network,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
     /// and every render outside one.
@@ -101,6 +103,37 @@ pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscr
 /// Service dependencies, including which periodic hosts run beside HTTP. The Rails parity
 /// server does not run bin/periodic; its seeded HTTP tests invoke due tasks explicitly.
 pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
+    let network = subscription_network.clone();
+    let github_app = crate::integrations::github::client::AppClient::with_network(
+        std::env::var("GITHUB_APP_CLIENT_ID").ok(),
+        std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
+        network.clone(),
+    );
+    boot_with_all_services(config, clock, crate::integrations::github::client::ReadClient::from_env(), github_app, network, subscription_network, intervals).await
+}
+
+/// Injects the fixed-host GitHub client for runtime acceptance tests.
+#[cfg(test)]
+pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient) -> anyhow::Result<Booted> {
+    boot_with_github_network(config, clock, github_read, crate::integrations::net::Network::system()).await
+}
+
+#[cfg(test)]
+pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    let github_app = crate::integrations::github::client::AppClient::with_network(
+        std::env::var("GITHUB_APP_CLIENT_ID").ok(),
+        std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
+        github_network.clone(),
+    );
+    boot_with_github_clients(config, clock, github_read, github_app, github_network).await
+}
+
+#[cfg(test)]
+pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    boot_with_all_services(config, clock, github_read, github_app, github_network, crate::integrations::net::Network::system(), jobs::periodic::Intervals::from_env()).await
+}
+
+pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let ar_encryption = Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets));
@@ -159,11 +192,7 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
     let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
-        db.clone(), ar_encryption.clone(),
-        crate::integrations::github::client::AppClient::with_network(
-            std::env::var("GITHUB_APP_CLIENT_ID").ok(),
-            std::env::var("GITHUB_APP_CLIENT_SECRET").ok(), subscription_network.clone(),
-        ), subscription_network.clone(),
+        db.clone(), ar_encryption.clone(), github_app.clone(), github_network,
     );
     let agent_repositories = crate::integrations::agent_repositories::State::live(github_accounts.clone());
     let app = Arc::new(AppState {
@@ -179,10 +208,12 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
         mail,
         agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
         agent_repositories,
-        github_accounts,
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         web_push,
+        github_read,
+        github_app,
+        github_accounts,
         subscription_network,
         fragment_cache,
     });
@@ -212,6 +243,8 @@ async fn open_database(
         sink: Arc::new(jobs),
         rich_text,
         bcrypt_cost: 12,
+        message_reference_syncs: vec![crate::integrations::github::references::sync],
+        user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
     };
     Ok(tokio::task::spawn_blocking(move || Database::open(db_config, env)).await??)
 }

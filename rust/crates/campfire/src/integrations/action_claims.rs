@@ -86,7 +86,9 @@ pub async fn recover_stuck_claims(
                     return Ok(false);
                 }
                 // Rails rescues audit errors separately: an audit outage must not suppress delivery.
-                if let Err(error) = record_execution_audit(tx, event_id, integration) {
+                if let Err(error) =
+                    record_execution_audit_with_url(tx, event_id, integration, false)
+                {
                     tracing::error!(%error, event_id, "Stuck integration claim audit failed");
                 }
                 Ok(true)
@@ -152,27 +154,66 @@ pub fn rewrite_running(
     Ok(won)
 }
 
+// Completed Fizzy outcomes and the shared sweep audit the persisted approval/actor snapshot.
 pub fn record_execution_audit(
     tx: &Tx<'_>,
     event_id: i64,
     integration: Integration,
 ) -> campfire_db::Result<()> {
+    record_execution_audit_with_url(tx, event_id, integration, true)
+}
+
+fn record_execution_audit_with_url(
+    tx: &Tx<'_>,
+    event_id: i64,
+    integration: Integration,
+    include_url: bool,
+) -> campfire_db::Result<()> {
+    use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
     // Prefer the additive approval column; metadata covers historical rows. A missing
     // approval means there is no audit target, exactly as Rails' find_by guard.
-    let source = tx.conn().query_row("SELECT agent_approvals.action, agent_events.metadata FROM agent_events JOIN agent_approvals ON agent_approvals.id = COALESCE(agent_events.agent_approval_id, json_extract(agent_events.metadata, '$.approval_id')) WHERE agent_events.id = ?", [event_id], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))).optional()?;
-    let Some((action, stored)) = source else {
+    let source = tx.conn().query_row(
+        "SELECT a.id, a.action, e.actor_id, e.metadata FROM agent_events e JOIN agent_approvals a ON a.id = COALESCE(e.agent_approval_id, json_extract(e.metadata, '$.approval_id')) WHERE e.id = ?",
+        [event_id],
+        |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<i64>>(2)?, row.get::<_, String>(3)?)),
+    ).optional()?;
+    let Some((approval_id, action, actor_id, stored)) = source else {
         return Ok(());
     };
     let metadata: Value = serde_json::from_str(&stored)
         .map_err(|error| campfire_db::Error::Other(error.to_string()))?;
     let mut details = serde_json::Map::new();
-    details.insert("action".into(), Value::String(action));
+    details.insert("action".into(), Value::String(action.clone()));
     for key in ["status", "url", "message"] {
+        // The timeout preserves historical metadata, but its audit only records status/message.
+        if key == "url" && !include_url {
+            continue;
+        }
         if let Some(value) = metadata.get(key).filter(|value| !value.is_null()) {
             details.insert(key.into(), value.clone());
         }
     }
-    tx.conn().execute("INSERT INTO audit_logs (action, actor_id, actor_label, target_type, target_id, target_label, details, created_at, updated_at) SELECT ?1, users.id, CASE WHEN users.id IS NOT NULL THEN users.name || ' <' || COALESCE(users.email_address, '') || '>' END, 'AgentApproval', agent_approvals.id, agent_approvals.action || ' approval #' || agent_approvals.id, ?2, ?3, ?3 FROM agent_events JOIN agent_approvals ON agent_approvals.id = COALESCE(agent_events.agent_approval_id, json_extract(agent_events.metadata, '$.approval_id')) LEFT JOIN users ON users.id = agent_events.actor_id WHERE agent_events.id = ?4", params![integration.audit_action, Value::Object(details).to_string(), tx.now(), event_id])?;
+    let actor = actor_id
+        .map(|id| campfire_db::User::find_by_id(tx.conn(), id))
+        .transpose()?
+        .flatten()
+        .as_ref()
+        .map(Actor::from);
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: integration.audit_action.into(),
+            actor,
+            target: Some(Target {
+                record_type: "AgentApproval".into(),
+                id: approval_id,
+                label: Some(format!("{action} approval #{approval_id}")),
+            }),
+            changes: Some(Value::Object(details)),
+            ..Default::default()
+        },
+        &Context::default(),
+    )?;
     Ok(())
 }
 

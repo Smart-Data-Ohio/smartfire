@@ -1,0 +1,3881 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "name": "opened",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "mention_security",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "@[Kevin]\nAlice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Ping @[Everyone]\r\nplease",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**@​[Kevin] Alice** opened pull request #12: Ping @​[Everyone] please\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "opened_reopen_dedupe",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "pull_request",
+          {
+            "action": "reopened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "pull_request",
+          {
+            "action": "ready_for_review",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "pull_request",
+          {
+            "action": "synchronize",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "pull_request",
+          {
+            "action": "labeled",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "reopened",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "reopened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** reopened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "ready",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "ready_for_review",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** marked #12: Fix login ready for review\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "closed_merged",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "closed",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": true,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "pull_request",
+          {
+            "action": "closed",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 13,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** merged #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** closed #13: Fix login\nhttps://github.com/rails/rails/pull/13",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                13
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "merged:rails/rails#12",
+            "message": 0
+          },
+          {
+            "subscription": 819,
+            "key": "closed:rails/rails#13:2026-09-17T12:00:00Z",
+            "message": 1
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "closed_twice",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "closed",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "pull_request",
+          {
+            "action": "closed",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "pull_request",
+          {
+            "action": "closed",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "later",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** closed #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** closed #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "closed:rails/rails#12:2026-09-17T12:00:00Z",
+            "message": 0
+          },
+          {
+            "subscription": 819,
+            "key": "closed:rails/rails#12:later",
+            "message": 1
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_requested",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:kevin-gh",
+            "message": 0
+          }
+        ],
+        "activity": [
+          {
+            "user_id": 812,
+            "message": 0
+          }
+        ],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_stranger",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "stranger"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **stranger** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:stranger",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_nonmember",
+      "member": false,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:kevin-gh",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_off",
+      "preference": false,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:kevin-gh",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_nothing",
+      "involvement": "nothing",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:kevin-gh",
+            "message": 0
+          }
+        ],
+        "activity": [
+          {
+            "user_id": 812,
+            "message": 0
+          }
+        ],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_invisible",
+      "involvement": "invisible",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:kevin-gh",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_inactive",
+      "inactive": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:kevin-gh",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_bot",
+      "reviewer_bot": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:kevin-gh",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_strip",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "  Kevin-GH  "
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:  kevin-gh  ",
+            "message": 0
+          }
+        ],
+        "activity": [
+          {
+            "user_id": 812,
+            "message": 0
+          }
+        ],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "team_review",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "reviews",
+      "deliveries": [
+        [
+          "pull_request_review",
+          {
+            "action": "submitted",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            },
+            "review": {
+              "id": 7,
+              "state": "approved",
+              "user": {
+                "login": "carol"
+              }
+            }
+          }
+        ],
+        [
+          "pull_request_review",
+          {
+            "action": "submitted",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            },
+            "review": {
+              "id": 7,
+              "state": "approved",
+              "user": {
+                "login": "carol"
+              }
+            }
+          }
+        ],
+        [
+          "pull_request_review",
+          {
+            "action": "submitted",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            },
+            "review": {
+              "id": 9,
+              "state": "changes_requested",
+              "user": {
+                "login": "carol"
+              }
+            }
+          }
+        ],
+        [
+          "pull_request_review",
+          {
+            "action": "submitted",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            },
+            "review": {
+              "id": 10,
+              "state": "commented",
+              "user": {
+                "login": "carol"
+              }
+            }
+          }
+        ],
+        [
+          "pull_request_review",
+          {
+            "action": "submitted",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            },
+            "review": {
+              "id": 11,
+              "state": "dismissed",
+              "user": {
+                "login": "carol"
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**carol** approved #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**carol** requested changes on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**carol** commented on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_submitted:rails/rails#12:7",
+            "message": 0
+          },
+          {
+            "subscription": 819,
+            "key": "review_submitted:rails/rails#12:9",
+            "message": 1
+          },
+          {
+            "subscription": 819,
+            "key": "review_submitted:rails/rails#12:10",
+            "message": 2
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "review_edited",
+      "deliveries": [
+        [
+          "pull_request_review",
+          {
+            "action": "edited",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            },
+            "review": {
+              "id": 7,
+              "state": "approved",
+              "user": {
+                "login": "carol"
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "checks_dedupe",
+      "deliveries": [
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_run": {
+              "head_sha": "abc123",
+              "conclusion": "failure",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ],
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_run": {
+              "head_sha": "abc123",
+              "conclusion": "failure",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / lint",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ],
+        [
+          "check_suite",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_suite": {
+              "head_sha": "abc123",
+              "conclusion": "failure",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ],
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_run": {
+              "head_sha": "def456",
+              "conclusion": "failure",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12 (`ci / test`)\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12 (`ci / test`)\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:abc123",
+            "message": 0
+          },
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:def456",
+            "message": 1
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "checks_success",
+      "deliveries": [
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_run": {
+              "head_sha": "abc123",
+              "conclusion": "success",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ],
+        [
+          "check_suite",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_suite": {
+              "head_sha": "abc123",
+              "conclusion": "success",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "checks_timeout_cancel",
+      "deliveries": [
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_run": {
+              "head_sha": "abc123",
+              "conclusion": "timed_out",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ],
+        [
+          "check_suite",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_suite": {
+              "head_sha": "next",
+              "conclusion": "cancelled",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12 (`ci / test`)\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12 (`CI`)\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:abc123",
+            "message": 0
+          },
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:next",
+            "message": 1
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "checks_multi",
+      "stored": true,
+      "deliveries": [
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_run": {
+              "head_sha": "abc123",
+              "conclusion": "failure",
+              "pull_requests": [
+                {
+                  "number": 12
+                },
+                {
+                  "number": 13
+                },
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12: Secret acquisition (`ci / test`)\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #13 (`ci / test`)\nhttps://github.com/rails/rails/pull/13",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                13
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:abc123",
+            "message": 0
+          },
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#13:abc123",
+            "message": 1
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "status_stored",
+      "stored": true,
+      "deliveries": [
+        [
+          "status",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "state": "failure",
+            "sha": "abc123",
+            "branches": [
+              {
+                "name": "shiny"
+              }
+            ],
+            "context": "ci / test"
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12: Secret acquisition (`ci / test`)\nhttps://github.com/Rails/Rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:abc123",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "status_no_pr",
+      "deliveries": [
+        [
+          "status",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "state": "failure",
+            "sha": "abc123",
+            "branches": [
+              {
+                "name": "shiny"
+              }
+            ],
+            "context": "ci / test"
+          }
+        ],
+        [
+          "status",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "state": "success",
+            "sha": "abc123",
+            "branches": [
+              {
+                "name": "shiny"
+              }
+            ],
+            "context": "ci / test"
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "status_fallback",
+      "stored": true,
+      "no_url": true,
+      "deliveries": [
+        [
+          "status",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "state": "error",
+            "sha": "abc123",
+            "branches": [
+              {
+                "name": "shiny"
+              }
+            ],
+            "context": "ci / test"
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12: Secret acquisition (`ci / test`)\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:abc123",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "unsubscribed_keys",
+      "events": [
+        "opened"
+      ],
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "closed",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": true,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "check_run": {
+              "head_sha": "abc123",
+              "conclusion": "failure",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "no_subscriptions",
+      "no_subscriptions": true,
+      "no_bot": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 0,
+        "thread": null
+      }
+    },
+    {
+      "name": "unhandled",
+      "no_bot": true,
+      "deliveries": [
+        [
+          "ping",
+          {}
+        ],
+        [
+          "push",
+          {
+            "repository": {
+              "full_name": "rails/rails"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 0,
+        "thread": null
+      }
+    },
+    {
+      "name": "thread_and_root",
+      "thread": true,
+      "other": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": true,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 825,
+            "thread": false,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          },
+          {
+            "subscription": 829,
+            "key": "opened:rails/rails#12",
+            "message": 1
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": true
+          },
+          {
+            "room_id": 825,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": {
+          "closed": false,
+          "locked": false,
+          "fresh": true
+        }
+      }
+    },
+    {
+      "name": "thread_dedupe",
+      "thread": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ],
+        [
+          "pull_request",
+          {
+            "action": "reopened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": true,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": true
+          }
+        ],
+        "bot_count": 1,
+        "thread": {
+          "closed": false,
+          "locked": false,
+          "fresh": true
+        }
+      }
+    },
+    {
+      "name": "thread_review",
+      "thread": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": true,
+            "source": "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "review_requested:rails/rails#12:kevin-gh",
+            "message": 0
+          }
+        ],
+        "activity": [
+          {
+            "user_id": 812,
+            "message": 0
+          }
+        ],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": true
+          }
+        ],
+        "bot_count": 1,
+        "thread": {
+          "closed": false,
+          "locked": false,
+          "fresh": true
+        }
+      }
+    },
+    {
+      "name": "thread_locked",
+      "thread": true,
+      "locked": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": {
+          "closed": false,
+          "locked": true,
+          "fresh": false
+        }
+      }
+    },
+    {
+      "name": "thread_closed",
+      "thread": true,
+      "closed": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": true,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": true
+          }
+        ],
+        "bot_count": 1,
+        "thread": {
+          "closed": false,
+          "locked": false,
+          "fresh": true
+        }
+      }
+    },
+    {
+      "name": "thread_case",
+      "thread": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "Rails/Rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": true,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": true
+          }
+        ],
+        "bot_count": 1,
+        "thread": {
+          "closed": false,
+          "locked": false,
+          "fresh": true
+        }
+      }
+    },
+    {
+      "name": "check_case",
+      "stored": true,
+      "deliveries": [
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "Rails/Rails",
+              "private": false
+            },
+            "check_run": {
+              "head_sha": "abc123",
+              "conclusion": "failure",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12: Secret acquisition (`ci / test`)\nhttps://github.com/Rails/Rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:abc123",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "status_case",
+      "stored": true,
+      "deliveries": [
+        [
+          "status",
+          {
+            "repository": {
+              "full_name": "Rails/Rails",
+              "private": false
+            },
+            "state": "failure",
+            "sha": "abc123",
+            "branches": [
+              {
+                "name": "shiny"
+              }
+            ],
+            "context": "ci / test"
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12: Secret acquisition (`ci / test`)\nhttps://github.com/Rails/Rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:abc123",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "deleted",
+      "deleted": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "deleted_review",
+      "deleted": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "review_requested",
+            "sender": {
+              "login": "bob"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "private_unverified",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": true
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Secret acquisition",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** opened pull request #12\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "unknown_unverified",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "closed",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails"
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Secret acquisition",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": true,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** merged #12\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "merged:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "private_verified",
+      "verified": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": true
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Secret acquisition",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** opened pull request #12: Secret acquisition\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "private_checks",
+      "stored": true,
+      "deliveries": [
+        [
+          "check_run",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": true
+            },
+            "check_run": {
+              "head_sha": "abc123",
+              "conclusion": "failure",
+              "pull_requests": [
+                {
+                  "number": 12
+                }
+              ],
+              "name": "ci / test",
+              "app": {
+                "name": "CI"
+              }
+            }
+          }
+        ],
+        [
+          "status",
+          {
+            "repository": {
+              "full_name": "rails/rails",
+              "private": true
+            },
+            "state": "failure",
+            "sha": "next",
+            "branches": [
+              {
+                "name": "shiny"
+              }
+            ],
+            "context": "ci / test"
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12 (`ci / test`)\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "Checks failed on #12 (`ci / test`)\nhttps://github.com/Rails/Rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:abc123",
+            "message": 0
+          },
+          {
+            "subscription": 819,
+            "key": "checks_failed:rails/rails#12:next",
+            "message": 1
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "per_subscription",
+      "other": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": true
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Secret acquisition",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** opened pull request #12\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          },
+          {
+            "room_id": 825,
+            "thread": false,
+            "source": "**alice** opened pull request #12: Secret acquisition\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          },
+          {
+            "subscription": 829,
+            "key": "opened:rails/rails#12",
+            "message": 1
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          },
+          {
+            "room_id": 825,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "lazy_bot",
+      "no_bot": true,
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "base_repository",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**alice** opened pull request #12\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "invalid_repository",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "alice"
+            },
+            "repository": {
+              "full_name": "rails/rails/other"
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "Fix login",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [],
+        "notifications": [],
+        "activity": [],
+        "broadcasts": [],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "blank_inline",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": "\r\n"
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": "\n\t",
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**Someone** opened pull request #12\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    },
+    {
+      "name": "coercion_inline",
+      "deliveries": [
+        [
+          "pull_request",
+          {
+            "action": "opened",
+            "sender": {
+              "login": false
+            },
+            "repository": {
+              "full_name": "rails/rails",
+              "private": false
+            },
+            "pull_request": {
+              "number": 12,
+              "title": 42,
+              "html_url": "https://github.com/evil/other/pull/99",
+              "merged": false,
+              "merged_by": {
+                "login": "alice"
+              },
+              "closed_at": "2026-09-17T12:00:00Z",
+              "base": {
+                "repo": {
+                  "full_name": "rails/rails"
+                }
+              }
+            },
+            "requested_reviewer": {
+              "login": "Kevin-GH"
+            }
+          }
+        ]
+      ],
+      "expected": {
+        "messages": [
+          {
+            "room_id": 815,
+            "thread": false,
+            "source": "**false** opened pull request #12: 42\nhttps://github.com/rails/rails/pull/12",
+            "bot": "GitHub",
+            "refs": [
+              [
+                "rails",
+                "rails",
+                12
+              ]
+            ]
+          }
+        ],
+        "notifications": [
+          {
+            "subscription": 819,
+            "key": "opened:rails/rails#12",
+            "message": 0
+          }
+        ],
+        "activity": [],
+        "broadcasts": [
+          {
+            "room_id": 815,
+            "thread": false
+          }
+        ],
+        "bot_count": 1,
+        "thread": null
+      }
+    }
+  ]
+}

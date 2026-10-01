@@ -17,13 +17,14 @@ pub mod fizzy;
 pub mod twitter;
 pub mod image_proxy;
 mod jobs;
-mod agent_jobs;
 pub mod agent_repositories;
 mod agent_streaming;
 pub mod action_claims;
 // Account, fetcher and notifier consumers remain staged (WS15g continuation).
 #[allow(dead_code)]
 pub mod github;
+pub mod health;
+mod agent_jobs;
 pub mod link_embed;
 #[allow(dead_code)]
 pub mod linkedin;

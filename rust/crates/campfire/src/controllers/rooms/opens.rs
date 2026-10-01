@@ -59,7 +59,9 @@ pub async fn edit(c: &mut Ctx) -> Result {
         can_administer: require_current_user(c)?.can_administer(Some(room.creator_id), false),
         users: active_users(c).await?,
     };
-    page::framed_page!(c, StatusCode::OK, |ctx| OpensEdit { ctx, form: &form }).await
+    let viewer = require_current_user(c)?.clone();
+    let github = c.app().db.read(move |conn| crate::controllers::presenters::github::subscription_section(conn, &room, &viewer)).await.map_err(db_error)?;
+    page::framed_page!(c, StatusCode::OK, |ctx| OpensEdit { ctx, form: &form, github: github.clone() }).await
 }
 
 pub async fn update(c: &mut Ctx) -> Result {

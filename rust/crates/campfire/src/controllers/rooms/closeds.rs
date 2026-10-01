@@ -86,7 +86,8 @@ pub async fn edit(c: &mut Ctx) -> Result {
         selected_users,
         unselected_users,
     };
-    page::framed_page!(c, StatusCode::OK, |ctx| ClosedsEdit { ctx, form: &form }).await
+    let github = c.app().db.read(move |conn| crate::controllers::presenters::github::subscription_section(conn, &room, &current_user)).await.map_err(db_error)?;
+    page::framed_page!(c, StatusCode::OK, |ctx| ClosedsEdit { ctx, form: &form, github: github.clone() }).await
 }
 
 pub async fn update(c: &mut Ctx) -> Result {
