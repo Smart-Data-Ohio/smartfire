@@ -1,225 +1,224 @@
-# WS8bm review fixes and continuation — partial
+# WS8bm main merge, attachment boundaries and integration — partial
 
 Date: 2026-09-30. Worker: GPT-6.1 Sol. Branch: `rust/ws8bm-messages-http`.
 Worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm`.
-Verified implementation input: `562aeea2fb1b12dfc34eeca434336c0bf2f6e42b` (five implementation slices, integration followups, clippy cleanup and request-scoped snapshot correction).
-The final report commit is documentation only. Main was not merged. Rails reference remains `d7c7de92`; post-pin layout/status work remains WS8b-r2-owned.
+Merged main: `27fd7892` via merge commit `b90ae426` (129 commits; #171 `76e54ad5`, WS17 #170 and deflake #169/#173). No stash, rebase, test concurrency reduction or timing threshold change.
+Latest implementation/fresh-check input: **`83d4d7f1a8d8817274592a1effaf1e091f9e2e33`**. Subsequent commits contain case attribution, integration documentation/patch and this report; they do not change the worker's production code or normal tests. Current integration patch commit: `e2790e26`.
 
-**PARTIAL.** The three assigned defects are fixed. Item 2 remains pending `rust/durable-attachment-analysis`, as explicitly assigned elsewhere. Wider retry coverage is complete for the recorded scalar matrix. Full upload/state/shell/system parity is still incomplete; a new pinned-Rails JPEG after-commit difference is recorded below.
+**PARTIAL.** The pending durable-edit regression is resolved by #171's merged atomic APIs. The JPEG mismatch needed additional after-commit work and is fixed. Avatar/bot/logo, filenames, cache-hit provider fetches and positive forwards are verified. Full combined live chrome/PR provider parity and end-to-end behaviour acceptance remain open. This report supersedes the prior claim that durable analysis/JPEG were still pending.
 
-## Review fixes and failing-first evidence
-
-| Review item | Fix / commit | Exact `6375ba3f` failure | Fixed evidence |
-| --- | --- | --- | --- |
-| 1, P1 closed-thread missing signed image file | `4aca5f0b`: process thread media inside the enclosing write, reusing forwards' staged original/preview/variant guards | 500 but `(messages, joined, closed) = (1, true, false)` | 500 and `(0, false, true)`; byte-identical Rails response; all rows in nine request record tables and every retained storage file unchanged |
-| 3, P2 boolean client-ID retries | `4929f9e4`: cast once with the Rails string-column cast, reuse for lookup and insert, preserve raw blank-value lookup semantics; audit/update all three retry paths | Two 201 responses, two rows with `"t"` | Two 201 responses, one `"t"` row; complete Rails response bytes match; 48-request matrix also passes |
-| 4, P2 signed initial attachment | `a6f04901`: route initial top/nested attachment params through the existing human signed-capability verifier | Valid signed blob 13 returned 500 | 201, byte-identical full Rails response, one message with analyzed blob 13 and downloadable original |
-
-All three regressions compiled and failed together against **exact** `6375ba3f5b996ad9bc27b5d9c0fd90ae2cc5bae2` before production edits. The committed reproducer regenerates seeds and adds only the regression module/vectors to that revision. A later final rerun verifies the same failures. The first fresh suite passed app/DB/views but clippy found a one-use parameter closure and an unnecessary post-write binding; `168a694c` removes those without changing behavior, and final fresh validation is reported below. A second fresh run caught an overbroad queue snapshot: the unrelated retention job completed during the request. `562aeea2` narrows the snapshot to the nine request record tables; the live runner/default concurrency remain intact and separate HTTP enqueue-failure trigger regressions remain in the suite. This is a corrected test invariant, not a timing threshold change or output mask. One intermediate rerun was killed by the host before tests executed; it was not counted as failing-first evidence.
-
-**Correction to the earlier report:** the earlier claim of Rails-equivalent thread-upload transaction boundaries was wrong. Media processing followed commit and could leave a joined/reopened thread and orphan message on 500. The encompassing transaction now covers thread creation/lifecycle, membership, initial/reply message, blob metadata/touches, and representation rows; transaction guards remove generated files on rollback. Root creation keeps Rails' distinct post-commit processing boundary. This does not claim that every Rails after-commit failure rolls back: the JPEG case below demonstrates the distinction.
-
-Item 2 is **not fixed here**. Human/bot attachment edits still rely on the shared in-memory analysis path. No shared `presenters/attachments.rs` change was made. After the lead authorizes merging the durable-analysis branch through main, add the HTTP message-edit trigger regression proving a failed durable enqueue rolls back the edit.
-
-## Changed files and design
+## Changed files and coherent pushed slices
 
 Paths are relative to `rust/`.
 
-- `crates/campfire/src/controllers/messages.rs`: thread processing inside the writer; root processing boundary preserved; shared human verifier factored into `resolve_human_attachment`; create callers supply the same cast client ID used for retry lookup.
-- `controllers/channel_thread_messages.rs`, `controllers/channel_threads/writes.rs`: consistent cast/lookup/insert and verified initial signed attachment; initial thread media processing stays inside the creation transaction. No bot/work/board policy was redesigned.
-- `crates/campfire/src/messaging.rs`: small `process_message_attachment` adapter reuses `ForwarderCopier`'s transaction-aware processor. No DB schema, dependencies, lockfile or Rails app changes.
-- `controllers/messages/review_tests.rs`: the three compiled review regressions, complete HTTP golden comparisons, nine-table/file rollback snapshots, multipart reply/initial variant-insert failures, and 24 scenarios/48 complete retry responses across root/reply/initial paths. Scalars: true, false, zero, decimal, string, empty string, ASCII whitespace and nonbreaking space. False still persists as `"f"` and does not deduplicate.
-- `reference-tools/messaging/{thread-review,client-retries,thread-upload-coverage}.rb`, `oracle-database.rb`, corresponding vectors: real Rails requests. Restore the private DB between scenarios; no outer test transaction changes request rollback semantics. The broader upload oracle is reference evidence, not full Rust signoff.
-- `review-failing-first.py`: exact reviewed-revision compilation/failure proof. `initial-image-gap.py`: isolated strict reproducer of the explicitly unresolved JPEG difference; not a new suite ignore or response mask.
-- `crates/richtext/src/markdown.rs`, `owner-schedule-integration.patch`: restore the room owner exact-key icon reader without changing Markdown lookup, and wrap the in-transaction thread result in the owner merged `PostingOutcome::Created`. The isolated merge previously failed compilation at these two concrete seams; the existing schedule patch now includes that typed wrapper. The seam comment is byte-identical to the owner definition to avoid a comment-only merge conflict.
-- `plans/ws8bm-controller-cases.md`: attribute the three named retry cases to the complete request matrix. Other named cases retain their explicit owner/backlog status.
+- `b90ae426`: merge the main attachment APIs, WS17/provider changes and deflake helpers. `controllers/messages.rs`, `channel_thread_messages.rs`, `channel_threads/writes.rs` now use `Assignment::stage` and the shared `attachment_blob`/`enqueue_analysis` inside the writer. Preserve both queue invariants in `jobs/tests.rs`, both authorization/clock test-support paths and all test declarations. Locked metadata and all 13 manifests parse without duplicate workspace dependency keys.
+- `1fa07b14`, `d313e498`: `messaging.rs`/`ForwarderCopier`, `active_storage.rs`, `crates/storage/src/storage.rs`, `controllers/messages.rs` and `messages/review_tests.rs` preserve the request's actual commit boundary. New variants start identified, durable variant analysis enqueues in their transaction, and nested new-variant upload failure is returned after commit with rows retained and the failed generated file removed. Existing variants reuse successfully; root processing keeps its separate committed-primary boundary. Explicit `Message#process_attachment` analysis runs even for already-analyzed originals and touches every attached owner, including a shared avatar. Durable AnalyzeJob retries retain their no-op semantics. Reference generators/vectors: `jpeg-boundary`, `thread-upload-coverage`; `initial-image-gap.py` now runs the normal passing regression.
+- `8f872e7c`: `crates/kit/src/body.rs` normalizes multipart filenames the way Rack's split/last does, discarding trailing empty path pieces. `presenters/attachments/avatar_logo_tests.rs`, `avatar-logo-uploads.rb` and its vector cover 18 real authenticated CSRF requests through the merged path: user avatar, bot icon, account logo × signed/multipart × trailing path/unsafe filename/real PNG. Compare whole response bytes, raw/sanitized names, MIME, downloaded bytes, metadata and inline/durable job counts.
+- `530216d4`: `check-goldens.py`/`thread-pages.json` obtain full layout bytes from the explicitly approved Rails #163 revision `2e20b24c` and cross-check **every non-layout field** unchanged against `d7c7de92`. No response mask or hand-edited fingerprint. The image's application layout, people.css and profile_card_controller.js were compared with the Git revision. All other message/thread oracles remain at the pin.
+- `43ee6f3c`: `controllers/presenters.rs` retains the cached Twitter resolver while restoring Rails's actual markdown predicate, attachment fallback and forward-note composition. Collect stale Twitter/link fetch intent before cache hits; a successful HTML cache insertion followed by a rejected durable enqueue must retry on the next request. `presenters/link_embeds/tests.rs` adds a real two-sibling enqueue-rejection regression; main's equivalent Twitter regression passes as well.
+- `75211148`: `crates/db/src/models/message.rs` and the Markdown presenter use the existing `campfire_storage::Filename` display conversion for attachment-only plain text. Raw DB filenames stay intact. The domain crate adds that pure data dependency through the existing workspace key; lockfile update adds one existing dependency. `signed-attachments.rb`/vector/test add four complete root/thread comparisons with unsafe path/metacharacters and nonbreaking-space Unicode names, bringing this oracle to 31 actual requests.
+- `1f357c6f`, `6ec56965`: `plans/ws8bm-controller-cases.md` attributes 65 more existing-test assertion scopes in this continuation. Overall 71/156 named declarations have scoped evidence; 85 still await attribution or missing assertions. These are **not** 71 newly ported one-to-one tests.
+- `42b10905`, `83d4d7f1`: `fresh-check.py` runs all workspace tests/doctests and all-target clippy with fresh generated seeds/target, eight test threads and two build jobs in pinned `campfire-toolchain` media. Container compilers claim the same host flock slots unconditionally (Docker's ancestry cannot detect Codex); this preserves the machine-wide throttle. Containers use worker names. The extra target is deleted on completion.
+- `239adb47`, `e2790e26`: `plans/ws8bm-integration.md` and `owner-current-integration.patch` retain current shell/M2 integration adapters as a reviewable patch for the lead. The worker branch does not implement M2 features or modify the owner's live shell.
 
-## New unresolved JPEG case
+## Failure-first and commit-boundary evidence
 
-The wider standalone Rails probe finds `top_image` and `nested_image` return 500 **after committing** one thread/message. Its unfiltered trace runs through `ActiveStorage::VariantRecord#_run_commit_callbacks!`, `CreateOne#upload`, and `DiskService#upload` (`IO.copy_stream`: `IOError: closed stream`). This occurs when creating a new JPEG thumbnail; valid blob 13/file is unaffected. Rust currently returns 201 with the committed thread/message. The strict isolated probe below reproduces that mismatch. The lead was asked whether to defer for a Rails fix or port this distinct after-commit failure exactly; no answer was assumed. JPEG parity remains open. The broader upload oracle's 66 responses must not be counted as 66 passing Rust comparisons.
+All before lines below were executed in this continuation before the corresponding fix, with eight test threads/two build jobs. They are compiled/runtime failures, not compilation-only evidence.
 
-## Stable shell/list/composer seam
+| Regression | Before | Fixed evidence |
+| --- | --- | --- |
+| Durable human attachment edit, root/thread × signed/multipart | First run on the #171 merge already passed; no new durability workaround | Four actual HTTP enqueue rejections roll back all request rows/files; atomic durable API retained in each controller |
+| Initial JPEG after commit | Rust 201, Rails 500; both retain one thread/message | Rails 500 with retained rows and missing new-variant file; six exact root/initial/reply responses and new/reuse lifecycle comparisons |
+| Multipart avatar filename ending in slash | Successful name edit but no new avatar; regression fails | Rack basename semantics restored; all 18 avatar/bot/logo requests match |
+| Cached generic-card enqueue retry | Second successful GET enqueued 0 jobs instead of 2 | Both claims and jobs roll back on failure; warm render durably enqueues both after rejection is removed |
+| Signed attachment-only thread filename | JSON byte mismatch at 158: raw filename instead of sanitized display name | All 31 signed request bodies/headers/rows match, including four new filename cases |
+| Merged room component mounts | Pending template 1 extra byte; list 6 extra bytes | Current owner patch mounts the owned bytes verbatim; strict checker passes 8/9 components, with only missing GitHub content remaining |
 
-No presenter/list/composer entry point changed in this continuation. The merged shell must pass:
-
-- `Presenter::room_message_list(&selected_roots, divider.message_id, divider.count)?` for the complete message-list slot. Set `Presenter.cache_base_url` to the verified request origin and use the application fragment cache. Mount the returned bytes verbatim; they include the invitation-expression blank line. WS8b-r supplies root/around selection, last-read/unread divider facts, invitation content and scrolling/jump facts.
-- The real `ViewContext`/CSRF provider, viewer `UserView`, `Presenter::composer_facts(room, viewer, thread, drive)`, ordered command names, and `composer_drive_flow(viewer, share_picker_available)` from Google's availability. Use `FooterComposer` in room footers and `Composer` inline/in thread panes. Pass M2's actual `scheduled_messages::ComposerButton { ctx, room_id, thread_id }` as `scheduled_control`; do not cache the composer.
-- Scoped thread items, optional same-thread anchor, room `updated_at`, ordered thread steps, viewer, composer facts and real schedule child to `Conversation`. Mount `PendingTemplate { ctx, user }` for optimistic messages.
-
-Apply the existing `owner-schedule-integration.patch` after merging the owner branches: it wires `render_thread_schedule_control` to M2's real provider and the room footer to `FooterComposer`. The worker baseline still has the flagged empty schedule seam because the owner module is absent. Standalone pinned thread show has no schedule/composer child; `/content` owns those. `render_thread_pull_request_header` remains WS15g's named fragment call site. Work/board HTML and activity remain WS12's flagged seams. No actual main/owner branch merge was made here; the checker performs an isolated scratch merge only.
-
-## Commands re-run and raw summaries
-
-All commands were executed from the worktree root. Fresh validation uses its private clone/target/scratch, CI=1, four build jobs, default test threads, ports 52050–52099 and newly generated seeds. Earlier proof/owner tools use ports 52000–52049. The optional owner target is compiler cache only, not a fixture input.
-
-```sh
-python3 rust/reference-tools/messaging/fresh-check.py > .scratch/fresh-review-final.log 2>&1
-```
-The helper executes locked metadata, seed build, campfire binary tests, DB tests/doctests, the views core test, and workspace/all-target clippy with `-D warnings`.
-
-```sh
-mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1
-bash rust/parity/bin/seed build default first_run
-mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire
-mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_db
-mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_views --test core
-mise exec rust@1.98.1 -- cargo clippy --locked -j4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
-```
-
-Locked metadata exited zero. Final fresh app/DB/views/clippy all passed; no timing test failed in that run.
+Raw before summaries:
 
 ```text
-WS8bm fresh checkout: 562aeea2fb1b12dfc34eeca434336c0bf2f6e42b; no pre-existing scratch or Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-iagkbbd5
-WS8bm fresh concurrency: default test threads; four build jobs; no timing threshold changes
+WS8bm merged JPEG: Rust 201 Created; committed messages/threads (1, 1); Rails 500 / (1, 1)
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 900 filtered out; finished in 1.30s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 900 filtered out; finished in 0.77s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 904 filtered out; finished in 0.74s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 904 filtered out; finished in 3.28s
+```
+
+The previous report's blanket statement that thread-upload failures roll back was wrong and remains corrected: **pre-commit** identification/processing/queue failures roll back thread/message/membership/metadata/representation rows and staged files; **after-commit** Rails JPEG variant upload failure preserves committed rows and returns 500. No subsequent successful reuse changes that boundary. Three real HTTP representation-queue rejection cases also verify root-primary retention versus initial/reply whole-request rollback. Forward processing still uses `ForwarderCopier`'s transaction and staged file guards; its positive whole-response/row/recipient regressions pass in the fresh suite.
+
+A first native fresh workspace run exposed three own integration failures (forward plain text, cached Twitter retry, outdated approved layout) plus the strict storage version gate: host libvips 8.18.6/FFmpeg 9.0.2 versus pinned 8.16.1/7.1.5. Fix the three own failures and run in the actual pinned environment; do not skip or weaken the gate. The final fresh run below is green, including all ten storage vector tests. No timing failure was dismissed or threshold widened.
+
+## Stable list/composer and current owner integration
+
+The entry points remain `Presenter::messages(&records)`, `messages::Index { ctx, messages }`, `Presenter::room_message_list(&selected_roots, divider.message_id, divider.count)`, `Composer { ctx, facts, scheduled_control }`, `FooterComposer` and `PendingTemplate { ctx, user }`. No field/signature was changed.
+
+The merged shell must supply:
+
+- The selected root records and unread divider message ID/count. The room owner supplies around/anchor selection, membership cursor and read effects. Mount the returned list **verbatim**, including invitation whitespace; keep viewer-specific markers outside shared fragments. Set `cache_base_url` to the verified origin and use the app fragment-cache scope.
+- The live request `ViewContext`, viewer, account/layout chrome, asset resolver, verified origin, stream signer and real CSRF provider. Use `composer_facts(room, viewer, thread, drive)` for room name/kind, optional thread ID/name, built-in command names then ordered room agent commands.
+- Google's actual Picker availability; `composer_drive_flow(viewer, share_picker_available)` returns Share/Metadata/None. Do not infer availability from an unconditional false once the owner provider is merged.
+- M2's real `scheduled_messages::ComposerButton { ctx, room_id, thread_id }` as trusted schedule child, rendered under the same request scope. Use `FooterComposer` for a room footer and `Composer` inline/in a pane. Mount `PendingTemplate` without an added newline.
+- For `Conversation`: scoped selected items, optional same-thread anchor, room updated_at, viewer view, ordered thread steps, composer facts and the real schedule child. Browsing does not join.
+
+The current isolated integration used published shell **`6dc741c9bd42922914d619f3d87889c63e5b839d`**, which includes M2/WS11, in a private scratch clone. Resolve the six documented merge overlaps preserving both sides. Apply the tracked current patch; it wires the schedule child/assertions, keeps request fetch intent with M2's batched references, sanitizes M2's preloaded filename fallback, preserves the old main quiet-stream payload decoder despite WS11's renamed lifecycle module, and removes duplicate caller whitespace. Reverse/forward patch application was checked against the tested merge. The clone reuses only the worker's ordinary compiler cache; this is **not fresh owner-build or whole live-page signoff**. It generates its own default/first_run seeds.
+
+17 thread tests and five native room tests pass. The separate strict checker (which includes the case the owner's test currently exempts) fails explicitly on Designers' missing GitHub PR card: Rust 287734 bytes, Rails 288823. Its diff contains only the absent populated PR article/discussion link (1,089 bytes). Fizzy, LinkedIn and generic bodies match. No mask or allowlist makes the ninth comparison green. Full app chrome/PR/system acceptance is still incomplete. The old automated `owner-integration-check.py`/`owner-schedule-integration.patch` target historical `27990da2`; refresh their merge automation for the current branch before reuse.
+
+`render_thread_pull_request_header` remains the named WS15g seam; ordinary GET thread HTML is 200, full fixed-token templates match, but populated PR headers require the lead's WS15g provider merge. The normal worker branch still has an explicitly empty `render_thread_schedule_control` because M2's module is not on main. The current integration patch supplies its real child after the owner merge. WS12 activity/work/board remain flagged; authorized work/board show/content HTML return 501.
+
+## Commands rerun and raw output
+
+Executed from the worktree root unless a working directory is specified. Repeated setup/cache validation is distinguished from acceptance. Current production code was frozen before the final fresh checkout; subsequent files are documentation/patch only.
+
+### Fresh final workspace and clippy
+
+```sh
+python3 rust/reference-tools/messaging/fresh-check.py > .scratch/fresh-filenames-final.log 2>&1
+```
+
+The helper runs locked metadata, fresh seed generation, then these actual Cargo commands in the pinned toolchain image, with `CI=1 CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=8`, shared compiler locks and its empty clone target:
+
+```sh
+cargo test --locked -j2 --manifest-path rust/Cargo.toml --workspace --exclude html5ever --no-fail-fast
+cargo clippy --locked -j2 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
+```
+
+All 48 raw summary lines are pasted, including zero-doctest and ignored lines; total **2193 passed, 0 failed, 12 existing ignores**. All seeded app cases execute under CI. The test inputs are committed vectors plus generated seeds, not prior scratch/target state. The helper deletes the extra target; a final directory check found no `.scratch/**/target`.
+
+```text
+WS8bm fresh checkout: 83d4d7f1a8d8817274592a1effaf1e091f9e2e33; no pre-existing scratch or Cargo target; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-fresh-s70i3gue
+WS8bm fresh concurrency: eight test threads; two build jobs; no timing threshold changes
+WS8bm pinned processing: campfire-toolchain; shared machine rustc flock slots
 seed: building default
 seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 4m 16s
-test result: ok. 478 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 44.19s
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 04s
-test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 53.40s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 48.36s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3m 04s
-WS8bm fresh-check: committed inputs only; generated default/first_run seeds; app/db/views/clippy passed
-```
-
-Three existing app ignores: reference cable recording, WS11 manages_bots and push-latency measurement. Four existing DB ignores: external Rails scenario/export/fixture/rollback hooks. Zero discovered DB doctests account for the zero-test line. No seed skips or new ignores.
-
-```sh
-python3 rust/reference-tools/messaging/review-failing-first.py > .scratch/review-failing-first-final.log 2>&1
-```
-```text
-WS8bm failing-first production revision: 6375ba3f5b996ad9bc27b5d9c0fd90ae2cc5bae2; only regression module/vectors added; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-review-6375-0sd5_tla
-seed: building default
-seed: default -> parity/.seed/default (6.1M)
-seed: building first_run
-seed: first_run -> parity/.seed/first_run (1.5M)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 01s
-WS8bmr Rust signed initial: 500 Internal Server Error
-test controllers::messages::review_tests::review_signed_initial_thread_attachment_matches_rails ... FAILED
-WS8bmr Rust boolean retry: statuses 201 Created 201 Created; rows [(935962058, "t"), (935962059, "t")]
-test controllers::messages::review_tests::review_boolean_client_retry_matches_rails_one_row ... FAILED
-WS8bmr Rust missing-file: status 500 Internal Server Error; (messages, joined, closed) (1, true, false)
-test controllers::messages::review_tests::review_failed_thread_upload_rolls_back_like_rails ... FAILED
-test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 477 filtered out; finished in 0.75s
-WS8bm failing-first: all 3 assigned regressions compiled and failed against 6375ba3f
-```
-```sh
-python3 rust/reference-tools/messaging/initial-image-gap.py > .scratch/initial-image-gap-current.log 2>&1
-```
-```text
-WS8bm image-gap checkout: 1589e20b569f1786905ea3e361a2ca55e8b65b4f; /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-image-gap-sh3e7erd
-seed: building default
-seed: default -> parity/.seed/default (6.1M)
-seed: building first_run
-seed: first_run -> parity/.seed/first_run (1.5M)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 4m 57s
-WS8bm initial JPEG gap: Rust status 201 Created; new messages 1; new threads 1; Rails status 500 / messages 1 / threads 1
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 481 filtered out; finished in 2.67s
-WS8bm initial JPEG: unresolved mismatch reproduced; explicit deferred case, not an application-suite ignore or parity mask
-```
-This separate probe requires the known mismatch to fail; it is not an application-suite pass.
-
-```sh
-python3 rust/reference-tools/messaging/owner-integration-check.py --target-dir rust/target > .scratch/owner-integration-review.log 2>&1
-```
-```text
-WS8bm owner integration: worker 3080f8504cc476390ed9caabb5840e9eeb1a12ee; shell 27990da2851f4c056db71c6b430c894307bc6bfe; isolated merge /home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm/.scratch/ws8bm-owner-_w_vuns8; main unmerged
-WS8bm owner manifests: 13 parsed; zero duplicate workspace dependency keys
-native:     Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 10s
-native: test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 981 filtered out; finished in 1.09s
-FAIL room 654632876 message_list: Rust 286016 bytes, Rails 288548 bytes
-PASS room 654632876 composer: 10371 exact bytes
-PASS room 654632876 pending_template: 1449 exact bytes
-PASS room 186869642 message_list: 19538 exact bytes
-PASS room 186869642 composer: 10367 exact bytes
-PASS room 186869642 pending_template: 1449 exact bytes
-PASS room 699448329 message_list: 6552 exact bytes
-PASS room 699448329 composer: 8594 exact bytes
-PASS room 699448329 pending_template: 1462 exact bytes
-Native room component acceptance: 8 exact matches; 1 differences; no masks
-pane:     Finished `test` profile [unoptimized + debuginfo] target(s) in 24.26s
-pane: test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 982 filtered out; finished in 1.31s
-show:     Finished `test` profile [unoptimized + debuginfo] target(s) in 19.69s
-show: test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 981 filtered out; finished in 1.62s
-AssertionError: Owner integration failures: ['native component bytes']; all available checks attempted
-```
-Owner checker exit 1 is retained: Designers populated card fragments differ. All 11 targeted tests pass; 8/9 components match. Earlier compile failures at the owned return/icon seams were fixed in the published integration patch/additive reader. The final owner check used implementation input 3080f850; subsequent changes were lint-only expressions and test snapshot scope, with no presenter/template or patch changes.
-
-```sh
-python3 rust/reference-tools/messaging/reference-check.py > .scratch/reference-review-current.log 2>&1
-python3 rust/reference-tools/messaging/check-goldens.py > .scratch/goldens-review-final.log 2>&1
-```
-```text
-WS8bm reference source check: 63 controller, model, helper, template and icon files match d7c7de92
-WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
-WS8bm preview oracle: 8 real Rails HTTP responses; 0 messages written
-WS8bm invalid-create oracle: 6 real Rails HTTP responses; 0 messages written
-WS8bm scalar-cast oracle: 8 actual Rails model assignments
-WS8bm fragment oracle: 5 real Rails messages; 2 viewers through one fragment cache; 0 session-bound values
-WS8bm root oracle: 10 real Rails actions responses; 6 updates and saved rows; 2 rejected updates; 9 edit forms and 1 actions menu; 4 standalone messages
-WS8bm paging oracle: 16 real Rails page requests; 12 format requests; template digest 8c84e9c3391ab09f136a472ad8ab8b69
-WS8bm broadcast oracle: 6 real Rails writes; 25 rendered/channel publisher frames; request port 3443
-WS8bm thread-membership oracle: 11 real Rails requests; membership rows and JSON bytes captured
-WS8bm collection oracle: 10 real Rails states; keys and cache-hit bytes; 0 session-bound values
-WS8bm room-list oracle: 9 real Rails room requests; selected roots/unread facts and show list-slot bytes; 0 session-bound values
-WS8bm message-states oracle: 26 real Rails states rendered cold/warm; 78 actual append/replace/remove frames; 0 session-bound values
-WS8bm thread-message read oracle: 18 actual Rails requests; scoped pages, empty formats, raw JSON/actions/HTML and locked reads
-WS8bm thread-message write oracle: 15 actual Rails writes; 50 publisher frames; retries, rows, Drive sets, locks and tombstones
-WS8bm thread-pages oracle: 28 actual Rails requests; state lists, standalone HTML/JSON, latest replies and deleted starter
-WS8bm thread-lifecycle oracle: 27 actual Rails actions; creation retries, metadata/tags, lifecycle permissions, rollback rows and delete frames
-WS8bm thread-content oracle: 9 actual requests; anchor scope and fixed-secret conversation/composer bytes
-WS8bm forwards oracle: 18 real picker/refusal/source-privacy requests; exact JSON bytes
-WS8bm forward-success oracle: 5 positive actual requests; 7 forwards; complete bodies/rows and 21 rendered frames
-WS8bm modern-boosts oracle: 46 actual toggle/alias/legacy/duplicate/delete/coercion requests; 44 rendered reaction replacements
-WS8bm signed-attachments oracle: 27 actual root/thread requests; attach/replace/delete, expiry/purpose/missing-blob rejection, expired retries and failed-edit preservation
-WS8bm boost-pages oracle: 7 actual index/new/actions requests; complete fixed-token forms, distinct reactors and hostile tooltip names
-WS8bm thread-review oracle: 4 actual Rails requests; boolean retry, failed closed-thread media rollback, signed initial attachment
-WS8bm thread-upload-coverage oracle: 42 scenarios; 66 actual Rails requests; 3 client-id paths, 4 media types, top/nested initial capabilities and rollback
-WS8bm client-retries oracle: 24 scenarios; 48 actual Rails requests; root/reply/initial scalar IDs and raw blank-value semantics
-WS8bm golden check: 22 Rails oracles re-run; 23 golden files byte-identical
-```
-These are source identity / Rails regeneration checks, not a claim that all 66 exploratory upload requests pass on Rust.
-
-```sh
-CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_richtext > .scratch/richtext-compat.log 2>&1
-```
-```text
-Finished `test` profile [unoptimized + debuginfo] target(s) in 8.54s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.22s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 32.18s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.93s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.81s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 07s
+test result: ok. 902 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 459.04s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.96s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
+test result: ok. 612 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 71.21s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.83s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.98s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.03s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.22s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.21s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.37s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.69s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.25s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.48s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.86s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.82s
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.41s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 21s
+WS8bm fresh target removed
+WS8bm fresh-check: committed inputs only; generated default/first_run seeds; workspace tests/doctests/clippy passed
 ```
-```sh
-python3 - <<'CHECK'
-from pathlib import Path
-import tomllib
-files=[Path('rust/Cargo.toml'),*sorted(Path('rust/crates').glob('*/Cargo.toml'))]
-for path in files: tomllib.loads(path.read_text())
-print(f'WS8bm dependency-key check: {len(files)} Cargo manifests parsed; zero duplicate workspace dependency keys')
-CHECK
-```
+
+Existing ignored hooks (none added):
+
 ```text
-WS8bm dependency-key check: 13 Cargo manifests parsed; zero duplicate workspace dependency keys
+test channels::tests::golden::record_reference ... ignored, needs a running reference app; see the module docs
+test controllers::presenters::accounts::tests::manages_bots ... ignored, WS11: resetting Bender's bot key leaves the original seeded key visible in the account bot list
+test jobs::tests::push_latency ... ignored, a measurement, not a test
+test record_reference ... ignored, needs a running reference app; see the module docs
+test tests::differential_test::scenario_matches_ruby ... ignored, needs CAMPFIRE_RUBY_SCENARIO_DB, the reference app's database after scenario.rb
+test tests::fixtures_test::export_database_for_rails ... ignored, writes a database to CAMPFIRE_EXPORT_DB for the Rails rollback check
+test tests::fixtures_test::fixtures_match_ruby_row_for_row ... ignored, needs CAMPFIRE_RUBY_FIXTURES_DB, a database the reference app filled with `db:fixtures:load` at CAMPFIRE_FIXTURES_NOW
+test tests::two_factor_rollback_test::read_rails_rollback_changes ... ignored, requires Rails to mutate the rollback fixture; run reference-tools/auth/rollback.sh
+test acme_tls_alpn_certificate_cached_and_reused ... ignored, requires a local Pebble ACME CA, PEBBLE_MINICA root certificate and TLS ports 5001/5002
+test export_for_rails ... ignored, exports a database for the Rails rollback check; requires CAMPFIRE_MAIL_EXPORT_DIR
+test crates/kit/src/error.rs - error::halt (line 91) ... ignored
+test crates/kit/src/lib.rs - (line 7) ... ignored
 ```
+
+### Metadata and manifest check
+
 ```sh
-python3 rust/reference-tools/messaging/check-controller-files.py > .scratch/controllers-review-current.log 2>&1
-python3 rust/reference-tools/messaging/deferred-system-inventory.py > .scratch/systems-review-current.log 2>&1
+cd rust
+mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 >/dev/null
 ```
 
+Executed again after the filename dependency/lock update; exit zero. Python tomllib parsed `Cargo.toml` and every `crates/*/Cargo.toml`.
 
-## Controller and system accounting
+```text
+WS8bm manifests: 13 parsed; zero duplicate workspace dependency keys
+```
 
-The Rails source suite below is independently executed reference evidence, not 156 one-to-one Rust ports. There are 156 named declarations across ten files. Six have explicit case attribution in the inventory (three prior boost cases and the three retry cases); remaining attribution/signoff is tracked there by name/owner. Aggregate Rust counts are separate.
+### Targeted runtime regressions
+
+The actual invocation pattern was `CI=1 CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=8 CABLE_TEST_PORT_RANGE=52000-52049 MAIL_TEST_PORT_RANGE=52000-52049 mise exec rust@1.98.1 -- cargo test --locked -j2 --manifest-path rust/Cargo.toml -p campfire --bin campfire SELECTOR -- --nocapture`. Each selector below was run in this continuation; the final fresh full suite reruns all of them.
+
+```text
+human_attachment_edits_enqueue_atomically_on_roots_and_threads:
+WS8bm durable edit: 4 real HTTP enqueue failures; root/thread and signed/multipart; all request rows/files rolled back
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 900 filtered out; finished in 3.74s
+controllers::messages::review_tests:::
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 894 filtered out; finished in 13.30s
+avatar_bot_logo_uploads_match_pinned_rails:
+WS8bm avatar/bot/logo: 18 Rails responses byte-identical; attachment bytes/filenames/MIME/metadata/job counts match
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 901 filtered out; finished in 3.04s
+controllers:::
+test result: ok. 323 passed; 0 failed; 1 ignored; 0 measured; 581 filtered out; finished in 72.50s
+controllers::presenters:::
+test result: ok. 59 passed; 0 failed; 1 ignored; 0 measured; 845 filtered out; finished in 8.48s
+signed_root_and_thread_attachments_match_rails_response_and_blob_rows:
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 904 filtered out; finished in 3.55s
+```
+
+The 42-scenario/66-request broader source oracle contains 24 scalar scenarios (48 requests) and 18 initial capability/media requests, now checked by Rust tests. Separately the signed upload oracle has 31 requests, the avatar/logo oracle 18, and JPEG boundary oracle six. The 26-state owned message corpus runs cold/warm (52 whole fragments) and publishes 78 append/replace/remove socket frames. The modern reaction oracle checks 46 actual HTTP responses/rows and 44 complete reaction frames. Positive forwards check 16 subscription decisions, six private-stream refusals, 29 delivered frames/20 distinct owned frames; one captured WS12 activity callback is explicitly deferred. These counts are scoped fixture comparisons, not a claim of the full application state cross product.
+
+### Rails goldens and controller reference
+
+```sh
+python3 rust/reference-tools/messaging/check-goldens.py > .scratch/all-goldens-filenames-final.log 2>&1
+python3 rust/reference-tools/messaging/check-controller-files.py > .scratch/controller-reference-current.log 2>&1
+python3 rust/reference-tools/messaging/deferred-system-inventory.py > .scratch/system-inventory-current.log 2>&1
+```
+
+These commands were rerun. Goldens use fresh DB copies and files from the generated seed; the goldens runner is serialized because it owns one scratch database. An earlier accidental concurrent invocation raced that scratch DB and was discarded; the final complete serialized invocation passes. Layout generation's initial image-argument typo was fixed before regeneration; no failed oracle output was committed.
+
+```text
+WS8bm thread layout: #163 Rails layout; every non-layout field identical to d7c7de92
+WS8bm signed-attachments oracle: 31 actual root/thread requests; attach/replace/delete, expiry/purpose/missing-blob rejection, expired retries and failed-edit preservation
+WS8bm avatar-logo oracle: 18 authenticated CSRF requests; avatar/bot/logo; signed/multipart; sanitized filenames and inline/durable analyzers
+WS8bm JPEG boundary oracle: 6 actual Rails requests; initial/reply/root; new/reused variants; rows/files/lifecycle after commit
+WS8bm golden check: 24 Rails oracles re-run; 25 golden files byte-identical
+```
+
+Per-file Rails **reference execution**, not Rust one-to-one port counts:
 
 ```text
 test/controllers/messages_controller_test.rb
@@ -245,7 +244,71 @@ test/controllers/message_forward_sources_controller_test.rb
 WS8bm Rails controller reference: 10 files passed; reference counts only
 ```
 
-The pinned system inventory records 19 files / 156 literal declarations, **0 executed**. End-to-end/pixel acceptance remains the end-to-end phase; no system signoff is claimed.
+### Isolated current owner integration
+
+Working directory: `.scratch/ws8bm-owner-merge-s7ztvppb`. The prepared merge carries the documented conflict resolutions/current patch and worker filename/model changes. Commands actually rerun there:
+
+```sh
+PARITY_NAMESPACE=ws8bm-owner PARITY_OWNER=ws8bm PARITY_CPUS=2 PARITY_IMAGE=triage-reference-d7c7de92 bash rust/parity/bin/seed build default first_run
+mise exec rust@1.98.1 -- cargo metadata --locked --manifest-path rust/Cargo.toml --format-version 1 >/dev/null
+```
+
+Then, with `CI=1 CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=8`, ports 52000–52049, `CAMPFIRE_REFERENCE` set to that clone and `CARGO_TARGET_DIR` set to this worker's ordinary `rust/target`, run both Cargo selectors using `--locked -j2 -p campfire --bin campfire -- --nocapture`:
+
+```text
+controllers::channel_threads:::
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 1324 filtered out; finished in 19.65s
+controllers::rooms::native_integration_tests:
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 1336 filtered out; finished in 1.30s
+```
+
+Compilation first exposed the old lifecycle namespace and a removed listener variable still present in a log line; the patch keeps the legacy payload decoder and removes the obsolete log variable. A missing Broadcast trait implementation in the first decoder attempt was corrected before tests. Those compilation failures are not counted as runtime failure-first evidence.
+
+```sh
+python3 rust/reference-tools/rooms/native_components_check.py --capture-log .scratch/native-integration-final.log
+```
+
+Exit **1**, expected unresolved provider evidence:
+
+```text
+FAIL room 654632876 message_list: Rust 287734 bytes, Rails 288823 bytes
+PASS room 654632876 composer: 10373 exact bytes
+PASS room 654632876 pending_template: 1449 exact bytes
+PASS room 186869642 message_list: 19547 exact bytes
+PASS room 186869642 composer: 10369 exact bytes
+PASS room 186869642 pending_template: 1449 exact bytes
+PASS room 699448329 message_list: 6559 exact bytes
+PASS room 699448329 composer: 8596 exact bytes
+PASS room 699448329 pending_template: 1464 exact bytes
+Native room component acceptance: 8 exact matches; 1 differences; no masks
+```
+
+## Exact remaining attribution and scope
+
+`plans/ws8bm-controller-cases.md` lists every declaration by name and owner. Scoped evidence does not replace full merged behaviour signoff. Remaining named declarations total **85**:
+
+| Pinned controller file | Rails runs | Scoped declarations | Still pending |
+| --- | ---: | ---: | ---: |
+| messages_controller_test.rb | 56 | 31 | 25 |
+| messages_drive_attachments_test.rb | 19 | 0 | 19 |
+| messages/cached_fragment_csrf_test.rb | 4 | 0 | 4 |
+| messages/legacy_presentation_cache_test.rb | 2 | 0 | 2 |
+| messages/boosts_controller_test.rb | 17 | 17 | 0 |
+| channel_threads_controller_test.rb | 24 | 9 | 15 |
+| channel_thread_messages_controller_test.rb | 12 | 8 | 4 |
+| channel_thread_messages_drive_attachments_test.rb | 13 | 0 | 13 |
+| message_forwards_controller_test.rb | 7 | 4 | 3 |
+| message_forward_sources_controller_test.rb | 2 | 2 | 0 |
+
+Next work in user-impact order:
+
+1. Lead merge of the current room/M2 branches with the reviewed integration adapters; merge/wire WS15g's populated message PR cards and `render_thread_pull_request_header`, then make the ninth strict component and complete live layout/chrome parity green. Refresh the historical automated owner merge checker. The ordinary thread page and real schedule component/pane checks already pass in the prepared merge; the normal branch's schedule seam remains empty until that merge.
+2. Finish broader upload/state/recipient cross products beyond the listed exact fixture matrices (including populated PR/thread headers and combined feature states), retaining the now-correct atomic/after-commit boundaries. WS15g/WS15e own provider internals; WS8bm owns their message integration. M2 owns polls/pins/saves/schedules/search/slash/autocomplete/links/files; do not implement those here.
+3. Attribute/implement missing assertions for the 85 named declarations above, with the per-declaration owners in the inventory. Work/board controller cases remain WS12/WS11 seams; bot/agent controller semantics remain WS11-owned.
+4. End-to-end **behaviour** execution for the 19 inventoried system files; 156 literal declarations, zero executed here. Shared shell/Google/keyboard/a11y interactions require the merged app. No screenshots or pixel-diff work is queued.
+5. WS12 activity frame and authorized work/board HTML 501 seams remain explicitly deferred to WS12; do not treat them as implemented.
+
+System inventory raw lines:
 
 ```text
 test/system/boosting_messages_test.rb: 4 literal test declarations; 0 executed; deferred
@@ -270,12 +333,4 @@ test/system/timezone_detection_test.rb: 2 literal test declarations; 0 executed;
 WS8bm system inventory: 19 pinned files; declarations only; no browser or pixel pass claim
 ```
 
-## Precisely remaining
-
-1. Durable attachment analysis from its owner branch; authorized main merge followed by atomic message-edit enqueue regression.
-2. Resolve the new JPEG variant after-commit mismatch; wider upload/state/recipient coverage beyond the committed matrices, including later cases of the 66-response upload probe not yet verified against Rust.
-3. Published owner merges plus schedule patch; full live shell/application layout/status popup acceptance, populated WS15g/WS15e card and PR fragments, invitation/owner chrome inputs. WS12 activity/work/board seams stay flagged.
-4. Complete the remaining named controller attribution/signoff in `ws8bm-controller-cases.md`, grouped by its ten files. The source tests pass; that does not close their Rust parity backlog.
-5. The 19 listed system files: all browser/pixel execution/signoff deferred to the end-to-end phase. M2's polls/pins/saves/schedules/search/slash/autocomplete/message-links/files, WS11 bot/agent endpoints, WS14 Google integrations, and WS15 card providers remain their owners' work.
-
-No test concurrency override, timing-threshold change, new ignore, or parity mask/allowlist change was introduced. Any failing timing result from final validation is reported in evidence instead of being tuned.
+No production deployment, PR creation or outbound messages were performed. No open permission question. All launched test/build processes must be finished at handoff; extra scratch targets are removed. Scratch logs are evidence outputs only, never normal-test inputs.
