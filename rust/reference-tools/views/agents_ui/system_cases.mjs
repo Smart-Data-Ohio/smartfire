@@ -60,8 +60,8 @@ try {
     if (result.status !== 0) throw new Error('approval row or approval_decided ledger assertion failed');
   });
   await run('agent_streaming_test.rb','agent steps render as a collapsible list','david',async page => {
-    await joinRoom(page, labels['rooms.designers']);
-    const message = page.locator(`#message_${labels['messages.agent_ui']}`);
+    await joinRoom(page, labels['system.room']);
+    const message = page.locator(`#message_${labels['system.message']}`);
     await contains(message.locator('details.agent-steps summary'),'Steps (2)');
     await message.locator('details.agent-steps > summary').click();
     for (const text of ['Run tests','Deploy','Done','All green','Ship it']) await contains(message,text);

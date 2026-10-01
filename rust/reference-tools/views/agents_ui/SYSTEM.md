@@ -5,9 +5,9 @@ run `npm ci --prefix rust/parity` first. Ports 52797–52799 belong to WS11-ui.
 
 This runner compares behavior; it captures no screenshots and performs no
 pixel work. Rails uses the pin plus exactly the approved status-popup layout.
-Both databases receive the same fixture rows. The steps case attaches the
-seed's two Deploy Bot steps to its Designers message rather than introducing
-another streaming-message producer. Failure counts are reported per original
+The pinned Rails models create the original Bender message, steps and approval,
+including all parent timestamps and callback-created activity. A SQLite backup
+copies that exact persisted state to Rust before boot. Failure counts are reported per original
 Rails file and cause a nonzero exit, even when the other runtime passes.
 
 The directory case includes the agent profile page; the inbox case includes
