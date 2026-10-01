@@ -219,7 +219,7 @@ fn invite_recipient(
     }
     if !huddle_notices::invitations_enabled(tx.conn(), recipient.id)? {
         let caller = User::find(tx.conn(), grant.user_id)?;
-        let name = room.direct_display_name(tx.conn(), Some(&recipient), None)?;
+        let name = room.direct_display_name(tx.conn(), Some(recipient), None)?;
         tx.emit_after_commit(Event::job(&RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""})}));
         return Ok(());
     }
