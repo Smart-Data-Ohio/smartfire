@@ -104,7 +104,7 @@ async fn replay(names: &[&str]) {
         "../../../../../../vectors/ws17_status_requests.json"
     ))
     .unwrap();
-    let app = boot().await;
+    let app = boot().await.without_job_runner().await;
     let (_server, mut socket) = subscribe(&app).await;
     for name in names {
         let row = golden["rows"]
@@ -366,7 +366,7 @@ async fn ws17_seeded_enabled_2fa_settings_errors_match_the_actual_rails_failure(
 
 #[tokio::test]
 async fn ws17_failed_status_refresh_enqueue_rolls_back_the_entire_http_write() {
-    let app = boot().await;
+    let app = boot().await.without_job_runner().await;
     app.db().write(|tx|{tx.conn().execute_batch("CREATE TRIGGER ws17_refresh_failure BEFORE INSERT ON background_jobs WHEN NEW.job_class='Calendar::MeetingRefreshJob' BEGIN SELECT RAISE(ABORT,'ws17 deliberate enqueue failure'); END;")?;Ok(())}).await.unwrap();
     let (_server, mut socket) = subscribe(&app).await;
     let mut browser = app.david();
