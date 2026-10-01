@@ -116,8 +116,8 @@ fn publish_current_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: b
     }));
 }
 
-/// Rails builds ActivityItem#activity_broadcast_payload from the current row.
-/// Rust's worker may run after access removal, item resolution, or call end.
+/// Legacy queued jobs recover the current row after access removal, item resolution, or call end.
+/// Synchronous ActivityItem callbacks instead use their saved instance below.
 fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest>> {
     let Some(viewer) = User::find_by_id(tx.conn(), request.recipient_id)?.filter(|u| u.is_active() && !u.is_bot()) else { return Ok(None); };
     let item_id = request.invitation["activityItemId"].as_i64().unwrap_or_default();
@@ -200,8 +200,8 @@ fn item_ring_request(tx: &Tx<'_>, item: &ActivityItem) -> Result<Option<RingRequ
 }
 
 /// Returning false preserves ordinary activity frames for other source/event types.
-pub(crate) fn enqueue_item_ring(tx: &mut Tx<'_>, id: i64) -> Result<bool> {
-    let Some(request) = item_ring_request(tx, &ActivityItem::find(tx.conn(), id)?)? else { return Ok(false); };
+pub(crate) fn enqueue_item_ring(tx: &mut Tx<'_>, item: &ActivityItem) -> Result<bool> {
+    let Some(request) = item_ring_request(tx, item)? else { return Ok(false); };
     enqueue_ring(tx, &request)?;
     Ok(true)
 }

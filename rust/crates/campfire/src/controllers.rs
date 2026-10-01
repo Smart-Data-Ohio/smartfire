@@ -55,6 +55,8 @@ mod message_forwards;
 pub(crate) mod message_forwards_tests;
 pub mod messages;
 pub mod presenters;
+#[cfg(test)]
+mod activity_domain_tests;
 pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
@@ -253,6 +255,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users#new" => arc(users::new),
         "users#index" => arc(users::index),
         "users/cards#show" => arc(users::cards::show),
+        "users/stars#create" => arc(users::stars::create),
+        "users/stars#destroy" => arc(users::stars::destroy),
         "users#create" => arc(users::create),
         "users#show" => arc(users::show),
         "qr_code#show" => arc(qr_code::show),
@@ -765,6 +769,8 @@ mod tests {
         "embeds/images#show",
         "users/presences#show",
         "users/dnd_allowances#create",
+        "users/stars#create",
+        "users/stars#destroy",
         "users/dnd_allowances#destroy",
         "users/notification_settings#update",
         "switchers#show",
