@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 138 ported domain/API/controller cases; 473 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 146 ported domain/API/controller cases; 465 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -277,22 +277,22 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Outside slice** — submitting a bot webhook unchanged needs no confirmation — WS9.
 - **Deferred** — Google re-auth confirms a Google-only user and continues — WS14g adapter + WS9 integration.
 - **Deferred** — Google re-auth with a different Google account is rejected — WS14g adapter + WS9 integration.
-- **Deferred** — Google re-auth forces a fresh Google login — WS14g adapter + WS9 integration.
+- **Ported** — Google re-auth forces a fresh Google login — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
 - **Deferred** — Google re-auth with a stale Google login is rejected — WS14g adapter + WS9 integration.
 - **Deferred** — Google re-auth without an auth_time is rejected — WS14g adapter + WS9 integration.
-- **Deferred** — Google confirmation is unavailable without a linked identity — WS14g adapter + WS9 integration.
+- **Ported** — Google confirmation is unavailable without a linked identity — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
 - **Outside slice** — confirmation attempts are rate limited — WS9.
 - **Outside slice** — the confirmation limit lives in the shared rate-limit store, not per-process memory — WS9.
 
 ## test/controllers/users/google_sign_in_links_controller_test.rb
 
 - **Partial** — the profile offers the link and the flow links the verified subject to the signed-in member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — the link flow keeps sign-in's domain allowlist — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — the link flow keeps sign-in's nonce check — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — a Google account that already signs in as someone else is refused — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — a member already linked to another subject is refused — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — a link flow finished by a different signed-in member links nobody — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — a link flow whose member signed out does not sign anyone in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — the link flow keeps sign-in's domain allowlist — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
+- **Ported** — the link flow keeps sign-in's nonce check — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
+- **Ported** — a Google account that already signs in as someone else is refused — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
+- **Ported** — a member already linked to another subject is refused — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
+- **Ported** — a link flow finished by a different signed-in member links nobody — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
+- **Ported** — a link flow whose member signed out does not sign anyone in — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
 - **Partial** — starting a link requires a signed-in member and CSRF protection — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 
 ## test/integration/drive_picker_test.rb
@@ -827,3 +827,9 @@ The profile connection/sign-in panels match seven connection and three identity 
 The WS11 agent credential/authentication seam is now on merged main; it is consumed rather than reimplemented. Drive attachment message submission/JSON/thread broadcasts remain with WS8b-m/m2 and agent polling/REST delivery with WS11-api. Existing Message attachment domain validation/save/touch/cascade code remains shared. Human recipient policy and viewer metadata authorization are implemented; remaining named tests below their respective headings remain explicitly partial/deferred.
 
 The remaining session/link/step-up controller cases include account history/password preservation, domain/rotation changes across HTTP, authenticated replay, deactivation/ban races and the full original audits/page assertions. Existing representative tests do not count as completion of an unmapped Rails case. The SQL-read-count assertion for inbound preloading is also unfinished.
+
+### October 2 continuation
+
+The real combined RSVP/Meet runner now uses a frozen clock, deterministic inbound-scope capture and a change-driven committed queue drain. Its original five-second deadline and normal runner concurrency remain. The application encryption provider now caches its 65536-round derivation per Secrets, matching Rails; repeated derivation was the CPU bottleneck. Thirty trials at eight concurrent tests on four CPUs passed after the fix (5/30 before it).
+
+The new controller-cases probe captures 58 complete Rails request observations, including signed-out/other-member callbacks, domain/nonce/subject checks, signed-in replay, malformed token/key payloads, and strict auth_time cutoff ±1 second for both reauth and sudo. Protected-action consumption, whole-page composition and Google-only provisioning transitions still have their own remaining ledger entries; observing markers alone does not claim those interactions.

@@ -1,0 +1,2733 @@
+{
+  "reference": "d7c7de92",
+  "now": 1772467200,
+  "rows": [
+    {
+      "index": 0,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "success"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ]
+      }
+    },
+    {
+      "index": 1,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "wrong_subject"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "That Google account is not linked here. Confirm with the Google account you sign in with."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 2,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "stale"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 3,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "missing_auth"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 4,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "before_auth_boundary"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 5,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "at_auth_boundary"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 6,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "after_auth_boundary"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ]
+      }
+    },
+    {
+      "index": 7,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "wrong_nonce"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 8,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "wrong_domain"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 9,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "unavailable"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google is unavailable right now. Try again."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 10,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "cancelled"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation was cancelled."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 11,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "expired_flow"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 12,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "replay"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Confirmed with Google. Continue with what you were doing."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "two_factor_reauthenticated_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "two_factor.reauthenticate",
+            "actor_id": 127326141,
+            "target_id": 127326141,
+            "target_type": "User",
+            "target_label": "David <david@37signals.com>",
+            "details": {}
+          }
+        ],
+        "replay": {
+          "status": 302,
+          "location": "http://campfire.test/",
+          "flash": {
+            "notice": "Confirmed with Google. Continue with what you were doing."
+          },
+          "calls": [],
+          "delta": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "markers": {
+            "two_factor_reauthenticated_at": 1772467200
+          },
+          "flow_present": false,
+          "identities": [
+            {
+              "user_id": 127326141,
+              "subject": "controller-member",
+              "email": "david@smartdata.net",
+              "domain": "smartdata.net"
+            }
+          ],
+          "email": "kevin@37signals.com",
+          "password_preserved": true,
+          "audits": [
+            {
+              "action": "two_factor.reauthenticate",
+              "actor_id": 127326141,
+              "target_id": 127326141,
+              "target_type": "User",
+              "target_label": "David <david@37signals.com>",
+              "details": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 13,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "unlinked"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation needs a linked Google account."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 14,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "unconfigured"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google confirmation needs a linked Google account."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 15,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "signed_out"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in expired. Try again or sign in with email and password."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          -1,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 16,
+      "spec": {
+        "purpose": "reauth",
+        "scenario": "other_member"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 17,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "success"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "sudo_verified_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "sudo.confirm.success",
+            "actor_id": 127326141,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "verifier": "google"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "index": 18,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "wrong_subject"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "That Google account is not the one linked to your account."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "sudo.confirm.failure",
+            "actor_id": 127326141,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "verifier": "google",
+              "reason": "subject_mismatch"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "index": 19,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "stale"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 20,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "missing_auth"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 21,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "before_auth_boundary"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 22,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "at_auth_boundary"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 23,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "after_auth_boundary"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "sudo_verified_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "sudo.confirm.success",
+            "actor_id": 127326141,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "verifier": "google"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "index": 24,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "wrong_nonce"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 25,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "wrong_domain"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 26,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "unavailable"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google is unavailable right now. Try again."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 27,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "cancelled"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation was cancelled."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 28,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "expired_flow"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 29,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "replay"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {
+          "sudo_verified_at": 1772467200
+        },
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "sudo.confirm.success",
+            "actor_id": 127326141,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "verifier": "google"
+            }
+          }
+        ],
+        "replay": {
+          "status": 302,
+          "location": "http://campfire.test/",
+          "flash": {},
+          "calls": [],
+          "delta": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "markers": {
+            "sudo_verified_at": 1772467200
+          },
+          "flow_present": false,
+          "identities": [
+            {
+              "user_id": 127326141,
+              "subject": "controller-member",
+              "email": "david@smartdata.net",
+              "domain": "smartdata.net"
+            }
+          ],
+          "email": "kevin@37signals.com",
+          "password_preserved": true,
+          "audits": [
+            {
+              "action": "sudo.confirm.success",
+              "actor_id": 127326141,
+              "target_id": null,
+              "target_type": null,
+              "target_label": null,
+              "details": {
+                "verifier": "google"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 30,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "unlinked"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation is not available for your account."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 31,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "unconfigured"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/sudo/new",
+        "flash": {
+          "alert": "Google confirmation is not available for your account."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 32,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "signed_out"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in expired. Try again or sign in with email and password."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          -1,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 33,
+      "spec": {
+        "purpose": "sudo",
+        "scenario": "other_member"
+      },
+      "actor_id": 127326141,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "prompt": "login",
+          "max_age": "0",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 127326141,
+            "subject": "controller-member",
+            "email": "david@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 34,
+      "spec": {
+        "purpose": "link",
+        "scenario": "success"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google sign-in linked to kevin.w@smartdata.net."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-member",
+            "email": "kevin.w@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "google.sign_in.link",
+            "actor_id": 712064548,
+            "target_id": 712064548,
+            "target_type": "User",
+            "target_label": "Kevin <kevin@37signals.com>",
+            "details": {
+              "email": "kevin.w@smartdata.net"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "index": 35,
+      "spec": {
+        "purpose": "link",
+        "scenario": "wrong_nonce"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google linking failed. Try again."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 36,
+      "spec": {
+        "purpose": "link",
+        "scenario": "wrong_domain"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Only @smartdata.net and @cnbssoftware.com Google accounts can be linked."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 37,
+      "spec": {
+        "purpose": "link",
+        "scenario": "subject_taken"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "That Google account already signs in as another member."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 773523953,
+            "subject": "controller-member",
+            "email": "jz@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 38,
+      "spec": {
+        "purpose": "link",
+        "scenario": "already_linked"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "notice": "Google sign-in is already linked."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [
+          {
+            "user_id": 712064548,
+            "subject": "controller-old",
+            "email": "kevin@smartdata.net",
+            "domain": "smartdata.net"
+          }
+        ],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 39,
+      "spec": {
+        "purpose": "link",
+        "scenario": "signed_out"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in expired. Try again or sign in with email and password."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          -1,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 40,
+      "spec": {
+        "purpose": "link",
+        "scenario": "other_member"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 41,
+      "spec": {
+        "purpose": "link",
+        "scenario": "unavailable"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google is unavailable right now. Try again."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 42,
+      "spec": {
+        "purpose": "link",
+        "scenario": "cancelled"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "flash": {
+          "alert": "Google linking was cancelled."
+        },
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 43,
+      "spec": {
+        "purpose": "link",
+        "scenario": "expired_flow"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/",
+        "flash": {},
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 44,
+      "spec": {
+        "purpose": "link",
+        "scenario": "anonymous"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {},
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 45,
+      "spec": {
+        "purpose": "link",
+        "scenario": "unconfigured"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 404
+      },
+      "result": {
+        "status": 404,
+        "location": null,
+        "flash": {},
+        "calls": [],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 46,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "token_shape",
+        "payload": null
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 47,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "token_shape",
+        "payload": []
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 48,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "token_shape",
+        "payload": 42
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 49,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "token_shape",
+        "payload": "unexpected"
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 50,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "token_shape",
+        "payload": {
+          "id_token": []
+        }
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in failed. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "index": 51,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "token_shape",
+        "payload": {
+          "id_token": {}
+        }
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in failed. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": [
+          {
+            "action": "session.sign_in.failure",
+            "actor_id": null,
+            "target_id": null,
+            "target_type": null,
+            "target_label": null,
+            "details": {
+              "method": "google"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "index": 52,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "key_shape",
+        "payload": null
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 53,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "key_shape",
+        "payload": []
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 54,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "key_shape",
+        "payload": 42
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 55,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "key_shape",
+        "payload": {
+          "keys": null
+        }
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 56,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "key_shape",
+        "payload": {
+          "keys": "unexpected"
+        }
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    },
+    {
+      "index": 57,
+      "spec": {
+        "purpose": "sign_in",
+        "scenario": "key_shape",
+        "payload": {
+          "keys": [
+            null,
+            42,
+            "invalid",
+            {
+              "kty": "RSA",
+              "kid": [],
+              "n": {},
+              "e": 42
+            }
+          ]
+        }
+      },
+      "actor_id": 712064548,
+      "jz_id": 773523953,
+      "start": {
+        "status": 302,
+        "authorize": {
+          "scope": "openid email profile",
+          "code_challenge_method": "S256",
+          "redirect_uri": "http://campfire.test/session/google/callback"
+        }
+      },
+      "result": {
+        "status": 302,
+        "location": "http://campfire.test/session/new",
+        "flash": {
+          "alert": "Google sign-in is unavailable right now. Try again or sign in with email and password."
+        },
+        "calls": [
+          "token",
+          "keys"
+        ],
+        "delta": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "markers": {},
+        "flow_present": false,
+        "identities": [],
+        "email": "kevin@37signals.com",
+        "password_preserved": true,
+        "audits": []
+      }
+    }
+  ]
+}

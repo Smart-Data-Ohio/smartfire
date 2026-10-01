@@ -952,3 +952,5 @@ async fn google_sessions_rejection_log_names_reason_without_token_or_authorizati
     assert!(!output.contains(&signed));
     assert!(!output.contains("secret-auth-code"));
 }
+
+mod parity_cases;
