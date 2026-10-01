@@ -516,7 +516,7 @@ async fn event_snapshot(app: &TestApp) -> Vec<Vec<String>> {
 
 #[tokio::test]
 async fn event_create_update_cancel_keep_zone_and_calendar_jobs() {
-    let Some(app) = TestApp::boot_with_clock_and_env(
+    let Some(mut app) = TestApp::boot_with_clock_and_env(
         seed_clock(),
         &[("APP_URL", "https://calendar.smartfire.test:8443")],
     )
@@ -524,6 +524,8 @@ async fn event_create_update_cancel_keep_zone_and_calendar_jobs() {
     else {
         return;
     };
+    // Rails test-adapter assertions inspect producer jobs before consumption.
+    app.booted.jobs.stop(std::time::Duration::from_secs(5)).await;
     let mut david = app.david();
     let collection = format!("/rooms/{ALL_TALK}/events");
     let prefilled=david.get(&format!("{collection}/new?event[title]=Planning&event[starts_at]=2026-10-05T09%3A00%3A00Z&event[time_zone]=Eastern%20Time%20%28US%20%26%20Canada%29")).await;
