@@ -108,7 +108,6 @@
 {% endif %}      {{ self.area_open() }}
         {{ self.pending() }}
 
-
         {{ self.list_open() }}
 {% if !post.messages.is_empty() %}          {% for message in post.messages %}{{ crate::messages::cached_message_item(ctx,message) }}{% endfor %}
 {% endif %}</div>
