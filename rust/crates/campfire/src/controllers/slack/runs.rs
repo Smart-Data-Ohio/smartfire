@@ -751,13 +751,13 @@ pub(super) fn sample_htmls(
             let source = oauth::string(&sample["markdown"]);
             let markdown = campfire_richtext::markdown::render(&source, &|_: &str| None, &resolver)
                 .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
-            Ok(campfire_richtext::markdown::presentation(
+            campfire_richtext::markdown::presentation(
                 &markdown,
                 &context,
                 &resolver,
                 host.as_deref(),
             )
-            .map_err(|e| campfire_db::Error::Other(e.to_string()))?)
+            .map_err(|e| campfire_db::Error::Other(e.to_string()))
         })
         .collect()
 }
