@@ -185,7 +185,7 @@ for name, path, mutate, package, test in mutations:
                    "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", package]
         if package == "campfire":
             command += ["--bin", "campfire"]
-        command += [test, "--", "--nocapture", "--test-threads=4"]
+        command += [test, "--", "--nocapture", "--test-threads=8"]
         result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
         output = result.stdout + result.stderr
         (SCRATCH / f"{name}.log").write_text(output)
