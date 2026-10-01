@@ -12,7 +12,7 @@ fn ws15e_x_post_identity_fetch_windows_and_quiet_claims() {
             sink: sink.clone(),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
-            ..Default::default()
+            ..Env::default()
         },
         &std::env::temp_dir(),
     );

@@ -34,7 +34,7 @@ async fn ws15e_fizzy_connection_http_matrix() {
                 "controllers::fizzy_connections::tests::ws15e_fizzy_connection_http_matrix",
                 "--exact",
                 "--nocapture",
-                "--test-threads=1",
+                "--test-threads=8",
             ])
             .env("WS15E_FIZZY_CONNECTION_CASE", case)
             .env("FIZZY_API_BASE_URL", crate::integrations::test_support::fixture_http_base(51597, 1))

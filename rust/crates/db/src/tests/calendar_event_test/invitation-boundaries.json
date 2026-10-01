@@ -1,0 +1,49 @@
+[
+  {
+    "position": 0,
+    "recipients": [
+      149087659,
+      712064548,
+      773523953
+    ],
+    "rejected": 149087659,
+    "error": "ActiveRecord::StatementInvalid",
+    "persisted": true,
+    "invited": [],
+    "organizer_response": "going",
+    "announcements": 0
+  },
+  {
+    "position": 1,
+    "recipients": [
+      149087659,
+      712064548,
+      773523953
+    ],
+    "rejected": 712064548,
+    "error": "ActiveRecord::StatementInvalid",
+    "persisted": true,
+    "invited": [
+      149087659
+    ],
+    "organizer_response": "going",
+    "announcements": 0
+  },
+  {
+    "position": 2,
+    "recipients": [
+      149087659,
+      712064548,
+      773523953
+    ],
+    "rejected": 773523953,
+    "error": "ActiveRecord::StatementInvalid",
+    "persisted": true,
+    "invited": [
+      149087659,
+      712064548
+    ],
+    "organizer_response": "going",
+    "announcements": 0
+  }
+]

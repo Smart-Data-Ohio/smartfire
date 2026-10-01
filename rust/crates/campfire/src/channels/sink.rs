@@ -109,7 +109,7 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
         let html=app.db.read_blocking(move|conn| {
             let message=campfire_db::Message::find(conn,message_id)?;
             let view=crate::controllers::presenters::Presenter::new(conn,&copy,None).message(&message)?;
-            Ok(crate::controllers::presenters::page::render_detached(&copy,None,|ctx|campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders")))
+            Ok(crate::controllers::presenters::page::render_detached_at(&copy,None,&copy.db.env().default_url_origin,|ctx|campfire_views::messages::message(ctx,&view)))
         })?;
         if campfire_views::helpers::request_forgery::has_token_slots(&html) {
             anyhow::bail!("refusing unresolved CSRF token slots in a message replacement");
@@ -119,6 +119,20 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
         let attrs:&[(&str,Option<&str>)]=if frame.maintain_scroll {&[("maintain_scroll",Some("true"))]} else {&[]};
         let action=if frame.action == campfire_db::broadcasts::TurboAction::Append {Action::Append} else {Action::Replace};
         cable.broadcast_action_to(&streamables,action,Target::Target(&frame.target),Some(&html),attrs);
+        return Ok(());
+    }
+    if let Broadcast::Turbo(frame) = broadcast
+        && let Some(campfire_db::broadcasts::Partial::EventCards { message_id }) = &frame.partial
+    {
+        let app = app.ok_or_else(|| anyhow::anyhow!("event card broadcast before app boot"))?;
+        let html = app.db.read_blocking(|conn| crate::controllers::presenters::events::cards(conn, *message_id))?;
+        let action = match frame.action {
+            campfire_db::broadcasts::TurboAction::Replace => Action::Replace,
+            _ => return Err(anyhow::anyhow!("unexpected event card action")),
+        };
+        let attributes = if frame.maintain_scroll { vec![("maintain_scroll", Some("true"))] } else { Vec::new() };
+        cable.broadcast_action_to(&[&broadcast.stream_name()], action, Target::Target(&frame.target), Some(&html), &attributes);
+
         return Ok(());
     }
     let (stream, payload) = template_free_broadcast(broadcast)

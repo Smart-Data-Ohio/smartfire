@@ -483,8 +483,10 @@ impl Message {
         use crate::callbacks::Phase;
         for sync in tx.env().message_reference_syncs.clone() { sync(tx,self,enqueue)?; }
         let sink=tx.env().sink.clone();
-        for phase in [Phase::MessageFizzyReferences,Phase::MessageTwitterReferences,Phase::MessageLinkReferences] {
+        for phase in [Phase::MessageFizzyReferences,Phase::MessageTwitterReferences,Phase::MessageEventReferences,Phase::MessageLinkReferences] {
+            if phase == Phase::MessageEventReferences { crate::models::calendar_event::references::sync(tx, self)?; }
             sink.sync_message_reference_phase(tx,self,phase,enqueue)?;
+
         }
         Ok(())
     }
@@ -1191,6 +1193,9 @@ impl Message {
         tx.model_callback(phase, self.id)?;
         if phase == crate::callbacks::Phase::MessageGithubReferences {
             for sync in tx.env().message_reference_syncs.clone() { sync(tx, self, enqueue)?; }
+        }
+        if phase == crate::callbacks::Phase::MessageEventReferences {
+            crate::models::calendar_event::references::sync(tx, self)?;
         }
         let sink = tx.env().sink.clone();
         sink.sync_message_reference_phase(tx, self, phase, enqueue)

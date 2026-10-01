@@ -121,6 +121,9 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     periodic.task(Task::new("stranded agent webhooks", Duration::from_secs(30), |app: App| async move {
         stranded_agent_webhooks(&app.db).await
     }));
+    periodic.task(Task::new("event reminders", intervals.reminders, |app: App| async move {
+        event_reminders(&app.db).await
+    }));
     periodic.task(Task::new(
         "saved item reminders",
         intervals.reminders,
@@ -181,6 +184,17 @@ pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
             .await
         {
             tracing::error!(id,%error,"Saved item reminder failed");
+        }
+    }
+    Ok(())
+}
+
+pub(super) async fn event_reminders(db: &Database) -> anyhow::Result<()> {
+    let now = db.env().now();
+    let ids = db.read(move |conn| campfire_db::CalendarEvent::due_reminder_ids(conn, now)).await?;
+    for id in ids {
+        if let Err(error) = db.write(move |tx| campfire_db::CalendarEvent::dispatch_reminder(tx, id, now)).await {
+            tracing::error!(id, %error, "Event reminder failed");
         }
     }
     Ok(())
