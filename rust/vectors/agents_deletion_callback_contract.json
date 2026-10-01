@@ -67,6 +67,28 @@
       ],
       "threads_remaining": 0
     },
+    "savepoint_false": {
+      "ledger": [
+        "A edited",
+        "B"
+      ],
+      "polled": [
+        "A edited",
+        "B"
+      ],
+      "threads_remaining": 0
+    },
+    "savepoint_true": {
+      "ledger": [
+        "A edited",
+        "B"
+      ],
+      "polled": [
+        "A edited",
+        "B"
+      ],
+      "threads_remaining": 0
+    },
     "first_ledger_failure_error": "statement_invalid",
     "first_ledger_failure": {
       "ledger": [],

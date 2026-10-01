@@ -37,6 +37,21 @@ results={}
     results["#{mode}_#{webhook}"]=observe.call
   end
 end
+[false,true].each do |webhook|
+  if webhook
+    Webhook.find_or_create_by!(user:agent.user) { |w|w.url='https://bots.example.test/hook' }
+  else
+    Webhook.where(user:agent.user).delete_all
+  end
+  agent.agent_events.delete_all
+  a=make.call('A');b=make.call('B')
+  ActiveRecord::Base.transaction do
+    a.update!(name:'A edited')
+    ActiveRecord::Base.transaction(requires_new:true) {c=make.call('Rolled back C');c.destroy!;raise ActiveRecord::Rollback}
+    b.destroy!;a.destroy!
+  end
+  results["savepoint_#{webhook}"]=observe.call
+end
 Webhook.where(user:agent.user).delete_all
 agent.agent_events.delete_all
 a=make.call('A');b=make.call('B')

@@ -268,3 +268,19 @@ fn ws11_r4_callback_failure_stops_remaining_publications() {
     println!("WS11 r4 first_callback_failure: {actual}");
     assert_eq!(actual,callback_order_oracle()["results"]["first_ledger_failure"]);
 }
+
+#[test]
+fn ws11_r4_callback_savepoint_discards_rolled_back_deletion() {
+    for webhook in [false,true] {
+        let t=callback_setup(webhook);
+        let (mut a,b)=t.write(|tx|Ok((callback_thread(tx,"A")?,callback_thread(tx,"B")?)));
+        t.write(move|tx| {
+            a.update_settings(tx,Some("A edited"),None)?;
+            let failed=tx.savepoint(|tx| {let c=callback_thread(tx,"Rolled back C")?;c.destroy(tx)?;Err::<(),_>(crate::Error::Other("WS11 nested rollback".into()))});
+            assert!(failed.is_err());
+            assert!(ChannelThread::find_by_id(tx.conn(),a.id)?.is_some());
+            b.destroy(tx)?;a.destroy(tx)
+        });
+        assert_eq!(callback_observation(&t),callback_order_oracle()["results"][format!("savepoint_{webhook}")]);
+    }
+}

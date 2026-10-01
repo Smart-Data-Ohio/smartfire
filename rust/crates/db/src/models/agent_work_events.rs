@@ -184,8 +184,8 @@ impl crate::Job for DeletedWorkWebhookJob {
     const CLASS: &'static str = "Agent::EventWebhookJob";
 }
 
-/// Used both by after_destroy_commit and by the durable runner if the process
-/// stopped after deletion committed. SQLite allocates the ID at publication.
+/// Only after_destroy_commit publishes the ledger, as Rails does. SQLite
+/// allocates the ID at insertion; the durable runner never recreates a missing row.
 pub fn publish_deleted_webhook(tx: &mut Tx<'_>, job: DeletedWorkWebhookJob) -> Result<EventWebhookJob> {
     let captured = job.deleted_work;
     let chain = captured.chain_id.clone();
@@ -253,7 +253,7 @@ pub(crate) fn record_deleted(
         // still rolls back deletion. Only insertion publishes a polling ID.
         let job = DeletedWorkWebhookJob {deleted_work:event.clone()};
         if deliverable { tx.emit_after_commit(crate::Event::job(&job)); }
-        tx.after_commit(move|tx|crate::database::run_write(tx.conn(),tx.env(),move|tx| {
+        tx.after_commit_record("channel_threads",thread.id,move|tx|crate::database::run_write(tx.conn(),tx.env(),move|tx| {
             if deliverable { publish_deleted_webhook(tx,job)?; }
             else { let event=AgentEvent::create_captured(tx,event)?; enqueue_webhook(tx,&event)?; }
             Ok(())

@@ -169,81 +169,34 @@ async fn ws11_publication_concurrent_poller_resumes_after_interleaved_commits() 
 }
 
 #[tokio::test]
-async fn ws11_publication_durable_intent_recovers_commit_gap_and_binds_once() {
-    use super::{EventWebhook, post_deferred_with_network};
-    use campfire_db::models::agent_work_events::publish_deleted_webhook;
-    let (app, dir) = TestApp::boot()
-        .await
-        .expect("default seed")
-        .stop_jobs()
-        .await;
-    let snapshot = dir.path().join("before-ledger.sqlite3");
-    let export = snapshot.clone();
-    let (agent_id, thread_id) = app
-        .db
-        .write(move |tx| {
-            let agent = Agent::for_user(tx.conn(), BENDER)?.unwrap();
-            tx.conn()
-                .execute("DELETE FROM agent_grants WHERE agent_id=?", [agent.id])?;
-            Room::find(tx.conn(), ALL_TALK)?.grant_to(tx, &[BENDER])?;
-            let thread = ChannelThread::create(
-                tx,
-                NewChannelThread {
-                    room_id: ALL_TALK,
-                    creator_id: DAVID,
-                    name: Some("Durable publication recovery".into()),
-                    ..Default::default()
-                },
-            )?;
-            tx.conn().execute(
-                "UPDATE channel_threads SET work_owner_id=? WHERE id=?",
-                rusqlite::params![BENDER, thread.id],
-            )?;
-            // A real SQLite snapshot of the crash boundary: deletion and enqueue
-            // have committed; the ledger callback has not run.
-            tx.after_commit(move |tx| {
-                tx.conn()
-                    .execute("VACUUM INTO ?", [export.to_str().unwrap()])?;
-                Ok(())
-            });
-            ChannelThread::find(tx.conn(), thread.id)?.destroy(tx)?;
-            Ok((agent.id, thread.id))
-        })
-        .await
-        .unwrap();
-    let env = app.db.env().clone();
-    let recovered=tokio::task::spawn_blocking(move || -> campfire_db::Result<(i64,Value,i64)> {
-        let conn=campfire_db::Connection::open(snapshot)?;
-        assert!(ChannelThread::find_by_id(&conn,thread_id)?.is_none());
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",rusqlite::params![agent_id,thread_id],|r|r.get::<_,i64>(0))?,0);
-        let (job_id,args):(i64,Value)=conn.query_row("SELECT id,arguments FROM background_jobs WHERE job_class='Agent::EventWebhookJob' AND json_extract(arguments,'$.deleted_work.metadata.thread_id')=?",[thread_id],|r|Ok((r.get(0)?,r.get(1)?)))?;
-        assert!(args.get("event_id").is_none(),"unpublished event has no reserved ID");
-        let EventWebhook::Deleted(intent)=serde_json::from_value(args.clone()).unwrap() else {panic!("captured deletion job")};
-        let first=campfire_db::run_write(&conn,&env,|tx| publish_deleted_webhook(tx,(*intent).clone()))?;
-        let second=campfire_db::run_write(&conn,&env,|tx| publish_deleted_webhook(tx,*intent))?;
-        assert_eq!(first.event_id,second.event_id,"duplicate publication reuses the committed event");
-        let bound:Value=conn.query_row("SELECT arguments FROM background_jobs WHERE id=?",[job_id],|r|r.get(0))?;
-        assert_eq!(bound,json!({"event_id":first.event_id,"attempt":0}));
-        assert_eq!(AgentEvent::find(&conn,first.event_id)?.unwrap().webhook_status,"pending");
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",rusqlite::params![agent_id,thread_id],|r|r.get::<_,i64>(0))?,1);
-        Ok((job_id,args,first.event_id))
-    }).await.unwrap().unwrap();
-    let (job_id, stale_args, _) = recovered;
-    // A runner that claimed the old envelope must reload the bound arguments.
-    // Removing the published event afterward retains Rails' missing-event no-op.
-    app.db.write(move |tx| {
-        tx.conn().execute("DELETE FROM agent_events WHERE agent_id=? AND event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",rusqlite::params![agent_id,thread_id])?;
+async fn ws11_publication_durable_intent_binds_published_event_and_stale_claim_is_noop() {
+    use super::{EventWebhook,post_deferred_with_network};
+    use std::sync::{Arc,Mutex};
+    let (app,_dir)=TestApp::boot().await.expect("default seed").stop_jobs().await;
+    let captured=Arc::new(Mutex::new(None));let capture=captured.clone();
+    let (agent_id,thread_id)=app.db.write(move|tx| {
+        let agent=Agent::for_user(tx.conn(),BENDER)?.unwrap();
+        tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?",[agent.id])?;
+        Room::find(tx.conn(),ALL_TALK)?.grant_to(tx,&[BENDER])?;
+        let thread=ChannelThread::create(tx,NewChannelThread {room_id:ALL_TALK,creator_id:DAVID,name:Some("Durable publication binding".into()),..Default::default()})?;
+        tx.conn().execute("UPDATE channel_threads SET work_owner_id=? WHERE id=?",rusqlite::params![BENDER,thread.id])?;
+        ChannelThread::find(tx.conn(),thread.id)?.destroy(tx)?;
+        let (job_id,args):(i64,Value)=tx.conn().query_row("SELECT id,arguments FROM background_jobs WHERE job_class='Agent::EventWebhookJob' AND json_extract(arguments,'$.deleted_work.metadata.thread_id')=?",[thread.id],|r|Ok((r.get(0)?,r.get(1)?)))?;
+        assert!(args.get("event_id").is_none());
+        *capture.lock().unwrap()=Some((job_id,args));
+        Ok((agent.id,thread.id))
+    }).await.unwrap();
+    let (job_id,stale_args)=captured.lock().unwrap().take().unwrap();
+    app.db.write(move|tx| {
+        let event=tx.conn().query_row("SELECT id FROM agent_events WHERE agent_id=? AND event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",rusqlite::params![agent_id,thread_id],|r|r.get::<_,i64>(0))?;
+        let bound:Value=tx.conn().query_row("SELECT arguments FROM background_jobs WHERE id=?",[job_id],|r|r.get(0))?;
+        assert_eq!(bound,json!({"event_id":event,"attempt":0}));
+        tx.conn().execute("DELETE FROM agent_events WHERE id=?",[event])?;
         Ok(())
     }).await.unwrap();
-    post_deferred_with_network(
-        &app,
-        serde_json::from_value(stale_args).unwrap(),
-        job_id,
-        &crate::integrations::net::Network::system(),
-    )
-    .await
-    .unwrap();
-    app.db.read(move |conn| {
+    let job:EventWebhook=serde_json::from_value(stale_args).unwrap();
+    post_deferred_with_network(&app,job,job_id,&crate::integrations::net::Network::system()).await.unwrap();
+    app.db.read(move|conn| {
         assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",rusqlite::params![agent_id,thread_id],|r|r.get::<_,i64>(0))?,0);
         Ok(())
     }).await.unwrap();

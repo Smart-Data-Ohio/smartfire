@@ -93,6 +93,11 @@ enum AfterCommit {
         id: i64,
         event: Event,
     },
+    RecordHooks {
+        table: &'static str,
+        id: i64,
+        hooks: Vec<AfterCommitHook>,
+    },
     Hook(AfterCommitHook),
     Event(Event),
 }
@@ -258,6 +263,25 @@ impl<'c> Tx<'c> {
         }
     }
 
+    /// Rails registers a record on its first save/destroy, even before it has
+    /// any commit callbacks to run. Later callbacks retain that record's slot.
+    pub fn register_record(&mut self, table: &'static str, id: i64) {
+        if self.in_transaction && !self.after_commit.iter().any(|item| {
+            matches!(item, AfterCommit::RecordHooks {table: t, id: i, ..} if *t == table && *i == id)
+        }) {
+            self.after_commit.push(AfterCommit::RecordHooks {table, id, hooks: Vec::new()});
+        }
+    }
+
+    pub fn after_commit_record(&mut self, table: &'static str, id: i64,
+        hook: impl FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static) {
+        if !self.in_transaction { self.after_commit(hook); return; }
+        self.register_record(table, id);
+        if let Some(AfterCommit::RecordHooks {hooks, ..}) = self.after_commit.iter_mut().find(|item| {
+            matches!(item, AfterCommit::RecordHooks {table: t, id: i, ..} if *t == table && *i == id)
+        }) { hooks.push(Box::new(hook)); }
+    }
+
     pub fn in_transaction(&self) -> bool {
         self.in_transaction
     }
@@ -267,6 +291,9 @@ impl<'c> Tx<'c> {
     /// fail the enclosing transaction through `persist_error`.
     pub fn savepoint<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let callbacks = self.after_commit.len();
+        let record_hooks: Vec<_> = self.after_commit.iter().enumerate().filter_map(|(i, item)| {
+            if let AfterCommit::RecordHooks {hooks, ..} = item {Some((i, hooks.len()))} else {None}
+        }).collect();
         self.conn.execute_batch("SAVEPOINT model_operation")?;
         match f(self) {
             Ok(value) => {
@@ -276,6 +303,9 @@ impl<'c> Tx<'c> {
             }
             Err(error) => {
                 self.after_commit.truncate(callbacks);
+                for (index, length) in record_hooks {
+                    if let AfterCommit::RecordHooks {hooks, ..} = &mut self.after_commit[index] {hooks.truncate(length);}
+                }
                 self.conn.execute_batch(
                     "ROLLBACK TO SAVEPOINT model_operation; RELEASE SAVEPOINT model_operation",
                 )?;
@@ -287,7 +317,7 @@ impl<'c> Tx<'c> {
 
 /// Runs `f` in `BEGIN IMMEDIATE`, commits, then runs the after-commit queue. An error from
 /// `f` rolls back and discards the queue. An error from an after-commit hook is returned
-/// after the rest of the queue has run (Rails raises it from the save that committed).
+/// immediately, discarding later callbacks (Rails raises it from the save that committed).
 pub fn run_write<T>(
     conn: &Connection,
     env: &Env,
@@ -351,7 +381,6 @@ pub fn run_write<T>(
         return Err(error.into());
     }
 
-    let mut first_error = None;
     let mut after = Tx {
         conn,
         env,
@@ -379,18 +408,13 @@ pub fn run_write<T>(
                     Err(error) => tracing::warn!(%error, table, id, "broadcast callback failed"),
                 }
             }
-            AfterCommit::Hook(hook) => {
-                if let Err(error) = hook(&mut after) {
-                    tracing::error!(%error, "after_commit hook failed");
-                    first_error.get_or_insert(error);
-                }
+            AfterCommit::RecordHooks {hooks, ..} => {
+                for hook in hooks { hook(&mut after)?; }
             }
+            AfterCommit::Hook(hook) => hook(&mut after)?,
         }
     }
-    match first_error {
-        Some(error) => Err(error),
-        None => Ok(value),
-    }
+    Ok(value)
 }
 
 #[derive(Debug, Clone)]

@@ -61,7 +61,10 @@ async fn post_deferred_with_network(app: &App, job: EventWebhook, job_id: i64, n
             let current: EventWebhook=serde_json::from_value(current).map_err(|e|campfire_db::Error::Other(e.to_string()))?;
             Ok(Some(match current {
                 EventWebhook::Published(job) => job,
-                EventWebhook::Deleted(job) => campfire_db::models::agent_work_events::publish_deleted_webhook(tx,*job)?,
+                // Rails never reconstructs an after_destroy_commit side effect
+                // after a process stop or callback failure. The atomic intent
+                // survives, but missing publication makes this job a no-op.
+                EventWebhook::Deleted(_) => return Ok(None),
             }))
         }).await?,
     };

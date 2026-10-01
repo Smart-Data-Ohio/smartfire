@@ -306,6 +306,7 @@ impl ChannelThread {
             ],
             |r| r.get(0),
         )?;
+        tx.register_record("channel_threads", id);
         for name in tag_names.unwrap_or_default() {
             ThreadTag::create(tx, id, &name)?;
         }
@@ -418,6 +419,7 @@ impl ChannelThread {
     /// `update!` of the given state: validated, then written with a fresh `updated_at` if
     /// anything changed (a save with no changes writes nothing).
     fn save(&mut self, tx: &mut Tx<'_>, changed: ChannelThread) -> Result<()> {
+        tx.register_record("channel_threads", self.id);
         if changed == *self {
             return Ok(());
         }
@@ -749,6 +751,7 @@ impl ChannelThread {
 
     pub fn destroy_by(&self, tx: &mut Tx<'_>, deleted_by_id: Option<i64>) -> Result<()> {
         let fresh = Self::find(tx.conn(), self.id)?;
+        tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
         crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
         for tag in ThreadTag::for_thread(tx.conn(), self.id)? {
@@ -789,7 +792,7 @@ impl ChannelThread {
         }
         super::agent_work_events::record_deleted(tx, &fresh, deleted_by_id, snapshot)?;
         let parent_message_id = self.parent_message_id;
-        tx.after_commit(move |tx| {
+        tx.after_commit_record("channel_threads", self.id, move |tx| {
             Self::broadcast_thread_indicator_change(tx, parent_message_id, 0)
         });
         Ok(())

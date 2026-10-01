@@ -272,14 +272,14 @@ impl EventSink for Jobs {
 
     fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
         let app = self.app.get().and_then(Weak::upgrade);
-        let crypto = app.as_ref().map(|app| rails_compat::ar_encryption::ArEncryption::new(&app.secrets));
-        crate::integrations::sync_message_references(tx, message, enqueue, crypto.as_ref())
+        let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
+        crate::integrations::sync_message_references(tx, message, enqueue, crypto)
     }
 
     fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, phase: campfire_db::callbacks::Phase, enqueue: bool) -> campfire_db::Result<()> {
         let app = self.app.get().and_then(Weak::upgrade);
-        let crypto = app.as_ref().map(|app| rails_compat::ar_encryption::ArEncryption::new(&app.secrets));
-        crate::integrations::sync_message_reference_phase(tx,message,phase,enqueue,crypto.as_ref())
+        let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
+        crate::integrations::sync_message_reference_phase(tx,message,phase,enqueue,crypto)
     }
 
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
