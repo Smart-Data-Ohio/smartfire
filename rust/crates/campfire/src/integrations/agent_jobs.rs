@@ -551,7 +551,10 @@ fn ws11_retry_after_and_response_policy_match_rails_vectors() {
 async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
     use crate::controllers::presenters::test_support::{BENDER, TestApp};
     let test = TestApp::boot().await.expect("default seed");
-    let db = test.db();
+    let db = test.db().clone();
+    // This checks recovery's durable enqueue before delivery. Keep the real
+    // worker from acknowledging the row between enqueue and the queue audit.
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let (first,second)=db.write(|tx| {
         let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
         let new=||domain::NewEvent {agent_id,event_type:"github_action_completed".into(),..Default::default()};
@@ -560,7 +563,7 @@ async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
         tx.conn().execute_batch(&format!("CREATE TRIGGER reject_recovery BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' AND json_extract(NEW.arguments,'$.event_id')={} BEGIN SELECT RAISE(ABORT,'WS11 one rejected candidate'); END;",a.id))?;
         Ok((a.id,b.id))
     }).await.unwrap();
-    crate::jobs::periodic::stranded_agent_webhooks(db)
+    crate::jobs::periodic::stranded_agent_webhooks(&db)
         .await
         .unwrap();
     db.read(move |c| {
