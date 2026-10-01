@@ -11,7 +11,7 @@ async fn check(case: &Value) {
     if config["owner_action"].is_string() {
         // The Rails oracle enqueues ban cleanup without a worker consuming it.
         // Keep that durable job pending while comparing the synchronous request.
-        app.shutdown_jobs().await;
+        app = app.without_job_runner().await;
     }
     app.db().write(move |tx| {
         tx.conn().execute("UPDATE agents SET daily_message_cap=?,owner_id=127326141 WHERE id=?",rusqlite::params![config["cap"].as_i64(),AGENT])?;

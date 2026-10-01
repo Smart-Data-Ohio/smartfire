@@ -1,0 +1,1006 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1790164800,
+  "cases": [
+    {
+      "number": 1,
+      "title": "pushes the join to the recipient's subscriptions and stamps the throttle",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": "2026-09-23 12:00:00 UTC",
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": [
+            {
+              "payload": {
+                "title": "David joined your huddle",
+                "body": "Join from the conversation",
+                "path": "/rooms/186869642",
+                "tag": "huddle-186869642"
+              },
+              "subscription_ids": [
+                782661003
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "a second push inside ten minutes is throttled",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": "2026-09-23 12:00:00 UTC",
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": [
+            {
+              "payload": {
+                "title": "David joined your huddle",
+                "body": "Join from the conversation",
+                "path": "/rooms/186869642",
+                "tag": "huddle-186869642"
+              },
+              "subscription_ids": [
+                782661003
+              ]
+            }
+          ]
+        },
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": "2026-09-23 12:00:00 UTC",
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "a push ten minutes later goes out again",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": "2026-09-23 12:00:00 UTC",
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": [
+            {
+              "payload": {
+                "title": "David joined your huddle",
+                "body": "Join from the conversation",
+                "path": "/rooms/186869642",
+                "tag": "huddle-186869642"
+              },
+              "subscription_ids": [
+                782661003
+              ]
+            }
+          ]
+        },
+        {
+          "operation": "later",
+          "policy_allowed": null,
+          "now": 1790165460,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": "2026-09-23 12:00:00 UTC",
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790165460,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": "2026-09-23 12:11:00 UTC",
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": [
+            {
+              "payload": {
+                "title": "David joined your huddle",
+                "body": "Join from the conversation",
+                "path": "/rooms/186869642",
+                "tag": "huddle-186869642"
+              },
+              "subscription_ids": [
+                782661003
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "a DND recipient gets no push and burns no throttle window",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "dnd",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": false,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "a starred joiner still pushes through DND",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "dnd",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "star",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": "2026-09-23 12:00:00 UTC",
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": [
+            {
+              "payload": {
+                "title": "David joined your huddle",
+                "body": "Join from the conversation",
+                "path": "/rooms/186869642",
+                "tag": "huddle-186869642"
+              },
+              "subscription_ids": [
+                782661003
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "a recipient in quiet hours gets no push",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "quiet",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": false,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "a recipient quiet in a meeting gets no push",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "meeting",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": false,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "title": "an out-of-office recipient gets no push unless they keep notifications on",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "ooo",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": false,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "ooo_notify",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": "2026-09-23 12:00:00 UTC",
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": [
+            {
+              "payload": {
+                "title": "David joined your huddle",
+                "body": "Join from the conversation",
+                "path": "/rooms/186869642",
+                "tag": "huddle-186869642"
+              },
+              "subscription_ids": [
+                782661003
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "title": "a connected recipient gets no push and burns no throttle window",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "connected",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": "2026-09-23 12:00:00 UTC",
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": "2026-09-23 12:00:00 UTC",
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "a switched-off or hidden room gets no push",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "off",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "nothing",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": false,
+          "now": 1790164800,
+          "involvement": "nothing",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "hidden",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "invisible",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": false,
+          "now": 1790164800,
+          "involvement": "invisible",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "a muted room gets no push and burns no throttle window",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "muted",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "muted",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": false,
+          "now": 1790164800,
+          "involvement": "muted",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "title": "a recipient with huddle invitations switched off gets no push and burns no throttle window",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "inbox_off",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": false
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": false
+          },
+          "subscription_ids": [
+            782661003
+          ],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "title": "a recipient with no subscriptions burns no throttle window",
+      "input": {
+        "recipient_id": 149087659,
+        "sender_id": 127326141,
+        "room_id": 186869642,
+        "membership_id": 198590975,
+        "involvement": "everything",
+        "connected_at": null,
+        "inbox_preferences": {
+          "github_review_requests": true,
+          "agent_approvals": true,
+          "agent_work": true,
+          "event_reminders": true,
+          "huddle_invitations": true
+        },
+        "subscriptions": [
+          782661003
+        ]
+      },
+      "results": [
+        {
+          "operation": "no_subscriptions",
+          "policy_allowed": null,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        },
+        {
+          "operation": "push",
+          "policy_allowed": true,
+          "now": 1790164800,
+          "involvement": "everything",
+          "connected_at": null,
+          "inbox_preferences": {
+            "github_review_requests": true,
+            "agent_approvals": true,
+            "agent_work": true,
+            "event_reminders": true,
+            "huddle_invitations": true
+          },
+          "subscription_ids": [],
+          "last_huddle_join_push_at": null,
+          "updated_at": "2026-09-23 12:00:00 UTC",
+          "pushes": []
+        }
+      ]
+    }
+  ]
+}

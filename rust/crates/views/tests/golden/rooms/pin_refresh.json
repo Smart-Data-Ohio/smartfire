@@ -1,0 +1,15 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "pinned": false,
+      "message_id": 935961915,
+      "body": "\n\n  <turbo-stream action=\"replace\" target=\"pins_count_rooms_closed_486777696\"><template><span id=\"pins_count_rooms_closed_486777696\" class=\"room-header__pins-count\" aria-label=\"0 pinned messages\">0</span>\n</template></turbo-stream>\n  <turbo-stream action=\"replace\" target=\"pins_list_rooms_closed_486777696\"><template><div id=\"pins_list_rooms_closed_486777696\" class=\"pins-panel__list\">\n    <p class=\"pins-panel__empty\">No pinned messages yet. Pin one from the message menu to keep it handy.</p>\n</div>\n</template></turbo-stream>\n"
+    },
+    {
+      "pinned": true,
+      "message_id": 935961915,
+      "body": "\n\n  <turbo-stream action=\"replace\" target=\"pins_count_rooms_closed_486777696\"><template><span id=\"pins_count_rooms_closed_486777696\" class=\"room-header__pins-count\" aria-label=\"1 pinned messages\">1</span>\n</template></turbo-stream>\n  <turbo-stream action=\"replace\" target=\"pins_list_rooms_closed_486777696\"><template><div id=\"pins_list_rooms_closed_486777696\" class=\"pins-panel__list\">\n    <ol class=\"pins-panel__items\">\n        <li class=\"pins-panel__item\">\n          <div class=\"pins-panel__meta\">\n            <span>Pinned by David</span>\n            <time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time>\n          </div>\n          <p class=\"pins-panel__author\">Jason</p>\n          <p class=\"pins-panel__excerpt\">001. Coffee machine is fixed!</p>\n          <div class=\"pins-panel__actions\">\n            <a class=\"btn\" data-turbo-frame=\"_top\" href=\"http://campfire.test/rooms/486777696/@935961915\">Jump to message</a>\n            <form data-turbo-frame=\"pins_frame_rooms_closed_486777696\" class=\"button_to\" method=\"post\" action=\"/messages/935961915/pin\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain\" type=\"submit\">Unpin</button><input type=\"hidden\" name=\"authenticity_token\" value=\"GLOBAL\" /></form>\n          </div>\n        </li>\n    </ol>\n</div>\n</template></turbo-stream>\n"
+    }
+  ]
+}

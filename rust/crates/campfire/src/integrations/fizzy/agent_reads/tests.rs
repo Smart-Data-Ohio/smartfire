@@ -11,7 +11,10 @@ use std::sync::Arc;
 const OWNER_TOKEN: &str = "fixture-owner";
 async fn fixture(case: &str) -> (TestApp, i64) {
     let mut app = TestApp::boot().await.expect("pinned seeds required");
-    app.shutdown_jobs().await;
+    app.booted
+        .jobs
+        .stop(std::time::Duration::from_secs(1))
+        .await;
     let crypto = ArEncryption::new(&app.booted.app.secrets);
     let case = case.to_owned();
     let agent=app.db().write(move|tx| {
@@ -43,7 +46,7 @@ async fn ws15e_fizzy_agent_reads_match_pinned_service_results() {
         } else {
             200
         };
-        let server = FakeServer::start(vec![
+        let server = FakeServer::start_ws15e(vec![
             Route::new("GET", "app.fizzy.do", "/897362094/boards.json", status).body(
                 if status >= 400 {
                     "{\"message\":\"Denied\"}"
@@ -182,7 +185,7 @@ async fn ws15e_review_legacy_inactive_owner_cannot_read_fizzy() {
     for status in [1,2] {
         let (app,agent) = fixture("linked").await;
         app.db().write(move |tx| {tx.conn().execute("UPDATE users SET status=? WHERE id=?",params![status,DAVID])?;Ok(())}).await.unwrap();
-        let server=FakeServer::start(vec![Route::new("GET","app.fizzy.do","/897362094/boards.json",200).body("[]")]).await;
+        let server=FakeServer::start_ws15e(vec![Route::new("GET","app.fizzy.do","/897362094/boards.json",200).body("[]")]).await;
         let resolver=Arc::new(FakeResolver::new([("app.fizzy.do",vec!["93.184.216.34"])]));
         let dialer=Arc::new(MappingDialer {public:["93.184.216.34".parse().unwrap()].into(),to:server.addr,dialed:Default::default()});
         let result=read(&app.booted.app,&network(resolver.clone(),dialer),"http://app.fizzy.do",agent,Read::Boards {account:json!(null)}).await.unwrap();

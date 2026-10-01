@@ -35,5 +35,8 @@ travel_to Time.utc(2026, 3, 2, 16) do
   results[:final_side_effects]={posted:agent.agent_events.where(event_type:"posted",message_id:final.id).count,
     indexed:Message.connection.select_value("SELECT COUNT(*) FROM message_search_index WHERE rowid=#{final.id}").to_i,
     presence:agent.reload.working_presence}
+  results[:tasks]=Periodic::Runner.new(reminders_interval:17,retention_interval:123).instance_variable_get(:@tasks)
+    .select{|t|["clear plaintext bot tokens","stranded agent webhooks","streaming messages"].include?(t.name)}
+    .map{|t|{name:t.name,seconds:t.interval}}.sort_by{|t|t[:name]}
   puts JSON.pretty_generate({reference_pin:"d7c7de92",results:results}.as_json)
 end

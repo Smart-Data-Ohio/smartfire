@@ -1,0 +1,430 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": {
+    "rich_text": {
+      "id": 136976342,
+      "client_message_id": "0013",
+      "created_at": "2026-03-02T15:55:00.000Z",
+      "updated_at": "2026-03-02T15:55:00.000Z",
+      "body": {
+        "plain_text": "When we are not sure, we are alive.",
+        "html": "<div class=\"trix-content\">\n  When we are not sure, we are alive.\n</div>\n"
+      },
+      "creator": {
+        "id": 773523953,
+        "name": "JZ",
+        "role": "member",
+        "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000",
+        "icon_name": null,
+        "icon_avatar_url": null
+      },
+      "room": {
+        "id": 486777696,
+        "icon_name": null
+      },
+      "drive_attachments": [],
+      "url": "https://payload.test/rooms/486777696/@136976342"
+    },
+    "markdown": {
+      "id": 935962058,
+      "client_message_id": "ws11-presenter",
+      "created_at": "2026-03-02T16:00:00.000Z",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "body": {
+        "plain_text": "Hello world &\n\nlet x = 1;",
+        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
+        "markdown_source": "Hello **world** & <x>\n\n```rust\nlet x = 1;\n```"
+      },
+      "creator": {
+        "id": 127326141,
+        "name": "David",
+        "role": "administrator",
+        "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+        "icon_name": null,
+        "icon_avatar_url": null
+      },
+      "room": {
+        "id": 486777696,
+        "icon_name": null
+      },
+      "drive_attachments": [],
+      "url": "https://payload.test/rooms/486777696/@935962058"
+    },
+    "reply_forward_drive": {
+      "id": 935962059,
+      "client_message_id": "ws11-presenter-reply",
+      "created_at": "2026-03-02T16:00:00.000Z",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "body": {
+        "plain_text": "From elsewhere\n\nAnswer",
+        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Answer</p></div>",
+        "markdown_source": "Answer"
+      },
+      "creator": {
+        "id": 394959859,
+        "name": "Bender Bot",
+        "role": "bot",
+        "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+        "icon_name": null,
+        "icon_avatar_url": null
+      },
+      "room": {
+        "id": 486777696,
+        "icon_name": null
+      },
+      "reply_to": {
+        "id": 935962058,
+        "url": "https://payload.test/rooms/486777696/@935962058",
+        "deleted": false,
+        "creator": {
+          "id": 127326141,
+          "name": "David",
+          "role": "administrator",
+          "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+          "icon_name": null,
+          "icon_avatar_url": null
+        },
+        "body": {
+          "plain_text": "Hello world &\n\nlet x = 1;",
+          "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>"
+        },
+        "notify_author": true
+      },
+      "forwarded": {
+        "label": "Forwarded",
+        "note": "From elsewhere"
+      },
+      "drive_attachments": [
+        {
+          "file_id": "ws11-public-drive-file",
+          "url": "https://drive.google.com/open?id=ws11-public-drive-file"
+        }
+      ],
+      "url": "https://payload.test/rooms/486777696/@935962059"
+    },
+    "deleted_reply": {
+      "id": 935962059,
+      "client_message_id": "ws11-presenter-reply",
+      "created_at": "2026-03-02T16:00:00.000Z",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "body": {
+        "plain_text": "From elsewhere\n\nAnswer",
+        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Answer</p></div>",
+        "markdown_source": "Answer"
+      },
+      "creator": {
+        "id": 394959859,
+        "name": "Bender Bot",
+        "role": "bot",
+        "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+        "icon_name": null,
+        "icon_avatar_url": null
+      },
+      "room": {
+        "id": 486777696,
+        "icon_name": null
+      },
+      "reply_to": {
+        "deleted": true,
+        "notify_author": true
+      },
+      "forwarded": {
+        "label": "Forwarded",
+        "note": "From elsewhere"
+      },
+      "drive_attachments": [
+        {
+          "file_id": "ws11-public-drive-file",
+          "url": "https://drive.google.com/open?id=ws11-public-drive-file"
+        }
+      ],
+      "url": "https://payload.test/rooms/486777696/@935962059"
+    },
+    "root_human": {
+      "id": 935962058,
+      "client_message_id": "ws11-presenter",
+      "created_at": "2026-03-02T16:00:00.000Z",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "body": {
+        "plain_text": "Hello world &\n\nlet x = 1;",
+        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
+        "markdown_source": "Hello **world** & <x>\n\n```rust\nlet x = 1;\n```"
+      },
+      "creator": {
+        "id": 127326141,
+        "name": "David",
+        "role": "administrator",
+        "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+        "icon_name": null,
+        "icon_avatar_url": null
+      },
+      "room": {
+        "id": 486777696,
+        "icon_name": null
+      },
+      "thread_summary": {
+        "id": 9,
+        "name": "Presenter chat",
+        "status": "active",
+        "room_id": 486777696,
+        "parent_message_id": 935962058,
+        "last_activity_at": "2026-03-02T16:00:00.000Z",
+        "closed_at": null,
+        "locked_at": null,
+        "auto_archive_after_minutes": 4320,
+        "work": false,
+        "work_status": null,
+        "work_owner_id": null,
+        "work_owner": null,
+        "work_owner_active": false,
+        "work_history": null,
+        "work_owner_options": null,
+        "joined": true,
+        "unread": false,
+        "involvement": "mentions",
+        "message_count": 0,
+        "member_count": 1,
+        "creator": {
+          "id": 127326141,
+          "name": "David",
+          "role": "administrator",
+          "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+          "icon_name": null,
+          "icon_avatar_url": null
+        },
+        "url": "https://payload.test/rooms/486777696/threads/9",
+        "permalink_url": "https://payload.test/rooms/486777696?thread=9",
+        "permissions": {
+          "can_rename": true,
+          "can_close": true,
+          "can_reopen": true,
+          "can_lock": true,
+          "can_unlock": true,
+          "can_delete": true,
+          "can_convert_work": true,
+          "can_manage_work": false,
+          "can_update_work_status": false,
+          "can_assign_work": false,
+          "can_remove_work": false
+        }
+      },
+      "drive_attachments": [],
+      "url": "https://payload.test/rooms/486777696/@935962058"
+    },
+    "root_bot": {
+      "id": 935962058,
+      "client_message_id": "ws11-presenter",
+      "created_at": "2026-03-02T16:00:00.000Z",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "body": {
+        "plain_text": "Hello world &\n\nlet x = 1;",
+        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Hello <strong>world</strong> &amp; </p>\n<pre><code class=\"language-rust\">let x = 1;\n</code></pre></div>",
+        "markdown_source": "Hello **world** & <x>\n\n```rust\nlet x = 1;\n```"
+      },
+      "creator": {
+        "id": 127326141,
+        "name": "David",
+        "role": "administrator",
+        "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+        "icon_name": null,
+        "icon_avatar_url": null
+      },
+      "room": {
+        "id": 486777696,
+        "icon_name": null
+      },
+      "thread_summary": {
+        "id": 9,
+        "name": "Presenter chat",
+        "status": "active",
+        "room_id": 486777696,
+        "parent_message_id": 935962058,
+        "last_activity_at": "2026-03-02T16:00:00.000Z",
+        "closed_at": null,
+        "locked_at": null,
+        "auto_archive_after_minutes": 4320,
+        "work": false,
+        "work_status": null,
+        "work_owner_id": null,
+        "work_owner": null,
+        "work_owner_active": false,
+        "work_history": null,
+        "work_owner_options": null,
+        "joined": false,
+        "unread": null,
+        "involvement": null,
+        "message_count": 0,
+        "member_count": 1,
+        "creator": {
+          "id": 127326141,
+          "name": "David",
+          "role": "administrator",
+          "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+          "icon_name": null,
+          "icon_avatar_url": null
+        },
+        "url": "https://payload.test/rooms/486777696/threads/9",
+        "permalink_url": "https://payload.test/rooms/486777696?thread=9",
+        "permissions": {
+          "can_rename": false,
+          "can_close": false,
+          "can_reopen": false,
+          "can_lock": false,
+          "can_unlock": false,
+          "can_delete": false,
+          "can_convert_work": false,
+          "can_manage_work": false,
+          "can_update_work_status": false,
+          "can_assign_work": false,
+          "can_remove_work": false
+        }
+      },
+      "drive_attachments": [],
+      "url": "https://payload.test/rooms/486777696/@935962058"
+    },
+    "thread_bot": {
+      "id": 935962060,
+      "client_message_id": "ws11-presenter-thread",
+      "created_at": "2026-03-02T16:00:00.000Z",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "body": {
+        "plain_text": "Thread reply",
+        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Thread reply</p></div>",
+        "markdown_source": "Thread reply"
+      },
+      "creator": {
+        "id": 394959859,
+        "name": "Bender Bot",
+        "role": "bot",
+        "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+        "icon_name": null,
+        "icon_avatar_url": null
+      },
+      "room": {
+        "id": 486777696,
+        "icon_name": null
+      },
+      "thread_context": {
+        "id": 9,
+        "name": "Presenter chat",
+        "status": "active",
+        "room_id": 486777696,
+        "parent_message_id": 935962058,
+        "last_activity_at": "2026-03-02T16:00:00.000Z",
+        "closed_at": null,
+        "locked_at": null,
+        "auto_archive_after_minutes": 4320,
+        "work": false,
+        "work_status": null,
+        "work_owner_id": null,
+        "work_owner": null,
+        "work_owner_active": false,
+        "work_history": null,
+        "work_owner_options": null,
+        "joined": false,
+        "unread": null,
+        "involvement": null,
+        "message_count": 1,
+        "member_count": 1,
+        "creator": {
+          "id": 127326141,
+          "name": "David",
+          "role": "administrator",
+          "avatar_url": "https://payload.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+          "icon_name": null,
+          "icon_avatar_url": null
+        },
+        "url": "https://payload.test/rooms/486777696/threads/9",
+        "permalink_url": "https://payload.test/rooms/486777696?thread=9",
+        "permissions": {
+          "can_rename": false,
+          "can_close": false,
+          "can_reopen": false,
+          "can_lock": false,
+          "can_unlock": false,
+          "can_delete": false,
+          "can_convert_work": false,
+          "can_manage_work": false,
+          "can_update_work_status": false,
+          "can_assign_work": false,
+          "can_remove_work": false
+        }
+      },
+      "drive_attachments": [],
+      "streaming": true,
+      "url": "https://payload.test/rooms/486777696?message_id=935962060&thread=9"
+    },
+    "thread_human": {
+      "id": 935962060,
+      "client_message_id": "ws11-presenter-thread",
+      "created_at": "2026-03-02T16:00:00.000Z",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "body": {
+        "plain_text": "Thread reply",
+        "html": "<div class=\"markdown-body\" data-controller=\"drive-link\"><p>Thread reply</p></div>",
+        "markdown_source": "Thread reply"
+      },
+      "creator": {
+        "id": 394959859,
+        "name": "Bender Bot",
+        "role": "bot",
+        "avatar_url": "https://other.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000",
+        "icon_name": null,
+        "icon_avatar_url": null
+      },
+      "room": {
+        "id": 486777696,
+        "icon_name": null
+      },
+      "thread_context": {
+        "id": 9,
+        "name": "Presenter chat",
+        "status": "active",
+        "room_id": 486777696,
+        "parent_message_id": 935962058,
+        "last_activity_at": "2026-03-02T16:00:00.000Z",
+        "closed_at": null,
+        "locked_at": null,
+        "auto_archive_after_minutes": 4320,
+        "work": false,
+        "work_status": null,
+        "work_owner_id": null,
+        "work_owner": null,
+        "work_owner_active": false,
+        "work_history": null,
+        "work_owner_options": null,
+        "joined": true,
+        "unread": false,
+        "involvement": "mentions",
+        "message_count": 1,
+        "member_count": 1,
+        "creator": {
+          "id": 127326141,
+          "name": "David",
+          "role": "administrator",
+          "avatar_url": "https://other.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000",
+          "icon_name": null,
+          "icon_avatar_url": null
+        },
+        "url": "https://other.test/rooms/486777696/threads/9",
+        "permalink_url": "https://other.test/rooms/486777696?thread=9",
+        "permissions": {
+          "can_rename": true,
+          "can_close": true,
+          "can_reopen": true,
+          "can_lock": true,
+          "can_unlock": true,
+          "can_delete": true,
+          "can_convert_work": true,
+          "can_manage_work": false,
+          "can_update_work_status": false,
+          "can_assign_work": false,
+          "can_remove_work": false
+        }
+      },
+      "drive_attachments": [],
+      "streaming": true,
+      "url": "https://other.test/rooms/486777696?message_id=935962060&thread=9"
+    }
+  }
+}

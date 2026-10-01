@@ -1,191 +1,341 @@
-//! Root-message and user JSON from MessagePayloadHelper. Keep request-bound values out of caches.
-use super::{Presenter, json_time};
-use campfire_db::{ChannelThread, Message, Result};
-use rusqlite::OptionalExtension;
-use serde_json::{Value, json};
-impl Presenter<'_> {
-    pub fn user_payload(&self, id: i64) -> Result<Value> {
-        let user = self.user(id)?;
-        let icon: Option<String> =
-            self.conn
-                .query_row("SELECT icon_name FROM users WHERE id=?", [id], |r| r.get(0))?;
-        let icon_url = icon.as_deref().and_then(|name| {
-            let name = name
-                .trim_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c'])
-                .trim_matches(':')
-                .trim()
-                .to_lowercase();
-            match campfire_views::helpers::IconSource::resolve_avatar_icon(self, &name) {
-                Some(campfire_views::helpers::AvatarIcon::Image {
-                    url, brand: true, ..
-                }) => campfire_assets::try_asset_path(&url).ok(),
-                Some(campfire_views::helpers::AvatarIcon::Image { url, .. }) => Some(url),
-                _ => None,
-            }
-        });
-        let base = self.cache_base_url.as_deref().unwrap_or_default();
-        Ok(
-            json!({"id":user.id,"name":user.name,"role":user.role.name(),"avatar_url":format!("{base}{}",super::avatar_path(self.secrets,&user)),"icon_name":icon,"icon_avatar_url":icon_url}),
-        )
-    }
-    fn payload_html(&self, message: &Message) -> Result<String> {
-        if message
-            .markdown_source
-            .as_deref()
-            .is_some_and(|s| !campfire_richtext::ruby::is_blank(s))
-        {
-            let body = message.body_html(self.conn)?.unwrap_or_default();
-            let resolver = self.resolver();
-            let ctx = resolver.render_context(self.request_host.clone());
-            let icons = crate::rich_text::icons(self.conn).map_err(campfire_db::Error::Other)?;
-            campfire_richtext::markdown::presentation(&body, &ctx, &icons, None)
-                .map_err(|e| campfire_db::Error::Other(e.to_string()))
-        } else {
-            self.body_html(message)
-        }
-    }
-    fn permalink(&self, message: &Message) -> String {
-        let path = if let Some(thread) = message.thread_id {
-            format!(
-                "/rooms/{}?message_id={}&thread={thread}",
-                message.room_id, message.id
-            )
-        } else {
-            campfire_routes::room_at_message(message.room_id, message.id)
-        };
-        format!(
-            "{}{path}",
-            self.cache_base_url.as_deref().unwrap_or_default()
-        )
-    }
-    pub(super) fn root_message_payload(&self, message: &Message) -> Result<Value> {
-        let summary = self
-            .conn
-            .query_row(
-                "SELECT id FROM channel_threads WHERE parent_message_id=?",
-                [message.id],
-                |r| r.get::<_, i64>(0),
-            )
-            .optional()?;
-        let icon: Option<String> = self.conn.query_row(
-            "SELECT icon_name FROM rooms WHERE id=?",
-            [message.room_id],
-            |r| r.get(0),
-        )?;
-        let mut body =
-            json!({"plain_text":self.plain_text_body(message)?,"html":self.payload_html(message)?});
-        if let Some(markdown) = &message.markdown_source {
-            body["markdown_source"] = markdown.clone().into();
-        }
-        let drive = message
-            .drive_file_ids(self.conn)?
-            .into_iter()
-            .map(|id| json!({"file_id":id,"url":format!("https://drive.google.com/open?id={id}")}))
-            .collect::<Vec<_>>();
-        let thread_context = message
-            .thread_id
-            .map(|id| self.bot_thread_payload(&ChannelThread::find(self.conn, id)?))
-            .transpose()?;
-        let thread_summary = summary
-            .map(|id| self.bot_thread_payload(&ChannelThread::find(self.conn, id)?))
-            .transpose()?;
-        let forwarded = message.forwarded().then(|| {
-            let mut value = json!({"label":"Forwarded"});
-            if let Some(note) = &message.forward_note {
-                value["note"] = note.clone().into();
-            }
-            value
-        });
-        let source = message
-            .reply_to_message_id
-            .map(|id| Message::find_by_id(self.conn, id))
-            .transpose()?
-            .flatten();
-        let reply = if source.is_some() || message.reply_target_deleted_at.is_some() {
-            let mut value = if let Some(source) = &source {
-                json!({"id":source.id,"url":self.permalink(source),"deleted":false,"creator":self.user_payload(source.creator_id)?,"body":{"plain_text":self.plain_text_body(source)?,"html":self.payload_html(source)?}})
-            } else {
-                json!({"deleted":true})
-            };
-            value["notify_author"] = message.reply_notify_author.into();
-            Some(value)
-        } else {
-            None
-        };
-        let mut payload = json!({"id":message.id,"client_message_id":message.client_message_id,"created_at":json_time(message.created_at.jiff()),"updated_at":json_time(message.updated_at.jiff()),"body":body,"creator":self.user_payload(message.creator_id)?,"room":{"id":message.room_id,"icon_name":icon},"thread_context":thread_context,"thread_summary":thread_summary,"reply_to":reply,"forwarded":forwarded,"drive_attachments":drive,"streaming":message.streaming.then_some(true),"url":self.permalink(message)});
-        payload.as_object_mut().unwrap().retain(|_, v| !v.is_null());
-        Ok(payload)
-    }
-    fn bot_thread_payload(&self, thread: &ChannelThread) -> Result<Value> {
-        let user = self.user(self.current_user_id.ok_or_else(|| {
-            campfire_db::Error::Other("MessagePayloadHelper requires the requesting user".into())
-        })?)?;
-        if !user.is_bot() {
-            return Err(campfire_db::Error::Other(
-                "WS8b-m/WS12 seam: MessagePayloadHelper work thread_payload".into(),
-            ));
-        }
-        let membership = thread.membership_for(self.conn, user.id)?;
-        let settings = thread.settings_manageable_by(self.conn, &user)?;
-        let lifecycle = thread.manageable_by(self.conn, &user)?;
-        let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM thread_memberships WHERE thread_id=?",
-            [thread.id],
-            |r| r.get(0),
-        )?;
-        let owner = thread
-            .work_owner_id
-            .map(|id| campfire_db::User::find_by_id(self.conn, id))
-            .transpose()?
-            .flatten();
-        let owner_payload = owner
-            .as_ref()
-            .map(|owner| {
-                let mut value = self.user_payload(owner.id)?;
-                value["active"] = owner.is_active().into();
-                value["human"] = (!owner.is_bot()).into();
-                value["agent"] = owner.is_bot().into();
-                Ok::<_, campfire_db::Error>(value)
-            })
-            .transpose()?;
-        let owner_member = owner
-            .as_ref()
-            .map(|owner| {
-                campfire_db::Membership::find_by_room_and_user(self.conn, thread.room_id, owner.id)
-            })
-            .transpose()?
-            .flatten()
-            .is_some();
-        let owner_active = if let Some(owner) = &owner {
-            if owner.is_bot() {
-                campfire_db::Agent::for_user(self.conn, owner.id)?
-                    .map(|agent| {
-                        campfire_db::models::agent_access::capability_for_agent(
-                            self.conn,
-                            agent.id,
-                            "post_messages",
-                            Some(thread.room_id),
-                        )
-                    })
-                    .transpose()?
-                    .unwrap_or(false)
-                    && owner_member
-            } else {
-                owner.is_active() && owner_member
-            }
-        } else {
-            false
-        };
-        let base = self.cache_base_url.as_deref().unwrap_or_default();
-        Ok(json!({
-            "id":thread.id,"name":thread.name,"status":thread.status(self.conn,campfire_db::Timestamp::from_jiff(self.now))?.name(),"room_id":thread.room_id,"parent_message_id":thread.parent_message_id,
-            "last_activity_at":json_time(thread.last_activity_at.jiff()),"closed_at":thread.closed_at.map(|t|json_time(t.jiff())),"locked_at":thread.locked_at.map(|t|json_time(t.jiff())),"auto_archive_after_minutes":thread.auto_archive_after_minutes,
-            "work":thread.work(),"work_status":thread.work_status,"work_owner_id":thread.work_owner_id,"work_owner":owner_payload,"work_owner_active":owner_active,"work_history":Value::Null,"work_owner_options":Value::Null,
-            "joined":membership.is_some(),"unread":membership.as_ref().map(|m|m.unread()),"involvement":membership.as_ref().map(|m|m.involvement.name()),"message_count":thread.message_count(self.conn)?,"member_count":count,"creator":self.user_payload(thread.creator_id)?,
-            "url":format!("{base}/rooms/{}/threads/{}",thread.room_id,thread.id),"permalink_url":format!("{base}/rooms/{}?thread={}",thread.room_id,thread.id),
-            "permissions":{"can_rename":settings,"can_close":settings,"can_reopen":if thread.locked_at.is_some(){lifecycle}else{membership.is_some()},"can_lock":lifecycle,"can_unlock":lifecycle,"can_delete":lifecycle,
-            // Human work controls are false for bot viewers (ChannelThread#work_viewable_by?).
-            "can_convert_work":false,"can_manage_work":false,"can_update_work_status":false,"can_assign_work":false,"can_remove_work":false}
-        }))
+//! Shared request-specific message payload adapter.
+//! WS8b-m owns MessagePayloadHelper; WS11-api calls the stable Presenter method.
+#![allow(dead_code)] // WS11-api calls the stable entry point after its HTTP branch merges.
+use super::{Presenter, Result};
+use campfire_db::{Message, User};
+use serde_json::Value;
+use std::sync::{Arc, RwLock};
+
+pub trait MessagePayload: Send + Sync {
+    fn message(
+        &self,
+        presenter: &Presenter<'_>,
+        message: &Message,
+        viewer: &User,
+        base_url: &str,
+    ) -> Result<Value>;
+}
+struct SharedPayload;
+impl MessagePayload for SharedPayload {
+    fn message(
+        &self,
+        presenter: &Presenter<'_>,
+        message: &Message,
+        viewer: &User,
+        base_url: &str,
+    ) -> Result<Value> {
+        crate::controllers::messages::payload::message(presenter, message, viewer, base_url)
     }
 }
+#[derive(Default)]
+pub struct State {
+    adapter: RwLock<Option<Arc<dyn MessagePayload>>>,
+}
+impl State {
+    pub fn live() -> Self {
+        let state = Self::default();
+        state.install(Arc::new(SharedPayload));
+        state
+    }
+    pub fn install(&self, adapter: Arc<dyn MessagePayload>) {
+        *self.adapter.write().unwrap_or_else(|p| p.into_inner()) = Some(adapter);
+    }
+    fn message(&self, presenter: &Presenter<'_>, message: &Message) -> Result<Value> {
+        let viewer = presenter.current_user_id.ok_or_else(|| {
+            campfire_db::Error::Other("message payload requires Current.user".into())
+        })?;
+        let viewer = presenter.user(viewer)?;
+        let base = presenter.cache_base_url.as_deref().ok_or_else(|| {
+            campfire_db::Error::Other("message payload requires request base URL".into())
+        })?;
+        let adapter = self
+            .adapter
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
+        // Explicitly uninstalled custom states fail instead of returning cached stock JSON.
+        adapter
+            .ok_or_else(|| {
+                campfire_db::Error::Other(
+                    "WS8b-m MessagePayloadHelper adapter is not installed".into(),
+                )
+            })?
+            .message(presenter, message, &viewer, base)
+    }
+}
+impl Presenter<'_> {
+    /// Matches WS11-api's seam. Its Current.user is the authenticated bot.
+    pub fn agent_message_payload(&self, message: &Message) -> Result<Value> {
+        self.agent_payload.message(self, message)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
+    use super::*;
+    use campfire_db::NewMessage;
+    struct Adapter;
+    impl MessagePayload for Adapter {
+        fn message(
+            &self,
+            p: &Presenter<'_>,
+            m: &Message,
+            viewer: &User,
+            base: &str,
+        ) -> Result<Value> {
+            assert!(p.conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM messages WHERE id=?)",
+                [m.id],
+                |r| r.get::<_, bool>(0)
+            )?);
+            Ok(serde_json::json!({"message":m.id,"viewer":viewer.id,"base":base}))
+        }
+    }
+    #[tokio::test]
+    async fn ws11_production_presenter_requires_current_user_and_forwards_uncached_request_context()
+    {
+        let test = TestApp::boot().await.expect("default seed");
+        let app = test.booted.app.clone();
+        let mid = app
+            .db
+            .write(|tx| {
+                Ok(Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        markdown_source: Some("Payload".into()),
+                        ..Default::default()
+                    },
+                )?
+                .id)
+            })
+            .await
+            .unwrap();
+        let copy = app.clone();
+        app.db
+            .read(move |conn| {
+                let mut p = Presenter::new(conn, &copy, None);
+                let m = Message::find(conn, mid)?;
+                assert!(
+                    p.agent_message_payload(&m)
+                        .unwrap_err()
+                        .to_string()
+                        .contains("Current.user")
+                );
+                p.current_user_id = Some(BENDER);
+                p.cache_base_url = Some("https://first.test".into());
+                let uninstalled = State::default();
+                assert!(
+                    uninstalled
+                        .message(&p, &m)
+                        .unwrap_err()
+                        .to_string()
+                        .contains("not installed")
+                );
+                copy.agent_message_payload.install(Arc::new(Adapter));
+                assert_eq!(
+                    p.agent_message_payload(&m)?,
+                    serde_json::json!({"message":mid,"viewer":BENDER,"base":"https://first.test"})
+                );
+                p.current_user_id = Some(DAVID);
+                p.cache_base_url = Some("https://second.test".into());
+                assert_eq!(
+                    p.agent_message_payload(&m)?,
+                    serde_json::json!({"message":mid,"viewer":DAVID,"base":"https://second.test"})
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod callback_tests {
+    use super::super::test_support::{ALL_TALK, DAVID, TestApp};
+    use campfire_db::callbacks::Phase;
+    use campfire_db::{Message, NewMessage};
+    #[tokio::test]
+    async fn ws11_production_jobs_dispatches_peer_hooks_and_rejects_the_originating_write() {
+        let test = TestApp::boot().await.expect("default seed");
+        let app = &test.booted.app;
+        app.jobs
+            .model_callbacks
+            .install(Phase::MessageActivity, |tx, c| {
+                assert!(Message::find_by_id(tx.conn(), c.record_id)?.is_some());
+                Err(campfire_db::Error::Other(
+                    "WS12 adapter rejected activity".into(),
+                ))
+            });
+        assert!(
+            app.db
+                .write(|tx| Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        client_message_id: Some("ws11-production-peer-rejected".into()),
+                        markdown_source: Some("Peer callback".into()),
+                        ..Default::default()
+                    }
+                ))
+                .await
+                .is_err()
+        );
+        app.db.read(|c|{assert_eq!(c.query_row("SELECT COUNT(*) FROM messages WHERE client_message_id='ws11-production-peer-rejected'",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
+    }
+}
+
+#[cfg(test)]
+mod finalization_tests {
+    use super::super::test_support::{ALL_TALK, BENDER, TestApp};
+    use campfire_db::{Agent, Message, NewMessage};
+    #[tokio::test]
+    async fn ws11_finalization_durable_job_failure_rolls_back_claim_and_earlier_effects() {
+        let test = TestApp::boot().await.expect("default seed");
+        let app = &test.booted.app;
+        let mid=app.db.write(|tx|{
+            let mut a=Agent::for_user(tx.conn(),BENDER)?.unwrap();a.set_working_presence(tx,Some("Keep working"))?;
+            let m=Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:BENDER,markdown_source:Some("Draft".into()),streaming:true,..Default::default()})?;
+            tx.conn().execute_batch("CREATE TRIGGER ws11_reject_finalize BEFORE INSERT ON background_jobs WHEN NEW.job_class='Room::PushMessageJob' BEGIN SELECT RAISE(ABORT,'WS11 rejected finalize queue'); END;")?;Ok(m.id)
+        }).await.unwrap();
+        assert!(
+            app.db
+                .write(move |tx| Message::find(tx.conn(), mid)?.finalize_stream(tx))
+                .await
+                .is_err()
+        );
+        app.db
+            .read(move |c| {
+                assert!(Message::find(c, mid)?.streaming);
+                assert_eq!(
+                    c.query_row(
+                        "SELECT COUNT(*) FROM message_search_index WHERE rowid=?",
+                        [mid],
+                        |r| r.get::<_, i64>(0)
+                    )?,
+                    0
+                );
+                assert_eq!(
+                    Agent::for_user(c, BENDER)?
+                        .unwrap()
+                        .working_presence
+                        .as_deref(),
+                    Some("Keep working")
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod reference_callback_tests {
+    use super::super::test_support::{ALL_TALK, BENDER, TestApp};
+    use campfire_db::{Message, MessageChanges, NewMessage};
+    fn expected(phase: &str) -> i64 {
+        let oracle: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../../vectors/agents_stream_references_contract.json"
+        ))
+        .unwrap();
+        oracle[phase].as_i64().unwrap()
+    }
+    #[tokio::test]
+    async fn ws11_stream_case_link_references_sync_only_at_finalize() {
+        let (app, _dir) = TestApp::boot()
+            .await
+            .expect("default seed")
+            .stop_jobs()
+            .await;
+        let mid = app
+            .db
+            .write(|tx| {
+                let m = Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: BENDER,
+                        streaming: true,
+                        markdown_source: Some("See https://example.test/some/page".into()),
+                        ..Default::default()
+                    },
+                )?;
+                assert_eq!(
+                    tx.conn().query_row(
+                        "SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",
+                        [m.id],
+                        |r| r.get::<_, i64>(0)
+                    )?,
+                    expected("start")
+                );
+                Ok(m.id)
+            })
+            .await
+            .unwrap();
+        app.db.write(move|tx| {
+            let mut m=Message::find(tx.conn(),mid)?;
+            m.update(tx,MessageChanges{markdown_source:Some("See https://example.test/some/page and more".into()),..Default::default()})?;
+            assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",[mid],|r|r.get::<_,i64>(0))?,expected("append"));
+            assert!(m.finalize_stream(tx)?);
+            assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",[mid],|r|r.get::<_,i64>(0))?,expected("finalize"));
+            assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",[],|r|r.get::<_,i64>(0))?,1);
+            assert!(!m.finalize_stream(tx)?);
+            assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",[mid],|r|r.get::<_,i64>(0))?,expected("repeat"));
+            assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())
+        }).await.unwrap();
+        app.db
+            .write(|tx| {
+                let mut quiet = Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: BENDER,
+                        streaming: true,
+                        markdown_source: Some("https://example.test/quiet-page".into()),
+                        ..Default::default()
+                    },
+                )?;
+                assert!(quiet.finalize_stream_quietly(tx)?);
+                assert_eq!(
+                    tx.conn().query_row(
+                        "SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",
+                        [quiet.id],
+                        |r| r.get::<_, i64>(0)
+                    )?,
+                    expected("quiet")
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+    #[tokio::test]
+    async fn ws11_stream_reference_fetch_failure_keeps_claim_and_reference_atomic() {
+        let (app, _dir) = TestApp::boot()
+            .await
+            .expect("default seed")
+            .stop_jobs()
+            .await;
+        let mid=app.db.write(|tx| {
+            let m=Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:BENDER,streaming:true,markdown_source:Some("https://example.test/rejected-fetch".into()),..Default::default()})?;
+            tx.conn().execute_batch("CREATE TRIGGER ws11_reject_ref_fetch BEFORE INSERT ON background_jobs WHEN NEW.job_class='LinkEmbed::FetchJob' BEGIN SELECT RAISE(ABORT,'reference fetch queue failure'); END")?;Ok(m.id)
+        }).await.unwrap();
+        assert!(
+            app.db
+                .write(move |tx| Message::find(tx.conn(), mid)?.finalize_stream(tx))
+                .await
+                .is_err()
+        );
+        app.db.read(move|c| {
+            assert!(Message::find(c,mid)?.streaming);
+            assert_eq!(c.query_row("SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",[mid],|r|r.get::<_,i64>(0))?,0);
+            assert_eq!(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())
+        }).await.unwrap();
+    }
+}
+
+#[cfg(test)]
+mod live_tests;

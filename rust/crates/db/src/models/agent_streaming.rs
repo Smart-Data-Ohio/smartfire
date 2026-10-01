@@ -230,12 +230,13 @@ pub fn trailing(tx: &mut Tx<'_>, job: &StreamTrailingBroadcastJob) -> Result<boo
     }
     broadcast_update(tx, &mut message)
 }
+/// Keep the partial-index predicate literal, as Rails does. Ordering the SQL
+/// by id makes SQLite prefer a full table scan; sort the selected ids instead
+/// to preserve Rails find_each's ascending claim order.
+pub const OVERDUE_QUERY: &str = "SELECT id FROM messages WHERE messages.streaming = 1 AND messages.streaming_updated_at < ?";
 pub fn overdue_ids(tx: &Tx<'_>, now: Timestamp) -> Result<Vec<i64>> {
     tx.conn().execute("UPDATE messages SET streaming_updated_at=created_at WHERE streaming=1 AND streaming_updated_at IS NULL",[])?;
-    query_all(
-        tx.conn(),
-        "SELECT id FROM messages WHERE messages.streaming = 1 AND messages.streaming_updated_at < ? ORDER BY id",
-        [now.ago(FINALIZE_AFTER)],
-        |r| r.get(0),
-    )
+    let mut ids = query_all(tx.conn(), OVERDUE_QUERY, [now.ago(FINALIZE_AFTER)], |r| r.get(0))?;
+    ids.sort_unstable();
+    Ok(ids)
 }

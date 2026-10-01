@@ -1,0 +1,47 @@
+      <div class="flex align-center gap">
+        {{ h::translation_button(ctx, "github_login") }}
+
+        <label class="flex align-center gap flex-item-grow input input--actor">
+          {{ form.text_field("github_login", sections.github_login.as_deref(), h::attrs().class("input txt-large").placeholder("GitHub username").required(false).autocomplete("off").data("1p-ignore", true).attr_opt("disabled", self.github_disabled())) }}
+          {{ h::image_tag(ctx, "link.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
+        </label>
+      </div>
+{% if !sections.github_errors.is_empty() %}        <p class="txt-small margin-none" style="color: var(--color-negative)">
+          GitHub username {{ sections.github_errors.join(" and ") }}.
+          Link it to receive review requests in your activity inbox.
+        </p>
+{% else if sections.github_verified %}        <p class="txt-small margin-none">Set by your linked GitHub account. Disconnect GitHub below to edit it.</p>
+{% else %}        <p class="txt-small margin-none">Link your GitHub username to receive review requests in your activity inbox.</p>
+{% endif %}
+      <fieldset class="margin-none">
+        <legend class="txt-large">Notifications</legend>
+        <p class="txt-small margin-none">Choose which updates land in your activity inbox. Turning one off never hides the page where the work lives.</p>
+{% for switch in sections.inbox %}          <div class="flex align-start gap pad-block-half">
+            <label class="switch flex-item-no-shrink">
+              {{ self.switch_hidden(format!("inbox_preferences][{}", switch.key)) }}
+              {{ self.switch_input(format!("inbox_preferences][{}", switch.key), switch.enabled) }}
+              <span class="switch__btn round"></span>
+              <span class="for-screen-reader">{{ switch.label }}</span>
+            </label>
+            <span>
+              <span class="txt-medium">{{ switch.label }}</span><br>
+              <span class="txt-small">{{ switch.description }}</span>
+            </span>
+          </div>
+{% endfor %}{% for error in sections.inbox_errors %}            <p class="txt-small margin-none" style="color: var(--color-negative)">{{ error }}</p>
+{% endfor %}      </fieldset>
+
+      <fieldset class="margin-none" data-controller="profile-voice" data-action="turbo:submit-end@window->profile-voice#sync">
+        <legend class="txt-large">Calls</legend>
+        <p class="txt-small margin-none">With voice activity your microphone is live whenever you are unmuted. With push-to-talk it opens only while you hold the key — never while you are typing.</p>
+        <div class="flex align-center gap pad-block-half">
+          {{ form.label("voice_mode", "Microphone mode", h::attrs().class("txt-medium")) }}
+          {{ self.select("voice_mode", sections.voice_mode.as_str(), [("Voice activity", "voice_activity"), ("Push to talk", "push_to_talk")], h::attrs().class("input").data("profile_voice_target", "voiceMode")) }}
+        </div>
+        <div class="flex align-center gap pad-block-half">
+          {{ form.label("push_to_talk_key", "Push-to-talk key", h::attrs().class("txt-medium")) }}
+          {{ form.text_field("push_to_talk_key", None, h::attrs().class("input").attr_opt("value", sections.push_to_talk_key.as_deref()).maxlength(20).autocomplete("off").placeholder("`").data("profile_voice_target", "pushToTalkKey")) }}
+        </div>
+{% for error in sections.call_errors %}            <p class="txt-small margin-none" style="color: var(--color-negative)">{{ error }}</p>
+{% endfor %}      </fieldset>
+{{ "\n" }}

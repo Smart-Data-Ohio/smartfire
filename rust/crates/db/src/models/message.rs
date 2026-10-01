@@ -88,10 +88,15 @@ pub struct NewMessage {
 /// Attributes assigned to a saved message (`message.update!(...)`); `None` leaves one alone.
 #[derive(Debug, Clone, Default)]
 pub struct MessageChanges {
-    /// Explicit nil assignment used by the raw bot edit endpoint.
-    pub clear_markdown_source: bool,
     /// Rendered into the body before validation, like a new message's.
     pub markdown_source: Option<String>,
+    /// The human edit endpoint assigns nil when switching back to a legacy body.
+    pub clear_markdown_source: bool,
+    /// Rendered non-mention attachments retained during a legacy-to-Markdown edit.
+    pub legacy_attachment_snapshot: Option<String>,
+    pub client_message_id: Option<Option<String>>,
+    pub reply_to_message_id: Option<Option<i64>>,
+    pub reply_notify_author: Option<bool>,
     /// A legacy (Action Text) body.
     pub body: Option<String>,
     pub forward_note: Option<Option<String>>,
@@ -394,8 +399,8 @@ impl Message {
     /// SQLite transaction as the write, so failure rolls it all back. Broadcasts and job wakes
     /// run after commit in Rails' order: unread, push, then the final thread indicator.
     /// Not ported here, for their owners: agent deliveries
-    /// (WS11), activity items (WS12), the GitHub, Fizzy, Twitter, event and link-embed reference
-    /// syncs (WS14, WS15), and the Slack importer's `importing` flag (WS16).
+    /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
+    /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
         let body = Self::rendered_body(tx, &attributes)?;
         Self::validate(tx.conn(), &attributes)?.into_result()?;
@@ -461,7 +466,8 @@ impl Message {
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
-            crate::models::message_reference::sync(tx, &message)?;
+            if !message.system_note { crate::ActivityItem::record_message(tx, &message)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, message.id)?; }
+            message.sync_all_references(tx)?;
             message.push_later_in_conversation(tx);
         }
         if message.thread_id.is_some() {
@@ -473,6 +479,21 @@ impl Message {
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)
+    }
+
+    /// Network-card owners plug into the real create/edit callbacks through the app sink.
+    /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
+    /// must not warm previews. Import callers pass false to retain DB references without fetches.
+    pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
+        use crate::callbacks::Phase;
+        for sync in tx.env().message_reference_syncs.clone() { sync(tx,self,enqueue)?; }
+        let sink=tx.env().sink.clone();
+        for phase in [Phase::MessageFizzyReferences,Phase::MessageTwitterReferences,Phase::MessageEventReferences,Phase::MessageLinkReferences] {
+            if phase == Phase::MessageEventReferences { crate::models::calendar_event::references::sync(tx, self)?; }
+            sink.sync_message_reference_phase(tx,self,phase,enqueue)?;
+
+        }
+        Ok(())
     }
 
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
@@ -620,12 +641,25 @@ impl Message {
         self.thread_id.is_some() && !self.system_note && !self.streaming
     }
 
+    /// Rails validates the saved false -> true transition on every update.
+    /// Compare the persisted row, so a stale or manually edited model cannot
+    /// bypass the stream's irreversible finalization claim.
+    fn validate_streaming_state(&self, conn: &Connection) -> Result<()> {
+        if self.streaming && !Self::find(conn, self.id)?.streaming {
+            let mut errors = Errors::default();
+            errors.add("streaming", "cannot resume once finalized");
+            return errors.into_result();
+        }
+        Ok(())
+    }
+
     /// `before_save :touch_streaming_activity, if: :streaming?`: every save while streaming
     /// restarts the finalize sweep's inactivity clock. That's a saved change, so it touches the
     /// room too (`belongs_to :room, touch: true`), even when nothing else changed. (`touch` isn't
     /// a save, so boosts don't restart the clock.) `save_touches_test` holds each save path to
     /// Rails' answer.
     fn touch_streaming_activity(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.validate_streaming_state(tx.conn())?;
         if !self.streaming {
             return Ok(());
         }
@@ -653,7 +687,9 @@ impl Message {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
             }
         }
-        self.touch(tx)
+        self.touch(tx)?;
+        if !self.streaming { self.sync_external_references(tx, true)?; }
+        Ok(())
     }
 
     /// The edit endpoints' save (`MessagesController#update`,
@@ -697,7 +733,8 @@ impl Message {
     }
 
     fn markdown_source_will_change(&self, changes: &MessageChanges) -> bool {
-        (changes.clear_markdown_source && self.markdown_source.is_some()) || changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
+        (changes.clear_markdown_source && self.markdown_source.is_some())
+            || changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
     }
 
     /// `save!` of assigned changes. A changed Markdown source re-renders the body
@@ -706,14 +743,18 @@ impl Message {
     /// in this transaction (Rails' `after_update_commit :update_in_index` is moved here so a
     /// failed renderer cannot leave a partially processed write).
     fn save_changes(&mut self, tx: &mut Tx<'_>, changes: MessageChanges, stamp_edited: bool) -> Result<()> {
+        self.validate_streaming_state(tx.conn())?;
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
-        let markdown_source =
-            if changes.clear_markdown_source { None } else if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() } else { self.markdown_source.clone() };
+        let markdown_source = if changes.clear_markdown_source { None }
+            else if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() }
+            else { self.markdown_source.clone() };
         let body = match &changes.markdown_source {
             Some(source) if self.markdown_source_will_change(&changes) => {
                 if source.chars().count() <= SOURCE_LIMIT {
-                    Some(tx.rich_text().render_markdown(conn, source, self.room_id).map_err(crate::error::Error::Other)?)
+                    let rendered = tx.rich_text().render_markdown(conn, source, self.room_id).map_err(crate::error::Error::Other)?;
+                    Some([Some(rendered), changes.legacy_attachment_snapshot.clone()].into_iter().flatten()
+                        .filter(|body| !body.chars().all(char::is_whitespace)).collect::<Vec<_>>().join("\n"))
                 } else {
                     None
                 }
@@ -728,11 +769,14 @@ impl Message {
         let drive_file_ids = changes.drive_file_ids.clone().unwrap_or_else(|| current_drive_ids.clone());
         let forward_note = changes.forward_note.clone().unwrap_or_else(|| self.forward_note.clone());
         let embeds_suppressed = changes.embeds_suppressed.unwrap_or(self.embeds_suppressed);
+        let client_message_id = changes.client_message_id.clone().unwrap_or_else(|| Some(self.client_message_id.clone()));
+        let reply_to_message_id = changes.reply_to_message_id.unwrap_or(self.reply_to_message_id);
+        let reply_notify_author = changes.reply_notify_author.unwrap_or(self.reply_notify_author);
 
         let attributes = NewMessage {
             room_id: self.room_id,
             creator_id: self.creator_id,
-            client_message_id: Some(self.client_message_id.clone()),
+            client_message_id: client_message_id.clone(),
             body: body.clone(),
             attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?.map(|a| a.blob_id),
             thread_id: self.thread_id,
@@ -742,8 +786,8 @@ impl Message {
             action: self.action,
             board_post_opener: self.board_post_opener,
             embeds_suppressed,
-            reply_to_message_id: self.reply_to_message_id,
-            reply_notify_author: Some(self.reply_notify_author),
+            reply_to_message_id,
+            reply_notify_author: Some(reply_notify_author),
             forwarded_from_message_id: self.forwarded_from_message_id,
             forwarded_at: self.forwarded_at,
             forward_note: forward_note.clone(),
@@ -755,6 +799,9 @@ impl Message {
         let now = tx.now();
         let edited_at = if content_changes { Some(now) } else { self.edited_at };
         let columns_changed = markdown_source != self.markdown_source
+            || client_message_id.as_deref() != Some(self.client_message_id.as_str())
+            || reply_to_message_id != self.reply_to_message_id
+            || reply_notify_author != self.reply_notify_author
             || forward_note != self.forward_note
             || embeds_suppressed != self.embeds_suppressed
             || edited_at != self.edited_at;
@@ -764,8 +811,8 @@ impl Message {
         }
         let streaming_updated_at = if self.streaming { Some(now) } else { self.streaming_updated_at };
         tx.conn().execute_cached(
-            r#"UPDATE "messages" SET "markdown_source" = ?, "forward_note" = ?, "embeds_suppressed" = ?, "edited_at" = ?, "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
-            params![markdown_source, forward_note, embeds_suppressed, edited_at, streaming_updated_at, now, self.id],
+            r#"UPDATE "messages" SET "markdown_source" = ?, "client_message_id" = ?, "reply_to_message_id" = ?, "reply_notify_author" = ?, "forward_note" = ?, "embeds_suppressed" = ?, "edited_at" = ?, "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
+            params![markdown_source, client_message_id, reply_to_message_id, reply_notify_author, forward_note, embeds_suppressed, edited_at, streaming_updated_at, now, self.id],
         )?;
         if let Some(body) = &body {
             match RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
@@ -796,9 +843,14 @@ impl Message {
         }
         if !self.streaming {
             self.update_in_index(tx)?;
-            if references_changed { crate::models::message_reference::sync(tx, self)?; }
+            if references_changed { self.sync_all_references(tx)?; }
         }
         Ok(())
+    }
+
+    /// Compatibility entry point for import callers; both owners use the real save hook.
+    pub fn sync_integration_references(&self, tx: &mut Tx<'_>, enqueue_fetches: bool) -> Result<()> {
+        self.sync_external_references(tx, enqueue_fetches)
     }
 
     /// `drive_attachments.map(&:file_id)`, in id order.
@@ -832,6 +884,9 @@ impl Message {
         if let Some(attachment) =
             Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
         {
+            if Some(attachment.blob_id) == blob_id {
+                return Ok(());
+            }
             attachment.delete(tx)?;
             tx.emit_after_commit(Event::PurgeBlob {
                 blob_id: attachment.blob_id,
@@ -1137,58 +1192,73 @@ impl Message {
         Ok(claimed)
     }
 
-    /// Normal finalization runs the deferred WS8/WS11 callbacks exactly once.
-    /// WS12's activity recorder and WS14/15's external reference syncs attach here
-    /// when their domains merge, as they do in the ordinary message create chain.
-    pub fn finalize_stream(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
-        let agent_id:Option<i64>=query_one(tx.conn(),"SELECT id FROM agents WHERE user_id=?",[self.creator_id],|r|r.get(0))?;
-        let active=agent_id.map(|id|crate::Agent::find(tx.conn(),id)).transpose()?.flatten().map(|a|a.active(tx.conn())).transpose()?.unwrap_or(false);
-        if !active {return self.finalize_stream_quietly(tx);}
-        if !self.claim_stream_finalized_without_indicator(tx)? {return Ok(false);}
-        self.create_in_index(tx)?;
-        self.receive_in_conversation(tx)?;
-        self.push_later_in_conversation(tx);
-        crate::models::agent_delivery::enqueue_for_message(tx,self)?;
+    /// `sync_all_references`, in the Rails declaration order. Peer adapters
+    /// implement their import/fetch policy; no network I/O runs here.
+    pub fn sync_all_references(&self, tx: &mut Tx<'_>) -> Result<()> {
+        use crate::callbacks::Phase;
+        for phase in [Phase::MessageGithubReferences, Phase::MessageFizzyReferences,
+            Phase::MessageTwitterReferences, Phase::MessageEventReferences] {
+            self.sync_reference_phase(tx, phase, true)?;
+        }
         crate::models::message_reference::sync(tx,self)?;
-        crate::models::bot_webhook_fanout::deliver(tx,self)?;
-        if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
-        if let Some(mut agent)=crate::Agent::find(tx.conn(),agent_id.expect("active agent"))? {agent.clear_working_presence(tx)?;}
-        if self.thread_reply() && let Some(thread_id)=self.thread_id {tx.after_commit(move |tx|ChannelThread::broadcast_thread_indicators(tx,&[thread_id]));}
-        crate::models::agent_streaming::broadcast_final(tx,self)?;
+        self.sync_reference_phase(tx, Phase::MessageLinkReferences, true)
+    }
+
+    fn sync_reference_phase(&self, tx: &mut Tx<'_>, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+        tx.model_callback(phase, self.id)?;
+        if phase == crate::callbacks::Phase::MessageGithubReferences {
+            for sync in tx.env().message_reference_syncs.clone() { sync(tx, self, enqueue)?; }
+        }
+        if phase == crate::callbacks::Phase::MessageEventReferences {
+            crate::models::calendar_event::references::sync(tx, self)?;
+        }
+        let sink = tx.env().sink.clone();
+        sink.sync_message_reference_phase(tx, self, phase, enqueue)
+    }
+
+    /// Claim first, like Rails' `update_all`, then run the deferred callbacks.
+    /// A callback exception preserves the claim and earlier effects. The writer
+    /// returns it after commit; a durable enqueue error still rolls the entire
+    /// write back through Tx::persist_error (the fixed queue-atomicity decision).
+    pub fn finalize_stream(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        if !self.claim_stream_finalized_without_indicator(tx)? { return Ok(false); }
+        let effects = (|| {
+            let agent = crate::Agent::for_user(tx.conn(), self.creator_id)?;
+            if !agent.as_ref().map(|a| a.active(tx.conn())).transpose()?.unwrap_or(false) {
+                return self.finalize_claimed_stream_quietly(tx);
+            }
+            self.create_in_index(tx)?;
+            self.receive_in_conversation(tx)?;
+            self.push_later_in_conversation(tx);
+            if !self.system_note { crate::ActivityItem::record_message(tx, self)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
+            crate::models::agent_delivery::enqueue_for_message(tx,self)?;
+            self.sync_all_references(tx)?;
+            crate::models::bot_webhook_fanout::deliver(tx,self)?;
+            if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
+            if let Some(mut agent) = crate::Agent::for_user(tx.conn(),self.creator_id)? {agent.clear_working_presence(tx)?;}
+            self.broadcast_finalized_thread_indicator(tx);
+            crate::models::agent_streaming::broadcast_final(tx,self)
+        })();
+        if let Err(error) = effects { tx.after_commit(move |_| Err(error)); }
         Ok(true)
     }
 
-    /// Quiet finalize is used by suspension even in locked threads. It claims once,
-    /// clears presence, updates the reply count and replaces the draft without fanout.
+    /// Quiet finalize is used by suspension even in locked threads. It claims
+    /// once and broadcasts the final draft without indexing, receive or fanout.
     pub fn finalize_stream_quietly(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
-        if !self.claim_stream_finalized_without_indicator(tx)? {
-            return Ok(false);
-        }
-        let agent_id: Option<i64> = query_one(
-            tx.conn(),
-            "SELECT id FROM agents WHERE user_id=?",
-            [self.creator_id],
-            |r| r.get(0),
-        )?;
-        if let Some(id) = agent_id
-            && let Some(mut agent) = crate::Agent::find(tx.conn(), id)?
-        {
-            agent.clear_working_presence(tx)?;
-        }
-        if self.thread_reply()
-            && let Some(thread_id) = self.thread_id
-        {
+        if !self.claim_stream_finalized_without_indicator(tx)? { return Ok(false); }
+        if let Err(error) = self.finalize_claimed_stream_quietly(tx) { tx.after_commit(move |_| Err(error)); }
+        Ok(true)
+    }
+    fn finalize_claimed_stream_quietly(&self, tx: &mut Tx<'_>) -> Result<()> {
+        if let Some(mut agent) = crate::Agent::for_user(tx.conn(),self.creator_id)? {agent.clear_working_presence(tx)?;}
+        self.broadcast_finalized_thread_indicator(tx);
+        crate::models::agent_streaming::broadcast_final(tx,self)
+    }
+    fn broadcast_finalized_thread_indicator(&self, tx: &mut Tx<'_>) {
+        if self.thread_reply() && let Some(thread_id)=self.thread_id {
             tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
         }
-        let stream = crate::broadcasts::conversation_messages(tx.conn(), self)?;
-        tx.emit_after_commit(Event::broadcast(&crate::broadcasts::Broadcast::replace(
-            stream,
-            crate::broadcasts::message_dom_id(self, None),
-            crate::broadcasts::Partial::MessageReplace {
-                message_id: self.id,
-            },
-        )));
-        Ok(true)
     }
 
     pub fn reload(&mut self, conn: &Connection) -> Result<()> {

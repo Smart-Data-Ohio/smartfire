@@ -1,0 +1,128 @@
+{
+  "reference": "d7c7de92",
+  "cards": [
+    {
+      "name": "full",
+      "attributes": {
+        "title": "Title",
+        "description": "Description",
+        "image_url": "https://example.test/hero.png"
+      },
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">Title</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">Description</p>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"linkedin-post-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">\n        <img alt=\"\" loading=\"lazy\" class=\"linkedin-post-card__image\" src=\"https://example.test/hero.png\" />\n</a>    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "title",
+      "attributes": {
+        "title": "Title"
+      },
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">Title</a>\n      </p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "description",
+      "attributes": {
+        "description": "Only excerpt"
+      },
+      "url": "https://www.linkedin.com/posts/smart-data_post",
+      "player_url": null,
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__excerpt\">Only excerpt</p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/posts/smart-data_post\">View post on LinkedIn</a>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "chip",
+      "attributes": {},
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678",
+      "html": "  <p class=\"linkedin-post-chip\">\n    <span class=\"linkedin-post-chip__mark\" aria-hidden=\"true\">in</span>\n    <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n  </p>\n"
+    },
+    {
+      "name": "image_only",
+      "attributes": {
+        "image_url": "https://example.test/hero.png"
+      },
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678",
+      "html": "  <p class=\"linkedin-post-chip\">\n    <span class=\"linkedin-post-chip__mark\" aria-hidden=\"true\">in</span>\n    <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n  </p>\n"
+    },
+    {
+      "name": "escaping",
+      "attributes": {
+        "title": "Tom & Jerry <3 \"hi\"",
+        "description": "<script>untrusted</script>\n& 'quotes'",
+        "image_url": "https://example.test/a?x=1&y=2"
+      },
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">Tom &amp; Jerry &lt;3 &quot;hi&quot;</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">&lt;script&gt;untrusted&lt;/script&gt;\n&amp; &#39;quotes&#39;</p>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"linkedin-post-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">\n        <img alt=\"\" loading=\"lazy\" class=\"linkedin-post-card__image\" src=\"https://example.test/a?x=1&amp;y=2\" />\n</a>    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "own_fragment",
+      "attributes": {
+        "title": "Own link"
+      },
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678?own=1#raw",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678?own=1#raw\">Own link</a>\n      </p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678?own=1#raw\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "blank",
+      "attributes": {
+        "title": "  ",
+        "description": "\t",
+        "image_url": null
+      },
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678",
+      "html": "  <p class=\"linkedin-post-chip\">\n    <span class=\"linkedin-post-chip__mark\" aria-hidden=\"true\">in</span>\n    <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n  </p>\n"
+    },
+    {
+      "name": "share",
+      "attributes": {
+        "description": "A shared post"
+      },
+      "url": "https://www.linkedin.com/feed/update/urn:li:share:9007199254740993",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:share:9007199254740993",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__excerpt\">A shared post</p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:share:9007199254740993\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:share:9007199254740993\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "ugc",
+      "attributes": {
+        "title": "UGC"
+      },
+      "url": "https://www.linkedin.com/feed/update/urn:li:ugcPost:9007199254740995",
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:ugcPost:9007199254740995",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:ugcPost:9007199254740995\">UGC</a>\n      </p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:ugcPost:9007199254740995\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:ugcPost:9007199254740995\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    }
+  ],
+  "containers": [
+    {
+      "cards": [],
+      "client_id": "ws15e-linkedin-key",
+      "html": "  <div id=\"linkedin_cards_message_ws15e-linkedin-key\" class=\"linkedin-post-cards\"></div>\n"
+    },
+    {
+      "cards": [
+        "full"
+      ],
+      "client_id": "ws15e-linkedin-key",
+      "html": "  <div id=\"linkedin_cards_message_ws15e-linkedin-key\" class=\"linkedin-post-cards\">\n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">Title</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">Description</p>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"linkedin-post-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">\n        <img alt=\"\" loading=\"lazy\" class=\"linkedin-post-card__image\" src=\"https://example.test/hero.png\" />\n</a>    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n\n  </div>\n"
+    },
+    {
+      "cards": [
+        "title",
+        "description"
+      ],
+      "client_id": "ws15e-linkedin-key",
+      "html": "  <div id=\"linkedin_cards_message_ws15e-linkedin-key\" class=\"linkedin-post-cards\">\n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">Title</a>\n      </p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n\n  \n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__excerpt\">Only excerpt</p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/posts/smart-data_post\">View post on LinkedIn</a>\n    </footer>\n  </article>\n\n  </div>\n"
+    },
+    {
+      "cards": [
+        "full"
+      ],
+      "client_id": "quoted\"<&'key",
+      "html": "  <div id=\"linkedin_cards_message_quoted&quot;&lt;&amp;&#39;key\" class=\"linkedin-post-cards\">\n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">Title</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">Description</p>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"linkedin-post-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">\n        <img alt=\"\" loading=\"lazy\" class=\"linkedin-post-card__image\" src=\"https://example.test/hero.png\" />\n</a>    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:7123456789012345678\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n\n  </div>\n"
+    }
+  ]
+}

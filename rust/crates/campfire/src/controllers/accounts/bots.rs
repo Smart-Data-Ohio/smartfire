@@ -35,13 +35,14 @@ pub async fn new(c: &mut Ctx) -> Result {
 /// `User.create_bot! bot_params`
 pub async fn create(c: &mut Ctx) -> Result {
     before(c).await?;
+    concerns::sudo::require_sudo_mode(c)?;
     let params = bot_params(c)?;
     // users.name is NOT NULL.
     let name = params.get("name").and_then(Param::to_s).ok_or_else(|| Error::internal(anyhow::anyhow!("NOT NULL constraint failed: users.name")))?;
     // `create_webhook!(url: webhook_url) if webhook_url`: any non-nil value, "" included.
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
     let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
-    let pending = c
+    c
         .app()
         .db
         .write(move |tx| {
@@ -50,7 +51,6 @@ pub async fn create(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    attachments::analyze_later(c.app(), pending);
     redirect_to_bots(c)
 }
 
@@ -60,27 +60,44 @@ pub async fn edit(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     let (storage, base_url, bot_id) = (c.app().storage.clone(), c.url_for(""), bot.id);
     let form = c.app().db.read(move |conn| presenters::accounts::bot_form(conn, &storage, &base_url, &bot)).await.map_err(Error::internal)?;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsEdit { ctx, bot_id, bot: form.clone() }).await
+    let github = presenters::github::connection(c.app(), bot_id).await.map_err(Error::internal)?;
+    let administrator = concerns::require_current_user(c)?.is_administrator();
+    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsEdit { ctx, bot_id, bot: form.clone(), github: github.clone(), administrator }).await
 }
 
 /// `@bot.update_bot! bot_params`: the webhook first, then the bot, in one transaction.
 pub async fn update(c: &mut Ctx) -> Result {
     before(c).await?;
     let mut bot = set_bot(c).await?;
+    // Rails gates an actual change, not the always-submitted edit field's presence.
+    if let Some(user) = c.params.get("user").and_then(Param::as_hash)
+        && let Some(url) = user.get("webhook_url")
+    {
+        let submitted = url.to_s().unwrap_or_default();
+        let bot_id = bot.id;
+        let existing = c.app().db.read(move |conn| campfire_db::Webhook::find_by_user(conn, bot_id)).await.map_err(Error::internal)?;
+        if submitted.trim_matches(|ch: char| ch == '\0' || ch.is_ascii_whitespace()) != existing.as_ref().and_then(|webhook| webhook.url.as_deref()).unwrap_or("") {
+            concerns::sudo::require_sudo_mode(c)?;
+        }
+    }
     let params = bot_params(c)?;
     let changes = UserChanges { name: params.get("name").and_then(Param::to_s), ..UserChanges::default() };
+    let webhook_submitted = params.contains_key("webhook_url");
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
     let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
-    let pending = c
+    c
         .app()
         .db
         .write(move |tx| {
-            bot.update_bot(tx, changes, webhook_url.as_deref())?;
+            if webhook_submitted {
+                bot.update_bot(tx, changes, webhook_url.as_deref())?;
+            } else {
+                bot.update(tx, changes)?;
+            }
             attachments::assign(tx, Record::user(bot.id), "avatar", avatar)
         })
         .await
         .map_err(Error::internal)?;
-    attachments::analyze_later(c.app(), pending);
     redirect_to_bots(c)
 }
 
@@ -88,7 +105,8 @@ pub async fn update(c: &mut Ctx) -> Result {
 pub async fn destroy(c: &mut Ctx) -> Result {
     before(c).await?;
     let mut bot = set_bot(c).await?;
-    c.app().db.write(move |tx| bot.deactivate(tx)).await.map_err(Error::internal)?;
+    let context = crate::controllers::two_factor::audit_context(c)?;
+    c.app().db.write(move |tx| bot.deactivate_with_audit(tx, &context)).await.map_err(Error::internal)?;
     redirect_to_bots(c)
 }
 

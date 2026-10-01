@@ -7,6 +7,7 @@
 //! database, and the after-commit queue.
 
 pub mod broadcasts;
+pub mod callbacks;
 pub mod database;
 pub mod error;
 pub mod events;
@@ -35,3 +36,8 @@ pub use time::{Clock, SystemClock, TestClock, Timestamp};
 mod tests;
 
 pub mod slash_commands;
+
+// WS8bm2 picker metadata read seam.
+pub mod command_suggestions;
+
+pub mod autocomplete_users;

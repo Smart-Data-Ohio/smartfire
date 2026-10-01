@@ -22,7 +22,7 @@
     {{ poll.total_label() }}
     · {% if poll.multiple %}Multiple choice{% else %}Single choice{% endif %}
     · {% if poll.anonymous %}Anonymous{% else %}Voters visible{% endif %}
-{% if poll.closes_at.is_some() %}      · {% if poll.closed %}Closed{% else %}Closes{% endif %} {{ poll.close_time() }}
+{% if poll.closes_at.is_some() %}      · {% if poll.closed %}Closed{% else %}Closes{% endif %} {{ poll.close_time(ctx) }}
 {% elif poll.closed %}      · Closed
 {% endif %}  </p>
 

@@ -117,7 +117,7 @@ pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(net: &Networ
     let mut request = http::Request::net_http(hyper::Method::POST, http::request_uri(&uri), Some(uri_host), headers).transport(false, &endpoint);
     request.body = payload.into_bytes();
 
-    let timeouts = Timeouts { open: ENDPOINT_TIMEOUT, read: ENDPOINT_TIMEOUT, write: crate::integrations::net::http::NET_HTTP_DEFAULT_TIMEOUT };
+    let timeouts = Timeouts { open: ENDPOINT_TIMEOUT, read: ENDPOINT_TIMEOUT, write: http::NET_HTTP_DEFAULT_TIMEOUT };
     let response = http::exchange(net, &endpoint, request, &timeouts).await.map_err(WebhookError::Http)?;
     let (status, content_type) = (response.status, response.content_type());
     let headers = response.headers.clone();
@@ -268,7 +268,7 @@ mod tests {
             let url = c["url"].as_str().map(str::to_string).unwrap_or_else(|| format!("http://webhook.example:{}/{}", server.addr.port(), c["name"].as_str().unwrap()));
             async move { deliver_signed(&net, &url, r#"{"message":"hi"}"#.to_string(), None, || "2026-03-02T16:00:00Z".parse().unwrap(), false).await }
         });
-        let outcomes = futures_join_all(runs).await;
+        let outcomes = crate::test_support::wait("guarded webhook fixture replies", futures_join_all(runs)).await;
 
         for ((case, expected), outcome) in cases.iter().zip(&expected).zip(outcomes) {
             let name = case["name"].as_str().unwrap();
@@ -458,7 +458,7 @@ mod tests {
         let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
         let net = network(resolver, dialer);
         let now = "2026-03-02T16:00:00Z".parse().unwrap();
-        let (legacy, agent) = tokio::join!(deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), None, || now, false), deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), Some("test-secret"), || now, true));
+        let (legacy, agent) = crate::test_support::wait("legacy and agent webhook timeouts", async { tokio::join!(deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), None, || now, false), deliver_signed(&net, "http://bots.example:8080/hook", "{}".into(), Some("test-secret"), || now, true)) }).await;
         assert_eq!(legacy.unwrap(), WebhookDelivery { status: None, reply: WebhookReply::Text("Failed to respond within 7 seconds".into()) });
         assert!(matches!(agent, Err(WebhookError::Http(HttpError::ReadTimeout))));
     }

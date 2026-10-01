@@ -1,0 +1,1698 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1767268800,
+  "cases": [
+    {
+      "name": "notifier_4",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": null,
+          "pins_changed_at": null,
+          "type": "Rooms::Direct",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 712064548
+          },
+          {
+            "id": 9014,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 773523953
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "sessions": [
+          {
+            "id": 481019661,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 10:00:00 UTC",
+            "token": "AxJs94fteQ5Autv2VrKsH68c",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+            "user_id": 127326141
+          },
+          {
+            "id": 481019662,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-query-jason",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": null,
+            "user_id": 149087659
+          }
+        ],
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "identity": "ws13b-query-1",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:00 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 481019661,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "identity": "ws13b-query-2",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:00 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 481019662,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "items": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": "2026-01-01 12:00:00 UTC",
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": null,
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 712064548
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": null,
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 773523953
+          }
+        ],
+        "streams": []
+      },
+      "queries": [
+        {
+          "sql": "SELECT \"rooms\".* FROM \"rooms\" WHERE \"rooms\".\"deleted_at\" IS NULL AND \"rooms\".\"id\" = ? LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"huddle_grants\" WHERE \"huddle_grants\".\"revoked_at\" IS NULL AND (last_seen_at > ?) AND \"huddle_grants\".\"id\" = ? LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT DISTINCT \"huddle_grants\".\"user_id\" FROM \"huddle_grants\" WHERE \"huddle_grants\".\"revoked_at\" IS NULL AND (last_seen_at > ?) AND \"huddle_grants\".\"room_id\" = ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"memberships\".* FROM \"memberships\" WHERE \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" != ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" IN (?, ?, ?)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" INNER JOIN \"memberships\" ON \"users\".\"id\" = \"memberships\".\"user_id\" WHERE \"memberships\".\"room_id\" = ? ORDER BY LOWER(name)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"activity_items\".\"user_id\" FROM \"activity_items\" INNER JOIN huddle_grants AS rung_grants ON rung_grants.id = activity_items.source_id WHERE \"activity_items\".\"user_id\" IN (?, ?, ?) AND \"activity_items\".\"source_type\" = ? AND \"activity_items\".\"event_type\" = ? AND \"activity_items\".\"handled_at\" IS NULL AND \"activity_items\".\"created_at\" >= ? AND \"rung_grants\".\"room_id\" = ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"huddle_grants\" WHERE \"huddle_grants\".\"room_id\" = ? AND \"huddle_grants\".\"user_id\" = ? AND \"huddle_grants\".\"id\" != ? AND \"huddle_grants\".\"revoked_at\" >= ? AND \"huddle_grants\".\"last_seen_at\" >= ? LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"push_subscriptions\" INNER JOIN \"users\" ON \"users\".\"id\" = \"push_subscriptions\".\"user_id\" INNER JOIN \"memberships\" ON \"memberships\".\"user_id\" = \"users\".\"id\" WHERE \"memberships\".\"involvement\" != ? AND (\"memberships\".\"connected_at\" IS NULL OR \"memberships\".\"connected_at\" < ?) AND \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" = ? AND \"memberships\".\"involvement\" NOT IN (?, ?) LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "UPDATE \"memberships\" SET \"last_huddle_join_push_at\" = ? WHERE \"memberships\".\"id\" = ? AND (last_huddle_join_push_at IS NULL OR last_huddle_join_push_at < ?)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"push_subscriptions\" INNER JOIN \"users\" ON \"users\".\"id\" = \"push_subscriptions\".\"user_id\" INNER JOIN \"memberships\" ON \"memberships\".\"user_id\" = \"users\".\"id\" WHERE \"memberships\".\"involvement\" != ? AND (\"memberships\".\"connected_at\" IS NULL OR \"memberships\".\"connected_at\" < ?) AND \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" = ? AND \"memberships\".\"involvement\" NOT IN (?, ?) LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "UPDATE \"memberships\" SET \"last_huddle_join_push_at\" = ? WHERE \"memberships\".\"id\" = ? AND (last_huddle_join_push_at IS NULL OR last_huddle_join_push_at < ?)",
+          "transaction": false
+        }
+      ],
+      "user_selects": [
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" IN (?, ?, ?)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" INNER JOIN \"memberships\" ON \"users\".\"id\" = \"memberships\".\"user_id\" WHERE \"memberships\".\"room_id\" = ? ORDER BY LOWER(name)",
+          "transaction": false
+        }
+      ],
+      "ring_selects": [
+        {
+          "sql": "SELECT \"activity_items\".\"user_id\" FROM \"activity_items\" INNER JOIN huddle_grants AS rung_grants ON rung_grants.id = activity_items.source_id WHERE \"activity_items\".\"user_id\" IN (?, ?, ?) AND \"activity_items\".\"source_type\" = ? AND \"activity_items\".\"event_type\" = ? AND \"activity_items\".\"handled_at\" IS NULL AND \"activity_items\".\"created_at\" >= ? AND \"rung_grants\".\"room_id\" = ?",
+          "transaction": false
+        }
+      ]
+    },
+    {
+      "name": "notifier_8",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": null,
+          "pins_changed_at": null,
+          "type": "Rooms::Direct",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 9013,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 712064548
+          },
+          {
+            "id": 9014,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 773523953
+          },
+          {
+            "id": 9015,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 10000
+          },
+          {
+            "id": 9016,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 10001
+          },
+          {
+            "id": 9017,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 10002
+          },
+          {
+            "id": 9018,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 10003
+          }
+        ],
+        "users": [
+          {
+            "id": 10000,
+            "name": "Query member 0",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 10001,
+            "name": "Query member 1",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 10002,
+            "name": "Query member 2",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 10003,
+            "name": "Query member 3",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "sessions": [
+          {
+            "id": 481019661,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 10:00:00 UTC",
+            "token": "AxJs94fteQ5Autv2VrKsH68c",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+            "user_id": 127326141
+          },
+          {
+            "id": 481019662,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 12:00:00 UTC",
+            "token": "ws13b-query-jason",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": null,
+            "user_id": 149087659
+          }
+        ],
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "identity": "ws13b-query-1",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:00 UTC",
+            "membership_id": 9011,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 481019661,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "identity": "ws13b-query-2",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": "2026-01-01 12:00:00 UTC",
+            "membership_id": 9012,
+            "revoked_at": null,
+            "room_id": 9001,
+            "room_name": "campfire-room-f8cf6eef7cd4016049f89826b53f9f6eaf7e44424a0b657ba5845a27f6ee1c75",
+            "server_muted": false,
+            "session_id": 481019662,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "items": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": null,
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 10000
+          },
+          {
+            "id": 2,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": null,
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 10001
+          },
+          {
+            "id": 3,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": null,
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 10002
+          },
+          {
+            "id": 4,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": null,
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 10003
+          },
+          {
+            "id": 5,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": "2026-01-01 12:00:00 UTC",
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 6,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": null,
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 712064548
+          },
+          {
+            "id": 7,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "event_type": "huddle_started",
+            "handled_at": "2026-01-01 12:00:00 UTC",
+            "read_at": null,
+            "source_id": 1,
+            "source_type": "HuddleGrant",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 773523953
+          }
+        ],
+        "streams": []
+      },
+      "queries": [
+        {
+          "sql": "SELECT \"rooms\".* FROM \"rooms\" WHERE \"rooms\".\"deleted_at\" IS NULL AND \"rooms\".\"id\" = ? LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"huddle_grants\" WHERE \"huddle_grants\".\"revoked_at\" IS NULL AND (last_seen_at > ?) AND \"huddle_grants\".\"id\" = ? LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT DISTINCT \"huddle_grants\".\"user_id\" FROM \"huddle_grants\" WHERE \"huddle_grants\".\"revoked_at\" IS NULL AND (last_seen_at > ?) AND \"huddle_grants\".\"room_id\" = ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"memberships\".* FROM \"memberships\" WHERE \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" != ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" IN (?, ?, ?, ?, ?, ?, ?)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" INNER JOIN \"memberships\" ON \"users\".\"id\" = \"memberships\".\"user_id\" WHERE \"memberships\".\"room_id\" = ? ORDER BY LOWER(name)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"activity_items\".\"user_id\" FROM \"activity_items\" INNER JOIN huddle_grants AS rung_grants ON rung_grants.id = activity_items.source_id WHERE \"activity_items\".\"user_id\" IN (?, ?, ?, ?, ?, ?, ?) AND \"activity_items\".\"source_type\" = ? AND \"activity_items\".\"event_type\" = ? AND \"activity_items\".\"handled_at\" IS NULL AND \"activity_items\".\"created_at\" >= ? AND \"rung_grants\".\"room_id\" = ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"huddle_grants\" WHERE \"huddle_grants\".\"room_id\" = ? AND \"huddle_grants\".\"user_id\" = ? AND \"huddle_grants\".\"id\" != ? AND \"huddle_grants\".\"revoked_at\" >= ? AND \"huddle_grants\".\"last_seen_at\" >= ? LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"push_subscriptions\" INNER JOIN \"users\" ON \"users\".\"id\" = \"push_subscriptions\".\"user_id\" INNER JOIN \"memberships\" ON \"memberships\".\"user_id\" = \"users\".\"id\" WHERE \"memberships\".\"involvement\" != ? AND (\"memberships\".\"connected_at\" IS NULL OR \"memberships\".\"connected_at\" < ?) AND \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" = ? AND \"memberships\".\"involvement\" NOT IN (?, ?) LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "UPDATE \"memberships\" SET \"last_huddle_join_push_at\" = ? WHERE \"memberships\".\"id\" = ? AND (last_huddle_join_push_at IS NULL OR last_huddle_join_push_at < ?)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"push_subscriptions\" INNER JOIN \"users\" ON \"users\".\"id\" = \"push_subscriptions\".\"user_id\" INNER JOIN \"memberships\" ON \"memberships\".\"user_id\" = \"users\".\"id\" WHERE \"memberships\".\"involvement\" != ? AND (\"memberships\".\"connected_at\" IS NULL OR \"memberships\".\"connected_at\" < ?) AND \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" = ? AND \"memberships\".\"involvement\" NOT IN (?, ?) LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "UPDATE \"memberships\" SET \"last_huddle_join_push_at\" = ? WHERE \"memberships\".\"id\" = ? AND (last_huddle_join_push_at IS NULL OR last_huddle_join_push_at < ?)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"push_subscriptions\" INNER JOIN \"users\" ON \"users\".\"id\" = \"push_subscriptions\".\"user_id\" INNER JOIN \"memberships\" ON \"memberships\".\"user_id\" = \"users\".\"id\" WHERE \"memberships\".\"involvement\" != ? AND (\"memberships\".\"connected_at\" IS NULL OR \"memberships\".\"connected_at\" < ?) AND \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" = ? AND \"memberships\".\"involvement\" NOT IN (?, ?) LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"push_subscriptions\" INNER JOIN \"users\" ON \"users\".\"id\" = \"push_subscriptions\".\"user_id\" INNER JOIN \"memberships\" ON \"memberships\".\"user_id\" = \"users\".\"id\" WHERE \"memberships\".\"involvement\" != ? AND (\"memberships\".\"connected_at\" IS NULL OR \"memberships\".\"connected_at\" < ?) AND \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" = ? AND \"memberships\".\"involvement\" NOT IN (?, ?) LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"push_subscriptions\" INNER JOIN \"users\" ON \"users\".\"id\" = \"push_subscriptions\".\"user_id\" INNER JOIN \"memberships\" ON \"memberships\".\"user_id\" = \"users\".\"id\" WHERE \"memberships\".\"involvement\" != ? AND (\"memberships\".\"connected_at\" IS NULL OR \"memberships\".\"connected_at\" < ?) AND \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" = ? AND \"memberships\".\"involvement\" NOT IN (?, ?) LIMIT ?",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"push_subscriptions\" INNER JOIN \"users\" ON \"users\".\"id\" = \"push_subscriptions\".\"user_id\" INNER JOIN \"memberships\" ON \"memberships\".\"user_id\" = \"users\".\"id\" WHERE \"memberships\".\"involvement\" != ? AND (\"memberships\".\"connected_at\" IS NULL OR \"memberships\".\"connected_at\" < ?) AND \"memberships\".\"room_id\" = ? AND \"memberships\".\"user_id\" = ? AND \"memberships\".\"involvement\" NOT IN (?, ?) LIMIT ?",
+          "transaction": false
+        }
+      ],
+      "user_selects": [
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" IN (?, ?, ?, ?, ?, ?, ?)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" INNER JOIN \"memberships\" ON \"users\".\"id\" = \"memberships\".\"user_id\" WHERE \"memberships\".\"room_id\" = ? ORDER BY LOWER(name)",
+          "transaction": false
+        }
+      ],
+      "ring_selects": [
+        {
+          "sql": "SELECT \"activity_items\".\"user_id\" FROM \"activity_items\" INNER JOIN huddle_grants AS rung_grants ON rung_grants.id = activity_items.source_id WHERE \"activity_items\".\"user_id\" IN (?, ?, ?, ?, ?, ?, ?) AND \"activity_items\".\"source_type\" = ? AND \"activity_items\".\"event_type\" = ? AND \"activity_items\".\"handled_at\" IS NULL AND \"activity_items\".\"created_at\" >= ? AND \"rung_grants\".\"room_id\" = ?",
+          "transaction": false
+        }
+      ]
+    },
+    {
+      "name": "demotion_lock",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Town Hall",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "sessions": [
+          {
+            "id": 481019661,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 10:00:00 UTC",
+            "token": "AxJs94fteQ5Autv2VrKsH68c",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+            "user_id": 127326141
+          }
+        ],
+        "grants": [],
+        "items": [],
+        "streams": []
+      },
+      "error": "Stage role can't demote the last host",
+      "events": [
+        "lock",
+        "check_in_transaction"
+      ],
+      "queries": [
+        {
+          "sql": "BEGIN immediate TRANSACTION",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"rooms\".* FROM \"rooms\" WHERE \"rooms\".\"type\" = ? AND \"rooms\".\"id\" = ? LIMIT ? ",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"memberships\" WHERE \"memberships\".\"room_id\" = ? AND \"memberships\".\"stage_role\" = ? AND \"memberships\".\"id\" != ? LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "ROLLBACK TRANSACTION",
+          "transaction": true
+        }
+      ]
+    },
+    {
+      "name": "departure_lock",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Town Hall",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "sessions": [
+          {
+            "id": 481019661,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 10:00:00 UTC",
+            "token": "AxJs94fteQ5Autv2VrKsH68c",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+            "user_id": 127326141
+          }
+        ],
+        "grants": [],
+        "items": [],
+        "streams": []
+      },
+      "error": null,
+      "events": [
+        "lock",
+        "check_in_transaction"
+      ],
+      "queries": [
+        {
+          "sql": "BEGIN immediate TRANSACTION",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"huddle_grants\".* FROM \"huddle_grants\" WHERE \"huddle_grants\".\"revoked_at\" IS NULL AND \"huddle_grants\".\"membership_id\" = ? ORDER BY \"huddle_grants\".\"id\" ASC LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"agents\".\"id\" FROM \"agents\" WHERE \"agents\".\"user_id\" = ? LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"streams\".* FROM \"streams\" WHERE \"streams\".\"ended_at\" IS NULL AND \"streams\".\"room_id\" = ? AND \"streams\".\"membership_id\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "DELETE FROM \"memberships\" WHERE \"memberships\".\"id\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"rooms\".* FROM \"rooms\" WHERE \"rooms\".\"type\" = ? AND \"rooms\".\"id\" = ? LIMIT ? ",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT 1 AS one FROM \"memberships\" WHERE \"memberships\".\"room_id\" = ? AND \"memberships\".\"stage_role\" = ? LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"memberships\".* FROM \"memberships\" WHERE \"memberships\".\"room_id\" = ? ORDER BY \"memberships\".\"created_at\" ASC",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"streams\".* FROM \"streams\" WHERE \"streams\".\"ended_at\" IS NULL AND \"streams\".\"room_id\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"huddle_grants\".\"room_name\" FROM \"huddle_grants\" WHERE \"huddle_grants\".\"room_id\" = ? LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"huddle_grants\".* FROM \"huddle_grants\" WHERE \"huddle_grants\".\"revoked_at\" IS NULL AND \"huddle_grants\".\"room_id\" = ? ORDER BY \"huddle_grants\".\"id\" ASC LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "INSERT INTO \"messages\" (\"action\", \"board_post_opener\", \"client_message_id\", \"created_at\", \"creator_id\", \"edited_at\", \"embeds_suppressed\", \"forward_note\", \"forwarded_at\", \"forwarded_from_message_id\", \"forwarded_markdown\", \"markdown_source\", \"reply_notify_author\", \"reply_target_deleted_at\", \"reply_to_message_id\", \"room_id\", \"stream_broadcast_at\", \"streaming\", \"streaming_updated_at\", \"system_note\", \"thread_id\", \"updated_at\") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING \"id\"",
+          "transaction": true
+        },
+        {
+          "sql": "INSERT INTO \"action_text_rich_texts\" (\"body\", \"created_at\", \"name\", \"record_id\", \"record_type\", \"updated_at\") VALUES (?, ?, ?, ?, ?, ?) RETURNING \"id\"",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"active_storage_attachments\".* FROM \"active_storage_attachments\" WHERE \"active_storage_attachments\".\"record_id\" = ? AND \"active_storage_attachments\".\"record_type\" = ? AND \"active_storage_attachments\".\"name\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"active_storage_attachments\".* FROM \"active_storage_attachments\" WHERE \"active_storage_attachments\".\"record_id\" = ? AND \"active_storage_attachments\".\"record_type\" = ? AND \"active_storage_attachments\".\"name\" = ? LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"huddle_grants\".* FROM \"huddle_grants\" WHERE \"huddle_grants\".\"revoked_at\" IS NULL AND \"huddle_grants\".\"membership_id\" = ? ORDER BY \"huddle_grants\".\"id\" ASC LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "UPDATE \"memberships\" SET \"stage_role\" = ? WHERE \"memberships\".\"id\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "UPDATE \"messages\" SET \"updated_at\" = ? WHERE \"messages\".\"id\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "UPDATE \"rooms\" SET \"updated_at\" = ? WHERE \"rooms\".\"id\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "COMMIT TRANSACTION",
+          "transaction": false
+        },
+        {
+          "sql": "DELETE FROM \"thread_memberships\" WHERE (\"thread_memberships\".\"id\") IN (SELECT \"thread_memberships\".\"id\" FROM \"thread_memberships\" INNER JOIN \"channel_threads\" ON \"channel_threads\".\"id\" = \"thread_memberships\".\"thread_id\" WHERE \"thread_memberships\".\"user_id\" = ? AND \"channel_threads\".\"room_id\" = ?)",
+          "transaction": false
+        },
+        {
+          "sql": "SELECT \"event_calendar_entries\".\"event_id\" FROM \"event_calendar_entries\" INNER JOIN \"events\" ON \"events\".\"id\" = \"event_calendar_entries\".\"event_id\" WHERE \"event_calendar_entries\".\"user_id\" = ? AND \"events\".\"room_id\" = ?",
+          "transaction": false
+        },
+        {
+          "sql": "DELETE FROM \"github_pull_request_references\" WHERE \"github_pull_request_references\".\"message_id\" = ? AND 1=1",
+          "transaction": false
+        },
+        {
+          "sql": "DELETE FROM \"fizzy_card_references\" WHERE \"fizzy_card_references\".\"message_id\" = ? AND 1=1",
+          "transaction": false
+        },
+        {
+          "sql": "DELETE FROM \"twitter_post_references\" WHERE \"twitter_post_references\".\"message_id\" = ? AND 1=1",
+          "transaction": false
+        },
+        {
+          "sql": "DELETE FROM \"event_references\" WHERE \"event_references\".\"message_id\" = ? AND \"event_references\".\"event_id\" NOT IN (SELECT \"events\".\"id\" FROM \"events\" WHERE 1=0 AND \"events\".\"room_id\" = ?)",
+          "transaction": false
+        },
+        {
+          "sql": "DELETE FROM \"message_references\" WHERE \"message_references\".\"message_id\" = ? AND \"message_references\".\"referenced_message_id\" NOT IN (SELECT \"messages\".\"id\" FROM \"messages\" WHERE 1=0 AND \"messages\".\"id\" != ? AND \"messages\".\"system_note\" = ?)",
+          "transaction": false
+        },
+        {
+          "sql": "DELETE FROM \"link_embed_references\" WHERE \"link_embed_references\".\"message_id\" = ?",
+          "transaction": false
+        }
+      ]
+    },
+    {
+      "name": "preloaded_live",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Town Hall",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "sessions": [
+          {
+            "id": 481019661,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 10:00:00 UTC",
+            "token": "AxJs94fteQ5Autv2VrKsH68c",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+            "user_id": 127326141
+          }
+        ],
+        "grants": [],
+        "items": [],
+        "streams": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "ended_at": "2026-01-01 12:00:00 UTC",
+            "membership_id": 9011,
+            "quality": "1080p15",
+            "room_id": 9001,
+            "started_at": "2026-01-01 12:00:00 UTC",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9002,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "ended_at": null,
+            "membership_id": 9011,
+            "quality": "1080p15",
+            "room_id": 9001,
+            "started_at": "2026-01-01 12:00:00 UTC",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ]
+      },
+      "value": 9002,
+      "preloaded_ids": [
+        9002
+      ],
+      "queries": []
+    },
+    {
+      "name": "preloaded_ended",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Town Hall",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "sessions": [
+          {
+            "id": 481019661,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 10:00:00 UTC",
+            "token": "AxJs94fteQ5Autv2VrKsH68c",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+            "user_id": 127326141
+          }
+        ],
+        "grants": [],
+        "items": [],
+        "streams": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "ended_at": "2026-01-01 12:00:00 UTC",
+            "membership_id": 9011,
+            "quality": "1080p15",
+            "room_id": 9001,
+            "started_at": "2026-01-01 12:00:00 UTC",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ]
+      },
+      "value": null,
+      "preloaded_ids": [],
+      "queries": []
+    },
+    {
+      "name": "unloaded_live",
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "Town Hall",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "host",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 9012,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "sessions": [
+          {
+            "id": 481019661,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 10:00:00 UTC",
+            "token": "AxJs94fteQ5Autv2VrKsH68c",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+            "user_id": 127326141
+          }
+        ],
+        "grants": [],
+        "items": [],
+        "streams": [
+          {
+            "id": 9001,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "ended_at": null,
+            "membership_id": 9011,
+            "quality": "1080p15",
+            "room_id": 9001,
+            "started_at": "2026-01-01 12:00:00 UTC",
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ]
+      },
+      "value": 9001,
+      "preloaded_ids": null,
+      "queries": [
+        {
+          "sql": "SELECT \"streams\".* FROM \"streams\" WHERE \"streams\".\"room_id\" = ? AND \"streams\".\"ended_at\" IS NULL ORDER BY \"streams\".\"id\" ASC LIMIT ?",
+          "transaction": false
+        }
+      ]
+    },
+    {
+      "name": "nonstage_no_stream_query",
+      "input": {
+        "room": {
+          "id": 486777696,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "All Talk",
+          "pins_changed_at": null,
+          "type": "Rooms::Closed",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 505016279,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 486777696,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 149087659
+          },
+          {
+            "id": 774341722,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "everything",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 486777696,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          },
+          {
+            "id": 963867642,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 486777696,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 394959859
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "role": "bot",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 712064548,
+            "name": "Kevin",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 773523953,
+            "name": "JZ",
+            "role": "member",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "sessions": [
+          {
+            "id": 481019661,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "device_id": null,
+            "ip_address": null,
+            "last_active_at": "2026-01-01 10:00:00 UTC",
+            "token": "AxJs94fteQ5Autv2VrKsH68c",
+            "two_factor_verified_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+            "user_id": 127326141
+          }
+        ],
+        "grants": [
+          {
+            "id": 1,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "identity": "ws13b-query-1",
+            "last_issued_at": "2026-01-01 12:00:00 UTC",
+            "last_seen_at": null,
+            "membership_id": 774341722,
+            "revoked_at": null,
+            "room_id": 486777696,
+            "room_name": "campfire-room-0c5ca9624cd733c1c639639cb44bd47e6acdbcbe13ec6b1ab7a42ebcb84729b9",
+            "server_muted": false,
+            "session_id": 481019661,
+            "stage_role": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "items": [],
+        "streams": []
+      },
+      "queries": [
+        {
+          "sql": "BEGIN immediate TRANSACTION",
+          "transaction": true
+        },
+        {
+          "sql": "UPDATE \"huddle_grants\" SET \"revoked_at\" = ? WHERE \"huddle_grants\".\"id\" = ?",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"huddle_cleanups\".* FROM \"huddle_cleanups\" WHERE \"huddle_cleanups\".\"operation\" = ? AND \"huddle_cleanups\".\"huddle_grant_id\" = ? LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "SAVEPOINT active_record_1",
+          "transaction": true
+        },
+        {
+          "sql": "INSERT INTO \"huddle_cleanups\" (\"attempts\", \"completed_at\", \"created_at\", \"enqueued_at\", \"huddle_grant_id\", \"identity\", \"last_attempted_at\", \"next_attempt_at\", \"operation\", \"room_name\", \"updated_at\") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING \"id\"",
+          "transaction": true
+        },
+        {
+          "sql": "RELEASE SAVEPOINT active_record_1",
+          "transaction": true
+        },
+        {
+          "sql": "SELECT \"rooms\".* FROM \"rooms\" WHERE \"rooms\".\"deleted_at\" IS NULL AND \"rooms\".\"id\" = ? LIMIT ?",
+          "transaction": true
+        },
+        {
+          "sql": "COMMIT TRANSACTION",
+          "transaction": false
+        }
+      ]
+    }
+  ]
+}

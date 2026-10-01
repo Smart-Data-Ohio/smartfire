@@ -36,7 +36,6 @@ impl ReadResult {
             error: Some(message.into()),
         }
     }
-    #[allow(dead_code, reason = "WS15e exposes body and separate service fields; REST/MCP use the latter")]
     pub fn body(&self) -> Value {
         self.payload
             .clone()

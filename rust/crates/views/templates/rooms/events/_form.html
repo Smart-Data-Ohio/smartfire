@@ -1,0 +1,91 @@
+{% let form = view.form() %}{% filter form_with(form) %}
+{% if !view.errors.is_empty() %}    <div class="room-events__errors" role="alert">
+      <h2>{{ view.error_count() }} kept this event from being saved:</h2>
+      <ul>
+{% for message in view.errors %}          <li>{{ message }}</li>
+{% endfor %}      </ul>
+    </div>
+{% endif %}
+  <div>
+    {{ view.label("title","Title") }}
+    {{ view.title_field() }}
+  </div>
+
+  <div>
+    {{ view.label("description","Description (optional)") }}
+    {{ view.description_field() }}
+  </div>
+
+  <div>
+    {{ view.label("venue_room_id","Where") }}
+    {{ view.venue_select() }}
+  </div>
+
+{% if let Some(meet_link) = view.meet_link %}    <p class="room-events__hint">Google Meet: {{ h::link_to_text(meet_link,meet_link,h::attrs()) }}</p>
+{% else %}    <div>
+      <label>
+        {{ view.meet_checkbox() }}
+        Add a Google Meet link
+      </label>
+      <p class="room-events__hint">Needs the organizer's connected Google account. The link appears on the event once Google creates it.</p>
+    </div>
+{% endif %}
+  <div class="room-events__time-fields">
+    <div>
+      {{ view.label("starts_at","Starts") }}
+      {{ view.time_field("starts_at") }}
+    </div>
+
+    <div>
+      {{ view.label("ends_at","Ends (optional)") }}
+      {{ view.time_field("ends_at") }}
+    </div>
+  </div>
+
+{% if view.id.is_some() %}    <p class="room-events__hint">
+      Times are in {{ view.time_zone }}, the time zone this event was scheduled in.
+      Attendees see them converted to their own.
+    </p>
+{% else %}    {{ view.zone_field() }}
+    <p class="room-events__hint">
+      Times are saved in your time zone (<span data-event-time-zone-target="label">{{ view.time_zone }}</span>).
+      Attendees see them converted to their own.
+    </p>
+{% endif %}
+{% if view.id.is_some() && view.series %}    <fieldset class="room-events__scope">
+      <legend>Apply changes to</legend>
+      <label>
+        {{ h::radio_button_tag("update_scope","this_event",true,h::attrs()) }}
+        This event
+      </label>
+      <label>
+        {{ h::radio_button_tag("update_scope","this_and_following",false,h::attrs()) }}
+        This and following
+      </label>
+    </fieldset>
+{% endif %}
+{% if view.id.is_none() || view.head %}    <div>
+      {{ view.label("recurrence_rule","Repeats") }}
+{% if view.id.is_some() %}        {{ view.repeat_select() }}
+{% else %}        {{ view.repeat_select() }}
+{% endif %}    </div>
+
+    <div>
+      {{ view.label("recurrence_until","Repeat until") }}
+      {{ view.until_field() }}
+    </div>
+
+{% if view.id.is_some() %}      <p class="room-events__hint">
+        Changing when this series repeats rebuilds its future occurrences, keeping any
+        occurrence where someone responded differently from this one.
+        The rule can only be changed here, on the first event, with This and following.
+      </p>
+{% else %}      <p class="room-events__hint">
+        Repeating events create one occurrence per repeat, up to 52, until the end date.
+        Members get a single invitation for the whole series.
+      </p>
+{% endif %}{% endif %}
+  <div>
+    {{ view.submit() }}
+  </div>
+{% endfilter %}

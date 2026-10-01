@@ -1,0 +1,11 @@
+<div class="room-header__identity room--current min-width" id="{{ h::dom_id(header.param_key.as_str(), header.id, Some("header")) }}">
+  <span class="room-header__kind">{{ header.kind_label }}</span>
+  <h1 class="room__contents overflow-ellipsis">
+{% if header.direct %}      <span class="for-screen-reader">Ping with</span>
+{% else if header.icon.is_some() %}      {{ h::icon_avatar_tag(ctx, header.icon.as_ref(), 32, h::attrs().class("room-header__icon")) }}
+{% else %}      <span class="room-header__hash" aria-hidden="true">#</span>
+{% endif %}
+    <span class="room-header__name overflow-ellipsis">{{ header.display_name }}</span>
+  </h1>
+</div>
+{# The preceding newline belongs to the Rails partial. #}

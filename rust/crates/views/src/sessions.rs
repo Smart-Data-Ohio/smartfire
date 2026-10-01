@@ -8,7 +8,12 @@ use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
 /// `AllowBrowser::VERSIONS`, minus the browsers it blocks outright (`ie: false`).
-pub const ALLOW_BROWSER_VERSIONS: [(&str, &str); 4] = [("safari", "17.2"), ("chrome", "120"), ("firefox", "121"), ("opera", "104")];
+pub const ALLOW_BROWSER_VERSIONS: [(&str, &str); 4] = [
+    ("safari", "17.2"),
+    ("chrome", "120"),
+    ("firefox", "121"),
+    ("opera", "104"),
+];
 
 /// `sessions/new.html.erb`.
 #[derive(Template)]
@@ -19,6 +24,27 @@ pub struct New<'a> {
     pub email_address: Option<String>,
     /// `User.administrator.first`, for `accounts/_help_contact`.
     pub help_contact: Option<HelpContact>,
+    /// Google::SignIn.allowed_domains when configured; WS14g supplies provider configuration.
+    pub google_sign_in_domains: Vec<String>,
+}
+
+impl New<'_> {
+    fn google_sign_in(&self) -> h::Html {
+        if self.google_sign_in_domains.is_empty() { h::empty() } else {
+            h::raw(GoogleSignIn {domains: self.google_sign_in_domains.clone()}.render().unwrap())
+        }
+    }
+}
+
+#[derive(Template)]
+#[template(path = "sessions/_google_sign_in.html")]
+pub struct GoogleSignIn {
+    pub domains: Vec<String>,
+}
+impl GoogleSignIn {
+    fn domain_sentence(&self) -> String {
+        h::to_sentence(&self.domains.iter().map(|domain| format!("@{domain}")).collect::<Vec<_>>(), " and ")
+    }
 }
 
 impl Page for New<'_> {
@@ -36,7 +62,14 @@ pub struct IncompatibleBrowser<'a> {
 
 impl Page for IncompatibleBrowser<'_> {
     fn page_title(&self) -> Option<String> {
-        Some(if self.ctx.platform.apple_messages { "Campfire" } else { "Unsupported browser" }.into())
+        Some(
+            if self.ctx.platform.apple_messages {
+                "Smartfire"
+            } else {
+                "Unsupported browser"
+            }
+            .into(),
+        )
     }
 }
 

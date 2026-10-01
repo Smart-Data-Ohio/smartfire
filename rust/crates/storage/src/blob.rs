@@ -132,6 +132,15 @@ impl Blob {
         Ok(conn.prepare_cached(&SQL)?.query_row([id], Blob::from_row).optional()?)
     }
 
+    /// WS8bm2 room Files: one blob read for the bounded upload window, including duplicates.
+    pub fn find_many(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Blob>> {
+        if ids.is_empty() { return Ok(std::collections::HashMap::new()); }
+        let sql = format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE id IN ({})", vec!["?"; ids.len()].join(","));
+        let mut statement = conn.prepare(&sql)?;
+        let blobs = statement.query_map(rusqlite::params_from_iter(ids), Self::from_row)?;
+        Ok(blobs.map(|blob| blob.map(|b| (b.id, b))).collect::<rusqlite::Result<_>>()?)
+    }
+
     pub fn find_by_key(conn: &Connection, key: &str) -> Result<Option<Blob>> {
         static SQL: LazyLock<String> = LazyLock::new(|| format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE key = ?1"));
         Ok(conn.prepare_cached(&SQL)?.query_row([key], Blob::from_row).optional()?)
@@ -147,6 +156,14 @@ impl Blob {
             )
         });
         Ok(conn.prepare_cached(&SQL)?.query_row(params![record_type, record_id, name], Blob::from_row).optional()?)
+    }
+
+    /// WS8bm2 read seam: the same first attachment/blob lookup for a bounded message window.
+    pub fn attached_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Blob>> {
+        if ids.is_empty() { return Ok(Default::default()); }
+        let columns = BLOB_COLUMNS.split(", ").map(|c| format!("b.{c}")).collect::<Vec<_>>().join(", ");
+        let sql = format!("SELECT {columns},a.record_id FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.record_type='Message' AND a.name='attachment' AND a.record_id IN ({}) ORDER BY a.id DESC", vec!["?"; ids.len()].join(","));
+        Ok(conn.prepare(&sql)?.query_map(rusqlite::params_from_iter(ids), |r| Ok((r.get(9)?, Self::from_row(r)?)))?.collect::<rusqlite::Result<_>>()?)
     }
 
     pub fn content_type(&self) -> &str {
@@ -179,6 +196,10 @@ impl Blob {
     /// `representable?`
     pub fn is_representable(&self) -> bool {
         self.is_variable() || self.is_previewable()
+    }
+
+    pub fn is_identified(&self) -> bool {
+        self.metadata.get("identified").is_some_and(|v| !matches!(v, Json::Null | Json::Bool(false)))
     }
 
     pub fn is_analyzed(&self) -> bool {

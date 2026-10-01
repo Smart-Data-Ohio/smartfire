@@ -22,13 +22,26 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let mut account = super::current_account(c).await?;
+    concerns::sudo::require_sudo_mode(c)?;
     let params = c.params.require("account")?.permit(&permit_keys(&["custom_styles"]));
-    let custom_styles = params.contains_key("custom_styles").then(|| params.get("custom_styles").and_then(Param::to_s));
-    c.app()
+    // ActiveModel::Type::String retains nil and casts booleans to "t"/"f".
+    let custom_styles = params.get("custom_styles").map(|value| match value {
+        Param::Null => None,
+        Param::Bool(value) => Some(if *value { "t" } else { "f" }.into()),
+        value => value.to_s(),
+    });
+    let audit = crate::controllers::two_factor::audit_context(c)?;
+    let (before, account) = c.app()
         .db
-        .write(move |tx| account.update(tx, None, custom_styles.as_ref().map(|styles| styles.as_deref()), None))
+        .write(move |tx| {
+            let before = account.clone();
+            account.update(tx, None, custom_styles.as_ref().map(|styles| styles.as_deref()), None)?;
+            Ok((before, account))
+        })
         .await
         .map_err(Error::internal)?;
+    // Rails update! and all save callbacks return before auditing the changed styles.
+    c.app().db.write(move |tx| crate::account_security::styles_changed(tx, &before, &account, &audit)).await.map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account_custom_styles());
     c.redirect_to_with(&location, Redirect { notice: Some("✓".into()), ..Redirect::default() })
 }

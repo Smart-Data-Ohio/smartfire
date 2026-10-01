@@ -5,6 +5,7 @@
 
 pub mod guard;
 pub mod http;
+pub mod redirect;
 
 use std::future::Future;
 use std::io;

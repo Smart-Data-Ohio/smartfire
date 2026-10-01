@@ -2,10 +2,25 @@
 //! join code, and a user's page.
 
 pub mod avatars;
+pub mod cards;
 pub mod bans;
+pub mod dnd_allowances;
+pub mod notification_settings;
+pub mod statuses;
 pub mod profiles;
+pub mod presences;
 pub mod push_subscriptions;
 pub mod sidebars;
+pub mod time_zones;
+pub mod tours;
+
+#[cfg(test)]
+mod preferences_tests;
+#[cfg(test)]
+pub(crate) mod people_tests;
+#[cfg(test)]
+mod profile_settings_tests;
+pub mod sessions;
 
 use askama::Template;
 use campfire_db::{Account, NewUser, User};
@@ -17,6 +32,15 @@ use super::presenters::{self, view_context};
 use crate::app::AppCtx;
 use crate::controllers::presenters::page::framed_page;
 use crate::concerns::{self, Before, cast_integer};
+
+pub async fn index(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default()).await?;
+    let viewer = concerns::require_current_user(c)?.id;
+    let now = campfire_db::Timestamp::from_jiff(c.now());
+    let people = c.app().db.read(move |conn| campfire_db::models::user::presentation::directory(conn,viewer,now)).await.map_err(Error::internal)?;
+    let people = people.into_iter().map(|person| presenters::people::person(&c.app().secrets,person)).collect::<Vec<_>>();
+    framed_page!(c,StatusCode::OK,|ctx| users::Directory { ctx,people:people.clone() }).await
+}
 
 /// `require_unauthenticated_access only: %i[ new create ]`, `before_action :verify_join_code`
 pub async fn new(c: &mut Ctx) -> Result {
@@ -48,13 +72,12 @@ pub async fn create(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let user = User::create(tx, attributes)?;
-            let pending = attachments::assign(tx, Record::user(user.id), "avatar", avatar)?;
-            Ok((user, pending))
+            attachments::assign(tx, Record::user(user.id), "avatar", avatar)?;
+            Ok(user)
         })
         .await;
     match result {
-        Ok((user, pending)) => {
-            attachments::analyze_later(c.app(), pending);
+        Ok(user) => {
             concerns::start_new_session_for(c, user).await?;
             let root = c.url_for(&campfire_routes::root());
             c.redirect_to(&root)
@@ -78,21 +101,50 @@ pub async fn show(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
+    let id = user.id;
+    let viewer_id = concerns::require_current_user(c)?.id;
+    let now = c.app().db.env().now();
+    let status_secrets = secrets.clone();
+    let profile_status = c
+        .app()
+        .db
+        .read(move |conn| {
+            presenters::status_settings::profile_status(conn, &status_secrets, id, viewer_id, now)
+        })
+        .await
+        .map_err(Error::internal)?;
+    let viewer = concerns::require_current_user(c)?.clone();
+    let target = user.clone();
+    let (agent_profile, can_manage_bot) = c.app().db.read(move |conn| presenters::agent_profile::load(conn, &target, &viewer, now)).await.map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     view_context::page_or_frame(
         c,
         StatusCode::OK,
-        |ctx| show_page(ctx, &user, &transfer_id).render(),
+        |ctx| show_page(ctx, &user, &transfer_id, &profile_status, &agent_profile, can_manage_bot).render(),
         |ctx| {
-            let page = show_page(ctx, &user, &transfer_id);
+            let page = show_page(ctx, &user, &transfer_id, &profile_status, &agent_profile, can_manage_bot);
             campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
         },
     )
     .await
 }
 
-fn show_page<'a>(ctx: &'a campfire_views::ViewContext<'a>, user: &users::UserSummary, transfer_id: &str) -> users::Show<'a> {
-    users::Show { ctx, user: user.clone(), transfer_id: transfer_id.to_string() }
+fn show_page<'a>(
+    ctx: &'a campfire_views::ViewContext<'a>,
+    user: &users::UserSummary,
+    transfer_id: &str,
+    status: &users::statuses::ProfileStatus,
+    agent_profile: &Option<users::AgentProfile>,
+    can_manage_bot: bool,
+) -> users::Show<'a> {
+    users::Show {
+        ctx,
+        user: user.clone(),
+        transfer_id: transfer_id.to_string(),
+        profile_status: Some(status.clone()),
+        agent_profile: agent_profile.clone(),
+        can_manage_bot,
+    }
 }
 
 /// `User.find(params[key])`: 404 when there's no such user.
@@ -121,3 +173,33 @@ async fn verify_join_code(c: &mut Ctx) -> Result<Account> {
 fn user_params(c: &Ctx) -> Result<ParamMap> {
     Ok(c.params.require("user")?.permit(&permit_keys(&["name", "avatar", "email_address", "password"])))
 }
+
+#[cfg(test)]
+mod profile_page_tests;
+
+#[cfg(test)]
+mod joining_tests;
+
+#[cfg(test)]
+mod profile_sections_tests;
+
+#[cfg(test)]
+mod status_popup_tests;
+
+#[cfg(test)]
+mod profile_security_tests;
+
+#[cfg(test)]
+mod ban_lifecycle_tests;
+
+#[cfg(test)]
+mod layout_preferences_tests;
+
+#[cfg(test)]
+mod profile_effective_ooo_tests;
+
+#[cfg(test)]
+mod agent_profile_tests;
+
+#[cfg(test)]
+mod fizzy_profile_tests;

@@ -1,45 +1,29 @@
-{#- reference/app/views/messages/edit.html.erb -#}
+{#- app/views/messages/edit.html.erb -#}
 {%- let message = &edit.message -%}
+{%- let form = h::form_with(message.path()).model("message").method("patch").class("message-edit") -%}
 <turbo-frame id="{{ message.dom_id("edit") }}">
-  <div class="message__body position-relative" data-controller="scroll-into-view">
-    <div class="message__body-content message__body-content--editing gap">
-      {%- if let Some(attachment) = message.attachment() %}
-        {{ crate::messages::presentation::attachment_presentation(ctx, attachment)|safe }}
-
-        <div class="message__edit-btns flex align-center justify-space-between gap full-width pad-block-start-half">
-          <button name="button" type="submit" class="btn btn--negative center margin-block-end" form="{{ message.dom_id("delete_form") }}" data-turbo-confirm="Are you sure you want to delete this message?">
-            <img aria-hidden="true" src="{{ ctx.asset("trash.svg") }}" />
-            <span class="for-screen-reader">Delete message</span>
-</button>        </div>
-      {%- else %}
-        <div class="composer--edit composer--rich-text">
-          <form id="{{ message.dom_id("form") }}" data-controller="form" data-action="lexxy:file-accept-&gt;form#preventAttachment keydown.esc-&gt;form#cancel keydown.ctrl+enter-&gt;form#submit:prevent keydown.meta+enter-&gt;form#submit:prevent" action="{{ message.path() }}" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="patch" />{{ crate::helpers::token_tag(&message.path().to_string(), "patch") }}
-            <div class="full-width input input--actor min-width fill-white">
-              <lexxy-editor rows="1" class="input lexxy-content" aria-multiline="true" aria-label="Edit message" autofocus="autofocus" permitted-attachment-types="application/vnd.campfire.mention application/vnd.actiontext.opengraph-embed" data-action="lexxy:change-&gt;typing-notifications#start keydown-&gt;composer#submitByKeyboard:capture" data-direct-upload-url="{{ ctx.url("/rails/active_storage/direct_uploads") }}" data-blob-url-template="{{ ctx.url("/rails/active_storage/blobs/redirect/:signed_id/:filename") }}" id="message_body" input="message_body_trix_input_{{ message.dom_id("") }}" name="message[body]" value="{{ edit.editable_body_html }}">
-                <lexxy-prompt trigger="@" name="mention" src="{{ crate::rooms::mention_prompt_src(*message.room_id) }}" remote-filtering="true" empty-results="No matches"></lexxy-prompt>
-</lexxy-editor>            </div>
-
-            <a data-form-target="cancel" hidden="hidden" href="{{ message.path() }}">Close editor and discard changes</a>
-
-            <div class="message__edit-btns flex align-center justify-space-between gap full-width pad-block-start-half">
-              <button name="button" type="submit" class="btn btn--reversed">
-                <img aria-hidden="true" src="{{ ctx.asset("check.svg") }}" />
-                <span class="for-screen-reader">Save changes</span>
-</button>
-              <button name="button" type="submit" class="btn btn--negative" form="{{ message.dom_id("delete_form") }}" data-turbo-confirm="Are you sure you want to delete this message?">
-                <img aria-hidden="true" src="{{ ctx.asset("trash.svg") }}" />
-                <span class="for-screen-reader">Delete message</span>
-</button>            </div>
-</form>        </div>
-      {%- endif %}
+  {% filter form_with(form) %}
+    <div class="message-edit__field">
+      {{ form.label("markdown_source", "Message", h::attrs()) }}
+      {{ form.text_area("markdown_source", Some(edit.editable_body_html.as_str()), h::attrs().attr("rows", 5).attr("maxlength", 50000).class("message-edit__textarea input")) }}
     </div>
 
-    <div class="message__actions flex flex-wrap">
-      <a class="message__action-btn message__edit-close-btn txt-small btn btn--borderless" href="{{ message.path() }}">
-        <img class="colorize--black" aria-hidden="true" src="{{ ctx.asset("remove.svg") }}" />
-        <span class="for-screen-reader">Close editor and discard changes</span>
-</a>    </div>
+    <div class="message-edit__field">
+      <span class="message-edit__label" id="{{ message.dom_id("drive_attachments_label") }}">Drive attachments</span>
+      <div class="drive-attachment-chips" role="group" aria-labelledby="{{ message.dom_id("drive_attachments_label") }}">
+{% for url in message.details.drive_urls %}          <span class="drive-attachment-chip" data-controller="element-removal">
+            {{ h::hidden_field_tag("message[drive_file_ids][]", Some(edit.drive_file_id(url)), h::attrs()) }}
+            <span class="drive-attachment-chip__icon" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/></svg></span>
+            <span class="drive-attachment-chip__name">Google Drive file</span>
+            {{ h::link_to_text("Open in Drive", url, h::attrs().class("drive-attachment-chip__open").attr("target", "_blank").attr("rel", "noopener")) }}
+            <button type="button" class="drive-attachment-chip__remove" aria-label="Remove Google Drive file"
+                    data-action="element-removal#remove">×</button>
+          </span>
+{% endfor %}        {{ h::hidden_field_tag("message[drive_file_ids][]", Some(""), h::attrs()) }}
+      </div>
+    </div>
 
-    <form id="{{ message.dom_id("delete_form") }}" data-turbo-frame="{{ message.dom_id("edit") }}" action="{{ message.path() }}" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="delete" />{{ crate::helpers::token_tag(&message.path().to_string(), "delete") }}{#- form_with without a block leaves the form open; the parser closes it at </div> #}
-  </div>
-</turbo-frame>
+    <div class="message-edit__actions">
+      <input type="submit" name="commit" value="Save changes" class="btn btn--reversed" data-disable-with="Save changes" />
+    </div>
+{% endfilter %}</turbo-frame>{{ "\n" }}

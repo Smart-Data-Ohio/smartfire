@@ -201,10 +201,69 @@ async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
         .map_err(Error::internal)
 }
 
-/// What `blob.analyze` would save, worked out off the writer.
-pub async fn analyzed_metadata(app: &App, blob: &Blob) -> Result<Json> {
-    let (storage, blob) = (app.storage.clone(), blob.clone());
-    process_media(move || storage.analyzed_metadata(&blob)).await
+/// Analyze an attached blob off the writer, then update metadata and touch its records.
+/// Re-delivery after success (or deletion) has no side effects.
+pub async fn analyze(app: &App, blob_id: i64) -> anyhow::Result<Option<Blob>> {
+    let blob = app
+        .db
+        .read(move |conn| Blob::find(conn, blob_id).map_err(storage_db_error))
+        .await?;
+    let Some(blob) = blob else { return Ok(None) };
+    if blob.is_analyzed() {
+        return Ok(Some(blob));
+    }
+    let storage = app.storage.clone();
+    let mut source = blob.clone();
+    source.metadata = Json::object();
+    let metadata = process_media_work(move || storage.analyzed_metadata(&source)).await?;
+    app.db
+        .write(move |tx| {
+            // Another delivery or synchronous message processing may have finished meanwhile.
+            let Some(mut blob) = Blob::find(tx.conn(), blob_id).map_err(storage_db_error)? else {
+                return Ok(None);
+            };
+            if blob.is_analyzed() {
+                return Ok(Some(blob));
+            }
+            blob.metadata.merge(&metadata);
+            blob.update_metadata(tx.conn(), blob.metadata.clone())
+                .map_err(storage_db_error)?;
+            touch_attachment_records(tx, blob.id)?;
+            Ok(Some(blob))
+        })
+        .await
+        .map_err(Into::into)
+}
+
+/// Active Storage's blob-save callback touches every attached record; messages touch rooms too.
+pub(crate) fn touch_attachment_records(
+    tx: &mut campfire_db::Tx<'_>,
+    blob_id: i64,
+) -> campfire_db::Result<()> {
+    for (record_type, record_id) in
+        campfire_storage::blob::attachment_records(tx.conn(), blob_id).map_err(storage_db_error)?
+    {
+        match record_type.as_str() {
+            "Message" => campfire_db::Message::find(tx.conn(), record_id)?.touch(tx)?,
+            "User" | "Account" | "WorkspaceIcon" => {
+                let table = match record_type.as_str() {
+                    "User" => "users",
+                    "Account" => "accounts",
+                    _ => "workspace_icons",
+                };
+                tx.conn().execute_cached(
+                    &format!("UPDATE {table} SET updated_at = ?1 WHERE id = ?2"),
+                    rusqlite::params![tx.now().to_string(), record_id],
+                )?;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn storage_db_error(error: campfire_storage::Error) -> campfire_db::Error {
+    campfire_db::Error::Other(error.to_string())
 }
 
 /// Uploads a file to storage for a blob whose row the caller saves next (see [`keep_after_commit`]).
@@ -228,19 +287,31 @@ pub fn keep_after_commit(tx: &mut campfire_db::Tx<'_>, staged: Staged) {
 /// Runs libvips, ffmpeg or ffprobe work on the blocking pool, a few jobs at a time: each can take
 /// a lot of memory and CPU (libvips threads its own work), and uploads shouldn't queue behind
 /// more of them than the machine can run at once.
-async fn process_media<T: Send + 'static>(work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static) -> Result<T> {
-    static PERMITS: LazyLock<Arc<Semaphore>> =
-        LazyLock::new(|| Arc::new(Semaphore::new(std::thread::available_parallelism().map_or(2, |n| n.get()).clamp(1, MAX_MEDIA_JOBS))));
+async fn process_media<T: Send + 'static>(
+    work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static,
+) -> Result<T> {
+    process_media_work(work).await.map_err(Error::internal)
+}
+
+async fn process_media_work<T: Send + 'static>(
+    work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static,
+) -> anyhow::Result<T> {
+    static PERMITS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| {
+        Arc::new(Semaphore::new(
+            std::thread::available_parallelism()
+                .map_or(2, |n| n.get())
+                .clamp(1, MAX_MEDIA_JOBS),
+        ))
+    });
     // The permit goes with the work: a request that gives up (a timeout, a closed connection)
     // doesn't stop the blocking task, so it mustn't free the slot either.
-    let permit = PERMITS.clone().acquire_owned().await.map_err(Error::internal)?;
+    let permit = PERMITS.clone().acquire_owned().await?;
     tokio::task::spawn_blocking(move || {
         let _permit = permit;
         work()
     })
-    .await
-    .map_err(Error::internal)?
-    .map_err(Error::internal)
+    .await?
+    .map_err(Into::into)
 }
 
 /// `blob.url(disposition:)` on the disk service: a signed `/rails/active_storage/disk/...` URL
@@ -563,12 +634,22 @@ fn json_time(db_time: &str) -> String {
     }
 }
 
-/// `ActiveStorageAuthentication#require_active_storage_authentication`: 401 without a session.
+/// `ActiveStorageAuthentication`: human sessions must have completed the second factor. These
+/// framework controllers do not restore a session or run application enrollment/idle callbacks.
 async fn require_active_storage_authentication(c: &mut Ctx) -> Result<()> {
-    if find_session_by_cookie(c).await?.is_none() {
-        return halt(head(StatusCode::UNAUTHORIZED));
+    if let Some(session) = find_session_by_cookie(c).await? {
+        if session.two_factor_verified() {
+            return Ok(());
+        }
+        let user_id = session.user_id;
+        let allowed = c.app().db.read(move |conn| {
+            Ok(campfire_db::User::find(conn, user_id)?.requires_two_factor())
+        }).await.map_err(Error::internal)?;
+        if !allowed {
+            return Ok(());
+        }
     }
-    Ok(())
+    halt(head(StatusCode::UNAUTHORIZED))
 }
 
 // --- Purging ---------------------------------------------------------------------------------------

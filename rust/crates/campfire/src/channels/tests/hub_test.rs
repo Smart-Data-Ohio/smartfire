@@ -16,6 +16,18 @@ use crate::controllers::presenters::test_support::{
 const DISCONNECT_RECONNECT: &str = r#"{"type":"disconnect","reason":"remote","reconnect":true}"#;
 const UNAUTHORIZED: &str = r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#;
 
+#[path = "directory_test.rs"]
+mod directory;
+
+#[path = "reads_test.rs"]
+mod reads;
+
+#[path = "join_test.rs"]
+mod join;
+
+#[path = "channel_audits_test.rs"]
+mod channel_audits;
+
 struct Hub {
     app: TestApp,
     url: String,
@@ -26,7 +38,11 @@ struct Hub {
 /// created by Rails before two-step sign-in existed; it's marked verified here so the cable
 /// accepts it.
 async fn boot() -> Option<Hub> {
-    let app = TestApp::boot().await?;
+    boot_with_test_clock(crate::controllers::presenters::test_support::seed_clock()).await
+}
+
+async fn boot_with_test_clock(clock: campfire_kit::SharedClock) -> Option<Hub> {
+    let app = TestApp::boot_with_test_clock(clock).await?;
     app.db()
         .write(|tx| {
             tx.conn().execute(
@@ -47,6 +63,8 @@ async fn boot() -> Option<Hub> {
         origin: format!("http://{addr}"),
     })
 }
+
+mod message_parity;
 
 impl Hub {
     async fn connect(&self, cookie: &str) -> Client {
@@ -268,7 +286,7 @@ async fn quote_text_post_delivers_to_socket() {
         reply.text().contains("nonce=\"example\""),
         "the quoted text survives rendering"
     );
-    let frame = tokio::time::timeout(std::time::Duration::from_secs(1), client.next_text())
+    let frame = tokio::time::timeout(crate::test_support::WAIT, client.next_text())
         .await
         .expect("POST succeeded but room subscribers received no message");
     let frame: serde_json::Value = serde_json::from_str(&frame).unwrap();
@@ -379,8 +397,12 @@ async fn unresolved_token_slots_never_reach_a_socket() {
 /// to the real message, presentation, boost, shared-room and direct-room templates.
 #[tokio::test]
 async fn http_broadcasts_supply_real_nonempty_partials() {
-    use crate::controllers::presenters::test_support::{ALL_TALK, DIRECT_DAVID_JASON};
+    use crate::controllers::presenters::test_support::ALL_TALK;
     let hub = boot().await.expect("seed required");
+    // Rails broadcasts creation only for a new DM, so use a genuinely new member set.
+    let peer = hub.app.db().write(|tx| Ok(User::create(tx, campfire_db::NewUser {
+        name: "Broadcast Peer".into(), email_address: Some("broadcast-peer@example.test".into()), ..Default::default()
+    })?.id)).await.unwrap();
     let mut client = hub.david().await;
     let rooms = hub.turbo(&["rooms"]);
     client.confirm(&rooms).await;
@@ -404,7 +426,7 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
         ),
         (
             "/rooms/directs",
-            vec![("user_ids[]", "149087659".to_string())],
+            vec![("user_ids[]", peer.to_string())],
             "direct_rooms",
         ),
     ] {
@@ -419,12 +441,14 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
         let html = broadcast_html(&mut client).await;
         assert!(html.contains(&format!(r#"target="{target}""#)), "{html}");
         if target == "direct_rooms" {
-            assert!(
-                html.contains(&format!(r#"id="list_rooms_direct_{DIRECT_DAVID_JASON}""#)),
-                "{html}"
-            );
+            let id = response.location().unwrap().rsplit('/').next().unwrap();
+            assert!(html.contains(&format!(r#"id="list_rooms_direct_{id}""#)), "{html}");
         }
     }
+
+    let reused = browser.write(Req::new(Method::POST, "/rooms/directs").form(&[("user_ids[]", &peer.to_string())])).await;
+    assert_eq!(reused.status, 302);
+    client.assert_silent().await;
 
     // The shared visibility row is supplied as well, despite its inherited HTML still
     // lacking the fork's membership/unread locals (explicitly partial in the contract).
@@ -494,6 +518,15 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
             .await
             .contains("Real presentation partial")
     );
+    let message = hub.app.db().read(move |conn| campfire_db::Message::find(conn,id)).await.unwrap();
+    for part in ["meta", "github_pr_cards", "twitter_cards", "message_link_cards", "fizzy_cards", "linkedin_cards", "link_embed_cards"] {
+        let html = broadcast_html(&mut client).await;
+        let target = crate::channels::broadcasts::message_dom_id(&message,Some(part));
+        assert!(html.contains(&format!(r#"target="{target}""#)),"{html}");
+        assert!(html.contains(r#"action="replace""#));
+        assert!(html.contains(r#"maintain_scroll="true""#));
+    }
+    client.assert_silent().await;
     let response = browser
         .write(
             Req::new(Method::POST, &format!("/messages/{id}/boosts"))

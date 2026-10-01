@@ -1,0 +1,846 @@
+[
+  {
+    "name": "default",
+    "linked": true,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "notice": "Subscribed to rails/rails."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "explicit",
+    "linked": true,
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": " Rails / Rails ",
+        "events": [
+          "opened",
+          "merged",
+          "",
+          "merged"
+        ]
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "notice": "Subscribed to rails/rails."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "open",
+    "linked": true,
+    "kind": "Rooms::Open",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/opens/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "notice": "Subscribed to rails/rails."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "creator",
+    "linked": true,
+    "role": 0,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "notice": "Subscribed to rails/rails."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "duplicate",
+    "linked": true,
+    "preset": [
+      "rails/rails"
+    ],
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "alert": "Could not subscribe: Owner has already been taken."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "malformed",
+    "linked": true,
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "not-a-repo"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "alert": "Could not subscribe: Repo can't be blank and Repo is invalid."
+    },
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "unknown_events",
+    "linked": true,
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "rails/rails",
+        "events": [
+          "evil"
+        ]
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "alert": "Could not subscribe: Events must be a subset of opened, merged, closed, review_requested, review_submitted, and checks_failed."
+    },
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "empty_events_default",
+    "linked": true,
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "rails/rails",
+        "events": [
+          ""
+        ]
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "notice": "Subscribed to rails/rails."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "update",
+    "linked": true,
+    "preset": [
+      "rails/rails"
+    ],
+    "method": "PATCH",
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "events": [
+          "merged",
+          ""
+        ]
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "notice": "Subscription to rails/rails updated."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "merged"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "update_empty",
+    "preset": [
+      "rails/rails"
+    ],
+    "method": "PATCH",
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "events": [
+          ""
+        ]
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "alert": "Could not update: Events must include at least one event."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "update_nil",
+    "preset": [
+      "rails/rails"
+    ],
+    "method": "PATCH",
+    "body": null,
+    "request_body": {
+      "github_repository_subscription": {}
+    },
+    "status": 400,
+    "location": null,
+    "content_type": "text/html; charset=UTF-8",
+    "flash": {},
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "destroy_last",
+    "preset": [
+      "rails/rails"
+    ],
+    "method": "DELETE",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "notice": "Unsubscribed from rails/rails."
+    },
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "destroy_one",
+    "preset": [
+      "rails/rails",
+      "rails/propshaft"
+    ],
+    "method": "DELETE",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "notice": "Unsubscribed from rails/rails."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "propshaft",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "denied",
+    "linked": true,
+    "access": 404,
+    "role": 0,
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "rails/rails",
+        "skip_access_check": "1"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "alert": "Could not subscribe: your linked GitHub account could not confirm it can read rails/rails."
+    },
+    "rows": [],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "unlinked",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "alert": "Could not subscribe: link your GitHub account on your profile so it can confirm you can read rails/rails. Administrators may subscribe without verifying access."
+    },
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "disconnected",
+    "linked": true,
+    "initially_disconnected": true,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "alert": "Could not subscribe: link your GitHub account on your profile so it can confirm you can read rails/rails. Administrators may subscribe without verifying access."
+    },
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": "Disconnected"
+  },
+  {
+    "name": "override_denied",
+    "linked": true,
+    "access": 404,
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "rails/rails",
+        "skip_access_check": "1"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "notice": "Subscribed to rails/rails."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": false
+      }
+    ],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "override_unlinked",
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "rails/rails",
+        "skip_access_check": "1"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "notice": "Subscribed to rails/rails."
+    },
+    "rows": [
+      {
+        "room_id": 815,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": false
+      }
+    ],
+    "requests": [],
+    "bot_member": true,
+    "disconnected": null
+  },
+  {
+    "name": "override_not_string",
+    "body": "",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "rails/rails",
+        "skip_access_check": 1
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "flash": {
+      "alert": "Could not subscribe: link your GitHub account on your profile so it can confirm you can read rails/rails. Administrators may subscribe without verifying access."
+    },
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "unauthorized",
+    "linked": true,
+    "access": 401,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "alert": "Could not subscribe: link your GitHub account on your profile so it can confirm you can read rails/rails. Administrators may subscribe without verifying access."
+    },
+    "rows": [],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": false,
+    "disconnected": "GitHub rejected the linked token (401)"
+  },
+  {
+    "name": "transport",
+    "linked": true,
+    "access": 500,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 302,
+    "location": "http://example.org/rooms/closeds/815/edit",
+    "content_type": "text/html; charset=utf-8",
+    "body": "",
+    "flash": {
+      "alert": "Could not subscribe: your linked GitHub account could not confirm it can read rails/rails. Administrators may subscribe without verifying access."
+    },
+    "rows": [],
+    "requests": [
+      [
+        "rails",
+        "rails",
+        "fixture-viewer-token"
+      ]
+    ],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "plain",
+    "role": 0,
+    "room_creator": 812,
+    "linked": true,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 403,
+    "location": null,
+    "content_type": "text/html",
+    "body": null,
+    "flash": {},
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "nonmember",
+    "member": false,
+    "linked": true,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 404,
+    "location": null,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "flash": {},
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "direct",
+    "kind": "Rooms::Direct",
+    "linked": true,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 404,
+    "location": null,
+    "content_type": "text/html",
+    "body": null,
+    "flash": {},
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "deleted",
+    "deleted": true,
+    "linked": true,
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 404,
+    "location": null,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "flash": {},
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "cross_room_update",
+    "preset": [
+      "rails/rails"
+    ],
+    "preset_room": 825,
+    "method": "PATCH",
+    "body": null,
+    "request_body": {
+      "github_repository_subscription": {
+        "events": [
+          "merged"
+        ]
+      }
+    },
+    "status": 404,
+    "location": null,
+    "content_type": "text/html; charset=UTF-8",
+    "flash": {},
+    "rows": [
+      {
+        "room_id": 825,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "cross_room_destroy",
+    "preset": [
+      "rails/rails"
+    ],
+    "preset_room": 825,
+    "method": "DELETE",
+    "request_body": {
+      "github_repository_subscription": {
+        "full_name": "Rails/Rails"
+      }
+    },
+    "status": 404,
+    "location": null,
+    "content_type": "text/html; charset=UTF-8",
+    "body": null,
+    "flash": {},
+    "rows": [
+      {
+        "room_id": 825,
+        "owner": "rails",
+        "repo": "rails",
+        "events": [
+          "opened",
+          "merged",
+          "review_requested",
+          "checks_failed"
+        ],
+        "created_by_id": 811,
+        "reader_verified": true
+      }
+    ],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  },
+  {
+    "name": "missing_params",
+    "linked": true,
+    "body": null,
+    "request_body": {},
+    "status": 400,
+    "location": null,
+    "content_type": "text/html; charset=UTF-8",
+    "flash": {},
+    "rows": [],
+    "requests": [],
+    "bot_member": false,
+    "disconnected": null
+  }
+]

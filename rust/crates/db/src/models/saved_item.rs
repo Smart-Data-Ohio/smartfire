@@ -225,6 +225,11 @@ impl SavedItem {
         Ok(())
     }
 
+    /// WS8bm2 reminder job checks membership before evaluating recipient policy.
+    pub fn reminder_room_member(&self, conn: &Connection) -> Result<bool> {
+        Self::room_member(conn, self.message_id, self.user_id)
+    }
+
     fn room_member(conn: &Connection, message_id: i64, user_id: i64) -> Result<bool> {
         sql::exists(
             conn,
@@ -312,10 +317,20 @@ impl SavedItem {
         let text = crate::models::channel_thread::truncate(&message.plain_text_body(conn, rich_text)?, 140, "...");
         Ok(Some(ReminderPush {
             user_id: item.user_id,
-            payload: PushPayload::fitted(title, format!("Reminder: {text}"), message_path(&message)),
+            payload: PushPayload::new(title, format!("Reminder: {text}"), message_path(&message), Some(format!("saved-{}", item.id))),
             tag: format!("saved-{}", item.id),
             subscriptions: PushSubscription::for_user(conn, item.user_id)?,
         }))
+    }
+
+    pub fn reminder_push_with_policy(conn: &Connection, rich_text: &dyn RichText, id: i64, now: Timestamp) -> Result<Option<ReminderPush>> {
+        let Some(item) = Self::find_by_id(conn, id)? else { return Ok(None) };
+        let users = crate::UserStatusSettings::for_ids(conn, &[item.user_id])?;
+        Self::reminder_push(conn, rich_text, id, &|user| crate::NotificationPolicy {
+            recipient: users.get(&user.id), kind: crate::NotificationKind::Reminder,
+            room_involvement: None, thread_involvement: None, mentioned: false, reply_to_recipient: false,
+            keyword_matched: false, dnd_exception: false, now,
+        }.push())
     }
 }
 

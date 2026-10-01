@@ -66,6 +66,31 @@ pub async fn serve_with_ready(
     ready: impl FnOnce() + Send,
     shutdown: impl Future<Output = ()> + Send + 'static,
 ) -> std::io::Result<()> {
+    serve_with_ready_inner(config, app, acme, None, ready, shutdown).await
+}
+
+/// Test support: retain the reserved `(HTTP, target)` listeners through startup while running
+/// the same front/target handlers. A configured HTTPS listener still binds HTTPS_PORT.
+#[cfg(feature = "test-support")]
+pub async fn serve_with_bound_listeners(
+    config: FrontConfig,
+    app: Router,
+    acme: Option<AcmeOptions>,
+    listeners: (tokio::net::TcpListener, tokio::net::TcpListener),
+    ready: impl FnOnce() + Send,
+    shutdown: impl Future<Output = ()> + Send + 'static,
+) -> std::io::Result<()> {
+    serve_with_ready_inner(config, app, acme, Some(listeners), ready, shutdown).await
+}
+
+async fn serve_with_ready_inner(
+    config: FrontConfig,
+    app: Router,
+    acme: Option<AcmeOptions>,
+    listeners: Option<(tokio::net::TcpListener, tokio::net::TcpListener)>,
+    ready: impl FnOnce() + Send,
+    shutdown: impl Future<Output = ()> + Send + 'static,
+) -> std::io::Result<()> {
     let shutdown_state = Shutdown::when(shutdown);
 
     let options = Options {
@@ -80,8 +105,15 @@ pub async fn serve_with_ready(
         Box::pin(async move { handler.call(request, conn).await })
     });
 
-    let upstream = serve_upstream(&config, app, options, shutdown_state.clone()).await?;
-    let http = bind(config.http_port).await?;
+    let (http, target) = match listeners {
+        Some((http, target)) => (Some(http), Some(target)),
+        None => (None, None),
+    };
+    let upstream = serve_upstream(&config, app, options, shutdown_state.clone(), target).await?;
+    let http = match http {
+        Some(listener) => listener,
+        None => bind(config.http_port).await?,
+    };
     let mut servers = vec![upstream];
     if config.has_tls() {
         let acme = acme.unwrap_or_else(|| AcmeOptions::from_config(&config));
@@ -113,12 +145,21 @@ pub async fn serve_with_ready(
 /// TARGET_PORT for it): HTTP/1.1, no `Date`, no cache or compression. Unlike Puma it listens on
 /// TARGET_BIND (loopback) and keeps to the front's timeouts and body limit, since whoever reaches
 /// it can claim any `X-Forwarded-*`.
-async fn serve_upstream(config: &FrontConfig, app: Router, options: Options, shutdown: Shutdown) -> std::io::Result<tokio::task::JoinHandle<()>> {
+async fn serve_upstream(
+    config: &FrontConfig,
+    app: Router,
+    options: Options,
+    shutdown: Shutdown,
+    listener: Option<tokio::net::TcpListener>,
+) -> std::io::Result<tokio::task::JoinHandle<()>> {
     if config.target_port == config.http_port || (config.has_tls() && config.target_port == config.https_port) {
         tracing::warn!(port = config.target_port, "TARGET_PORT is the front server's port; not listening on it separately");
         return Ok(tokio::spawn(async {}));
     }
-    let listener = tokio::net::TcpListener::bind((config.target_bind, config.target_port)).await?;
+    let listener = match listener {
+        Some(listener) => listener,
+        None => tokio::net::TcpListener::bind((config.target_bind, config.target_port)).await?,
+    };
     let service = limited_app_service(app, config.max_request_body.max(0) as u64);
     Ok(tokio::spawn(serve_plain(listener, service, Protocol::Http1, Options { date: false, ..options }, shutdown)))
 }

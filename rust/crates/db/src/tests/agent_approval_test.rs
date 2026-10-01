@@ -254,11 +254,12 @@ fn ws11_approval_validation_defaults_boundaries_and_uniqueness_match_rails() {
 #[test]
 fn ws11_approval_decision_expiry_cancellation_and_inbox_match_rails() {
     let t = setup();
-    t.write(|tx| {
-        let v=gold();let flow=&v["flows"];
-        let owner=User::find(tx.conn(),id("kevin"))?;let admin=User::find(tx.conn(),id("david"))?;
-        AgentApproval::create(tx,NewApproval {external_id:Some("repeat".into()),..base()})?;
-        let mut approval=AgentApproval::create(tx,NewApproval {room_id:Some(id("watercooler")),payload:Some("{\"key\":\"<>&\"}".into()),external_id:Some("stable".into()),..base()})?;
+    t.write(|tx|AgentApproval::create(tx,NewApproval {external_id:Some("repeat".into()),..base()}));
+    let mut approval=t.write(|tx|AgentApproval::create(tx,NewApproval {room_id:Some(id("watercooler")),payload:Some("{\"key\":\"<>&\"}".into()),external_id:Some("stable".into()),..base()}));
+    t.write(move |tx| {
+        let flow=gold()["flows"].clone();
+        let owner=User::find(tx.conn(),id("kevin"))?;
+        let admin=User::find(tx.conn(),id("david"))?;
         assert_eq!(approval.payload(tx.conn(),tx.now())?,flow["created"]);
         assert_eq!(inbox(tx.conn(),approval.id)?,flow["inbox"]);
         let mut stale=approval.clone();
@@ -269,31 +270,47 @@ fn ws11_approval_decision_expiry_cancellation_and_inbox_match_rails() {
         let events=crate::sql::query_all(tx.conn(),"SELECT agent_approval_id,outcome,webhook_status,metadata FROM agent_events WHERE event_type='approval_decided' ORDER BY id",[],|r|Ok(json!({"agent_approval_id":r.get::<_,Option<i64>>(0)?,"outcome":r.get::<_,Option<String>>(1)?,"webhook_status":r.get::<_,String>(2)?,"metadata":r.get::<_,Value>(3)?})))?;
         assert_eq!(json!(events),flow["events"]);
         assert_eq!(approval.decide(tx,"surprise",&admin,None).unwrap_err().to_string(),flow["unknown"]);
-        let mut expired=AgentApproval::create(tx,base())?;
+        Ok(())
+    });
+    let mut expired=t.write(|tx|AgentApproval::create(tx,base()));
+    t.write(move |tx| {
+        let flow=gold()["flows"].clone();
         tx.conn().execute("UPDATE agent_approvals SET expires_at=? WHERE id=?",params![tx.now(),expired.id])?;
         expired=AgentApproval::find(tx.conn(),expired.id)?.unwrap();
         assert_eq!(json!({"status":expired.status,"effective":expired.effective_status(tx.now())}),flow["effective"]);
         assert_eq!(errors(expired.cancel_by_agent(tx)?),flow["expired_errors"]);
         assert_eq!(json!({"status":expired.status,"inbox":inbox(tx.conn(),expired.id)?}),flow["expired"]);
-        assert!(!expired.expire_if_due(tx)?);
-        let mut cancelled=AgentApproval::create(tx,base())?;
+        assert!(!expired.expire_if_due(tx)?);Ok(())
+    });
+    let mut cancelled=t.write(|tx|AgentApproval::create(tx,base()));
+    t.write(move |tx| {
+        let flow=gold()["flows"].clone();
         assert_eq!(workflow_errors(cancelled.cancel_by_agent(tx)?),flow["cancel_errors"]);
         assert_eq!(errors(cancelled.cancel_by_agent(tx)?),flow["cancel_again"]);
         let count:i64=tx.conn().query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",[cancelled.id],|r|r.get(0))?;
-        assert_eq!(json!(count),flow["cancel_events"]);
-        let mut note=AgentApproval::create(tx,base())?;
+        assert_eq!(json!(count),flow["cancel_events"]);Ok(())
+    });
+    let mut note=t.write(|tx|AgentApproval::create(tx,base()));
+    t.write(move |tx| {
+        let flow=gold()["flows"].clone();
+        let owner=User::find(tx.conn(),id("kevin"))?;
+        let admin=User::find(tx.conn(),id("david"))?;
         assert_eq!(errors(note.decide(tx,"denied",&admin,Some(&"é".repeat(201)))?),flow["long_note"]);
         assert_eq!(json!(AgentApproval::find(tx.conn(),note.id)?.unwrap().status),flow["long_note_status"]);
-        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?",params![json!({"agent_approvals":"0"}),owner.id])?;
-        let opted=AgentApproval::create(tx,base())?;
-        assert_eq!(inbox(tx.conn(),opted.id)?,flow["opt_out"]);
-        let mut external=AgentApproval::create(tx,NewApproval {action:"github.comment".into(),..base()})?;
+        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?",params![json!({"agent_approvals":"0"}),owner.id])?;Ok(())
+    });
+    let opted=t.write(|tx|AgentApproval::create(tx,base()));
+    t.read(|c| {assert_eq!(inbox(c,opted.id)?,gold()["flows"]["opt_out"]);Ok(())});
+    let mut external=t.write(|tx|AgentApproval::create(tx,NewApproval {action:"github.comment".into(),..base()}));
+    t.write(move |tx| {
+        let flow=gold()["flows"].clone();
+        let owner=User::find(tx.conn(),id("kevin"))?;
+        let admin=User::find(tx.conn(),id("david"))?;
         assert!(external.decide(tx,"approved",&admin,Some("ok"))?.is_empty());
         tx.conn().execute("UPDATE agents SET suspended_at=? WHERE id=?",params![tx.now(),external.agent_id])?;
         assert_eq!(json!(external.decidable_by(tx.conn(),&owner)?),flow["suspended_decidable"]);
         tx.conn().execute("UPDATE users SET status=2 WHERE id=?",[id("bender")])?;
-        assert_eq!(json!(external.decidable_by(tx.conn(),&owner)?),flow["inactive_decidable"]);
-        Ok(())
+        assert_eq!(json!(external.decidable_by(tx.conn(),&owner)?),flow["inactive_decidable"]);Ok(())
     });
     let jobs:Vec<_>=t.events().into_iter().filter_map(|e|match e {
         Event::Job(job) if ["Agent::EventWebhookJob","Github::PerformAgentActionJob"].contains(&job.class)=>Some(json!({"class":job.class,"args":if job.class=="Agent::EventWebhookJob" {json!([job.arguments["event_id"],job.arguments["attempt"]])} else {json!([job.arguments["approval_id"]])}})),_=>None
@@ -332,8 +349,8 @@ fn ws11_approval_authorization_matches_rails_and_external_approval_is_admin_only
 #[test]
 fn ws11_approval_inbox_replay_preserves_read_time_and_overdue_filter() {
     let t = setup();
-    let (first,second)=t.write(|tx| {
-        let first=AgentApproval::create(tx,base())?;let second=AgentApproval::create(tx,base())?;
+    let (first,second)=t.write(|tx| Ok((AgentApproval::create(tx,base())?, AgentApproval::create(tx,base())?)));
+    let (first,second)=t.write(move |tx| {
         let read=tx.now().ago(jiff::SignedDuration::from_mins(5));
         tx.conn().execute("UPDATE activity_items SET read_at=? WHERE source_type='AgentApproval' AND source_id=? AND user_id=?",params![read,first.id,id("kevin")])?;
         first.fan_out_inbox_items(tx)?;

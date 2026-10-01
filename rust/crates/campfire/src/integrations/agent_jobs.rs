@@ -20,8 +20,11 @@ impl JobKind for Delivery {
     }
 }
 #[derive(Serialize, Deserialize)]
-#[serde(transparent)]
-struct EventWebhook(domain::EventWebhookJob);
+#[serde(untagged)]
+enum EventWebhook {
+    Published(domain::EventWebhookJob),
+    Deleted(Box<campfire_db::models::agent_work_events::DeletedWorkWebhookJob>),
+}
 impl campfire_db::Job for EventWebhook {
     const CLASS: &'static str = "Agent::EventWebhookJob";
 }
@@ -40,9 +43,33 @@ async fn deliver(app: App, job: Delivery, _: Execution) -> JobResult {
         .await?;
     Ok(Outcome::Done)
 }
-async fn post(app: App, job: EventWebhook, _: Execution) -> JobResult {
-    post_with_network(&app, job.0, &Network::system()).await?;
+async fn post(app: App, job: EventWebhook, execution: Execution) -> JobResult {
+    post_deferred_with_network(&app, job, execution.id, &Network::system()).await?;
     Ok(Outcome::Done)
+}
+
+async fn post_deferred_with_network(app: &App, job: EventWebhook, job_id: i64, net: &Network) -> anyhow::Result<()> {
+    use rusqlite::OptionalExtension;
+    let job = match job {
+        EventWebhook::Published(job) => Some(job),
+        EventWebhook::Deleted(_) => app.db.write(move |tx| {
+            // A claim may have loaded the intent just before after_commit bound
+            // it. Re-read the row, so deletion of its published event stays a no-op.
+            let current: Option<serde_json::Value> = tx.conn().query_row(
+                "SELECT arguments FROM background_jobs WHERE id=? AND job_class='Agent::EventWebhookJob'",[job_id],|r|r.get(0)).optional()?;
+            let Some(current) = current else {return Ok(None)};
+            let current: EventWebhook=serde_json::from_value(current).map_err(|e|campfire_db::Error::Other(e.to_string()))?;
+            Ok(Some(match current {
+                EventWebhook::Published(job) => job,
+                // Rails never reconstructs an after_destroy_commit side effect
+                // after a process stop or callback failure. The atomic intent
+                // survives, but missing publication makes this job a no-op.
+                EventWebhook::Deleted(_) => return Ok(None),
+            }))
+        }).await?,
+    };
+    if let Some(job)=job { post_with_network(app,job,net).await?; }
+    Ok(())
 }
 
 pub(super) async fn post_with_network(
@@ -68,6 +95,40 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
     let e = e.clone();
     let encryption = app.ar_encryption.clone();
     let db = app.db.clone();
+    let event = e.clone();
+    let threads = match app
+        .db
+        .read(move |conn| {
+            let mut ids = Vec::new();
+            if let Some(message_id) = event.message_id
+                && let Some(message) = Message::find_by_id(conn, message_id)?
+                && let Some(thread_id) = message.thread_id
+            {
+                ids.push(thread_id);
+            }
+            if let Some(thread_id) = event
+                .metadata
+                .get("thread_id")
+                .and_then(serde_json::Value::as_i64)
+            {
+                ids.push(thread_id);
+            }
+            Ok(ids)
+        })
+        .await
+    {
+        Ok(ids) => ids,
+        Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
+    };
+    let access_result = if campfire_db::models::agent_delivery::MESSAGE_TYPES.contains(&e.event_type.as_str()) {
+        app.agent_repositories.resolve_messages(&app.db,id,threads).await
+    } else {
+        app.agent_repositories.resolve_work(&app.db,id,threads).await
+    };
+    let access = match access_result {
+        Ok(access) => access,
+        Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
+    };
     let prepared = app
         .db
         .write(move |tx| {
@@ -82,7 +143,7 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
                 tx.conn(),
                 &*db.env().rich_text,
                 &e,
-                &Default::default(),
+                &access,
             )?;
             let campfire_db::models::agent_payloads::Payload::Ready { body, sync_message } =
                 payload
@@ -286,6 +347,60 @@ mod tests {
             .unwrap()
     }
     #[tokio::test]
+    async fn ws11_repository_webhook_uses_the_live_owner_decision() {
+        struct Readable;
+        impl super::super::agent_repositories::RepositoryReader for Readable {
+            fn readable(
+                &self,
+                request: super::super::agent_repositories::RepositoryRequest,
+            ) -> super::super::net::BoxFuture<'_, campfire_db::Result<bool>> {
+                assert_eq!(request.user_id, DAVID);
+                assert_eq!(
+                    (request.owner.as_str(), request.repo.as_str()),
+                    ("private", "repo")
+                );
+                Box::pin(async { Ok(true) })
+            }
+        }
+        let test = TestApp::boot().await.expect("default seed");
+        let app = &test.booted.app;
+        let event = pending(app).await;
+        let (id, message_id) = (event.agent_id, event.message_id.unwrap());
+        let crypto = app.ar_encryption.clone();
+        app.db.write(move|tx| {
+            tx.conn().execute("UPDATE agents SET owner_id=? WHERE id=?",rusqlite::params![DAVID,id])?;
+            tx.conn().execute("INSERT INTO github_connected_accounts(user_id,github_login,access_token,created_at,updated_at) VALUES (?,'ws11-owner',?,?,?)",rusqlite::params![DAVID,crypto.encrypt("ws11-public-test-token"),tx.now(),tx.now()])?;
+            let thread=campfire_db::ChannelThread::create(tx,campfire_db::NewChannelThread{room_id:ALL_TALK,creator_id:DAVID,name:Some("PR".into()),..Default::default()})?;
+            tx.conn().execute("UPDATE messages SET thread_id=? WHERE id=?",rusqlite::params![thread.id,message_id])?;
+            tx.conn().execute("INSERT INTO github_pull_requests(id,owner,repo,number,title,private,created_at,updated_at) VALUES (900140000,'Private','Repo',1,'Owner-visible title',1,?,?)",rusqlite::params![tx.now(),tx.now()])?;
+            tx.conn().execute("INSERT INTO github_pull_request_threads(github_pull_request_id,room_id,channel_thread_id,created_at,updated_at) VALUES (900140000,?,?,?,?)",rusqlite::params![ALL_TALK,thread.id,tx.now(),tx.now()])?;
+            Ok(())
+        }).await.unwrap();
+        app.agent_repositories.install(Arc::new(Readable));
+        let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 200)]).await;
+        let net = network(
+            Arc::new(FakeResolver::new([("bots.example", vec!["93.184.216.34"])])),
+            Arc::new(MappingDialer {
+                public: HashSet::from(["93.184.216.34".parse().unwrap()]),
+                to: server.addr,
+                dialed: Mutex::new(vec![]),
+            }),
+        );
+        post_with_network(
+            app,
+            domain::EventWebhookJob {
+                event_id: event.id,
+                attempt: Some(0),
+            },
+            &net,
+        )
+        .await
+        .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&server.received()[0].body).unwrap();
+        assert_eq!(body["pull_request"]["title"], "Owner-visible title");
+    }
+
+    #[tokio::test]
     async fn ws11_agent_webhook_http_retries_claims_and_permanent_failures() {
         let test = TestApp::boot().await.expect("default seed");
         let app = &test.booted.app;
@@ -454,7 +569,9 @@ mod tests {
     async fn ws11_approval_queue_failure_rolls_back_decision_ledger_and_inbox() {
         use campfire_db::{AgentApproval, NewApproval};
         let test=TestApp::boot().await.expect("default seed");
-        let db=test.db();
+        let db=test.db().clone();
+        // Inspect durable enqueue before any worker can consume the committed job.
+        test.booted.jobs.shutdown(std::time::Duration::from_secs(1)).await;
         let approval=db.write(|tx| {
             let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
             AgentApproval::create(tx,NewApproval {agent_id,action:"deploy".into(),summary:"Ship".into(),..Default::default()})
@@ -464,24 +581,39 @@ mod tests {
             tx.conn().execute_batch("CREATE TRIGGER ws11_reject_decision_webhook BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' BEGIN SELECT RAISE(ABORT,'WS11 rejected decision webhook'); END;")?;
             Ok(())
         }).await.unwrap();
-        let failed=db.write(move |tx| {
-            let mut approval=AgentApproval::find(tx.conn(),id)?.unwrap();
-            let user=User::find(tx.conn(),DAVID)?;
-            assert!(approval.decide(tx,"approved",&user,None)?.is_empty());
-            Ok(())
-        }).await;
-        assert!(failed.is_err(),"durable queue insertion must be part of settlement");
+        let failed = db
+            .write(move |tx| {
+                let mut approval = AgentApproval::find(tx.conn(), id)?.unwrap();
+                let user = User::find(tx.conn(), DAVID)?;
+                assert!(approval.decide(tx, "approved", &user, None)?.is_empty());
+                Ok(())
+            })
+            .await;
+        assert!(
+            failed.is_err(),
+            "durable queue insertion must be part of settlement"
+        );
         db.read(move |c| {
             assert_eq!(AgentApproval::find(c,id)?.unwrap().status,"pending");
             let events:i64=c.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",[id],|r|r.get(0))?;
             let handled:i64=c.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NOT NULL",[id],|r|r.get(0))?;
             assert_eq!((events,handled),(0,0));Ok(())
         }).await.unwrap();
-        db.write(|tx| {tx.conn().execute_batch("DROP TRIGGER ws11_reject_decision_webhook")?;Ok(())}).await.unwrap();
+        db.write(|tx| {
+            tx.conn()
+                .execute_batch("DROP TRIGGER ws11_reject_decision_webhook")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
         db.write(move |tx| {
-            let mut approval=AgentApproval::find(tx.conn(),id)?.unwrap();let user=User::find(tx.conn(),DAVID)?;
-            assert!(approval.decide(tx,"approved",&user,None)?.is_empty());Ok(())
-        }).await.unwrap();
+            let mut approval = AgentApproval::find(tx.conn(), id)?.unwrap();
+            let user = User::find(tx.conn(), DAVID)?;
+            assert!(approval.decide(tx, "approved", &user, None)?.is_empty());
+            Ok(())
+        })
+        .await
+        .unwrap();
         db.read(move |c| {
             assert_eq!(AgentApproval::find(c,id)?.unwrap().status,"approved");
             let event= c.query_row("SELECT id FROM agent_events WHERE agent_approval_id=?",[id],|r|r.get::<_,i64>(0))?;
@@ -492,8 +624,9 @@ mod tests {
 
     #[tokio::test]
     async fn ws11_slash_queue_failure_rolls_back_the_invocation() {
-        use campfire_db::{AgentSlashCommand,NewAgentSlashCommand};
-        let test=TestApp::boot().await.expect("default seed");let db=test.db();
+        use campfire_db::{AgentSlashCommand, NewAgentSlashCommand};
+        let test = TestApp::boot().await.expect("default seed");
+        let db = test.db();
         db.write(|tx| {
             let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
             tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?",[agent_id])?;
@@ -502,18 +635,69 @@ mod tests {
             tx.conn().execute_batch("CREATE TRIGGER ws11_reject_slash_webhook BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' BEGIN SELECT RAISE(ABORT,'WS11 rejected slash webhook'); END;")?;
             Ok(())
         }).await.unwrap();
-        let failed=db.write(|tx| {
-            let context=campfire_db::slash_commands::Context {user_id:DAVID,room_id:ALL_TALK,thread_id:None,huddles_configured:false};
-            let result=campfire_db::slash_commands::dispatch(tx,&context,"/inspect queue")?;
-            assert_eq!(result.kind,"ephemeral");Ok(())
-        }).await;
-        assert!(failed.is_err(),"invocation and webhook queue insertion must commit together");
+        let failed = db
+            .write(|tx| {
+                let context = campfire_db::slash_commands::Context {
+                    user_id: DAVID,
+                    room_id: ALL_TALK,
+                    thread_id: None,
+                    huddles_configured: false,
+                };
+                let result = campfire_db::slash_commands::dispatch(tx, &context, "/inspect queue")?;
+                assert_eq!(result.kind, "ephemeral");
+                Ok(())
+            })
+            .await;
+        assert!(
+            failed.is_err(),
+            "invocation and webhook queue insertion must commit together"
+        );
         db.read(|c| {
-            let count:i64=c.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='slash_command'",[],|r|r.get(0))?;
-            assert_eq!(count,0);Ok(())
+            let count: i64 = c.query_row(
+                "SELECT COUNT(*) FROM agent_events WHERE event_type='slash_command'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(count, 0);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    }
+    #[tokio::test]
+    async fn ws11_work_delete_queue_failure_rolls_back_thread_and_ledger() {
+        let test = TestApp::boot().await.expect("default seed");
+        let db = test.db();
+        let thread_id=db.write(|tx| {
+            let agent_id:i64=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
+            tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?",[agent_id])?;
+            Room::find(tx.conn(),ALL_TALK)?.grant_to(tx,&[BENDER])?;
+            let thread=campfire_db::ChannelThread::create(tx,campfire_db::NewChannelThread {room_id:ALL_TALK,creator_id:DAVID,name:Some("Delete work".into()),work_status:Some("planned".into()),..Default::default()})?;
+            tx.conn().execute("UPDATE channel_threads SET work_owner_id=? WHERE id=?",rusqlite::params![BENDER,thread.id])?;
+            tx.conn().execute_batch("CREATE TRIGGER ws11_reject_work_webhook BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' BEGIN SELECT RAISE(ABORT,'WS11 rejected work webhook'); END;")?;
+            Ok(thread.id)
+        }).await.unwrap();
+        assert!(
+            db.write(
+                move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                    .destroy_by(tx, Some(DAVID))
+            )
+            .await
+            .is_err()
+        );
+        db.read(move |conn| {
+            assert!(campfire_db::ChannelThread::find_by_id(conn,thread_id)?.is_some());
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",[thread_id],|r|r.get::<_,i64>(0))?,0);
+            Ok(())
         }).await.unwrap();
     }
 }
+
+#[cfg(test)]
+mod publication_tests;
+
+#[cfg(test)]
+mod indicator_tests;
 
 #[cfg(test)]
 #[test]
@@ -573,3 +757,18 @@ async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
 #[cfg(test)]
 #[path = "agent_payload_tests.rs"]
 mod payload_tests;
+
+#[cfg(test)]
+mod case_tests;
+
+#[cfg(test)]
+mod webhook_cases;
+
+#[cfg(test)]
+mod recovery_cases;
+
+#[cfg(test)]
+mod delivery_path_cases;
+
+#[cfg(test)]
+mod webhook_key_cases;

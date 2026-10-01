@@ -60,11 +60,20 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let account = super::current_account(c).await?;
+    let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
-        .write(move |tx| attachments::destroy(tx, Record::account(account.id), "logo"))
+        .write(move |tx| {
+            attachments::destroy(tx, Record::account(account.id), "logo")?;
+            Ok(())
+        })
         .await
         .map_err(Error::internal)?;
+    // Rails destroys the attachment before its separate audit write.
+    c.app().db.write(move |tx| crate::account_security::logo_removed(tx, &account, &audit)).await.map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }
+
+#[cfg(test)]
+mod tests;

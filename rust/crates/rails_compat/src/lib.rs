@@ -21,6 +21,9 @@ pub mod calendar_credentials;
 pub mod verifiers;
 pub mod webhook;
 pub mod jwt;
+pub mod totp;
+pub mod unicode;
+pub mod keyword_regex;
 
 mod encoding;
 mod json;
@@ -28,10 +31,13 @@ mod marshal;
 mod metadata;
 mod ruby;
 mod uri;
+/// The Rails event helper's safe HTTPS rendering boundary.
+pub use uri::safe_https;
 
 pub use key_generator::KeyGenerator;
 pub use message_verifier::MessageVerifier;
 pub use message_encryptor::MessageEncryptor;
+pub use json::encode as json_encode;
 
 /// Everything derived from `secret_key_base`, built once at boot and shared.
 pub struct Secrets {

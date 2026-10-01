@@ -1,0 +1,91 @@
+{
+  "reference": "parity",
+  "now": "2026-03-02T16:00:00Z",
+  "blob_id": 15,
+  "png_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC",
+  "cases": [
+    {
+      "case": "valid",
+      "signed_id": "eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da103799358a",
+      "expected_id": 15,
+      "statuses": {
+        "logo": 302,
+        "icon": 302
+      }
+    },
+    {
+      "case": "before expiry",
+      "signed_id": "eyJfcmFpbHMiOnsiZGF0YSI6MTUsImV4cCI6IjIwMjYtMDMtMDJUMTY6MDE6MDAuMDAwWiIsInB1ciI6ImJsb2JfaWQifX0=--4d0b84fcac8bf626442378410d81ebb6709e0271",
+      "expected_id": 15,
+      "statuses": {
+        "logo": 302,
+        "icon": 302
+      }
+    },
+    {
+      "case": "at expiry",
+      "signed_id": "eyJfcmFpbHMiOnsiZGF0YSI6MTUsImV4cCI6IjIwMjYtMDMtMDJUMTY6MDA6MDAuMDAwWiIsInB1ciI6ImJsb2JfaWQifX0=--8634edfde630e869f0b0cc1d28936c26a6e28220",
+      "expected_id": null,
+      "statuses": {
+        "logo": 500,
+        "icon": 500
+      }
+    },
+    {
+      "case": "expired",
+      "signed_id": "eyJfcmFpbHMiOnsiZGF0YSI6MTUsImV4cCI6IjIwMjYtMDMtMDJUMTU6NTk6NTkuMDAwWiIsInB1ciI6ImJsb2JfaWQifX0=--95a2e4fe4fdc45b55b1ba99d165523745734c25a",
+      "expected_id": null,
+      "statuses": {
+        "logo": 500,
+        "icon": 500
+      }
+    },
+    {
+      "case": "wrong purpose",
+      "signed_id": "eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6InZhcmlhdGlvbiJ9fQ==--de4fc3ef29c3ffae35231d1361f846f166b3a072",
+      "expected_id": null,
+      "statuses": {
+        "logo": 500,
+        "icon": 500
+      }
+    },
+    {
+      "case": "tampered digest",
+      "signed_id": "eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da1037993580",
+      "expected_id": null,
+      "statuses": {
+        "logo": 500,
+        "icon": 500
+      }
+    },
+    {
+      "case": "tampered payload",
+      "signed_id": "AyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da103799358a",
+      "expected_id": null,
+      "statuses": {
+        "logo": 500,
+        "icon": 500
+      }
+    },
+    {
+      "case": "missing blob",
+      "signed_id": "eyJfcmFpbHMiOnsiZGF0YSI6OTAwMDAwMDAwMCwicHVyIjoiYmxvYl9pZCJ9fQ==--368bb6764388a69acee7328feb978e863c0dd196",
+      "expected_id": 9000000000,
+      "statuses": {
+        "logo": 404,
+        "icon": 404
+      }
+    }
+  ],
+  "analysis": {
+    "first_attachment_jobs": 1,
+    "analyzed_reassignment_jobs": 0,
+    "metadata": {
+      "identified": true,
+      "width": 64,
+      "height": 64,
+      "analyzed": true
+    },
+    "same_attachment": true
+  }
+}

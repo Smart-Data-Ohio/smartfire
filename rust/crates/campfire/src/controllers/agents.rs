@@ -9,7 +9,6 @@ pub mod mcp;
 pub mod approvals;
 pub mod pending;
 pub mod conversations;
-pub mod repository_access;
 pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {
@@ -136,7 +135,12 @@ pub async fn poll(
     limit: Option<Value>,
 ) -> Result<Value> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
-    let access = repository_access::resolve(c, agent_id).await?;
+    let since_id = since.as_ref().map_or(0, ruby_i64);
+    let page_limit = limit.as_ref().filter(|v| !mcp::blank(v)).map(ruby_i64);
+    let events = c.app().db.read(move |conn| {
+        Ok(campfire_db::models::agent_event_access::readable_page(conn, agent_id, since_id, page_limit)?.into_iter().map(|event| event.id).collect())
+    }).await.map_err(db_error)?;
+    let access = c.app().agent_repositories.resolve_events(&c.app().db, agent_id, events).await.map_err(db_error)?;
     super::messages::present(c, move |presenter| {
         agent_event_polling::poll(
             presenter.conn,

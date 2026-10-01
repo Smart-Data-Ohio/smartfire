@@ -1,7 +1,7 @@
 //! The shared connector also serves GitHub; every connection stage consumes one budget.
 use super::*;
 use crate::integrations::net::{BoxFuture, Dialer, Resolver};
-use crate::integrations::test_support::{FakeResolver, MappingDialer, bind_test_listener};
+use crate::integrations::test_support::{FakeResolver, MappingDialer, ws15e_listener};
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
@@ -96,7 +96,7 @@ async fn ws15e_shared_open_timeout_covers_all_address_attempts() {
 }
 #[tokio::test]
 async fn ws15e_shared_open_timeout_includes_tls_handshake() {
-    let listener = bind_test_listener().await;
+    let listener = ws15e_listener().await;
     let address = listener.local_addr().unwrap();
     let server = tokio::spawn(async move {
         let (mut socket, _) = listener.accept().await.unwrap();

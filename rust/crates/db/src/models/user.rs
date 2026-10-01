@@ -1,6 +1,10 @@
 //! `reference/app/models/user.rb` and `user/*.rb` (Role, Bot, Bannable, Mentionable; Avatar
 //! and Transferable are signed ids, which live in `rails_compat`).
 
+pub mod removal;
+pub mod icon;
+pub mod lifecycle;
+
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
 use sha2::{Digest, Sha256};
@@ -12,6 +16,9 @@ use crate::events::Event;
 use crate::models::{Ban, Membership, Message, Session, Webhook};
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::{SQLITE_NOW, Timestamp};
+
+pub mod presentation;
+pub mod profile_settings;
 
 /// `enum :role, %i[ member administrator bot ]`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -110,6 +117,7 @@ pub struct User {
     pub role: Role,
     pub status: Status,
     pub bio: Option<String>,
+    pub icon_name: Option<String>,
     /// SHA-256 hex of the bot token (`User::Bot`). The plaintext `bot_token` column is retired:
     /// never written except to clear it, never read.
     pub bot_token_digest: Option<String>,
@@ -129,6 +137,7 @@ pub struct NewUser {
     pub password_digest: Option<PasswordDigest>,
     pub role: Role,
     pub bio: Option<String>,
+    pub icon_name: Option<String>,
     pub bot_token_digest: Option<String>,
 }
 
@@ -141,9 +150,15 @@ pub struct UserChanges {
     pub role: Option<Role>,
     pub status: Option<Status>,
     pub bio: Option<Option<String>>,
+    pub icon_name: Option<Option<String>>,
+    pub time_zone: Option<Option<String>>,
+    /// A submitted zone key is an explicit choice even when its value is filtered or nil.
+    pub time_zone_explicit: Option<bool>,
+    /// `Users::ProfilesController`: blocks Google email auto-linking after a self-change.
+    pub email_self_changed_at: Option<Timestamp>,
 }
 
-const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
+const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "icon_name", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
 
 impl User {
     /// A `SELECT "users".*` row.
@@ -156,6 +171,7 @@ impl User {
             role: row.get("role")?,
             status: row.get("status")?,
             bio: row.get("bio")?,
+            icon_name: row.get("icon_name")?,
             bot_token_digest: row.get("bot_token_digest")?,
             plain_bot_token: None,
             created_at: row.get("created_at")?,
@@ -335,14 +351,21 @@ impl User {
 
     /// User.create_bot!(skip_open_room_grant: true), used by RoomMailbox.
     pub fn create_email_bot(tx: &mut Tx<'_>) -> Result<Self> {
+        Self::create_integration_bot(tx, "Email")
+    }
+
+    /// `User.create_bot!(name:, skip_open_room_grant: true)` for integration bots.
+    pub fn create_integration_bot(tx: &mut Tx<'_>, name: &str) -> Result<Self> {
         let token = generate_bot_token();
         Self::create_with_open_room_grant(tx, NewUser {
-            name: "Email".into(), role: Role::Bot,
+            name: name.into(), role: Role::Bot,
             bot_token_digest: Some(digest_bot_token(&token)), ..Default::default()
         }, false)
     }
 
-    fn create_with_open_room_grant(tx: &mut Tx<'_>, attributes: NewUser, grant: bool) -> Result<Self> {
+    fn create_with_open_room_grant(tx: &mut Tx<'_>, mut attributes: NewUser, grant: bool) -> Result<Self> {
+        attributes.icon_name = icon::normalize_name(attributes.icon_name.as_deref());
+        icon::validate(tx.conn(), attributes.icon_name.as_deref())?.into_result()?;
         let now = tx.now();
         let password_digest = attributes.password_digest.map(PasswordDigest::into_string);
         let id: i64 = tx.conn().query_row_cached(
@@ -352,6 +375,7 @@ impl User {
                 attributes.bot_token_digest,
                 now,
                 attributes.email_address,
+                attributes.icon_name,
                 attributes.name,
                 password_digest,
                 attributes.role,
@@ -367,16 +391,15 @@ impl User {
     /// `User.create_bot!`: stores the token's digest alone; the returned bot knows its key
     /// (`plain_bot_token`) until it's dropped.
     pub fn create_bot(tx: &mut Tx<'_>, name: &str, webhook_url: Option<&str>) -> Result<Self> {
+        Self::create_bot_with_attributes(tx, NewUser { name: name.into(), ..Default::default() }, webhook_url)
+    }
+
+    /// Bot creation with the same normalized/validated fields as ordinary User creation.
+    pub fn create_bot_with_attributes(tx: &mut Tx<'_>, mut attributes: NewUser, webhook_url: Option<&str>) -> Result<Self> {
         let token = generate_bot_token();
-        let mut user = Self::create(
-            tx,
-            NewUser {
-                name: name.to_string(),
-                bot_token_digest: Some(digest_bot_token(&token)),
-                role: Role::Bot,
-                ..Default::default()
-            },
-        )?;
+        attributes.role = Role::Bot;
+        attributes.bot_token_digest = Some(digest_bot_token(&token));
+        let mut user = Self::create(tx, attributes)?;
         user.plain_bot_token = Some(token);
         if let Some(url) = webhook_url {
             Webhook::create(tx, user.id, Some(url))?;
@@ -386,10 +409,57 @@ impl User {
 
     // Updating
 
+    /// `Users::TimeZonesController`: auto-detection only fills an unset, non-explicit choice.
+    /// Use the same User validations as the other settings writes, including persisted fields.
+    pub fn detect_browser_time_zone(tx: &Tx<'_>, user_id: i64, zone: &str) -> Result<Option<String>> {
+        let (saved, explicit): (Option<String>, bool) = tx.conn().query_row(
+            "SELECT time_zone,time_zone_explicit FROM users WHERE id=?", [user_id], |row| Ok((row.get(0)?,row.get(1)?)),
+        )?;
+        if crate::slash_commands::time_parser::known_zone(zone).is_some()
+            && !explicit && saved.as_deref().is_none_or(|zone| zone.chars().all(char::is_whitespace)) {
+            crate::slash_commands::user_settings::update(tx, user_id, serde_json::json!({"time_zone":zone}))?;
+        }
+        Self::saved_time_zone(tx.conn(), user_id)
+    }
+
+    pub fn saved_time_zone(conn: &Connection, user_id: i64) -> Result<Option<String>> {
+        Ok(conn.query_row("SELECT time_zone FROM users WHERE id=?", [user_id], |row| row.get(0))?)
+    }
+
+    /// `Current.user.touch(:tour_completed_at)`: refresh both stamps, skipping validations.
+    pub fn complete_tour(tx: &Tx<'_>, user_id: i64) -> Result<()> {
+        tx.conn().execute("UPDATE users SET tour_completed_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),user_id])?;
+        Ok(())
+    }
+
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {
+        // `User::StatusSettings`: blank Not set normalizes to nil; unknown zones fail save.
+        let zone = changes.time_zone
+            .map(|zone| zone.filter(|value| !campfire_richtext::ruby::is_blank(value)));
+        let current_zone: Option<String> = tx.conn().query_row(
+            "SELECT time_zone FROM users WHERE id=?", [self.id], |r| r.get(0),
+        )?;
+        // Rails validates the effective zone on every save, including an unchanged
+        // persisted value; no other field or security marker may bypass that validation.
+        if zone.as_ref().unwrap_or(&current_zone).as_deref()
+            .filter(|name| !campfire_richtext::ruby::is_blank(name))
+            .is_some_and(|name| crate::slash_commands::time_parser::known_zone(name).is_none())
+        {
+            let mut errors = crate::Errors::default();
+            errors.add("time_zone", "is not a valid time zone");
+            return Err(crate::Error::RecordInvalid(errors));
+        }
+        let icon = changes.icon_name.map(|name| icon::normalize_name(name.as_deref()));
+        if let Some(name) = &icon && *name != self.icon_name {
+            icon::validate(tx.conn(), name.as_deref())?.into_result()?;
+        }
         let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql>)> = Vec::new();
+        if let Some(name) = icon.filter(|name| *name != self.icon_name) {
+            self.icon_name = name.clone();
+            sets.push(("icon_name", Box::new(name)));
+        }
         if let Some(name) = changes.name.filter(|n| *n != self.name) {
             self.name = name.clone();
             sets.push(("name", Box::new(name)));
@@ -408,6 +478,7 @@ impl User {
         }
         if let Some(status) = changes.status.filter(|s| *s != self.status) {
             if status != Status::Active {
+                crate::models::huddle_grant::HuddleGrant::revoke_for_user(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
                 crate::models::AgentGrant::revoke_for_user(tx, self.id)?;
             }
             self.status = status;
@@ -416,6 +487,26 @@ impl User {
         if let Some(bio) = changes.bio.filter(|b| *b != self.bio) {
             self.bio = bio.clone();
             sets.push(("bio", Box::new(bio)));
+        }
+        if let Some(at) = changes.email_self_changed_at {
+            sets.push(("email_self_changed_at", Box::new(at)));
+        }
+        // These profile preferences are not part of the compact User projection. Compare
+        // stored values so an unchanged assignment doesn't touch updated_at (Rails dirty tracking).
+        if let Some(zone) = zone
+            && zone != current_zone
+        {
+            sets.push(("time_zone", Box::new(zone)));
+        }
+        if let Some(explicit) = changes.time_zone_explicit {
+            let current: Option<bool> = tx.conn().query_row(
+                "SELECT time_zone_explicit FROM users WHERE id=?",
+                [self.id],
+                |r| r.get(0),
+            )?;
+            if current != Some(explicit) {
+                sets.push(("time_zone_explicit", Box::new(explicit)));
+            }
         }
         if sets.is_empty() {
             return Ok(());
@@ -432,6 +523,10 @@ impl User {
         values.push(&self.id);
         tx.conn().execute_cached(&sql, values.as_slice())?;
         Ok(())
+    }
+
+    pub fn set_icon_name(&mut self, tx: &mut Tx<'_>, name: Option<&str>) -> Result<()> {
+        self.update(tx, UserChanges { icon_name: Some(name.map(str::to_owned)), ..Default::default() })
     }
 
     /// `update_bot!`: the webhook first, then the user, in one transaction.
@@ -478,11 +573,17 @@ impl User {
     }
     pub fn deactivate_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
         self.close_remote_connections(tx, false);
+        let hosted_stages = super::stage::hosted_room_ids(tx,self.id)?;
+        super::stream::Stream::end_for_user(tx,self.id)?;
         let conn = tx.conn();
         conn.execute_cached(
             r#"DELETE FROM "memberships" WHERE ("memberships"."id") IN (SELECT "memberships"."id" FROM "memberships" INNER JOIN "rooms" AS "room" ON "room"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? AND "room"."type" != ?)"#,
             params![self.id, "Rooms::Direct"],
         )?;
+        for room_id in hosted_stages {
+            super::stage::host_departed(tx,room_id,self.id,&super::room_delete::HuddleConfig::from_env())?;
+        }
+        let conn = tx.conn();
         conn.execute_cached(
             r#"DELETE FROM "push_subscriptions" WHERE "push_subscriptions"."user_id" = ?"#,
             [self.id],
@@ -491,14 +592,19 @@ impl User {
             r#"DELETE FROM "searches" WHERE "searches"."user_id" = ?"#,
             [self.id],
         )?;
+        conn.execute_cached("DELETE FROM two_factor_setup_secrets WHERE session_id IN (SELECT id FROM sessions WHERE user_id=?)", [self.id])?;
         conn.execute_cached(
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
-        let sink = tx.env().sink.clone();
-        sink.disconnect_user_accounts(tx, self.id)?;
-        super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
+        for disconnect in tx.env().user_deactivation_hooks.clone() {
+            disconnect(tx, self)?;
+        }
+        conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
+        lifecycle::deactivate(tx, self.id, audit)?;
         let email = self.deactivated_email_address();
+        // app/models/user.rb: manual OOO cannot survive account deactivation.
+        conn.execute_cached("UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?", [self.id])?;
         self.update(
             tx,
             UserChanges {
@@ -542,8 +648,6 @@ impl User {
             [self.id],
         )?;
         tx.emit_after_commit(Event::RemoveBannedContent { user_id: self.id });
-        let sink = tx.env().sink.clone();
-        sink.disconnect_user_accounts(tx, self.id)?;
         super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
         self.update(
             tx,
@@ -626,15 +730,16 @@ impl User {
     /// `name.scan(/\b\w/).join`. Ruby's `\w` is ASCII-only, but `\b` treats any Unicode
     /// letter or digit as a word character, so "Émile" contributes nothing.
     pub fn initials(&self) -> String {
+        static WORD: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+            regex::Regex::new(r"\A[\p{Alphabetic}\p{Mark}\p{Number}\p{Connector_Punctuation}\p{Join_Control}]\z").unwrap()
+        });
         let mut initials = String::new();
-        let mut previous: Option<char> = None;
+        let mut previous_word = false;
         for c in self.name.chars() {
-            let ascii_word = c.is_ascii_alphanumeric() || c == '_';
-            let boundary = previous.is_none_or(|p| !(p.is_alphanumeric() || p == '_'));
-            if ascii_word && boundary {
+            if (c.is_ascii_alphanumeric() || c == '_') && !previous_word {
                 initials.push(c);
             }
-            previous = Some(c);
+            previous_word = WORD.is_match(c.encode_utf8(&mut [0; 4]));
         }
         initials
     }
@@ -675,6 +780,23 @@ impl User {
             Some(digest) if !digest.is_empty() => bcrypt::verify(password, digest).unwrap_or(false),
             _ => false,
         }
+    }
+
+    /// Rails `email_change_requested?`: strip, then Unicode `casecmp?`. The submitted
+    /// value is still saved verbatim; only the security check uses this comparison.
+    pub fn email_change_requested(&self, submitted: &str) -> bool {
+        use campfire_richtext::ruby::strip;
+        rails_compat::unicode::fold(strip(submitted)) != rails_compat::unicode::fold(
+            strip(self.email_address.as_deref().unwrap_or("")),
+        )
+    }
+
+    /// Google-provisioned accounts have no existing password to confirm.
+    pub fn current_password_confirmed(&self, submitted: &str) -> bool {
+        self.password_digest
+            .as_deref()
+            .is_none_or(campfire_richtext::ruby::is_blank)
+            || self.authenticate(submitted)
     }
 
     pub fn is_member(&self) -> bool {
@@ -796,3 +918,5 @@ fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
     }
     Ok(())
 }
+
+pub mod status_form;

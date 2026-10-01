@@ -1,7 +1,7 @@
 //! Four one-to-one assertions from the pinned FizzyConnectedAccountTest.
 use super::*;
 use crate::controllers::presenters::test_support::{DAVID, TestApp};
-
+use std::time::Duration;
 
 const FIXTURE_TOKEN: &str = "fizzy-model-fixture-token";
 fn input() -> Input<'static> {
@@ -16,7 +16,7 @@ fn input() -> Input<'static> {
 }
 async fn app() -> (TestApp, ArEncryption) {
     let mut app = TestApp::boot().await.expect("pinned parity seed required");
-    app.shutdown_jobs().await;
+    app.booted.jobs.stop(Duration::from_secs(1)).await;
     let crypto = ArEncryption::new(&app.booted.app.secrets);
     app.db()
         .write(|tx| Account::disconnect(tx, DAVID))

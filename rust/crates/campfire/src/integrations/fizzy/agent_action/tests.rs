@@ -41,7 +41,7 @@ fn ws15e_fizzy_agent_action_matches_pinned_rails() {
 }
 #[tokio::test]
 async fn ws15e_fizzy_agent_action_dispatches_all_five_writes() {
-    let server = FakeServer::start(vec![
+    let server = FakeServer::start_ws15e(vec![
         Route::new("POST", "app.fizzy.do", "/acc/boards/board/cards.json", 201)
             .body("{\"number\":580}"),
         Route::new("POST", "app.fizzy.do", "/acc/cards/579/comments.json", 201)

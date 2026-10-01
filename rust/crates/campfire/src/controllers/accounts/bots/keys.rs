@@ -12,7 +12,7 @@ use crate::controllers::presenters::page::framed_page;
 pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
-    concerns::require_sudo_mode(c)?;
+    concerns::sudo::require_sudo_mode(c)?;
     let mut bot = super::find_active_bot(c, "bot_id").await?;
     let name = bot.name.clone();
     let context = Context {

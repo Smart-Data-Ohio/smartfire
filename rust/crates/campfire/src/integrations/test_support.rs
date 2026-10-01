@@ -140,36 +140,40 @@ impl Received {
     }
 }
 
-/// Constrain host listeners when several parity workers run on the same machine.
-pub(crate) async fn bind_test_listener() -> TcpListener {
-    if let Ok(range) = std::env::var("INTEGRATION_TEST_PORT_RANGE") {
-        let (first, last) = range.split_once('-').expect("INTEGRATION_TEST_PORT_RANGE=start-end");
-        let (first, last): (u16, u16) = (first.parse().unwrap(), last.parse().unwrap());
-        assert!(first <= last, "invalid integration test port range");
-        for port in first..=last {
-            match TcpListener::bind(("127.0.0.1", port)).await {
-                Ok(listener) => return listener,
-                Err(error) if error.kind() == io::ErrorKind::AddrInUse => {},
-                Err(error) => panic!("integration test listener: {error}"),
-            }
-        }
-        panic!("no free integration test port in {range}");
-    }
-    TcpListener::bind("127.0.0.1:0").await.unwrap()
-}
-
 pub struct FakeServer {
     pub addr: SocketAddr,
     pub received: Arc<Mutex<Vec<Received>>>,
-    accept: tokio::task::JoinHandle<()>,
+    listener_task: tokio::task::JoinHandle<()>,
 }
 
 impl FakeServer {
     pub async fn start(routes: Vec<Route>) -> Self {
-        Self::start_with(routes, None).await
+        Self::start_with(routes, None, false).await
     }
 
     pub async fn start_tls(routes: Vec<Route>) -> Self {
+        Self::start_tls_on(routes, false).await
+    }
+
+    pub async fn start_tls_ws15e(routes: Vec<Route>) -> Self {
+        Self::start_tls_on(routes, true).await
+    }
+
+    /// Verify real TLS hostnames for integrations outside the static fixture's SAN list.
+    pub async fn start_named_tls_ws15e(routes: Vec<Route>, names: Vec<String>) -> (Self, rustls::RootCertStore) {
+        use rustls::pki_types::{PrivateKeyDer, PrivatePkcs8KeyDer};
+        let rcgen::CertifiedKey { cert, signing_key } = rcgen::generate_simple_self_signed(names).unwrap();
+        let der = cert.der().clone();
+        let mut roots = rustls::RootCertStore::empty();
+        roots.add(der.clone()).unwrap();
+        let config = rustls::ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+            .with_safe_default_protocol_versions().unwrap().with_no_client_auth()
+            .with_single_cert(vec![der], PrivateKeyDer::from(PrivatePkcs8KeyDer::from(signing_key.serialize_der()))).unwrap();
+        let server = Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), true).await;
+        (server, roots)
+    }
+
+    async fn start_tls_on(routes: Vec<Route>, ws15e: bool) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};
         let certs = vec![CertificateDer::from_pem_slice(include_bytes!("testdata/tls/server.pem")).unwrap()];
@@ -181,18 +185,29 @@ impl FakeServer {
             .with_no_client_auth()
             .with_single_cert(certs, key)
             .unwrap();
-        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config)))).await
+        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), ws15e).await
     }
 
-    async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>) -> Self {
-        let listener = bind_test_listener().await;
+    pub async fn start_ws15e(routes: Vec<Route>) -> Self {
+        Self::start_with(routes, None, true).await
+    }
+
+    async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, ws15e: bool) -> Self {
+        let listener = if ws15e { ws15e_listener().await } else { crate::test_support::bind_listener().await };
+        Self::on_listener(routes, tls, listener).await
+    }
+
+    pub async fn on_listener(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, listener: TcpListener) -> Self {
+
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
         let log = received.clone();
-        let accept = tokio::spawn(async move {
+        let listener_task = tokio::spawn(async move {
             loop {
-                let Ok((stream, _)) = listener.accept().await else { break };
+                let Ok((stream, _)) = listener.accept().await else {
+                    break;
+                };
                 let (routes, log, tls) = (routes.clone(), log.clone(), tls.clone());
                 tokio::spawn(async move {
                     match tls {
@@ -208,7 +223,7 @@ impl FakeServer {
                 });
             }
         });
-        Self { addr, received, accept }
+        Self { addr, received, listener_task }
     }
 
     pub fn received(&self) -> Vec<Received> {
@@ -218,7 +233,77 @@ impl FakeServer {
 
 impl Drop for FakeServer {
     fn drop(&mut self) {
-        self.accept.abort();
+        self.listener_task.abort();
+    }
+}
+
+pub async fn ws15e_listener() -> TcpListener {
+    if std::env::var_os("CABLE_TEST_PORT_RANGE").is_some() {
+        return crate::test_support::bind_listener().await;
+    }
+    for port in 51550..=51594 {
+        if let Ok(listener) = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
+            return listener;
+        }
+    }
+    panic!("WS15e test ports are all in use");
+}
+
+/// Reserve an assigned port across exec; Fizzy controllers construct system clients.
+/// Main's held-listener protocol transfers the socket through the child's stdin.
+pub async fn ws15e_http_case(marker: &str, case: &str, test: &str) -> std::process::Output {
+    use std::os::fd::OwnedFd;
+    let listener = crate::test_support::bind_listener().await.into_std().unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    tokio::process::Command::new(std::env::current_exe().unwrap())
+        .args([test, "--exact", "--nocapture", "--test-threads=8"])
+        .env(marker, case)
+        .env("FIZZY_API_BASE_URL", base)
+        .stdin(OwnedFd::from(listener))
+        .output().await.unwrap()
+}
+
+pub fn ws15e_http_case_listener() -> TcpListener {
+    use std::os::fd::AsFd;
+    let listener = std::net::TcpListener::from(std::io::stdin().as_fd().try_clone_to_owned().unwrap());
+    assert_eq!(crate::integrations::fizzy::client::api_base_url(), format!("http://{}", listener.local_addr().unwrap()));
+    listener.set_nonblocking(true).unwrap();
+    TcpListener::from_std(listener).unwrap()
+}
+
+pub async fn ws15e_trickling_server(head: &'static str) -> SocketAddr {
+    trickling_server_with(ws15e_listener().await, head).await.0
+}
+
+/// Control Tokio deadlines without counting CPU contention or TCP setup against them.
+/// A separate wall-clock watchdog still bounds stalled I/O and a broken timeout.
+pub fn with_paused_time(what: &'static str, test: impl std::future::Future<Output = ()> + Send + 'static) {
+    let (finished, result) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .start_paused(true)
+                .build()
+                .unwrap();
+            runtime.block_on(async {
+                // Keep idle-time auto-advance from consuming the deadline during real I/O.
+                let keep_time_paused = tokio::spawn(async {
+                    loop {
+                        tokio::task::yield_now().await;
+                    }
+                });
+                test.await;
+                keep_time_paused.abort();
+            });
+        }));
+        let _ = finished.send(outcome);
+    });
+    let outcome = result.recv_timeout(crate::test_support::WAIT)
+        .unwrap_or_else(|_| panic!("{what} exceeded its 30 s wall-clock watchdog"));
+    worker.join().expect("paused-time worker panicked outside its test");
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
     }
 }
 
@@ -247,10 +332,7 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
     log.lock().unwrap().push(Received { method: method.clone(), target: target.clone(), headers, body });
 
     let not_found = Route::new(&method, &host, &target, 404).header("Content-Type", "text/plain").body("not found");
-    let route = routes
-        .iter()
-        .find(|r| r.method == method && (r.host == host || r.host == "*") && r.path == target)
-        .unwrap_or(&not_found);
+    let route = routes.iter().find(|r| r.method == method && (r.host == host || r.host == "*") && r.path == target).unwrap_or(&not_found);
     tokio::time::sleep(route.delay).await;
     let mut body = route.body.clone();
     if route.gzip {
@@ -291,22 +373,37 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
 }
 
 /// A server that answers every request with `head` and then a byte of body every 50 ms, until
-/// the client hangs up.
-pub async fn trickling_server(head: &'static str) -> SocketAddr {
-    let listener = bind_test_listener().await;
+/// the client hangs up. Acknowledges the first byte, so a paused-time test can wait for real
+/// I/O before advancing its clock.
+pub async fn trickling_server_with_ready(
+    head: &'static str,
+) -> (SocketAddr, tokio::sync::oneshot::Receiver<()>) {
+    trickling_server_with(crate::test_support::bind_listener().await, head).await
+}
+
+async fn trickling_server_with(
+    listener: TcpListener,
+    head: &'static str,
+) -> (SocketAddr, tokio::sync::oneshot::Receiver<()>) {
     let addr = listener.local_addr().unwrap();
+    let (ready, received) = tokio::sync::oneshot::channel();
     tokio::spawn(async move {
+        let mut ready = Some(ready);
         while let Ok((mut stream, _)) = listener.accept().await {
+            let mut ready = ready.take();
             tokio::spawn(async move {
                 let _ = stream.read(&mut [0; 4096]).await;
                 let _ = stream.write_all(head.as_bytes()).await;
                 while stream.write_all(b" ").await.is_ok() {
+                    if let Some(ready) = ready.take() {
+                        let _ = ready.send(());
+                    }
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                 }
             });
         }
     });
-    addr
+    (addr, received)
 }
 
 /// A gzip bomb:`megabytes` gzip members of a megabyte of zeros each, about 1 KB apiece.
@@ -325,13 +422,21 @@ pub struct TestDb {
 
 impl TestDb {
     pub fn new() -> Self {
-        use campfire_db::{BasicRichText, Config, Database, Env, NullSink, TestClock, fixtures};
+        Self::in_dir(Arc::new(campfire_db::TestClock::new()), &std::env::temp_dir())
+    }
+
+    pub fn in_dir(clock: Arc<dyn campfire_db::Clock>, directory: &std::path::Path) -> Self {
+        use campfire_db::{BasicRichText, Env, NullSink};
+        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4, ..Env::default() }, directory)
+    }
+
+    pub fn with_env(env: campfire_db::Env, directory: &std::path::Path) -> Self {
+        use campfire_db::{Config, Database, fixtures};
         static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let path = std::env::temp_dir().join(format!("campfire-integrations-{}-{n}", std::process::id()));
+        let path = directory.join(format!("campfire-integrations-{}-{n}", std::process::id()));
         let _ = std::fs::remove_dir_all(&path);
         std::fs::create_dir_all(&path).unwrap();
-        let env = Env { clock: Arc::new(TestClock::new()), sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 };
         let mut config = Config::new(path.join("test.sqlite3"));
         config.environment = "test".into();
         let db = Database::open(config, env).unwrap();

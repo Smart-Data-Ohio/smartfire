@@ -1,0 +1,109 @@
+{% let form = h::form_with(h::routes::user_status()).model("user").method("patch").data("controller", "form").class("flex flex-column gap") %}{% filter form_with(form) %}
+  <fieldset class="margin-none">
+    <legend class="txt-large">Status</legend>
+    <p class="txt-small margin-none">Automatic shows you online while you're here and idle after 10 quiet minutes. Your custom status shows beside your name.</p>
+
+    <div class="flex align-center gap pad-block-half">
+      {{ data.label(&form, "presence_setting", "Presence", "txt-medium") }}
+      {{ data.presence_select() }}
+    </div>
+{% if data.has_errors("presence_setting") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">Presence {{ data.error_sentence("presence_setting") }}.</p>
+{% endif %}
+    <div class="flex align-center gap pad-block-half">
+      {{ data.label(&form, "custom_status_emoji", "Emoji", "txt-medium") }}
+      {{ data.text(&form, "custom_status_emoji", data.custom_status_emoji.as_deref(), h::attrs().class("input").maxlength(8).placeholder("😀").autocomplete("off").size(6).id("user_custom_status_emoji")) }}
+      {{ data.label(&form, "custom_status_text", "Status text", "txt-medium for-screen-reader") }}
+      {{ data.text(&form, "custom_status_text", data.custom_status_text.as_deref(), h::attrs().class("input flex-item-grow").maxlength(100).placeholder("Working from the train…").autocomplete("off").id("user_custom_status_text")) }}
+    </div>
+{% for attribute in ["custom_status_emoji", "custom_status_text"] %}{% if data.has_errors(attribute) %}        <p class="txt-small margin-none" style="color: var(--color-negative)">Custom status {{ data.error_sentence(attribute) }}.</p>
+{% endif %}{% endfor %}
+    <div class="flex align-center gap pad-block-half">
+      {{ data.label(&form, "custom_status_expires_in", "Clear after", "txt-medium") }}
+      {{ data.expiry_select() }}
+    </div>
+
+    <div class="flex flex-wrap align-center gap pad-block-half">
+      {{ h::profile_form_submit_button(ctx) }}
+      {{ h::button_tag(h::attrs().name("user[clear_custom_status]").value("1").class("btn txt-small"), "Clear status") }}
+    </div>
+  </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Meetings</legend>
+{% if !data.google_configured %}      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+{% elif data.calendar_connected %}      <p class="txt-small margin-none">Show "In a meeting" beside your name while your Google Calendar says you're busy. Only free/busy times are read — never titles or attendees. A custom status or DND shows instead.</p>
+
+      <div class="flex align-start gap pad-block-half">
+        <label class="switch flex-item-no-shrink">
+          {{ data.hidden("meeting_status_enabled") }}
+          {{ data.check("meeting_status_enabled", data.meeting_status_enabled) }}
+          <span class="switch__btn round"></span>
+          <span class="for-screen-reader">Show when I'm in a meeting</span>
+        </label>
+        <span>
+          <span class="txt-medium">Show when I'm in a meeting</span><br>
+          <span class="txt-small">Connected as {{ data.google_email.as_deref().unwrap_or("") }}.</span>
+        </span>
+      </div>
+
+{% if data.fetch_error_present() %}        <p class="txt-small margin-none">{{ data.fetch_error.as_deref().unwrap_or("") }}</p>
+{% endif %}{% elif data.meeting_status_enabled %}      <p class="txt-small margin-none">Meeting status is on, but Google Calendar isn't connected. {{ h::link_to_text("Reconnect below", "#google-calendar-title", h::attrs()) }} to resume showing when you're in a meeting.</p>
+{% else %}      <p class="txt-small margin-none">Show "In a meeting" beside your name while your Google Calendar says you're busy. {{ h::link_to_text("Connect Google Calendar", "#google-calendar-title", h::attrs()) }} first — only free/busy times are read, never titles or attendees.</p>
+{% endif %}
+    {{ h::profile_form_submit_button(ctx) }}
+  </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Out of office</legend>
+{% if data.out_of_office %}      <p class="txt-small margin-none">
+{% if data.manual_ooo_active %}          Out of office until {{ data.ooo_until_date.as_deref().unwrap_or("") }}.
+{% else %}          Out of office until {{ data.ooo_until_date.as_deref().unwrap_or("") }} from your Google Calendar.
+{% endif %}      </p>
+{% endif %}    <p class="txt-small margin-none">Show "Out of office" beside your name until the end you pick. It clears itself when the end passes, and wins over a custom status, DND, and the meeting label.</p>
+
+    <div class="flex align-center gap pad-block-half">
+      {{ data.tag_label("ooo_preset", "Out until") }}
+      {{ data.ooo_select() }}
+    </div>
+
+    <div class="flex flex-wrap align-center gap pad-block-half">
+      {{ data.tag_label("ooo_until_custom", "Custom end") }}
+      {{ h::datetime_local_field_tag("user[ooo_until_custom]", None, h::attrs().class("input").id("user_ooo_until_custom")) }}
+      <span class="txt-small">in your time zone</span>
+    </div>
+{% if data.has_errors("ooo_until") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">Out of office {{ data.error_sentence("ooo_until") }}.</p>
+{% endif %}
+    <div class="flex align-center gap pad-block-half">
+      {{ data.tag_label("ooo_note", "Note") }}
+      {{ data.note_field() }}
+    </div>
+{% if data.has_errors("ooo_note") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">Note {{ data.error_sentence("ooo_note") }}.</p>
+{% endif %}
+    <div class="flex flex-wrap align-center gap pad-block-half">
+      {{ h::profile_form_submit_button(ctx) }}
+      {{ h::button_tag(h::attrs().name("user[clear_ooo]").value("1").class("btn txt-small"), "Clear out of office") }}
+    </div>
+
+{% if !data.google_configured %}      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+{% elif data.calendar_connected %}      <p class="txt-small margin-none">Use out-of-office events from your Google Calendar: they mark you out for the event's span. Only the event type and times are read — never titles or details. When both apply, the later end shows; clearing above ends only the manual one.</p>
+
+      <div class="flex align-start gap pad-block-half">
+        <label class="switch flex-item-no-shrink">
+          {{ data.hidden("ooo_calendar_enabled") }}
+          {{ data.check("ooo_calendar_enabled", data.ooo_calendar_enabled) }}
+          <span class="switch__btn round"></span>
+          <span class="for-screen-reader">Use my Google Calendar out-of-office</span>
+        </label>
+        <span>
+          <span class="txt-medium">Use my Google Calendar out-of-office</span><br>
+          <span class="txt-small">Connected as {{ data.google_email.as_deref().unwrap_or("") }}.</span>
+        </span>
+      </div>
+
+{% if data.fetch_error_present() %}        <p class="txt-small margin-none">{{ data.fetch_error.as_deref().unwrap_or("") }}</p>
+{% endif %}{% elif data.ooo_calendar_enabled %}      <p class="txt-small margin-none">Calendar out-of-office is on, but Google Calendar isn't connected. {{ h::link_to_text("Reconnect below", "#google-calendar-title", h::attrs()) }} to resume showing it.</p>
+{% else %}      <p class="txt-small margin-none">Use out-of-office events from your Google Calendar to mark yourself out automatically. {{ h::link_to_text("Connect Google Calendar", "#google-calendar-title", h::attrs()) }} first — only the event type and times are read, never titles or details.</p>
+{% endif %}
+    {{ h::profile_form_submit_button(ctx) }}
+  </fieldset>
+{% endfilter %}

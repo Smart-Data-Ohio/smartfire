@@ -1,5 +1,8 @@
 //! Views for `reference/app/views/accounts`.
 
+pub mod audit_logs;
+pub mod icons;
+
 use askama::Template;
 
 use crate::ViewContext;
@@ -24,7 +27,7 @@ pub struct HelpContactPartial<'a> {
 
 /// `accounts/edit.html.erb`.
 #[derive(Template)]
-#[template(path = "accounts/edit.html", blocks = ["head", "content"])]
+#[template(path = "accounts/edit.html", blocks = ["head", "nav", "content", "footer"])]
 pub struct Edit<'a> {
     pub ctx: &'a ViewContext<'a>,
     /// `Current.account.id`: `form_with model: @account` posts to `/account.<id>` because the
@@ -140,9 +143,17 @@ impl Page for BotsNew<'_> {
 #[derive(Template)]
 #[template(path = "accounts/bots/edit.html", blocks = ["head", "content"])]
 pub struct BotsEdit<'a> {
+    pub github: crate::github::connections::Connection,
+    pub administrator: bool,
     pub ctx: &'a ViewContext<'a>,
     pub bot_id: i64,
     pub bot: BotForm,
+}
+
+impl BotsEdit<'_> {
+    fn github_panel(&self) -> h::Html {
+        h::raw(crate::github::connections::bot(&self.github, self.bot_id, self.administrator))
+    }
 }
 
 impl Page for BotsEdit<'_> {

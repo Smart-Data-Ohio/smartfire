@@ -4,7 +4,7 @@ use super::*;
 use rusqlite::types::Value as SqlValue;
 use std::collections::HashMap;
 
-pub(super) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
+pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     let mut stmt = tx.conn().prepare("SELECT * FROM users WHERE id=?")?;
     let columns = stmt
         .column_names()
@@ -26,6 +26,7 @@ pub(super) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
             match v {
                 Value::Null => SqlValue::Null,
                 Value::Bool(b) => SqlValue::Integer(i64::from(*b)),
+                Value::String(s) if key == "time_zone" && campfire_richtext::ruby::is_blank(s) => SqlValue::Null,
                 Value::String(s) => SqlValue::Text(s.clone()),
                 _ => unreachable!("typed internal changes"),
             },

@@ -39,10 +39,17 @@ pub struct AppState {
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
     pub mail: crate::mail::State,
-    /// Owner-scoped Fizzy client transport; authentication remains in the shared service.
     pub fizzy: crate::integrations::fizzy::State,
+    pub agent_message_payload: crate::controllers::presenters::agent_payload::State,
+    pub agent_repositories: crate::integrations::agent_repositories::State,
+    pub sudo: crate::concerns::sudo::State,
+    pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
+    pub github_accounts: crate::integrations::github::accounts::Accounts,
+    pub github_app: crate::integrations::github::client::AppClient,
+    pub github_read: crate::integrations::github::client::ReadClient,
+    pub subscription_network: crate::integrations::net::Network,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
     /// and every render outside one.
     pub fragment_cache: Arc<FragmentCache>,
@@ -52,7 +59,9 @@ impl AppState {
     /// The key pages offer browsers to subscribe with: none while Web Push is off, so that browsers
     /// don't subscribe to notifications that would never be sent.
     pub fn vapid_public_key(&self) -> Option<String> {
-        self.web_push.as_ref().and(self.config.vapid_public_key.clone())
+        self.web_push
+            .as_ref()
+            .and(self.config.vapid_public_key.clone())
     }
 }
 
@@ -85,10 +94,51 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
 /// [`boot`] with its clock given rather than read from `CAMPFIRE_FROZEN_TIME`: the seeded tests
 /// run at the parity seed's instant, as the reference does (`parity/seeds/README.md`).
 pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Result<Booted> {
-    boot_with_fizzy(config, clock, crate::integrations::fizzy::State::system()).await
+    boot_with_network(config, clock, crate::integrations::net::Network::system()).await
 }
 
-pub(crate) async fn boot_with_fizzy(config: Config, clock: SharedClock, fizzy: crate::integrations::fizzy::State) -> anyhow::Result<Booted> {
+pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    boot_with_services(config, clock, subscription_network, jobs::periodic::Intervals::from_env()).await
+}
+
+/// Service dependencies, including which periodic hosts run beside HTTP. The Rails parity
+/// server does not run bin/periodic; its seeded HTTP tests invoke due tasks explicitly.
+pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
+    let network = crate::integrations::net::Network::system();
+    let github_app = crate::integrations::github::client::AppClient::with_network(
+        std::env::var("GITHUB_APP_CLIENT_ID").ok(),
+        std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
+        network.clone(),
+    );
+    boot_with_all_services(config, clock, crate::integrations::github::client::ReadClient::from_env(), github_app, network, subscription_network, intervals).await
+}
+
+/// Injects the fixed-host GitHub client for runtime acceptance tests.
+#[cfg(test)]
+pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient) -> anyhow::Result<Booted> {
+    boot_with_github_network(config, clock, github_read, crate::integrations::net::Network::system()).await
+}
+
+#[cfg(test)]
+pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    let github_app = crate::integrations::github::client::AppClient::with_network(
+        std::env::var("GITHUB_APP_CLIENT_ID").ok(),
+        std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
+        github_network.clone(),
+    );
+    boot_with_github_clients(config, clock, github_read, github_app, github_network).await
+}
+
+#[cfg(test)]
+pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    boot_with_all_services(config, clock, github_read, github_app, github_network, crate::integrations::net::Network::system(), jobs::periodic::Intervals::from_env()).await
+}
+
+pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
+    boot_with_all_services_and_fizzy(config, clock, github_read, github_app, github_network, subscription_network, intervals, crate::integrations::fizzy::State::system()).await
+}
+
+pub(crate) async fn boot_with_all_services_and_fizzy(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals, fizzy: crate::integrations::fizzy::State) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let ar_encryption = Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets));
@@ -99,7 +149,7 @@ pub(crate) async fn boot_with_fizzy(config: Config, clock: SharedClock, fizzy: c
     let registry = jobs::registry();
     let runner_config = jobs::runner_config(&config);
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
-    let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env());
+    let loops = jobs::periodic::Loops::new(intervals);
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
     // Mail's preflight and Message::create use the same room-aware, fallible renderer.
     mail.install_renderer(Arc::new({
@@ -110,16 +160,24 @@ pub(crate) async fn boot_with_fizzy(config: Config, clock: SharedClock, fizzy: c
         }
     }));
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
+    jobs::huddle::recover_unregistered(&db).await?;
 
     // config/puma.rb: `Membership.disconnect_all` when the server boots.
-    db.write(|tx| campfire_db::Membership::disconnect_all(tx).map(|_| ())).await?;
+    db.write(|tx| campfire_db::Membership::disconnect_all(tx).map(|_| ()))
+        .await?;
 
     let storage = Arc::new(Storage::new(
         DiskService::new(&config.storage.files, "local"),
-        Arc::new(ActiveStorageVerifier(rails_compat::app_verifier(&secrets, "ActiveStorage"))),
+        Arc::new(ActiveStorageVerifier(rails_compat::app_verifier(
+            &secrets,
+            "ActiveStorage",
+        ))),
     ));
 
-    let cable_config = campfire_cable::Config { assume_ssl: !config.disable_ssl, ..campfire_cable::Config::default() };
+    let cable_config = campfire_cable::Config {
+        assume_ssl: !config.disable_ssl,
+        ..campfire_cable::Config::default()
+    };
     let deps = channels::Deps {
         db: db.clone(),
         secrets: secrets.clone(),
@@ -132,11 +190,20 @@ pub(crate) async fn boot_with_fizzy(config: Config, clock: SharedClock, fizzy: c
     let mut kit_config = KitConfig::production(config.disable_ssl);
     kit_config.error_pages = error_pages();
     kit_config.default_headers = crate::security::default_headers();
-    kit_config.content_security_policy = Some(Arc::new(crate::security::content_security_policy(config.livekit_url.clone())));
+    kit_config.content_security_policy = Some(Arc::new(crate::security::content_security_policy(
+        config.livekit_url.clone(),
+    )));
     campfire_kit::param_filter::install(crate::security::parameter_filter());
 
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
+    let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
+        db.clone(), Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets)), github_app.clone(), github_network,
+    );
+    let agent_repositories = crate::integrations::agent_repositories::State::live(
+        db.clone(), ar_encryption.clone(),
+    );
+    agent_repositories.install(Arc::new(github_accounts.clone()));
     let app = Arc::new(AppState {
         config,
         secrets,
@@ -149,7 +216,15 @@ pub(crate) async fn boot_with_fizzy(config: Config, clock: SharedClock, fizzy: c
         jobs,
         mail,
         fizzy,
+        agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
+        agent_repositories,
+        sudo: crate::concerns::sudo::State::default(),
+        two_factor: crate::concerns::two_factor::State::default(),
         web_push,
+        github_read,
+        github_app,
+        github_accounts,
+        subscription_network,
         fragment_cache,
     });
 
@@ -157,10 +232,19 @@ pub(crate) async fn boot_with_fizzy(config: Config, clock: SharedClock, fizzy: c
 
     let kit = Kit::new(kit_config, crypto, clock, app.clone());
     let router = router(&app, kit);
-    Ok(Booted { app, router, jobs: runner })
+    Ok(Booted {
+        app,
+        router,
+        jobs: runner,
+    })
 }
 
-async fn open_database(config: &Config, clock: SharedClock, jobs: jobs::Jobs, rich_text: Arc<AppRichText>) -> anyhow::Result<Database> {
+async fn open_database(
+    config: &Config,
+    clock: SharedClock,
+    jobs: jobs::Jobs,
+    rich_text: Arc<AppRichText>,
+) -> anyhow::Result<Database> {
     let mut db_config = campfire_db::Config::new(&config.storage.database);
     db_config.readers = config.db_readers;
     db_config.environment = config.environment.clone();
@@ -169,28 +253,36 @@ async fn open_database(config: &Config, clock: SharedClock, jobs: jobs::Jobs, ri
         sink: Arc::new(jobs),
         rich_text,
         bcrypt_cost: 12,
+        default_url_origin: config.mail.url_origin().to_owned(),
+        message_reference_syncs: vec![crate::integrations::github::references::sync],
+        user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
     };
     Ok(tokio::task::spawn_blocking(move || Database::open(db_config, env)).await??)
 }
 
 /// The HTTP service: public files, then `/cable`, then the Rails route table.
 fn router(app: &App, kit: Kit) -> Router {
+    let github_webhook = || {
+        axum::routing::post(campfire_kit::unparsed_action(controllers::github::webhooks::create))
+            .fallback(campfire_kit::unparsed_action(controllers::github::webhooks::not_found))
+    };
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
         .merge(app.cable.router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH))
-        // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController
-        // routes, which reads its own body after its rate limit.
+        // API actions authenticate/rate-limit before interpreting their own raw uploads.
+        // Unmatched webhook verbs use Rails' 404 response rather than Axum's default 405.
+        .route("/github/webhooks", github_webhook())
+        .route("/github/webhooks.{format}", github_webhook())
         .route("/csp_reports", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
         .route("/csp_reports.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
-        // MCP owns JSON-RPC parse errors and must charge the coarse bucket before
-        // parsing non-JSON bodies. Keep the kit's upload bound before its action.
         .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
         .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
     // config.ru: `use Rack::Deflater` around the whole app.
-    campfire_kit::app(routes, kit).layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
+    campfire_kit::app(routes, kit)
+        .layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
 }
 
 /// The Rails route table, with the app's fragment cache current while the action runs.
@@ -217,18 +309,26 @@ fn static_response(request: &axum::extract::Request) -> Option<axum::response::R
         if_modified_since: header(axum::http::header::IF_MODIFIED_SINCE),
     })?;
     let immutable = immutable_asset(request.uri().path(), served.status);
-    let mut response = axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));
-    *response.status_mut() = axum::http::StatusCode::from_u16(served.status).unwrap_or(axum::http::StatusCode::OK);
-    response.extensions_mut().insert(campfire_kit::deflater::StaticFile);
+    let mut response =
+        axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));
+    *response.status_mut() =
+        axum::http::StatusCode::from_u16(served.status).unwrap_or(axum::http::StatusCode::OK);
+    response
+        .extensions_mut()
+        .insert(campfire_kit::deflater::StaticFile);
     for (name, value) in served.headers {
-        if let (Ok(name), Ok(value)) =
-            (axum::http::HeaderName::from_bytes(name.as_bytes()), axum::http::HeaderValue::from_str(&value))
-        {
+        if let (Ok(name), Ok(value)) = (
+            axum::http::HeaderName::from_bytes(name.as_bytes()),
+            axum::http::HeaderValue::from_str(&value),
+        ) {
             response.headers_mut().append(name, value);
         }
     }
     if immutable {
-        response.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static(IMMUTABLE_CACHE_CONTROL));
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static(IMMUTABLE_CACHE_CONTROL),
+        );
     }
     Some(response)
 }
@@ -248,7 +348,11 @@ fn immutable_asset(path: &str, status: u16) -> bool {
 fn error_pages() -> ErrorPages {
     ErrorPages::new([404, 422, 500, 502].into_iter().filter_map(|status| {
         let path = format!("/{status}.html");
-        let request = campfire_assets::StaticRequest { method: "GET", path: &path, ..Default::default() };
+        let request = campfire_assets::StaticRequest {
+            method: "GET",
+            path: &path,
+            ..Default::default()
+        };
         campfire_assets::serve(&request).map(|page| (status, page.body.into_owned().into()))
     }))
 }
@@ -257,7 +361,12 @@ fn error_pages() -> ErrorPages {
 struct ActiveStorageVerifier(MessageVerifier);
 
 impl campfire_storage::Verifier for ActiveStorageVerifier {
-    fn generate(&self, data_json: &str, purpose: &str, expires_at: Option<jiff::Timestamp>) -> String {
+    fn generate(
+        &self,
+        data_json: &str,
+        purpose: &str,
+        expires_at: Option<jiff::Timestamp>,
+    ) -> String {
         self.0.generate_raw(data_json, Some(purpose), expires_at)
     }
 
@@ -318,11 +427,19 @@ fn init_logging(config: &Config) {
         _ => "info",
     };
     // The front server logs on its own terms, as Thruster did: requests at info, more with DEBUG.
-    let front = if campfire_kit::front::FrontConfig::from_env().debug { "debug" } else { "info" };
+    let front = if campfire_kit::front::FrontConfig::from_env().debug {
+        "debug"
+    } else {
+        "info"
+    };
     let default = format!("{level},thruster={front},campfire_kit::front={front}");
-    let filter = tracing_subscriber::EnvFilter::try_from_env("CAMPFIRE_LOG").unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default));
+    let filter = tracing_subscriber::EnvFilter::try_from_env("CAMPFIRE_LOG")
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default));
     // `LogScrubbingFormatter`: bot keys in paths never reach the log.
-    let _ = tracing_subscriber::fmt().with_env_filter(filter).with_writer(crate::security::ScrubbingStdout).try_init();
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_writer(crate::security::ScrubbingStdout)
+        .try_init();
 }
 
 /// How long in-flight requests and running jobs get after SIGTERM/SIGINT. Jobs still waiting
@@ -374,7 +491,10 @@ pub fn backup(config: &Config) -> anyhow::Result<()> {
     // interrupted or concurrent backup never leaves a torn file where ONCE (and `post-restore`)
     // expect the last good one. A failed one's file is deleted when `partial` drops.
     let dir = destination.parent().unwrap_or(std::path::Path::new("."));
-    let partial = tempfile::Builder::new().prefix(".backup-").suffix(".sqlite3").tempfile_in(dir)?;
+    let partial = tempfile::Builder::new()
+        .prefix(".backup-")
+        .suffix(".sqlite3")
+        .tempfile_in(dir)?;
     copy_database(&config.storage.database, partial.path())?;
     partial.persist(&destination)?;
     tracing::info!(path = %destination.display(), "backup written");
@@ -383,7 +503,8 @@ pub fn backup(config: &Config) -> anyhow::Result<()> {
 
 /// SQLite's online backup of the live database at `source` into a new file at `target`.
 fn copy_database(source: &std::path::Path, target: &std::path::Path) -> anyhow::Result<()> {
-    let source = rusqlite::Connection::open_with_flags(source, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let source =
+        rusqlite::Connection::open_with_flags(source, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     source.busy_timeout(Duration::from_secs(5))?;
     let mut target = rusqlite::Connection::open(target)?;
     let backup = rusqlite::backup::Backup::new(&source, &mut target)?;
@@ -403,5 +524,36 @@ fn copy_database(source: &std::path::Path, target: &std::path::Path) -> anyhow::
 
 #[cfg(test)]
 mod security_tests;
+
+#[cfg(test)]
+mod sudo_tests;
+
+#[cfg(test)]
+mod two_factor_tests;
+
+#[cfg(test)]
+mod challenge_tests;
+
+#[cfg(test)]
+mod enforcement_tests;
+
+#[cfg(test)]
+mod session_management_tests;
+
+#[cfg(test)]
+mod admin_two_factor_tests;
+#[cfg(test)]
+mod full_page_tests;
+#[cfg(test)]
+mod profile_security_tests;
+#[cfg(test)]
+mod round_three_security_tests;
+#[cfg(test)]
+mod round_four_security_tests;
+
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "../../../test-support/asset_goldens.rs"]
+pub(crate) mod asset_goldens;

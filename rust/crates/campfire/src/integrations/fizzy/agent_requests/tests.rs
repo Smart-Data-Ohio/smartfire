@@ -7,7 +7,10 @@ async fn fixture(name: &str) -> (TestApp, i64, i64) {
     )))
     .await
     .expect("pinned seed required");
-    app.shutdown_jobs().await;
+    app.booted
+        .jobs
+        .stop(std::time::Duration::from_secs(1))
+        .await;
     let crypto = ArEncryption::new(&app.booted.app.secrets);
     let name = name.to_owned();
     let ids=app.db().write(move|tx| {
