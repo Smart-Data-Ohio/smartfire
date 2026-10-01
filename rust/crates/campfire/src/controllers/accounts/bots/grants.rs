@@ -43,16 +43,38 @@ pub async fn create(c: &mut Ctx) -> Result {
     let context = super::audit_context(c)?;
     let form_capability = capability.clone();
     let bot_name = bot.name.clone();
-    let result=c.app().db.write(move |tx| {
-        use rusqlite::OptionalExtension;
-        let existing:Option<i64>=tx.conn().query_row("SELECT id FROM agent_grants WHERE agent_id=? AND capability=? AND room_id IS ? AND revoked_at IS NULL LIMIT 1",rusqlite::params![agent.id,capability,room_id],|r|r.get(0)).optional()?;
-        if existing.is_none() {
-            let grant=AgentGrant::create(tx,NewGrant{agent_id:agent.id,capability,room_id,granted_by_id:actor,..Default::default()})?;
-            let room=grant.room_id.map(|id|campfire_db::Room::find_by_id(tx.conn(),id)).transpose()?.flatten().and_then(|r|r.name);
-            AuditLog::record(tx,NewAuditLog{action:"agent.grant.create".into(),target:Some(target(grant.id,&grant.capability,&bot_name)),changes:Some(serde_json::json!({"capability":grant.capability,"room":room})),..Default::default()},&context)?;
+    let result = async {
+        let audit = c
+            .app()
+            .db
+            .write(move |tx| {
+                use rusqlite::OptionalExtension;
+                let existing: Option<i64> = tx.conn().query_row(
+                    "SELECT id FROM agent_grants WHERE agent_id=? AND capability=? AND room_id IS ? AND revoked_at IS NULL LIMIT 1",
+                    rusqlite::params![agent.id, capability, room_id], |r| r.get(0)
+                ).optional()?;
+                if existing.is_none() {
+                    let grant = AgentGrant::create(tx, NewGrant {
+                        agent_id: agent.id, capability, room_id, granted_by_id: actor, ..Default::default()
+                    })?;
+                    let room = grant.room_id.map(|id| campfire_db::Room::find_by_id(tx.conn(), id)).transpose()?.flatten().and_then(|r| r.name);
+                    return Ok(Some(NewAuditLog {
+                        action: "agent.grant.create".into(),
+                        target: Some(target(grant.id, &grant.capability, &bot_name)),
+                        changes: Some(serde_json::json!({"capability":grant.capability,"room":room})),
+                        ..Default::default()
+                    }));
+                }
+                Ok(None)
+            })
+            .await?;
+        // The find/create transaction commits before Rails writes its audit.
+        // The action's uniqueness rescue still covers both independent writes.
+        if let Some(audit) = audit {
+            c.app().db.write(move |tx| AuditLog::record(tx, audit, &context)).await?;
         }
-        Ok(())
-    }).await;
+        Ok::<_, campfire_db::Error>(())
+    }.await;
     match result {
         Ok(()) => redirect(c, bot.id),
         Err(campfire_db::Error::RecordInvalid(errors)) => {
@@ -86,14 +108,14 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .ok_or(Error::NotFound)?;
     let context = super::audit_context(c)?;
     let bot_name = bot.name.clone();
-    let found = c
+    let audit = c
         .app()
         .db
         .write(move |tx| {
             let Some(mut grant) =
                 AgentGrant::find(tx.conn(), id)?.filter(|g| g.agent_id == agent.id)
             else {
-                return Ok(false);
+                return Ok(None);
             };
             if grant.revoked_at.is_none() {
                 grant.revoke(tx)?;
@@ -103,25 +125,24 @@ pub async fn destroy(c: &mut Ctx) -> Result {
                     .transpose()?
                     .flatten()
                     .and_then(|r| r.name);
-                AuditLog::record(
-                    tx,
-                    NewAuditLog {
-                        action: "agent.grant.revoke".into(),
-                        target: Some(target(grant.id, &grant.capability, &bot_name)),
-                        changes: Some(
-                            serde_json::json!({"capability":grant.capability,"room":room}),
-                        ),
-                        ..Default::default()
-                    },
-                    &context,
-                )?;
+                return Ok(Some(Some(NewAuditLog {
+                    action: "agent.grant.revoke".into(),
+                    target: Some(target(grant.id, &grant.capability, &bot_name)),
+                    changes: Some(serde_json::json!({"capability":grant.capability,"room":room})),
+                    ..Default::default()
+                })));
             }
-            Ok(true)
+            Ok(Some(None))
         })
         .await
         .map_err(Error::internal)?;
-    if !found {
-        return Err(Error::NotFound);
+    let audit = audit.ok_or(Error::NotFound)?;
+    if let Some(audit) = audit {
+        c.app()
+            .db
+            .write(move |tx| AuditLog::record(tx, audit, &context))
+            .await
+            .map_err(Error::internal)?;
     }
     redirect(c, bot.id)
 }

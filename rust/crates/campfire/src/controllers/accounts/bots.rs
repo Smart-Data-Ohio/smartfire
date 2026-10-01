@@ -552,3 +552,6 @@ pub(super) async fn viewer_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
         .map_err(Error::internal)?;
     Ok(campfire_views::time::Zone::for_user(name.as_deref()))
 }
+
+#[cfg(test)]
+mod access_boundary_tests;

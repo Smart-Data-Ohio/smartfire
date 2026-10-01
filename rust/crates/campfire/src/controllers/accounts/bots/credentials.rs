@@ -34,11 +34,25 @@ pub async fn create(c: &mut Ctx) -> Result {
     let context = super::audit_context(c)?;
     let form_name = name.clone();
     let bot_name = bot.name.clone();
-    let result=c.app().db.write(move |tx| {
-        let (credential,secret)=AgentCredential::create_with_secret(tx,agent.id,&name,actor,expires_at)?;
-        AuditLog::record(tx,NewAuditLog{action:"agent.credential.create".into(),target:Some(target(credential.id,&credential.name,&bot_name)),changes:Some(serde_json::json!({"name":credential.name,"last_four":credential.token_last_four})),..Default::default()},&context)?;
-        Ok(secret)
-    }).await;
+    let result = async {
+        let (secret, audit) = c
+            .app()
+            .db
+            .write(move |tx| {
+                let (credential, secret) = AgentCredential::create_with_secret(tx, agent.id, &name, actor, expires_at)?;
+                let audit = NewAuditLog {
+                    action: "agent.credential.create".into(),
+                    target: Some(target(credential.id, &credential.name, &bot_name)),
+                    changes: Some(serde_json::json!({"name":credential.name,"last_four":credential.token_last_four})),
+                    ..Default::default()
+                };
+                Ok((secret, audit))
+            })
+            .await?;
+        // Rails commits create_with_secret! before the independent audit insert.
+        c.app().db.write(move |tx| AuditLog::record(tx, audit, &context)).await?;
+        Ok::<_, campfire_db::Error>(secret)
+    }.await;
     match result {
         Ok(secret) => {
             let bot_id = bot.id;
@@ -79,34 +93,35 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .ok_or(Error::NotFound)?;
     let context = super::audit_context(c)?;
     let bot_name = bot.name.clone();
-    let found = c
+    let audit = c
         .app()
         .db
         .write(move |tx| {
             let Some(mut credential) =
                 AgentCredential::find(tx.conn(), id)?.filter(|c| c.agent_id == agent.id)
             else {
-                return Ok(false);
+                return Ok(None);
             };
             if credential.revoked_at.is_none() {
                 credential.revoke(tx)?;
-                AuditLog::record(
-                    tx,
-                    NewAuditLog {
-                        action: "agent.credential.revoke".into(),
-                        target: Some(target(id, &credential.name, &bot_name)),
-                        changes: Some(serde_json::json!({"name":credential.name})),
-                        ..Default::default()
-                    },
-                    &context,
-                )?;
+                return Ok(Some(Some(NewAuditLog {
+                    action: "agent.credential.revoke".into(),
+                    target: Some(target(id, &credential.name, &bot_name)),
+                    changes: Some(serde_json::json!({"name":credential.name})),
+                    ..Default::default()
+                })));
             }
-            Ok(true)
+            Ok(Some(None))
         })
         .await
         .map_err(Error::internal)?;
-    if !found {
-        return Err(Error::NotFound);
+    let audit = audit.ok_or(Error::NotFound)?;
+    if let Some(audit) = audit {
+        c.app()
+            .db
+            .write(move |tx| AuditLog::record(tx, audit, &context))
+            .await
+            .map_err(Error::internal)?;
     }
     c.redirect_to(&c.url_for(&campfire_routes::account_bot_credentials(bot.id)))
 }
