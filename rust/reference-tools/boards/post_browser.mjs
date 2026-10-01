@@ -24,10 +24,10 @@ try {
   assert.deepEqual(await p.locator("#thread_work_owner_id optgroup").evaluateAll(xs=>xs.map(x=>x.label)),["Members","Agents"])
   assert.deepEqual(await p.locator("#board-tag-suggestions option").evaluateAll(xs=>xs.map(x=>x.value)),["release","rust"])
   await p.getByRole("link",{name:"Cancel",exact:true}).click()
-  await p.getByRole("heading",{name:"Release board",exact:true}).waitFor()
+  await p.locator("#board-title").waitFor()
  })
  await scenario("post-discussion-template-and-controls",async p=> {
-  await p.getByRole("link",{name:"Planned work",exact:true}).click()
+  await p.locator("#board_row_channel_thread_4 .board-row__link").click()
   await p.locator("#post-title").waitFor()
   assert.equal(await p.locator('meta[name="current-room-id"]').getAttribute("content"),String(labels["rooms.board"]))
   assert.equal(await p.locator('script[data-messages-target="template"]').count(),1)
