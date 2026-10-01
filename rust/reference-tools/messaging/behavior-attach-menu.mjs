@@ -34,6 +34,7 @@ export async function attachMenu({author,recipient,caseName}) {
     // Measure an actionable, settled menu, after its enter transform. This
     // is an interaction-state wait, with no fixed sleep or changed bounds.
     await menu.getByRole('menuitem',{name:'From Google Drive',exact:true}).click({trial:true});
+    await menu.evaluate(element=>Promise.all(element.getAnimations({subtree:true}).map(animation=>animation.finished)));
     const geometry=await page.evaluate(()=>{
       const menu=document.querySelector('.attach-menu').getBoundingClientRect(),button=document.querySelector('button.composer__attachment-btn').getBoundingClientRect();
       return {menu:{left:menu.left,right:menu.right,top:menu.top,bottom:menu.bottom,height:menu.height},buttonTop:button.top,

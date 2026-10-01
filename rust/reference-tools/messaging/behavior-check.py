@@ -399,7 +399,11 @@ for file in files:
                                 actual_blobs = {row[0] for row in conn.execute("SELECT id FROM active_storage_blobs")}
                                 # Live apps may purge old unattached seed blobs. The
                                 # invariant is no new uploads, not suppressing purge.
-                                assert actual_blobs <= blobs, "previews/pickers must not upload unsent files"
+                                added_blobs = actual_blobs - blobs
+                                if added_blobs:
+                                    rows = [(blob_id, conn.execute("SELECT filename,content_type,byte_size FROM active_storage_blobs WHERE id=?", (blob_id,)).fetchone(), conn.execute("SELECT record_type,record_id,name FROM active_storage_attachments WHERE blob_id=?", (blob_id,)).fetchall()) for blob_id in sorted(added_blobs)]
+                                    print(f"WS8bm unsent blob diagnostics: {database}: {rows!r}", flush=True)
+                                assert not added_blobs, "previews/pickers must not upload unsent files"
                             elif file == "boosting_messages":
                                 if case == "boosting a message":
                                     assert conn.execute("SELECT booster_id FROM boosts WHERE message_id=607264868 AND content='Good morning'").fetchall() == [(712064548,)]
