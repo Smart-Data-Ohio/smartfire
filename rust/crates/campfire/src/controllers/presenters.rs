@@ -198,6 +198,8 @@ pub struct Presenter<'a> {
     pub current_user_id: Option<i64>,
     #[allow(dead_code)] // WS11-api calls agent_message_payload after its branch merges.
     agent_payload: &'a agent_payload::State,
+    /// The viewer's zone for token-free request partials; detached jobs default to UTC.
+    pub render_zone: campfire_views::time::Zone,
     github_refreshes: std::rc::Rc<RefCell<BTreeSet<i64>>>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
@@ -227,6 +229,7 @@ impl<'a> Presenter<'a> {
             cache_base_url: None,
             current_user_id: None,
             agent_payload: &app.agent_message_payload,
+            render_zone: page::renderer_time_zone(),
             github_refreshes: Default::default(),
             users: RefCell::default(),
             room_names: RefCell::default(),
@@ -236,6 +239,12 @@ impl<'a> Presenter<'a> {
             twitter_posts: Default::default(),
             twitter_existence: Default::default(),
         }
+    }
+
+    pub(crate) fn use_viewer_zone(&mut self, user_id: i64) -> Result<()> {
+        let zone: Option<String> = self.conn.query_row("SELECT time_zone FROM users WHERE id=?", [user_id], |row| row.get(0))?;
+        self.render_zone = campfire_views::time::Zone::for_user(zone.as_deref());
+        Ok(())
     }
 
     /// Collected only when a card partial actually renders (never on a fragment-cache hit).
@@ -287,6 +296,7 @@ impl<'a> Presenter<'a> {
             cache_base_url: self.cache_base_url.clone(),
             current_user_id: self.current_user_id,
             agent_payload: self.agent_payload,
+            render_zone: self.render_zone.clone(),
             users: RefCell::default(),
             room_names: RefCell::default(),
             search_preloads: Some(data),
@@ -601,35 +611,18 @@ impl<'a> Presenter<'a> {
                 |row| row.get::<_, bool>(0),
             )?
         };
-        let Some(base) = self.cache_base_url.as_deref().filter(|_| !has_events) else {
-            return Ok(MessageItem::View(Box::new(view()?)));
-        };
-        let key = campfire_views::messages::collection_fragment_key(
-            &self.message_collection_cache_key(message)?,
-            base,
-        );
-        let html = fragment_cache::try_fetch_value(
-            || key,
-            || {
-                let view = view()?;
-                let account = campfire_db::Account::first(self.conn)?;
-                page::render_detached_at(self.app, account.as_ref(), base, |ctx| {
-                    use askama::Template;
-                    campfire_views::messages::MessagePartial {
-                        ctx,
-                        message: &view,
-                    }
-                    .render()
-                    .map(std::sync::Arc::new)
-                    .map_err(|error| campfire_db::Error::Other(error.to_string()))
-                })
-            },
-        )?;
-        Ok(MessageItem::Fragment {
-            client_message_id: message.client_message_id.clone(),
-            room_id: message.room_id,
-            html,
-        })
+        let Some(base) = self.cache_base_url.as_deref().filter(|_| !has_events) else { return Ok(MessageItem::View(Box::new(view()?))) };
+        let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
+        let html = fragment_cache::try_fetch_value(|| key, || {
+            let view = view()?;
+            let account = campfire_db::Account::first(self.conn)?;
+            page::render_detached_in_zone(self.app, account.as_ref(), base, &self.render_zone, |ctx| {
+                use askama::Template;
+                campfire_views::messages::MessagePartial { ctx, message: &view }.render()
+                    .map(std::sync::Arc::new).map_err(|error| campfire_db::Error::Other(error.to_string()))
+            })
+        })?;
+        Ok(MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html })
     }
 
     /// A message as `messages/_message` shows it.
@@ -678,7 +671,7 @@ impl<'a> Presenter<'a> {
                 (None, String::new())
             }
         } else {
-            let html = github::message_cards(self.conn, self.app, message)?;
+            let html = github::message_cards_in_zone(self.conn, self.app, message, &self.render_zone)?;
             self.github_refreshes.borrow_mut().extend(
                 crate::integrations::github::pull_requests::PullRequest::for_message(
                     self.conn, message.id,

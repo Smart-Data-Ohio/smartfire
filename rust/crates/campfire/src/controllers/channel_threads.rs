@@ -134,7 +134,7 @@ fn render_thread_pull_request_header(p: &crate::controllers::presenters::Present
         (thread.id, thread.room_id), |row| row.get::<_, i64>(0)).optional()? {
         p.remember_github_refresh(id);
     }
-    page::render_detached_at(p.app(), None, p.cache_base_url.as_deref().unwrap_or("http://example.org"), |ctx| {
+    page::render_detached_in_zone(p.app(), None, p.cache_base_url.as_deref().unwrap_or("http://example.org"), &p.render_zone, |ctx| {
         crate::controllers::presenters::github::thread_header(p.conn, ctx, thread).map(campfire_views::helpers::raw)
     })
 }

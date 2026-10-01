@@ -123,12 +123,15 @@ pub fn shared_card(conn: &Connection, pr: &PullRequest, room_id: i64, files: boo
     }
 }
 pub fn message_cards(conn: &Connection, app: &AppState, message: &Message) -> Result<String> {
+    message_cards_in_zone(conn, app, message, &super::page::renderer_time_zone())
+}
+pub fn message_cards_in_zone(conn: &Connection, app: &AppState, message: &Message, zone: &campfire_views::time::Zone) -> Result<String> {
     let cards = PullRequest::for_message(conn, message.id)?
         .iter()
         .map(|pr| shared_card(conn, pr, message.room_id, false))
         .collect::<Result<Vec<_>>>()?;
     let account = Account::first(conn)?;
-    Ok(super::page::render_detached(app, account.as_ref(), |ctx| {
+    Ok(super::page::render_detached_in_zone(app, account.as_ref(), "http://example.org", zone, |ctx| {
         campfire_views::github::cards(
             ctx,
             &message.client_message_id,
