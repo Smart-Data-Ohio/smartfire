@@ -15,6 +15,7 @@ pub mod link_embeds;
 pub mod fizzy_cards;
 pub mod twitter_cards;
 pub mod page;
+pub mod events;
 pub mod pagination;
 pub mod rich_text;
 mod layout_preferences;
@@ -276,8 +277,9 @@ impl<'a> Presenter<'a> {
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
+        let has_events: bool = self.conn.query_row("SELECT EXISTS(SELECT 1 FROM event_references WHERE message_id=?)", [message.id], |row| row.get(0))?;
         let stamp = github::cache_stamp(self.conn, message)?;
-        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment_with_cards(message.id, message.updated_at.jiff(), base, &stamp)) {
+        Ok(match self.cache_base_url.as_deref().filter(|_| !has_events).and_then(|base| campfire_views::messages::cached_message_fragment_with_cards(message.id, message.updated_at.jiff(), base, &stamp)) {
             Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
             None => MessageItem::View(Box::new(self.message(message)?)),
         })
@@ -314,6 +316,10 @@ impl<'a> Presenter<'a> {
                 .into_iter().filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(self.now))).map(|pr| pr.id)
         );
         let plain_text = self.plain_text_body(message)?;
+        let mut components = link_embeds::components(self, message)?;
+        components.event_views = events::for_message(self.conn, message)?;
+        components.github_cards_html = Some(github_cards_html);
+        components.github_cards_stamp = github::cache_stamp(self.conn, message)?;
         Ok(MessageView {
             id: message.id,
             client_message_id: message.client_message_id.clone(),
@@ -326,11 +332,7 @@ impl<'a> Presenter<'a> {
             content: self.content(message, &plain_text)?,
             boosts: self.boosts(message)?,
             details: self.message_details(message)?,
-            components: campfire_views::messages::MessageComponents {
-                github_cards_html: Some(github_cards_html),
-                github_cards_stamp: github::cache_stamp(self.conn, message)?,
-                ..link_embeds::components(self, message)?
-            },
+            components,
         })
     }
 

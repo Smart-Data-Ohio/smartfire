@@ -100,6 +100,37 @@ fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updat
 /// directory partial descriptions belongs to WS8br; message/poll/pin partials use WS8b-m's seam.
 fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
     use campfire_db::broadcasts::{Broadcast, TurboAction};
+    if let Broadcast::Turbo(frame) = broadcast
+        && let Some(campfire_db::broadcasts::Partial::Message { message_id }) = &frame.partial
+    {
+        let app = app.ok_or_else(|| anyhow::anyhow!("message broadcast before app boot"))?;
+        let html = app.db.read_blocking(|conn| {
+            let message = campfire_db::Message::find(conn, *message_id)?;
+            let view = crate::controllers::presenters::Presenter::new(conn, app, None).message(&message)?;
+            Ok(crate::controllers::presenters::page::render_detached_at(app, None, &app.db.env().default_url_origin, |ctx| campfire_views::messages::message(ctx, &view)))
+        })?;
+        let action = match frame.action {
+            campfire_db::broadcasts::TurboAction::Append => Action::Append,
+            campfire_db::broadcasts::TurboAction::Replace => Action::Replace,
+            _ => return Err(anyhow::anyhow!("unexpected message partial action")),
+        };
+        let attributes = if frame.maintain_scroll { vec![("maintain_scroll", Some("true"))] } else { Vec::new() };
+        cable.broadcast_action_to(&[&broadcast.stream_name()], action, Target::Target(&frame.target), Some(&html), &attributes);
+        return Ok(());
+    }
+    if let Broadcast::Turbo(frame) = broadcast
+        && let Some(campfire_db::broadcasts::Partial::EventCards { message_id }) = &frame.partial
+    {
+        let app = app.ok_or_else(|| anyhow::anyhow!("event card broadcast before app boot"))?;
+        let html = app.db.read_blocking(|conn| crate::controllers::presenters::events::cards(conn, *message_id))?;
+        let action = match frame.action {
+            campfire_db::broadcasts::TurboAction::Replace => Action::Replace,
+            _ => return Err(anyhow::anyhow!("unexpected event card action")),
+        };
+        let attributes = if frame.maintain_scroll { vec![("maintain_scroll", Some("true"))] } else { Vec::new() };
+        cable.broadcast_action_to(&[&broadcast.stream_name()], action, Target::Target(&frame.target), Some(&html), &attributes);
+        return Ok(());
+    }
     if let Some((stream, payload)) = template_free_broadcast(broadcast) {
         match broadcast {
             Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }

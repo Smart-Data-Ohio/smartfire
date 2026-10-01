@@ -68,6 +68,9 @@ impl Config {
             app_url,
         })
     }
+    pub fn url_origin(&self) -> &str {
+        self.app_url.as_deref().unwrap_or("http://example.com")
+    }
     pub fn security_configured(&self) -> bool {
         self.smtp.is_some() && self.mailer_from.is_some() && self.app_url.is_some()
     }
