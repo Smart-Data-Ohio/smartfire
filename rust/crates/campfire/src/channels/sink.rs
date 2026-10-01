@@ -49,8 +49,11 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         }),
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, app.map_or_else(||huddle_configured(env),|app|app.config.huddle.configured()))),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
-            if let Some(app) = app {
-                if super::message_features::deliver(cable, app, &broadcast)? || super::room_composition::deliver(app,&broadcast)? { return Ok(()); }
+            if let Some(app) = app
+                && (super::message_features::deliver(cable, app, &broadcast)?
+                    || super::room_composition::deliver(app, &broadcast)?)
+            {
+                return Ok(());
             }
             messaging(cable, app, &broadcast)
         }),

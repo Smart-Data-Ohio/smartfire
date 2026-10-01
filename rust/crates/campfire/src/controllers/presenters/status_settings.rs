@@ -5,9 +5,6 @@ use rusqlite::OptionalExtension;
 
 /// RoomsController#show's uncached, ordered other active human DM members. No OOO filter:
 /// a member whose OOO begins later must already have a live stream mounted on this page.
-// The production room uses the composed shell adapter; retain these complete
-// WS17 member facts as an independent oracle for its original integration replays.
-#[cfg(test)]
 pub fn ooo_notice_members(
     conn: &Connection,
     secrets: &rails_compat::Secrets,

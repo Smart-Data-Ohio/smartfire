@@ -331,7 +331,6 @@ fn mutation(tx:&mut campfire_db::Tx<'_>, options:&serde_json::Value, config:&cam
 /// Rails emits the ring inline. For E2E, drain only that durable effect through
 /// WS13b's current API, with the same optional quiet_check injection as Rails.
 /// Uses the merged main API directly; no source or compile-time overlay.
-
 fn queued_ring_adapter(app:crate::app::App,quiet:std::sync::Arc<std::sync::atomic::AtomicU8>)->tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {
