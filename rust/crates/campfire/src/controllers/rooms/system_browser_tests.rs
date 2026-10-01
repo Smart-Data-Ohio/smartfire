@@ -102,6 +102,14 @@ async fn run_browser(real_livekit:bool) {
                         let mut member = Membership::find_by_room_and_user(tx.conn(),room.id,KEVIN)?.unwrap();
                         member.change_stage_role(tx,campfire_db::StageRole::Speaker)?;
                     }
+                    let jz_seed:i64=tx.conn().query_row("SELECT id FROM users WHERE name='JZ'",[],|r|r.get(0))?;
+                    // Rails reloads memberships between non-transactional system cases.
+                    // Recover the original Designers member if an earlier revocation
+                    // assertion failed before its explicit restoration.
+                    let designers=Room::find(tx.conn(),654632876)?;
+                    if Membership::find_by_room_and_user(tx.conn(),designers.id,jz_seed)?.is_none() {
+                        designers.grant_to(tx,&[jz_seed])?;
+                    }
                     let crypto = campfire_kit::RailsCrypto::new(secrets);
                     let mut people = serde_json::Map::new();
                     let jz:i64 = tx.conn().query_row("SELECT id FROM users WHERE name='JZ'",[],|r|r.get(0))?;
@@ -120,6 +128,14 @@ async fn run_browser(real_livekit:bool) {
             #[cfg(ws13b_domain_api)]
             let mutation_quiet=mutation_quiet.clone();
             async move {
+                if options["op"]=="server_remove" {
+                    assert!(real_livekit,"server removal requires the project-local LiveKit fixture");
+                    let room=options["room"].as_i64().unwrap();
+                    let identity=options["identity"].as_str().unwrap();
+                    let name=rails_compat::jwt::livekit::room_name(app.config.huddle.api_secret.as_deref().unwrap(),room);
+                    crate::huddle::RoomService::new(app.config.huddle.clone()).remove_participant(&name,identity,app.clock.now().as_second()).await.unwrap();
+                    return Json(json!({}));
+                }
                 if options["op"]=="reconnect" {
                     let user=options["user"].as_i64().unwrap();
                     let disconnected=app.cable.disconnect(&crate::channels::user_gid(user).to_string(),true);
@@ -260,6 +276,11 @@ fn mutation(tx:&mut campfire_db::Tx<'_>, options:&serde_json::Value, config:&cam
         room.grant_to(tx,&[user])?;
         return Ok(json!({}));
     }
+    if op=="revoke_member" {
+        let room=Room::find(tx.conn(),options["room"].as_i64().unwrap())?;
+        room.revoke_from(tx,&[options["user"].as_i64().unwrap()])?;
+        return Ok(json!({}));
+    }
     if op=="preferences" {
         tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=?",params![options["preferences"].to_string(),options["user"].as_i64().unwrap()])?;
         return Ok(json!({}));
@@ -283,6 +304,7 @@ fn mutation(tx:&mut campfire_db::Tx<'_>, options:&serde_json::Value, config:&cam
         }
         "notify_leave"=>huddle_notices::notify_leave(tx,&grant)?,
         "revoke"=>grant.revoke(tx,true,config)?,
+        "destroy_session"=>Session::find(tx.conn(),grant.session_id)?.destroy(tx)?,
         "out"=>return Ok(json!({"changed":grant.mark_out_of_call(tx,None)?})),
         "inspect"=>return Ok(json!({"last_seen":grant.last_seen_at.map(|at|at.as_microsecond()),"revoked":grant.revoked(),"activities":tx.conn().prepare("SELECT user_id,event_type,read_at IS NOT NULL,handled_at IS NOT NULL FROM activity_items WHERE source_type='HuddleGrant' AND source_id=?")?.query_map([id],|r|Ok(json!({"user":r.get::<_,i64>(0)?,"event":r.get::<_,String>(1)?,"read":r.get::<_,bool>(2)?,"handled":r.get::<_,bool>(3)?})))?.collect::<Result<Vec<_>,_>>()?})),
         _=>panic!("unknown fixture operation: {op}"),

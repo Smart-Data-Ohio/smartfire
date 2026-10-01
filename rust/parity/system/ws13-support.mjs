@@ -22,7 +22,7 @@ async function fixture(t, names, options={}) {
     // Each browser context owns its forwarding agent. Close both together so
     // cancelled page requests cannot occupy the shared agent across declarations.
     const pageProxy = await startProxy(process.env.WS13_SYSTEM_TARGET);
-    const context = await browser.newContext({proxy:{server:pageProxy.server,bypass},timezoneId:'UTC',locale:'en-US',viewport:{width:1400,height:1000}});
+    const context = await browser.newContext({proxy:{server:pageProxy.server,bypass},timezoneId:'UTC',locale:'en-US',...(process.env.WS13_LIVEKIT_GATEWAY_BYPASS?{permissions:['microphone','camera']}:{}),viewport:{width:1400,height:1000}});
     t.after(async () => {
       if(process.env.WS13_LIVEKIT_GATEWAY_BYPASS) {
         const p=pages[name];if(p&&await p.locator('#channel-huddle:not([hidden])').isVisible()){

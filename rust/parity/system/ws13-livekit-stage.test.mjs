@@ -38,3 +38,5 @@ test('a listener survives a full reconnect and stays subscribe-only',async t=>{
   assert.equal(result.ok,true,'SDK could not start a full reconnect');await p.locator('#channel-huddle[data-state="connected"]').waitFor({timeout:20000});
   await p.waitForFunction(()=>window.Stimulus.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle')?.room?.localParticipant?.permissions?.canPublish===false,null,{timeout:10000,polling:50});await note(p);await noMute(p);
 });
+
+import './ws13-livekit-huddles.cases.mjs';
