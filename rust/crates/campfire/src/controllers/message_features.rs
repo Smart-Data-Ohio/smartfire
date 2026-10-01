@@ -2,6 +2,8 @@
 #[cfg(test)]
 mod saved_tests;
 #[cfg(test)]
+mod coercion_tests;
+#[cfg(test)]
 mod scheduled_tests;
 #[cfg(test)]
 mod tests;
