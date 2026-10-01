@@ -42,7 +42,19 @@ pub(super) fn deliver(app: &App, broadcast: &Broadcast) -> anyhow::Result<bool> 
                 member_ids,
             } => {
                 let membership = Membership::find(conn, membership_id)?;
-                let row = composition::for_membership(&copy, conn, &membership, Some(&member_ids))?;
+                let room = Room::find(conn, membership.room_id)?;
+                // The descriptor selects members; main's directory presenter
+                // supplies Rails' membership association order for their avatars.
+                let ordered_ids: Vec<_> =
+                    crate::controllers::presenters::accounts::sidebar_direct(
+                        conn, &copy.secrets, &membership, &room,
+                    )?
+                    .members
+                    .into_iter()
+                    .filter(|member| member_ids.contains(&member.id))
+                    .map(|member| member.id)
+                    .collect();
+                let row = composition::for_membership(&copy, conn, &membership, Some(&ordered_ids))?;
                 Ok(page::render_detached(&copy, account.as_ref(), |ctx| {
                     row.render_fragment(ctx, copy.config.huddle.configured())
                 }))
