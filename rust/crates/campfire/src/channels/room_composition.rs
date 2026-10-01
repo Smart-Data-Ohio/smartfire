@@ -14,6 +14,16 @@ pub(super) fn deliver(app: &App, broadcast: &Broadcast) -> anyhow::Result<bool> 
     let Broadcast::Turbo(frame) = broadcast else {
         return Ok(false);
     };
+    // The native directory renderer owns ordinary room rows and headers. The
+    // huddle composition adds the participant and call controls only when Rails'
+    // Huddle.configured? branch is active.
+    if matches!(
+        frame.partial,
+        Some(Partial::DirectSidebar { .. } | Partial::RoomHeader { .. })
+    ) && !app.config.huddle.configured()
+    {
+        return Ok(false);
+    }
     if !matches!(
         frame.partial,
         Some(

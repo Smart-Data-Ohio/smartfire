@@ -46,7 +46,7 @@ async fn full_room_pages_match_thirty_eight_complete_rails_pages() {
                         &app,
                         Some("campfire.test".into()),
                     );
-                    presenter.cache_base_url = Some("http://campfire.test/".into());
+                    presenter.cache_base_url = Some("http://campfire.test".into());
                     Ok((
                         presenter.room_view(&room, &user)?,
                         super::call_navigation::model(&app, conn, &room, &user)?,
