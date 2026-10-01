@@ -59,7 +59,8 @@ async function acceptance(base,caseName,probe={}) {
       await page.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]').waitFor({state:'attached'});
       return page;
     }
-    const author=await viewer('JZ'),recipient=await viewer('Kevin');
+    const profileActors=file==='message_list_a11y'&&caseName==='profile message and ban buttons have accessible names';
+    const author=await viewer('JZ'),recipient=await viewer(profileActors?'David':'Kevin');
     // Startup errors are never accepted as proof of assertion discrimination.
     probe.ready=true;
     if(negative) {
@@ -90,7 +91,7 @@ async function acceptance(base,caseName,probe={}) {
       await page.waitForFunction(value=>document.querySelector('#composer textarea[name="message[markdown_source]"]')?.value===value,value);
     }
     if(file==='message_list_a11y') {
-      if(destinationCases.includes(caseName)) await messageDestinations({author,base,caseName,fixture,viewer});
+      if(destinationCases.includes(caseName)) await messageDestinations({author,recipient,base,caseName,fixture,viewer});
       else await messageList({author,recipient,caseName,send,text,openEdit,field});
       return;
     }

@@ -11,7 +11,7 @@ export const destinationCases=[
   'flash persists its 5-second minimum under reduced motion',
   'flash dismisses on demand under reduced motion',
 ];
-export async function messageDestinations({author:page,base,caseName,fixture,viewer}) {
+export async function messageDestinations({author:page,recipient,base,caseName,fixture}) {
   async function visit(path) {assert.equal((await page.goto(base+path)).status(),200);}
   async function menu(message) {
     await message.locator(':scope[aria-haspopup="menu"]').waitFor();
@@ -70,7 +70,7 @@ export async function messageDestinations({author:page,base,caseName,fixture,vie
   } else if(caseName===destinationCases[4]) {
     assert.equal(await page.locator('meta[name="viewport"]').getAttribute('content'),'width=device-width, initial-scale=1, interactive-widget=resizes-content');
   } else if(caseName===destinationCases[5]) {
-    for(const browser of [page,await viewer('David')]) {
+    for(const browser of [page,recipient]) {
       assert.equal((await browser.goto(base+'/users/712064548')).status(),200);
       await browser.locator('button[aria-label="Message Kevin"]').waitFor();
       assert.equal(await browser.locator('img[aria-label]').count(),0);
