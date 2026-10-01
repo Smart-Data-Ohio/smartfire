@@ -18,6 +18,7 @@ pub mod twitter;
 pub mod image_proxy;
 mod jobs;
 pub mod agent_repositories;
+mod agent_jobs;
 mod agent_streaming;
 pub mod action_claims;
 // Account, fetcher and notifier consumers remain staged (WS15g continuation).
