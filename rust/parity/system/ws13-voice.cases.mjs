@@ -17,6 +17,7 @@ async function createVoice(f,name,users) {
 }
 async function setup(t) {
   const f=await fixture(t,['david','jason']);
+  await f.pages.jason.setViewportSize({width:1400,height:1400}); // Rails' shared system driver.
   const room=await createVoice(f,'Lounge',['david','jason']);
   await visitRoom(f.pages.jason,room);
   return {...f,room,page:f.pages.jason};

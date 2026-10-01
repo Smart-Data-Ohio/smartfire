@@ -644,7 +644,7 @@ Owner: WS13. Complete: 8/8 original declarations passed against the actual seede
 
 ## test/system/huddle_invitations_test.rb
 
-Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration are complete; the remaining system interactions need their backend fixture adapter. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - the recipient sees an incoming huddle banner and dismissing it marks the item read
 - joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel
@@ -659,7 +659,7 @@ Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers
 
 ## test/system/huddle_join_notices_test.rb
 
-Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration are complete; the remaining system interactions need their backend fixture adapter. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - an in-call member sees a join toast and hears the join sound
 - rapid joins batch into one toast with one sound
@@ -680,7 +680,7 @@ Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers
 
 ## test/system/huddle_presence_test.rb
 
-Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
+Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration are complete; the remaining system interactions need their backend fixture adapter. These cases use stubbed rooms and do not require a real LiveKit server.
 
 - the channel sidebar row and header show participants and empty on revoke
 - the DM sidebar row and header show the peer and empty on revoke
@@ -779,13 +779,13 @@ Owner: WS13. Partial: 4/12 complete original declarations passed through public 
 
 `stream_controller_tests.rs` closes the 22 previously open stream declarations with exact HTTP bodies, global stream-count guards, outsider/admin/type isolation, presenter and stale-id behavior, member-edit teardown and last-host succession. Its real Cable test checks one room badge and three per-user replacements, explicit presenter-stop silence, a moderator's single stopped event, and a barrier proving silent no-op stop without sleeping or changing timing thresholds. `stage_page_tests.rs` checks the 15 page declarations through the actual generic room endpoint. Domain/model/job/service files remain WS13b-owned.
 
-The 35 real LiveKit declarations remain individually inventoried above: 31 in `test/system/huddles_test.rb`, four in `test/system/stage_test.rb`. Their browser WebRTC/media/reconnect assertions cannot be expressed by recorded responses from the injected administrative LiveKit client. Recorded client/Twirp and gateway contracts remain covered; 52 ordinary browser declarations remain open, rather than being reclassified as LiveKit-dependent; 19 ordinary declarations are complete.
+The 35 real LiveKit declarations remain individually inventoried above: 31 in `test/system/huddles_test.rb`, four in `test/system/stage_test.rb`. Their browser WebRTC/media/reconnect assertions cannot be expressed by recorded responses from the injected administrative LiveKit client. Recorded client/Twirp and gateway contracts remain covered; 40 ordinary browser declarations remain open, rather than being reclassified as LiveKit-dependent; 31 ordinary declarations are complete.
 
 ## Remaining controller and integration closure
 
-The nine tests in `remaining_call_tests.rs`, `remaining_query_tests.rs` and `remaining_presence_tests.rs` close the last 26 original declarations. Query probes trace executed cached statements, retaining the configured reader count. Their isolated app shuts down its independent background workers before measuring controller SQL; the test suite still runs four tests concurrently. A barrier holds the room read after membership scope while a separate write commits membership revocation, then verifies the issue path returns the controlled JSON denial without a grant. Stage edits prove the host read and membership insert sit between one immediate begin and commit. Steady-state admission runs no transaction or writes and at most eight statements; denial performs exactly one grant update and cleanup insert. Presence batches one grants query and one user preload across three live rooms. Real Cable frames prove exact hand/promotion/mute fan-out, personalization, cleanup and unchanged host grants, with a clock-controlled double raise preserving queue order. All five integration declarations inspect actual GET HTML for channel, direct and group stacks, quiet targets, adjacency and disabled configuration.
+The nine tests in `remaining_call_tests.rs`, `remaining_query_tests.rs` and `remaining_presence_tests.rs` close the last 26 original declarations. Query probes trace executed cached statements, retaining the configured reader count. Their isolated app shuts down its independent background workers before measuring controller SQL; the current suite retains eight test threads. A barrier holds the room read after membership scope while a separate write commits membership revocation, then verifies the issue path returns the controlled JSON denial without a grant. Stage edits prove the host read and membership insert sit between one immediate begin and commit. Steady-state admission runs no transaction or writes and at most eight statements; denial performs exactly one grant update and cleanup insert. Presence batches one grants query and one user preload across three live rooms. Real Cable frames prove exact hand/promotion/mute fan-out, personalization, cleanup and unchanged host grants, with a clock-controlled double raise preserving queue order. All five integration declarations inspect actual GET HTML for channel, direct and group stacks, quiet targets, adjacency and disabled configuration.
 
-All 226 controller/integration declarations are complete. WS13b retains the 216 domain declarations and unchanged historic 37 passed / 179 open. Nineteen of 106 system declarations now pass. The remaining 52 ordinary browser cases and 35 real LiveKit cases remain individually inventoried, as requested.
+All 226 controller/integration declarations are complete. WS13b retains the 216 domain declarations and unchanged historic 37 passed / 179 open. Thirty-one of 106 system declarations now pass. The remaining 40 ordinary browser cases and 35 real LiveKit cases remain individually inventoried, as requested.
 
 ## Room composition continuation
 
@@ -805,7 +805,7 @@ The previous continuation paragraphs are historical: Designers and application-l
 
 ## Audio browser continuation
 
-The eight audio declarations use the real Designers seed room (the fixture asserts its ID) and signed Rust sessions, with the actual Rails SDK/track stub transcribed verbatim apart from named JavaScript arguments. No product JavaScript, LiveKit policy, transport seam or original assertion was changed. The ordinary browser total is now 19 passed, 52 remaining; the real LiveKit total remains 0 passed, 35 remaining. Browser acceptance runs explicitly rather than being silently skipped as part of the ordinary workspace suite.
+The eight audio declarations use the real Designers seed room (the fixture asserts its ID) and signed Rust sessions, with the actual Rails SDK/track stub transcribed verbatim apart from named JavaScript arguments. No product JavaScript, LiveKit policy, transport seam or original assertion was changed. The ordinary browser total is now 31 passed, 40 remaining; the real LiveKit total remains 0 passed, 35 remaining. Browser acceptance runs explicitly rather than being silently skipped as part of the ordinary workspace suite.
 
 The roster SDK/analyser fixture is copied from the pinned Rails helper. Browser contexts now close their individual forwarding proxies with the context: cancelled page requests cannot carry into later declarations. The shared fixture explicitly waits for its Stimulus huddle controller within the existing two-second selector budget before installing the original SDK fixture. These are harness lifecycle fixes; no original assertion, concurrency or explicit wait is changed.
 
