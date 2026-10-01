@@ -8,7 +8,8 @@ use hyper::{Method, StatusCode};
 use serde_json::{Value, json};
 use std::sync::Arc;
 async fn app() -> (TestApp, Arc<Recorded>) {
-    let a = TestApp::boot().await.expect("default seed required");
+    let clock = Arc::new(campfire_kit::FrozenClock::new(crate::controllers::presenters::test_support::seed_clock().now()));
+    let a = TestApp::boot_with_clock(clock).await.expect("default seed required");
     let r = Recorded::new(vec![]);
     support::install(&a, r.clone()).await;
     a.booted.app.google.drive().install_picker(true);
