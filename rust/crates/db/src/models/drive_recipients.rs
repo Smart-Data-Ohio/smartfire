@@ -9,13 +9,12 @@ pub struct Recipient {
     pub name: String,
     pub email: String,
 }
+// URI::MailTo::EMAIL_REGEXP from pinned Rails' uri gem. Test vectors validate
+// this constant; release code must not depend on the parity fixture directory.
+const EMAIL_PATTERN: &str = r"\A[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\z";
 pub fn eligible_email(email: &str) -> bool {
     static PATTERN: LazyLock<regex::Regex> = LazyLock::new(|| {
-        let v: Value =
-            serde_json::from_str(include_str!("../../../../vectors/google_drive_policy.json"))
-                .expect("Rails email vectors");
-        regex::Regex::new(&v["email_pattern"].as_str().unwrap().replace("\\#", "#"))
-            .expect("URI::MailTo::EMAIL_REGEXP")
+        regex::Regex::new(EMAIL_PATTERN).expect("URI::MailTo::EMAIL_REGEXP")
     });
     PATTERN.is_match(email)
 }
@@ -49,6 +48,7 @@ mod tests {
         let v: Value =
             serde_json::from_str(include_str!("../../../../vectors/google_drive_policy.json"))
                 .unwrap();
+        assert_eq!(EMAIL_PATTERN, v["email_pattern"].as_str().unwrap().replace("\\#", "#"));
         for case in v["emails"].as_array().unwrap() {
             assert_eq!(
                 eligible_email(case["input"].as_str().unwrap()),
