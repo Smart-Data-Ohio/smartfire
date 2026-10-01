@@ -49,6 +49,11 @@ calendar_job!(Remote, RemoteDeleteJob, "Calendar::RemoteDeleteJob");
 calendar_job!(Watch, WatchChannelJob, "Calendar::WatchChannelJob");
 pub fn register(registry: &mut Registry) {
     registry.register(cleanup_job);
+    registry.on_exhausted::<Cleanup,_>(|app,job,error| {
+        let class=error.downcast_ref::<api::Error>().map_or("Google::Client::Unavailable",api::Error::class);
+        tracing::error!(error_class=class,"Calendar::DisconnectCleanupJob failed after retries");
+        app.errors.report(error,class,serde_json::json!({"job":"Calendar::DisconnectCleanupJob","account_id":job.0.0.2}));
+    });
     registry.register(remote_job);
     registry.register(watch_job);
 }

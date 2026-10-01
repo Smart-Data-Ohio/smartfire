@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 148 ported domain/API/controller cases; 463 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 149 ported domain/API/controller cases; 462 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -331,7 +331,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Deferred** — a transient delete failure schedules a retry without revoking — WS14g continuation.
 - **Deferred** — a revoke 5xx schedules a retry — WS14g continuation.
 - **Deferred** — an exhausted retry logs the failure at error level — WS14g continuation.
-- **Deferred** — an exhausted retry reports to the error service with the account id — WS14g continuation.
+- **Ported** — an exhausted retry reports to the error service with the account id — `app::google_reporting_tests::google_cleanup_reports_the_rails_account_context_only_after_eight_committed_attempts` (two actual Rails subscribers with numeric/nil account contexts; sixteen recorded runner attempts; exactly two reports after fenced COMMIT; real error object retains classification and excludes credentials).
 - **Deferred** — a missing id list still revokes the grant — WS14g continuation.
 - **Deferred** — blank credentials are a no-op — WS14g continuation.
 - **Deferred** — an unreadable credentials blob logs a warning with the account id — WS14g continuation.
@@ -820,7 +820,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 Main was merged at `35c0e65b` to consume WS14e's `CalendarEvent::respond` and `CalendarEvent::save_meet_link`. All seven Calendar classes, including InboundSync and MeetLink, now have registered consumers. The 38 pinned consumer scenarios exercise exact HTTP, responses, attendance timestamps, link/request flags, queue emissions, channel errors and disconnects. Real-runner tests verify declines, provisioning and pending retries. Late enqueue failures roll back domain changes and callback jobs; complete Meet-card and disconnect status/OOO socket frames are compared with Rails after commit. Compound attendance parameters have 24 Rails-generated GET/PATCH vectors with exact opening-frame and hidden-input bytes.
 
-Retry budgets now persist by Rails exception-handler group, survive restarts and reset on manual retry. Six serialized Rails retry sequences cover mixed inherited/Google errors and exhaustion. Native tests cover writer rollback, expired process leases, explicit re-enqueue and terminal cleanup. Rails.error subscriber integration and cleanup account-id error context remain unfinished.
+Retry budgets now persist by Rails exception-handler group, survive restarts and reset on manual retry. Six serialized Rails retry sequences cover mixed inherited/Google errors and exhaustion. Native tests cover writer rollback, expired process leases, explicit re-enqueue and terminal cleanup. Cleanup exhaustion now invokes an injectable error subscriber with Rails account-id/job context and the actual error after fenced terminal COMMIT. Pinned Rails defaults are handled=true, severity=warning and source=application. Engine regressions prove rollback, lost-claim and ordinary-discard outcomes do not publish it.
 
 The profile connection/sign-in panels match seven connection and three identity states, Drive chips match empty/populated states, and administrator allow/unlink forms match eleven account rows byte for byte. Complete configured pages and interaction assertions remain WS14g work with the page/layout owners. No browser pixel-diff work is required or listed as remaining.
 
@@ -837,3 +837,5 @@ The new controller-cases probe captures 66 complete Rails request observations, 
 Inbound preloading now has the original one-event-read assertion, scaled from 3 to 30 confirmed entries, with recorded Google calls and unchanged responses/jobs. The merged owner SQL tracer is reused on the actual reader count.
 
 Complete Google HTML now compares all three login HTTP pages and sixteen complete Google profile panels across eight configured/grant/link states, including complete Google Calendar notices. The injected Calendar configuration now drives settings notices; the old process-global environment read caused configured clients to render the unconfigured notice. Full profile pages remain owner-blocked: WS8b-r2 profile/status/membership composition, WS10 GitHub/inbox controls, WS13 call settings, WS15f Fizzy, WS16 Slack, and WS6 timezone ordering. The eight full Rails profile responses are retained in google_full_pages.json; no failed whole-page claim is relabeled complete and no pixel work is required.
+
+Error service reporting is now implemented through the app subscriber boundary. The Rails probe observes real report defaults and represents its execution-context ActiveJob object by class name (Ruby object pointers are not a cross-language contract); all other options, account contexts, request counts and retry emissions are compared exactly. The real error is passed to subscribers; default structured logs contain only classification/options, never snapshot tokens. Missing subscribers were reproduced after all eight committed attempts before wiring the consumer exhaustion block.

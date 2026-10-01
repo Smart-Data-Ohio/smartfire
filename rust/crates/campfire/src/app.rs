@@ -43,6 +43,7 @@ pub struct AppState {
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
     pub google: crate::integrations::google::State,
+    pub errors: crate::errors::Reporter,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     pub github_accounts: crate::integrations::github::accounts::Accounts,
@@ -209,6 +210,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         google: crate::integrations::google::State::default(),
+        errors: crate::errors::Reporter::default(),
         web_push,
         github_read,
         github_app,
@@ -607,3 +609,6 @@ mod google_admin_tests;
 
 #[cfg(test)]
 mod google_page_tests;
+
+#[cfg(test)]
+mod google_reporting_tests;

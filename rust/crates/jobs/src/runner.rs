@@ -278,7 +278,7 @@ pub(crate) fn decide(policy: &RetryPolicy, executions: u32, result: &JobResult, 
     }
 }
 
-async fn finish<C: Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, policy: &RetryPolicy, result: JobResult, elapsed: Duration) {
+async fn finish<C: Clone + Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, policy: &RetryPolicy, result: JobResult, elapsed: Duration) {
     let (decision, arguments) = decision_with_metadata(policy, job, &result, rand::random::<f64>());
     let (class, id, executions) = (job.class.as_str(), job.id, job.attempts);
     let elapsed_ms = elapsed.as_millis() as u64;
@@ -292,7 +292,7 @@ async fn finish<C: Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, pol
             job = class,
             id,
             error = describe(error),
-            "retry handler exhausted, reported and completed"
+            "retry handler exhausted"
         ),
         (Err(_), Decision::Delete) => {}
     }
@@ -329,7 +329,13 @@ async fn finish<C: Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, pol
         }
     };
     match written {
-        Ok(true) => {}
+        Ok(true) => {
+            if let (Err(JobError::RetryGroup {error,discard_exhausted:true,..}),Decision::Delete)=(&result,&decision)
+                && let Some(callback)=shared.registry.get(class).and_then(|kind|kind.exhausted.as_ref())
+            {
+                callback(shared.context.clone(),crate::retry::arguments(serde_json::from_str(&job.arguments).unwrap_or_default()),job.version,error);
+            }
+        }
         // Its lease expired and it was recovered: the other claim's outcome stands.
         Ok(false) => tracing::warn!(job = class, id, "the job's claim was lost while it ran; its outcome wasn't recorded"),
         Err(error) => tracing::error!(job = class, id, %error, "recording the job's outcome failed; it's retried when its lease expires"),
