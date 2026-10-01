@@ -31,8 +31,10 @@ ends with its source newline and must also be mounted verbatim.
 The stored fragment uses `message_fragment_cache_key`: that collection key followed
 by the exact `MessagesController#index` page validator for the message and its reply
 source, the individual rendered-record Rails key array (including all user roles,
-rooms, cards/references, body/attachment identities, poll options/votes and its closed
-boolean), then the verified origin. The collection prefix carries the pinned Rails
+cards/references, resolved icons, body/attachment identities, poll options/votes and its closed
+boolean), projected rendered room labels, then the verified origin. Search room icons
+have their own resolved-value suffix; unrelated room touches and unused icons do not
+change existing fragment keys. The collection prefix carries the pinned Rails
 template digest. Rails' initial room list renders uncached; these complete dependencies
 preserve its freshness when Rust reuses a fragment. There is no nested HTML boost cache.
 See `ws8bma-review-fixes.md` for the exact Rails input/key/touch/digest source ledger.

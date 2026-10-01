@@ -1,7 +1,7 @@
 # PR #182 review fixes
 
 Initial reviewed input: `9883d3fa1d2f797f84fd3e96e9e7e8472435cdb9`.
-Latest reviewed input: `8cc1e9393f6c75d34f27d323e6eacaa353668a80`.
+Latest reviewed input: `63c42b8954d1fbcb9d319b484b43178642c8394e`.
 The PR was conflicting, so `origin/main` was merged in `2139a2b6` before the fixes.
 The one thread-header conflict retains the owner's adapter and main's render-zone behavior.
 Rails oracle: `d7c7de92`, with the approved #163 layout/assets drift unchanged.
@@ -99,7 +99,9 @@ Both literal Rails compositions are preserved, with their existing oracle compar
 
 This follows every branch in `app/views/messages/_message.html.erb:3` through `:33`.
 “Individual version” below means the record's literal Rails `cache_key_with_version`,
-not a new timestamp maximum. These form the additional room reuse dependency array;
+not a new timestamp maximum. Room labels and search room icons use their actual
+rendered values, since whole Room versions would invalidate on unrelated posts.
+Icon records are restricted to resolved names. These form the additional reuse array;
 Rails itself needs no such array for its uncached initial room render.
 
 | Rendered inputs | Rails source | Key / touch coverage in Rust's mounted fragment |
@@ -107,12 +109,12 @@ Rails itself needs no such array for its uncached initial room render.
 | Message/client id, room/thread/creator ids, created/updated times, sort/targets/URLs, note/action/emoji classes | `app/helpers/messages_helper.rb:49`, `:79`, `:93`, `:103`, `:111`; `app/models/message.rb:402` | Original message version, flags, individual message version; source records also carry their versions. |
 | Day separator and timestamp hooks | `app/views/messages/_message.html.erb:4`; `app/helpers/time_helper.rb:2` | Message created time; normal date/time hooks emit ISO time for browser localization, not viewer-local text. |
 | System note actor, body, permalink, icon | `app/views/messages/_system_note.html.erb:6` | Message/body versions and actor's individual User version; static asset resolver scoped to the app. |
-| Author name, bio/title, profile-card URLs, avatar, bot icon/role | `app/views/messages/_meta.html.erb:3`; `app/helpers/users/avatars_helper.rb:15`, `:29`; `app/models/user.rb:135`; `app/helpers/users_helper.rb:6` | Author's individual User version, avatar attachment/blob identities, workspace icon versions. |
-| Room name/direct member names and optional room icon | `app/views/messages/_meta.html.erb:14`; `app/helpers/rooms_helper.rb:106`; `app/models/rooms/direct.rb:77` | Individual STI Room version and direct members' User versions. Search's `show_room_icon` local uses a separate key suffix. |
+| Author name, bio/title, profile-card URLs, avatar, bot icon/role | `app/views/messages/_meta.html.erb:3`; `app/helpers/users/avatars_helper.rb:15`, `:29`; `app/models/user.rb:135`; `app/helpers/users_helper.rb:6` | Author's individual User version, avatar attachment/blob identities, only resolved workspace icon versions. |
+| Room name/direct member names and optional room icon | `app/views/messages/_meta.html.erb:14`; `app/helpers/rooms_helper.rb:106`; `app/models/rooms/direct.rb:77` | Room identity and its rendered label, including current direct-member names, without the room-wide timestamp. Search's `show_room_icon` local uses a separate resolved-icon key suffix. |
 | Toolbar, pin badge, streaming state | `app/views/messages/_message.html.erb:16`, `:17`, `:19`; `app/views/messages/_pin_badge.html.erb:3` | Message flags, exact pin slots/pin digest, pin record set/versions; fixed toolbar assets. No viewer/session token. |
-| Reply source existence/id, author name, text, forward-note text, attachment fallback filename, permalink/thread id | `app/views/messages/_context.html.erb:1`; `app/models/message.rb:262`; `app/helpers/messages_helper.rb:111` | Source Message/RichText/Room versions, source-author and source-mentioned User versions, attachment/blob identities; existing page validator includes reply source edited stamp. |
+| Reply source existence/id, author name, text, forward-note text, attachment fallback filename, permalink/thread id | `app/views/messages/_context.html.erb:1`; `app/models/message.rb:262`; `app/helpers/messages_helper.rb:111` | Source Message/RichText versions, source-author and source-mentioned User versions, attachment/blob identities; existing page validator includes reply source edited stamp. |
 | Forward flag/note and lazy source endpoint | `app/views/messages/_context.html.erb:16` | Forwarding Message version; original source contents/access are fetched separately and are not embedded here. |
-| Legacy/Markdown body, sanitized HTML, emoji/icon rendering, rich-text embedded blobs and mentions | `app/views/messages/_presentation.html.erb:5`; `app/helpers/messages_helper.rb:163`, `:188`; `app/views/users/_mention.html.erb:1`; `lib/rails_ext/action_text_attachables.rb:18` | Message/RichText versions and touch chain; every resolved mentioned User version, including reply/quote bodies (`app/models/message/mention_preloader.rb:66`); workspace icon record set/versions. |
+| Legacy/Markdown body, sanitized HTML, emoji/icon rendering, rich-text embedded blobs and mentions | `app/views/messages/_presentation.html.erb:5`; `app/helpers/messages_helper.rb:163`, `:188`; `app/views/users/_mention.html.erb:1`; `lib/rails_ext/action_text_attachables.rb:18` | Message/RichText versions and touch chain; every resolved mentioned User version, including reply/quote bodies (`app/models/message/mention_preloader.rb:66`); only resolved workspace icon versions. |
 | File presence/type, filename/base, metadata width/height, signed blob/variant URLs, download/share labels | `app/helpers/messages/attachment_presentation.rb:6`, `:29`, `:40`, `:58`, `:76`, `:88`, `:94`, `:100`; `app/helpers/broadcasts_helper.rb:6`; `app/models/message/attachment.rb:8` | Attachment/blob identities have no changing version; Rails blob updates touch attachments, then owner, then Room. Source owner versions protect filename previews. Variant transforms are fixed code/config; no variant row fields render. |
 | Sound asset path, text/image and dimensions | `app/helpers/messages_helper.rb:221` | Message/body version; sound catalog/assets immutable for the app instance, presentation version 3. |
 | Agent step order/count, name/status, duration, input/output summaries | `app/views/agent_steps/_steps.html.erb:5`; `app/models/agent_step.rb:24` | Exact newest-step helper slot plus independent step record set/versions. Agent's own profile is not rendered in the steps. |
@@ -121,13 +123,13 @@ Rails itself needs no such array for its uncached initial room render.
 | GitHub order, privacy/lazy frame, repository/number/state, title/error/loading, author login/avatar, branches, review/checks, update time, URL, Discuss mapping/form | `app/views/github/pull_requests/_cards.html.erb:5`; `app/views/github/pull_requests/_card.html.erb:1`, `:13`, `:17`, `:26`, `:32`, `:44`, `:50`; `app/helpers/github/pull_requests_helper.rb:61` | Original card/mapping stamp slots plus every PR/reference/mapping version. Private content is fetched by the viewer endpoint. PR authors are provider fields, not local User rows. |
 | X identity, error/loading, author/profile/avatar, text/clamping, media types/URLs/alt/dimensions, quote fields, posted time, counts/view URL | `app/views/twitter/posts/_card.html.erb:1`, `:13`, `:26`, `:41`, `:61`, `:78` | Original card stamp plus Post/Reference individual versions; nested quoted-provider data lives in the Post record. |
 | Event title/state/series/time zone/start/end, venue name, Meet link, organizer name, lazy attendance endpoint | `app/views/rooms/events/_card.html.erb:1`, `:9`, `:12`, `:18`, `:22`, `:26`, `:29`; `app/models/message.rb:169` | Event-bearing messages already bypass the collection store and render current Event/Room/Organizer/Venue inputs in request context. No stale event fragment can be reused; attendance remains per viewer. |
-| Quote source author, neutral room label, created time, excerpt/mention names/attachment fallback/forward note, jump URL; cross-room lazy frame | `app/views/messages/message_links/_cards.html.erb:6`; `app/views/messages/message_links/_card.html.erb:7`, `:8`, `:9`, `:11`, `:15`; `app/helpers/rooms_helper.rb:120` | Exact quote stamp/name digest; Source Message/RichText/Room/User/mentioned User versions and attachment/blob identities; Reference versions. Cross-room source contents/access stay behind their endpoint. |
+| Quote source author, neutral room label, created time, excerpt/mention names/attachment fallback/forward note, jump URL; cross-room lazy frame | `app/views/messages/message_links/_cards.html.erb:6`; `app/views/messages/message_links/_card.html.erb:7`, `:8`, `:9`, `:11`, `:15`; `app/helpers/rooms_helper.rb:120` | Exact quote stamp/name digest; Source Message/RichText/User/mentioned User versions, rendered quote room label and attachment/blob identities; Reference versions. Cross-room source contents/access stay behind their endpoint. |
 | Fizzy sorted card ids, frame id/src | `app/views/fizzy/cards/_cards.html.erb:6`; `app/helpers/fizzy/cards_helper.rb:11`, `:17` | Original card stamp plus Card/Reference versions; payload and viewer's Fizzy account cache are not in this partial. |
 | LinkedIn URL/URN embed player, fetched title/description/image or fallback chip | `app/views/linkedin/posts/_cards.html.erb:8`; `app/views/linkedin/posts/_card.html.erb:7`; `app/helpers/linkedin/posts_helper.rb:10`, `:23` | Exact embed-reference pairs plus LinkEmbed/Reference versions; suppression belongs to the Message version. |
 | Generic embed site/title/description/image and message-specific URL/position | `app/views/link_embeds/_card.html.erb:7`, `:11`, `:14`, `:19`, `:23`; `app/models/link_embed_reference.rb:11`; `app/helpers/link_embeds_helper.rb:11`, `:24` | Exact embed pairs plus **reference** and embed individual versions, including URL/position changes with an unchanged card stamp. |
 | Boost creation order/content/classification, grouped reactor ids/count/names, legacy booster title/name/bio/avatar/accessibility labels and delete controls | `app/views/messages/boosts/_reactions.html.erb:1`; `app/views/messages/boosts/_reaction.html.erb:4`, `:29`; `app/views/messages/boosts/_boost.html.erb:3`, `:5`, `:9`, `:14`; `app/models/boost.rb:5` | Boost touches Message; independent Boost and every booster/reactor User version. Removed the non-Rails nested HTML boost cache. |
-| Reaction/boost shortcode title/character/brand or workspace image | `app/helpers/boosts_helper.rb:4`, `:15`, `:29`; `app/models/icons.rb:145`, `:173`, `:182` | Workspace icon record set/versions (also consulted by bot/room icons and Markdown); compiled brand/gemoji/config/assets live with the app. |
-| Thread indicator count/hidden state/pluralized label and fixed icon | `app/views/messages/_thread_indicator.html.erb:10`; `app/models/channel_thread.rb:206` | Literal helper count slot; parent Message stamp from count refresh; Thread record identity/version. The thread's reply bodies/authors are not rendered by this indicator. |
+| Reaction/boost shortcode title/character/brand or workspace image | `app/helpers/boosts_helper.rb:4`, `:15`, `:29`; `app/models/icons.rb:145`, `:173`, `:182` | Only resolved workspace icon versions (also consulted by rendered bot avatars and Markdown; search room icons have their own suffix); compiled brand/gemoji/config/assets live with the app. |
+| Thread indicator count/hidden state/pluralized label and fixed icon; reply routing | `app/views/messages/_thread_indicator.html.erb:9`, `:12`, `:14`; `app/helpers/message_threads_helper.rb:19`; `app/helpers/github/pull_requests_helper.rb:42`; `app/models/channel_thread.rb:206`; `app/helpers/messages_helper.rb:64`, `:94` | Literal helper count slot and parent Message stamp from count refresh. Replies' URLs/outlet use their own Message's `thread_id`; saving it versions the Message. No Thread record version: thread name/activity, other reply bodies/authors and thread-wide timestamps are absent from the partial. Parent count changes invalidate its fragment; posting another reply or renaming preserves existing replies' fragments, and rename preserves the parent's fragment. |
 | Unrenderable fallback | `app/helpers/messages_helper.rb:84`; `app/views/messages/_unrenderable.html.erb:1` | Dependencies disappearing change the individual record set; fixed template fallback. |
 | URL origin, configuration/signing inputs and assets | `app/helpers/messages_helper.rb:93`; `app/views/users/_mention.html.erb:1`; `app/helpers/users/avatars_helper.rb:33` | Verified origin remains in the key; signer/config/asset resolver and cache share one app lifetime. Viewer CSRF tokens are excluded by Rails' forms. |
 
@@ -139,8 +141,8 @@ Paths below are relative to that tree when prefixed `gem:`.
 
 | Dependency | Rails source and effect |
 | --- | --- |
-| Every timestamped record in the dependency array | `gem:activerecord/lib/active_record/integration.rb:97`, `:114`: `model_name.cache_key/id-UTC_updated_at_usec`; individual records, not Relation count/max keys. Expansion calls each record's versioned key. |
-| STI Room / namespaced records | Same `gem:activerecord/lib/active_record/integration.rb:72`; the individual Rails keys use `rooms/closeds`, `rooms/directs`, `github/pull_requests`, `twitter/posts`, `fizzy/cards`, `action_text/rich_texts`, `active_storage/attachments`, `active_storage/blobs` stems. |
+| Every timestamped record retained in the dependency array | `gem:activerecord/lib/active_record/integration.rb:97`, `:114`: `model_name.cache_key/id-UTC_updated_at_usec`; individual records, not Relation count/max keys. Expansion calls each record's versioned key. |
+| STI Room / namespaced records | Same `gem:activerecord/lib/active_record/integration.rb:72`; Room projection identities retain `rooms/closeds` and `rooms/directs`; the individual Rails keys use `github/pull_requests`, `twitter/posts`, `fizzy/cards`, `action_text/rich_texts`, `active_storage/attachments`, `active_storage/blobs` stems. |
 | Blob, Attachment, DriveAttachment | No `updated_at` column: `cache_version` is nil and `cache_key_with_version` uses plain `model_name.cache_key/id` (`gem:activerecord/lib/active_record/integration.rb:79`, `:100`, `:117`; `gem:activerecord/lib/active_record/timestamp.rb:163`). `created_at` is **not** substituted as a changing version. |
 | Message → Room | `app/models/message.rb:17`, `touch: true`. Creator, reply, forwarded source and thread associations at `:18` through `:21` do not touch the Message when their rows change. |
 | Boost → Message → Room | `app/models/boost.rb:2`, `touch: true`; booster at `:3` has no touch. A User rename does not update any Boost or Message. |
@@ -152,10 +154,10 @@ Paths below are relative to that tree when prefixed `gem:`.
 | Thread reply count | `app/models/channel_thread.rb:206`: writes count and parent Message stamp, deliberately leaving Thread `updated_at` alone. Its count stays in the original key. |
 | Poll votes/close | `app/models/poll.rb:113`, `:77`: ballot changes touch Poll; close writes Poll timestamp. Poll, Option, Vote and voter associations do not touch Message or each other automatically (`app/models/poll.rb:5`, `app/models/poll_option.rb:4`, `app/models/poll_vote.rb:2`). |
 | Cards, references and agent steps | `app/models/message.rb:40`, `:44`, `:48`, `:52`, `:55`, `:59`, `:66`; `app/models/link_embed_reference.rb:2`; `app/models/agent_step.rb:11`: their updates do not automatically touch Message; the exact helper aggregates and individual records both remain represented. |
-| User/Room renames | `app/models/message.rb:18`, `app/models/boost.rb:3`, `app/models/poll_vote.rb:4`, `app/models/rooms/direct.rb:77`: no reverse touch; all rendered user roles and rooms must therefore appear independently in the added room dependency array. |
+| User/Room renames | `app/models/message.rb:18`, `app/models/boost.rb:3`, `app/models/poll_vote.rb:4`, `app/models/rooms/direct.rb:77`: no reverse touch; rendered User versions and Room display labels must therefore appear independently in the added dependency array. |
 
-The added array is the sorted, deduplicated set of these literal record keys,
-plus a poll's `closed?` boolean when present. It is **a Rust room-cache reuse guard**,
+The added array is the sorted, deduplicated set of message-specific literal record keys
+and projected room labels, plus a poll's `closed?` boolean when present. It is **a Rust room-cache reuse guard**,
 not a claim that pinned Rails has a missing `cache` call containing this array.
 `rendered-dependencies.rb` obtains the keys via Rails models and
 `ActiveSupport::Cache.expand_cache_key`; Rust asserts the entire expanded string
@@ -351,7 +353,7 @@ WS8bm reference source check: 63 controller, model, helper, template and icon fi
 WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
 ```
 
-## Final round verification
+## Verification of 63c42b89
 
 Final code includes the conflict-only merge of main `59ad94de` in `0748d8ed`.
 Fresh `default` and `first_run` seeds were generated from the pinned Rails image.
@@ -471,6 +473,266 @@ Raw Rails reproduction/source verification summaries:
 ```text
 WS8bm rendered dependencies: 14 warm-room update/reload pairs from pinned Rails
 WS8bm golden check: 2 Rails oracles re-run; 3 golden files byte-identical
+WS8bm reference source check: 63 controller, model, helper, template and icon files match d7c7de92
+WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
+```
+
+
+## Over-invalidation review of 63c42b89
+
+The former reuse guard included each rendered Room's `cache_key_with_version`
+and every WorkspaceIcon. Those dependencies were too broad. A new Message touches
+Room (`app/models/message.rb:17`), even though an older message's displayed room
+label stays the same. Icons' global count/max stamp (`app/models/icons.rb:173`)
+refreshes the lookup catalog; it is not a fragment key dependency for every message.
+
+The guard now uses the root message's `room_display_name(room, for_user: nil)`
+(`app/views/messages/_meta.html.erb:16`, `app/helpers/rooms_helper.rb:106`,
+`app/models/rooms/direct.rb:77`) and quote cards' `viewer_neutral_room_label`
+(`app/views/messages/message_links/_card.html.erb:8`, `app/helpers/rooms_helper.rb:120`).
+Reply previews don't render a room label. Direct membership names enter only through
+the root's actual label, using the renderer's preloaded member ordering; unrelated member fields cannot replace an identical fragment.
+The original Rails collection helper and page validator remain unchanged.
+The additional GitHub mapping versions are also restricted to this message's
+referenced PRs (`app/helpers/github/pull_requests_helper.rb:99`, `:100`); the literal helper's
+room-wide maximum at `:40` remains exactly as Rails composes it.
+
+Workspace icon versions are limited to names resolved by Markdown image alt text
+(`app/models/message/markdown.rb:75`, `:97`), boost shortcodes
+(`app/helpers/boosts_helper.rb:15`, `:29`), and visible bot avatars
+(`app/helpers/users/avatars_helper.rb:15`, `:29`). Lookup keeps brand precedence
+(`app/models/icons.rb:64`, `:68`). A previously missing icon can enter this set when its
+name becomes resolvable; unrelated uploads cannot. Search room icons have a separate
+suffix for their resolved value (`app/views/messages/_meta.html.erb:14`); normal
+room and scrolling fragments do not render that local.
+
+`cache-stability.rb` records actual pinned-Rails POST /messages and POST /account/icons
+writes between room and scrolling GETs. Both existing helper keys and HTML stay
+identical. Rust's corresponding regressions assert those facts, unchanged stored
+fragment keys, and `Arc::ptr_eq` on the cached HTML allocation after each reload.
+All 14 freshness regressions remain required, including used-icon title and room/direct
+member renames; their recorded HTML is unchanged, while recorded dependency keys
+now reflect the narrowed guard.
+
+### Accepted scrolling-cache freshness
+
+The decision "Rust may be fresher than a stale Rails cache" (2026-10-01) measures
+parity against Rails rendering current data. Pinned Rails may reuse a stale reactor
+tooltip in `/rooms/:id/messages`; Rust keeps its reacting User version in that
+message's key and refreshes the tooltip. This is conforming. No change reproduces
+Rails' staleness, and the narrowing above preserves that freshness without admitting
+unrelated room/global versions.
+
+
+### Final verification of the over-invalidation fix
+
+All gates ran on the final source, with freshly generated pinned-Rails `default`
+and `first_run` seeds, Rust 1.98.1 and CI=1. Full workspace tests (including
+`html5ever` and doctests): **3709 passed, 0 failed, 12 existing ignores**,
+across 60 summary lines. All 16 dependency/stability regression cases passed;
+no missing-seed skips occurred. Strict clippy covered the workspace and all targets
+with `-D warnings`. Locked metadata exited 0, and the exact release-input build
+passed. PR #182 is mergeable, so this round did not merge main. The shared rustc
+throttle remains four slots. Scratch targets/caches are deleted after verification;
+logs are retained outside the worktree.
+
+Commands:
+
+```sh
+cargo test --locked --workspace --no-fail-fast
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo metadata --locked --format-version 1
+bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
+PARITY_IMAGE=triage-reference-d7c7de92 python3 rust/reference-tools/messaging/check-goldens.py cache-stability rendered-dependencies cache-reaction-review
+PARITY_IMAGE=triage-reference-d7c7de92 python3 rust/reference-tools/messaging/reference-check.py
+```
+
+Raw failing-first stability summary (both failed at the key-equality assertion):
+
+```text
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 1856 filtered out; finished in 1.47s
+```
+
+Raw final workspace summaries:
+
+```text
+test result: ok. 1855 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 644.02s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.81s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 40.20s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
+test result: ok. 1143 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 165.77s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.92s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.03s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.77s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.33s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.65s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.11s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.59s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.93s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.93s
+test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.62s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Raw strict clippy / locked metadata / release-input build summaries
+(only terminal color escapes removed from the release line):
+
+```text
+    Finished `dev` profile [unoptimized] target(s) in 1m 46s
+cargo metadata --locked: exit 0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 40s
+```
+
+Raw Rails reproduction/source verification summaries:
+
+```text
+WS8bm cache stability: 2 unrelated HTTP writes preserve Rails helper keys and HTML
+WS8bm rendered dependencies: 14 warm-room update/reload pairs from pinned Rails
+WS8bm golden check: 3 Rails oracles re-run; 4 golden files byte-identical
+WS8bm reference source check: 63 controller, model, helper, template and icon files match d7c7de92
+WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
+```
+
+## Thread activity review (4c9ebb97)
+
+The remaining over-invalidation came from including `channel_threads.updated_at`
+for both a message's containing thread and its child thread in the added rendered
+record array. `ChannelThread#post_message!` updates `last_activity_at` and therefore
+that record's version (`app/models/channel_thread.rb:486`, `:497`). Renaming also
+versions the thread, although neither input appears in the message fragment.
+
+The narrowed guard omits Thread record versions. The parent indicator reads only
+`messages_count` (`app/helpers/message_threads_helper.rb:19`;
+`app/views/messages/_thread_indicator.html.erb:9`, `:12`, `:14`). Rails already
+includes that literal count in its helper array
+(`app/helpers/github/pull_requests_helper.rb:42`), and counter refreshes stamp the
+parent Message (`app/models/channel_thread.rb:206`, `:210`). A reply's URLs and
+composer outlet use its own `thread_id`, covered by its Message version
+(`app/helpers/messages_helper.rb:64`, `:94`). There is no thread-title or reply-body
+preview in the parent indicator. Actual reply/quote previews retain their existing
+source-message, author, attachment and mention dependencies.
+
+`thread-cache-stability.rb` records actual pinned Rails room and scrolling-thread
+reloads. Its three states cover two existing replies, a third reply posted through
+HTTP, then a thread rename. Every helper key and full fragment is asserted against
+Rails. Rust additionally asserts unchanged fragment keys and `Arc::ptr_eq` for
+existing replies after posting, and for both parent and replies after renaming.
+The separate parent regression asserts that the displayed count changes from
+`2 replies` to `3 replies`, changes its fragment key and replaces its allocation.
+Before the production fix, posting/renaming failed their key assertions while the
+parent-count regression passed:
+
+```text
+Thread post: helper_key_unchanged=true; html_unchanged=true; fragment_key_unchanged=false; allocation_reused=false
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 1859 filtered out; finished in 1.60s
+```
+
+The accepted scrolling-cache freshness decision still applies: retained per-message
+rendered dependencies refresh current data where Rails' collection might stay stale.
+Removing an unrendered Thread version preserves those freshness dependencies and
+Rails' actual parent-count invalidation.
+
+### Fresh GitHub card fixture
+
+Pinned Rails does **not** skip fetching a fresh card when a new reference is created.
+`app/models/github/pull_request_reference_sync.rb:23` schedules for a newly created
+reference **or** a stale card, subject to the atomic claim at
+`app/models/github/pull_request.rb:46`. Rust's existing scheduling matches it.
+`fresh-github-reference.rb` records one queued fetch for a new reference with
+`stale? == false`, then no additional fetch when reconciling the existing fresh
+reference with the claim cleared. Its Rails adapter records jobs without executing
+them; the Rust regression uses the existing stopped-runner integration fixture.
+
+The cache-sharing/form fixture now calls `TestApp::without_job_runner()` before
+creating references. Its supplied fresh card cannot be overwritten by an actual
+fetch/error. The targeted Rust tests also run in a container with external networking
+disabled. Production fetch behavior is unchanged.
+
+### Verification for this round
+
+Rust 1.98.1, fresh `default`/`first_run` parity seeds, `CI=1`, two build jobs,
+at most eight test threads, ports 54000–54049, and the unchanged four-slot host
+rustc throttle. The release-input build uses one compiler under one host slot.
+All gates passed. No `.claude/delegation` files changed.
+
+```sh
+cargo test --locked -p campfire controllers::messages:: -- --test-threads=8
+cargo test --locked -p campfire controllers::messages::rendered_dependency_tests:: -- --nocapture --test-threads=8
+cargo test --locked -p campfire cached_pages_refreshes_and_thread_pages_reuse_tokenless_fragments_across_sessions -- --test-threads=8
+cargo test --locked -p campfire integrations::github::references::tests:: -- --test-threads=8
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo metadata --locked --format-version 1
+bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
+PARITY_IMAGE=triage-reference-d7c7de92 python3 rust/reference-tools/messaging/check-goldens.py thread-cache-stability fresh-github-reference cache-stability rendered-dependencies cache-reaction-review
+PARITY_IMAGE=triage-reference-d7c7de92 python3 rust/reference-tools/messaging/reference-check.py
+```
+
+Raw final summaries, in command order (only terminal color escapes removed):
+
+```text
+test result: ok. 108 passed; 0 failed; 0 ignored; 0 measured; 1754 filtered out; finished in 61.54s
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 1843 filtered out; finished in 10.26s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1861 filtered out; finished in 2.05s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1856 filtered out; finished in 1.59s
+    Finished `dev` profile [unoptimized] target(s) in 1m 54s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 20s
+```
+
+Locked metadata exited 0 and parsed as workspace metadata.
+
+Raw Arc reuse witness and Rails reproduction/source checks:
+
+```text
+Thread post: helper_key_unchanged=true; html_unchanged=true; fragment_key_unchanged=true; allocation_reused=true
+WS8bm thread cache stability: replies retain Rails helper keys/HTML after post and rename; parent count refreshes
+WS8bm fresh GitHub reference: Rails enqueues the new reference; unchanged fresh reference enqueues nothing
+WS8bm cache stability: 2 unrelated HTTP writes preserve Rails helper keys and HTML
+WS8bm rendered dependencies: 14 warm-room update/reload pairs from pinned Rails
+WS8bm golden check: 5 Rails oracles re-run; 6 golden files byte-identical
 WS8bm reference source check: 63 controller, model, helper, template and icon files match d7c7de92
 WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected
 ```

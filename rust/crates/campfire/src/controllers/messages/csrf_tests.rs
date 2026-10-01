@@ -9,9 +9,9 @@ use crate::controllers::presenters::{Presenter, test_support::*};
 fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors/messaging/cached-csrf.json")).unwrap() }
 
 async fn fixture() -> TestApp {
-    // These are fixed-row Rails render captures, not provider execution checks.
-    // Keep queued provider refreshes from changing the fixture between reading
-    // the cache and mounting its bytes; actual job delivery has separate tests.
+    // Rails queues a fetch for a new reference even when its fixture card is fresh.
+    // These cache/form tests supply fixed fetched cards; provider execution has
+    // separate tests. Stop the consumer before mounting the shared cached bytes.
     let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
     app.db().write(|tx| {
         let pr=crate::integrations::github::pull_requests::PullRequest::for_reference(tx,"rails","rails",3141)?;

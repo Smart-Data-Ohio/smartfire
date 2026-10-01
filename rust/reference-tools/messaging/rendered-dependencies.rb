@@ -74,22 +74,35 @@ database = models.to_h do |model|
 end
 rendered_keys = ->(message) do
   sources = [message, message.reply_to_message, *message.referenced_messages].compact.uniq
-  rooms = sources.map(&:room).uniq
+  rooms = [message.room, *message.referenced_messages.map(&:room)].uniq
   users = sources.map(&:creator) + message.boosts.map(&:booster)
   users += sources.flat_map { |source| source.body.body&.attachables&.grep(User) || [] }
-  users += rooms.select(&:direct?).flat_map(&:users)
   users += message.poll&.poll_votes&.filter_map(&:user) || []
-  records = sources + rooms + users + sources.filter_map(&:rich_text_body)
+  records = sources + users + sources.filter_map(&:rich_text_body)
   records += [*message.boosts, *message.message_pins, *message.agent_steps, *message.drive_attachments,
-    message.poll, *message.poll&.poll_options, *message.poll&.poll_votes, message.channel_thread, message.thread,
-    *message.message_references, *WorkspaceIcon.all, *message.github_pull_request_references, *message.github_pull_requests,
+    message.poll, *message.poll&.poll_options, *message.poll&.poll_votes,
+    *message.message_references, *message.github_pull_request_references, *message.github_pull_requests,
     *message.fizzy_card_references, *message.fizzy_cards, *message.twitter_post_references, *message.twitter_posts,
     *message.event_references, *message.events, *message.link_embed_references, *message.link_embeds]
-  records += Github::PullRequestThread.where(room_id: message.room_id).to_a if message.github_pull_requests.any?
+  records += Github::PullRequestThread.where(room_id: message.room_id, github_pull_request_id: message.github_pull_requests.map(&:id)).to_a if message.github_pull_requests.any?
   attachments = sources.filter_map { |source| source.attachment_attachment } + users.uniq.filter_map(&:avatar_attachment)
   attachments += sources.filter_map(&:rich_text_body).flat_map(&:embeds_attachments)
   records += attachments + attachments.map(&:blob)
-  key = records.compact.map(&:cache_key_with_version).uniq.sort
+  # Project room-wide state to the labels actually rendered; posting only touches updated_at.
+  room_keys = rooms.map do |room|
+    label = room.id == message.room_id ? ApplicationController.helpers.room_display_name(room, for_user: nil) : ApplicationController.helpers.viewer_neutral_room_label(room)
+    ActiveSupport::Cache.expand_cache_key(["#{room.model_name.cache_key}/#{room.id}", label.to_s])
+  end
+  icon_names = message.boosts.filter_map { |boost| boost.content.strip[/\A:([a-z0-9_]+):\z/, 1] }
+  avatar_users = [message.creator, *message.boosts.map(&:booster)].uniq
+  icon_names += avatar_users.select { |user| user.bot? && !user.avatar.attached? }.filter_map(&:icon_name)
+  sources.each do |source|
+    next unless source.markdown? || source.forwarded_markdown?
+    icon_names += Nokogiri::HTML5.fragment(source.body.body.to_html).css("img[alt]").filter_map { |img| img["alt"][/\A:([a-z0-9_]+):\z/, 1] }
+  end
+  custom_names = icon_names.filter_map { |name| icon = Icons.find(name); icon.name if icon.is_a?(Icons::Custom) }.uniq
+  records += WorkspaceIcon.where(name: custom_names).to_a
+  key = (records.compact.map(&:cache_key_with_version) + room_keys).uniq.sort
   key << message.poll.closed? if message.poll
   ActiveSupport::Cache.expand_cache_key(key)
 end

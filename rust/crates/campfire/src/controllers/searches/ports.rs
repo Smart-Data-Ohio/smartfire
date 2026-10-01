@@ -907,11 +907,7 @@ async fn search_supplies_the_room_icon_only_on_shared_fragment_misses() {
         .await
         .unwrap();
     let r = find(&mut app.david(), "needleicon alpha").await;
-    assert!(
-        r.text().contains("icon-avatar--brand"),
-        "shared hit: {}",
-        r.text()
-    );
+    assert!(!r.text().contains("message__room--custom"), "room icon changed: {}", r.text());
     app.db()
         .write(move |tx| {
             tx.conn().execute(
