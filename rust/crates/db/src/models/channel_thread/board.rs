@@ -1,5 +1,5 @@
 //! Rails board listings and commit callbacks. Assignment automation is layered onto these
-//! writes by the automation domain; agent owner writes wait for the WS11 service API.
+//! writes by the automation domain; work mutations use the merged WS11 agent APIs.
 use super::*;
 use crate::Involvement;
 use crate::broadcasts::{TurboAction, TurboStream};

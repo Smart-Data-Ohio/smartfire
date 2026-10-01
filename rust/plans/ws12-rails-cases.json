@@ -926,57 +926,57 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 27,
       "test": "creates a post with a first message, owner, status, and tags",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 50,
       "test": "creates a post without a first message and defaults to planned",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 68,
       "test": "creates a post with an agent owner through the assignment path",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 87,
       "test": "rejects posts with invalid titles, owners, statuses, and tags",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 118,
       "test": "non-members cannot create posts",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 128,
       "test": "a new post notifies everything-followers and always the human owner",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 151,
       "test": "a messageless post with an owner still writes the assignment event and notifies the owner",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -990,17 +990,17 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 180,
       "test": "post owner, creator, board creator, and admins can change the status",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 197,
       "test": "post creator, board creator, and admins can assign the owner",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1022,41 +1022,41 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 246,
       "test": "post owner can edit the title and tags like the status managers",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 266,
       "test": "result edits follow the status rule and write a result_updated event",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 288,
       "test": "stopping work tracking is rejected for posts",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 301,
       "test": "auto-archive changes are rejected for posts",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 309,
       "test": "only the board creator and admins can close, lock, or delete a post",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1118,9 +1118,9 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 513,
       "test": "post payloads do not advertise removing work tracking",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -2614,17 +2614,17 @@
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 25,
       "test": "a legacy agent keeps post eligibility through the fallback",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Agent work writes/services are still WS12-owned and unblocked; read owner candidates use its real APIs."
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 33,
       "test": "a suspended agent is rejected with a validation error",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Agent work writes/services are still WS12-owned and unblocked; read owner candidates use its real APIs."
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2670,9 +2670,9 @@
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 110,
       "test": "assignment writes one work_assigned row in the same transaction as the work event",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Agent work writes/services are still WS12-owned and unblocked; read owner candidates use its real APIs."
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2686,9 +2686,9 @@
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 146,
       "test": "unassignment after the agent left the room writes the ledger row but enqueues no webhook",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Agent work writes/services are still WS12-owned and unblocked; read owner candidates use its real APIs."
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2726,17 +2726,17 @@
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 210,
       "test": "assignment rows roll back when the work event fails",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Agent work writes/services are still WS12-owned and unblocked; read owner candidates use its real APIs."
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 222,
       "test": "the work event rolls back when the assignment row fails",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12 using merged WS11 #176",
-      "evidence": "WS11 #176 is merged. Agent work writes/services are still WS12-owned and unblocked; read owner candidates use its real APIs."
+      "evidence": "work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
@@ -2918,9 +2918,9 @@
       "file": "test/models/channel_thread_board_test.rb",
       "line": 10,
       "test": "board posts require work tracking while channel threads stay optional",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "WS12 board post/result/work slice. Existing tracking validation is retained, but removing tracking, comma-separated HTTP tag input, result writes/events/recipients and run URL writes are not closed by board listing tests."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
@@ -2934,9 +2934,9 @@
       "file": "test/models/channel_thread_board_test.rb",
       "line": 42,
       "test": "tag writer normalises names",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "WS12 board post/result/work slice. Existing tracking validation is retained, but removing tracking, comma-separated HTTP tag input, result writes/events/recipients and run URL writes are not closed by board listing tests."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
@@ -2966,25 +2966,25 @@
       "file": "test/models/channel_thread_board_test.rb",
       "line": 101,
       "test": "result edits record a result_updated event with an excerpt",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "WS12 board post/result/work slice. Existing tracking validation is retained, but removing tracking, comma-separated HTTP tag input, result writes/events/recipients and run URL writes are not closed by board listing tests."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 127,
       "test": "result edits notify the creator and owner other than the actor",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "WS12 board post/result/work slice. Existing tracking validation is retained, but removing tracking, comma-separated HTTP tag input, result writes/events/recipients and run URL writes are not closed by board listing tests."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
       "line": 149,
       "test": "result edits require status permission and respect the length limit",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "WS12 board post/result/work slice. Existing tracking validation is retained, but removing tracking, comma-separated HTTP tag input, result writes/events/recipients and run URL writes are not closed by board listing tests."
+      "evidence": "work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
@@ -3638,9 +3638,9 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 209,
       "test": "work updates for one thread collapse into a single item",
-      "status": "deferred",
-      "owner": "WS12 with existing WS17 message candidates",
-      "evidence": "Full generic recorder/source authorization and work grouping/recipient hooks remain. Existing message-recorder concurrency is checked by WS12, not a claim that every original declaration is closed."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3662,9 +3662,9 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 272,
       "test": "work assigned by a bot without an agent ignores the agent_work switch",
-      "status": "deferred",
-      "owner": "WS12 with existing WS17 message candidates",
-      "evidence": "Full generic recorder/source authorization and work grouping/recipient hooks remain. Existing message-recorder concurrency is checked by WS12, not a claim that every original declaration is closed."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3678,9 +3678,9 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 308,
       "test": "recording the same source twice is idempotent",
-      "status": "deferred",
-      "owner": "WS12 with existing WS17 message candidates",
-      "evidence": "Full generic recorder/source authorization and work grouping/recipient hooks remain. Existing message-recorder concurrency is checked by WS12, not a claim that every original declaration is closed."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3830,9 +3830,9 @@
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 304,
       "test": "converts a thread to work, assigns an eligible owner, and keeps an audit trail",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
@@ -3846,41 +3846,41 @@
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 356,
       "test": "assigned owner can change work status but cannot reassign it",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 375,
       "test": "only a thread manager can remove work tracking",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 387,
       "test": "the work model also protects conversion when the owner field is omitted",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 398,
       "test": "work status updates from separate stale instances produce one event per real change",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 413,
       "test": "a manager can assign an eligible agent and the agent is notified",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
@@ -3894,9 +3894,9 @@
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 480,
       "test": "a member who cannot manage the thread cannot assign an agent",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state and board room/list/row slices."
+      "evidence": "work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",

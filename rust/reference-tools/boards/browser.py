@@ -15,7 +15,7 @@ import urllib.request
 root = Path(__file__).resolve().parents[2]
 scratch = root.parent / ".scratch"
 scratch.mkdir(exist_ok=True)
-script = "post_browser.mjs" if "--posts" in sys.argv else "browser.mjs"
+script = "write_browser.mjs" if "--writes" in sys.argv else "post_browser.mjs" if "--posts" in sys.argv else "browser.mjs"
 run_dir = Path(tempfile.mkdtemp(prefix="ws12-browser-boards-",dir=scratch))
 seed = root / "parity/.seed/default"
 labels = json.loads((seed / "labels.json").read_text())
@@ -64,7 +64,7 @@ try:
         else:
             raise RuntimeError("Rust server did not start")
         for name,port in (("Rails",53410),("Rust",53411)):
-            print(f"{name} board read browser scenarios:",flush=True)
+            print(f"{name} board browser scenarios:",flush=True)
             subprocess.run(["docker","run","--rm","--name",f"ws12-boards-browser-{name.lower()}","--network","host",
                 "--label","parity.owner=ws12","-v",f"{root.parent}:/work:ro",
                 "-e",f"WS12_BROWSER_URL=http://127.0.0.1:{port}","-e","WS12_BROWSER_LABELS=/work/rust/parity/.seed/default/labels.json",

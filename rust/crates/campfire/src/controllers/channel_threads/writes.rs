@@ -1,8 +1,9 @@
-//! Channel creation and ordinary thread lifecycle. Work/board writes await WS12's domain API.
+//! Channel and board creation, metadata, work/result changes and lifecycle writes.
 use super::*;
 use campfire_db::{Membership, NewChannelThread, NewMessage, ThreadStatus};
 use campfire_kit::{Param, ParamMap, permit_keys};
 use crate::controllers::presenters::attachments::Assignment;
+use campfire_db::models::channel_thread::{WorkChanges, WORK_UPDATE_FORBIDDEN, normalize_owner_id};
 
 const FORBIDDEN_UPDATE: &str = "WS8bm thread update forbidden";
 
@@ -47,12 +48,56 @@ pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = alive_room(c).await?;
     if room.direct() { return render_error(c, StatusCode::FORBIDDEN, "Direct rooms cannot contain channel threads"); }
-    if room.board() { return crate::controllers::not_yet_ported(c).await; }
+    if room.board() { return create_board(c, room).await; }
     match create_channel(c, room).await {
         Err(Error::NotFound) => Ok(c.head(StatusCode::NOT_FOUND)),
         Err(error) => write_error(c, error),
         result => result,
     }
+}
+
+async fn create_board(c: &mut Ctx, room: Room) -> Result {
+    let attributes = permitted(c, &["name", "work_status", "work_owner_id", "tags"])?;
+    let name = attributes.get("name").and_then(messages::string_column);
+    let status = attributes.get("work_status").filter(|value|value.is_present()).and_then(messages::string_column).unwrap_or_else(||"planned".into());
+    let raw_owner = attributes.get("work_owner_id").map(Param::to_json).unwrap_or(Value::Null);
+    let tags = attributes.get("tags").map(|value| value.to_s().unwrap_or_default().split(',').map(str::to_string).collect::<Vec<_>>());
+    let first_message = permitted(c, &["first_message"])?.get("first_message").map(|value|campfire_richtext::ruby::json_value_to_s(&value.to_json())).unwrap_or_default();
+    let viewer = require_current_user(c)?.clone();
+    let (room_id, creator_id) = (room.id, viewer.id);
+    let attempted_status=attributes.get("work_status").and_then(messages::string_column).filter(|value|!campfire_richtext::ruby::is_blank(value)).unwrap_or_else(||"planned".into());
+    let attempted = (name.clone(), attempted_status, raw_owner.clone(), tags.clone(), first_message.clone());
+    let result = c.app().db.write(move |tx| {
+        let room = Room::find(tx.conn(),room_id)?;
+        if room.deleted_at.is_some() { return Err(campfire_db::Error::RecordNotFound("Room")); }
+        let owner = normalize_owner_id(&raw_owner)?;
+        ChannelThread::create_board_post(tx,NewChannelThread {room_id,creator_id,name,work_status:Some(status),work_owner_id:owner,tag_names:tags,..Default::default()},Some(first_message))
+    }).await;
+    let thread = match result {
+        Ok(thread)=>thread,
+        Err(campfire_db::Error::RecordNotFound(_))=>return Ok(c.head(StatusCode::NOT_FOUND)),
+        Err(campfire_db::Error::RecordInvalid(errors)) if c.format()?==Some(&format::HTML)=> {
+            let mut post = messages::present(c,move |p| crate::controllers::presenters::board_posts::new_post(p,&room,&viewer)).await?;
+            post.name=attempted.0; post.status=attempted.1;
+            post.owner_id=match attempted.2 {
+                Value::Null=>None, Value::Bool(value)=>Some(i64::from(value)),
+                Value::Number(value)=>value.as_i64().or_else(||value.as_f64().map(|n|n as i64)),
+                Value::String(value) if campfire_richtext::ruby::is_blank(&value)=>None,
+                Value::String(value)=>Some(cast_integer(&value).unwrap_or(0)), _=>None,
+            };
+            post.tags=campfire_db::models::channel_thread::normalize_tag_names(&attempted.3.unwrap_or_default());
+            post.first_message=Some(attempted.4);
+            post.error=Some(campfire_views::helpers::to_sentence(&errors.full_messages(), " and "));
+            return page::framed_page!(c,StatusCode::UNPROCESSABLE_ENTITY,|ctx|campfire_views::channel_threads::board::New {ctx,post:&post}).await;
+        }
+        Err(error)=>return write_error(c,Error::internal(error)),
+    };
+    if *c.respond_to(&[&format::HTML,&format::JSON])?==format::HTML {
+        return c.redirect_to(&c.url_for(&format!("/rooms/{room_id}/threads/{}",thread.id)));
+    }
+    let base=c.url_for("");
+    let payload=messages::present(c,move |p| Ok(json!({"thread":messages::payload::thread(p,&thread,&viewer,&base)?,"parent_message":null}))).await?;
+    render_json(c,StatusCode::CREATED,&payload)
 }
 
 async fn create_channel(c: &mut Ctx, room: Room) -> Result {
@@ -129,27 +174,42 @@ pub async fn update(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (room, thread) = scope(c).await?;
     let attributes = permitted(c, &["name", "auto_archive_after_minutes", "status", "work_status", "work_owner_id", "tags", "result_markdown"])?;
-    let work_pending = ["work_status", "work_owner_id", "result_markdown"].iter().any(|key| attributes.contains_key(key));
+    let work = WorkChanges {status:attributes.get("work_status").map(|value|value.to_s().filter(|value|!campfire_richtext::ruby::is_blank(value))),owner_id:attributes.get("work_owner_id").map(Param::to_json)};
+    let result_markdown=attributes.get("result_markdown").cloned();
     let actor = require_current_user(c)?.clone();
     let name = attributes.get("name").and_then(messages::string_column);
     let minutes = attributes.get("auto_archive_after_minutes").map(archive_minutes).transpose()?;
+    let archive_given=attributes.contains_key("auto_archive_after_minutes");
     let tags = attributes.get("tags").map(|value| value.to_s().unwrap_or_default().split(',').map(str::to_string).collect::<Vec<_>>());
     let status = attributes.get("status").and_then(messages::string_column);
     let metadata_given = attributes.contains_key("name") || minutes.is_some() || tags.is_some();
     let (thread_id, room_id) = (thread.id, room.id);
-    let mut attempted = thread.clone();
-    if let Some(name) = &name { attempted.name = name.clone(); }
-    if let Some(minutes) = minutes { attempted.auto_archive_after_minutes = minutes; }
+    let board=room.board();
+    let attempted=std::sync::Arc::new(std::sync::Mutex::new((thread.clone(),None::<Vec<String>>,None::<Vec<campfire_db::WorkThreadEvent>>)));
+    let capture=attempted.clone();
     let result = c.app().db.write(move |tx| {
         let mut thread = ChannelThread::find(tx.conn(), thread_id)?;
+        let mut pending_tags=None;
+        let outcome=(|| {
         if Membership::find_by_room_and_user(tx.conn(), room_id, actor.id)?.is_none() {
             return Err(campfire_db::Error::RecordNotFound("Membership"));
         }
+        if board && archive_given {
+            let mut errors=campfire_db::Errors::default(); errors.add("auto_archive_after_minutes","is not available for board posts");
+            return Err(campfire_db::Error::RecordInvalid(errors));
+        }
         let settings = thread.settings_manageable_by(tx.conn(), &actor)?;
         let moderator = thread.manageable_by(tx.conn(), &actor)?;
-        let allowed = (!metadata_given || settings) && match status.as_deref() {
+        let work_manager=thread.work_manageable_by(tx.conn(),&actor)?;
+        let assignment_manager=thread.work_assignment_manageable_by(tx.conn(),&actor)?;
+        let allowed = (!metadata_given || if board {work_manager} else {settings})
+            && (result_markdown.is_none() || work_manager)
+            && ((work.status.is_none() && work.owner_id.is_none()) || work_manager)
+            && (work.owner_id.is_none() || assignment_manager)
+            && (work.status.as_ref().is_none_or(|status|status.is_some()==thread.work_status.is_some()) || assignment_manager)
+            && match status.as_deref() {
             None => true,
-            Some("closed") => settings,
+            Some("closed") => if board {moderator} else {settings},
             Some("locked") => moderator,
             Some("active") if thread.locked_at.is_some() => moderator,
             Some("active") if thread.status(tx.conn(), tx.now())? == ThreadStatus::Closed => thread.membership_for(tx.conn(), actor.id)?.is_some(),
@@ -157,23 +217,47 @@ pub async fn update(c: &mut Ctx) -> Result {
             _ => false,
         };
         if !allowed { return Err(campfire_db::Error::Other(FORBIDDEN_UPDATE.into())); }
-        if room.board() || work_pending { return Err(campfire_db::Error::Other("WS8bm pending work domain".into())); }
+        pending_tags=tags.as_deref().map(campfire_db::models::channel_thread::normalize_tag_names);
         thread.update_metadata(tx, name.as_deref(), minutes, tags.as_deref())?;
         match status.as_deref() {
             Some("closed") => thread.close(tx)?, Some("locked") => thread.lock_conversation(tx)?,
             Some("active") if thread.locked_at.is_some() => thread.unlock_conversation(tx)?,
             Some("active") => thread.reopen(tx)?, _ => {},
         }
-        Ok(thread)
+        if let Some(markdown)=result_markdown {
+            let markdown=match markdown {Param::Null | Param::Bool(false)=>None,Param::Str(value)=>Some(value),_=>return Err(campfire_db::Error::Other("result_markdown does not respond to length".into()))};
+            let reload=markdown.as_ref().filter(|value|!campfire_richtext::ruby::is_blank(value))!=thread.result_markdown.as_ref();
+            thread.update_result(tx,&actor,markdown)?;
+            if reload {pending_tags=None;}
+        }
+        if work.status.is_some() || work.owner_id.is_some() { pending_tags=None; thread.update_work(tx,&actor,work)?; }
+        Ok(())
+        })();
+        let history=if matches!(&outcome,Err(campfire_db::Error::RecordInvalid(_))) {
+            if pending_tags.is_none() {pending_tags=Some(thread.tag_names(tx.conn())?);}
+            Some(campfire_db::WorkThreadEvent::for_thread(tx.conn(),thread_id)?)
+        } else {None};
+        *capture.lock().expect("thread attempt")=(thread.clone(),pending_tags,history);
+        outcome.map(|()|thread)
     }).await;
+    let (attempted,pending_tags,history)=attempted.lock().expect("thread attempt").clone();
     let thread = match result {
         Ok(thread) => thread,
         Err(campfire_db::Error::RecordNotFound(_)) => return forbidden_update(c, &thread),
-        Err(campfire_db::Error::Other(message)) if message == FORBIDDEN_UPDATE => return forbidden_update(c, &thread),
-        Err(campfire_db::Error::Other(message)) if message == "WS8bm pending work domain" => return crate::controllers::not_yet_ported(c).await,
+        Err(campfire_db::Error::Other(message)) if message == FORBIDDEN_UPDATE || message == WORK_UPDATE_FORBIDDEN => return forbidden_update(c, &thread),
         Err(campfire_db::Error::RecordInvalid(errors)) if c.format()? == Some(&format::HTML) => {
             let records = c.app().db.read(move |conn| Message::last_page(conn, Timeline::Thread(thread_id))).await.map_err(db_error)?;
-            let _ = errors; // Ordinary Rails show has no post-error slot; attempted values still render.
+            if room.board() {
+                let viewer=require_current_user(c)?.clone(); let picker=c.app().config.google_picker.is_some();
+                let mut post=messages::present(c,move |p| {
+                    let mut post=crate::controllers::presenters::board_posts::post(p,&room,&attempted,&viewer,&records,picker)?;
+                    if let Some(history)=history {post.history=crate::controllers::presenters::board_posts::history_records(p,history)?;}
+                    Ok(post)
+                }).await?;
+                if let Some(tags)=pending_tags {post.tags=tags;}
+                post.error=Some(campfire_views::helpers::to_sentence(&errors.full_messages()," and "));
+                return page::framed_page!(c,StatusCode::UNPROCESSABLE_ENTITY,|ctx|campfire_views::channel_threads::board::Show {ctx,post:&post}).await;
+            }
             return render_standalone(c, attempted, records, StatusCode::UNPROCESSABLE_ENTITY).await;
         }
         Err(error) => return write_error(c, Error::internal(error)),
@@ -205,13 +289,11 @@ pub async fn destroy(c: &mut Ctx) -> Result {
             return Err(campfire_db::Error::RecordNotFound("Membership"));
         }
         if !thread.manageable_by(tx.conn(), &actor)? { return Ok(false); }
-        if thread.work() { return Err(campfire_db::Error::Other("WS8bm pending work domain".into())); }
-        thread.destroy(tx)?;
+        thread.destroy_by(tx,Some(actor.id))?;
         Ok(true)
     }).await;
     match removed {
         Ok(false) => return Ok(concerns::head(StatusCode::FORBIDDEN)),
-        Err(campfire_db::Error::Other(message)) if message == "WS8bm pending work domain" => return crate::controllers::not_yet_ported(c).await,
         Err(error) => return Err(db_error(error)), _ => {},
     }
     if c.format()? == Some(&format::HTML) { c.redirect_to(&c.url_for(&format!("/rooms/{}", room.id))) }

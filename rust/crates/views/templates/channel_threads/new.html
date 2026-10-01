@@ -15,7 +15,7 @@
   {% let form = self.form() %}{% filter form_with(form) %}
     <label class="board-post-form__field">
       <span>Title</span>
-      {{ form.text_field("name", None, h::attrs().required(true).maxlength(100).attr("autofocus", true).attr("autocomplete", "off").placeholder("What needs doing?")) }}
+      {{ form.text_field("name", post.name.as_deref(), h::attrs().required(true).maxlength(100).attr("autofocus", true).attr("autocomplete", "off").placeholder("What needs doing?")) }}
     </label>
 
     <label class="board-post-form__field">

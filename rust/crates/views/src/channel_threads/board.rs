@@ -11,7 +11,7 @@ use askama::Template;
 pub struct NewPost {
     pub room_id: i64,
     pub room_name: String,
-    pub name: String,
+    pub name: Option<String>,
     pub first_message: Option<String>,
     pub status: String,
     pub owner_id: Option<i64>,
@@ -53,7 +53,7 @@ impl New<'_> {
         status_options(&self.post.status)
     }
     fn owner_options(&self) -> h::Html {
-        owner_options(&self.post.humans, &self.post.agents, self.post.owner_id)
+        owner_options_with_prompt(&self.post.humans, &self.post.agents, self.post.owner_id, self.post.owner_id.is_none())
     }
 }
 pub fn status_options(selected: &str) -> h::Html {
@@ -81,7 +81,10 @@ pub fn owner_options(
     agents: &[(String, i64)],
     selected: Option<i64>,
 ) -> h::Html {
-    let mut html = h::content_tag_text("option", h::attrs().value(""), "Unassigned").0 + "\n";
+    owner_options_with_prompt(humans, agents, selected, true)
+}
+fn owner_options_with_prompt(humans: &[(String, i64)], agents: &[(String, i64)], selected: Option<i64>, prompt: bool) -> h::Html {
+    let mut html = if prompt { h::content_tag_text("option", h::attrs().value(""), "Unassigned").0 + "\n" } else { String::new() };
     for (label, users) in [("Members", humans), ("Agents", agents)] {
         let options = users
             .iter()

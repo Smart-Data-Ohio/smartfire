@@ -6,7 +6,6 @@ use campfire_views::{
     helpers as h,
 };
 use rusqlite::params;
-use serde_json::Value;
 
 pub fn new_post(p: &Presenter<'_>, room: &Room, viewer: &User) -> Result<NewPost> {
     let (humans, agents) = ChannelThread::work_owner_candidates_for(p.conn, room.id)?;
@@ -102,77 +101,65 @@ pub fn post(
     })
 }
 fn history(p: &Presenter<'_>, id: i64) -> Result<Vec<History>> {
-    let mut statement=p.conn.prepare("SELECT event_type,actor_id,from_status,to_status,from_owner_id,to_owner_id,from_owner_name,to_owner_name,metadata FROM work_thread_events WHERE channel_thread_id=? ORDER BY created_at DESC,id DESC")?;
-    let records = statement
-        .query_map([id], |r| {
-            Ok((
-                r.get::<_, String>(0)?,
-                r.get::<_, Option<i64>>(1)?,
-                r.get::<_, Option<String>>(2)?,
-                r.get::<_, Option<String>>(3)?,
-                r.get::<_, Option<i64>>(4)?,
-                r.get::<_, Option<i64>>(5)?,
-                r.get::<_, Option<String>>(6)?,
-                r.get::<_, Option<String>>(7)?,
-                r.get::<_, Option<String>>(8)?,
-            ))
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
+    history_records(p, campfire_db::WorkThreadEvent::for_thread(p.conn, id)?)
+}
+pub fn history_records(
+    p: &Presenter<'_>,
+    records: Vec<campfire_db::WorkThreadEvent>,
+) -> Result<Vec<History>> {
     records
         .into_iter()
-        .map(
-            |(kind, actor, from, to, from_id, to_id, from_name, to_name, metadata)| {
-                let metadata: Value = metadata
-                    .as_deref()
-                    .map(serde_json::from_str)
-                    .transpose()
-                    .map_err(|e| campfire_db::Error::Other(e.to_string()))?
-                    .unwrap_or(Value::Null);
-                let text = |key: &str| {
+        .map(|record| {
+            let kind = record.event_type;
+            let actor = record.actor_id;
+            let (from, to) = (record.from_status, record.to_status);
+            let (from_id, to_id) = (record.from_owner_id, record.to_owner_id);
+            let (from_name, to_name) = (record.from_owner_name, record.to_owner_name);
+            let metadata = record.metadata;
+            let text = |key: &str| {
+                metadata[key]
+                    .as_str()
+                    .filter(|s| !campfire_richtext::ruby::is_blank(s))
+                    .map(str::to_owned)
+            };
+            let number = |key: &str| {
+                metadata[key].as_i64().unwrap_or_else(|| {
                     metadata[key]
                         .as_str()
-                        .filter(|s| !campfire_richtext::ruby::is_blank(s))
-                        .map(str::to_owned)
-                };
-                let number = |key: &str| {
-                    metadata[key].as_i64().unwrap_or_else(|| {
-                        metadata[key]
-                            .as_str()
-                            .and_then(crate::concerns::cast_integer)
-                            .unwrap_or(0)
-                    })
-                };
-                let status = |s: &Option<String>| {
-                    match s.as_deref() {
-                        Some("planned") => "Planned",
-                        Some("in_progress") => "In progress",
-                        Some("blocked") => "Blocked",
-                        Some("done") => "Done",
-                        _ => "Ordinary thread",
-                    }
-                    .to_string()
-                };
-                Ok(History {
-                    kind,
-                    actor: actor
-                        .map(|id| User::find_by_id(p.conn, id))
-                        .transpose()?
-                        .flatten()
-                        .map(|u| u.name)
-                        .unwrap_or("Former member".into()),
-                    from_status: status(&from),
-                    to_status: status(&to),
-                    status_changed: from != to,
-                    owner_changed: from_id != to_id,
-                    from_owner: from_name.unwrap_or("Unassigned".into()),
-                    to_owner: to_name.unwrap_or("Unassigned".into()),
-                    note: text("note"),
-                    summary: text("handoff_summary"),
-                    links: number("handoff_links_count"),
-                    questions: number("handoff_questions_count"),
+                        .and_then(crate::concerns::cast_integer)
+                        .unwrap_or(0)
                 })
-            },
-        )
+            };
+            let status = |s: &Option<String>| {
+                match s.as_deref() {
+                    Some("planned") => "Planned",
+                    Some("in_progress") => "In progress",
+                    Some("blocked") => "Blocked",
+                    Some("done") => "Done",
+                    _ => "Ordinary thread",
+                }
+                .to_string()
+            };
+            Ok(History {
+                kind,
+                actor: actor
+                    .map(|id| User::find_by_id(p.conn, id))
+                    .transpose()?
+                    .flatten()
+                    .map(|u| u.name)
+                    .unwrap_or("Former member".into()),
+                from_status: status(&from),
+                to_status: status(&to),
+                status_changed: from != to,
+                owner_changed: from_id != to_id,
+                from_owner: from_name.unwrap_or("Unassigned".into()),
+                to_owner: to_name.unwrap_or("Unassigned".into()),
+                note: text("note"),
+                summary: text("handoff_summary"),
+                links: number("handoff_links_count"),
+                questions: number("handoff_questions_count"),
+            })
+        })
         .collect()
 }
 fn links(p: &Presenter<'_>, thread: &ChannelThread) -> Result<Links> {

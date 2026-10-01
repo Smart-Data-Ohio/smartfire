@@ -88,6 +88,58 @@ for path in files:
             status,owner,evidence="existing peer tests","WS7","channels/tests/reference_test.rs already tests own-stream subscription and bot/inactive rejection; WS12 keeps that implementation."
         elif "services/activity_items" in relative:
             owner,evidence="WS12 with existing WS17 message candidates","Full generic recorder/source authorization and work grouping/recipient hooks remain. Existing message-recorder concurrency is checked by WS12, not a claim that every original declaration is closed."
+        board_writes = {
+            "creates a post with a first message, owner, status, and tags",
+            "creates a post without a first message and defaults to planned",
+            "creates a post with an agent owner through the assignment path",
+            "rejects posts with invalid titles, owners, statuses, and tags",
+            "non-members cannot create posts",
+            "a new post notifies everything-followers and always the human owner",
+            "a messageless post with an owner still writes the assignment event and notifies the owner",
+            "post owner, creator, board creator, and admins can change the status",
+            "post creator, board creator, and admins can assign the owner",
+            "post owner can edit the title and tags like the status managers",
+            "result edits follow the status rule and write a result_updated event",
+            "stopping work tracking is rejected for posts",
+            "auto-archive changes are rejected for posts",
+            "only the board creator and admins can close, lock, or delete a post",
+            "post payloads do not advertise removing work tracking",
+        }
+        if relative=="test/controllers/channel_threads_board_test.rb" and title in board_writes:
+            status,owner,evidence="ported","WS12","channel_threads/board_write_tests.rs: complete Rails HTTP write responses, actual opener recipients and atomic queue-failure rollback. work_mutations_test.rs: creation assignment/inbox, permission, event/result and real WS11 ledger writes."
+        if relative=="test/models/channel_thread_board_test.rb" and title in {
+            "board posts require work tracking while channel threads stay optional",
+            "tag writer normalises names",
+            "result edits record a result_updated event with an excerpt",
+            "result edits notify the creator and owner other than the actor",
+            "result edits require status permission and respect the length limit",
+        }:
+            status,owner,evidence="ported","WS12","work_mutations_test.rs and board_write_tests.rs: real conversion/removal rejection, tag input, result Unicode excerpt/limits/clear/no-op, audit snapshots and current recipient rules."
+        if relative=="test/controllers/channel_threads_controller_test.rb" and title in {
+            "converts a thread to work, assigns an eligible owner, and keeps an audit trail",
+            "assigned owner can change work status but cannot reassign it",
+            "only a thread manager can remove work tracking",
+            "the work model also protects conversion when the owner field is omitted",
+            "work status updates from separate stale instances produce one event per real change",
+            "a manager can assign an eligible agent and the agent is notified",
+            "a member who cannot manage the thread cannot assign an agent",
+        }:
+            status,owner,evidence="ported","WS12","work_mutations_test.rs: actual manager/owner mutations, independent SQLite writers, stamps/no-ops, audit/agent-ledger failure rollback; boards_write.json compares ordinary conversion/removal HTTP responses."
+        if relative=="test/models/channel_thread_agent_assignment_test.rb" and title in {
+            "a legacy agent keeps post eligibility through the fallback",
+            "a suspended agent is rejected with a validation error",
+            "unassignment after the agent left the room writes the ledger row but enqueues no webhook",
+            "assignment writes one work_assigned row in the same transaction as the work event",
+            "the work event rolls back when the assignment row fails",
+            "assignment rows roll back when the work event fails",
+        }:
+            status,owner,evidence="ported","WS12 using merged WS11 #176","work_mutations_test.rs: real owner writer, legacy eligibility, suspension, ledger assignment/unassignment after access loss, and failing event/ledger triggers. Existing WS11 APIs supply ledger/webhook behavior."
+        if relative=="test/services/activity_items/recorder_test.rb" and title in {
+            "work updates for one thread collapse into a single item",
+            "work assigned by a bot without an agent ignores the agent_work switch",
+            "recording the same source twice is idempotent",
+        }:
+            status,owner,evidence="ported","WS12","work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")

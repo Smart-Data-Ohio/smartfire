@@ -5,6 +5,8 @@ mod tests;
 mod page_tests;
 #[cfg(test)]
 mod board_read_tests;
+#[cfg(test)]
+mod board_write_tests;
 mod writes;
 pub use writes::{create, destroy, new, update};
 #[cfg(test)]
