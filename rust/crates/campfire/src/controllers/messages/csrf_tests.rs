@@ -66,7 +66,9 @@ async fn cached_pages_refreshes_and_thread_pages_reuse_tokenless_fragments_acros
             if new.as_str()!=expected {rails_mismatch(new,&expected,"cached CSRF fragment");}
             assert!(!new.contains("authenticity_token"));
             assert!(!new.contains(&a)&&!new.contains(&b));
-            assert!(response.text().contains(new.as_str()),"cached bytes mounted unchanged");
+            if !response.text().contains(new.as_str()) {
+                rails_mismatch(&response.text(),new,&format!("cached bytes mounted unchanged at {path}"));
+            }
         }
     }
 }
