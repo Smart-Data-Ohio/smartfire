@@ -198,7 +198,12 @@ impl Session {
 
     /// `destroy!`: revoke huddle grants before deleting the session and its dependents.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        crate::models::huddle_grant::HuddleGrant::revoke_for_session(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
+        tx.model_callback(crate::callbacks::Phase::SessionHuddles, self.id)?;
+        crate::models::huddle_grant::HuddleGrant::revoke_for_session(
+            tx,
+            self.id,
+            &crate::models::room_delete::HuddleConfig::from_env(),
+        )?;
         tx.conn().execute_cached(
             r#"DELETE FROM "workspace_presence_leases" WHERE "workspace_presence_leases"."session_id" = ?"#,
             [self.id],

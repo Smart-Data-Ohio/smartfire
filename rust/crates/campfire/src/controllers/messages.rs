@@ -778,13 +778,14 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let viewer_id = concerns::current_user(c).map(|user| user.id);
+    let current_user_id = require_current_user(c)?.id;
     let (value, fetches, twitter_fetches, refreshes) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
-            if let Some(id) = viewer_id { presenter.use_viewer_zone(id)?; }
+            presenter.current_user_id = Some(current_user_id);
+            presenter.use_viewer_zone(current_user_id)?;
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
             let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
             Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_github_refreshes()))
