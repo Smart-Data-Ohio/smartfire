@@ -281,13 +281,21 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn plain_text_body(&self, message: &Message) -> Result<String> {
-        if message.markdown_source.is_some() || message.forwarded_markdown {
-            let body = message.body_html(self.conn)?.unwrap_or_default();
-            let resolver = self.resolver();
-            return campfire_richtext::markdown::plain_text(&body, &resolver.render_context(self.request_host.clone()), &resolver)
-                .map_err(|error| campfire_db::Error::Other(error.to_string()));
+        if !message.markdown() { return message.plain_text_body(self.conn, self.rich_text); }
+        let body = message.body_html(self.conn)?.unwrap_or_default();
+        let resolver = self.resolver();
+        let mut text = campfire_richtext::markdown::plain_text(&body, &resolver.render_context(self.request_host.clone()), &resolver)
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))?;
+        // Message#plain_text_body applies these after Markdown.plain_text, including
+        // attachment-only Markdown and a forward note. forwarded_markdown is not markdown?.
+        if campfire_views::helpers::is_blank(&text) {
+            text = message.attachment(self.conn)?.map(|(_, blob)| blob.filename).unwrap_or_default();
         }
-        message.plain_text_body(self.conn, self.rich_text)
+        Ok(match message.forward_note.as_deref().filter(|note| !campfire_views::helpers::is_blank(note)) {
+            Some(note) if campfire_views::helpers::is_blank(&text) => note.to_string(),
+            Some(note) => format!("{note}\n\n{text}"),
+            None => text,
+        })
     }
 
     /// `render @messages, cached: message_with_pr_cards_cache_key`: collection hits skip
@@ -303,6 +311,14 @@ impl<'a> Presenter<'a> {
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
         let Some(base) = self.cache_base_url.as_deref() else { return Ok(MessageItem::View(Box::new(self.message(message)?))) };
+        // Fetch intent belongs to the request, even if an earlier render populated
+        // the HTML cache and then its durable enqueue rolled back.
+        for post in self.twitter_posts(message)? { self.request_twitter_fetch(&post); }
+        if !message.embeds_suppressed {
+            for reference in crate::integrations::link_embed::Reference::for_message(self.conn, message)? {
+                self.request_link_fetch(&reference.embed);
+            }
+        }
         let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
         let html = fragment_cache::try_fetch_value(|| key, || {
             let view = self.message(message)?;
