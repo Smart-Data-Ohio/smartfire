@@ -43,6 +43,7 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
                 "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
                 "--exact",
                 "--nocapture",
+                "--test-threads=8",
             ])
             .env("WS15E_FIZZY_MESSAGE_CASE", case)
             .env("FIZZY_API_BASE_URL", format!("http://127.0.0.1:{}",case_port()))

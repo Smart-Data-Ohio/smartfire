@@ -10,7 +10,9 @@ root=Path(__file__).resolve().parents[3]
 binary=Path(sys.argv[1]).resolve()
 if Path.cwd()==root/'rust/crates/storage' and binary.name.startswith('vectors-'):
  scratch=root/'.scratch';temporary=scratch/'pinned-media';temporary.mkdir(parents=True,exist_ok=True)
- print('WS11 media runner: storage vectors execute in triage-reference-d7c7de92',flush=True)
- args=['docker','run','--rm','--network','none','--name','ws11-fresh-pinned-media','--entrypoint',str(binary),'-e','CI=1','-e','TMPDIR='+str(temporary),'-v',str(root)+':'+str(root)+':ro','-v',str(scratch)+':'+str(scratch)+':rw','--workdir',str(Path.cwd()),'triage-reference-d7c7de92',*sys.argv[2:]]
+ image=os.environ.get('PARITY_IMAGE','ws11ui-reference:d7c7de92')
+ owner=os.environ.get('PARITY_OWNER','ws11ui')
+ print(f'WS11 media runner: storage vectors execute in {image}',flush=True)
+ args=['docker','run','--rm','--network','none','--name',owner+'-fresh-pinned-media','--cpus','2','--user',f'{os.getuid()}:{os.getgid()}','--entrypoint',str(binary),'-e','CI=1','-e','TMPDIR='+str(temporary),'-v',str(root)+':'+str(root)+':ro','-v',str(scratch)+':'+str(scratch)+':rw','--workdir',str(Path.cwd()),image,*sys.argv[2:]]
  os.execvp('docker',args)
 os.execv(str(binary),[str(binary),*sys.argv[2:]])

@@ -25,7 +25,7 @@ def fixture(db):
     # A public fixture, matching AgentApprovalsTest setup; boot's owner callbacks
     # handle subsequent decisions. Both runtimes start from these identical rows.
     c.execute("INSERT INTO agent_approvals(id,agent_id,room_id,action,summary,status,expires_at,created_at,updated_at) VALUES (90015001,?,?,'deploy','Ship the release','pending','2026-03-02 16:30:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",(labels['agents.bender'],labels['rooms.watercooler']))
-    c.execute("INSERT INTO activity_items(id,user_id,event_type,source_type,source_id,created_at,updated_at) VALUES (90015001,?,'approval_requested','AgentApproval',90015001,'2026-03-02 16:00:00','2026-03-02 16:00:00')",(labels['users.david'],))
+    c.execute("INSERT INTO activity_items(id,user_id,event_type,source_type,source_id,created_at,updated_at) VALUES (90015001,?,'agent_approval_request','AgentApproval',90015001,'2026-03-02 16:00:00','2026-03-02 16:00:00')",(labels['users.david'],))
     c.commit(); c.close()
 
 def wait_up(port):
