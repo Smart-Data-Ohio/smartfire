@@ -101,9 +101,14 @@ pub struct ArEncryption {
 impl ArEncryption {
     /// `ActiveRecord::Encryption.key_provider` as the app configures it.
     pub fn new(secrets: &Secrets) -> Self {
-        let primary_key = secrets.key_generator.generate_key(PRIMARY_KEY_SALT, KEY_LENGTH);
-        let salt = secrets.key_generator.generate_key(KEY_DERIVATION_SALT, KEY_LENGTH);
-        Self::from_key(&derive_key(&primary_key, &salt))
+        // Rails keeps its DerivedSecretKeyProvider (and its derived keys) for the
+        // application lifetime. Cache with these Secrets, including concurrent callers.
+        let key = secrets.ar_encryption_key.get_or_init(|| {
+            let primary_key = secrets.key_generator.generate_key(PRIMARY_KEY_SALT, KEY_LENGTH);
+            let salt = secrets.key_generator.generate_key(KEY_DERIVATION_SALT, KEY_LENGTH);
+            derive_key(&primary_key, &salt)
+        });
+        Self::from_key(key)
     }
 
     /// From the derived 32-byte cipher key itself. The type carries the length, so no key can
@@ -198,10 +203,14 @@ impl ArEncryption {
     }
 }
 
+#[cfg(test)]
+thread_local! { static DERIVATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
 /// `ActiveRecord::Encryption::KeyGenerator#derive_key_from`: `ActiveSupport::KeyGenerator.new(
 /// primary_key, hash_digest_class: SHA256).generate_key(salt, 32)`, which is
 /// `OpenSSL::PKCS5.pbkdf2_hmac` at the default 2**16 iterations.
 pub(crate) fn derive_key(primary_key: &[u8], salt: &[u8]) -> [u8; KEY_LENGTH] {
+    #[cfg(test)]
+    DERIVATIONS.with(|n| n.set(n.get() + 1));
     let mut key = [0u8; KEY_LENGTH];
     pbkdf2::pbkdf2_hmac::<sha2::Sha256>(primary_key, salt, DEFAULT_ITERATIONS, &mut key);
     key
@@ -355,4 +364,26 @@ mod tests {
             assert!(encryption.decrypt(input).is_err(), "{input:?}");
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn provider_derives_once_across_concurrent_instances_like_rails() {
+    use std::sync::{Arc, Barrier};
+    let secrets = Arc::new(Secrets::new("FAKE-cached-provider"));
+    let barrier = Arc::new(Barrier::new(4));
+    let workers: Vec<_> = (0..4).map(|_| {
+        let secrets = secrets.clone(); let barrier = barrier.clone();
+        std::thread::spawn(move || {
+            barrier.wait();
+            let first = ArEncryption::new(&secrets);
+            let encrypted = first.encrypt("provider fixture");
+            let second = ArEncryption::new(&secrets);
+            assert_eq!(second.decrypt(&encrypted).unwrap(), "provider fixture");
+            DERIVATIONS.with(std::cell::Cell::get)
+        })
+    }).collect();
+    assert_eq!(workers.into_iter().map(|w| w.join().unwrap()).sum::<usize>(),1);
+    let other = ArEncryption::new(&Secrets::new("FAKE-another-provider"));
+    assert!(other.decrypt(&ArEncryption::new(&secrets).encrypt("separate keys")).is_err());
 }

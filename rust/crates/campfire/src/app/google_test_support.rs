@@ -4,3 +4,52 @@ use crate::controllers::presenters::test_support::TestApp;
 pub async fn observe_jobs(a: &TestApp) {
     a.db().write(|tx|{tx.conn().execute_batch("CREATE TABLE ws14g_emitted_jobs(id INTEGER PRIMARY KEY AUTOINCREMENT,job_class TEXT NOT NULL,arguments TEXT NOT NULL); CREATE TRIGGER ws14g_observe_job AFTER INSERT ON background_jobs BEGIN INSERT INTO ws14g_emitted_jobs(job_class,arguments) VALUES(NEW.job_class,NEW.arguments); END;")?;Ok(())}).await.unwrap();
 }
+
+/// Wake on queue writes, then read committed state. No busy read loop competes
+/// with the runner on CPU-limited CI. The writer barrier also fences DELETE's
+/// pre-commit update hook, so a successful drain means the outcomes committed.
+pub struct QueueDrain {
+    changed: tokio::sync::mpsc::UnboundedReceiver<()>,
+}
+impl QueueDrain {
+    pub async fn install(a: &TestApp) -> Self {
+        let (send, changed) = tokio::sync::mpsc::unbounded_channel();
+        a.db()
+            .write(move |tx| {
+                tx.conn()
+                    .update_hook(Some(move |_, _: &str, table: &str, _| {
+                        if table == "background_jobs" {
+                            let _ = send.send(());
+                        }
+                    }));
+                Ok(())
+            })
+            .await
+            .unwrap();
+        Self { changed }
+    }
+    pub async fn calendar(&mut self, a: &TestApp) {
+        loop {
+            // Consume old notifications before the writer barrier, never after it.
+            while self.changed.try_recv().is_ok() {}
+            let rows = a.db().write(|tx| Ok(tx.conn().prepare("SELECT job_class,status,attempts,last_error FROM background_jobs WHERE job_class IN ('Calendar::InboundSyncJob','Calendar::MeetLinkJob','Calendar::SyncEntryJob')")?.query_map([], |r| Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,i64>(2)?,r.get::<_,Option<String>>(3)?)))?.collect::<rusqlite::Result<Vec<_>>>()?)).await.unwrap();
+            if rows.is_empty() {
+                break;
+            }
+            assert!(
+                rows.iter()
+                    .all(|(_, status, attempts, _)| status != "failed" && *attempts <= 1),
+                "Calendar drain failed or retried: {rows:?}"
+            );
+            self.changed.recv().await.expect("queue observer closed");
+        }
+        a.db()
+            .write(|tx| {
+                tx.conn()
+                    .update_hook(None::<fn(rusqlite::hooks::Action, &str, &str, i64)>);
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+}

@@ -477,6 +477,32 @@ async fn review_emitted_calendar_jobs_have_working_consumers() {
     );
 }
 
+struct InboundGate {
+    recorded: Arc<Recorded>,
+    entered: tokio::sync::Notify,
+    release: tokio::sync::Notify,
+    path: String,
+}
+impl Client for InboundGate {
+    fn request<'a>(
+        &'a self,
+        host: &'a str,
+        method: Method,
+        target: &'a str,
+        headers: Vec<(String, String)>,
+        body: Vec<u8>,
+    ) -> BoxFuture<'a, Result<(u16, Vec<u8>), Unavailable>> {
+        Box::pin(async move {
+            if method == Method::GET && target == self.path {
+                self.entered.notify_one();
+                self.release.notified().await;
+            }
+            self.recorded
+                .request(host, method, target, headers, body)
+                .await
+        })
+    }
+}
 #[tokio::test]
 async fn review_calendar_runner_declines_and_provisions_like_rails() {
     use campfire_db::{
@@ -484,9 +510,12 @@ async fn review_calendar_runner_declines_and_provisions_like_rails() {
         models::google_calendar::{InboundSyncJob, MeetLinkJob},
     };
     use hyper::Method;
-    let a = TestApp::boot_without_periodic().await.unwrap();
+    let at: jiff::Timestamp = "2026-03-02T16:00:00Z".parse().unwrap();
+    let a = TestApp::boot_without_periodic_with_clock(Arc::new(campfire_kit::FrozenClock::new(at)))
+        .await
+        .unwrap();
+    let mut drain = super::google_test_support::QueueDrain::install(&a).await;
     let r = Recorded::new(vec![]);
-    support::install(&a, r.clone()).await;
     a.db()
         .write(|tx| {
             tx.conn()
@@ -505,6 +534,16 @@ async fn review_calendar_runner_declines_and_provisions_like_rails() {
     let decline = 9_500_000_001i64;
     let meet = 9_500_000_002i64;
     let remote = campfire_db::models::google_entry::google_id(decline, DAVID);
+    let gate = Arc::new(InboundGate {
+        recorded: r.clone(),
+        entered: tokio::sync::Notify::new(),
+        release: tokio::sync::Notify::new(),
+        path: format!("/calendar/v3/calendars/primary/events/{remote}"),
+    });
+    a.booted
+        .app
+        .google
+        .install_api(Api::new(support::config(), gate.clone()));
     r.answer_for(
         Method::GET,
         &format!("/calendar/v3/calendars/primary/events/{remote}"),
@@ -537,16 +576,33 @@ async fn review_calendar_runner_declines_and_provisions_like_rails() {
         }
         let entry=campfire_db::models::google_entry::reserve(tx,decline,DAVID)?;
         campfire_db::models::google_entry::success(tx,&entry)?;
-        tx.emit_after_commit(Event::job(&InboundSyncJob((DAVID,))));
-        tx.emit_after_commit(Event::job(&MeetLinkJob{event_id:meet}));
         Ok(())
     }).await.unwrap();
-    tokio::time::timeout(std::time::Duration::from_secs(5),async {loop {
-        let waiting=a.db().read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('Calendar::InboundSyncJob','Calendar::MeetLinkJob','Calendar::SyncEntryJob') AND status!='failed'",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
-        if waiting==0 {break} tokio::task::yield_now().await;
-    }}).await.unwrap();
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        a.db()
+            .write(|tx| {
+                tx.emit_after_commit(Event::job(&InboundSyncJob((DAVID,))));
+                Ok(())
+            })
+            .await
+            .unwrap();
+        // Pin the inbound scope before Meet reserves its entry, while leaving
+        // both consumers free to run concurrently after the HTTP gate opens.
+        gate.entered.notified().await;
+        a.db()
+            .write(move |tx| {
+                tx.emit_after_commit(Event::job(&MeetLinkJob { event_id: meet }));
+                Ok(())
+            })
+            .await
+            .unwrap();
+        gate.release.notify_one();
+        drain.calendar(&a).await;
+    })
+    .await
+    .expect("Calendar consumers did not drain within five seconds");
     let (errors,response,link)=a.db().read(move |c| {
-        let errors=c.prepare("SELECT last_error FROM background_jobs WHERE job_class IN ('Calendar::InboundSyncJob','Calendar::MeetLinkJob') AND status='failed'")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        let errors=c.prepare("SELECT last_error FROM background_jobs WHERE job_class IN ('Calendar::InboundSyncJob','Calendar::MeetLinkJob','Calendar::SyncEntryJob') AND status='failed'")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
         Ok((errors,c.query_row("SELECT response FROM event_attendances WHERE event_id=? AND user_id=?",[decline,DAVID],|r|r.get::<_,String>(0))?,c.query_row("SELECT meet_link FROM events WHERE id=?",[meet],|r|r.get::<_,Option<String>>(0))?))
     }).await.unwrap();
     assert!(errors.is_empty(), "Calendar consumers failed: {errors:?}");
