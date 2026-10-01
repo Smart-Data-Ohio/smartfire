@@ -29,7 +29,7 @@ vectors=cases.map do |c|
  thread=ChannelThread.create!(id:817,room:room,creator:owner,parent_message:message)
  pr=Github::PullRequest.create!(id:816,owner:'rails',repo:'rails',number:12)
  Membership.create!(room:room,user:bot)
- 
+
  ActivityItem.delete_all;AgentApproval.delete_all;AgentBudgetNotice.delete_all;AgentGrant.delete_all;GithubConnectedAccount.delete_all;Github::PullRequestThread.delete_all;ActiveRecord::Base.connection.execute("DELETE FROM sqlite_sequence WHERE name = 'agent_approvals'");Rails.cache.clear
  agent.update_columns(last_seen_at:nil,suspended_at:c[:suspended] ? Time.current : nil,daily_external_action_cap:c[:cap]);credential.update_columns(expires_at:c[:expired] ? Time.current : nil,revoked_at:c[:revoked] ? Time.current : nil,last_used_at:nil,last_used_ip:nil)
  Membership.where(user:bot).delete_all;Membership.create!(room:room,user:bot) unless c[:member]==false;Membership.create!(room:other,user:bot) if c[:other_member]

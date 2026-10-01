@@ -71,6 +71,9 @@ pub mod two_factor;
 pub mod unfurl_links;
 pub mod users;
 pub mod welcome;
+pub mod internal_huddle;
+#[cfg(test)]
+mod internal_huddle_tests;
 pub mod workspace_icons;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
@@ -168,6 +171,17 @@ fn arc(action: impl Action) -> Arc<dyn Action> {
 /// with ports of ours.
 fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
     Some(match endpoint {
+        "rooms/stage/roles#update" => arc(rooms::stage_participation::role),
+        "rooms/stage/hands#create" => arc(rooms::stage_participation::raise),
+        "rooms/stage/hands#destroy" => arc(rooms::stage_participation::lower),
+        "rooms/stage/streams#create" => arc(rooms::stage_streams::create),
+        "rooms/stage/streams#destroy" => arc(rooms::stage_streams::destroy),
+        "rooms/call_moderation#mute" => arc(rooms::call_moderation::mute),
+        "rooms/call_moderation#unmute" => arc(rooms::call_moderation::unmute),
+        "rooms/call_moderation#disconnect" => arc(rooms::call_moderation::disconnect),
+        "internal/huddle#authorize" => arc(internal_huddle::authorize),
+        "internal/huddle#show" => arc(internal_huddle::show),
+        "internal/huddle#left" => arc(internal_huddle::left),
         "public_pages#about" => arc(public_pages::about),
         "public_pages#privacy" => arc(public_pages::privacy),
         "public_pages#terms" => arc(public_pages::terms),

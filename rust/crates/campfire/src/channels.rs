@@ -15,6 +15,9 @@ mod github_notifier;
 mod github_cards;
 mod connection;
 pub mod huddle_notice;
+pub(crate) mod huddle_effects;
+#[cfg(test)]
+mod huddle_effects_tests;
 mod presence;
 mod read_rooms;
 pub mod revocation;
