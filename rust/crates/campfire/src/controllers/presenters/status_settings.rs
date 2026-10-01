@@ -168,13 +168,3 @@ pub fn forms(
             .collect(),
     })
 }
-
-pub fn google_configured() -> bool {
-    ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
-        .iter()
-        .all(|key| {
-            std::env::var(key)
-                .ok()
-                .is_some_and(|s| !s.chars().all(char::is_whitespace))
-        })
-}

@@ -1,0 +1,48 @@
+      <div class="flex flex-column gap" style="--row-gap: calc(var(--block-space) / 3)">
+        <h1 class="txt-x-large txt-tight-lines margin-none">{{ user.name }}</h1>
+
+{% if let Some(agent) = agent_profile %}          {{ self.agent_subscription() }}
+
+          <div class="txt-small">{{ agent.kind_description }}</div>
+
+{% if let Some(provider) = agent.provider_runtime %}            <div class="txt-small">{{ provider }}</div>
+{% endif %}
+{% if let Some(description) = agent.description %}            <div>{{ description }}</div>
+{% endif %}
+          <div class="txt-small">
+            {{ self.agent_badge(agent) }}
+          </div>
+
+          <div class="txt-small">
+            {{ self.agent_seen(agent) }}
+          </div>
+
+{% if !agent.rooms.is_empty() || agent.hidden_rooms > 0 %}            <div class="txt-small">
+              Rooms: {{ self.agent_rooms(agent) }}{% if agent.hidden_rooms > 0 %}{% if !agent.rooms.is_empty() %}, {% endif %}and {{ agent.hidden_rooms }} more{% endif %}
+            </div>
+{% endif %}
+          <div class="txt-small">Grants: {{ agent.grants_summary }}</div>
+
+{% if let Some(activity) = agent.activity_summary %}            <div class="txt-small">Last 24 hours: {{ activity }}</div>
+            <div class="txt-small">Today's usage: {{ agent.budget_usage.as_deref().unwrap_or_default() }}</div>
+{% endif %}{% endif %}      </div>
+
+      <div class="pad-double--inline push--inline push--block-start">
+{% if user.active() %}          {{ h::button_to_direct_room_with(ctx, user.id, &user.name) }}
+{% if can_manage_bot %}            <div class="margin-block-start">
+              {% filter link_to("/account/bots/" ~ user.id ~ "/grants", h::attrs().class("btn full-width")) %}
+                {{ h::image_tag(ctx, "key.svg", h::attrs().aria_hidden().size(20)) }}
+                Manage capability grants
+{% endfilter %}            </div>
+{% if let Some(agent) = agent_profile %}              <div class="margin-block-start">
+                {% filter link_to("/agents/" ~ agent.id ~ "/events", h::attrs().class("btn full-width")) %}
+                  {{ h::image_tag(ctx, "messages-outlined.svg", h::attrs().aria_hidden().size(20)) }}
+                  View activity ledger
+{% endfilter %}              </div>
+              <div class="margin-block-start">
+                {% filter link_to("/agents/" ~ agent.id ~ "/approvals", h::attrs().class("btn full-width")) %}
+                  {{ h::image_tag(ctx, "check.svg", h::attrs().aria_hidden().size(20)) }}
+                  View approval requests
+{% endfilter %}              </div>
+{% endif %}{% endif %}{% else %}          <div>{{ user.name }} is no longer on this account</div>
+{% endif %}      </div>{{ "\n" }}

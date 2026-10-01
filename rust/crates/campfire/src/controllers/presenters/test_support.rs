@@ -17,18 +17,34 @@ const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 /// Failure artifacts are output, never fixture inputs. Create their parent and a private
 /// directory even when neither TMPDIR nor any previous target directory exists.
 pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
-    let byte = actual.bytes().zip(expected.bytes()).position(|(a, b)| a != b)
+    let byte = actual
+        .bytes()
+        .zip(expected.bytes())
+        .position(|(a, b)| a != b)
         .unwrap_or(actual.len().min(expected.len()));
     let parent = Path::new(ROOT).join("target/ws8bm-diffs");
-    let directory = std::fs::create_dir_all(&parent).ok()
-        .and_then(|_| tempfile::Builder::new().prefix("difference-").tempdir_in(&parent).ok());
+    let directory = std::fs::create_dir_all(&parent).ok().and_then(|_| {
+        tempfile::Builder::new()
+            .prefix("difference-")
+            .tempdir_in(&parent)
+            .ok()
+    });
     if let Some(directory) = directory {
         let path = directory.keep();
         let _ = std::fs::write(path.join("actual.txt"), actual);
         let _ = std::fs::write(path.join("expected.txt"), expected);
-        panic!("{label}: byte {byte}; actual {} bytes, Rails {} bytes; {}", actual.len(), expected.len(), path.display());
+        panic!(
+            "{label}: byte {byte}; actual {} bytes, Rails {} bytes; {}",
+            actual.len(),
+            expected.len(),
+            path.display()
+        );
     }
-    panic!("{label}: byte {byte}; actual {} bytes, Rails {} bytes", actual.len(), expected.len());
+    panic!(
+        "{label}: byte {byte}; actual {} bytes, Rails {} bytes",
+        actual.len(),
+        expected.len()
+    );
 }
 
 pub const DAVID: i64 = 127326141;
@@ -84,7 +100,10 @@ fn find_seed(root: &Path, name: &str, ci: bool) -> Option<PathBuf> {
     if dir.join("db/production.sqlite3").is_file() {
         return Some(dir);
     }
-    assert!(!ci, "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests");
+    assert!(
+        !ci,
+        "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests"
+    );
     eprintln!("skipping locally: parity/.seed/{name} isn't built (parity/bin/seed build {name})");
     None
 }
@@ -148,12 +167,19 @@ impl TestApp {
 
     /// Byte goldens generated with the reference's --freeze clock.
     pub async fn boot_frozen() -> Option<TestApp> {
-        Self::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()))).await
+        Self::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
+            SEED_NOW.parse().unwrap(),
+        )))
+        .await
     }
 
     /// Test-local configuration; no process environment changes or pre-existing input files.
     pub async fn boot_frozen_with_env(values: &[(&str, &str)]) -> Option<TestApp> {
-        Self::boot_with_clock_and_env(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), values).await
+        Self::boot_with_clock_and_env(
+            std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+            values,
+        )
+        .await
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
@@ -173,17 +199,52 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_with_clients("default", clock, crate::integrations::net::Network::system(), extra, None).await
+        Self::boot_with_clients(
+            "default",
+            clock,
+            crate::integrations::net::Network::system(),
+            extra,
+            None,
+        )
+        .await
     }
 
     pub async fn boot_with_github_app(
         github_app: crate::integrations::github::client::AppClient,
     ) -> Option<TestApp> {
-        Self::boot_with_clients("default", seed_clock(), crate::integrations::net::Network::system(), &[], Some(github_app)).await
+        Self::boot_with_clients(
+            "default",
+            seed_clock(),
+            crate::integrations::net::Network::system(),
+            &[],
+            Some(github_app),
+        )
+        .await
     }
 
+    pub async fn boot_seed_with_env(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        vars: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_clients(
+            name,
+            clock,
+            crate::integrations::net::Network::system(),
+            vars,
+            None,
+        )
+        .await
+    }
     pub async fn boot_seed(name: &str) -> Option<TestApp> {
-        Self::boot_with_clients(name, seed_clock(), crate::integrations::net::Network::system(), &[], None).await
+        Self::boot_with_clients(
+            name,
+            seed_clock(),
+            crate::integrations::net::Network::system(),
+            &[],
+            None,
+        )
+        .await
     }
 
     async fn boot_with_clients(
@@ -215,16 +276,27 @@ impl TestApp {
                 .map(|(_, value)| (*value).into()),
         })
         .unwrap();
-        let intervals = crate::jobs::periodic::Intervals { periodic: None, huddle: None };
+        let intervals = crate::jobs::periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        };
         let booted = match github_app {
             Some(client) => crate::app::boot_with_all_services(
-                config, clock, crate::integrations::github::client::ReadClient::from_env(),
-                client, crate::integrations::net::Network::system(), network, intervals,
-            ).await.unwrap(),
-            None => boot_with_services(config, clock, network, intervals).await.unwrap(),
+                config,
+                clock,
+                crate::integrations::github::client::ReadClient::from_env(),
+                client,
+                crate::integrations::net::Network::system(),
+                network,
+                intervals,
+            )
+            .await
+            .unwrap(),
+            None => boot_with_services(config, clock, network, intervals)
+                .await
+                .unwrap(),
         };
         Some(TestApp { booted, _dir: dir })
-
     }
 
     pub fn db(&self) -> &campfire_db::Database {
@@ -397,16 +469,24 @@ pub async fn with_fixed_render_secrets<T>(request: impl std::future::Future<Outp
     FIXED_RENDER_SECRETS.scope((), request).await
 }
 
-pub(super) fn fixed_render_secrets() -> Option<campfire_views::helpers::request_forgery::RequestSecrets> {
+pub(super) fn fixed_render_secrets()
+-> Option<campfire_views::helpers::request_forgery::RequestSecrets> {
     use campfire_views::helpers::request_forgery::{AuthenticityTokens, RequestSecrets};
     struct Tokens;
     impl AuthenticityTokens for Tokens {
-        fn global(&self) -> String { "GLOBAL".into() }
-        fn for_form(&self, action: &str, method: &str) -> String { format!("{method}:{action}") }
+        fn global(&self) -> String {
+            "GLOBAL".into()
+        }
+        fn for_form(&self, action: &str, method: &str) -> String {
+            format!("{method}:{action}")
+        }
     }
-    FIXED_RENDER_SECRETS.try_with(|()| RequestSecrets {
-        tokens: Box::new(Tokens), csp_nonce: Some("NONCE".into()),
-    }).ok()
+    FIXED_RENDER_SECRETS
+        .try_with(|()| RequestSecrets {
+            tokens: Box::new(Tokens),
+            csp_nonce: Some("NONCE".into()),
+        })
+        .ok()
 }
 
 impl Browser<'_> {
@@ -416,15 +496,25 @@ impl Browser<'_> {
         self.authenticity_token().await;
         let key = campfire_kit::session::SESSION_KEY;
         let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
-        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap()).decode_utf8().unwrap();
-        let mut session = crypto.decrypt_cookie(key, &raw, jiff::Timestamp::now()).unwrap();
-        session["sudo_verified_at"] = serde_json::json!(self.app.booted.app.clock.now().as_second());
+        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap())
+            .decode_utf8()
+            .unwrap();
+        let mut session = crypto
+            .decrypt_cookie(key, &raw, jiff::Timestamp::now())
+            .unwrap();
+        session["sudo_verified_at"] =
+            serde_json::json!(self.app.booted.app.clock.now().as_second());
         let encrypted = crypto.encrypt_cookie(key, &session, None);
-        self.cookies.insert(key.into(), campfire_kit::cookies::escape(&encrypted));
+        self.cookies
+            .insert(key.into(), campfire_kit::cookies::escape(&encrypted));
     }
 
     pub fn cookie_header(&self) -> String {
-        self.cookies.iter().map(|(k,v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ")
+        self.cookies
+            .iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("; ")
     }
 
     pub fn absorb_cookie_header(&mut self, header: &str) {
@@ -451,7 +541,11 @@ impl Browser<'_> {
 
     pub async fn send(&mut self, req: Req) -> Reply {
         let mut request = Request::builder().method(req.method.clone()).uri(&req.path);
-        if !req.headers.iter().any(|(name, _)| name.eq_ignore_ascii_case("host")) {
+        if !req
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("host"))
+        {
             request = request.header(header::HOST, "campfire.test");
         }
         if !self.cookies.is_empty() {

@@ -64,6 +64,7 @@ pub mod notification_policy;
 pub mod user_device;
 pub mod webhook;
 pub mod workspace_presence_lease;
+pub mod workspace_icon;
 
 pub use account::{Account, AccountSettings};
 pub use auth_audit::{AuthAudit, SudoVerifier};

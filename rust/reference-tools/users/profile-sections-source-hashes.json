@@ -1,0 +1,5 @@
+{
+  "app/views/users/profiles/_google_calendar.html.erb": "fa4697a7b9cf89a2e58d95ab0838f35afa49c9e060752abb2a51d8b807f5d76e",
+  "app/models/google_account.rb": "90b8c2abb86a530c9d77bb2e2397882c8bb843fb79c2d569c3f5a044c11f2b9a",
+  "app/models/google/client.rb": "6e4eff284246eafbc1ac3da2fac1663aa751c9773d490c8b6f277846c09ac705"
+}

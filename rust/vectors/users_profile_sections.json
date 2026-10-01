@@ -1,0 +1,131 @@
+{
+  "reference": "d7c7de92",
+  "google_calendar": [
+    {
+      "name": "unconfigured",
+      "input": {
+        "calendar_configured": false,
+        "account_exists": false,
+        "connected": false,
+        "calendar": false,
+        "drive": false,
+        "email": ""
+      },
+      "scopes": null,
+      "reason": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Google Calendar is not configured for this workspace</p>\n</section>\n"
+    },
+    {
+      "name": "missing",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": false,
+        "connected": false,
+        "calendar": false,
+        "drive": false,
+        "email": ""
+      },
+      "scopes": null,
+      "reason": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Publish events you are going or maybe to to your Google Calendar.</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /></form>\n</section>\n"
+    },
+    {
+      "name": "calendar_only",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": true,
+        "connected": true,
+        "calendar": true,
+        "drive": false,
+        "email": "fixture<&>@example.test"
+      },
+      "scopes": null,
+      "reason": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Connected as fixture&lt;&amp;&gt;@example.test</p>\n      <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Enable Drive previews</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n    <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    },
+    {
+      "name": "calendar_drive",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": true,
+        "connected": true,
+        "calendar": true,
+        "drive": true,
+        "email": "fixture<&>@example.test"
+      },
+      "scopes": "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file",
+      "reason": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Connected as fixture&lt;&amp;&gt;@example.test</p>\n      <p>Drive previews enabled</p>\n    <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    },
+    {
+      "name": "drive_only",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": true,
+        "connected": true,
+        "calendar": false,
+        "drive": true,
+        "email": "fixture<&>@example.test"
+      },
+      "scopes": "https://www.googleapis.com/auth/drive.file",
+      "reason": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n      <p>Calendar permission needed, reconnect to publish events</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n      <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    },
+    {
+      "name": "rejected_drive",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": true,
+        "connected": false,
+        "calendar": false,
+        "drive": true,
+        "email": "fixture<&>@example.test"
+      },
+      "scopes": "https://www.googleapis.com/auth/drive.file",
+      "reason": "401",
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n      <p>Google rejected the connection, reconnect</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n</section>\n"
+    },
+    {
+      "name": "rejected_calendar",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": true,
+        "connected": false,
+        "calendar": true,
+        "drive": false,
+        "email": "fixture<&>@example.test"
+      },
+      "scopes": "https://www.googleapis.com/auth/calendar.events",
+      "reason": "invalid_grant",
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n      <p>Google rejected the connection, reconnect</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /></form>\n</section>\n"
+    },
+    {
+      "name": "retired_metadata",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": true,
+        "connected": true,
+        "calendar": true,
+        "drive": false,
+        "email": "fixture<&>@example.test"
+      },
+      "scopes": "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly",
+      "reason": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Connected as fixture&lt;&amp;&gt;@example.test</p>\n      <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Enable Drive previews</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n    <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    },
+    {
+      "name": "blank_reason",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": true,
+        "connected": true,
+        "calendar": true,
+        "drive": false,
+        "email": "fixture<&>@example.test"
+      },
+      "scopes": "https://www.googleapis.com/auth/calendar.events",
+      "reason": " ",
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n    <p>Connected as fixture&lt;&amp;&gt;@example.test</p>\n      <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Enable Drive previews</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n    <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    }
+  ]
+}

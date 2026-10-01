@@ -112,6 +112,7 @@ async fn complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks(
                                 ctx: &ctx,
                                 email_address: None,
                                 help_contact: help.clone(),
+                                google_sign_in_domains: Vec::new(),
                             }
                             .render()
                             .unwrap(),
