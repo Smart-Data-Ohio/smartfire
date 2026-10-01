@@ -109,7 +109,12 @@ fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcas
         let html=app.db.read_blocking(move|conn| {
             let message=campfire_db::Message::find(conn,message_id)?;
             let view=crate::controllers::presenters::Presenter::new(conn,&copy,None).message(&message)?;
-            Ok(crate::controllers::presenters::page::render_detached_at(&copy,None,&copy.db.env().default_url_origin,|ctx|campfire_views::messages::message(ctx,&view)))
+            // APP_URL supplies route defaults. Without it ActionController's
+            // renderer uses example.org, independent of mail's example.com fallback.
+            let origin=copy.config.mail.app_url.as_deref().unwrap_or("http://example.org");
+            // Rails broadcasts render the partial directly. A stream update can
+            // keep its frozen updated_at, so the collection cache would be stale.
+            Ok(crate::controllers::presenters::page::render_detached_at(&copy,None,origin,|ctx|campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders")))
         })?;
         if campfire_views::helpers::request_forgery::has_token_slots(&html) {
             anyhow::bail!("refusing unresolved CSRF token slots in a message replacement");
