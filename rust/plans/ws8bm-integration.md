@@ -76,15 +76,18 @@ and makes the complete pane comparison use the real child provider. Apply it aft
 owner merge. It is a patch because the feature module is absent from the WS8bm baseline;
 the worker branch still has an explicitly empty schedule call site.
 
-`owner-integration-check.py` reproduces an isolated merge with published shell
-`27990da2851f4c056db71c6b430c894307bc6bfe` (including its M2/WS11/WS17 inputs), applies
-that patch, builds seeds and checks actual room/anchor/unread/token behavior plus
-strict complete components and thread panes/show. It never merges main or the worker
-branch. This run passed all 11 targeted tests and 8 of 9 room components. It exits
-nonzero for the ninth: the Designers list's populated GitHub, Fizzy, link-embed and
-LinkedIn cards still require WS15g/WS15e providers. No mask or allowlist suppresses that
-difference. The whole live application layout, post-pin status popup and browser/system
-signoff remain separate owner/end-to-end work.
+`owner-integration-check.py` and `owner-schedule-integration.patch` describe the earlier
+published shell `27990da2851f4c056db71c6b430c894307bc6bfe`. They are historical integration
+tools, not verification of the current owner branch. Refresh their conflict handling and
+patch before using them against the newer shell `6dc741c9bd42922914d619f3d87889c63e5b839d`.
+That merge has six overlapping files: `channels/sink.rs`, `controllers/channel_threads.rs`,
+`controllers/messages.rs`, `controllers/fizzy_message_cards/tests.rs`,
+`controllers/presenters/test_support.rs` and `jobs/tests.rs`. Retain main's atomic
+attachment APIs and ready-listener test helpers, the message worker's in-transaction
+thread post (wrapped in M2's `PostingOutcome::Created`), both queue invariants, and the
+owner's feature dispatch, Picker availability and schedule child. Do not select an
+entire side of these files. Full merged live chrome, populated PR cards and real schedule
+provider parity remain separate integration work; no current combined-page pass is claimed.
 
 ## Standalone thread show and PR integration
 
@@ -93,7 +96,10 @@ ordinary reachable threads (the latest 40 replies), using `layouts::Application`
 `layouts::FrameLayout`. The pinned standalone Rails show has no composer or schedule
 child; those belong to `/content` and `Conversation`, as documented above. Full fixed-token
 template/layout goldens cover ordinary, empty, stale, closed, locked, deleted-starter and
-Turbo-frame cases. Live HTTP retains its real session tokens; its owned body and headers
+Turbo-frame cases. The full layout comes from the explicitly approved Rails #163
+revision `2e20b24c`; every other oracle field is cross-checked unchanged against
+`d7c7de92`. `check-goldens.py` regenerates both references and rejects content drift.
+Live HTTP retains its real session tokens; its owned body and headers
 are checked separately. Chrome is an explicit owner input in full-layout goldens; current
 `Layout::load` still needs the owner's icons/Google/presence facts for full live-page parity.
 
