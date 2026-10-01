@@ -21,7 +21,7 @@ pub mod agent_repositories;
 mod agent_jobs;
 mod agent_streaming;
 pub mod action_claims;
-// Account, fetcher and notifier consumers remain staged (WS15g continuation).
+// WS15g installs the GitHub account, fetcher, notifier and approved-action consumers.
 #[allow(dead_code)]
 pub mod github;
 pub mod health;

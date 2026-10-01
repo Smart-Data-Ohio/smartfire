@@ -52,8 +52,10 @@ impl Registry {
             .unwrap_or_else(|p| p.into_inner())
             .get(&callback.phase)
             .cloned();
-        // FLAGGED STUB: WS12 activity, WS13 huddles, WS14 Google/events,
-        // WS15 GitHub/Fizzy/embeds and WS16 Slack install their model adapters.
+        // FLAGGED STUB: optional WS12 work activity, WS13 huddles, WS14
+        // Google/events and WS16 Slack adapters remain with those owners.
+        // GitHub/Fizzy owner removal is installed by the app; message references
+        // also use Env.message_reference_syncs and EventSink.sync_message_references.
         // Leave their rows intact until installed; deletion FK failures roll back.
         match handler {
             Some(handler) => handler(tx, callback),

@@ -1200,6 +1200,180 @@
           "rust": "ws11_webhook_key_nonpr_thread_and_room"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent_revocation_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_security_lifecycle_cases_test.rs",
+      "cases": [
+        {
+          "rails": "removing a membership revokes that agent's grants in that room only",
+          "rust": "ws11_revocation_case_membership_scoped_only"
+        },
+        {
+          "rails": "workspace-wide grants survive membership removal",
+          "rust": "ws11_revocation_case_workspace_survives"
+        },
+        {
+          "rails": "membership revocation persists in the same transaction as the removal",
+          "rust": "ws11_revocation_case_removal_and_grant_rollback"
+        },
+        {
+          "rails": "destroying a room revokes its grants and forbids the next post",
+          "rust": "ws11_revocation_case_room_destroy"
+        },
+        {
+          "rails": "suspending an agent revokes all of its grants immediately",
+          "rust": "ws11_revocation_case_suspend_all"
+        },
+        {
+          "rails": "deactivating the agent user revokes all of its grants",
+          "rust": "ws11_revocation_case_deactivate_all"
+        },
+        {
+          "rails": "banning the agent user revokes all of its grants",
+          "rust": "ws11_revocation_case_ban_all"
+        },
+        {
+          "rails": "destroying the agent user revokes all of its grants",
+          "rust": "ws11_revocation_case_destroy_all"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_kill_switch_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_security_lifecycle_cases_test.rs",
+      "cases": [
+        {
+          "rails": "kill switch suspends, cancels pending approvals, and audits",
+          "rust": "ws11_kill_case_suspend_cancel_expire_audit"
+        },
+        {
+          "rails": "kill switch marks cancelled approvals' inbox items handled",
+          "rust": "ws11_kill_case_inbox_handled"
+        },
+        {
+          "rails": "kill switch is safe to repeat",
+          "rust": "ws11_kill_case_repeat_safe"
+        },
+        {
+          "rails": "kill switch quietly finalizes the agent's open streams",
+          "rust": "ws11_kill_case_quiet_stream"
+        },
+        {
+          "rails": "suspend quietly finalizes the agent's open streams",
+          "rust": "ws11_kill_case_suspend_quiet_stream"
+        },
+        {
+          "rails": "a suspension that rolls back leaves open streams untouched",
+          "rust": "ws11_kill_case_suspension_rollback"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_kill_switch_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_repositories/live_tests.rs",
+      "cases": [
+        {
+          "rails": "kill switch blocks approved-but-unexecuted external actions",
+          "rust": "ws11_kill_case_approved_github_job_rechecks_before_http"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_working_presence_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_presence_slash_cases_test.rs",
+      "cases": [
+        {
+          "rails": "sets presence with a TTL",
+          "rust": "ws11_presence_case_ttl"
+        },
+        {
+          "rails": "blank clears presence",
+          "rust": "ws11_presence_case_blank_clears"
+        },
+        {
+          "rails": "expired presence reads as cleared",
+          "rust": "ws11_presence_case_expired_reads_cleared"
+        },
+        {
+          "rails": "presence is capped in length",
+          "rust": "ws11_presence_case_model_limit"
+        },
+        {
+          "rails": "shared service sets and clears",
+          "rust": "ws11_presence_case_shared_set_clear"
+        },
+        {
+          "rails": "shared service rejects overlong text",
+          "rust": "ws11_presence_case_shared_limit"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_slash_command_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_presence_slash_cases_test.rs",
+      "cases": [
+        {
+          "rails": "registers a command",
+          "rust": "ws11_slash_model_case_registers"
+        },
+        {
+          "rails": "new commands take arguments by default",
+          "rust": "ws11_slash_model_case_default_arguments"
+        },
+        {
+          "rails": "names are unique per room across agents",
+          "rust": "ws11_slash_model_case_room_unique_across_agents"
+        },
+        {
+          "rails": "names must be lowercase command words",
+          "rust": "ws11_slash_model_case_command_words"
+        },
+        {
+          "rails": "names cannot shadow built-ins",
+          "rust": "ws11_slash_model_case_no_builtin_shadow"
+        },
+        {
+          "rails": "descriptions are capped",
+          "rust": "ws11_slash_model_case_description_limit"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/services/bots/clear_plaintext_tokens_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_repositories/bot_plaintext_cases.rs",
+      "cases": [
+        {
+          "rails": "re-keys the digest from the plaintext, then clears it",
+          "rust": "ws11_plaintext_case_rekeys_stale_and_digestless_leaves_clean"
+        },
+        {
+          "rails": "a key reset between the read and the write wins over the stale plaintext",
+          "rust": "ws11_plaintext_case_key_reset_beats_snapshot"
+        },
+        {
+          "rails": "repeat runs are no-ops",
+          "rust": "ws11_plaintext_case_repeat_noop"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agents/work_payload_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_work_payload_cases_test.rs",
+      "cases": [
+        {
+          "rails": "carries the full work shape for a channel thread",
+          "rust": "ws11_work_payload_case_complete_thread_shape"
+        },
+        {
+          "rails": "marks human owners and null owners",
+          "rust": "ws11_work_payload_case_human_and_null_owners"
+        },
+        {
+          "rails": "carries board identity, tags, run_url, and links for a post",
+          "rust": "ws11_work_payload_case_board_tags_run_and_links"
+        }
+      ]
     }
   ],
   "boundary_deferred": {

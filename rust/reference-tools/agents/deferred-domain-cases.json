@@ -136,72 +136,9 @@
     },
     {
       "rails_file": "test/models/agent_kill_switch_test.rb",
-      "owner": "WS11; WS15g/WS15e approved-action execution callbacks",
+      "owner": "WS11 callbacks; WS12 owned-board mutation producer",
       "remaining_named_case_ports": [
-        "kill switch suspends, cancels pending approvals, and audits",
-        "kill switch marks cancelled approvals' inbox items handled",
-        "kill switch blocks approved-but-unexecuted external actions",
-        "kill switch is safe to repeat",
-        "kill switch quietly finalizes the agent's open streams",
-        "suspend quietly finalizes the agent's open streams",
-        "a suspension that rolls back leaves open streams untouched",
         "kill switch leaves owned work assigned without reassigning it"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_revocation_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "removing a membership revokes that agent's grants in that room only",
-        "workspace-wide grants survive membership removal",
-        "membership revocation persists in the same transaction as the removal",
-        "destroying a room revokes its grants and forbids the next post",
-        "suspending an agent revokes all of its grants immediately",
-        "deactivating the agent user revokes all of its grants",
-        "banning the agent user revokes all of its grants",
-        "destroying the agent user revokes all of its grants"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_slash_command_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "registers a command",
-        "new commands take arguments by default",
-        "names are unique per room across agents",
-        "names must be lowercase command words",
-        "names cannot shadow built-ins",
-        "descriptions are capped"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_working_presence_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "sets presence with a TTL",
-        "blank clears presence",
-        "expired presence reads as cleared",
-        "presence is capped in length",
-        "shared service sets and clears",
-        "shared service rejects overlong text"
-      ]
-    },
-    {
-      "rails_file": "test/models/agents/work_payload_test.rb",
-      "owner": "WS11; WS8 message presenter; WS15g private repository reader",
-      "remaining_named_case_ports": [
-        "carries the full work shape for a channel thread",
-        "marks human owners and null owners",
-        "carries board identity, tags, run_url, and links for a post"
-      ]
-    },
-    {
-      "rails_file": "test/services/bots/clear_plaintext_tokens_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "re-keys the digest from the plaintext, then clears it",
-        "a key reset between the read and the write wins over the stale plaintext",
-        "repeat runs are no-ops"
       ]
     }
   ]

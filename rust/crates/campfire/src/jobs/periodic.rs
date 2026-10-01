@@ -239,18 +239,20 @@ pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> 
         .await?;
     let mut healed = 0;
     for (id, plaintext) in tokens {
-        let digest = campfire_db::user::digest_bot_token(&plaintext);
-        let updated = db
-            .write(move |tx| {
-                Ok(tx.conn().execute_cached(
-                    r#"UPDATE "users" SET "bot_token_digest" = ?1, "bot_token" = NULL WHERE "id" = ?2 AND "bot_token" = ?3"#,
-                    rusqlite::params![digest, id, plaintext],
-                )?)
-            })
-            .await?;
-        healed += updated;
+        if heal_plaintext_bot_token(db, id, plaintext).await? { healed += 1; }
     }
     Ok(healed)
+}
+
+/// `Bots::ClearPlaintextTokens.heal`: a reset after the snapshot wins the CAS.
+pub(crate) async fn heal_plaintext_bot_token(db: &Database, id: i64, plaintext: String) -> anyhow::Result<bool> {
+    let digest = campfire_db::user::digest_bot_token(&plaintext);
+    Ok(db.write(move |tx| {
+        Ok(tx.conn().execute_cached(
+            r#"UPDATE "users" SET "bot_token_digest" = ?1, "bot_token" = NULL WHERE "id" = ?2 AND "bot_token" = ?3"#,
+            rusqlite::params![digest, id, plaintext],
+        )? == 1)
+    }).await?)
 }
 
 /// Rails rescues each recovery enqueue independently. Each row's job and stamp still commit
