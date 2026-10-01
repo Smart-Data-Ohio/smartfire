@@ -65,7 +65,7 @@ async fn render_profile(
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
     let now = c.app().db.env().now();
-    let google_configured = presenters::status_settings::google_configured();
+    let google_configured = c.app().google.api().config.configured();
     let (avatar_attached, (direct_memberships, shared_memberships), settings) = {
         let user = user.clone();
         c.app()

@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 147 ported domain/API/controller cases; 464 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 148 ported domain/API/controller cases; 463 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -171,7 +171,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/sessions/google_controller_test.rb
 
-- **Partial** — login page offers Google sign-in with the mark, domains, and password note — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — login page offers Google sign-in with the mark, domains, and password note — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (all three complete login HTTP bodies; request entropy fixed before rendering; approved #163 layout and only validated asset URL fingerprints may drift).
 - **Ported** — login page hides the Google button when credentials are missing — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
 - **Ported** — login page hides the Google button when domains are explicitly empty — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
 - **Partial** — start redirects to Google with identity-only scope, nonce, and PKCE — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
@@ -835,3 +835,5 @@ The real combined RSVP/Meet runner now uses a frozen clock, deterministic inboun
 The new controller-cases probe captures 66 complete Rails request observations, including signed-out/other-member callbacks, domain/nonce/subject checks, signed-in replay, malformed token/key payloads, and strict auth_time cutoff ±1 second for both reauth and sudo. Reauth observations follow the callback and exercise backup rotation (including single consumption), device removal, disabling two factor, wrong credentials, and the 599/600/601-second expiration boundary. Sudo protected-action continuation, whole-page composition and Google-only provisioning transitions still have their own remaining ledger entries. Eight additional controller declarations are now fully mapped; these are outside the primary 611-case count.
 
 Inbound preloading now has the original one-event-read assertion, scaled from 3 to 30 confirmed entries, with recorded Google calls and unchanged responses/jobs. The merged owner SQL tracer is reused on the actual reader count.
+
+Complete Google HTML now compares all three login HTTP pages and sixteen complete Google profile panels across eight configured/grant/link states, including complete Google Calendar notices. The injected Calendar configuration now drives settings notices; the old process-global environment read caused configured clients to render the unconfigured notice. Full profile pages remain owner-blocked: WS8b-r2 profile/status/membership composition, WS10 GitHub/inbox controls, WS13 call settings, WS15f Fizzy, WS16 Slack, and WS6 timezone ordering. The eight full Rails profile responses are retained in google_full_pages.json; no failed whole-page claim is relabeled complete and no pixel work is required.

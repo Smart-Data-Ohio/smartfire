@@ -604,3 +604,6 @@ mod google_lifecycle_tests;
 
 #[cfg(test)]
 mod google_admin_tests;
+
+#[cfg(test)]
+mod google_page_tests;
