@@ -10,6 +10,9 @@ use crate::layouts::Page;
 pub mod google;
 mod summary;
 pub use summary::*;
+mod settings;
+pub use settings::*;
+pub mod statuses;
 
 #[derive(Clone)]
 pub struct UserSession {
@@ -68,6 +71,27 @@ pub struct Show<'a> {
     pub user: UserSummary,
     /// `user.transfer_id`, for `users/profiles/_transfer` (shown to administrators).
     pub transfer_id: String,
+    pub profile_status: Option<statuses::ProfileStatus>,
+}
+
+impl Show<'_> {
+    fn status_section(&self, status: &statuses::ProfileStatus) -> h::Html {
+        h::raw(
+            statuses::ProfileStatusSection { status }
+                .render()
+                .expect("profile status"),
+        )
+    }
+    fn allowance(&self, status: &statuses::ProfileStatus) -> h::Html {
+        h::raw(
+            statuses::DndAllowance {
+                ctx: self.ctx,
+                status,
+            }
+            .render()
+            .expect("DND allowance"),
+        )
+    }
 }
 
 impl Page for Show<'_> {
@@ -151,6 +175,7 @@ impl ProfileMembership {
 pub struct ProfileShow<'a> {
     pub google_calendar: google::CalendarData,
     pub google_sign_in: google::SignInData,
+    pub github: crate::github::connections::Connection,
     pub has_password: bool,
     pub current_password_error: Option<&'a str>,
     pub security: crate::two_factor::ProfileData,
@@ -161,11 +186,24 @@ pub struct ProfileShow<'a> {
     pub transfer_id: String,
     pub shared_memberships: Vec<ProfileMembership>,
     pub direct_memberships: Vec<ProfileMembership>,
+    pub settings: SettingsFormData,
 }
 
 impl<'a> ProfileShow<'a> {
     fn google_calendar_panel(&self) -> h::Html { h::raw(google::Calendar{data:self.google_calendar.clone()}.render().unwrap()) }
     fn google_sign_in_panel(&self) -> h::Html { h::raw(google::SignIn{data:self.google_sign_in.clone()}.render().unwrap()) }
+    fn github_panel(&self) -> h::Html {
+        h::raw(crate::github::connections::profile(&self.github))
+    }
+    fn status_form(&self) -> h::Html {
+        h::raw(StatusForm { ctx: self.ctx, data: &self.settings }.render().expect("status form renders"))
+    }
+    fn notification_form(&self) -> h::Html {
+        h::raw(NotificationForm { ctx: self.ctx, data: &self.settings }.render().expect("notification form renders"))
+    }
+    fn appearance_form(&self) -> h::Html {
+        h::raw(AppearanceForm { ctx: self.ctx, data: &self.settings }.render().expect("appearance form renders"))
+    }
     fn security_panel(&self) -> h::Html {
         h::raw(
             crate::two_factor::Profile {

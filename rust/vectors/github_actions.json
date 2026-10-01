@@ -1,0 +1,3463 @@
+{
+  "reference_pin": "d7c7de92",
+  "validation": [
+    {
+      "kind": "comment",
+      "body": "  ",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "body": [
+            "is required for a comment"
+          ]
+        },
+        "body": null,
+        "reviewers": [],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_changes",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "body": [
+            "is required when requesting changes"
+          ]
+        },
+        "body": null,
+        "reviewers": [],
+        "action": "github.request_changes",
+        "summary": "Request changes on rails/rails#12",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_changes",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_changes\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "approve",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": null,
+        "reviewers": [],
+        "action": "github.approve",
+        "summary": "Approve rails/rails#12",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "approve",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"approve\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "  ",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": [],
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "alice,bob!!",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": null,
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": [
+        "user1",
+        "user2",
+        "user3",
+        "user4",
+        "user5",
+        "user6",
+        "user7",
+        "user8",
+        "user9",
+        "user10",
+        "user11",
+        "user12",
+        "user13",
+        "user14",
+        "user15",
+        "user16"
+      ],
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": null,
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": " @Alice, alice  @BOB ",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": null,
+        "reviewers": [
+          "alice",
+          "bob"
+        ],
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @alice, @bob",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":[\"alice\",\"bob\"]}"
+      }
+    },
+    {
+      "kind": "merge",
+      "body": "x",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "kind": [
+            "must be one of: comment, approve, request_changes, request_review"
+          ]
+        },
+        "body": "x",
+        "reviewers": [],
+        "action": "github.merge",
+        "summary": null,
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "merge",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"merge\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "comment",
+      "body": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "body": [
+            "is too long (maximum is 3500 characters)"
+          ]
+        },
+        "body": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "reviewers": [],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "comment",
+      "body": "雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪",
+        "reviewers": [],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: 雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "comment",
+      "body": "  Nice  ",
+      "reviewers": "alice",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "Nice",
+        "reviewers": [
+          "alice"
+        ],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "Nice",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "comment",
+      "body": "雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪",
+        "reviewers": [],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: 雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪雪\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_changes",
+      "body": "Fix it",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "Fix it",
+        "reviewers": [],
+        "action": "github.request_changes",
+        "summary": "Request changes on rails/rails#12",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_changes",
+          "body": "Fix it",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_changes\",\"body\":\"Fix it\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "approve",
+      "body": " optional ",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "optional",
+        "reviewers": [],
+        "action": "github.approve",
+        "summary": "Approve rails/rails#12",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "approve",
+          "body": "optional",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"approve\",\"body\":\"optional\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": [
+        "@Alice, Bob",
+        null
+      ],
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": null,
+        "reviewers": [
+          "alice",
+          "bob"
+        ],
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @alice, @bob",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": [
+            "alice",
+            "bob"
+          ]
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":[\"alice\",\"bob\"]}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": [
+        "a-b",
+        "a--b"
+      ],
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": null,
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "a b",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": null,
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "@@alice",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": null,
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": [
+        "u1",
+        "u2",
+        "u3",
+        "u4",
+        "u5",
+        "u6",
+        "u7",
+        "u8",
+        "u9",
+        "u10",
+        "u11",
+        "u12",
+        "u13",
+        "u14",
+        "u15"
+      ],
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": null,
+        "reviewers": [
+          "u1",
+          "u2",
+          "u3",
+          "u4",
+          "u5",
+          "u6",
+          "u7",
+          "u8",
+          "u9",
+          "u10",
+          "u11",
+          "u12",
+          "u13",
+          "u14",
+          "u15"
+        ],
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @u1, @u2, @u3, @u4, @u5, @u6, @u7, @u8, @u9, @u10, @u11, @u12, @u13, @u14, @u15",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": [
+            "u1",
+            "u2",
+            "u3",
+            "u4",
+            "u5",
+            "u6",
+            "u7",
+            "u8",
+            "u9",
+            "u10",
+            "u11",
+            "u12",
+            "u13",
+            "u14",
+            "u15"
+          ]
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":[\"u1\",\"u2\",\"u3\",\"u4\",\"u5\",\"u6\",\"u7\",\"u8\",\"u9\",\"u10\",\"u11\",\"u12\",\"u13\",\"u14\",\"u15\"]}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": null,
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "comment",
+      "body": "\u0000\tNice\u000b\u0000",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "Nice",
+        "reviewers": [],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "Nice",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "comment",
+      "body": 42,
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "42",
+        "reviewers": [],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: 42",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "42",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"42\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "comment",
+      "body": false,
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "false",
+        "reviewers": [],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: false",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "false",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"false\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "comment",
+      "body": [
+        "one",
+        "two"
+      ],
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": "[\"one\", \"two\"]",
+        "reviewers": [],
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: [\"one\", \"two\"]",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "comment",
+          "body": "[\"one\", \"two\"]",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"[\\\"one\\\", \\\"two\\\"]\",\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "ſalice",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": null,
+        "reviewers": [
+          "ſalice"
+        ],
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @ſalice",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": [
+            "ſalice"
+          ]
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":[\"ſalice\"]}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "ß",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": null,
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "K",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": null,
+        "reviewers": [
+          "k"
+        ],
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @k",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": [
+            "k"
+          ]
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":[\"k\"]}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "ſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſ",
+      "expected": {
+        "valid": true,
+        "errors": {},
+        "body": null,
+        "reviewers": [
+          "ſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſ"
+        ],
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @ſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": [
+            "ſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſ"
+          ]
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":[\"ſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſ\"]}"
+      }
+    },
+    {
+      "kind": "request_review",
+      "reviewers": "ſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſſ",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        },
+        "body": null,
+        "reviewers": null,
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "request_review",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": null,
+      "expected": {
+        "valid": false,
+        "errors": {
+          "kind": [
+            "must be one of: comment, approve, request_changes, request_review"
+          ]
+        },
+        "body": null,
+        "reviewers": [],
+        "action": "github.",
+        "summary": null,
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": 1,
+      "expected": {
+        "valid": false,
+        "errors": {
+          "kind": [
+            "must be one of: comment, approve, request_changes, request_review"
+          ]
+        },
+        "body": null,
+        "reviewers": [],
+        "action": "github.1",
+        "summary": null,
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "1",
+          "body": null,
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"1\",\"body\":null,\"reviewers\":null}"
+      }
+    },
+    {
+      "kind": "approve",
+      "body": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "expected": {
+        "valid": false,
+        "errors": {
+          "body": [
+            "is too long (maximum is 3500 characters)"
+          ]
+        },
+        "body": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "reviewers": [],
+        "action": "github.approve",
+        "summary": "Approve rails/rails#12",
+        "payload": {
+          "pull_request_id": 816,
+          "kind": "approve",
+          "body": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "reviewers": null
+        },
+        "payload_json": "{\"pull_request_id\":816,\"kind\":\"approve\",\"body\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"reviewers\":null}"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "name": "comment",
+      "body": "  Nice  ",
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "approve",
+      "kind": "approve",
+      "approval": {
+        "action": "github.approve",
+        "summary": "Approve rails/rails#12",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"approve\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.approve",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.approve approval #813",
+            "details": {
+              "action": "github.approve",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/pulls/12/reviews",
+            "body": {
+              "event": "APPROVE",
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "request_changes",
+      "kind": "request_changes",
+      "body": " Fix it ",
+      "approval": {
+        "action": "github.request_changes",
+        "summary": "Request changes on rails/rails#12",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"request_changes\",\"body\":\"Fix it\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.request_changes",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.request_changes approval #813",
+            "details": {
+              "action": "github.request_changes",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/pulls/12/reviews",
+            "body": {
+              "event": "REQUEST_CHANGES",
+              "body": "Fix it"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "request_review",
+      "kind": "request_review",
+      "reviewers": " @Alice, bob, ALICE ",
+      "approval": {
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from @alice, @bob",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":[\"alice\",\"bob\"]}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.request_review",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.request_review approval #813",
+            "details": {
+              "action": "github.request_review",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/pulls/12/requested_reviewers",
+            "body": {
+              "reviewers": [
+                "alice",
+                "bob"
+              ]
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "approve_without_body",
+      "kind": "approve",
+      "body": null,
+      "approval": {
+        "action": "github.approve",
+        "summary": "Approve rails/rails#12",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"approve\",\"body\":null,\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.approve",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.approve approval #813",
+            "details": {
+              "action": "github.approve",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/pulls/12/reviews",
+            "body": {
+              "event": "APPROVE"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "optional_approve_body",
+      "kind": "approve",
+      "body": " Looks good ",
+      "approval": {
+        "action": "github.approve",
+        "summary": "Approve rails/rails#12",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"approve\",\"body\":\"Looks good\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.approve",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.approve approval #813",
+            "details": {
+              "action": "github.approve",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/pulls/12/reviews",
+            "body": {
+              "event": "APPROVE",
+              "body": "Looks good"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "denied",
+      "status": "denied",
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "denied",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Approval is no longer approved",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval is no longer approved"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval is no longer approved"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "pending_expired",
+      "status": "pending",
+      "expired": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "pending",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Approval is no longer approved",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval is no longer approved"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval is no longer approved"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "cancelled",
+      "status": "cancelled",
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "cancelled",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Approval is no longer approved",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval is no longer approved"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval is no longer approved"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "suspended",
+      "suspended": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent is suspended or deactivated",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent is suspended or deactivated"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent is suspended or deactivated"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "deactivated",
+      "deactivated": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent is suspended or deactivated",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent is suspended or deactivated"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent is suspended or deactivated"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "missing_room",
+      "missing_room": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": null
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": null,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Room no longer exists",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Room no longer exists"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Room no longer exists"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "soft_deleted_room",
+      "soft_deleted": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent no longer has the external_action capability",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent no longer has the external_action capability"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent no longer has the external_action capability"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "membership_removed",
+      "membership_removed": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent is no longer a member of the room",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent is no longer a member of the room"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent is no longer a member of the room"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "grant_revoked",
+      "grant_revoked": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent no longer has the external_action capability",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent no longer has the external_action capability"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent no longer has the external_action capability"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "legacy_without_grants",
+      "legacy": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent no longer has the external_action capability",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent no longer has the external_action capability"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent no longer has the external_action capability"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "workspace_grant",
+      "workspace_grant": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "mapping_removed",
+      "mapping_removed": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "The pull request is no longer discussed in this room",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "no_payload",
+      "payload": null,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": null,
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "The pull request is no longer discussed in this room",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "invalid_json",
+      "payload": "{bad",
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{bad",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "The pull request is no longer discussed in this room",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "array_payload",
+      "payload": "[]",
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "[]",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "The pull request is no longer discussed in this room",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "missing_pr",
+      "missing_pr": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":999,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "The pull request is no longer discussed in this room",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The pull request is no longer discussed in this room"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "invalid_body",
+      "body": " ",
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: ",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":null,\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Approval payload is invalid",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval payload is invalid"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval payload is invalid"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "invalid_reviewers",
+      "kind": "request_review",
+      "reviewers": "alice!",
+      "approval": {
+        "action": "github.request_review",
+        "summary": "Request review on rails/rails#12 from ",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"request_review\",\"body\":null,\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Approval payload is invalid",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.request_review",
+              "status": "failed",
+              "message": "Approval payload is invalid"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.request_review approval #813",
+            "details": {
+              "action": "github.request_review",
+              "status": "failed",
+              "message": "Approval payload is invalid"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "summary_swapped",
+      "summary_swapped": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Swapped",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Approval summary does not match its payload",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval summary does not match its payload"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval summary does not match its payload"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "action_swapped",
+      "action_swapped": true,
+      "approval": {
+        "action": "github.approve",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Approval summary does not match its payload",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.approve",
+              "status": "failed",
+              "message": "Approval summary does not match its payload"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.approve approval #813",
+            "details": {
+              "action": "github.approve",
+              "status": "failed",
+              "message": "Approval summary does not match its payload"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "pr_swapped",
+      "pr_swapped": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":822,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Approval summary does not match its payload",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval summary does not match its payload"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Approval summary does not match its payload"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "account_relinked",
+      "relinked": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "The agent's GitHub account changed since this was approved",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The agent's GitHub account changed since this was approved"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The agent's GitHub account changed since this was approved"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "account_replaced",
+      "replaced": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "The agent's GitHub account changed since this was approved",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The agent's GitHub account changed since this was approved"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The agent's GitHub account changed since this was approved"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "missing_identity",
+      "missing_identity": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": null,
+        "github_login": null,
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "The agent's GitHub account changed since this was approved",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The agent's GitHub account changed since this was approved"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "The agent's GitHub account changed since this was approved"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "login_case",
+      "login_case": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "MACHINE",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "disconnected",
+      "disconnected": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent has no usable GitHub account",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent has no usable GitHub account"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent has no usable GitHub account"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": "Disconnected fixture"
+      }
+    },
+    {
+      "name": "destroyed",
+      "destroyed": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent has no usable GitHub account",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent has no usable GitHub account"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent has no usable GitHub account"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "unreadable_access",
+      "unreadable": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent has no usable GitHub account",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent has no usable GitHub account"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent has no usable GitHub account"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": "The stored token could not be read; link it again"
+      }
+    },
+    {
+      "name": "unauthorized",
+      "code": 401,
+      "response": {
+        "message": "Bad credentials"
+      },
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "GitHub rejected the agent's linked token (401)",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "GitHub rejected the agent's linked token (401)"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "GitHub rejected the agent's linked token (401)"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)"
+      }
+    },
+    {
+      "name": "destroyed_during_401",
+      "destroy_during_http": true,
+      "code": 401,
+      "response": {
+        "message": "Bad credentials"
+      },
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "GitHub rejected the agent's linked token (401)",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "GitHub rejected the agent's linked token (401)"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "GitHub rejected the agent's linked token (401)"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "refused",
+      "code": 403,
+      "response": {
+        "message": "Nope"
+      },
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "GitHub refused: Nope",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "GitHub refused: Nope"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "GitHub refused: Nope"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "server_error",
+      "code": 500,
+      "response": {
+        "message": "Nope"
+      },
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "GitHub returned 500",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "GitHub returned 500"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "GitHub returned 500"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "non_hash_response",
+      "response": [],
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "completed"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "historical",
+      "historical": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": null,
+            "room_id": 815,
+            "actor_id": null,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "running_claim",
+      "running": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": null,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "running"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "twice",
+      "twice": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "failure_twice",
+      "grant_revoked": true,
+      "twice": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": "Agent no longer has the external_action capability",
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent no longer has the external_action capability"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "failed",
+              "message": "Agent no longer has the external_action capability"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "missing_approval",
+      "missing_approval": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [],
+        "audits": [],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "non_github",
+      "non_github": true,
+      "approval": {
+        "action": "deploy",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [],
+        "audits": [],
+        "jobs": [],
+        "received": [],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "owner_app",
+      "owner_app": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 821,
+        "github_login": "owner",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "owner_pat",
+      "owner_pat": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "none",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "webhook",
+      "webhook": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "pending",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [
+          {
+            "action": "agent.github_action.execute",
+            "actor_id": 811,
+            "actor_label": "Oracle <oracle@example.test>",
+            "target_type": "AgentApproval",
+            "target_id": 813,
+            "target_label": "github.comment approval #813",
+            "details": {
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "class": "Agent::EventWebhookJob",
+            "attempt": 0
+          }
+        ],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    },
+    {
+      "name": "audit_failure",
+      "webhook": true,
+      "audit_failure": true,
+      "approval": {
+        "action": "github.comment",
+        "summary": "Comment on rails/rails#12: Nice",
+        "payload": "{\"pull_request_id\":816,\"kind\":\"comment\",\"body\":\"Nice\",\"reviewers\":null}",
+        "status": "approved",
+        "github_account_id": 819,
+        "github_login": "machine",
+        "room_id": 815
+      },
+      "expected": {
+        "events": [
+          {
+            "agent_id": 812,
+            "agent_approval_id": 813,
+            "room_id": 815,
+            "actor_id": 811,
+            "outcome": "delivered",
+            "detail": null,
+            "event_type": "github_action_completed",
+            "metadata": {
+              "approval_id": 813,
+              "action": "github.comment",
+              "status": "completed",
+              "url": "https://github.com/rails/rails/pull/12#fixture"
+            },
+            "webhook_status": "pending",
+            "webhook_attempts": 0,
+            "hop": 0
+          }
+        ],
+        "audits": [],
+        "jobs": [
+          {
+            "class": "Agent::EventWebhookJob",
+            "attempt": 0
+          }
+        ],
+        "received": [
+          {
+            "method": "POST",
+            "path": "/repos/rails/rails/issues/12/comments",
+            "body": {
+              "body": "Nice"
+            },
+            "agent_authorization": true
+          }
+        ],
+        "disconnected_reason": null
+      }
+    }
+  ]
+}

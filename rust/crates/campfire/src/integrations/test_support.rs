@@ -51,7 +51,7 @@ impl Resolver for FakeResolver {
     }
 }
 
-/// Connects the given addresses (any port) to `to`; anything else is dialed for real.
+/// Connects the given fake addresses to `to`; every unmapped address is refused.
 pub struct MappingDialer {
     pub public: HashSet<IpAddr>,
     pub to: SocketAddr,
@@ -61,8 +61,11 @@ pub struct MappingDialer {
 impl Dialer for MappingDialer {
     fn connect(&self, addr: SocketAddr) -> BoxFuture<'_, io::Result<TcpStream>> {
         self.dialed.lock().unwrap().push(addr);
-        let target = if self.public.contains(&addr.ip()) { self.to } else { addr };
-        Box::pin(TcpStream::connect(target))
+        if self.public.contains(&addr.ip()) {
+            Box::pin(TcpStream::connect(self.to))
+        } else {
+            Box::pin(async move { Err(io::Error::new(io::ErrorKind::ConnectionRefused, format!("unmapped test address: {addr}"))) })
+        }
     }
 }
 
@@ -213,11 +216,12 @@ impl FakeServer {
     }
 
     async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, ws15e: bool) -> Self {
-        let listener = if ws15e { ws15e_listener().await } else { TcpListener::bind("127.0.0.1:0").await.unwrap() };
+        let listener = if ws15e { ws15e_listener().await } else { crate::test_support::bind_listener().await };
         Self::on_listener(routes, tls, listener).await
     }
 
     pub async fn on_listener(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, listener: TcpListener) -> Self {
+
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
@@ -256,7 +260,23 @@ impl Drop for FakeServer {
     }
 }
 
+/// Isolated HTTP matrices use distinct ports at the end of their worker's reserved range.
+pub fn fixture_http_base(default_port: u16, offset: u16) -> String {
+    let port = std::env::var("INTEGRATION_TEST_PORT_RANGE").map(|range| {
+        let (first, last) = range.split_once('-').expect("INTEGRATION_TEST_PORT_RANGE=start-end");
+        let first: u16 = first.parse().unwrap();
+        let last: u16 = last.parse().unwrap();
+        let port = last.checked_sub(offset).expect("fixture port offset outside range");
+        assert!(first <= port, "fixture port offset outside range");
+        port
+    }).unwrap_or(default_port);
+    format!("http://127.0.0.1:{port}")
+}
+
 pub async fn ws15e_listener() -> TcpListener {
+    if std::env::var_os("CABLE_TEST_PORT_RANGE").is_some() {
+        return crate::test_support::bind_listener().await;
+    }
     for port in 51550..=51594 {
         if let Ok(listener) = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
             return listener;
@@ -266,7 +286,39 @@ pub async fn ws15e_listener() -> TcpListener {
 }
 
 pub async fn ws15e_trickling_server(head: &'static str) -> SocketAddr {
-    trickling_server_with(ws15e_listener().await, head).await
+    trickling_server_with(ws15e_listener().await, head).await.0
+}
+
+/// Control Tokio deadlines without counting CPU contention or TCP setup against them.
+/// A separate wall-clock watchdog still bounds stalled I/O and a broken timeout.
+pub fn with_paused_time(what: &'static str, test: impl std::future::Future<Output = ()> + Send + 'static) {
+    let (finished, result) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .start_paused(true)
+                .build()
+                .unwrap();
+            runtime.block_on(async {
+                // Keep idle-time auto-advance from consuming the deadline during real I/O.
+                let keep_time_paused = tokio::spawn(async {
+                    loop {
+                        tokio::task::yield_now().await;
+                    }
+                });
+                test.await;
+                keep_time_paused.abort();
+            });
+        }));
+        let _ = finished.send(outcome);
+    });
+    let outcome = result.recv_timeout(crate::test_support::WAIT)
+        .unwrap_or_else(|_| panic!("{what} exceeded its 30 s wall-clock watchdog"));
+    worker.join().expect("paused-time worker panicked outside its test");
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
+    }
 }
 
 async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], log: &Mutex<Vec<Received>>) -> io::Result<()> {
@@ -335,26 +387,37 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
 }
 
 /// A server that answers every request with `head` and then a byte of body every 50 ms, until
-/// the client hangs up.
-pub async fn trickling_server(head: &'static str) -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    trickling_server_with(listener, head).await
+/// the client hangs up. Acknowledges the first byte, so a paused-time test can wait for real
+/// I/O before advancing its clock.
+pub async fn trickling_server_with_ready(
+    head: &'static str,
+) -> (SocketAddr, tokio::sync::oneshot::Receiver<()>) {
+    trickling_server_with(crate::test_support::bind_listener().await, head).await
 }
 
-async fn trickling_server_with(listener: TcpListener, head: &'static str) -> SocketAddr {
+async fn trickling_server_with(
+    listener: TcpListener,
+    head: &'static str,
+) -> (SocketAddr, tokio::sync::oneshot::Receiver<()>) {
     let addr = listener.local_addr().unwrap();
+    let (ready, received) = tokio::sync::oneshot::channel();
     tokio::spawn(async move {
+        let mut ready = Some(ready);
         while let Ok((mut stream, _)) = listener.accept().await {
+            let mut ready = ready.take();
             tokio::spawn(async move {
                 let _ = stream.read(&mut [0; 4096]).await;
                 let _ = stream.write_all(head.as_bytes()).await;
                 while stream.write_all(b" ").await.is_ok() {
+                    if let Some(ready) = ready.take() {
+                        let _ = ready.send(());
+                    }
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                 }
             });
         }
     });
-    addr
+    (addr, received)
 }
 
 /// A gzip bomb:`megabytes` gzip members of a megabyte of zeros each, about 1 KB apiece.
@@ -378,7 +441,7 @@ impl TestDb {
 
     pub fn in_dir(clock: Arc<dyn campfire_db::Clock>, directory: &std::path::Path) -> Self {
         use campfire_db::{BasicRichText, Env, NullSink};
-        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 }, directory)
+        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4, ..Env::default() }, directory)
     }
 
     pub fn with_env(env: campfire_db::Env, directory: &std::path::Path) -> Self {

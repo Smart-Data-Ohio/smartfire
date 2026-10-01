@@ -31,6 +31,7 @@ pub use crate::channels::Cable;
 pub struct AppState {
     pub config: Config,
     pub secrets: Arc<Secrets>,
+    pub ar_encryption: Arc<rails_compat::ar_encryption::ArEncryption>,
     pub clock: SharedClock,
     pub db: Database,
     pub storage: Arc<Storage>,
@@ -43,6 +44,10 @@ pub struct AppState {
     pub google: crate::integrations::google::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
+    pub github_accounts: crate::integrations::github::accounts::Accounts,
+    pub github_app: crate::integrations::github::client::AppClient,
+    pub github_read: crate::integrations::github::client::ReadClient,
+    pub subscription_network: crate::integrations::net::Network,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
     /// and every render outside one.
     pub fragment_cache: Arc<FragmentCache>,
@@ -87,22 +92,50 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
 /// [`boot`] with its clock given rather than read from `CAMPFIRE_FROZEN_TIME`: the seeded tests
 /// run at the parity seed's instant, as the reference does (`parity/seeds/README.md`).
 pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Result<Booted> {
-    boot_with_clock_and_loops(
-        config,
-        clock,
-        jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env()),
-    )
-    .await
+    boot_with_network(config, clock, crate::integrations::net::Network::system()).await
 }
 
-/// Injectable periodic loops for consumer tests; the durable worker concurrency is unchanged.
-pub(crate) async fn boot_with_clock_and_loops(
-    config: Config,
-    clock: SharedClock,
-    loops: jobs::periodic::Loops,
-) -> anyhow::Result<Booted> {
+pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    boot_with_services(config, clock, subscription_network, jobs::periodic::Intervals::from_env()).await
+}
+
+/// Service dependencies, including which periodic hosts run beside HTTP. The Rails parity
+/// server does not run bin/periodic; its seeded HTTP tests invoke due tasks explicitly.
+pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
+    let network = crate::integrations::net::Network::system();
+    let github_app = crate::integrations::github::client::AppClient::with_network(
+        std::env::var("GITHUB_APP_CLIENT_ID").ok(),
+        std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
+        network.clone(),
+    );
+    boot_with_all_services(config, clock, crate::integrations::github::client::ReadClient::from_env(), github_app, network, subscription_network, intervals).await
+}
+
+/// Injects the fixed-host GitHub client for runtime acceptance tests.
+#[cfg(test)]
+pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient) -> anyhow::Result<Booted> {
+    boot_with_github_network(config, clock, github_read, crate::integrations::net::Network::system()).await
+}
+
+#[cfg(test)]
+pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    let github_app = crate::integrations::github::client::AppClient::with_network(
+        std::env::var("GITHUB_APP_CLIENT_ID").ok(),
+        std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
+        github_network.clone(),
+    );
+    boot_with_github_clients(config, clock, github_read, github_app, github_network).await
+}
+
+#[cfg(test)]
+pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    boot_with_all_services(config, clock, github_read, github_app, github_network, crate::integrations::net::Network::system(), jobs::periodic::Intervals::from_env()).await
+}
+
+pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
+    let ar_encryption = Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets));
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
 
     // The job classes first: the database's sink enqueues them on their queues.
@@ -110,6 +143,7 @@ pub(crate) async fn boot_with_clock_and_loops(
     let registry = jobs::registry();
     let runner_config = jobs::runner_config(&config);
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
+    let loops = jobs::periodic::Loops::new(intervals);
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
     // Mail's preflight and Message::create use the same room-aware, fallible renderer.
     mail.install_renderer(Arc::new({
@@ -156,9 +190,13 @@ pub(crate) async fn boot_with_clock_and_loops(
 
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
+    let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
+        db.clone(), Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets)), github_app.clone(), github_network,
+    );
     let app = Arc::new(AppState {
         config,
         secrets,
+        ar_encryption,
         clock: clock.clone(),
         db,
         storage,
@@ -170,6 +208,10 @@ pub(crate) async fn boot_with_clock_and_loops(
         two_factor: crate::concerns::two_factor::State::default(),
         google: crate::integrations::google::State::default(),
         web_push,
+        github_read,
+        github_app,
+        github_accounts,
+        subscription_network,
         fragment_cache,
     });
 
@@ -201,6 +243,9 @@ async fn open_database(
         sink: Arc::new(jobs),
         rich_text,
         bcrypt_cost: 12,
+        default_url_origin: config.mail.url_origin().to_owned(),
+        message_reference_syncs: vec![crate::integrations::github::references::sync],
+        user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
     };
     Ok(tokio::task::spawn_blocking(move || Database::open(db_config, env)).await??)
 }

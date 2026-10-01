@@ -353,6 +353,45 @@
           ]
         }
       ]
+    },
+    {
+      "name": "preserved_url_excluded_from_timeout_audit",
+      "age": 960,
+      "url": "https://github.com/rails/rails/pull/12#historical",
+      "expected": {
+        "metadata": {
+          "approval_id": 813,
+          "action": "github.comment",
+          "status": "failed",
+          "extra": "preserved",
+          "url": "https://github.com/rails/rails/pull/12#historical",
+          "message": "GitHub action execution timed out"
+        },
+        "detail": "GitHub action execution timed out",
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "webhook_attempts": 2,
+        "outcome": "delivered",
+        "created_at": "2026-01-01 11:44:00",
+        "audits": 1,
+        "jobs": 0
+      },
+      "audits": [
+        {
+          "action": "agent.github_action.execute",
+          "actor_id": 811,
+          "actor_label": "Oracle <oracle@example.test>",
+          "target_type": "AgentApproval",
+          "target_id": 813,
+          "target_label": "github.comment approval #813",
+          "details": {
+            "action": "github.comment",
+            "status": "failed",
+            "message": "GitHub action execution timed out"
+          }
+        }
+      ],
+      "jobs": []
     }
   ]
 }

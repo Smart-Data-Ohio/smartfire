@@ -443,17 +443,33 @@ fn authenticate_bot_reply_token(
     Ok(Membership::find_by_room_and_user(conn, room_id, bot.id)?.map(|_| bot))
 }
 
-/// `agent_authentication`: an `Authorization: Bearer` secret authenticates its agent's user, and
-/// an unknown secret, or an inactive agent's, is a 401 that ends the chain.
-///
-/// `AgentCredential` and `Agent` aren't ported yet (the tables are), so every secret is unknown:
-/// agents get the 401
-/// Rails gives a revoked token rather than being taken for signed-out browsers.
+/// Bearer authentication uses the persisted credential and the agent's current active state.
+/// Unknown, revoked, expired and suspended credentials halt with 401; endpoint policy then
+/// denies a valid agent token on every controller that hasn't opted into agent access.
 pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
-    if agent_bearer_secret(c.request.header("authorization")).is_none() {
-        return Ok(false);
+    let Some(secret) = agent_bearer_secret(c.request.header("authorization")).map(str::to_string) else { return Ok(false) };
+    let ip = c.request.remote_ip()?.to_string();
+    let user = c.app().db.write(move |tx| campfire_db::models::agent_access::authenticate(tx, &secret, &ip)).await.map_err(Error::internal)?;
+    let Some(user) = user else { return halt(head(StatusCode::UNAUTHORIZED)) };
+    c.set_current(CurrentUser(user));
+    set_authenticated_by(c, AuthenticatedBy::AgentToken);
+    Ok(true)
+}
+
+/// AgentAuthorization: membership is checked by each controller first, with 404. Missing
+/// capabilities return the same JSON 403 for bot keys, agent tokens and bot sessions.
+pub async fn ensure_agent_capability(c: &mut Ctx, capability: &'static str, room_id: i64) -> Result<()> {
+    let user = require_current_user(c)?;
+    if !user.is_bot() && !matches!(authenticated_by(c), AuthenticatedBy::BotKey | AuthenticatedBy::AgentToken) {
+        return Ok(());
     }
-    halt(head(StatusCode::UNAUTHORIZED))
+    let user_id = user.id;
+    let allowed = c.app().db.read(move |conn| campfire_db::models::agent_access::capability_for_user(conn,user_id,capability,room_id)).await.map_err(Error::internal)?;
+    if allowed == Some(false) {
+        let body = serde_json::json!({"error":format!("Forbidden: agent lacks {capability} capability")}).to_string();
+        return halt(c.render(StatusCode::FORBIDDEN, &campfire_kit::format::JSON, body));
+    }
+    Ok(())
 }
 
 /// `agent_bearer_secret`: `scheme, token = request.authorization.to_s.split(" ", 2)`, then the
@@ -747,20 +763,7 @@ pub fn sudo_rate_limit() -> campfire_kit::RateLimit {
 /// confirming (`store_sudo_pending_request`) and redirects to `new_sudo_url`.
 #[allow(dead_code)]
 pub fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
-    let now = c.now();
-    if session_keys::sudo_verified(c.session(), now) {
-        return Ok(());
-    }
-    let method = c.request.method.as_str().to_string();
-    let pending = session_keys::SudoPendingRequest {
-        params: session_keys::sudo_storable_params(&method, &c.request_params),
-        method,
-        path: c.request.fullpath(),
-        origin: session_keys::sudo_origin_path(c.request.referer(), &c.request.host(), "/"),
-    };
-    session_keys::store_sudo_pending_request(c.session(), pending);
-    let location = c.url_for("/sudo/new");
-    halt(c.redirect_to(&location)?)
+    sudo::require_sudo_mode(c)
 }
 
 /// `deny_bots`: 403 for bot-key and bot-reply-token requests.
@@ -888,7 +891,7 @@ pub async fn last_room_visited(c: &Ctx) -> Result<Option<Room>> {
 
 // --- RoomScoped ----------------------------------------------------------------------------------
 
-/// `RoomScoped#set_room`: `Current.user.memberships.find_by!(room_id: params[:room_id])`, 404
+/// `RoomScoped#set_room`: memberships joined to `Room.alive`, 404
 /// otherwise. Returns the membership and its room.
 pub async fn set_room(c: &mut Ctx) -> Result<(Membership, Room)> {
     let user_id = require_current_user(c)?.id;
@@ -903,6 +906,7 @@ pub async fn set_room(c: &mut Ctx) -> Result<(Membership, Room)> {
                 return Ok(None);
             };
             let room = membership.room(conn)?;
+            if room.deleted() { return Ok(None) }
             Ok(Some((membership, room)))
         })
         .await

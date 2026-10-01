@@ -1,0 +1,314 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": "2026-03-02T16:00:00Z",
+  "guards": [
+    {
+      "host": "0.0.0.0",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "10.1.2.3",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "100.64.0.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "127.0.0.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "168.63.129.16",
+      "address": "168.63.129.16"
+    },
+    {
+      "host": "169.254.169.254",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "172.16.0.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "172.31.255.255",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "192.0.0.8",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "192.0.2.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "192.88.99.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "192.168.1.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "198.18.0.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "198.51.100.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "203.0.113.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "224.0.0.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "240.0.0.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "255.255.255.255",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "::",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "::ffff:192.168.1.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "::ffff:8.8.8.8",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "::8.8.8.8",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "64:ff9b::a00:1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "64:ff9b:1::808:808",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "::ffff:0:a00:1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "fc00::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "fd00::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "fe80::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "fec0::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "ff02::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "2001::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "2001:db8::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "2002::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "3fff::1",
+      "address": "3fff::1"
+    },
+    {
+      "host": "5f00::1",
+      "address": "5f00::1"
+    },
+    {
+      "host": "100::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "2001:2::1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "4000::1",
+      "address": "4000::1"
+    },
+    {
+      "host": "2001:10::1",
+      "address": "2001:10::1"
+    },
+    {
+      "host": "2130706433",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "017700000001",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "0x7f000001",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "127.1",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "3232235521",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "[::1]",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "[fd00::1]",
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "8.8.8.8",
+      "address": "8.8.8.8"
+    },
+    {
+      "host": "1.1.1.1",
+      "address": "1.1.1.1"
+    },
+    {
+      "host": "93.184.216.34",
+      "address": "93.184.216.34"
+    },
+    {
+      "host": "172.32.0.1",
+      "address": "172.32.0.1"
+    },
+    {
+      "host": "100.128.0.1",
+      "address": "100.128.0.1"
+    },
+    {
+      "host": "192.0.1.1",
+      "address": "192.0.1.1"
+    },
+    {
+      "host": "2606:4700:4700::1111",
+      "address": "2606:4700:4700::1111"
+    },
+    {
+      "host": "2001:3::1",
+      "address": "2001:3::1"
+    },
+    {
+      "host": "2001:4:112::1",
+      "address": "2001:4:112::1"
+    },
+    {
+      "host": "64:ff9b::808:808",
+      "address": "64:ff9b::808:808"
+    },
+    {
+      "host": "::ffff:0:808:808",
+      "address": "::ffff:0:808:808"
+    },
+    {
+      "host": "134744072",
+      "address": "8.8.8.8"
+    },
+    {
+      "host": "0x08080808",
+      "address": "8.8.8.8"
+    },
+    {
+      "host": "010.010.010.010",
+      "address": "8.8.8.8"
+    },
+    {
+      "host": "[2606:4700:4700::1111]",
+      "address": "2606:4700:4700::1111"
+    }
+  ],
+  "dns": [
+    {
+      "host": "private.example",
+      "answers": [
+        "10.0.0.1"
+      ],
+      "error": "RestrictedHTTP::Violation"
+    },
+    {
+      "host": "mixed.example",
+      "answers": [
+        "10.0.0.1",
+        "2606:4700:4700::1111",
+        "93.184.216.34"
+      ],
+      "address": "93.184.216.34"
+    },
+    {
+      "host": "empty.example",
+      "answers": [],
+      "error": "Surfguard::Unresolvable"
+    }
+  ],
+  "signatures": [
+    {
+      "body": "{}",
+      "secret": "ws11-public-test-signing-secret",
+      "timestamp": "1772467200",
+      "signature": "sha256=f9f45cfc16d318ee4b9613059b3b7d7714f6cf4f0a12de4b9acaae9c15bcb9fc"
+    },
+    {
+      "body": "{\"body\":\"<b>Hi</b>&bye\"}",
+      "secret": "ws11-public-test-signing-secret",
+      "timestamp": "1772467200",
+      "signature": "sha256=567df4c64b4cc10d50b33aeaee5186982f62e7f4e6d215208321efa198dc0f88"
+    },
+    {
+      "body": "é😀",
+      "secret": "ws11-public-test-signing-secret",
+      "timestamp": "1772467200",
+      "signature": "sha256=bcd43efbb37458b087377c0cd788e06aae87000c8fe9a609732ca8e6d0454392"
+    },
+    {
+      "body": "line\nend",
+      "secret": "ws11-public-test-signing-secret",
+      "timestamp": "1772467200",
+      "signature": "sha256=c6e3570857d06edc5625648266a20760f5d7fb4d8f436b14a6726672ba52e33b"
+    }
+  ],
+  "payloads": {
+    "agent_backed_legacy_delivery": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\"}}",
+    "agent_delivery": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\",\"drive_attachments\":[]},\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":123},\"pull_request\":null}",
+    "legacy_delivery": "{\"user\":{\"id\":773523953,\"name\":\"JZ\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\",\"path\":\"/rooms/486777696/eyJfcmFpbHMiOnsiZGF0YSI6eyJib3RfaWQiOjM5NDk1OTg1OSwicm9vbV9pZCI6NDg2Nzc3Njk2fSwiZXhwIjoiMjAyNi0wMy0wMlQxNjoxNTowMC4wMDBaIn19--35db5027abd19b1a6a00ee5e40b0d3867b9f0446/messages\"},\"message\":{\"id\":136976342,\"body\":{\"html\":\"When we are not sure, we are alive.\",\"plain\":\"When we are not sure, we are alive.\"},\"path\":\"/rooms/486777696/@136976342\"},\"reply_url\":\"/rooms/486777696/eyJfcmFpbHMiOnsiZGF0YSI6eyJib3RfaWQiOjM5NDk1OTg1OSwicm9vbV9pZCI6NDg2Nzc3Njk2fSwiZXhwIjoiMjAyNi0wMy0wMlQxNjoxNTowMC4wMDBaIn19--35db5027abd19b1a6a00ee5e40b0d3867b9f0446/messages\"}"
+  },
+  "secret": {
+    "plaintext": "88acfa3d46a9dc4c193025074354a622311a7d815a7835a6a5a56e13a5456e28",
+    "ciphertext": "{\"p\":\"xEdHlky5KSG1sKDKcnEo1oXluf4dUhC1MwYG0pvQFd5AYbf0YGZ5YEwUI766DU47hFk5dVaUF7x0k5ZD51WpKA==\",\"h\":{\"iv\":\"1ozD+VnkC75okj61\",\"at\":\"/xJoUzUfbq2g/0/x9K6INQ==\",\"e\":\"VVMtQVNDSUk=\"}}",
+    "encoding": "US-ASCII",
+    "repeated": true
+  }
+}

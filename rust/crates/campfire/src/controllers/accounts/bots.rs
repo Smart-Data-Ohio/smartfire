@@ -42,7 +42,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     // `create_webhook!(url: webhook_url) if webhook_url`: any non-nil value, "" included.
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
     let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
-    let pending = c
+    c
         .app()
         .db
         .write(move |tx| {
@@ -51,7 +51,6 @@ pub async fn create(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    attachments::analyze_later(c.app(), pending);
     redirect_to_bots(c)
 }
 
@@ -61,7 +60,9 @@ pub async fn edit(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     let (storage, base_url, bot_id) = (c.app().storage.clone(), c.url_for(""), bot.id);
     let form = c.app().db.read(move |conn| presenters::accounts::bot_form(conn, &storage, &base_url, &bot)).await.map_err(Error::internal)?;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsEdit { ctx, bot_id, bot: form.clone() }).await
+    let github = presenters::github::connection(c.app(), bot_id).await.map_err(Error::internal)?;
+    let administrator = concerns::require_current_user(c)?.is_administrator();
+    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsEdit { ctx, bot_id, bot: form.clone(), github: github.clone(), administrator }).await
 }
 
 /// `@bot.update_bot! bot_params`: the webhook first, then the bot, in one transaction.
@@ -84,7 +85,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let webhook_submitted = params.contains_key("webhook_url");
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
     let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
-    let pending = c
+    c
         .app()
         .db
         .write(move |tx| {
@@ -97,7 +98,6 @@ pub async fn update(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    attachments::analyze_later(c.app(), pending);
     redirect_to_bots(c)
 }
 

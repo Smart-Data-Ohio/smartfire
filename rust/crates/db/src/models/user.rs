@@ -344,9 +344,14 @@ impl User {
 
     /// User.create_bot!(skip_open_room_grant: true), used by RoomMailbox.
     pub fn create_email_bot(tx: &mut Tx<'_>) -> Result<Self> {
+        Self::create_integration_bot(tx, "Email")
+    }
+
+    /// `User.create_bot!(name:, skip_open_room_grant: true)` for integration bots.
+    pub fn create_integration_bot(tx: &mut Tx<'_>, name: &str) -> Result<Self> {
         let token = generate_bot_token();
         Self::create_with_open_room_grant(tx, NewUser {
-            name: "Email".into(), role: Role::Bot,
+            name: name.into(), role: Role::Bot,
             bot_token_digest: Some(digest_bot_token(&token)), ..Default::default()
         }, false)
     }
@@ -555,9 +560,14 @@ impl User {
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
+        for disconnect in tx.env().user_deactivation_hooks.clone() {
+            disconnect(tx, self)?;
+        }
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
         lifecycle::deactivate(tx, self.id, context)?;
         let email = self.deactivated_email_address();
+        // app/models/user.rb: manual OOO cannot survive account deactivation.
+        conn.execute_cached("UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?", [self.id])?;
         self.update(
             tx,
             UserChanges {
@@ -738,12 +748,9 @@ impl User {
     /// Rails `email_change_requested?`: strip, then Unicode `casecmp?`. The submitted
     /// value is still saved verbatim; only the security check uses this comparison.
     pub fn email_change_requested(&self, submitted: &str) -> bool {
-        use caseless::Caseless;
         use campfire_richtext::ruby::strip;
-        !strip(submitted).chars().default_case_fold().eq(
-            strip(self.email_address.as_deref().unwrap_or(""))
-                .chars()
-                .default_case_fold(),
+        rails_compat::unicode::fold(strip(submitted)) != rails_compat::unicode::fold(
+            strip(self.email_address.as_deref().unwrap_or("")),
         )
     }
 

@@ -279,6 +279,25 @@ pub fn parse(text: &str, zone_name: &str, now: Timestamp) -> Option<Timestamp> {
         fallback(text, &zone, now)
     }
 }
+/// Calendar forms use TimeZone#parse directly, without the slash command grammar.
+pub fn parse_calendar_time(
+    text: &str,
+    zone_name: &str,
+    viewer_zone: &str,
+    now: Timestamp,
+) -> Option<Timestamp> {
+    let zone = known_zone(zone_name).unwrap_or_else(|| zone(viewer_zone));
+    fallback(text, &zone, now).or_else(|| {
+        // Date._parse also recognizes a standalone month prefix: "junk" means June.
+        let c = re("(?i)(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)").captures(text)?;
+        let date = Date::new(now.jiff().to_zoned(zone.clone()).year(), month(&c[1])?, 1).ok()?;
+        local(date, 0, 0, 0, 0, &zone)
+    })
+}
+
+pub fn known_calendar_zone(name: &str) -> bool {
+    known_zone(name).is_some()
+}
 pub fn split_leading_time(
     text: &str,
     zone_name: &str,
@@ -320,7 +339,7 @@ pub(crate) fn month(name: &str) -> Option<i8> {
 }
 // ActiveSupport::TimeZone#parse delegates to Date._parse, with omitted date parts
 // filled from now. Explicit offsets denote absolute instants; clock-only forms stay today.
-fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
+pub(crate) fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
     let text = strip(text);
     if text.is_empty() {
         return None;
