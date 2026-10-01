@@ -1,0 +1,273 @@
+[
+  {
+    "name": "loading",
+    "attributes": {
+      "id": 816,
+      "author_avatar_url": null,
+      "author_login": null,
+      "base_branch": null,
+      "changed_files": null,
+      "changed_files_fetched_at": null,
+      "check_status": null,
+      "fetch_error": null,
+      "fetch_requested_at": null,
+      "fetched_at": "2026-01-01 12:00:00 UTC",
+      "github_updated_at": null,
+      "head_branch": null,
+      "head_sha": null,
+      "html_url": null,
+      "number": 12,
+      "owner": "rails",
+      "payload": null,
+      "private": false,
+      "repo": "rails",
+      "review_decision": null,
+      "state": null,
+      "title": null
+    },
+    "mapped": false,
+    "reply": false,
+    "card": "<article class=\"github-pr-card github-pr-card--unknown\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">rails/rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__loading\">Loading pull request…</p>\n\n  <footer class=\"github-pr-card__footer\">\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/rails/rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n",
+    "cards": "<div id=\"github_pr_cards_message_card-parent\" class=\"github-pr-cards\">\n    <article class=\"github-pr-card github-pr-card--unknown\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">rails/rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__loading\">Loading pull request…</p>\n\n  <footer class=\"github-pr-card__footer\">\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/rails/rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n\n</div>\n",
+    "header": "<div id=\"github_pr_header_channel_thread_817\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODRNVGM6bWVzc2FnZXMi--bd766443783f9ca915ca40d2819f6ece135776987b1d2f7939d089626561d544\"></turbo-cable-stream-source>\n    <article class=\"github-pr-card github-pr-card--unknown\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">rails/rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__loading\">Loading pull request…</p>\n\n  <footer class=\"github-pr-card__footer\">\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/rails/rails/pull/12\">View on GitHub</a>\n  </footer>\n</article>\n\n    <section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <p class=\"github-pr-files__loading\">Loading files…</p>\n</section>\n\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\" src=\"/rooms/815/github/pull_request_write_actions/816\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n",
+    "files": "<section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <p class=\"github-pr-files__loading\">Loading files…</p>\n</section>\n"
+  },
+  {
+    "name": "public",
+    "attributes": {
+      "id": 816,
+      "author_avatar_url": "https://example.test/avatar.png",
+      "author_login": "alice",
+      "base_branch": "main",
+      "changed_files": "{\"files\":[{\"filename\":\"app/a.rb\",\"status\":\"modified\",\"additions\":4,\"deletions\":2}],\"total_count\":3}",
+      "changed_files_fetched_at": null,
+      "check_status": "passing",
+      "fetch_error": null,
+      "fetch_requested_at": null,
+      "fetched_at": "2026-01-01 12:00:00 UTC",
+      "github_updated_at": "2025-12-31 10:00:00 UTC",
+      "head_branch": "shiny",
+      "head_sha": null,
+      "html_url": "https://github.com/Rails/Rails/pull/12",
+      "number": 12,
+      "owner": "rails",
+      "payload": {
+        "base": {
+          "repo": {
+            "full_name": "Rails/Rails"
+          }
+        }
+      },
+      "private": false,
+      "repo": "rails",
+      "review_decision": "approved",
+      "state": "open",
+      "title": "Fix login"
+    },
+    "mapped": false,
+    "reply": false,
+    "card": "<article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--passing\">Checks passing</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n",
+    "cards": "<div id=\"github_pr_cards_message_card-parent\" class=\"github-pr-cards\">\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--passing\">Checks passing</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n\n</div>\n",
+    "header": "<div id=\"github_pr_header_channel_thread_817\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODRNVGM6bWVzc2FnZXMi--bd766443783f9ca915ca40d2819f6ece135776987b1d2f7939d089626561d544\"></turbo-cable-stream-source>\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--passing\">Checks passing</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n  </footer>\n</article>\n\n    <section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\" src=\"/rooms/815/github/pull_request_write_actions/816\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n",
+    "files": "<section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n"
+  },
+  {
+    "name": "private",
+    "attributes": {
+      "id": 816,
+      "author_avatar_url": "https://example.test/avatar.png",
+      "author_login": "alice",
+      "base_branch": "main",
+      "changed_files": "{\"files\":[{\"filename\":\"app/a.rb\",\"status\":\"modified\",\"additions\":4,\"deletions\":2}],\"total_count\":3}",
+      "changed_files_fetched_at": null,
+      "check_status": "passing",
+      "fetch_error": null,
+      "fetch_requested_at": null,
+      "fetched_at": "2026-01-01 12:00:00 UTC",
+      "github_updated_at": "2025-12-31 10:00:00 UTC",
+      "head_branch": "shiny",
+      "head_sha": null,
+      "html_url": "https://github.com/Rails/Rails/pull/12",
+      "number": 12,
+      "owner": "rails",
+      "payload": {
+        "base": {
+          "repo": {
+            "full_name": "Rails/Rails"
+          }
+        }
+      },
+      "private": true,
+      "repo": "rails",
+      "review_decision": "approved",
+      "state": "open",
+      "title": "Secret title"
+    },
+    "mapped": false,
+    "reply": false,
+    "card": "<article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Secret title</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--passing\">Checks passing</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n",
+    "cards": "<div id=\"github_pr_cards_message_card-parent\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_818_github_pull_request_816\" src=\"/rooms/815/github/pull_requests/816/card?message_id=818\"></turbo-frame>\n</div>\n",
+    "header": "<div id=\"github_pr_header_channel_thread_817\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODRNVGM6bWVzc2FnZXMi--bd766443783f9ca915ca40d2819f6ece135776987b1d2f7939d089626561d544\"></turbo-cable-stream-source>\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_thread_817_github_pull_request_816\" src=\"/rooms/815/github/pull_requests/816/card?thread_id=817\"></turbo-frame>\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\" src=\"/rooms/815/github/pull_request_write_actions/816\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n",
+    "files": "<section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n"
+  },
+  {
+    "name": "unknown",
+    "attributes": {
+      "id": 816,
+      "author_avatar_url": "https://example.test/avatar.png",
+      "author_login": "alice",
+      "base_branch": "main",
+      "changed_files": "{\"files\":[{\"filename\":\"app/a.rb\",\"status\":\"modified\",\"additions\":4,\"deletions\":2}],\"total_count\":3}",
+      "changed_files_fetched_at": null,
+      "check_status": "passing",
+      "fetch_error": null,
+      "fetch_requested_at": null,
+      "fetched_at": "2026-01-01 12:00:00 UTC",
+      "github_updated_at": "2025-12-31 10:00:00 UTC",
+      "head_branch": "shiny",
+      "head_sha": null,
+      "html_url": "https://github.com/Rails/Rails/pull/12",
+      "number": 12,
+      "owner": "rails",
+      "payload": {
+        "base": {
+          "repo": {
+            "full_name": "Rails/Rails"
+          }
+        }
+      },
+      "private": null,
+      "repo": "rails",
+      "review_decision": "approved",
+      "state": "open",
+      "title": "Secret title"
+    },
+    "mapped": false,
+    "reply": false,
+    "card": "<article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Secret title</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--passing\">Checks passing</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n",
+    "cards": "<div id=\"github_pr_cards_message_card-parent\" class=\"github-pr-cards\">\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_message_818_github_pull_request_816\" src=\"/rooms/815/github/pull_requests/816/card?message_id=818\"></turbo-frame>\n</div>\n",
+    "header": "<div id=\"github_pr_header_channel_thread_817\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODRNVGM6bWVzc2FnZXMi--bd766443783f9ca915ca40d2819f6ece135776987b1d2f7939d089626561d544\"></turbo-cable-stream-source>\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_thread_817_github_pull_request_816\" src=\"/rooms/815/github/pull_requests/816/card?thread_id=817\"></turbo-frame>\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\" src=\"/rooms/815/github/pull_request_write_actions/816\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n",
+    "files": "<section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n"
+  },
+  {
+    "name": "error",
+    "attributes": {
+      "id": 816,
+      "author_avatar_url": "https://example.test/avatar.png",
+      "author_login": "alice",
+      "base_branch": "main",
+      "changed_files": "{\"files\":[{\"filename\":\"app/a.rb\",\"status\":\"modified\",\"additions\":4,\"deletions\":2}],\"total_count\":3}",
+      "changed_files_fetched_at": null,
+      "check_status": "passing",
+      "fetch_error": "Fetch <failed> & blocked",
+      "fetch_requested_at": null,
+      "fetched_at": "2026-01-01 12:00:00 UTC",
+      "github_updated_at": "2025-12-31 10:00:00 UTC",
+      "head_branch": "shiny",
+      "head_sha": null,
+      "html_url": "https://github.com/Rails/Rails/pull/12",
+      "number": 12,
+      "owner": "rails",
+      "payload": {
+        "base": {
+          "repo": {
+            "full_name": "Rails/Rails"
+          }
+        }
+      },
+      "private": false,
+      "repo": "rails",
+      "review_decision": "approved",
+      "state": "open",
+      "title": "Fix login"
+    },
+    "mapped": false,
+    "reply": false,
+    "card": "<article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__error\">\n      Couldn’t load this pull request.\n      <span class=\"github-pr-card__error-detail\">Fetch &lt;failed&gt; &amp; blocked</span>\n    </p>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n",
+    "cards": "<div id=\"github_pr_cards_message_card-parent\" class=\"github-pr-cards\">\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__error\">\n      Couldn’t load this pull request.\n      <span class=\"github-pr-card__error-detail\">Fetch &lt;failed&gt; &amp; blocked</span>\n    </p>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n\n</div>\n",
+    "header": "<div id=\"github_pr_header_channel_thread_817\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODRNVGM6bWVzc2FnZXMi--bd766443783f9ca915ca40d2819f6ece135776987b1d2f7939d089626561d544\"></turbo-cable-stream-source>\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__error\">\n      Couldn’t load this pull request.\n      <span class=\"github-pr-card__error-detail\">Fetch &lt;failed&gt; &amp; blocked</span>\n    </p>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n  </footer>\n</article>\n\n    <section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\" src=\"/rooms/815/github/pull_request_write_actions/816\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n",
+    "files": "<section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n"
+  },
+  {
+    "name": "discuss_link",
+    "attributes": {
+      "id": 816,
+      "author_avatar_url": "https://example.test/avatar.png",
+      "author_login": "alice",
+      "base_branch": "main",
+      "changed_files": "{\"files\":[{\"filename\":\"app/a.rb\",\"status\":\"modified\",\"additions\":4,\"deletions\":2}],\"total_count\":3}",
+      "changed_files_fetched_at": null,
+      "check_status": "passing",
+      "fetch_error": null,
+      "fetch_requested_at": null,
+      "fetched_at": "2026-01-01 12:00:00 UTC",
+      "github_updated_at": "2025-12-31 10:00:00 UTC",
+      "head_branch": "shiny",
+      "head_sha": null,
+      "html_url": "https://github.com/Rails/Rails/pull/12",
+      "number": 12,
+      "owner": "rails",
+      "payload": {
+        "base": {
+          "repo": {
+            "full_name": "Rails/Rails"
+          }
+        }
+      },
+      "private": false,
+      "repo": "rails",
+      "review_decision": "approved",
+      "state": "open",
+      "title": "Fix login"
+    },
+    "mapped": true,
+    "reply": false,
+    "card": "<article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--passing\">Checks passing</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <a class=\"github-pr-card__discuss\" data-turbo-frame=\"_top\" href=\"/rooms/815/threads/817\">Discuss</a>\n  </footer>\n</article>\n",
+    "cards": "<div id=\"github_pr_cards_message_card-parent\" class=\"github-pr-cards\">\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--passing\">Checks passing</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <a class=\"github-pr-card__discuss\" data-turbo-frame=\"_top\" href=\"/rooms/815/threads/817\">Discuss</a>\n  </footer>\n</article>\n\n</div>\n",
+    "header": "<div id=\"github_pr_header_channel_thread_817\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODRNVGM6bWVzc2FnZXMi--bd766443783f9ca915ca40d2819f6ece135776987b1d2f7939d089626561d544\"></turbo-cable-stream-source>\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--passing\">Checks passing</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n  </footer>\n</article>\n\n    <section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\" src=\"/rooms/815/github/pull_request_write_actions/816\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n",
+    "files": "<section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n"
+  },
+  {
+    "name": "checks_",
+    "attributes": {
+      "id": 816,
+      "author_avatar_url": "https://example.test/avatar.png",
+      "author_login": "alice",
+      "base_branch": "main",
+      "changed_files": "{\"files\":[{\"filename\":\"app/a.rb\",\"status\":\"modified\",\"additions\":4,\"deletions\":2}],\"total_count\":3}",
+      "changed_files_fetched_at": null,
+      "check_status": null,
+      "fetch_error": null,
+      "fetch_requested_at": null,
+      "fetched_at": "2026-01-01 12:00:00 UTC",
+      "github_updated_at": "2025-12-31 10:00:00 UTC",
+      "head_branch": "shiny",
+      "head_sha": null,
+      "html_url": "https://github.com/Rails/Rails/pull/12",
+      "number": 12,
+      "owner": "rails",
+      "payload": {
+        "base": {
+          "repo": {
+            "full_name": "Rails/Rails"
+          }
+        }
+      },
+      "private": false,
+      "repo": "rails",
+      "review_decision": "approved",
+      "state": "open",
+      "title": "Fix login"
+    },
+    "mapped": false,
+    "reply": false,
+    "card": "<article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--none\">No checks</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n",
+    "cards": "<div id=\"github_pr_cards_message_card-parent\" class=\"github-pr-cards\">\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--none\">No checks</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n        <form data-turbo-frame=\"_top\" class=\"github-pr-card__discuss-form\" method=\"post\" action=\"/rooms/815/github/pull_request_threads\"><button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button><input type=\"hidden\" name=\"message_id\" value=\"818\" /><input type=\"hidden\" name=\"pull_request_id\" value=\"816\" /></form>\n  </footer>\n</article>\n\n</div>\n",
+    "header": "<div id=\"github_pr_header_channel_thread_817\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODRNVGM6bWVzc2FnZXMi--bd766443783f9ca915ca40d2819f6ece135776987b1d2f7939d089626561d544\"></turbo-cable-stream-source>\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"rails/rails#12\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Rails/Rails</span>\n    <span class=\"github-pr-card__number\">#12</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Fix login</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n            <img alt=\"\" class=\"github-pr-card__avatar\" loading=\"lazy\" src=\"https://example.test/avatar.png\" width=\"16\" height=\"16\" />\n          alice\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← shiny\n        </span>\n\n        <span class=\"github-pr-card__review github-pr-card__review--approved\">Approved</span>\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--none\">No checks</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n      <span class=\"github-pr-card__updated\">Updated <time datetime=\"2025-12-31T10:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Rails/Rails/pull/12\">View on GitHub</a>\n  </footer>\n</article>\n\n    <section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_817\" src=\"/rooms/815/github/pull_request_write_actions/816\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n",
+    "files": "<section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <ul class=\"github-pr-files__list\">\n        <li class=\"github-pr-files__file\">\n          <span class=\"github-pr-files__path\">app/a.rb</span>\n            <span class=\"github-pr-files__status\">Modified</span>\n          <span class=\"github-pr-files__counts\">+4 −2</span>\n        </li>\n    </ul>\n      <p class=\"github-pr-files__more\">and 2 more on GitHub</p>\n</section>\n"
+  },
+  {
+    "name": "no_cards",
+    "cards": "<div id=\"github_pr_cards_message_card-parent\" class=\"github-pr-cards\"></div>\n"
+  }
+]

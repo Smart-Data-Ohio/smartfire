@@ -95,6 +95,8 @@
 
   {{ self.appearance_form() }}
 
+  {{ self.github_panel() }}
+
   <div class="margin-block pad-inline pad-block fill-shade border-radius">
     <menu class="flex flex-column gap margin-none pad">
       {% for membership in shared_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}

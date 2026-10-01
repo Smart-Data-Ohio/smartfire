@@ -21,7 +21,7 @@
           {{ crate::messages::parts::steps(&message.details.agent_steps) }}
           {% if let Some(poll) = message.details.poll %}{{ crate::messages::parts::poll(ctx, poll) }}{% endif %}
           {% include "messages/_drive_attachments.html" %}
-          {{ crate::messages::cards(message, "github_pr_cards", "github-pr-cards", 0, &message.components.github_cards) }}
+          {% if let Some(html) = message.components.github_cards_html %}{{ h::raw(html) }}{% else %}{{ crate::messages::cards(message, "github_pr_cards", "github-pr-cards", 0, &message.components.github_cards) }}{% endif %}
           {{ crate::twitter::cards(ctx, message) }}
           {{ crate::messages::event_cards(message) }}
           {{ crate::messages::cards(message, "message_link_cards", "message-link-cards", 0, &message.components.message_link_cards) }}

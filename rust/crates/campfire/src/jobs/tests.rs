@@ -589,7 +589,6 @@ async fn the_periodic_loops_run_with_the_jobs() {
 
     let (ticked, mut ticks) = mpsc::unbounded_channel();
     let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None));
-    loops.periodic.as_mut().unwrap().task(periodic::clear_plaintext_bot_tokens_task());
     loops.huddle.as_mut().unwrap().task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
         let ticked = ticked.clone();
         async move {
@@ -736,6 +735,7 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     });
     let tasks: Vec<_> = periodic
         .tasks()
+        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     let mut expected = golden["tasks"].as_array().unwrap().clone();
@@ -749,6 +749,9 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
     expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
     assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
+    let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
+    assert_eq!(recovery.interval(), Duration::from_secs(30));
+
 }
 
 #[tokio::test]

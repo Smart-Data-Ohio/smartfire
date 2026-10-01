@@ -37,7 +37,9 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
     ] {
         // Keep the allocated socket open across exec, rather than choosing a port and rebinding.
         // stdin carries the listener; the child gets its own configured origin without mutating ENV.
-        let listener = std::net::TcpListener::bind("127.0.0.1:0")
+        let listener = crate::test_support::bind_listener()
+            .await
+            .into_std()
             .expect("reserve an isolated Fizzy API listener");
         let base = format!("http://{}", listener.local_addr().unwrap());
         let output = tokio::process::Command::new(std::env::current_exe().unwrap())
@@ -45,6 +47,7 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
                 "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
                 "--exact",
                 "--nocapture",
+                "--test-threads=8",
             ])
             .env("WS15E_FIZZY_MESSAGE_CASE", case)
             .env("FIZZY_API_BASE_URL", &base)
@@ -159,9 +162,17 @@ async fn run(case: &str) {
             .await
             .unwrap();
     }
-    if case == "direct_bots" {
-        app.db().write(move|tx| {tx.conn().execute("INSERT OR IGNORE INTO memberships (room_id,user_id,created_at,updated_at) VALUES (?,?,?,?)",rusqlite::params![room_id,BENDER,tx.now(),tx.now()])?;Ok(())}).await.unwrap();
-    }
+    let legacy_bot = if case == "direct_bots" {
+        Some(app.db().write(move |tx| {
+            // Bender is agent-backed in the seed: Rails excludes it from legacy delivery.
+            let bot = campfire_db::User::create_integration_bot(tx, "Fizzy legacy fixture")?;
+            campfire_db::Webhook::create(tx, bot.id, Some("https://example.test/legacy"))?;
+            for user in [BENDER, bot.id] {
+                tx.conn().execute("INSERT OR IGNORE INTO memberships (room_id,user_id,created_at,updated_at) VALUES (?,?,?,?)", rusqlite::params![room_id,user,tx.now(),tx.now()])?;
+            }
+            Ok(bot.id)
+        }).await.unwrap())
+    } else { None };
     if case == "enqueue_rollback" {
         app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws15e_reject_fizzy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Fizzy::FetchCardJob' BEGIN SELECT RAISE(ABORT,'queue rejected'); END;")?;Ok(())}).await.unwrap();
     }
@@ -312,10 +323,10 @@ async fn run(case: &str) {
     }
     if case == "direct_bots" {
         let jobs = app.db().read(campfire_jobs::inspect::all).await.unwrap();
-        assert_eq!(
-            jobs.iter().filter(|j| j.class == "Bot::WebhookJob").count(),
-            1
-        );
+        let jobs: Vec<_> = jobs.iter().filter(|j| j.class == "Bot::WebhookJob").collect();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].arguments["bot_id"], legacy_bot.unwrap());
+        assert!(jobs.iter().all(|j| j.arguments["bot_id"] != BENDER), "agent-backed bot bypassed its ledger");
     }
     if case == "enqueue_rollback" {
         app.db().read(|c| {assert_eq!(c.query_row("SELECT COUNT(*) FROM fizzy_card_references WHERE message_id NOT IN (SELECT id FROM messages)",[],|r|r.get::<_,i64>(0))?,0);assert_eq!(c.query_row("SELECT COUNT(*) FROM fizzy_card_caches",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();

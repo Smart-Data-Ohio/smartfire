@@ -29,6 +29,7 @@ async fn database() -> TestDb {
         sink: Arc::new(QueueSink(queue)),
         rich_text: Arc::new(BasicRichText),
         bcrypt_cost: 4,
+        ..Default::default()
     };
     let directory =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
@@ -277,7 +278,7 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
         });
         assert_eq!(
             periodic.tick(booted.app.clone(), db.env().now()).await,
-            ["saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "stuck GitHub claims", "stuck Fizzy claims", "retention prune", "presence leases", "meeting status", "out of office"]
+            ["clear plaintext bot tokens", "stranded agent webhooks", "saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "stuck GitHub claims", "stuck Fizzy claims", "retention prune", "presence leases", "meeting status", "out of office"]
         );
         assert_eq!(snapshot(db).await["metadata"]["status"], "failed");
         clock.advance(jiff::SignedDuration::from_secs(29));
@@ -290,7 +291,7 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
         clock.advance(jiff::SignedDuration::from_secs(1));
         assert_eq!(
             periodic.tick(booted.app.clone(), db.env().now()).await,
-            ["saved item reminders", "scheduled messages", "poll closing", "stuck GitHub claims", "stuck Fizzy claims"]
+            ["stranded agent webhooks", "saved item reminders", "scheduled messages", "poll closing", "stuck GitHub claims", "stuck Fizzy claims"]
         );
         assert_eq!(snapshot(db).await["audits"], 1);
     }
@@ -313,7 +314,9 @@ async fn github_claim_persisted_outcomes_and_audits_match_pinned_rails() {
         let historical = case["historical"] == true;
         let missing = case["missing"] == true;
         let audit_failure = case["audit_failure"] == true;
+        let preserved_url = case["url"].as_str().map(str::to_owned);
         fixture.db.write(move |tx| {
+            if let Some(url) = preserved_url { tx.conn().execute("UPDATE agent_events SET metadata = json_set(metadata, '$.url', ?) WHERE id = 814", [url])?; }
             if historical { tx.conn().execute("UPDATE agent_events SET agent_approval_id = NULL WHERE id = 814", [])?; }
             if missing { tx.conn().execute("UPDATE agent_events SET agent_approval_id = 999, metadata = json_set(metadata, '$.approval_id', 999) WHERE id = 814", [])?; }
             if audit_failure { tx.conn().execute_batch("CREATE TRIGGER reject_audit BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT, 'fixture audit down'); END")?; }

@@ -117,15 +117,17 @@ impl Layout {
     /// of the request) the way the layout's `flash[:notice]` / `flash[:alert]` read it. The
     /// templates get this request's authenticity tokens and CSP nonce (`csrf_meta_tags`, forms,
     /// `csp_meta_tag` and the importmap tags), which puts the CSRF token in the session.
-    pub fn render(
-        &self,
-        c: &mut Ctx,
-        render: impl FnOnce(&ViewContext) -> askama::Result<String>,
-    ) -> Result<String> {
-        let secrets = RequestSecrets {
-            tokens: Box::new(KitTokens(c.authenticity_tokens())),
-            csp_nonce: c.content_security_policy_nonce(),
-        };
+    pub fn render(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
+        let secrets = RequestSecrets { tokens: Box::new(KitTokens(c.authenticity_tokens())), csp_nonce: c.content_security_policy_nonce() };
+        self.render_with_secrets(c, Some(secrets), render)
+    }
+
+    /// Token-free partials use the viewer's time zone without creating a CSRF session.
+    pub fn render_without_secrets(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
+        self.render_with_secrets(c, None, render)
+    }
+
+    fn render_with_secrets(&self, c: &mut Ctx, secrets: Option<RequestSecrets>, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
         let flash_notice = c.flash().notice().map(str::to_string);
         let flash_alert = c.flash().alert().map(str::to_string);
         let base_url = c.url_for("");
@@ -159,7 +161,10 @@ impl Layout {
             time_zone: self.time_zone.clone(),
             chrome: self.chrome.clone(),
         };
-        request_forgery::rendering_with(secrets, || render(&ctx)).map_err(Error::internal)
+        match secrets {
+            Some(secrets) => request_forgery::rendering_with(secrets, || render(&ctx)),
+            None => render(&ctx),
+        }.map_err(Error::internal)
     }
 
     /// A page rendered in the application layout: `text/html`, plus the `Link` preload header

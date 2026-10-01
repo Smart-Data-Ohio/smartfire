@@ -7,7 +7,7 @@ pub mod boosts;
 pub mod by_bots;
 
 use askama::Template;
-use campfire_db::{Job as _, Message, NewMessage, Role, Room, Status, Timeline};
+use campfire_db::{Job as _, Message, NewMessage, Room, Timeline};
 use campfire_kit::format;
 use campfire_kit::{Ctx, Error, Freshness, Param, Result, StatusCode, halt, permit_keys};
 use campfire_richtext::Content;
@@ -162,6 +162,8 @@ pub(crate) fn ensure_can_administer(c: &mut Ctx, message: &Message) -> Result<()
 /// What `create_with_attachment!`/`update!` receive.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct MessageParams {
+    pub clear_markdown_source: bool,
+    pub client_message_lookup: campfire_db::models::agent_posting::client_ids::Lookup,
     pub body: Option<String>,
     pub markdown_source: Option<String>,
     /// `attachment=`: `None` when the key wasn't given.
@@ -179,6 +181,8 @@ fn message_params(c: &Ctx) -> Result<MessageParams> {
         markdown_source: text("markdown_source"),
         attachment: attachment_assignment(&permitted)?,
         client_message_id: text("client_message_id"),
+        clear_markdown_source: false,
+        client_message_lookup: Default::default(),
     })
 }
 
@@ -221,6 +225,14 @@ pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Mess
 /// `@room.messages.create!` and, in its transaction, `deliver_webhooks_to_bots`: the webhook
 /// jobs are held until the caller has broadcast the message ([`release_webhooks`]).
 pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<Message> {
+    match create_message_with_agent_policy(c, room, attributes, false).await? {
+        campfire_db::models::agent_posting::PostingOutcome::Created(message) => Ok(message),
+        _ => unreachable!("human posting does not run agent policy"),
+    }
+}
+
+pub(crate) async fn create_message_with_agent_policy(c: &Ctx, room: &Room, mut attributes: MessageParams, agent_policy: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
+    use campfire_db::models::agent_posting::{PostingOutcome, PostingCheck};
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
     let room = room.clone();
@@ -236,7 +248,16 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
         .app()
         .db
         .write(move |tx| {
+            if agent_policy {
+                match campfire_db::models::agent_posting::prepare_for_user_with_lookup(tx, creator_id, room_id, attributes.client_message_id.as_deref(), &attributes.client_message_lookup)? {
+                    Some(PostingCheck::Replay(message)) => return Ok((PostingOutcome::Replay(*message), None)),
+                    Some(PostingCheck::Budget(payload)) => return Ok((PostingOutcome::Budget(payload), None)),
+                    Some(PostingCheck::Allowed) => {},
+                    None => attributes.client_message_id = None,
+                }
+            }
             let blob = attachment_blob(tx, attachment)?;
+
             let message = Message::create(
                 tx,
                 NewMessage {
@@ -253,15 +274,22 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
             if let Some(blob) = &blob {
                 attachments::enqueue_analysis(tx, blob);
             }
-            Ok((message, blob))
+            Ok((PostingOutcome::Created(message), blob))
+
         })
         .await
         .map_err(db_error)?;
     if let Some(blob) = blob {
         process_attachment(c.app(), blob).await?;
     }
-    let id = message.id;
-    c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
+    match message {
+        PostingOutcome::Created(message) => {
+            let id = message.id;
+            let message = c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)?;
+            Ok(PostingOutcome::Created(message))
+        }
+        outcome => Ok(outcome),
+    }
 }
 
 /// Inserts a staged blob's row, keeping its file once the transaction commits.
@@ -345,6 +373,7 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
             }
             message.edit(tx, campfire_db::MessageChanges {
                 markdown_source: attributes.markdown_source,
+                clear_markdown_source: attributes.clear_markdown_source,
                 body,
                 ..Default::default()
             })?;
@@ -373,7 +402,7 @@ pub(crate) async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> 
 pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
     let base_url = page::renderer_base_url(c);
-    c.app()
+    let refreshes = c.app()
         .db
         .read(move |conn| {
             let presenter = Presenter::new(conn, &app, None);
@@ -381,10 +410,13 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
             let account = campfire_db::Account::first(conn)?;
             let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::message(ctx, &view));
             let partials = Rendered { message: Some(html), ..Rendered::default() };
-            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)
+            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
+            Ok(presenter.take_github_refreshes())
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(())
 }
 
 /// `broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial:
@@ -392,7 +424,7 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
 pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let (app, room, message) = (c.app().clone(), room.clone(), message.clone());
     let base_url = page::renderer_base_url(c);
-    c.app()
+    let refreshes = c.app()
         .db
         .read(move |conn| {
             let presenter = Presenter::new(conn, &app, None);
@@ -407,9 +439,8 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             let replacements = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| -> askama::Result<_> {
                 Ok([
                     ("meta", views::MetaPartial {ctx, message: &view}.render()?),
-                    // WS15g/WS8b provide the existing MessageComponents loop bodies for these
-                    // two containers. The empty replacements still remove cards after edits.
-                    ("github_pr_cards", views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0),
+                    // Empty containers remove their old cards after an edit.
+                    ("github_pr_cards", view.components.github_cards_html.clone().unwrap_or_else(|| views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0)),
                     ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
                     ("message_link_cards", views::cards(&view, "message_link_cards", "message-link-cards", 0, &view.components.message_link_cards).0),
                     ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
@@ -420,10 +451,12 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             for (part, html) in replacements {
                 app.broadcasts.message_part_replace(&room, &message, part, &html);
             }
-            Ok(())
+            Ok(presenter.take_github_refreshes())
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(())
 }
 
 /// `deliver_webhooks_to_bots`, in the message's transaction: every active bot in a direct room,
@@ -434,8 +467,8 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
 /// be told (and reply) before the room sees the message, and [`release_webhooks`] makes them due
 /// once it has been broadcast.
 pub(crate) fn deliver_webhooks_to_bots(tx: &mut campfire_db::Tx<'_>, room: &Room, message: &Message) -> campfire_db::Result<()> {
-    let candidates = if room.direct() { room.active_bots(tx.conn())? } else { message.mentionees(tx.conn(), tx.rich_text())? };
-    for bot in candidates.into_iter().filter(|user| user.role == Role::Bot && user.status == Status::Active && user.id != message.creator_id) {
+    let _ = room;
+    for bot in campfire_db::models::bot_webhook_fanout::recipients(tx, message)? {
         if bot.webhook(tx.conn())?.is_some() {
             tx.emit_after_commit(campfire_db::Event::job_in(WEBHOOK_HOLD, &WebhookJob { bot_id: bot.id, message_id: message.id }));
         }
@@ -465,20 +498,21 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let (value, fetches, twitter_fetches) = c.app()
+    let (value, fetches, twitter_fetches, refreshes) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
             let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
-            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches()))
+            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_github_refreshes()))
         })
         .await
         .map_err(db_error)?;
     super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
         .await
         .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
     Ok(value)
 }
 
