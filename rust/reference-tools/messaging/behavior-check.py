@@ -63,10 +63,19 @@ CASES = {
         "paginated history stays quiet past the insert, then the live region comes back",
         "an edit replacement is not announced as an addition",
         "an own message is not re-announced when its broadcast replaces the pending copy",
+        "search results keep their menus and focusability",
+        "the message-list top padding does not apply to search results",
+        "the standalone thread page keeps menus and focusability",
+        "the standalone message page keeps its menu and focusability",
+        "the viewport allows pinch zoom",
+        "profile message and ban buttons have accessible names",
+        "flash persists its 5-second minimum under reduced motion",
+        "flash dismisses on demand under reduced motion",
     ],
     "search_forward_edit": [
         "search tolerates operators, shows an empty state and pages older results",
         "forwarded Markdown keeps tables and code blocks",
+        "editing to add a URL renders its card live and the edited marker on load",
     ],
     "unread_divider": [
         "few unread render the divider above the first new message and keep the bottom scroll",
@@ -74,6 +83,32 @@ CASES = {
         "the jump pill shows while the divider is off-screen and returns to it",
         "unread older than the last page keeps the last page and the pill links to the first unread",
         "mark unread from the message menu points the divider at that message",
+    ],
+    "composer": [
+        "blurring an open autocomplete does not leave a zombie that swallows Enter",
+        "a stale icon response does not poison the suggestion commit",
+        "mention queries are URL-encoded",
+        "composer autocomplete exposes combobox semantics over a polite listbox",
+        "composing text does not commit a suggestion or send the message",
+        "clicking a reply preview scrolls to the loaded message instead of navigating",
+        "clicking a reply preview falls back to the permalink when the target is not loaded",
+        "deleting a replied-to message turns open reply previews into a tombstone",
+        "two typers with the same name do not merge",
+        "composer drafts persist per room and clear on send",
+        "thread drafts persist per thread without touching the channel draft",
+    ],
+    "composer_attach_menu": [
+        "+ shows both attach options when Drive is available",
+        "From this device triggers the file input",
+        "+ opens the file picker directly without Drive",
+        "arrow keys move between items and Escape closes back onto +",
+        "a tap outside closes the menu",
+        "phone layout keeps the menu above the composer with no horizontal overflow",
+        "device files, paste, and drag-and-drop still preview uploads",
+    ],
+    "boosting_messages": [
+        "boosting a message", "deleting a boost", "message update preserves the input state",
+        "boost by another user preserves the input state",
     ],
 }
 parser = argparse.ArgumentParser(description=__doc__)
@@ -145,8 +180,13 @@ for file in files:
     # batch verifies saved message rows are unchanged. All writing/history
     # cases retain separate fixture/database/server copies.
     readonly = CASES["message_list_a11y"][:17] if file == "message_list_a11y" else []
+    navigation = CASES["message_list_a11y"][20:26] if file == "message_list_a11y" else []
     batches = [[case for case in selected if case in readonly]] if readonly else []
-    batches += [[case] for case in selected if case not in readonly]
+    if navigation:
+        batches += [[case for case in selected if case in navigation]]
+    batches += [[case] for case in selected if case not in readonly + navigation]
+    if file == "composer_attach_menu":
+        batches = [selected]  # No server writes; new contexts for each case.
     for batch in filter(None, batches):
         case = batch[0]
         for name in batch:
@@ -157,19 +197,33 @@ for file in files:
             shutil.copytree(RUST / "parity/.seed/default", fixture)
             if file == "message_list_a11y":
                 fixture_kind = "history" if case.startswith("paginated history") else "message_list"
+                if any(name in CASES[file][20:] for name in batch):
+                    fixture_kind = "message_destinations"
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             elif file == "search_forward_edit":
-                fixture_kind = "search" if case.startswith("search tolerates") else "forward"
+                fixture_kind = "search" if case.startswith("search tolerates") else "edit-card" if case.startswith("editing to add") else "forward"
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             elif file == "unread_divider":
                 fixture_kind = "unread-" + ["few", "many", "pill", "offpage", "menu"][CASES[file].index(case)]
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            elif file == "composer":
+                fixture_kind = "composer-typing" if case.startswith("two typers") else "composer-drafts"
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            elif file == "composer_attach_menu":
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "attach-menu"], cwd=ROOT, env=env, check=True)
+            elif file == "boosting_messages":
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "boosts"], cwd=ROOT, env=env, check=True)
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
+            if file == "composer_attach_menu":
+                run_env.update(GOOGLE_CLIENT_ID="test-client-id", GOOGLE_CLIENT_SECRET="test-client-secret")
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log:
                 try:
@@ -283,6 +337,9 @@ for file in files:
                                 assert thread is not None
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [("The name survives the re-entry.",)]
                             elif file == "message_list_a11y":
+                                if case.startswith("flash "):
+                                    bio = "Reduced motion flash check" if case.startswith("flash persists") else "Reduced motion dismiss check"
+                                    assert conn.execute("SELECT bio FROM users WHERE id=773523953").fetchone() == (bio,)
                                 if case == "an edit replacement is not announced as an addition":
                                     assert conn.execute("SELECT markdown_source FROM messages WHERE id=607264868").fetchone() == ("Edited quietly",)
                                 elif case == "an own message is not re-announced when its broadcast replaces the pending copy":
@@ -297,6 +354,9 @@ for file in files:
                                     with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                         expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
                                     assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
+                                elif case.startswith("editing to add"):
+                                    assert conn.execute("SELECT markdown_source,edited_at IS NOT NULL FROM messages WHERE id=?", (metadata["edit_card_id"],)).fetchone() == ("now with https://x.com/jack/status/424242", 1)
+                                    assert conn.execute("SELECT posts.post_id FROM twitter_post_references refs JOIN twitter_posts posts ON posts.id=refs.twitter_post_id WHERE refs.message_id=?", (metadata["edit_card_id"],)).fetchall() == [("424242",)]
                                 else:
                                     source_row = conn.execute("SELECT id,markdown_source FROM messages WHERE client_message_id='system-forward-source'").fetchone()
                                     assert source_row is not None
@@ -308,6 +368,45 @@ for file in files:
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
                                 assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
+                            elif file == "composer":
+                                if case.startswith("blurring"):
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='hello'").fetchone()[0] == 1
+                                elif case.startswith("clicking a reply") or case.startswith("deleting a replied"):
+                                    body = {"clicking a reply preview scrolls to the loaded message instead of navigating": "A reply for preview click",
+                                            "clicking a reply preview falls back to the permalink when the target is not loaded": "A reply for preview fallback",
+                                            "deleting a replied-to message turns open reply previews into a tombstone": "A reply whose source goes away"}[case]
+                                    parent = None if case.startswith("deleting") else 607264868
+                                    assert conn.execute("SELECT reply_to_message_id FROM messages WHERE markdown_source=?", (body,)).fetchall() == [(parent,)]
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE id=607264868").fetchone()[0] == (0 if case.startswith("deleting") else 1)
+                                elif case.startswith("composer drafts"):
+                                    assert conn.execute("SELECT room_id FROM messages WHERE markdown_source='Pets draft'").fetchall() == [(metadata["pets_id"],)]
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='Designers draft'").fetchone()[0] == 0
+                                elif case.startswith("thread drafts"):
+                                    thread = conn.execute("SELECT id FROM channel_threads WHERE name='Composer draft thread'").fetchone()
+                                    assert thread is not None
+                                    for body in ["The thread for draft persistence.", "Thread draft sent"]:
+                                        assert conn.execute("SELECT thread_id FROM messages WHERE markdown_source=?", (body,)).fetchall() == [(thread[0],)]
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source IN ('Channel draft','Thread draft')").fetchone()[0] == 0
+                                else:
+                                    with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                        expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
+                                    assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
+                            elif file == "composer_attach_menu":
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
+                                    blobs = seed.execute("SELECT COUNT(*) FROM active_storage_blobs").fetchone()[0]
+                                assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
+                                assert conn.execute("SELECT COUNT(*) FROM active_storage_blobs").fetchone()[0] == blobs, "previews/pickers must not upload unsent files"
+                            elif file == "boosting_messages":
+                                if case == "boosting a message":
+                                    assert conn.execute("SELECT booster_id FROM boosts WHERE message_id=607264868 AND content='Good morning'").fetchall() == [(712064548,)]
+                                elif case == "deleting a boost":
+                                    assert conn.execute("SELECT COUNT(*) FROM boosts WHERE content='Hello'").fetchone()[0] == 0
+                                elif case.startswith("message update"):
+                                    assert conn.execute("SELECT markdown_source FROM messages WHERE id=607264868").fetchone() == ("Redacted!",)
+                                else:
+                                    assert conn.execute("SELECT booster_id FROM boosts WHERE message_id=607264868 AND content='Morning'").fetchall() == [(127326141,)]
+                                assert conn.execute("SELECT COUNT(*) FROM boosts WHERE content='Hey!'").fetchone()[0] == 0, "another viewer's stream never submits the unfinished boost"
                     for case in succeeded:
                         passed += 1
                         print(f"WS8bm behaviour: {file}: {case}: Rails PASS; Rust PASS; persisted rows PASS", flush=True)

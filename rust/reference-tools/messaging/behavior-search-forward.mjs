@@ -1,6 +1,6 @@
 // Source: test/system/search_forward_edit_test.rb at d7c7de92.
 import assert from 'node:assert/strict';
-export async function searchForward({author:page,recipient,base,caseName}) {
+export async function searchForward({author:page,recipient,base,caseName,fixture,openEdit,send}) {
   if(caseName.startsWith('search tolerates')) {
     const search=page.locator('#global-search-input');
     await search.fill('nonsense zebra tuxedo xyzzy');await search.press('Enter');
@@ -32,5 +32,15 @@ export async function searchForward({author:page,recipient,base,caseName}) {
       assert.equal(await forwarded.locator('pre code.language-ruby').textContent(),'puts :forwarded\n');
       assert.equal(await forwarded.count(),1);
     }
+  } else if(caseName==='editing to add a URL renders its card live and the edited marker on load') {
+    const message=page.locator(`.message[data-message-id="${fixture.edit_card_id}"]`);
+    await message.filter({hasText:'nothing linked yet'}).waitFor();await openEdit(page,message);
+    await send(page,'now with https://x.com/jack/status/424242');
+    for(const viewer of [page,recipient]) {
+      // Original Rails BROADCAST_WAIT=15; no increased delivery threshold.
+      await viewer.locator(`.message[data-message-id="${fixture.edit_card_id}"] .x-post-card`).filter({hasText:'Loading post'}).waitFor({timeout:15000});
+    }
+    assert.equal((await page.goto(base+'/rooms/654632876')).status(),200);
+    await message.locator('.x-post-card').waitFor();await message.locator('.message__edited').filter({hasText:'(edited)'}).waitFor();
   } else throw new Error(`unimplemented search/forward case ${caseName}`);
 }

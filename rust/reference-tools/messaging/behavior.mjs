@@ -7,13 +7,17 @@ import {messageList} from './behavior-message-list.mjs';
 import {searchForward} from './behavior-search-forward.mjs';
 import {installMutation} from './behavior-mutations.mjs';
 import {unreadDivider} from './behavior-unread.mjs';
+import {destinationCases,messageDestinations} from './behavior-message-destinations.mjs';
+import {composer} from './behavior-composer.mjs';
+import {attachMenu} from './behavior-attach-menu.mjs';
+import {boosts} from './behavior-boosts.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
 const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider'].includes(file));
+assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages'].includes(file));
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
@@ -86,15 +90,28 @@ async function acceptance(base,caseName,probe={}) {
       await page.waitForFunction(value=>document.querySelector('#composer textarea[name="message[markdown_source]"]')?.value===value,value);
     }
     if(file==='message_list_a11y') {
-      await messageList({author,recipient,caseName,send,text,openEdit,field});
+      if(destinationCases.includes(caseName)) await messageDestinations({author,base,caseName,fixture,viewer});
+      else await messageList({author,recipient,caseName,send,text,openEdit,field});
       return;
     }
     if(file==='search_forward_edit') {
-      await searchForward({author,recipient,base,caseName});
+      await searchForward({author,recipient,base,caseName,fixture,openEdit,send});
       return;
     }
     if(file==='unread_divider') {
       await unreadDivider({author,base,caseName,fixture});
+      return;
+    }
+    if(file==='composer') {
+      await composer({author,recipient,base,caseName,fixture,viewer,send,text,field});
+      return;
+    }
+    if(file==='composer_attach_menu') {
+      await attachMenu({author,recipient,caseName});
+      return;
+    }
+    if(file==='boosting_messages') {
+      await boosts({author,recipient,caseName,viewer,openEdit,send,text});
       return;
     }
     if (file==='threads') {
@@ -113,6 +130,10 @@ async function acceptance(base,caseName,probe={}) {
           await panel.getByRole('button',{name:'New thread',exact:true}).click();
         }
         await panel.locator('[data-thread-panel-target="create"]').waitFor();
+        // beginCreate hands focus to First message on the next animation
+        // frame. Wait for that observable open-state transition before
+        // typing the name, so insertText cannot land in the other field.
+        await page.waitForFunction(()=>document.activeElement===document.querySelector('[data-thread-panel-target="createMessage"]'));
         const nameField=panel.locator('[data-thread-panel-target="createName"]');
         assert.match(await nameField.evaluate(input=>input.closest('label')?.textContent||''),/Thread name/);
         await nameField.fill(name);

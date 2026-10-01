@@ -3,12 +3,19 @@
 kind = ARGV.fetch(0)
 # The production parity seed has many extra provider/state examples. The
 # pinned list regressions use just the three original Designers fixtures.
-if %w[message_list history].include?(kind) || kind.start_with?("unread-")
+if %w[message_list message_destinations history boosts].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-")
   Room.find(654632876).root_messages.where.not(id: [309456473, 908005739, 607264868]).destroy_all
 end
 case kind
 when "message_list"
   # No additional rows are needed.
+when "message_destinations"
+  room = Room.find(654632876)
+  creator = User.find(773523953)
+  room.messages.create!(creator:, body: "A searchable menu result", client_message_id: "menu-search-result")
+  thread = ChannelThread.create!(room:, creator:, name: "Menu audit thread", parent_message: Message.find(607264868))
+  reply = thread.messages.create!(room:, creator:, markdown_source: "A thread reply with a menu", client_message_id: "menu-thread-reply")
+  File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(menu_thread_id: thread.id, menu_reply_id: reply.id))
 when "history"
   count = Message::PAGE_SIZE + 5
   first_created_at = count.seconds.ago
@@ -30,6 +37,24 @@ when "forward"
   Room.find(654632876).messages.create!(creator: User.find(773523953),
     markdown_source: "| Keep |\n| --- |\n| row |\n\n```ruby\nputs :forwarded\n```",
     client_message_id: "system-forward-source")
+when "edit-card"
+  message = Room.find(654632876).messages.create!(creator: User.find(773523953),
+    markdown_source: "nothing linked yet", client_message_id: "system-edit-card")
+  File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(edit_card_id: message.id))
+when /^composer-/
+  pets = Room.find_by!(name: "All Pets")
+  pets.memberships.grant_to(User.find(773523953))
+  User.find_by!(name: "Kevin").update!(name: "David") if kind == "composer-typing"
+  File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(pets_id: pets.id))
+when "attach-menu"
+  user = User.find(773523953)
+  user.google_account&.destroy!
+  GoogleAccount.create!(user:, email: "jz@gmail.test", refresh_token: "refresh-token-#{user.id}",
+    access_token: "access-token-#{user.id}", access_token_expires_at: 1.hour.from_now,
+    scopes: "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file")
+  User.find(712064548).google_account&.destroy!
+when "boosts"
+  Message.find(607264868).boosts.create!(booster: User.find(127326141), content: "Older note")
 when /^unread-/
   room = Room.find(654632876)
   if kind == "unread-many"

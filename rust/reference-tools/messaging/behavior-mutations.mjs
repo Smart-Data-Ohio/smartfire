@@ -36,11 +36,44 @@ const mutations=new Map([
   ['sending preserves the submitted source and a newer draft',[composer,'if (this.markdownTarget.value === submission.content)','if (true)']],
   ['search tolerates operators, shows an empty state and pages older results',['search-page-response']],
   ['forwarded Markdown keeps tables and code blocks',['forward-response']],
+  ['editing to add a URL renders its card live and the edited marker on load',['controllers/messages_controller-','connect() {','connect() { document.addEventListener("turbo:before-stream-render", event => { if (event.target.getAttribute("target")?.startsWith("twitter_cards_")) event.preventDefault(); });']],
   ['few unread render the divider above the first new message and keep the bottom scroll',['controllers/messages_controller-','connect() {','connect() { const divider = document.getElementById("unread-divider"); divider?.nextElementSibling?.after(divider);']],
   ['many unread scroll the room to the divider',['controllers/messages_controller-','this.#scrollToUnreadDivider(true)','this.messagesTarget.scrollTop = 0']],
   ['the jump pill shows while the divider is off-screen and returns to it',['controllers/messages_controller-','this.#scrollToUnreadDivider(false)','void(false)']],
   ['unread older than the last page keeps the last page and the pill links to the first unread',['controllers/messages_controller-','connect() {','connect() { document.getElementById("jump-to-unread")?.setAttribute("href", "/rooms/654632876?message_id=1");']],
   ['mark unread from the message menu points the divider at that message',[actions,'method: "DELETE",','method: "POST",']],
+  ...[
+    'search results keep their menus and focusability',
+    'the standalone thread page keeps menus and focusability',
+    'the standalone message page keeps its menu and focusability',
+  ].map(name=>[name,[list,'message.setAttribute("aria-haspopup", "menu")','message.setAttribute("aria-haspopup", "dialog")']]),
+  ['the message-list top padding does not apply to search results',['messages-','.messages:not(.searches__results) {','.messages {']],
+  ['the viewport allows pinch zoom',['viewport-response']],
+  ['profile message and ban buttons have accessible names',['profile-button-response']],
+  ['flash persists its 5-second minimum under reduced motion',['flash-','animation-duration: 5s !important;','animation-duration: 2s !important;']],
+  ['flash dismisses on demand under reduced motion',['controllers/element_removal_controller-','this.element.remove()','void(this.element)']],
+  ['blurring an open autocomplete does not leave a zombie that swallows Enter',['lib/autocomplete/base_autocomplete_handler-','this.suggestionController.destroy()','void(this.suggestionController)']],
+  ['a stale icon response does not poison the suggestion commit',['lib/autocomplete/markdown_icons_autocomplete_handler-','if (requestId !== this.#requestId) return','if (false) return']],
+  ['mention queries are URL-encoded',['lib/autocomplete/base_autocomplete_handler-','query=${encodeURIComponent(query)}','query=${query}']],
+  ['composer autocomplete exposes combobox semantics over a polite listbox',['lib/autocomplete/suggestion_controller-','element.setAttribute("aria-expanded", String(expanded))','element.setAttribute("aria-expanded", "false")']],
+  ['composing text does not commit a suggestion or send the message',['lib/autocomplete/suggestion_controller-','this.#committing || event.isComposing || event.keyCode === 229','this.#committing || event.keyCode === 229']],
+  ['clicking a reply preview scrolls to the loaded message instead of navigating',['controllers/reply_controller-','target.classList.add("message--reply-target")','void(target)']],
+  ['clicking a reply preview falls back to the permalink when the target is not loaded',['controllers/reply_controller-','if (!target) return','if (!target) { event.preventDefault(); return }']],
+  ['deleting a replied-to message turns open reply previews into a tombstone',['reply-tombstone-response']],
+  ['two typers with the same name do not merge',['models/typing_tracker-','this.currentlyTyping[id] = { name, timestamp: Date.now() }','this.currentlyTyping[name] = { name, timestamp: Date.now() }']],
+  ['composer drafts persist per room and clear on send',[composer,'window.localStorage.setItem(this.#draftKey(), value)','void(value)']],
+  ['thread drafts persist per thread without touching the channel draft',[composer,'const scope = this.threadIdValue ? `thread-${this.threadIdValue}` : "main"','const scope = "main"']],
+  ['+ shows both attach options when Drive is available',['controllers/attach_menu_controller-','this.buttonTarget.setAttribute("aria-expanded", "true")','this.buttonTarget.setAttribute("aria-expanded", "false")']],
+  ['From this device triggers the file input',['controllers/attach_menu_controller-','chooseDevice(event) {','chooseDevice(event) { return;']],
+  ['+ opens the file picker directly without Drive',['controllers/attach_menu_controller-','if (!this.hasMenuTarget) {\n      this.fileInputTarget.click()','if (!this.hasMenuTarget) {\n      void(this.fileInputTarget)']],
+  ['arrow keys move between items and Escape closes back onto +',['controllers/attach_menu_controller-','nextIndex = (currentIndex + 1) % items.length','nextIndex = currentIndex']],
+  ['a tap outside closes the menu',['controllers/attach_menu_controller-','this.onDocumentPointerDown = this.#onDocumentPointerDown.bind(this)','this.onDocumentPointerDown = () => {}']],
+  ['phone layout keeps the menu above the composer with no horizontal overflow',['controllers/attach_menu_controller-','const top = buttonRect.top - menuHeight - VIEWPORT_PADDING','const top = buttonRect.bottom + VIEWPORT_PADDING']],
+  ['device files, paste, and drag-and-drop still preview uploads',[composer,'this.#files.push(...files)','this.#files.push()']],
+  ['boosting a message',['boost-create-response']],
+  ['a stray create re-entry does not wipe the half-filled thread name',['controllers/thread_panel_controller-','else if (this.createTarget.hidden || parentMessageId !== this.createParentIdTarget.value)','else if (true)']],
+  ['deleting a boost',['boost-delete-response']],
+  ...['message update preserves the input state','boost by another user preserves the input state'].map(name=>[name,['controllers/messages_controller-','connect() {','connect() { document.addEventListener("turbo:before-stream-render", () => { for (const input of document.querySelectorAll("input[name=\\\"boost[content]\\\"]")) input.value = ""; });']]),
 ]);
 export const mutationNames=[...mutations.keys()];
 export async function installMutation(page,caseName,probe) {
@@ -53,12 +86,22 @@ export async function installMutation(page,caseName,probe) {
     const mention=asset==='mention-response'&&url.pathname.includes('/autocompletable/users');
     const search=asset==='search-page-response'&&url.pathname==='/searches'&&url.searchParams.has('before');
     const forward=asset==='forward-response'&&request.method()==='POST'&&/\/forwards(?:\.json)?$/.test(url.pathname);
-    if(!refresh&&!mention&&!search&&!forward&&!url.pathname.includes('/assets/'+asset)) return route.continue();
+    const viewport=asset==='viewport-response'&&url.pathname==='/rooms/654632876';
+    const profile=asset==='profile-button-response'&&url.pathname==='/users/712064548';
+    const tombstone=asset==='reply-tombstone-response'&&url.pathname.startsWith('/rooms/')&&url.pathname.includes('/messages/')&&request.method()==='DELETE';
+    const boost=asset==='boost-create-response'&&/\/messages\/\d+\/boosts$/.test(url.pathname)&&request.method()==='POST';
+    const boostDelete=asset==='boost-delete-response'&&/\/messages\/\d+\/boosts\/\d+$/.test(url.pathname)&&(request.method()==='DELETE'||request.postData()?.includes('_method=delete'));
+    if(!refresh&&!mention&&!search&&!forward&&!viewport&&!profile&&!tombstone&&!boost&&!boostDelete&&!url.pathname.includes('/assets/'+asset)) return route.continue();
+    // Reject the request before forwarding it: a deliberately failed write
+    // cannot secretly reach the real app and then pass through its Cable frame.
+    if(forward||tombstone) {probe.applied++;return route.fulfill({status:422,contentType:'application/json',body:'{"error":"injected failed write"}'});}
+    if(boost||boostDelete) {probe.applied++;return route.fulfill({status:422,contentType:'text/html',body:'<div>injected failed boost</div>'});}
     const response=await route.fetch();let body=await response.text(),headers=response.headers();
     if(refresh) {headers['content-type']='text/vnd.turbo-stream.html';body=' ';}
     else if(mention) {assert.ok(body.includes('Kevin'));body=body.replaceAll('Kevin','Wrong member');}
     else if(search) {assert.ok(body.includes('system paging alpha'));body=body.replaceAll('system paging alpha','wrong older result');}
-    else if(forward) {return route.fulfill({status:422,contentType:'application/json',body:'{"error":"injected failed forward"}'}).then(()=>probe.applied++);}
+    else if(viewport) {assert.ok(body.includes('interactive-widget=resizes-content'));body=body.replace('interactive-widget=resizes-content','user-scalable=no');}
+    else if(profile) {assert.ok(body.includes('aria-label="Message Kevin"'));body=body.replace('aria-label="Message Kevin"','aria-label="Wrong recipient"');}
     else {assert.ok(body.includes(needle),`mutant source needle missing: ${asset}`);body=body.replace(needle,replacement);}
     probe.applied++;
     await route.fulfill({response,status:refresh?200:response.status(),headers,body});
