@@ -143,8 +143,7 @@ async fn render_form(c: &mut Ctx, room: FormRoom, status: StatusCode) -> Result 
         selected_users,
         unselected_users,
     };
-    if form.room.id.is_some() {
-        let id = form.room.id.unwrap();
+    if let Some(id) = form.room.id {
         let viewer = require_current_user(c)?.clone();
         let github = c.app().db.read(move |conn| {
             let room = Room::find(conn, id)?;

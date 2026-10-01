@@ -749,26 +749,6 @@ pub fn storage_error(error: campfire_storage::Error) -> campfire_db::Error {
     campfire_db::Error::Other(error.to_string())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn all_emoji_matches_ruby() {
-        assert!(all_emoji("👍"));
-        assert!(all_emoji("❤️"));
-        assert!(!all_emoji("hi 👍"));
-        assert!(!all_emoji(""));
-    }
-
-    #[test]
-    fn cache_versions_use_usec() {
-        let time: jiff::Timestamp = "2024-06-01T12:00:00.000123Z".parse().unwrap();
-        assert_eq!(cache_key_with_version("messages", 1, time), "messages/1-20240601120000000123");
-        assert_eq!(to_fs_number(time), "20240601120000");
-    }
-}
-
 // Read-only owner adapter from WS13 498aa4e6; no icon mutation or rendering policy.
 /// `Icons.client_icon_names`: canonical brands/aliases followed by ordered workspace icons.
 pub fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> {
@@ -797,4 +777,24 @@ pub fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> 
             .collect::<std::result::Result<Vec<_>, _>>()?,
     );
     Ok(names)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_emoji_matches_ruby() {
+        assert!(all_emoji("👍"));
+        assert!(all_emoji("❤️"));
+        assert!(!all_emoji("hi 👍"));
+        assert!(!all_emoji(""));
+    }
+
+    #[test]
+    fn cache_versions_use_usec() {
+        let time: jiff::Timestamp = "2024-06-01T12:00:00.000123Z".parse().unwrap();
+        assert_eq!(cache_key_with_version("messages", 1, time), "messages/1-20240601120000000123");
+        assert_eq!(to_fs_number(time), "20240601120000");
+    }
 }
