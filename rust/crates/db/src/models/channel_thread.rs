@@ -741,7 +741,8 @@ impl ChannelThread {
     /// (`after_destroy :stamp_parent_message`) and its indicator hidden after commit.
     ///
     /// Work/SLA dependents commit with deletion. The agent ledger runs after
-    /// commit; a reserved event identity keeps its durable enqueue atomic.
+    /// commit; a captured deletion job keeps its durable enqueue atomic without
+    /// reserving an event ID ahead of ledger publication.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.destroy_by(tx, None)
     }

@@ -59,7 +59,7 @@ pub struct AgentEvent {
     pub webhook_next_attempt_at: Option<Timestamp>,
     pub webhook_last_error: Option<String>,
 }
-#[derive(Default)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct NewEvent {
     pub agent_id: i64,
     pub room_id: Option<i64>,
@@ -108,26 +108,16 @@ impl AgentEvent {
         )
     }
     pub fn create(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
-        Self::create_record(tx,None,a,false)
-    }
-    /// Reserve the identity of an after-commit deletion event so its durable
-    /// job can be persisted with deletion without inserting the ledger early.
-    pub(crate) fn reserve_id(tx: &Tx<'_>) -> Result<i64> {
-        let last:i64=tx.conn().query_row("SELECT max(COALESCE((SELECT seq FROM sqlite_sequence WHERE name='agent_events'),0),COALESCE((SELECT max(id) FROM agent_events),0))",[],|r|r.get(0))?;
-        let id=last.checked_add(1).ok_or_else(||crate::Error::Other("Agent event identity exhausted".into()))?;
-        if tx.conn().execute("UPDATE sqlite_sequence SET seq=? WHERE name='agent_events'",[id])?==0 {
-            tx.conn().execute("INSERT INTO sqlite_sequence(name,seq) VALUES ('agent_events',?)",[id])?;
-        }
-        Ok(id)
+        Self::create_record(tx,a,false)
     }
     /// Thread's after_destroy_commit keeps its already-loaded belongs_to Agent,
     /// even if the outer transaction deleted that row. Rails has no ledger FK.
     /// This is only for an identity captured by the deletion callback; ordinary
     /// event creation still validates an agent_id against the database.
-    pub(crate) fn create_captured(tx: &Tx<'_>, id: Option<i64>, a: NewEvent) -> Result<Self> {
-        Self::create_record(tx,id,a,true)
+    pub(crate) fn create_captured(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
+        Self::create_record(tx,a,true)
     }
-    fn create_record(tx: &Tx<'_>, id: Option<i64>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
+    fn create_record(tx: &Tx<'_>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
         let mut errors = Errors::default();
         if !DELIVERABLE_TYPES.contains(&a.event_type.as_str())
             && !["posted", "delivery_suppressed_rate_limit", "delivery_suppressed_hop_limit", "delivery_suppressed_revoked"].contains(&a.event_type.as_str())        {
@@ -160,8 +150,8 @@ impl AgentEvent {
         {
             a.hop = ruby_i64(hop);
         }
-        let id=tx.conn().query_row_cached("INSERT INTO agent_events (id,agent_id,room_id,message_id,actor_id,agent_approval_id,agent_credential_id,event_type,outcome,chain_id,metadata,hop,detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",
-            params![id,a.agent_id,a.room_id,a.message_id,a.actor_id,a.agent_approval_id,a.agent_credential_id,a.event_type,a.outcome,a.chain_id,(!a.metadata.is_null()).then_some(&a.metadata),a.hop,a.detail,tx.now()],|r|r.get(0))?;
+        let id=tx.conn().query_row_cached("INSERT INTO agent_events (agent_id,room_id,message_id,actor_id,agent_approval_id,agent_credential_id,event_type,outcome,chain_id,metadata,hop,detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",
+            params![a.agent_id,a.room_id,a.message_id,a.actor_id,a.agent_approval_id,a.agent_credential_id,a.event_type,a.outcome,a.chain_id,(!a.metadata.is_null()).then_some(&a.metadata),a.hop,a.detail,tx.now()],|r|r.get(0))?;
         Ok(Self::find(tx.conn(), id)?.expect("inserted event"))
     }
     /// The unfiltered ledger association. Polling must use agent_event_access,

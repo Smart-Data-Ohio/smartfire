@@ -20,8 +20,11 @@ impl JobKind for Delivery {
     }
 }
 #[derive(Serialize, Deserialize)]
-#[serde(transparent)]
-struct EventWebhook(domain::EventWebhookJob);
+#[serde(untagged)]
+enum EventWebhook {
+    Published(domain::EventWebhookJob),
+    Deleted(Box<campfire_db::models::agent_work_events::DeletedWorkWebhookJob>),
+}
 impl campfire_db::Job for EventWebhook {
     const CLASS: &'static str = "Agent::EventWebhookJob";
 }
@@ -40,9 +43,30 @@ async fn deliver(app: App, job: Delivery, _: Execution) -> JobResult {
         .await?;
     Ok(Outcome::Done)
 }
-async fn post(app: App, job: EventWebhook, _: Execution) -> JobResult {
-    post_with_network(&app, job.0, &Network::system()).await?;
+async fn post(app: App, job: EventWebhook, execution: Execution) -> JobResult {
+    post_deferred_with_network(&app, job, execution.id, &Network::system()).await?;
     Ok(Outcome::Done)
+}
+
+async fn post_deferred_with_network(app: &App, job: EventWebhook, job_id: i64, net: &Network) -> anyhow::Result<()> {
+    use rusqlite::OptionalExtension;
+    let job = match job {
+        EventWebhook::Published(job) => Some(job),
+        EventWebhook::Deleted(_) => app.db.write(move |tx| {
+            // A claim may have loaded the intent just before after_commit bound
+            // it. Re-read the row, so deletion of its published event stays a no-op.
+            let current: Option<serde_json::Value> = tx.conn().query_row(
+                "SELECT arguments FROM background_jobs WHERE id=? AND job_class='Agent::EventWebhookJob'",[job_id],|r|r.get(0)).optional()?;
+            let Some(current) = current else {return Ok(None)};
+            let current: EventWebhook=serde_json::from_value(current).map_err(|e|campfire_db::Error::Other(e.to_string()))?;
+            Ok(Some(match current {
+                EventWebhook::Published(job) => job,
+                EventWebhook::Deleted(job) => campfire_db::models::agent_work_events::publish_deleted_webhook(tx,*job)?,
+            }))
+        }).await?,
+    };
+    if let Some(job)=job { post_with_network(app,job,net).await?; }
+    Ok(())
 }
 
 pub(super) async fn post_with_network(

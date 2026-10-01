@@ -322,7 +322,7 @@ async fn ws11_review_stale_batch_is_redacted_by_work_message_and_poll_readers() 
 #[tokio::test]
 async fn ws11_review_deliverable_deletion_keeps_commit_on_ledger_failure() {
     use crate::controllers::presenters::test_support::ALL_TALK;
-    use campfire_db::models::agent_delivery::{AgentEvent, EventWebhookJob, claim_webhook};
+    use campfire_db::models::agent_work_events::{DeletedWorkWebhookJob, publish_deleted_webhook};
     use campfire_db::{ChannelThread, NewChannelThread};
     let (app, _dir) = TestApp::boot()
         .await
@@ -343,7 +343,7 @@ async fn ws11_review_deliverable_deletion_keeps_commit_on_ledger_failure() {
             .await
             .is_err()
     );
-    let event=app.db.read(move|c| {
+    let job=app.db.read(move|c| {
         let actual=json!({"thread_exists":ChannelThread::find_by_id(c,thread)?.is_some(),"events":c.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",[thread],|r|r.get::<_,i64>(0))?});
         let expected=&oracle()["results"]["deletion_with_webhook"];
         assert_eq!(actual["thread_exists"],expected["thread_exists"]);
@@ -351,23 +351,16 @@ async fn ws11_review_deliverable_deletion_keeps_commit_on_ledger_failure() {
         let mut q=c.prepare("SELECT arguments FROM background_jobs WHERE job_class='Agent::EventWebhookJob'")?;
         let jobs=q.query_map([],|r|r.get::<_,Value>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
         assert_eq!(jobs.len(),1,"job is persisted with deletion, never in its failed ledger callback");
-        let event=jobs[0]["event_id"].as_i64().unwrap();
-        assert!(AgentEvent::find(c,event)?.is_none());
-        Ok(event)
+        assert!(jobs[0].get("event_id").is_none(),"no identity is allocated before publication");
+        assert_eq!(jobs[0]["deleted_work"]["metadata"]["thread_id"],thread);
+        Ok(serde_json::from_value::<DeletedWorkWebhookJob>(jobs[0].clone()).unwrap())
     }).await.unwrap();
     assert!(
         app.db
-            .write(move |tx| claim_webhook(
-                tx,
-                &EventWebhookJob {
-                    event_id: event,
-                    attempt: Some(0)
-                }
-            ))
+            .write(move |tx| publish_deleted_webhook(tx,job))
             .await
-            .unwrap()
-            .is_none(),
-        "a reserved job with a failed ledger callback is a harmless no-op"
+            .is_err(),
+        "publication cannot bypass the failing ledger insert"
     );
 }
 
