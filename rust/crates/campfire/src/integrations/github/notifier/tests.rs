@@ -56,7 +56,8 @@ async fn database(case: &Value) -> (TestDb, Sink) {
         bcrypt_cost: 4,
         message_reference_syncs: vec![super::super::references::sync],
         user_deactivation_hooks: Vec::new(),
-        ..Default::default()
+        ..Env::default()
+
     };
     let directory =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");

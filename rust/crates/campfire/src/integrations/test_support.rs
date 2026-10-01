@@ -418,7 +418,7 @@ impl TestDb {
 
     pub fn in_dir(clock: Arc<dyn campfire_db::Clock>, directory: &std::path::Path) -> Self {
         use campfire_db::{BasicRichText, Env, NullSink};
-        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4, ..Default::default() }, directory)
+        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4, ..Env::default() }, directory)
     }
 
     pub fn with_env(env: campfire_db::Env, directory: &std::path::Path) -> Self {

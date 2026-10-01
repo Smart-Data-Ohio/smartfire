@@ -46,6 +46,8 @@ pub struct Env {
     /// BCrypt cost for `has_secure_password`. Rails uses `BCrypt::Engine.cost` (12), or
     /// `MIN_COST` (4) in the test environment.
     pub bcrypt_cost: u32,
+    /// Configured default host/protocol, supplied from the mail URL configuration.
+    pub default_url_origin: String,
     /// App-owned reference domains run on Message's real save hooks, in its transaction.
     /// The flag lets importers reconcile rows without scheduling network fetches.
     pub message_reference_syncs: Vec<MessageReferenceSync>,
@@ -74,6 +76,7 @@ impl Default for Env {
             sink: Arc::new(NullSink),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 12,
+            default_url_origin: "http://example.com".into(),
             message_reference_syncs: Vec::new(),
             user_deactivation_hooks: Vec::new(),
             #[cfg(feature = "test-support")]
@@ -113,6 +116,17 @@ impl Env {
 type AfterCommitHook = Box<dyn FnOnce(&mut Tx<'_>) -> Result<()> + Send>;
 
 enum AfterCommit {
+    RecordJob {
+        table: &'static str,
+        id: i64,
+        event: Option<Event>,
+        condition: Option<fn(&Connection, i64) -> Result<bool>>,
+    },
+    RecordBroadcast {
+        table: &'static str,
+        id: i64,
+        event: Event,
+    },
     Hook(AfterCommitHook),
     Event(Event),
 }
@@ -165,6 +179,67 @@ impl<'c> Tx<'c> {
         }
         if self.in_transaction {
             self.after_commit.push(AfterCommit::Event(event));
+        } else {
+            self.env.sink.emit(event);
+        }
+    }
+
+    /// A record's commit callback enqueues once, even if that record was saved
+    /// repeatedly. Persist surviving callbacks before COMMIT, so both the job
+    /// and its triggering write roll back on queue failure. Explicit job calls
+    /// outside record callbacks still use `emit_after_commit` without coalescing.
+    pub(crate) fn emit_record_job_once(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        job: &impl crate::Job,
+    ) {
+        self.emit_record_job_once_if(table, id, job, None);
+    }
+
+    /// Conditional commit callbacks evaluate the surviving record at the end of
+    /// the writer transaction, as Rails evaluates a saved model at commit time.
+    pub(crate) fn emit_record_job_once_if(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        job: &impl crate::Job,
+        condition: Option<fn(&Connection, i64) -> Result<bool>>,
+    ) {
+        let event = Event::job(job);
+        if !self.in_transaction {
+            self.emit_after_commit(event);
+        } else if !self.after_commit.iter().any(|queued| {
+            matches!(queued, AfterCommit::RecordJob { table: previous_table, id: previous_id, event: Some(previous), .. } if *previous_table == table && *previous_id == id && previous == &event)
+        }) {
+            self.after_commit.push(AfterCommit::RecordJob {
+                table,
+                id,
+                event: Some(event),
+                condition,
+            });
+        }
+    }
+
+    /// Active Record runs a record's commit callback once per transaction. Keep
+    /// the first registration's position for repeated descriptions of its frame.
+    /// This API accepts broadcasts only; job callbacks use the separate job API.
+    pub fn emit_broadcast_once(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        broadcast: &impl crate::events::Broadcast,
+    ) {
+        let event = Event::broadcast(broadcast);
+        if self.in_transaction && self.after_commit.iter().any(|queued| {
+            matches!(queued, AfterCommit::RecordBroadcast { table: previous_table, id: previous_id, event: previous } if *previous_table == table && *previous_id == id && previous == &event)
+        }) { return; }
+        if !self.persist(&event) {
+            return;
+        }
+        if self.in_transaction {
+            self.after_commit
+                .push(AfterCommit::RecordBroadcast { table, id, event });
         } else {
             self.env.sink.emit(event);
         }
@@ -269,12 +344,46 @@ pub fn run_write<T>(
             return Err(error);
         }
     };
+    let mut queue = std::mem::take(&mut tx.after_commit);
+    let persist_callbacks = (|| -> Result<()> {
+        for item in &mut queue {
+            if let AfterCommit::RecordJob {
+                table,
+                id,
+                event,
+                condition,
+            } = item
+            {
+                let survives = conn.query_row(
+                    &format!("SELECT EXISTS(SELECT 1 FROM {table} WHERE id=?)"),
+                    [*id],
+                    |r| r.get::<_, bool>(0),
+                )?;
+                let should_enqueue = survives
+                    && match condition {
+                        Some(test) => test(conn, *id)?,
+                        None => true,
+                    };
+                if should_enqueue {
+                    if let Some(event) = event {
+                        env.sink.persist(&tx, event)?;
+                    }
+                } else {
+                    *event = None;
+                }
+            }
+        }
+        Ok(())
+    })();
+    if let Err(error) = persist_callbacks {
+        let _ = conn.execute_batch("ROLLBACK TRANSACTION");
+        return Err(error);
+    }
     if let Err(error) = conn.execute_batch("COMMIT TRANSACTION") {
         let _ = conn.execute_batch("ROLLBACK TRANSACTION");
         return Err(error.into());
     }
 
-    let mut queue = std::mem::take(&mut tx.after_commit);
     let mut first_error = None;
     let mut after = Tx {
         conn,
@@ -285,7 +394,24 @@ pub fn run_write<T>(
     };
     for item in queue.drain(..) {
         match item {
+            AfterCommit::RecordJob { event, .. } => {
+                if let Some(event) = event {
+                    env.sink.emit(event);
+                }
+            }
             AfterCommit::Event(event) => env.sink.emit(event),
+            AfterCommit::RecordBroadcast { table, id, event } => {
+                // A later destroy suppresses the record's earlier update callback.
+                match conn.query_row(
+                    &format!("SELECT EXISTS(SELECT 1 FROM {table} WHERE id=?)"),
+                    [id],
+                    |r| r.get::<_, bool>(0),
+                ) {
+                    Ok(true) => env.sink.emit(event),
+                    Ok(false) => (),
+                    Err(error) => tracing::warn!(%error, table, id, "broadcast callback failed"),
+                }
+            }
             AfterCommit::Hook(hook) => {
                 if let Err(error) = hook(&mut after) {
                     tracing::error!(%error, "after_commit hook failed");
