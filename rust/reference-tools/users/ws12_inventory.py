@@ -142,6 +142,8 @@ for path in files:
             status,owner,evidence="ported","WS12","work_mutations_test.rs: work grouping/repointing/read reset, handled-source idempotency across independent SQLite writers and real Agent-row preference gating. Full original message/keyword query and source matrix remains separate."
         if relative=="test/system/boards_test.rb" and title=="replying on a board post sends and clears the composer":
             status,owner,evidence="ported","WS12","reference-tools/boards/write_browser.mjs: actual signed-session Markdown reply form, rendered message, cleared composer and persisted plain text through the JSON read on both Rails and Rust."
+        if relative=="test/system/boards_test.rb" and title=="board pages align to the top under the header":
+            status,owner,evidence="ported","WS12","Body-class assertions are covered by full board post/new-page response comparisons and write_browser.mjs. Geometric assertions are excluded from acceptance by the pixel-phase cut in wave4/_common.md and decisions.md; no pixel work is deferred."
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
 out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")

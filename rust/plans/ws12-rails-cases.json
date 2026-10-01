@@ -3774,9 +3774,9 @@
       "file": "test/system/boards_test.rb",
       "line": 67,
       "test": "board pages align to the top under the header",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS12",
-      "evidence": "Outside the completed stars, inbox-access/state, board room/list/post and human work mutation slices."
+      "evidence": "Body-class assertions are covered by full board post/new-page response comparisons and write_browser.mjs. Geometric assertions are excluded from acceptance by the pixel-phase cut in wave4/_common.md and decisions.md; no pixel work is deferred."
     },
     {
       "file": "test/system/boards_test.rb",
