@@ -1,3 +1,57 @@
+# WS8br PR #175 production-input build correction — complete
+
+Baseline: `1db3e578895a69c624ff604e0fbf0f29e90eae72`. This focused follow-up fixes the production build failure without changing Rails vectors or response bytes.
+
+Changes:
+
+- `rust/crates/campfire/src/controllers/messages/freshness.rs`: the production index digest is the self-contained literal `8c84e9c3391ab09f136a472ad8ab8b69`. A `#[cfg(test)]` regression compares it with the trimmed, tracked Rails vector. The existing HTTP caller still trims it; the paging/ETag byte comparisons pass.
+- `rust/ci/with-release-inputs.sh`: runs Cargo from a disposable copy of only `Cargo.toml`, `Cargo.lock` and `crates/`, with Docker's six explicit reference asset inputs copied separately. Vectors, parity files and reference tools are absent. It cleans its source copy and uses the caller's existing target directory.
+- `.github/workflows/rust.yml`: wraps the existing normal binary build with that guard. It adds no extra Cargo build, Docker image or test dependency. The same guard runs natively with Cargo.
+
+Include audit: `rg -n 'include_(str|bytes)!' rust/crates -g '*.rs'` plus an ad hoc syn syntax/module traversal under `.scratch/include-audit/` covered all **330 actual source macros**, including nested macro arguments and `CARGO_MANIFEST_DIR` concatenations. All **184 unique external file/path/context entries** are in cfg(test) modules, test functions or Cargo integration-test targets. There are no other production leaks. The two additional textual matches in `crates/assets/build.rs` are strings generating embedded-asset code, supplied by Docker's explicit reference asset context/build outputs; they do not read vectors or test reference files.
+
+Raw audit summary:
+
+```text
+AUDIT: 330 include macros visited; 184 unique external file/path/context entries; 0 production leaks
+```
+
+Failing-first evidence, with the production constant still as at the baseline:
+
+```text
+error: couldn't read `crates/campfire/src/controllers/messages/../../../../../vectors/messaging/index-template-digest.txt`: No such file or directory (os error 2)
+error: could not compile `campfire` (bin "campfire") due to 1 previous error
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1401 filtered out; finished in 0.00s
+```
+
+The reduced-input native build and the new guard both reproduced that compiler failure. The added unit test separately failed because the old include retained the vector's trailing newline.
+
+Verification commands below ran with `CARGO_BUILD_JOBS=2`, `CARGO_PROFILE_DEV_DEBUG=0`, and (for tests/clippy) `CARGO_PROFILE_TEST_DEBUG=0`; no command exceeded four test threads. The copy was created from the worktree's Cargo manifests and `crates/` only. `CAMPFIRE_REFERENCE="$PWD"` supplies the asset context for the direct build; the guard is stricter and copies only the six Docker-provided asset inputs. All commands below were run this turn. These are targeted build-fix checks; the full-suite results in the previous report below are historical.
+
+```sh
+CAMPFIRE_REFERENCE="$PWD" mise exec rust@1.98.1 -- cargo build --locked -p campfire --manifest-path .scratch/release-build/rust/Cargo.toml
+CARGO_TARGET_DIR="$PWD/.scratch/release-build/rust/target" bash rust/ci/with-release-inputs.sh mise exec rust@1.98.1 -- cargo build --locked --workspace --bins
+mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire --bin campfire index_template_digest_matches_rails_vector -- --test-threads=4
+CI=1 TMPDIR="$PWD/.scratch" CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 mise exec rust@1.98.1 -- cargo test --locked --manifest-path rust/Cargo.toml -p campfire --bin campfire controllers::messages::paging_tests -- --test-threads=4
+mise exec rust@1.98.1 -- cargo clippy --locked --manifest-path rust/Cargo.toml -p campfire --all-targets -- -D warnings
+shellcheck rust/ci/with-release-inputs.sh
+bash -n rust/ci/with-release-inputs.sh
+```
+
+Raw summaries in that order (shellcheck and bash syntax checks exited 0 with no output):
+
+```text
+    Finished `dev` profile [unoptimized] target(s) in 24.65s
+    Finished `dev` profile [unoptimized] target(s) in 40.72s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1401 filtered out; finished in 0.00s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1398 filtered out; finished in 27.45s
+    Finished `dev` profile [unoptimized] target(s) in 32.53s
+```
+
+Logs and the audit inventory are retained in `.scratch/release-build/`; its 3.4 GB target directory has been deleted. No Rails regeneration, main merge, dependency change or unrelated source edit was needed. This production build correction is complete; the prior workstream inventory below is unchanged.
+
+---
+
 # WS8br PR #175 review fixes — complete; wider workstream partial
 
 Verified source: `9abd1c14e1d8f961c6739e38af67da2719d3f06f`, based on reviewed `3f25dcc5105488c55834399caeba9c2578047f64`. Both P2 fixes and the injected-HTML audit are complete. The independent fresh clone passes **2805 workspace tests, zero failures, eleven existing ignores, 58 harness summaries**; its seeded app passes **1399, zero failures, two existing ignores**. Clippy passes with `--workspace --all-targets -- -D warnings`. No seed-dependent case silently skipped: CI=1 and independently built default/first_run seeds were used.
