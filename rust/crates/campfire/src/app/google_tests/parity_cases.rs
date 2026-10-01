@@ -108,6 +108,7 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
         "../../../../../vectors/google_controller_cases.json"
     ))
     .unwrap();
+    let domains = regex::Regex::new("Google sign-in for (.*?) accounts").unwrap();
     for row in oracle["rows"].as_array().unwrap() {
         let now = jiff::Timestamp::from_second(oracle["now"].as_i64().unwrap()).unwrap();
         let clock = Arc::new(FrozenClock::new(now));
@@ -245,7 +246,6 @@ async fn google_controller_cases_match_complete_pinned_rails_observations() {
         let mut started = json!({"status":start_reply.status.as_u16()});
         if purpose == "sign_in" {
             let html = initial_page.text();
-            let domains = regex::Regex::new("Google sign-in for (.*?) accounts").unwrap();
             started["page"] = json!({"status":initial_page.status.as_u16(), "google_mark":html.contains("Sign in with Google"), "domain_sentence":domains.captures(&html).map(|c|c[1].to_owned())});
         }
         let q = start_reply
