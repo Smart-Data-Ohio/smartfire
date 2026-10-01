@@ -142,3 +142,19 @@ queue rejection preserves the successful edit response and rolls back the refres
 Work and board HTML show and pane content routes return an authorized 501 pending WS12;
 their JSON show read details retain the existing API. No work/board shell or control policy
 is implemented here.
+
+The shared root/thread edit broadcaster now uses `MessageComponents::github_cards_html`
+and the real `twitter::cards` renderer, matching the message partial. Preserve these
+provider calls when merging M2; empty legacy card vectors cannot replace populated
+provider markup. Five actual edits compare all 40 complete replacement frames against
+Rails through WS7, including removal containers and the associated reference rows.
+
+Cached fragments remain tokenless across independent real viewer sessions. The room
+shell must supply its current page header token to form submission: the four owned
+GitHub/reaction/legacy forms pass with the actual thread-page header, while missing or
+foreign tokens return 422 without changing rows. Complete all-form acceptance still
+requires M2's poll endpoints and WS8b-r's room header. WS14e's event-reference callback
+is also absent: the explicitly owner-flagged
+`legacy_rich_text_edit_synchronizes_event_reference_through_ws14e` probe compares a
+real legacy PATCH with Rails and currently finds no event reference. Enable it when
+the owner callback lands; GitHub/Twitter reference synchronization already passes.
