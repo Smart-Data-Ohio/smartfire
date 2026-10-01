@@ -34,7 +34,7 @@ fn assert_response(response: &Reply, row: &Value) {
         rails_mismatch(
             &response.text(),
             row["body"].as_str().unwrap(),
-            row["name"].as_str().unwrap(),
+            row["name"].as_str().unwrap_or("response"),
         );
     }
 }
@@ -604,5 +604,151 @@ async fn initial_attachment_capability_and_media_matrix_matches_rails() {
     assert_eq!(requests, 18);
     println!(
         "WS8bm initial attachments: 18 Rails requests byte-identical; top/nested; file/JPEG/video/BMP; invalid capabilities; committed and rolled-back rows"
+    );
+}
+
+#[tokio::test]
+async fn jpeg_new_and_reused_variants_match_rails_rows_files_and_lifecycle() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/jpeg-boundary.json"
+    ))
+    .unwrap();
+    for row in oracle["rows"].as_array().unwrap() {
+        let app = app().await;
+        app.db().write(|tx| {
+            tx.conn().execute_batch("CREATE TRIGGER hold_variant_analysis AFTER INSERT ON background_jobs WHEN NEW.job_class='ActiveStorage::AnalyzeJob' BEGIN UPDATE background_jobs SET run_at='2099-01-01 00:00:00' WHERE id=NEW.id; END;")?;
+            Ok(())
+        }).await.unwrap();
+        let id = if row["kind"] == "reply" {
+            let id = thread(&app).await;
+            app.db()
+                .write(move |tx| ChannelThread::find(tx.conn(), id)?.close(tx))
+                .await
+                .unwrap();
+            Some(id)
+        } else {
+            None
+        };
+        let last = app
+            .db()
+            .read(|c| {
+                c.query_row("SELECT MAX(id) FROM messages", [], |r| r.get::<_, i64>(0))
+                    .map_err(Into::into)
+            })
+            .await
+            .unwrap();
+        let mut browser = app.david();
+        for input in row["responses"].as_array().unwrap() {
+            let response = browser
+                .write(
+                    Req::new(Method::POST, row["path"].as_str().unwrap())
+                        .header("content-type", "application/json")
+                        .body(input["input"].to_string()),
+                )
+                .await;
+            assert_response(&response, input);
+            let (mut state,original,variants)=app.db().read(move |c| {
+                let count=c.query_row("SELECT COUNT(*) FROM messages WHERE id>?",[last],|r|r.get::<_,i64>(0))?;
+                let mut state=json!({"message_count":count});
+                if let Some(id)=id {
+                    state["joined"]=json!(ThreadMembership::find_by_thread_and_user(c,id,DAVID)?.is_some());
+                    state["closed"]=json!(ChannelThread::find(c,id)?.closed_at.is_some());
+                }
+                let original=campfire_storage::Blob::find(c,1).unwrap().unwrap();
+                let mut stmt=c.prepare("SELECT id,variation_digest FROM active_storage_variant_records WHERE blob_id=1 ORDER BY id")?;
+                let records=stmt.query_map([],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?)))?.collect::<rusqlite::Result<Vec<_>>>()?;
+                let variants=records.into_iter().map(|(id,digest)|Ok((digest,campfire_storage::Blob::attached(c,"ActiveStorage::VariantRecord",id,"image").unwrap().unwrap()))).collect::<campfire_db::Result<Vec<_>>>()?;
+                Ok((state,original,variants))
+            }).await.unwrap();
+            state["original_exists"] = json!(
+                app.booted
+                    .app
+                    .storage
+                    .service
+                    .path_for(&original.key)
+                    .exists()
+            );
+            state["variants"]=json!(variants.into_iter().map(|(digest,blob)|json!({"digest":digest,"filename":blob.filename.sanitized(),"metadata":serde_json::from_str::<Value>(&blob.metadata.encode()).unwrap(),"exists":app.booted.app.storage.service.path_for(&blob.key).exists()})).collect::<Vec<_>>());
+            assert_eq!(state, input["state"], "{}", row["kind"]);
+        }
+    }
+    println!(
+        "WS8bm JPEG boundaries: 6 Rails responses byte-identical; root success; initial/reply 500 then reuse 201; committed variant rows and missing files match"
+    );
+}
+
+#[tokio::test]
+async fn variant_analysis_jobs_share_the_representation_transaction() {
+    for kind in ["root", "initial", "reply"] {
+        let app = app().await;
+        let id = if kind == "reply" {
+            Some(thread(&app).await)
+        } else {
+            None
+        };
+        app.db().write(|tx| {
+            tx.conn().execute_batch("CREATE TRIGGER reject_variant_analysis BEFORE INSERT ON background_jobs WHEN NEW.job_class='ActiveStorage::AnalyzeJob' BEGIN SELECT RAISE(ABORT,'variant analysis must commit atomically'); END;")?;
+            Ok(())
+        }).await.unwrap();
+        let rows = row_snapshot(&app).await;
+        let files = file_snapshot(app.booted.app.storage.service.root());
+        let signed =
+            campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, 1, None);
+        let path = match id {
+            Some(id) => format!("/rooms/{ALL_TALK}/threads/{id}/messages.json"),
+            None if kind == "root" => format!("/rooms/{ALL_TALK}/messages.turbo_stream"),
+            None => format!("/rooms/{ALL_TALK}/threads.json"),
+        };
+        let response=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json").body(json!({"thread":{"name":"Reject variant"},"message":{"markdown_source":"Keep boundaries","client_message_id":"reject-variant-analysis","attachment":signed}}).to_string())).await;
+        assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR, "{kind}");
+        let after = row_snapshot(&app).await;
+        if kind == "root" {
+            // Root Message.create_with_attachment! committed before representation processing.
+            assert_eq!(
+                after
+                    .iter()
+                    .find(|(name, _)| name == "active_storage_variant_records"),
+                rows.iter()
+                    .find(|(name, _)| name == "active_storage_variant_records")
+            );
+            // Explicit analysis of the original already committed too; no generated blob survives.
+            assert_eq!(
+                after
+                    .iter()
+                    .find(|(name, _)| name == "active_storage_blobs")
+                    .unwrap()
+                    .1
+                    .len(),
+                rows.iter()
+                    .find(|(name, _)| name == "active_storage_blobs")
+                    .unwrap()
+                    .1
+                    .len()
+            );
+            assert_eq!(
+                after
+                    .iter()
+                    .find(|(name, _)| name == "messages")
+                    .unwrap()
+                    .1
+                    .len(),
+                rows.iter()
+                    .find(|(name, _)| name == "messages")
+                    .unwrap()
+                    .1
+                    .len()
+                    + 1
+            );
+        } else {
+            assert_eq!(after, rows, "{kind}");
+        }
+        assert_eq!(
+            file_snapshot(app.booted.app.storage.service.root()),
+            files,
+            "{kind}"
+        );
+    }
+    println!(
+        "WS8bm variant analysis: 3 HTTP enqueue rejections; atomic representation rollback; root primary retained; initial/reply rows rolled back"
     );
 }

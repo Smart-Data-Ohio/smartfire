@@ -49,15 +49,15 @@ impl campfire_db::models::forwarder::BlobCopier for ForwarderCopier {
         else {
             return Ok(());
         };
-        if !blob.is_analyzed() {
-            let metadata = self
-                .storage
-                .analyzed_metadata(&blob)
-                .map_err(storage_error)?;
-            blob.update_metadata(tx.conn(), metadata)
-                .map_err(storage_error)?;
-            crate::active_storage::touch_attachment_records(tx, blob.id)?;
-        }
+        // Message#process_attachment explicitly calls Blob#analyze even when it was
+        // already analyzed; unlike a retried AnalyzeJob, this save touches all owners.
+        let metadata = self
+            .storage
+            .analyzed_metadata(&blob)
+            .map_err(storage_error)?;
+        blob.update_metadata(tx.conn(), metadata)
+            .map_err(storage_error)?;
+        crate::active_storage::touch_attachment_records(tx, blob.id)?;
         if blob.is_video() {
             self.preview(tx, &blob, Variation::format_only("webp"))?;
         } else if blob.is_previewable() {
@@ -120,13 +120,14 @@ impl ForwarderCopier {
             let staged = self
                 .storage
                 .transform_variant(blob, &variation)
-                .map_err(storage_error)?;
-            if self
+                .map_err(storage_error)?
+                .defer_analysis();
+            if let Some(recorded) = self
                 .storage
                 .record_variant(tx.conn(), blob, &variation, &staged, tx.now().jiff())
                 .map_err(storage_error)?
-                .is_some()
             {
+                crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
                 if self.nested_variant_upload {
                     // Pinned VariantWithRecord#transform_blob closes its output IO before the
                     // enclosing ChannelThread transaction commits. CreateOne#upload then raises
