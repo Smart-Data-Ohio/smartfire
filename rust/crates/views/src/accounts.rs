@@ -169,16 +169,7 @@ impl BotForm {
                 agent.owner_id == ctx.current_user.as_ref().map(|user| user.id)
             })
     }
-    fn github_usable(&self) -> bool {
-        self.github.as_ref().is_some_and(|account| account.usable)
-    }
-    fn github_submit_label(&self) -> &'static str {
-        if self.github.is_some() {
-            "Reconnect GitHub"
-        } else {
-            "Connect GitHub"
-        }
-    }
+
 }
 impl BotAgentForm {
     fn cap_value(&self, name: &str) -> Option<String> {
@@ -264,20 +255,18 @@ pub struct BotsEdit<'a> {
 }
 
 impl BotsEdit<'_> {
-    /// WS15g plug-in boundary: Rails `accounts/bots/_github_connection.html.erb`.
-    /// At d7c7de92 this section is inline in `accounts/bots/edit.html.erb`.
-    /// Keep the already-ported rendering here until WS15g supplies its fragment;
-    /// connection validation, writes and read-side effects remain with WS15g.
+    /// WS15g owner fragment: pinned inline `accounts/bots/edit.html.erb`;
+    /// the planned Rails partial name is `accounts/bots/_github_connection.html.erb`.
     fn ws15g_github_connection_fragment(&self) -> askama::Result<h::Html> {
-        #[derive(Template)]
-        #[template(path = "accounts/bots/_github_connection.html")]
-        struct GithubConnection<'a> {
-            ctx: &'a ViewContext<'a>,
-            bot_id: i64,
-            bot: &'a BotForm,
-        }
-        GithubConnection { ctx: self.ctx, bot_id: self.bot_id, bot: &self.bot }
-            .render().map(h::raw)
+        let account = self.bot.github.as_ref();
+        let data = crate::github::connections::Connection {
+            linked: account.is_some(), usable: account.is_some_and(|a| a.usable),
+            login: account.map(|a| a.login.clone()).unwrap_or_default(),
+            reason: account.and_then(|a| a.disconnected_reason.clone()), ..Default::default()
+        };
+        let html = crate::github::connections::bot(&data, self.bot_id, self.ctx.can_administer());
+        // This inline call already contributes the partial's final newline.
+        Ok(h::raw(html.strip_suffix('\n').unwrap_or(&html)))
     }
 
     /// WS15e plug-in boundary: Rails `accounts/bots/_fizzy_connection.html.erb`.

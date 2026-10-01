@@ -6,5 +6,4 @@
 {% endfilter %}{% for destination in crate::activity::DESTINATIONS %}        {% filter link_to(destination.0, h::attrs().class("sidebar-item btn").data("workspace_destination", destination.0)) %}
           {{ h::image_tag(ctx, destination.1, h::attrs().size(20).aria_hidden().class("colorize--black")) }}
           <span class="sidebar-item__label">{{ destination.2 }}</span>
-{% endfilter %}{% endfor %}      </nav>
-
+{% endfilter %}{% endfor %}      </nav>{{ "\n" }}

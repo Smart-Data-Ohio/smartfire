@@ -69,10 +69,57 @@ pub async fn update(c: &mut Ctx) -> Result {
         return failure(c, StatusCode::FORBIDDEN, &message, &format!("{message}."));
     }
     if decision == "approved" && (approval.github_action() || approval.fizzy_action()) {
-        // WS15g/WS15e must bind their current-identity resolver before this action
-        // can approve external writes. No identity resolver exists on this base.
-        // Leave this branch visibly unported; never enqueue an unchecked write.
-        return super::not_yet_ported(c).await;
+        let agent_id = approval.agent_id;
+        let agent = c
+            .app()
+            .db
+            .read(move |conn| campfire_db::Agent::find(conn, agent_id))
+            .await
+            .map_err(Error::internal)?
+            .ok_or(Error::NotFound)?;
+        let current = if approval.github_action() {
+            c.app()
+                .github_accounts
+                .agent_identity(agent.owner_id, agent.user_id)
+                .await
+                .map_err(Error::internal)?
+                .is_some_and(|account| {
+                    approval.github_identity_matches(account.id, &account.github_login)
+                })
+        } else {
+            c.app()
+                .db
+                .read(move |conn| {
+                    agent
+                        .owner_id
+                        .map(|owner| {
+                            crate::integrations::fizzy::accounts::Account::for_user(conn, owner)
+                        })
+                        .transpose()
+                        .map(Option::flatten)
+                })
+                .await
+                .map_err(Error::internal)?
+                .is_some_and(|account| {
+                    account
+                        .fizzy_user_id
+                        .as_deref()
+                        .is_some_and(|user| approval.fizzy_identity_matches(account.id, user))
+                })
+        };
+        if !current {
+            let message = if approval.github_action() {
+                "The agent's GitHub account changed since this was requested; deny it and ask the agent to request again"
+            } else {
+                "The agent owner's Fizzy account changed since this was requested; deny it and ask the agent to request again"
+            };
+            return failure(
+                c,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                message,
+                &format!("{message}."),
+            );
+        }
     }
     let note = ["decision_note", "note"].into_iter().find_map(|key| {
         c.params
@@ -105,8 +152,11 @@ pub async fn update(c: &mut Ctx) -> Result {
     // independent audit insert. An audit failure returns 500 with that decision
     // preserved; it must not roll the owner mutation back.
     if let Some(audit) = audit {
-        c.app().db.write(move |tx| AuditLog::record(tx, audit, &context))
-            .await.map_err(Error::internal)?;
+        c.app()
+            .db
+            .write(move |tx| AuditLog::record(tx, audit, &context))
+            .await
+            .map_err(Error::internal)?;
     }
     match decision_result {
         ApprovalDecision::Forbidden => Err(Error::NotFound),

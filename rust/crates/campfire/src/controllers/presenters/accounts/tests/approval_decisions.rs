@@ -396,3 +396,117 @@ async fn html_external_approve_is_303_for_owner_with_alert_and_safe_referer() {
     assert_eq!(response.location(), "http://campfire.test/activity");
     assert_eq!(state(&test, id).await.status, "pending");
 }
+
+#[tokio::test]
+async fn external_decisions_revalidate_identity_and_atomically_enqueue_owner_jobs() {
+    use crate::integrations::{
+        fizzy::accounts::{Account as Fizzy, Input},
+        github::accounts::{Account as Github, AccountInput},
+    };
+    let mut test = boot_seed("default").await.expect("default seed");
+    test.booted
+        .jobs
+        .stop(std::time::Duration::from_secs(1))
+        .await;
+    let bot_id = test.label("users.bender").parse::<i64>().unwrap();
+    let owner_id = test.label("users.kevin").parse::<i64>().unwrap();
+    let crypto = test.booted.app.ar_encryption.clone();
+    let (github_id, fizzy_id) = test
+        .booted
+        .app
+        .db
+        .write(move |tx| {
+            let g = Github::relink(
+                tx,
+                &crypto,
+                &AccountInput {
+                    user_id: bot_id,
+                    github_login: "machine-fixture",
+                    access_token: "fixture-machine-credential",
+                    refresh_token: None,
+                    token_expires_at: None,
+                    token_source: "pat",
+                },
+            )?;
+            let f = Fizzy::relink(
+                tx,
+                &crypto,
+                &Input {
+                    user_id: owner_id,
+                    account_id: "12345",
+                    account_name: Some("Fixture"),
+                    fizzy_user_id: Some("fixture-user"),
+                    fizzy_user_name: Some("Fixture User"),
+                    token: "fixture-fizzy-credential",
+                },
+            )?;
+            Ok((g.id, f.id))
+        })
+        .await
+        .unwrap();
+    let mut admin = test.browser("198.51.100.214");
+    admin.sign_in(&test.label("emails.david")).await;
+    for (service, job) in [
+        ("github", "Github::PerformAgentActionJob"),
+        ("fizzy", "Fizzy::PerformAgentActionJob"),
+    ] {
+        let id = approval(&test, &format!("{service}.comment")).await;
+        let missing = admin
+            .form(
+                "patch",
+                &format!("/agent_approvals/{id}.json"),
+                &[("decision", "approved")],
+            )
+            .await;
+        assert_eq!(
+            missing.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            missing.text()
+        );
+        assert_eq!(state(&test, id).await.status, "pending");
+        let github = service == "github";
+        test.booted.app.db.write(move|tx| {
+            tx.conn().execute("UPDATE agent_approvals SET github_account_id=?,github_login=?,fizzy_connected_account_id=?,fizzy_user_id=? WHERE id=?",rusqlite::params![github.then_some(github_id),github.then_some("machine-fixture"),(!github).then_some(fizzy_id),(!github).then_some("fixture-user"),id])?;Ok(())
+        }).await.unwrap();
+        test.booted.app.db.write(move|tx| {
+            tx.conn().execute_batch("CREATE TRIGGER ws11ui_reject_external BEFORE INSERT ON background_jobs WHEN NEW.job_class IN ('Github::PerformAgentActionJob','Fizzy::PerformAgentActionJob') BEGIN SELECT RAISE(ABORT,'external enqueue rejected'); END;")?;Ok(())
+        }).await.unwrap();
+        let rejected = admin
+            .form(
+                "patch",
+                &format!("/agent_approvals/{id}.json"),
+                &[("decision", "approved")],
+            )
+            .await;
+        assert_eq!(rejected.status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(state(&test, id).await.status, "pending");
+        test.booted.app.db.read(move|conn| {
+            assert_eq!(conn.query_row("SELECT count(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NOT NULL",[id],|r|r.get::<_,i64>(0))?,0);
+            assert_eq!(conn.query_row("SELECT count(*) FROM agent_events WHERE event_type='approval_decided' AND json_extract(metadata,'$.approval_id')=?",[id],|r|r.get::<_,i64>(0))?,0);Ok(())
+        }).await.unwrap();
+        test.booted
+            .app
+            .db
+            .write(|tx| {
+                tx.conn()
+                    .execute_batch("DROP TRIGGER ws11ui_reject_external")?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let accepted = admin
+            .form(
+                "patch",
+                &format!("/agent_approvals/{id}.json"),
+                &[("decision", "approved")],
+            )
+            .await;
+        assert_eq!(accepted.status, StatusCode::OK, "{}", accepted.text());
+        assert_eq!(payload(&accepted)["status"], "approved");
+        let job = job.to_owned();
+        test.booted.app.db.read(move|conn| {
+            assert_eq!(conn.query_row("SELECT count(*) FROM background_jobs WHERE job_class=? AND json_extract(arguments,'$.approval_id')=?",rusqlite::params![job,id],|r|r.get::<_,i64>(0))?,1);Ok(())
+        }).await.unwrap();
+    }
+}

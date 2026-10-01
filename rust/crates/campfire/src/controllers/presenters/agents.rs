@@ -83,40 +83,82 @@ fn directory_record(
 }
 
 /// Rails public bot profile, using WS11's kind/grants/activity readers.
-pub fn profile(conn: &Connection, secrets: &rails_compat::Secrets, user_id: i64,
-    viewer: &campfire_db::User, now: campfire_db::Timestamp, zone: &campfire_views::time::Zone,
+pub fn profile(
+    conn: &Connection,
+    secrets: &rails_compat::Secrets,
+    user_id: i64,
+    viewer: &campfire_db::User,
+    now: campfire_db::Timestamp,
+    zone: &campfire_views::time::Zone,
 ) -> Result<Option<campfire_views::agents::Profile>> {
-    let Some(agent) = campfire_db::Agent::for_user(conn, user_id)? else { return Ok(None); };
+    let Some(agent) = campfire_db::Agent::for_user(conn, user_id)? else {
+        return Ok(None);
+    };
     let directory = directory_agent(conn, secrets, agent.id)?.expect("same agent row");
     let mut all_rooms = campfire_db::Room::for_user(conn, user_id)?;
     super::accounts::sort_by_lower_name(&mut all_rooms, |r| r.name.as_deref().unwrap_or(""));
     let total = all_rooms.len();
-    let rooms = all_rooms.into_iter().filter_map(|room| {
-        match campfire_db::Membership::find_by_room_and_user(conn, room.id, viewer.id) {
-            Ok(Some(_)) => Some(super::accounts::room_display_name(conn, &room, viewer).map(|name| (room.id, name))),
-            Ok(None) => None, Err(e) => Some(Err(e)),
-        }
-    }).collect::<Result<Vec<_>>>()?;
-    let management = (viewer.is_administrator() || agent.owner_id == Some(viewer.id)).then(|| -> Result<(String,String)> {
-        Ok((agent.activity_summary(conn, now)?, budget_usage_line(conn, &agent, now, zone)?))
-    }).transpose()?;
+    let rooms = all_rooms
+        .into_iter()
+        .filter_map(|room| {
+            match campfire_db::Membership::find_by_room_and_user(conn, room.id, viewer.id) {
+                Ok(Some(_)) => Some(
+                    super::accounts::room_display_name(conn, &room, viewer)
+                        .map(|name| (room.id, name)),
+                ),
+                Ok(None) => None,
+                Err(e) => Some(Err(e)),
+            }
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let management = (viewer.is_administrator() || agent.owner_id == Some(viewer.id))
+        .then(|| -> Result<(String, String)> {
+            Ok((
+                agent.activity_summary(conn, now)?,
+                budget_usage_line(conn, &agent, now, zone)?,
+            ))
+        })
+        .transpose()?;
     let present = |v: &Option<String>| v.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));
     Ok(Some(campfire_views::agents::Profile {
-        provider_runtime: [present(&agent.provider), present(&agent.runtime)].into_iter().flatten().collect::<Vec<_>>().join(" · "),
-        description: present(&agent.description), has_rooms: total > 0,
-        hidden_room_count: total - rooms.len(), rooms, grants: agent.grants_summary(conn)?, management, agent: directory,
+        provider_runtime: [present(&agent.provider), present(&agent.runtime)]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" · "),
+        description: present(&agent.description),
+        has_rooms: total > 0,
+        hidden_room_count: total - rooms.len(),
+        rooms,
+        grants: agent.grants_summary(conn)?,
+        management,
+        agent: directory,
     }))
 }
-pub fn budget_usage_line(conn: &Connection, agent: &campfire_db::Agent,
-    now: campfire_db::Timestamp, zone: &campfire_views::time::Zone,
+pub fn budget_usage_line(
+    conn: &Connection,
+    agent: &campfire_db::Agent,
+    now: campfire_db::Timestamp,
+    zone: &campfire_views::time::Zone,
 ) -> Result<String> {
     use campfire_db::models::agent_posting::{self, Cap};
     let window = agent_posting::daily_window(now, zone.tz())?;
-    [(Cap::Messages, agent.daily_message_cap, "messages"),
-     (Cap::BoardPosts, agent.daily_board_post_cap, "board posts"),
-     (Cap::ExternalActions, agent.daily_external_action_cap, "external actions")]
-        .into_iter().map(|(cap, limit, noun)| {
-            let used = agent_posting::cap_usage(conn, agent.id, agent.user_id, cap, &window)?;
-            Ok(limit.map(|limit| format!("{used}/{limit} {noun}")).unwrap_or_else(|| format!("{used} {noun}")))
-        }).collect::<Result<Vec<_>>>().map(|cells| cells.join(" · "))
+    [
+        (Cap::Messages, agent.daily_message_cap, "messages"),
+        (Cap::BoardPosts, agent.daily_board_post_cap, "board posts"),
+        (
+            Cap::ExternalActions,
+            agent.daily_external_action_cap,
+            "external actions",
+        ),
+    ]
+    .into_iter()
+    .map(|(cap, limit, noun)| {
+        let used = agent_posting::cap_usage(conn, agent.id, agent.user_id, cap, &window)?;
+        Ok(limit
+            .map(|limit| format!("{used}/{limit} {noun}"))
+            .unwrap_or_else(|| format!("{used} {noun}")))
+    })
+    .collect::<Result<Vec<_>>>()
+    .map(|cells| cells.join(" · "))
 }
