@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import {test, before, after} from 'node:test';
 import {chromium} from 'playwright';
 import {pollBrowser} from './ws13-browser-poll.mjs';
+import http from 'node:http';
+import {navigate} from './ws13-browser-navigation.mjs';
 let browser;
 before(async()=>{browser=await chromium.launch({headless:true});});
 after(async()=>{await browser?.close();});
@@ -24,4 +26,20 @@ test('media readiness waits for a completed positive RTP sample',async t=>{
   },null,{timeout:1000,polling:10,message:'no RTP'});
   assert.equal(result,true);
   assert.equal(await page.evaluate(()=>window.samples),3);
+});
+test('fixture navigation waits for the lazy controller script to load, like Selenium',async t=>{
+  const server=http.createServer((req,res)=>{
+    if(req.url==='/controller.js') {
+      setTimeout(()=>{res.writeHead(200,{'Content-Type':'application/javascript'});res.end('window.presenceControllerConnected=true;');},150);
+    } else {
+      res.writeHead(200,{'Content-Type':'text/html'});
+      res.end('<script>document.addEventListener("DOMContentLoaded",()=>{const s=document.createElement("script");s.src="/controller.js";document.head.append(s);});</script>');
+    }
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const page=await browser.newPage();
+  t.after(async()=>{await page.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));});
+  await navigate(page,'http://127.0.0.1:'+server.address().port);
+  assert.equal(await page.evaluate(()=>document.readyState),'complete');
+  assert.equal(await page.evaluate(()=>window.presenceControllerConnected),true);
 });

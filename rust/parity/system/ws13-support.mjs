@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { before, after } from 'node:test';
 import { chromium } from 'playwright';
 import { startProxy } from '../capture/proxy.ts';
+import { navigate } from './ws13-browser-navigation.mjs';
 let browser, proxy, api;
 // Loopback is a secure browser context, like Capybara's local Rails server.
 const origin = 'http://127.0.0.1';
@@ -49,7 +50,15 @@ async function fixture(t, names, options={}) {
   return {...data,pages,state,mutate,issue};
 }
 async function visitRoom(page,room) {
-  const response = await page.goto(`${origin}/rooms/${room}`,{waitUntil:'domcontentloaded'});
+  const failures=[];
+  const failed=request=>failures.push({url:new URL(request.url()).pathname,error:request.failure()?.errorText});
+  const errors=[];
+  const errored=error=>errors.push(error.message);
+  page.on('requestfailed',failed);page.on('pageerror',errored);
+  try {
+  // Rails visit uses Selenium's normal page-load strategy. Starting the idle
+  // check at DOMContentLoaded spent its 10 s on unfinished lazy script loads.
+  const response = await navigate(page,`${origin}/rooms/${room}`);
   assert.equal(response.status(),200);
   await page.waitForFunction(() => {
     const sources = [...document.querySelectorAll('turbo-cable-stream-source')];
@@ -62,6 +71,14 @@ async function visitRoom(page,room) {
   // Cable and Stimulus connect independently. The Rails helper assumes the
   // huddle controller exists before installing its SDK fixture.
   await page.waitForFunction(() => !!window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle'),null,{timeout:2000});
+  } catch(error) {
+    const state=await page.evaluate(()=>{
+      const e=document.querySelector('[data-controller~="huddle-presence"]');
+      const c=e&&window.Stimulus?.getControllerForElementAndIdentifier(e,'huddle-presence');
+      return {readyState:document.readyState,presenceElement:!!e,controller:!!c,inFlight:c?.inFlightRefresh,sidebar:document.getElementById('user_sidebar')?.outerHTML.slice(0,500),fetches:performance.getEntriesByType('resource').filter(r=>r.name.includes('/users/huddle_presence')).map(r=>({duration:r.duration,status:r.responseStatus}))};
+    });
+    throw new Error(error.message+'; fixture readiness '+JSON.stringify({state,failures,errors}),{cause:error});
+  } finally {page.off('requestfailed',failed);page.off('pageerror',errored);}
 }
 
 async function text(page, selector, value, timeout=2000) {
