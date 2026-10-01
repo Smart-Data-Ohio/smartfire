@@ -10,6 +10,7 @@ async fn google_admin_link_controls_and_all_security_audits_match_pinned_rails()
     let v: Value =
         serde_json::from_str(include_str!("../../../../vectors/google_admin_links.json")).unwrap();
     let at: jiff::Timestamp = "2026-03-02T16:00:00Z".parse().unwrap();
+    let forms_re = regex::Regex::new(r#"<form\b[^>]*\baction="([^"]*/google_link)""#).unwrap();
     for case in v["cases"].as_array().unwrap() {
         let mut a = TestApp::boot_with_clock(Arc::new(FrozenClock::new(at)))
             .await
@@ -55,8 +56,7 @@ async fn google_admin_link_controls_and_all_security_audits_match_pinned_rails()
             "{name}: destination"
         );
         let html = response.text();
-        let forms = regex::Regex::new(r#"<form\b[^>]*\baction="([^"]*/google_link)""#)
-            .unwrap()
+        let forms = forms_re
             .captures_iter(&html)
             .map(|c| c[1].to_owned())
             .collect::<Vec<_>>();

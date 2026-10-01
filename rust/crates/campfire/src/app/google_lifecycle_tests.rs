@@ -171,11 +171,11 @@ async fn google_lifecycle_matches_pinned_rails_state_jobs_and_remote_stop_order(
   }).collect::<Vec<_>>();
         let mut expected_jobs = case["jobs"].clone();
         for job in expected_jobs.as_array_mut().unwrap() {
-            if job["class"] == "Calendar::DisconnectCleanupJob" {
-                if let Some(s) = job["args"][1]["access_token_expires_at"].as_str() {
-                    job["args"][1]["access_token_expires_at"] =
-                        json!(s.parse::<jiff::Timestamp>().unwrap().to_string());
-                }
+            if job["class"] == "Calendar::DisconnectCleanupJob"
+                && let Some(s) = job["args"][1]["access_token_expires_at"].as_str()
+            {
+                job["args"][1]["access_token_expires_at"] =
+                    json!(s.parse::<jiff::Timestamp>().unwrap().to_string());
             }
         }
         assert_eq!(
