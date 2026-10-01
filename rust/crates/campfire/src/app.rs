@@ -39,6 +39,7 @@ pub struct AppState {
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
     pub mail: crate::mail::State,
+    pub agent_message_payload: crate::controllers::presenters::agent_payload::State,
     pub agent_repositories: crate::integrations::agent_repositories::State,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
@@ -197,6 +198,10 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         db.clone(), Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets)), github_app.clone(), github_network,
     );
     let google = crate::integrations::google::State::from_config(&config);
+    let agent_repositories = crate::integrations::agent_repositories::State::live(
+        db.clone(), ar_encryption.clone(),
+    );
+    agent_repositories.install(Arc::new(github_accounts.clone()));
     let app = Arc::new(AppState {
         config,
         secrets,
@@ -208,7 +213,8 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         cable,
         jobs,
         mail,
-        agent_repositories: crate::integrations::agent_repositories::State::default(),
+        agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
+        agent_repositories,
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         google,

@@ -2,6 +2,8 @@
 //! and Transferable are signed ids, which live in `rails_compat`).
 
 pub mod removal;
+pub mod icon;
+pub mod lifecycle;
 
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
@@ -115,6 +117,7 @@ pub struct User {
     pub role: Role,
     pub status: Status,
     pub bio: Option<String>,
+    pub icon_name: Option<String>,
     /// SHA-256 hex of the bot token (`User::Bot`). The plaintext `bot_token` column is retired:
     /// never written except to clear it, never read.
     pub bot_token_digest: Option<String>,
@@ -134,6 +137,7 @@ pub struct NewUser {
     pub password_digest: Option<PasswordDigest>,
     pub role: Role,
     pub bio: Option<String>,
+    pub icon_name: Option<String>,
     pub bot_token_digest: Option<String>,
 }
 
@@ -146,6 +150,7 @@ pub struct UserChanges {
     pub role: Option<Role>,
     pub status: Option<Status>,
     pub bio: Option<Option<String>>,
+    pub icon_name: Option<Option<String>>,
     pub time_zone: Option<Option<String>>,
     /// A submitted zone key is an explicit choice even when its value is filtered or nil.
     pub time_zone_explicit: Option<bool>,
@@ -155,7 +160,7 @@ pub struct UserChanges {
     pub allow_google_email_link: bool,
 }
 
-const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
+const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "icon_name", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
 
 impl User {
     /// A `SELECT "users".*` row.
@@ -168,6 +173,7 @@ impl User {
             role: row.get("role")?,
             status: row.get("status")?,
             bio: row.get("bio")?,
+            icon_name: row.get("icon_name")?,
             bot_token_digest: row.get("bot_token_digest")?,
             plain_bot_token: None,
             created_at: row.get("created_at")?,
@@ -359,7 +365,9 @@ impl User {
         }, false)
     }
 
-    fn create_with_open_room_grant(tx: &mut Tx<'_>, attributes: NewUser, grant: bool) -> Result<Self> {
+    fn create_with_open_room_grant(tx: &mut Tx<'_>, mut attributes: NewUser, grant: bool) -> Result<Self> {
+        attributes.icon_name = icon::normalize_name(attributes.icon_name.as_deref());
+        icon::validate(tx.conn(), attributes.icon_name.as_deref())?.into_result()?;
         let now = tx.now();
         let password_digest = attributes.password_digest.map(PasswordDigest::into_string);
         let id: i64 = tx.conn().query_row_cached(
@@ -369,6 +377,7 @@ impl User {
                 attributes.bot_token_digest,
                 now,
                 attributes.email_address,
+                attributes.icon_name,
                 attributes.name,
                 password_digest,
                 attributes.role,
@@ -384,16 +393,15 @@ impl User {
     /// `User.create_bot!`: stores the token's digest alone; the returned bot knows its key
     /// (`plain_bot_token`) until it's dropped.
     pub fn create_bot(tx: &mut Tx<'_>, name: &str, webhook_url: Option<&str>) -> Result<Self> {
+        Self::create_bot_with_attributes(tx, NewUser { name: name.into(), ..Default::default() }, webhook_url)
+    }
+
+    /// Bot creation with the same normalized/validated fields as ordinary User creation.
+    pub fn create_bot_with_attributes(tx: &mut Tx<'_>, mut attributes: NewUser, webhook_url: Option<&str>) -> Result<Self> {
         let token = generate_bot_token();
-        let mut user = Self::create(
-            tx,
-            NewUser {
-                name: name.to_string(),
-                bot_token_digest: Some(digest_bot_token(&token)),
-                role: Role::Bot,
-                ..Default::default()
-            },
-        )?;
+        attributes.role = Role::Bot;
+        attributes.bot_token_digest = Some(digest_bot_token(&token));
+        let mut user = Self::create(tx, attributes)?;
         user.plain_bot_token = Some(token);
         if let Some(url) = webhook_url {
             Webhook::create(tx, user.id, Some(url))?;
@@ -445,7 +453,15 @@ impl User {
             errors.add("time_zone", "is not a valid time zone");
             return Err(crate::Error::RecordInvalid(errors));
         }
+        let icon = changes.icon_name.map(|name| icon::normalize_name(name.as_deref()));
+        if let Some(name) = &icon && *name != self.icon_name {
+            icon::validate(tx.conn(), name.as_deref())?.into_result()?;
+        }
         let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql>)> = Vec::new();
+        if let Some(name) = icon.filter(|name| *name != self.icon_name) {
+            self.icon_name = name.clone();
+            sets.push(("icon_name", Box::new(name)));
+        }
         if let Some(name) = changes.name.filter(|n| *n != self.name) {
             self.name = name.clone();
             sets.push(("name", Box::new(name)));
@@ -524,6 +540,10 @@ impl User {
         Ok(())
     }
 
+    pub fn set_icon_name(&mut self, tx: &mut Tx<'_>, name: Option<&str>) -> Result<()> {
+        self.update(tx, UserChanges { icon_name: Some(name.map(str::to_owned)), ..Default::default() })
+    }
+
     /// `update_bot!`: the webhook first, then the user, in one transaction.
     pub fn update_bot(
         &mut self,
@@ -596,10 +616,7 @@ impl User {
             disconnect(tx, self)?;
         }
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
-        // Main's account owners share this transaction; WS11 retains real suspension.
-        let sink = tx.env().sink.clone();
-        sink.disconnect_user_accounts(tx, self.id)?;
-        super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
+        lifecycle::deactivate(tx, self.id, audit)?;
         let email = self.deactivated_email_address();
         // app/models/user.rb: manual OOO cannot survive account deactivation.
         conn.execute_cached("UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?", [self.id])?;

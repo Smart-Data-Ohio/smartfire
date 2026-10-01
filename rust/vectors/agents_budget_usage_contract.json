@@ -1,0 +1,27 @@
+{
+  "initial": {
+    "messages": 0,
+    "board_posts": 0,
+    "external_actions": 0
+  },
+  "all": {
+    "messages": 1,
+    "board_posts": 1,
+    "external_actions": 1
+  },
+  "opener": {
+    "messages": 0,
+    "board_posts": 1,
+    "external_actions": 0
+  },
+  "reply": {
+    "messages": 1,
+    "board_posts": 1,
+    "external_actions": 0
+  },
+  "yesterday": {
+    "messages": 0,
+    "board_posts": 1,
+    "external_actions": 0
+  }
+}

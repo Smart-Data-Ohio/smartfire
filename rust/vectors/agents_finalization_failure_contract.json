@@ -1,0 +1,11 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "error": "WS12 adapter rejected activity",
+    "streaming": false,
+    "indexed": 1,
+    "posted": 0,
+    "presence": "Finishing",
+    "repeated": false
+  }
+}

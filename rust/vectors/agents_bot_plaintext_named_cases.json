@@ -1,0 +1,28 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "heal": {
+      "count": 2,
+      "stale": {
+        "plaintext": null,
+        "digest": "94e7b208130f3fb4f422ad087bde1718024d539a78b10517d7787be8175cbf4a",
+        "current_auth": true,
+        "old_auth": false
+      },
+      "digestless": {
+        "plaintext": null,
+        "digest": "dbe634df8a6b8aa014b1e707a4d25a3f9fc7aa24a511b42f11ad6ad41fa708f3",
+        "current_auth": true,
+        "old_auth": null
+      },
+      "clean_plaintext": null,
+      "clean_auth": true
+    },
+    "race": {
+      "healed": false,
+      "new_auth": true,
+      "old_auth": false
+    },
+    "repeat": 0
+  }
+}

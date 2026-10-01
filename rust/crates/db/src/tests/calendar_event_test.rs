@@ -103,7 +103,9 @@ fn pr174_invitation_failure_preserves_committed_recipients() {
             )?)),
             case["announcements"].as_i64().unwrap()
         );
-        // The primary write's sync callback still runs after a failed invitation.
+        // Rails stops its later sync callback (see WS11's pinned failure probe).
+        // Our durable-enqueue exception already committed that job, so its queue
+        // notification survives even though remaining model callbacks stop.
         assert_eq!(
             t.events()
                 .iter()

@@ -15,6 +15,7 @@ fn with_pool(original: &App, pool: Pool) -> App {
         google: original.google.clone(),
         errors: original.errors.clone(),
         ar_encryption: original.ar_encryption.clone(),
+        agent_message_payload: Default::default(),
         agent_repositories: Default::default(),
         github_accounts: original.github_accounts.clone(),
         github_app: original.github_app.clone(),

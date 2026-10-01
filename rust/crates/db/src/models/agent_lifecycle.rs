@@ -35,8 +35,9 @@ pub fn suspend(tx: &mut Tx<'_>, agent_id: i64, audit: &Context) -> Result<()> {
             [user_id],
             |r| r.get::<_, i64>(0),
         )? {
-            let result =
-                Message::find(tx.conn(), id).and_then(|mut m| m.finalize_stream_quietly(tx));
+            let result = crate::database::run_write(tx.conn(), tx.env(), |tx| {
+                Message::find(tx.conn(), id).and_then(|mut m| m.finalize_stream_quietly(tx))
+            });
             if let Err(error) = result {
                 tracing::error!(message_id=id,%error,"quiet stream finalize failed");
             }
