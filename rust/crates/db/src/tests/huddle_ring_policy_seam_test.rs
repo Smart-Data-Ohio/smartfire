@@ -23,6 +23,7 @@ fn run(name: &str) {
         let member = crate::Membership::find_by_room_and_user(tx.conn(), room, caller)?.unwrap();
         Ok(tx.conn().query_row("INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,last_issued_at,created_at,updated_at) VALUES('ws13b-policy-source','ws13b-policy-room',?,?,?,?,?,?,?) RETURNING id",rusqlite::params![session.id,caller,member.id,room,tx.now(),tx.now(),tx.now()],|r|r.get::<_,i64>(0))?)
     });
+    let invited_at = db.read(move |conn| Ok(crate::models::huddle_grant::HuddleGrant::find_by_id(conn, grant_id)?.unwrap().last_issued_at.map(Timestamp::as_microsecond)));
     for outcome in case["outcomes"].as_array().unwrap() {
         db.clock.travel_to(Timestamp::from_second(
             outcome["context"]["now"].as_i64().unwrap(),
@@ -33,6 +34,7 @@ fn run(name: &str) {
             recipient_id: outcome["context"]["recipient"]["id"].as_i64().unwrap(),
             sender_id: outcome["sender_id"].as_i64().unwrap(),
             grant_id: Some(grant_id),
+            invited_at,
             invitation,
         };
         let setup = outcome["setup_sql"].as_str().unwrap().to_owned();

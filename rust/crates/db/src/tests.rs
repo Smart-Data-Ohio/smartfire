@@ -24,6 +24,7 @@ mod huddle_invitation_job_test;
 mod huddle_query_assertions_test;
 mod huddle_ring_policy_seam_test;
 mod huddle_ring_revocation_test;
+mod huddle_ring_generations_test;
 mod membership_test;
 mod keyword_alert_test;
 mod ws17_review_test;

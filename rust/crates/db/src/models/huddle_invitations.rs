@@ -18,6 +18,10 @@ pub struct RingRequest {
     /// Older item jobs can recover their source; banner-only jobs cannot.
     #[serde(default)]
     pub grant_id: Option<i64>,
+    /// UTC microseconds: item created_at (reset on retry), or banner last_issued_at.
+    /// Unversioned jobs cannot safely identify the invitation they belong to.
+    #[serde(default)]
+    pub invited_at: Option<i64>,
     pub invitation: serde_json::Value,
 }
 impl Job for RingRequest {
@@ -92,14 +96,18 @@ fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest
             Err(error) => return Err(error),
         };
         if request.grant_id.is_some_and(|id| id != item.source_id) { return Ok(None); }
+        if request.invited_at != Some(item.created_at.as_microsecond()) { return Ok(None); }
         let Some(current) = item_ring_request(tx, &item)? else { return Ok(None); };
+        if request.invitation["eventType"] != current.invitation["eventType"]
+            || request.invitation["state"] != current.invitation["state"] { return Ok(None); }
         current
     } else {
         let Some(grant) = request.grant_id.map(|id| HuddleGrant::find_by_id(tx.conn(), id)).transpose()?.flatten() else { return Ok(None); };
         if grant.user_id != request.sender_id { return Ok(None); }
+        if request.invited_at.is_none() || request.invited_at != grant.last_issued_at.map(Timestamp::as_microsecond) { return Ok(None); }
         let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else { return Ok(None); };
         let Some(caller) = User::find_by_id(tx.conn(), grant.user_id)? else { return Ok(None); };
-        RingRequest { recipient_id:viewer.id, sender_id:caller.id, grant_id:Some(grant.id),
+        RingRequest { recipient_id:viewer.id, sender_id:caller.id, grant_id:Some(grant.id), invited_at:grant.last_issued_at.map(Timestamp::as_microsecond),
             invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":room.direct_display_name(tx.conn(),Some(&viewer),None)?,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""}) }
     };
     let grant = HuddleGrant::find_by_id(tx.conn(), current.grant_id.unwrap())?.unwrap();
@@ -148,7 +156,7 @@ fn item_ring_request(tx: &Tx<'_>, item: &ActivityItem) -> Result<Option<RingRequ
         room.name.clone()
     };
     Ok(Some(RingRequest {
-        recipient_id:viewer.id,sender_id:caller.id,grant_id:Some(grant.id),
+        recipient_id:viewer.id,sender_id:caller.id,grant_id:Some(grant.id),invited_at:Some(item.created_at.as_microsecond()),
         invitation:serde_json::json!({
             "activityItemId":item.id,"eventType":item.event_type,
             "state":if item.handled_at.is_some(){"handled"}else if item.read_at.is_some(){"read"}else{"unread"},
@@ -220,7 +228,7 @@ fn invite_recipient(
     if !huddle_notices::invitations_enabled(tx.conn(), recipient.id)? {
         let caller = User::find(tx.conn(), grant.user_id)?;
         let name = room.direct_display_name(tx.conn(), Some(recipient), None)?;
-        tx.emit_after_commit(Event::job(&RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""})}));
+        tx.emit_after_commit(Event::job(&RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invited_at:grant.last_issued_at.map(Timestamp::as_microsecond),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""})}));
         return Ok(());
     }
     let owned = ActivityItem::find_by_user_and_source(

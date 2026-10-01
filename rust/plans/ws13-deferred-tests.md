@@ -22,6 +22,8 @@ All 207 original declarations in the WS13b-assigned files now have complete cove
 
 PR #172 review regressions supplement these original declaration counts: queued rings now re-read recipient access and item/source state, and call-end callbacks cancel pending started frames, including already claimed workers. New probes in `reference-tools/ws13b_review_fixes.rb` run against Rails `d7c7de92`. Issuance commits before invitation callbacks; each invitation and its durable jobs share a later transaction, preserving earlier recipients when a later one fails. Gateway disconnect parsing now honors numeric offsets and preserves newer rejoin sightings; Rails rejects invalid 24-hour times. These review regressions do not change original declaration counts.
 
+The re-review's duplicate retry ring also failed first on `e9ddf5d9`. Ring requests now identify the invitation generation by the refreshed item `created_at` (or banner grant `last_issued_at`) and reject superseded jobs. Six pinned Rails retry sequences, both drain orders, the reviewer's legitimate-retry/post-commit probes and the nine earlier regressions keep their executable assertions; original declaration counts stay unchanged.
+
 ## Rails declaration coverage by file
 
 These are original declaration counts, not Rust test counts or individual vector counts. A declaration is closed only when all of its original assertions are covered. Each title remains below, including those now passed. Raw executable pass counts are in ws13-wave4-report.md.

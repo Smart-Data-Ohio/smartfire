@@ -1,0 +1,433 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "operation": "handled",
+      "phases": [
+        {
+          "name": "initial",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "mutation",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "handled",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "retry",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:03:01.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "unhandled",
+      "phases": [
+        {
+          "name": "initial",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "mutation",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": []
+        },
+        {
+          "name": "retry",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:03:01.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "missed",
+      "phases": [
+        {
+          "name": "initial",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "mutation",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_missed",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "retry",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:03:01.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "same_attempt_new_grant",
+      "phases": [
+        {
+          "name": "initial",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "mutation",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": []
+        },
+        {
+          "name": "retry",
+          "grant_id": 2,
+          "invited_at": "2026-01-01T12:03:01.000000Z",
+          "item_id": 1,
+          "source_id": 2,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "ended_retry",
+      "phases": [
+        {
+          "name": "initial",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "mutation",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_ended",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled"
+              }
+            }
+          ]
+        },
+        {
+          "name": "retry",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:03:01.000000Z",
+          "item_id": 1,
+          "source_id": 1,
+          "frames": [
+            {
+              "activityItemId": 1,
+              "huddleInvitation": {
+                "activityItemId": 1,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "/activity/1/read?state=read",
+                "handledPath": "/activity/1/handled?state=handled",
+                "silent": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "suppressed_retry",
+      "phases": [
+        {
+          "name": "initial",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": null,
+          "source_id": null,
+          "frames": [
+            {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "mutation",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:00:00.000000Z",
+          "item_id": null,
+          "source_id": null,
+          "frames": [
+            {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_ended",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "retry",
+          "grant_id": 1,
+          "invited_at": "2026-01-01T12:03:01.000000Z",
+          "item_id": null,
+          "source_id": null,
+          "frames": [
+            {
+              "activityItemId": 0,
+              "huddleInvitation": {
+                "activityItemId": 0,
+                "eventType": "huddle_started",
+                "state": "unread",
+                "roomId": 186869642,
+                "roomName": "David",
+                "roomPath": "/rooms/186869642",
+                "callerName": "David",
+                "readPath": "",
+                "handledPath": "",
+                "silent": false
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

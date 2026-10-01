@@ -648,3 +648,59 @@ fn ws13b_review_invitation_insert_failure_keeps_committed_reissuance() {
 fn ws13b_review_later_recipient_failure_keeps_earlier_invitation_committed() {
     review_invitation_insert_failure("group");
 }
+
+#[test]
+fn reviewer_delayed_handled_job_must_not_become_a_second_retry_ring() {
+    use crate::models::huddle_invitations::{RingRequest, publish_ring_with_policy};
+    let db = TestDb::new();
+    let (room, membership, session) = review_direct_setup(&db);
+    let recipient = crate::fixtures::identify("jason");
+    let grant = db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
+    let first = db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>()).find(|r| r.recipient_id == recipient).unwrap();
+    let item = first.invitation["activityItemId"].as_i64().unwrap();
+    db.write(move |tx| publish_ring_with_policy(tx, &first, None));
+    db.sink.take();
+    db.write(move |tx| crate::ActivityItem::find(tx.conn(), item)?.mark_handled(tx));
+    let mut backlog: Vec<_> = db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>()).collect();
+    assert_eq!(backlog.len(), 1);
+    assert_eq!(backlog[0].invitation["state"], "handled");
+    db.travel(181);
+    let retry = db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
+    assert_eq!(retry.id, grant.id);
+    backlog.extend(db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>()));
+    assert_eq!(backlog.len(), 2, "one handled update and one retry job");
+    for request in backlog { db.write(move |tx| publish_ring_with_policy(tx, &request, None)); }
+    let frames: Vec<_> = db.sink.take().iter().filter_map(|e| e.as_broadcast()).filter_map(|b| match b {
+        crate::broadcasts::Broadcast::Cable{payload,..} => Some(payload["huddleInvitation"].clone()), _ => None
+    }).collect();
+    let rings = frames.iter().filter(|p| p["eventType"]=="huddle_started" && p["state"]=="unread").count();
+    assert_eq!(rings, 1, "a queued handled update was promoted into a fresh retry ring: {frames:?}");
+}
+
+#[test]
+fn reviewer_issuance_and_ring_publication_stay_after_commit() {
+    use crate::models::huddle_invitations::{RingRequest, publish_ring_with_policy};
+    let db = TestDb::new();
+    let (room, membership, session) = review_direct_setup(&db);
+    db.sink.take();
+    let sink = db.sink.clone();
+    let result: crate::Result<()> = db.try_write(move |tx| {
+        HuddleGrant::issue(tx, session, membership, room, &config())?;
+        assert!(sink.events().is_empty(), "issuance emitted before commit");
+        Err(crate::Error::Other("review rollback".into()))
+    });
+    assert!(result.is_err());
+    assert!(db.sink.take().is_empty());
+    let count: i64 = db.read(move |conn| Ok(conn.query_row("SELECT COUNT(*) FROM huddle_grants WHERE session_id=?", [session], |r|r.get(0))?));
+    assert_eq!(count, 0);
+    db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
+    let request = db.sink.take().iter().filter_map(|e|e.as_job::<RingRequest>()).next().unwrap();
+    let sink = db.sink.clone();
+    let result: crate::Result<()> = db.try_write(move |tx| {
+        publish_ring_with_policy(tx, &request, None)?;
+        assert!(sink.events().is_empty(), "ring escaped before commit");
+        Err(crate::Error::Other("review ring rollback".into()))
+    });
+    assert!(result.is_err());
+    assert!(db.sink.take().is_empty());
+}
