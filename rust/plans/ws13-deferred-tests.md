@@ -631,7 +631,7 @@ Owner: WS13. Complete: 8/8 original declarations passed against the actual seede
 
 ## test/system/huddle_invitations_test.rb
 
-Owner: WS13. Eight of ten declarations pass with the exact current WS13b API in an isolated fresh clone; all ten depend on that branch. The first two fail because the public ActivityItemsController count/read/handled endpoints are still 501 on main. The current WS11-UI report owns the inbox index/count and lists read/handled as its inbox continuation; the old WS12 source note is historical. Exact routes and ownership evidence are in ws13-inbox-route-dependencies.md. No domain or foreign-owner controller implementation was copied into WS13.
+Owner: WS13. Eight of ten declarations pass in a fresh clone through main's merged WS13b APIs, without an overlay. The two inbox declarations remain deferred to WS11-UI: the public ActivityItemsController count/read/handled endpoints return 501. Their complete assertions can be enabled with WS13_ENABLE_INBOX_CASES=1. Exact routes and ownership evidence are in ws13-inbox-route-dependencies.md. No domain or foreign-owner controller implementation was copied into WS13.
 
 - the recipient sees an incoming huddle banner and dismissing it marks the item read
 - joining from the banner marks the item handled, navigates to the DM room, and rings the huddle panel
@@ -692,7 +692,7 @@ Owner: WS13. Complete: 8/8 original declarations passed against real Rust pages,
 
 ## test/system/huddles_test.rb
 
-Owner: WS13. All 31 original declarations are implemented against the project-local real LiveKit server. Every original assertion passed across the media runs; the latest fresh 35-case run (31 huddles plus four Stage) had one initial RTP-byte timing failure. A different fixture-readiness failure occurred in the worktree. Both are explicitly retained in the report; this is assertion coverage across runs, not a green-batch claim.
+Owner: WS13. All 31 original declarations pass against the project-local real LiveKit server. The current fresh-clone batch passes all 35 media cases (31 huddles plus four Stage), including device-picker readiness and inbound RTP-byte assertions. Raw results are in ws13-wave4-report.md. No recorded response substitutes for WebRTC tracks, audio/video decode, token-refresh reconnects or server enforcement.
 
 - **Passed:** two users exchange audio and a screen while navigating and muting
 - **Passed:** two users exchange camera video while navigating, muting, toggling, and leaving
