@@ -621,9 +621,6 @@ impl Ctx {
     /// The etaggers are turbo-rails' frame etagger, `ETagWithTemplateDigest` and `ETagWithFlash`.
     fn combine_etags(&mut self, validator: Option<String>, freshness: &Freshness) -> String {
         let mut parts: Vec<String> = validator.into_iter().collect();
-        if self.is_turbo_frame_request() {
-            parts.push("frame".into());
-        }
         if let Some(template) = &freshness.template {
             parts.push(template.clone());
         }
@@ -631,6 +628,10 @@ impl Ctx {
         if !flash.is_empty() {
             let flashes: Vec<String> = flash.keys().map(|k| format!("{k}={:?}", flash.get(k))).collect();
             parts.push(flashes.join("&"));
+        }
+        // Rails installs the template/flash etaggers before turbo-rails' FrameRequest.
+        if self.is_turbo_frame_request() {
+            parts.push("frame".into());
         }
         hex::encode(&Sha256::digest(parts.join("/"))[..16])
     }

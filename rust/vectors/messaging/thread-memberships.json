@@ -1,0 +1,429 @@
+{
+  "reference": "d7c7de92",
+  "parent_id": 935962058,
+  "thread_id": 9,
+  "steps": [
+    {
+      "name": "invalid",
+      "action": "join",
+      "input": {
+        "involvement": "invalid"
+      },
+      "verb": "post",
+      "format": "json",
+      "time": "2026-03-02T16:00:00Z",
+      "status": 422,
+      "json": {
+        "error": "Involvement must be one of nothing, mentions, or everything"
+      },
+      "json_text": "{\"error\":\"Involvement must be one of nothing, mentions, or everything\"}",
+      "cache_control": "no-store",
+      "location": null,
+      "membership": null
+    },
+    {
+      "name": "read_before_join",
+      "action": "read",
+      "input": {},
+      "verb": "patch",
+      "format": "json",
+      "time": "2026-03-02T16:00:01Z",
+      "status": 404,
+      "json": {
+        "error": "Join the thread before marking it read"
+      },
+      "json_text": "{\"error\":\"Join the thread before marking it read\"}",
+      "cache_control": "no-store",
+      "location": null,
+      "membership": null
+    },
+    {
+      "name": "join_default",
+      "action": "join",
+      "input": {},
+      "verb": "post",
+      "format": "json",
+      "time": "2026-03-02T16:00:02Z",
+      "status": 200,
+      "json": {
+        "thread": {
+          "id": 9,
+          "name": "Membership thread",
+          "status": "active",
+          "room_id": 486777696,
+          "parent_message_id": 935962058,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "closed_at": null,
+          "locked_at": null,
+          "auto_archive_after_minutes": 4320,
+          "work": false,
+          "work_status": null,
+          "work_owner_id": null,
+          "work_owner": null,
+          "work_owner_active": false,
+          "work_history": null,
+          "work_owner_options": null,
+          "joined": true,
+          "unread": false,
+          "involvement": "mentions",
+          "message_count": 0,
+          "member_count": 1,
+          "creator": {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "url": "http://campfire.test/rooms/486777696/threads/9",
+          "permalink_url": "http://campfire.test/rooms/486777696?thread=9",
+          "permissions": {
+            "can_rename": true,
+            "can_close": true,
+            "can_reopen": true,
+            "can_lock": true,
+            "can_unlock": true,
+            "can_delete": true,
+            "can_convert_work": true,
+            "can_manage_work": false,
+            "can_update_work_status": false,
+            "can_assign_work": false,
+            "can_remove_work": false
+          }
+        },
+        "membership": {
+          "id": 7,
+          "user_id": 127326141,
+          "involvement": "mentions",
+          "unread_at": null,
+          "joined_at": "2026-03-02T16:00:02.000Z"
+        }
+      },
+      "json_text": "{\"thread\":{\"id\":9,\"name\":\"Membership thread\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"mentions\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"membership\":{\"id\":7,\"user_id\":127326141,\"involvement\":\"mentions\",\"unread_at\":null,\"joined_at\":\"2026-03-02T16:00:02.000Z\"}}",
+      "cache_control": "no-store",
+      "location": null,
+      "membership": {
+        "id": 7,
+        "involvement": "mentions",
+        "joined_at": "2026-03-02T16:00:02.000Z",
+        "unread_at": null,
+        "updated_at": "2026-03-02T16:00:02.000Z"
+      }
+    },
+    {
+      "name": "join_update",
+      "action": "join",
+      "input": {
+        "involvement": "everything"
+      },
+      "verb": "post",
+      "format": "json",
+      "time": "2026-03-02T16:00:03Z",
+      "status": 200,
+      "json": {
+        "thread": {
+          "id": 9,
+          "name": "Membership thread",
+          "status": "active",
+          "room_id": 486777696,
+          "parent_message_id": 935962058,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "closed_at": null,
+          "locked_at": null,
+          "auto_archive_after_minutes": 4320,
+          "work": false,
+          "work_status": null,
+          "work_owner_id": null,
+          "work_owner": null,
+          "work_owner_active": false,
+          "work_history": null,
+          "work_owner_options": null,
+          "joined": true,
+          "unread": false,
+          "involvement": "everything",
+          "message_count": 0,
+          "member_count": 1,
+          "creator": {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "url": "http://campfire.test/rooms/486777696/threads/9",
+          "permalink_url": "http://campfire.test/rooms/486777696?thread=9",
+          "permissions": {
+            "can_rename": true,
+            "can_close": true,
+            "can_reopen": true,
+            "can_lock": true,
+            "can_unlock": true,
+            "can_delete": true,
+            "can_convert_work": true,
+            "can_manage_work": false,
+            "can_update_work_status": false,
+            "can_assign_work": false,
+            "can_remove_work": false
+          }
+        },
+        "membership": {
+          "id": 7,
+          "user_id": 127326141,
+          "involvement": "everything",
+          "unread_at": null,
+          "joined_at": "2026-03-02T16:00:02.000Z"
+        }
+      },
+      "json_text": "{\"thread\":{\"id\":9,\"name\":\"Membership thread\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"everything\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"membership\":{\"id\":7,\"user_id\":127326141,\"involvement\":\"everything\",\"unread_at\":null,\"joined_at\":\"2026-03-02T16:00:02.000Z\"}}",
+      "cache_control": "no-store",
+      "location": null,
+      "membership": {
+        "id": 7,
+        "involvement": "everything",
+        "joined_at": "2026-03-02T16:00:02.000Z",
+        "unread_at": null,
+        "updated_at": "2026-03-02T16:00:03.000Z"
+      }
+    },
+    {
+      "name": "invalid_joined",
+      "action": "join",
+      "input": {
+        "involvement": [
+          "mentions"
+        ]
+      },
+      "verb": "post",
+      "format": "json",
+      "time": "2026-03-02T16:00:04Z",
+      "status": 422,
+      "json": {
+        "error": "Involvement must be one of nothing, mentions, or everything"
+      },
+      "json_text": "{\"error\":\"Involvement must be one of nothing, mentions, or everything\"}",
+      "cache_control": "no-store",
+      "location": null,
+      "membership": {
+        "id": 7,
+        "involvement": "everything",
+        "joined_at": "2026-03-02T16:00:02.000Z",
+        "unread_at": null,
+        "updated_at": "2026-03-02T16:00:03.000Z"
+      }
+    },
+    {
+      "name": "read",
+      "action": "read",
+      "input": {},
+      "verb": "patch",
+      "format": "json",
+      "time": "2026-03-02T16:00:05Z",
+      "status": 200,
+      "json": {
+        "thread": {
+          "id": 9,
+          "name": "Membership thread",
+          "status": "active",
+          "room_id": 486777696,
+          "parent_message_id": 935962058,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "closed_at": null,
+          "locked_at": null,
+          "auto_archive_after_minutes": 4320,
+          "work": false,
+          "work_status": null,
+          "work_owner_id": null,
+          "work_owner": null,
+          "work_owner_active": false,
+          "work_history": null,
+          "work_owner_options": null,
+          "joined": true,
+          "unread": false,
+          "involvement": "everything",
+          "message_count": 0,
+          "member_count": 1,
+          "creator": {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "url": "http://campfire.test/rooms/486777696/threads/9",
+          "permalink_url": "http://campfire.test/rooms/486777696?thread=9",
+          "permissions": {
+            "can_rename": true,
+            "can_close": true,
+            "can_reopen": true,
+            "can_lock": true,
+            "can_unlock": true,
+            "can_delete": true,
+            "can_convert_work": true,
+            "can_manage_work": false,
+            "can_update_work_status": false,
+            "can_assign_work": false,
+            "can_remove_work": false
+          }
+        },
+        "membership": {
+          "id": 7,
+          "user_id": 127326141,
+          "involvement": "everything",
+          "unread_at": null,
+          "joined_at": "2026-03-02T16:00:02.000Z"
+        }
+      },
+      "json_text": "{\"thread\":{\"id\":9,\"name\":\"Membership thread\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"everything\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"membership\":{\"id\":7,\"user_id\":127326141,\"involvement\":\"everything\",\"unread_at\":null,\"joined_at\":\"2026-03-02T16:00:02.000Z\"}}",
+      "cache_control": "no-store",
+      "location": null,
+      "membership": {
+        "id": 7,
+        "involvement": "everything",
+        "joined_at": "2026-03-02T16:00:02.000Z",
+        "unread_at": null,
+        "updated_at": "2026-03-02T16:00:05.000Z"
+      }
+    },
+    {
+      "name": "read_again",
+      "action": "read",
+      "input": {},
+      "verb": "patch",
+      "format": "json",
+      "time": "2026-03-02T16:00:06Z",
+      "status": 200,
+      "json": {
+        "thread": {
+          "id": 9,
+          "name": "Membership thread",
+          "status": "active",
+          "room_id": 486777696,
+          "parent_message_id": 935962058,
+          "last_activity_at": "2026-03-02T16:00:00.000Z",
+          "closed_at": null,
+          "locked_at": null,
+          "auto_archive_after_minutes": 4320,
+          "work": false,
+          "work_status": null,
+          "work_owner_id": null,
+          "work_owner": null,
+          "work_owner_active": false,
+          "work_history": null,
+          "work_owner_options": null,
+          "joined": true,
+          "unread": false,
+          "involvement": "everything",
+          "message_count": 0,
+          "member_count": 1,
+          "creator": {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "avatar_url": "http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000",
+            "icon_name": null,
+            "icon_avatar_url": null
+          },
+          "url": "http://campfire.test/rooms/486777696/threads/9",
+          "permalink_url": "http://campfire.test/rooms/486777696?thread=9",
+          "permissions": {
+            "can_rename": true,
+            "can_close": true,
+            "can_reopen": true,
+            "can_lock": true,
+            "can_unlock": true,
+            "can_delete": true,
+            "can_convert_work": true,
+            "can_manage_work": false,
+            "can_update_work_status": false,
+            "can_assign_work": false,
+            "can_remove_work": false
+          }
+        },
+        "membership": {
+          "id": 7,
+          "user_id": 127326141,
+          "involvement": "everything",
+          "unread_at": null,
+          "joined_at": "2026-03-02T16:00:02.000Z"
+        }
+      },
+      "json_text": "{\"thread\":{\"id\":9,\"name\":\"Membership thread\",\"status\":\"active\",\"room_id\":486777696,\"parent_message_id\":935962058,\"last_activity_at\":\"2026-03-02T16:00:00.000Z\",\"closed_at\":null,\"locked_at\":null,\"auto_archive_after_minutes\":4320,\"work\":false,\"work_status\":null,\"work_owner_id\":null,\"work_owner\":null,\"work_owner_active\":false,\"work_history\":null,\"work_owner_options\":null,\"joined\":true,\"unread\":false,\"involvement\":\"everything\",\"message_count\":0,\"member_count\":1,\"creator\":{\"id\":149087659,\"name\":\"Jason\",\"role\":\"administrator\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"icon_name\":null,\"icon_avatar_url\":null},\"url\":\"http://campfire.test/rooms/486777696/threads/9\",\"permalink_url\":\"http://campfire.test/rooms/486777696?thread=9\",\"permissions\":{\"can_rename\":true,\"can_close\":true,\"can_reopen\":true,\"can_lock\":true,\"can_unlock\":true,\"can_delete\":true,\"can_convert_work\":true,\"can_manage_work\":false,\"can_update_work_status\":false,\"can_assign_work\":false,\"can_remove_work\":false}},\"membership\":{\"id\":7,\"user_id\":127326141,\"involvement\":\"everything\",\"unread_at\":null,\"joined_at\":\"2026-03-02T16:00:02.000Z\"}}",
+      "cache_control": "no-store",
+      "location": null,
+      "membership": {
+        "id": 7,
+        "involvement": "everything",
+        "joined_at": "2026-03-02T16:00:02.000Z",
+        "unread_at": null,
+        "updated_at": "2026-03-02T16:00:05.000Z"
+      }
+    },
+    {
+      "name": "leave",
+      "action": "leave",
+      "input": {},
+      "verb": "delete",
+      "format": "json",
+      "time": "2026-03-02T16:00:07Z",
+      "status": 204,
+      "json": null,
+      "json_text": null,
+      "cache_control": "no-cache",
+      "location": null,
+      "membership": null
+    },
+    {
+      "name": "leave_again",
+      "action": "leave",
+      "input": {},
+      "verb": "delete",
+      "format": "json",
+      "time": "2026-03-02T16:00:08Z",
+      "status": 204,
+      "json": null,
+      "json_text": null,
+      "cache_control": "no-cache",
+      "location": null,
+      "membership": null
+    },
+    {
+      "name": "join_html",
+      "action": "join",
+      "input": {
+        "involvement": "nothing"
+      },
+      "verb": "post",
+      "format": "html",
+      "time": "2026-03-02T16:00:09Z",
+      "status": 302,
+      "json": null,
+      "json_text": null,
+      "cache_control": "no-store",
+      "location": "http://campfire.test/rooms/486777696/threads/9",
+      "membership": {
+        "id": 8,
+        "involvement": "nothing",
+        "joined_at": "2026-03-02T16:00:09.000Z",
+        "unread_at": null,
+        "updated_at": "2026-03-02T16:00:09.000Z"
+      }
+    },
+    {
+      "name": "leave_html",
+      "action": "leave",
+      "input": {},
+      "verb": "delete",
+      "format": "html",
+      "time": "2026-03-02T16:00:10Z",
+      "status": 302,
+      "json": null,
+      "json_text": null,
+      "cache_control": "no-cache",
+      "location": "http://campfire.test/rooms/486777696/threads/9",
+      "membership": null
+    }
+  ]
+}

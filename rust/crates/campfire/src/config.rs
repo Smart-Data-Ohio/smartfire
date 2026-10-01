@@ -56,6 +56,9 @@ pub struct Config {
     /// `LIVEKIT_URL`, whose origin the Content Security Policy allows to connect.
     pub livekit_url: Option<String>,
     pub huddle: crate::huddle::Config,
+    /// WS8bm2 readiness seam; WS13 owns launching the returned huddle.
+    pub huddles_configured: bool,
+    pub google_picker: Option<campfire_views::layouts::GooglePicker>,
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
     pub admin_session_idle_timeout: jiff::SignedDuration,
 }
@@ -153,6 +156,8 @@ impl Config {
                 .saturating_mul(1 << 20),
             livekit_url: get("LIVEKIT_URL"),
             huddle: crate::huddle::Config::from_lookup(&get),
+            huddles_configured: crate::huddle_readiness::huddles_configured(&get),
+            google_picker: crate::picker_configuration::picker(&get),
             admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),
         })
     }

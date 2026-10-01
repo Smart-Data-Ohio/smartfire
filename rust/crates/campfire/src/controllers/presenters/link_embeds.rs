@@ -8,9 +8,9 @@ use campfire_db::{Connection, Message, Room};
 use campfire_views::messages::{self, MessageComponents};
 
 pub fn components(presenter: &super::Presenter<'_>, message: &Message) -> campfire_db::Result<MessageComponents> {
-    let mut components = MessageComponents { twitter_posts: super::twitter_cards::cards(presenter, message)?, fizzy_cards: super::fizzy_cards::frames(presenter.conn, message)?, ..Default::default() };
+    let mut components = MessageComponents { twitter_posts: super::twitter_cards::cards(presenter, message)?, fizzy_cards: super::fizzy_cards::frames_from_cards(message, &presenter.fizzy_cards(message)?), ..Default::default() };
     if !message.embeds_suppressed {
-        for reference in Reference::for_message(presenter.conn, message)? {
+        for reference in presenter.link_references(message)? {
             presenter.request_link_fetch(&reference.embed);
             if reference.embed.linkedin() {
                 let embed = &reference.embed;
@@ -46,7 +46,7 @@ pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>, twitter_ids: Vec<i
     if ids.is_empty() && twitter_ids.is_empty() {
         return Ok(());
     }
-    app.db
+    let result = app.db
         .write(move |tx| {
             for id in ids {
                 match crate::integrations::link_embed::Embed::find(tx.conn(), id) {
@@ -66,7 +66,11 @@ pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>, twitter_ids: Vec<i
             }
             Ok(())
         })
-        .await
+        .await;
+    // Collection fragments can be stored before this writer rejects a fetch job.
+    // Do not let a retry reuse that incomplete render and lose its pending requests.
+    if result.is_err() { app.fragment_cache.clear(); }
+    result
 }
 
 /// WS8b's actions-menu seam: the HTTP endpoint also independently enforces this policy.

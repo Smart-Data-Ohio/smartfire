@@ -1,0 +1,140 @@
+{
+  "reference": "d7c7de92",
+  "root_ids": [
+    935961915,
+    935961916,
+    136976342
+  ],
+  "cases": {
+    "create": {
+      "status": 200,
+      "location": null,
+      "json": {
+        "room_id": 486777696,
+        "unread": false
+      },
+      "frames": [
+        {
+          "stream": "user_127326141_reads",
+          "message": {
+            "room_id": 486777696
+          }
+        }
+      ],
+      "unread": false,
+      "pointer": 136976342
+    },
+    "second": {
+      "status": 200,
+      "location": null,
+      "json": {
+        "room_id": 486777696,
+        "unread": true,
+        "first_unread_message_id": 935961916
+      },
+      "frames": [
+        {
+          "stream": "user_127326141_unreads",
+          "message": {
+            "roomId": 486777696
+          }
+        }
+      ],
+      "unread": true,
+      "pointer": 935961915
+    },
+    "first": {
+      "status": 200,
+      "location": null,
+      "json": {
+        "room_id": 486777696,
+        "unread": true,
+        "first_unread_message_id": 935961915
+      },
+      "frames": [
+        {
+          "stream": "user_127326141_unreads",
+          "message": {
+            "roomId": 486777696
+          }
+        }
+      ],
+      "unread": true,
+      "pointer": null
+    },
+    "foreign": {
+      "status": 404,
+      "location": null,
+      "json": {
+        "status": 404,
+        "error": "Not Found"
+      },
+      "frames": [],
+      "unread": true,
+      "pointer": null
+    },
+    "missing": {
+      "status": 404,
+      "location": null,
+      "json": {
+        "status": 404,
+        "error": "Not Found"
+      },
+      "frames": [],
+      "unread": true,
+      "pointer": null
+    },
+    "outsider": {
+      "status": 404,
+      "location": null,
+      "json": {
+        "status": 404,
+        "error": "Not Found"
+      },
+      "frames": [],
+      "unread": true,
+      "pointer": null
+    },
+    "anonymous": {
+      "status": 302,
+      "location": "http://campfire.test/session/new",
+      "json": null,
+      "frames": [],
+      "unread": true,
+      "pointer": null
+    },
+    "bot": {
+      "status": 403,
+      "location": null,
+      "json": null,
+      "frames": [],
+      "unread": true,
+      "pointer": null
+    },
+    "deleted": {
+      "status": 404,
+      "location": null,
+      "json": {
+        "status": 404,
+        "error": "Not Found"
+      },
+      "frames": [],
+      "unread": true,
+      "pointer": null
+    }
+  },
+  "refresh": {
+    "text/vnd.turbo-stream.html": {
+      "status": 204,
+      "body": ""
+    },
+    "text/html": {
+      "status": 204,
+      "body": ""
+    },
+    "application/json": {
+      "status": 204,
+      "body": ""
+    }
+  }
+}

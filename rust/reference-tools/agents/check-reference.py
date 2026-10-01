@@ -6,6 +6,9 @@ import subprocess
 
 root = Path(__file__).resolve().parents[3]
 files = [
+    'db/migrate/20260916000000_create_agents.rb',
+    'app/models/user/starring.rb', 'app/models/user/status_settings.rb', 'app/models/user/two_factor.rb',
+    'app/models/two_factor_credential.rb', 'app/models/session.rb', 'app/models/room_category.rb', 'app/models/message_pin.rb',
     'app/models/user/bot.rb', 'app/models/agent.rb', 'app/models/agent_credential.rb', 'app/models/agent_grant.rb',
     'app/controllers/concerns/authentication.rb', 'app/controllers/concerns/agent_authorization.rb',
     'app/controllers/accounts/bots/keys_controller.rb', 'app/controllers/messages/by_bots_controller.rb',
@@ -24,7 +27,7 @@ files = [
     'app/models/agent_step.rb', 'app/services/agents/steps.rb',
     'app/models/agent_slash_command.rb', 'app/services/agents/slash_commands.rb',
     'app/services/slash_commands/dispatcher.rb', 'app/models/activity_item.rb',
-    'app/services/agents/working_presence.rb',
+    'app/services/agents/working_presence.rb', 'app/models/channel_thread.rb', 'app/services/agents/context_builder.rb', 'app/services/agents/direct_messages.rb', 'app/models/message.rb', 'app/models/message/broadcasts.rb', 'app/models/user/bannable.rb', 'app/services/agents/streaming.rb', 'app/jobs/message/stream_trailing_broadcast_job.rb', 'app/services/periodic/runner.rb',
 ]
 command = ['docker', 'run', '--rm', '--name', 'ws11-reference-source-check', '--entrypoint', 'sha256sum',
            'triage-reference-d7c7de92', *['/rails/' + file for file in files]]

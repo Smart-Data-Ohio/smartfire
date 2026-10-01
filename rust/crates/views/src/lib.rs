@@ -27,13 +27,18 @@ pub mod rooms;
 pub mod huddle;
 pub mod huddle_stage;
 pub mod messages;
+pub mod channel_threads;
 pub mod github;
 pub mod integration_health;
 pub mod searches;
+pub mod pins;
+pub mod saved_items;
+pub mod scheduled_messages;
 pub mod events;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the
 /// helpers read from `Current`, `request`, `flash` and the session.
+#[derive(Clone)]
 pub struct ViewContext<'a> {
     pub current_user: Option<CurrentUser>,
     pub account: AccountSummary,
@@ -171,5 +176,7 @@ pub struct Platform {
     pub operating_system: String,
 }
 
+pub mod room_files;
+pub mod message_links;
 #[cfg(test)]
 mod card_html_audit;

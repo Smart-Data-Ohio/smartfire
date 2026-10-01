@@ -1,0 +1,46 @@
+{
+  "reference": "d7c7de92",
+  "sources": {
+    "app/controllers/channel_threads_controller.rb": "3be99780463dc3033c01ac82f8df206a27e1912b8234ef172383d2a229758f2c",
+    "app/views/channel_threads/show.html.erb": "ca89dbda17176587431322aa093b23497fee5cb0e97f6ee90589f5515a5e0051",
+    "app/helpers/github/pull_requests_helper.rb": "9c9c2375c5c995bd0d65da29095bed3c9337265f3622ebcb21ca891f2c8b5cd1",
+    "app/views/github/pull_requests/_thread_header.html.erb": "982ca0f51e30548d00a0b7ed92951377c2d3bce4e04fae8a02087e33b17c6936"
+  },
+  "thread_id": 8,
+  "room_id": 654632876,
+  "pull_request_id": 1,
+  "rows": [
+    {
+      "name": "public",
+      "private": false,
+      "mapped": true,
+      "path": "/rooms/654632876/threads/8",
+      "status": 200,
+      "body": "<main class=\"thread\" aria-labelledby=\"thread-title\" data-controller=\"message-format message-list\" data-message-format-first-of-day-class=\"message--first-of-day\" data-message-format-formatted-class=\"message--formatted\" data-message-format-me-class=\"message--me\" data-message-format-mentioned-class=\"message--mentioned\" data-message-format-threaded-class=\"message--threaded\">\n  <header>\n    <h1 id=\"thread-title\">Pull request review</h1>\n    <p>active · 0 messages</p>\n  </header>\n\n    <div id=\"github_pr_header_channel_thread_8\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODQ6bWVzc2FnZXMi--1834aea5d599dd4959c85ce490d2b832632bcd92b547594cd26852d93c2ab855\"></turbo-cable-stream-source>\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"smart-data-ohio/smartfire#42\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Smart-Data-Ohio/smartfire</span>\n    <span class=\"github-pr-card__number\">#42</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Port the launch checklist</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n          parity-user\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base ← head\">\n          main ← rust-parity\n        </span>\n\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--success\">No checks</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Smart-Data-Ohio/smartfire/pull/42\">View on GitHub</a>\n  </footer>\n</article>\n\n    <section class=\"github-pr-files\" aria-label=\"Files changed\">\n  <h2 class=\"github-pr-files__heading\">Files changed</h2>\n    <p class=\"github-pr-files__loading\">Loading files…</p>\n</section>\n\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_8\" src=\"/rooms/654632876/github/pull_request_write_actions/1\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n\n\n\n  <section aria-label=\"Thread messages\">\n    \n  </section>\n</main>"
+    },
+    {
+      "name": "private",
+      "private": true,
+      "mapped": true,
+      "path": "/rooms/654632876/threads/8",
+      "status": 200,
+      "body": "<main class=\"thread\" aria-labelledby=\"thread-title\" data-controller=\"message-format message-list\" data-message-format-first-of-day-class=\"message--first-of-day\" data-message-format-formatted-class=\"message--formatted\" data-message-format-me-class=\"message--me\" data-message-format-mentioned-class=\"message--mentioned\" data-message-format-threaded-class=\"message--threaded\">\n  <header>\n    <h1 id=\"thread-title\">Pull request review</h1>\n    <p>active · 0 messages</p>\n  </header>\n\n    <div id=\"github_pr_header_channel_thread_8\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODQ6bWVzc2FnZXMi--1834aea5d599dd4959c85ce490d2b832632bcd92b547594cd26852d93c2ab855\"></turbo-cable-stream-source>\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_thread_8_github_pull_request_1\" src=\"/rooms/654632876/github/pull_requests/1/card?thread_id=8\"></turbo-frame>\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_8\" src=\"/rooms/654632876/github/pull_request_write_actions/1\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n\n\n\n  <section aria-label=\"Thread messages\">\n    \n  </section>\n</main>"
+    },
+    {
+      "name": "unknown",
+      "private": null,
+      "mapped": true,
+      "path": "/rooms/654632876/threads/8",
+      "status": 200,
+      "body": "<main class=\"thread\" aria-labelledby=\"thread-title\" data-controller=\"message-format message-list\" data-message-format-first-of-day-class=\"message--first-of-day\" data-message-format-formatted-class=\"message--formatted\" data-message-format-me-class=\"message--me\" data-message-format-mentioned-class=\"message--mentioned\" data-message-format-threaded-class=\"message--threaded\">\n  <header>\n    <h1 id=\"thread-title\">Pull request review</h1>\n    <p>active · 0 messages</p>\n  </header>\n\n    <div id=\"github_pr_header_channel_thread_8\" class=\"github-pr-thread-header\">\n  <turbo-cable-stream-source channel=\"RoomMessagesChannel\" signed-stream-name=\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDODQ6bWVzc2FnZXMi--1834aea5d599dd4959c85ce490d2b832632bcd92b547594cd26852d93c2ab855\"></turbo-cable-stream-source>\n    <turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_thread_8_github_pull_request_1\" src=\"/rooms/654632876/github/pull_requests/1/card?thread_id=8\"></turbo-frame>\n  <turbo-frame class=\"github-pr-write\" id=\"github_write_actions_channel_thread_8\" src=\"/rooms/654632876/github/pull_request_write_actions/1\">\n    <p class=\"github-pr-write__loading\">Loading GitHub actions…</p>\n</turbo-frame></div>\n\n\n\n  <section aria-label=\"Thread messages\">\n    \n  </section>\n</main>"
+    },
+    {
+      "name": "unmapped",
+      "private": false,
+      "mapped": false,
+      "path": "/rooms/654632876/threads/8",
+      "status": 200,
+      "body": "<main class=\"thread\" aria-labelledby=\"thread-title\" data-controller=\"message-format message-list\" data-message-format-first-of-day-class=\"message--first-of-day\" data-message-format-formatted-class=\"message--formatted\" data-message-format-me-class=\"message--me\" data-message-format-mentioned-class=\"message--mentioned\" data-message-format-threaded-class=\"message--threaded\">\n  <header>\n    <h1 id=\"thread-title\">Pull request review</h1>\n    <p>active · 0 messages</p>\n  </header>\n\n\n\n  <section aria-label=\"Thread messages\">\n    \n  </section>\n</main>"
+    }
+  ]
+}
