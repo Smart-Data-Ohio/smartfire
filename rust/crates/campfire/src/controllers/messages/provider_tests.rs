@@ -21,3 +21,26 @@ pub(crate) async fn assert_references(app:&TestApp,row:&Value) {
     }).await.unwrap();
     assert_eq!(refs["github"],row["github"]);assert_eq!(refs["twitter"],row["twitter"]);
 }
+
+// WS14e owns event reference synchronization; this real-controller probe is
+// enabled when that owner's callback lands. GitHub/Twitter remain covered above.
+#[tokio::test]
+#[ignore = "WS14e event-reference callback is not merged; real HTTP probe fails on the missing reference"]
+async fn legacy_rich_text_edit_synchronizes_event_reference_through_ws14e() {
+    use axum::http::Method;
+    use campfire_kit::clock::FrozenClock;
+    let row:Value=serde_json::from_str(include_str!("../../../../../vectors/messaging/event-reference-declaration.json")).unwrap();
+    let mut app=TestApp::boot_with_test_clock(std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    let id=app.db().write(|tx|Message::create(tx,NewMessage{room_id:654632876,creator_id:DAVID,body:Some("<div>no links here</div>".into()),client_message_id:Some("legacy-resync-event".into()),..Default::default()}).map(|m|m.id)).await.unwrap();
+    assert_eq!(row["message_id"],id);
+    let response=app.david().write(Req::new(Method::PATCH,row["path"].as_str().unwrap()).header("content-type","application/json").body(json!({"message":row["input"]}).to_string())).await;
+    assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16);
+    assert_eq!(response.location(),row["location"].as_str());
+    let events=app.db().read(move|conn| {
+        let mut stmt=conn.prepare("SELECT event_id FROM event_references WHERE message_id=? ORDER BY id")?;
+        let ids=stmt.query_map([id],|r|r.get::<_,i64>(0))?.collect::<Result<Vec<_>,_>>()?;
+        Ok(ids)
+    }).await.unwrap();
+    assert_eq!(json!(events),row["events"]);
+}

@@ -1,10 +1,10 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 137 of 156 declarations have scoped evidence; 19 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 143 of 156 declarations have scoped evidence; the remaining 13 are blocked only on other owners. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
-56 named declarations; 48 have scoped Rust evidence below, and 8 await attribution/signoff. Reference execution counts are in the main report.
+56 named declarations; 54 have scoped Rust evidence below; the remaining 2 are blocked on WS8b-r and WS14e. Reference execution counts are in the main report.
 
 - index returns the last page by default — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (complete pinned Rails page/response comparisons).
 - index is not found for a soft-deleted room — WS8bm. Attributed to `messages::http_tests::deleted_room_is_inaccessible_even_with_a_lingering_membership` (actual requests with retained membership).
@@ -16,7 +16,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - index etag changes when an author is renamed — WS8bm. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (author cache stamp invalidates the existing validator).
 - index etag changes when the older of two pins is removed — WS8b-m2; WS8bm cache integration. Attributed to `messages::paging_tests::validators_observe_related_rows_and_older_unpins_without_message_touches` (actual older-pin removal invalidates the prior HTTP validator; M2 owns pin endpoints).
 - get renders a single message belonging to the user — WS8bm. Attributed to `messages::root_tests::standalone_message_wrapper_matches_rails_bytes` (four complete standalone Rails view bodies).
-- room message list announces live appends — WS8b-r; WS8bm list integration.
+- room message list announces live appends — WS8b-r; WS8bm list integration. BLOCKED on the owner room show route/container (role=log, aria-live=polite, aria-relevant=additions); owned list/publisher bytes are covered.
 - image attachments use the filename as alt text — WS8bm. Attributed to `messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits` (complete square/wide/unrepresentable image HTML on cold and warm caches).
 - creating a message broadcasts the message to the room — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (real HTTP POST to guarded WS7 socket; complete Rails append frame).
 - broadcast message actions preserve a nonstandard request port — WS8bm. Attributed to `channels::tests::hub_test::message_parity::root_append_replace_and_remove_match_rendered_rails_frames` (create/update/delete requests carry campfire.test:3443; full Rails frame bytes).
@@ -32,7 +32,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - a legacy body update clears stale Markdown mode — WS8bm. Attributed to `messages::root_tests::updates_match_rails_json_and_saved_rows_including_legacy_conversion` (legacy conversion and clearing state).
 - editing a message to add a PR URL broadcasts the new card — WS15g / WS15e; WS8bm render integration. `provider_edit_replacements_match_all_rails_bytes_and_reference_rows`: actual root PATCH; complete real GitHub card through WS7 and exact references.
 - editing a message to remove a PR URL broadcasts an empty card container — WS15g / WS15e; WS8bm render integration. Same provider socket regression: actual root PATCH; complete empty GitHub replacement and empty reference rows.
-- legacy rich-text edits re-sync card references — WS15g / WS15e; WS8bm render integration.
+- legacy rich-text edits re-sync card references — WS15g / WS15e / WS14e; WS8bm render integration. GitHub/Twitter are covered by the provider socket regression. BLOCKED on WS14e event-reference synchronization: the committed real-HTTP probe `messages::provider_tests::legacy_rich_text_edit_synchronizes_event_reference_through_ws14e` fails with [] versus Rails [390339825] and is explicitly owner-flagged; no full declaration pass is claimed.
 - messages render empty card containers for future broadcasts — WS15g / WS15e; WS8bm render integration. Same provider socket regression: actual root SHOW mounts the exact empty GitHub/Twitter container bytes from Rails replacement fixtures.
 - admin cannot update a message belonging to another user — WS8bm. Attributed to `messages::http_tests::author_only_edits_even_for_an_administrator` (admin edit/update denied).
 - destroy destroys a message belonging to the user — WS8bm. Attributed to `messages::paging_tests::root_formats_and_destroy_side_effects_match_rails` (own deletes across Rails formats remove rows).
@@ -51,12 +51,12 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - reply tombstones do not mark the reply edited — WS8bm. `messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones`: advancing real requests, exact Rails responses/saved timestamps, real reactions/provider fetch/tombstones and complete UTC meta in two viewer zones.
 - ensure non-admin can't update a message belonging to another user — WS8bm. `messages::http_tests::non_author_non_admin_cannot_edit_or_delete`: actual PATCH is forbidden and the complete saved row remains unchanged.
 - ensure non-admin can't destroy a message belonging to another user — WS8bm. Attributed to `messages::http_tests::non_author_non_admin_cannot_edit_or_delete` (other member delete denied).
-- mentioning a bot triggers a webhook — WS11; WS8bm HTTP integration.
-- mentioning a bot from Markdown triggers a webhook — WS11; WS8bm HTTP integration.
-- mentioning an agent-backed bot skips the legacy webhook job — WS11; WS8bm HTTP integration.
-- mentioning an agent-backed bot posts exactly one webhook with the agent key — WS11; WS8bm HTTP integration.
-- revoked agent delivery posts no webhook — WS11; WS8bm HTTP integration.
-- mentioning a bot without an agent row still uses the legacy webhook — WS11; WS8bm HTTP integration.
+- mentioning a bot triggers a webhook — WS11; WS8bm HTTP integration. `integrations::agent_jobs::message_controller_tests::rich_text_and_markdown_root_mentions_enqueue_exactly_one_agent_job_and_no_legacy_job`: actual rich-text HTTP POST, complete Rails response and one durable agent job.
+- mentioning a bot from Markdown triggers a webhook — WS11; WS8bm HTTP integration. Same actual-controller oracle test: Markdown POST, complete Rails response and exactly one durable agent job.
+- mentioning an agent-backed bot skips the legacy webhook job — WS11; WS8bm HTTP integration. Same actual-controller oracle test: three real root POSTs and no legacy job.
+- mentioning an agent-backed bot posts exactly one webhook with the agent key — WS11; WS8bm HTTP integration. `integrations::agent_jobs::message_controller_tests::root_agent_mention_runs_delivery_and_posts_one_real_webhook_with_agent_identity`: actual POST/event/delivery, held external HTTP listener, exact Rails agent ID; replay sends no second webhook.
+- revoked agent delivery posts no webhook — WS11; WS8bm HTTP integration. `integrations::agent_jobs::message_controller_tests::revoked_root_mention_cannot_post_an_agent_or_legacy_webhook`: actual root POST then grant revocation; actual delivery/transport posts nothing and enqueues no webhook job.
+- mentioning a bot without an agent row still uses the legacy webhook — WS11; WS8bm HTTP integration. `integrations::agent_jobs::message_controller_tests::root_legacy_bot_without_agent_enqueues_and_posts_only_the_legacy_webhook`: actual root POST, one durable legacy job, zero agent delivery jobs; actual external POST has no agent key.
 - retried create with the same client id returns the original message — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
 - system notes render as a compact note without message chrome — WS8bm. Attributed to `messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits` (complete system_note HTML on cold and warm cache).
 - system notes cannot be edited or deleted by their actor — WS8bm. Attributed to `messages::http_tests::system_notes_are_immutable_for_author_and_administrator` (real own-note edit/update/delete requests; row retained).
