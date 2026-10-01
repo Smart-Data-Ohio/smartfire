@@ -79,7 +79,7 @@ job_partial = {
 paths = sorted(set(root.glob('test/models/*slack*_test.rb')) | set(root.glob('test/models/slack/*_test.rb')) | set(root.glob('test/jobs/slack_import/*_test.rb')) | set(root.glob('test/controllers/slack/*_test.rb')) | set(root.glob('test/controllers/accounts/*slack*_test.rb')) | {root / 'test/system/slack_import_test.rb'})
 lines = ['# WS16 Rails test inventory — partial', '',
  'Owner for every deferred or partial row: **WS16 continuation**. No tests are reassigned to other workstreams.', '',
- 'Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. HTTP/OAuth and remaining fault/large-history cases are deferred below.', '']
+ 'Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. OAuth, connection and setup routes now have Rails-generated transport/HTTP/view goldens and runtime security tests. Admin/personal run controllers and remaining fault/large-history cases are deferred below.', '']
 counts = {'covered': 0, 'partial': 0, 'deferred': 0}
 for path in paths:
     tests = re.findall(r'^\s*test "((?:[^"\\]|\\.)*)"', path.read_text(), re.M)
@@ -88,6 +88,8 @@ for path in paths:
         state, note = 'deferred', 'WS16 continuation: implement and exercise the original behavior.'
         if '/models/slack/markdown_converter_test.rb' in str(path) and not name.startswith('rendering:'):
             state, note = 'covered', 'Rails-generated converter vectors; crafted-token timing guard is a Rust test.'
+        elif path.name in ('oauth_controller_test.rb', 'connections_controller_test.rb', 'slack_imports_controller_test.rb'):
+            state, note = 'covered', 'slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks.'
         elif '/models/slack/client_test.rb' in str(path):
             if name in client_deferred:
                 state, note = 'partial', client_deferred[name]

@@ -2,7 +2,7 @@
 
 Owner for every deferred or partial row: **WS16 continuation**. No tests are reassigned to other workstreams.
 
-Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. HTTP/OAuth and remaining fault/large-history cases are deferred below.
+Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. OAuth, connection and setup routes now have Rails-generated transport/HTTP/view goldens and runtime security tests. Admin/personal run controllers and remaining fault/large-history cases are deferred below.
 
 ## test/controllers/accounts/slack_import_runs_controller_test.rb
 
@@ -46,27 +46,27 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| setup is admin-only | deferred | WS16 continuation: implement and exercise the original behavior. |
-| setup shows the manifest with the callback URL and user scopes | deferred | WS16 continuation: implement and exercise the original behavior. |
-| the client secret is never rendered back | deferred | WS16 continuation: implement and exercise the original behavior. |
-| saving credentials requires sudo | deferred | WS16 continuation: implement and exercise the original behavior. |
-| saving credentials creates the workspace and records who configured it | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a blank secret keeps the stored one | deferred | WS16 continuation: implement and exercise the original behavior. |
-| invalid credentials re-render with errors | deferred | WS16 continuation: implement and exercise the original behavior. |
-| removing credentials requires sudo | deferred | WS16 continuation: implement and exercise the original behavior. |
-| removing credentials clears them and every connection but keeps runs | deferred | WS16 continuation: implement and exercise the original behavior. |
-| removing credentials is blocked while a run is active | deferred | WS16 continuation: implement and exercise the original behavior. |
+| setup is admin-only | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| setup shows the manifest with the callback URL and user scopes | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| the client secret is never rendered back | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| saving credentials requires sudo | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| saving credentials creates the workspace and records who configured it | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| a blank secret keeps the stored one | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| invalid credentials re-render with errors | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| removing credentials requires sudo | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| removing credentials clears them and every connection but keeps runs | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| removing credentials is blocked while a run is active | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
 
 ## test/controllers/slack/connections_controller_test.rb
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| disconnect revokes remotely and destroys the connection | deferred | WS16 continuation: implement and exercise the original behavior. |
-| disconnect redirects a member to the personal page | deferred | WS16 continuation: implement and exercise the original behavior. |
-| disconnect is blocked while one of the member's runs is active | deferred | WS16 continuation: implement and exercise the original behavior. |
-| another member's active run does not block disconnect | deferred | WS16 continuation: implement and exercise the original behavior. |
-| disconnect without a connection still redirects | deferred | WS16 continuation: implement and exercise the original behavior. |
-| disconnect requires sudo | deferred | WS16 continuation: implement and exercise the original behavior. |
+| disconnect revokes remotely and destroys the connection | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| disconnect redirects a member to the personal page | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| disconnect is blocked while one of the member's runs is active | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| another member's active run does not block disconnect | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| disconnect without a connection still redirects | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| disconnect requires sudo | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
 
 ## test/controllers/slack/imports_controller_test.rb
 
@@ -97,28 +97,28 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| start redirects to Slack with user scopes and no bot scope | deferred | WS16 continuation: implement and exercise the original behavior. |
-| start pins the team once it is known | deferred | WS16 continuation: implement and exercise the original behavior. |
-| start without configured credentials redirects back | deferred | WS16 continuation: implement and exercise the original behavior. |
-| start requires sudo | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback success upserts the connection and sets the team | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback success without a team.info answer still connects | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback clears a previous disconnected reason | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback with a state mismatch is rejected | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback state cannot be replayed | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback state is bound to the user who started it | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback with access_denied stores nothing | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback from a different team is rejected | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback missing a required scope is rejected with the missing ones | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback refuses a Slack account linked to another member | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback rescues a duplicate connection raced in after the check | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback fills a missing team name from team.info | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a failed exchange returns to the page the flow started from | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback with a failed exchange stores nothing | deferred | WS16 continuation: implement and exercise the original behavior. |
-| callback returns to the personal page when the flow started there | deferred | WS16 continuation: implement and exercise the original behavior. |
-| an off-allowlist return_to falls back to the default page | deferred | WS16 continuation: implement and exercise the original behavior. |
-| a member's first connection does not name the workspace team | deferred | WS16 continuation: implement and exercise the original behavior. |
-| the code, token, and secret parameters are filtered from request logs | deferred | WS16 continuation: implement and exercise the original behavior. |
+| start redirects to Slack with user scopes and no bot scope | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| start pins the team once it is known | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| start without configured credentials redirects back | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| start requires sudo | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback success upserts the connection and sets the team | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback success without a team.info answer still connects | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback clears a previous disconnected reason | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback with a state mismatch is rejected | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback state cannot be replayed | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback state is bound to the user who started it | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback with access_denied stores nothing | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback from a different team is rejected | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback missing a required scope is rejected with the missing ones | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback refuses a Slack account linked to another member | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback rescues a duplicate connection raced in after the check | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback fills a missing team name from team.info | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| a failed exchange returns to the page the flow started from | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback with a failed exchange stores nothing | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| callback returns to the personal page when the flow started there | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| an off-allowlist return_to falls back to the default page | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| a member's first connection does not name the workspace team | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
+| the code, token, and secret parameters are filtered from request logs | covered | slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks. |
 
 ## test/jobs/slack_import/run_lifecycle_test.rb
 
@@ -305,4 +305,4 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 ## Totals
 
-95 covered, 10 partial, 139 deferred; 244 Rails tests inventoried.
+133 covered, 10 partial, 101 deferred; 244 Rails tests inventoried.

@@ -50,6 +50,7 @@ pub mod fizzy_cards;
 pub mod fizzy_connections;
 pub mod fizzy_message_cards;
 pub mod github;
+pub mod slack;
 pub mod message_embed_suppressions;
 pub mod messages;
 pub(crate) mod message_features;
@@ -180,6 +181,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "github/pull_request_review_requests#create" => arc(github::writes::review_request),
         "github/pull_request_write_actions#show" => arc(github::writes::show),
         "github/pull_request_threads#create" => arc(github::discussions::create),
+        "accounts/slack_imports#show" => arc(slack::setup::show),
+        "accounts/slack_imports#update" => arc(slack::setup::update),
+        "accounts/slack_imports#destroy" => arc(slack::setup::destroy),
+        "slack/oauth#start" => arc(slack::start),
+        "slack/oauth#callback" => arc(slack::callback),
+        "slack/connections#destroy" => arc(slack::disconnect),
         "github/connections#create" => arc(github::connections::create),
         "github/connections#destroy" => arc(github::connections::destroy),
         "github/app_connections#connect" => arc(github::connections::connect),
@@ -733,6 +740,8 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "slack/oauth#start", "slack/oauth#callback", "slack/connections#destroy",
+        "accounts/slack_imports#show", "accounts/slack_imports#update", "accounts/slack_imports#destroy",
         "rooms/events#index",
         "rooms/events#show",
         "rooms/events#new",
