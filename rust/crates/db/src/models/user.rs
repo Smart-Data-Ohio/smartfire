@@ -340,6 +340,18 @@ impl User {
         Self::create_with_open_room_grant(tx, attributes, true)
     }
 
+    /// Slack's claimable human placeholders and deactivated historical authors.
+    /// The status is assigned on creation, so deactivated authors never receive open rooms.
+    pub fn create_slack_placeholder(tx: &mut Tx<'_>, attributes: NewUser, active: bool,
+        time_zone: Option<&str>, link_allowed: bool) -> Result<Self> {
+        let zone = time_zone.filter(|name| active && crate::slash_commands::time_parser::known_zone(name).is_some());
+        let user = Self::create_with_open_room_grant(tx, attributes, active)?;
+        tx.conn().execute_cached(
+            "UPDATE users SET status = ?, time_zone = ?, google_email_link_allowed = ? WHERE id = ?",
+            params![if active { Status::Active } else { Status::Deactivated }, zone, link_allowed, user.id])?;
+        Self::find(tx.conn(), user.id)
+    }
+
     /// User.create_bot!(skip_open_room_grant: true), used by RoomMailbox.
     pub fn create_email_bot(tx: &mut Tx<'_>) -> Result<Self> {
         Self::create_integration_bot(tx, "Email")
