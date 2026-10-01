@@ -1,8 +1,14 @@
 //! Read-only request adapter. Personal notice sets never enter the fragment cache.
-use campfire_db::{CachedStatements, Connection, Membership, Message, Room, Timestamp};
-use campfire_views::rooms::shell::{Notice, State};
+use campfire_db::{CachedStatements, Connection, Timestamp};
+#[cfg(test)]
+use campfire_db::{Membership, Message, Room};
+use campfire_views::rooms::shell::Notice;
+#[cfg(test)]
+use campfire_views::rooms::shell::State;
+#[cfg(test)]
 use rusqlite::OptionalExtension;
 
+#[cfg(test)]
 pub(super) fn load(
     conn: &Connection,
     room: &Room,
@@ -58,6 +64,7 @@ pub(super) fn load(
     }
     Ok(state)
 }
+#[cfg(test)]
 fn first(
     conn: &Connection,
     room_id: i64,

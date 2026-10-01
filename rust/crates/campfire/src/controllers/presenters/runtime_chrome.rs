@@ -1,8 +1,12 @@
 //! Read-only adapters for layout chrome. These never call notification policy,
 //! decrypt Google tokens, refresh calendars, or send anything to a transport.
+#[cfg(test)]
 use campfire_db::{CachedStatements, Connection, Timestamp};
+#[cfg(test)]
 use campfire_views::layouts::{RecentSearch, UserPreferences};
+#[cfg(test)]
 use rusqlite::OptionalExtension;
+#[cfg(test)]
 pub(crate) fn recent_searches(
     conn: &Connection,
     user_id: Option<i64>,
@@ -22,6 +26,7 @@ pub(crate) fn recent_searches(
         })?
         .collect::<rusqlite::Result<_>>()?)
 }
+#[cfg(test)]
 pub(crate) fn preferences(
     conn: &Connection,
     user_id: i64,

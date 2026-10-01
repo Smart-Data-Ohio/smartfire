@@ -188,6 +188,7 @@ fn direct_members(
 }
 
 /// Controller broadcasts render shared rows without recipient membership state.
+#[cfg(test)]
 pub(crate) fn neutral(app: &App, conn: &Connection, room: &Room) -> campfire_db::Result<Row> {
     let legacy = presenters::Presenter::new(conn, app, None).sidebar_room(room);
     let mut call = call_channels::row(app, conn, room)?;
