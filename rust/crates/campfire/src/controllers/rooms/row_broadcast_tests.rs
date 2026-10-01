@@ -21,6 +21,57 @@ async fn until_marker(test: &TestApp, socket: &mut Socket, user: i64) -> Vec<Str
     htmls
 }
 #[tokio::test]
+async fn configured_direct_callback_keeps_rails_membership_avatar_order() {
+    use std::sync::Arc;
+    use crate::controllers::presenters::test_support::SEED_NOW;
+    let Some(test) = TestApp::boot_with_huddle_and_clock(
+        super::call_channel_tests::configured(),
+        Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+    ).await else { return; };
+    let id = test.db().write(|tx| Ok(Room::find_or_create_direct_for(
+        tx, &[DAVID, JASON, KEVIN, 773523953], KEVIN,
+    )?.id)).await.unwrap();
+    let listener = crate::channels::tests::support::bind_listener().await;
+    let addr = listener.local_addr().unwrap();
+    let router = test.booted.router.clone();
+    let (stop, stopping) = tokio::sync::oneshot::channel();
+    let serving = tokio::spawn(async move {
+        axum::serve(listener, router).with_graceful_shutdown(async {
+            let _ = stopping.await;
+        }).await.unwrap();
+    });
+    let mut client = socket(&test, addr, DAVID).await;
+    test.db().write(move |tx| {
+        Room::find(tx.conn(), id)?.rename_direct(tx, "Friday <&>", KEVIN)
+    }).await.unwrap();
+    let frames = until_marker(&test, &mut client, DAVID).await;
+    let actual = frames.iter().find(|html| html.contains(
+        &format!("target=\"list_rooms_direct_{id}\""),
+    )).expect("missing configured direct row");
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../views/tests/golden/rooms/directory.json",
+    )).unwrap();
+    assert_eq!(id, oracle["setup"]["group_id"].as_i64().unwrap());
+    let stream = format!("{}:rooms", crate::channels::user_gid(DAVID).to_param());
+    let expected = oracle["operations"][0]["frames"].as_array().unwrap().iter()
+        .filter(|frame| frame["stream"].as_str() == Some(stream.as_str()))
+        .filter_map(|frame| frame["html"].as_str())
+        .find(|html| html.contains(&format!("target=\"list_rooms_direct_{id}\"")))
+        .unwrap();
+    // Huddle configuration adds call controls; the Rails avatar association order
+    // in the same recorded directory callback remains unchanged.
+    fn profile_paths(html: &str) -> Vec<&str> {
+        html.split("data-profile-card-url=\"").skip(1)
+            .map(|part| part.split_once('"').unwrap().0).collect()
+    }
+    assert_eq!(profile_paths(actual), profile_paths(expected));
+    assert!(actual.contains("voice-room__trailing"));
+    client.close(None).await.unwrap();
+    let _ = stop.send(());
+    serving.await.unwrap();
+    test.booted.jobs.shutdown(Duration::from_secs(1)).await;
+}
+#[tokio::test]
 async fn composed_sidebar_rename_callback_delivers_recipient_rows_and_headers() {
     let Some(test) = TestApp::boot_with_huddle(super::call_channel_tests::configured()).await
     else {
