@@ -3,6 +3,55 @@ use campfire_mail::{
     config::{Config, RelayAuth, relay_auth},
     parse::authenticated_sender,
 };
+
+fn unicode_auth_cases() -> serde_json::Value {
+    serde_json::from_str(include_str!("../../../vectors/unicode_casing_parity.json")).unwrap()
+}
+
+#[test]
+fn unicode_parity_authenticated_domains_use_downcase_without_folding() {
+    for case in unicode_auth_cases()["auth"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["relay"] == "mx.mail.test")
+    {
+        assert_eq!(
+            authenticated_sender(
+                &[case["header"].as_str().unwrap().into()],
+                case["relay"].as_str(),
+                case["address"].as_str().unwrap()
+            ),
+            case["expected"].as_bool().unwrap(),
+            "{case}"
+        );
+    }
+}
+
+#[test]
+fn unicode_parity_relay_ids_use_full_folding_and_topmost_header() {
+    for case in unicode_auth_cases()["auth"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["relay"] != "mx.mail.test")
+    {
+        let header = case["header"].as_str().unwrap();
+        let relay = case["relay"].as_str();
+        let address = case["address"].as_str().unwrap();
+        assert_eq!(
+            authenticated_sender(&[header.into()], relay, address),
+            case["expected"].as_bool().unwrap(),
+            "{case}"
+        );
+        assert!(!authenticated_sender(
+            &[header.replace("=pass", "=fail"), header.into()],
+            relay,
+            address
+        ));
+    }
+}
+
 #[test]
 fn review_non_ascii_authentication_whitespace_is_rejected() {
     let corpus: serde_json::Value =
