@@ -68,11 +68,19 @@ CASES = {
         "search tolerates operators, shows an empty state and pages older results",
         "forwarded Markdown keeps tables and code blocks",
     ],
+    "unread_divider": [
+        "few unread render the divider above the first new message and keep the bottom scroll",
+        "many unread scroll the room to the divider",
+        "the jump pill shows while the divider is off-screen and returns to it",
+        "unread older than the last page keeps the last page and the pill links to the first unread",
+        "mark unread from the message menu points the divider at that message",
+    ],
 }
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("files", nargs="*", choices=CASES)
 parser.add_argument("--case", help="run one exact pinned declaration from the selected files")
 parser.add_argument("--negative", action="store_true", help="require each selected case to reject its deliberately broken served implementation")
+parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
 args = parser.parse_args()
 files = args.files or list(CASES)
 if args.case:
@@ -85,6 +93,7 @@ revision = subprocess.check_output(["docker", "image", "inspect", "--format", "{
 assert any(f"GIT_REVISION={value}" in revision.splitlines() for value in [PIN, PIN[:8]]), "browser reference must be the pinned Rails image"
 env["PARITY_IMAGE"] = image
 env["WS8BM_NEGATIVE"] = "1" if args.negative else "0"
+env["WS8BM_KEEP_GOING"] = "1" if args.keep_going else "0"
 subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"], cwd=ROOT, env=env, check=True)
 subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
@@ -118,6 +127,7 @@ with sqlite3.connect(RUST / "parity/.seed/default/db/production.sqlite3") as con
     protected_counts = {table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                         for table in ["channel_threads", "messages", "thread_memberships"]}
 passed = 0
+failed_cases = []
 mutation_names = set(json.loads(subprocess.check_output([
     "node", "--input-type=module", "-e",
     "import {mutationNames} from './rust/reference-tools/messaging/behavior-mutations.mjs'; console.log(JSON.stringify(mutationNames))"
@@ -153,6 +163,10 @@ for file in files:
                 fixture_kind = "search" if case.startswith("search tolerates") else "forward"
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            elif file == "unread_divider":
+                fixture_kind = "unread-" + ["few", "many", "pill", "offpage", "menu"][CASES[file].index(case)]
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
@@ -176,9 +190,19 @@ for file in files:
                         time.sleep(.2)
                     fixture_data = fixture / "db/browser-fixture.json"
                     metadata = json.loads(fixture_data.read_text()) if fixture_data.exists() else {}
-                    subprocess.run(["node", str(RUST / "reference-tools/messaging/behavior.mjs"), f"http://127.0.0.1:{ports[0]}", f"http://127.0.0.1:{ports[1]}", file, json.dumps(batch), json.dumps(metadata)], cwd=ROOT, env=run_env, check=True)
+                    command = ["node", str(RUST / "reference-tools/messaging/behavior.mjs"), f"http://127.0.0.1:{ports[0]}", f"http://127.0.0.1:{ports[1]}", file, json.dumps(batch), json.dumps(metadata)]
+                    result = subprocess.run(command, cwd=ROOT, env=run_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                    print(result.stdout, end="", flush=True)
+                    if result.returncode and not args.keep_going:
+                        raise subprocess.CalledProcessError(result.returncode, command)
+                    suffix = ": served mutant REJECTED (" if args.negative else ": Rails PASS; Rust PASS"
+                    prefix = f"WS8bm discrimination: {file}: " if args.negative else f"WS8bm browser flow: {file}: "
+                    succeeded = [name for name in batch if any(line.startswith(prefix + name + suffix) for line in result.stdout.splitlines())]
+                    failed_cases.extend(f"{file}: {name}" for name in batch if name not in succeeded)
                     if args.negative:
-                        passed += len(batch)
+                        passed += len(succeeded)
+                        continue
+                    if not succeeded:
                         continue
                     databases = [work / f".instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
                     for database in databases:
@@ -280,7 +304,11 @@ for file in files:
                                     assert len(copies) == 1 and copies[0][1:] == (None, 1, 654632876), "Rails forwards store a rendered snapshot, not source Markdown"
                                     original = conn.execute("SELECT body FROM action_text_rich_texts WHERE record_type='Message' AND record_id=? AND name='body'", (source_row[0],)).fetchone()
                                     assert conn.execute("SELECT body FROM action_text_rich_texts WHERE record_type='Message' AND record_id=? AND name='body'", (copies[0][0],)).fetchone() == original
-                    for case in batch:
+                            elif file == "unread_divider":
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
+                                assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
+                    for case in succeeded:
                         passed += 1
                         print(f"WS8bm behaviour: {file}: {case}: Rails PASS; Rust PASS; persisted rows PASS", flush=True)
                 finally:
@@ -294,6 +322,9 @@ for file in files:
                     subprocess.run([reference, "down", "--port", str(ports[0])], cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
     print(f"WS8bm behaviour source: test/system/{file}_test.rb SHA256 {hashlib.sha256(source).hexdigest()}", flush=True)
 if args.negative:
-    print(f"WS8bm discrimination check: {passed} named checks rejected their served mutants; 0 escaped", flush=True)
+    print(f"WS8bm discrimination check: {passed} named checks rejected their served mutants; {len(failed_cases)} invalid or escaped", flush=True)
 else:
-    print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; 0 failed; no pixel checks", flush=True)
+    print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; {len(failed_cases)} failed; no pixel checks", flush=True)
+if failed_cases:
+    print("WS8bm failed named checks:\n" + "\n".join(failed_cases), flush=True)
+    raise SystemExit(1)

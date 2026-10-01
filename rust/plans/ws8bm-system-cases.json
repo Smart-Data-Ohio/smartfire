@@ -603,8 +603,9 @@
         },
         {
           "name": "text fields stay at 16px on touch devices without changing the desktop look",
-          "status": "deferred",
-          "evidence": null
+          "status": "blocked_ws12",
+          "evidence": null,
+          "blocked_reason": "Pinned flow requires the authorized, flagged WS12 board/work page or activity inbox; WS12 has not started. No partial pass credited."
         },
         {
           "name": "profile message and ban buttons have accessible names",
@@ -650,28 +651,28 @@
       "cases": [
         {
           "name": "few unread render the divider above the first new message and keep the bottom scroll",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
         },
         {
           "name": "many unread scroll the room to the divider",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
         },
         {
           "name": "the jump pill shows while the divider is off-screen and returns to it",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
         },
         {
           "name": "unread older than the last page keeps the last page and the pill links to the first unread",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
         },
         {
           "name": "mark unread from the message menu points the divider at that message",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py unread_divider: real unread fixture, divider boundary, initial/bottom scroll, on-page jump and off-page around link, actual mark-unread menu/public endpoint, unchanged saved message rows on both apps; seven-unread fixture also has loaded read history at 1440x700 to discriminate scrolling; five served mutants rejected"
         }
       ]
     },
@@ -773,8 +774,9 @@
         },
         {
           "name": "every drawer destination has one toggle that opens the drawer on itself",
-          "status": "deferred",
-          "evidence": null
+          "status": "blocked_ws12",
+          "evidence": null,
+          "blocked_reason": "Pinned flow requires the authorized, flagged WS12 board/work page or activity inbox; WS12 has not started. No partial pass credited."
         }
       ]
     }

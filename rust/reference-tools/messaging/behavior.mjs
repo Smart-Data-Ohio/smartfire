@@ -6,20 +6,23 @@ import {execFileSync} from 'node:child_process';
 import {messageList} from './behavior-message-list.mjs';
 import {searchForward} from './behavior-search-forward.mjs';
 import {installMutation} from './behavior-mutations.mjs';
+import {unreadDivider} from './behavior-unread.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
 const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit'].includes(file));
+assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider'].includes(file));
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
+const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
 async function acceptance(base,caseName,probe={}) {
   const contexts=[];
   try {
     async function viewer(name) {
-      const context=await browser.newContext({viewport:{width:1440,height:1000}});
+      const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
+      const context=await browser.newContext({viewport:{width:1440,height}});
       contexts.push(context);
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
@@ -79,6 +82,10 @@ async function acceptance(base,caseName,probe={}) {
     }
     if(file==='search_forward_edit') {
       await searchForward({author,recipient,base,caseName});
+      return;
+    }
+    if(file==='unread_divider') {
+      await unreadDivider({author,base,caseName,fixture});
       return;
     }
     if (file==='threads') {
@@ -369,7 +376,9 @@ async function acceptance(base,caseName,probe={}) {
   } finally {for(const context of contexts) await context.close();}
 }
 try {
+  let failures=0;
   for(const caseName of cases) {
+    try {
     if(negative) {
       const probe={ready:false,applied:0};let failure;
       try {await acceptance(rust,caseName,probe);} catch(error) {failure=error;}
@@ -384,6 +393,12 @@ try {
       await acceptance(rails,caseName);await acceptance(rust,caseName);
       console.log(`WS8bm browser flow: ${file}: ${caseName}: Rails PASS; Rust PASS`);
     }
+    } catch(error) {
+      console.error(`WS8bm browser flow FAILED: ${file}: ${caseName}:`,error.stack);
+      failures++;
+      if(!keepGoing) throw error;
+    }
   }
+  if(failures) process.exitCode=1;
 }
 finally {await browser.close();}

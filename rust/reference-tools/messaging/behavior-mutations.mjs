@@ -36,6 +36,11 @@ const mutations=new Map([
   ['sending preserves the submitted source and a newer draft',[composer,'if (this.markdownTarget.value === submission.content)','if (true)']],
   ['search tolerates operators, shows an empty state and pages older results',['search-page-response']],
   ['forwarded Markdown keeps tables and code blocks',['forward-response']],
+  ['few unread render the divider above the first new message and keep the bottom scroll',['controllers/messages_controller-','connect() {','connect() { const divider = document.getElementById("unread-divider"); divider?.nextElementSibling?.after(divider);']],
+  ['many unread scroll the room to the divider',['controllers/messages_controller-','this.#scrollToUnreadDivider(true)','this.messagesTarget.scrollTop = 0']],
+  ['the jump pill shows while the divider is off-screen and returns to it',['controllers/messages_controller-','this.#scrollToUnreadDivider(false)','void(false)']],
+  ['unread older than the last page keeps the last page and the pill links to the first unread',['controllers/messages_controller-','connect() {','connect() { document.getElementById("jump-to-unread")?.setAttribute("href", "/rooms/654632876?message_id=1");']],
+  ['mark unread from the message menu points the divider at that message',[actions,'method: "DELETE",','method: "POST",']],
 ]);
 export const mutationNames=[...mutations.keys()];
 export async function installMutation(page,caseName,probe) {
