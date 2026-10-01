@@ -1,0 +1,23 @@
+//! Complete response/row checks for the provider edit declarations.
+use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage, Tx};
+use serde_json::{Value,json};
+use crate::controllers::presenters::test_support::*;
+pub(crate) fn oracle() -> Value {serde_json::from_str(include_str!("../../../../../vectors/messaging/provider-declarations.json")).unwrap()}
+pub(crate) fn seed(tx:&mut Tx<'_>)->campfire_db::Result<()> {
+    let root=Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:DAVID,markdown_source:Some("Original".into()),client_message_id:Some("provider-root".into()),..Default::default()})?;
+    let mut thread=ChannelThread::create(tx,NewChannelThread{room_id:ALL_TALK,creator_id:DAVID,name:Some("Provider thread".into()),..Default::default()})?;
+    let reply=thread.post_message(tx,DAVID,NewMessage{markdown_source:Some("Original".into()),client_message_id:Some("provider-reply".into()),..Default::default()})?;
+    let pr=crate::integrations::github::pull_requests::PullRequest::for_reference(tx,"rails","rails",511)?;
+    tx.conn().execute("UPDATE github_pull_requests SET private=0,title='Seeded PR card',state='open',fetched_at=?,fetch_requested_at=NULL,updated_at=? WHERE id=?",(tx.now(),tx.now(),pr.id))?;
+    for (name,id) in [("root_id",root.id),("thread_id",thread.id),("reply_id",reply.id)]{assert_eq!(oracle()[name],id);}
+    Ok(())
+}
+pub(crate) async fn assert_references(app:&TestApp,row:&Value) {
+    let id=row["path"].as_str().unwrap().rsplit('/').next().unwrap().parse::<i64>().unwrap();
+    let refs=app.db().read(move|conn| {
+        let github=crate::integrations::github::pull_requests::PullRequest::for_message(conn,id)?.into_iter().map(|pr|json!([pr.owner,pr.repo,pr.number])).collect::<Vec<_>>();
+        let twitter=crate::integrations::twitter::post::Post::for_message(conn,id)?.into_iter().map(|post|post.post_id).collect::<Vec<_>>();
+        Ok(json!({"github":github,"twitter":twitter}))
+    }).await.unwrap();
+    assert_eq!(refs["github"],row["github"]);assert_eq!(refs["twitter"],row["twitter"]);
+}

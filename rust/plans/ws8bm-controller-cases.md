@@ -1,10 +1,10 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 111 of 156 declarations have scoped evidence; 45 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
+Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 120 of 156 declarations have scoped evidence; 36 remain pending. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not 103 new one-to-one Rust tests. No one-to-one port count is claimed. Browser/system execution remains deferred.
 
 ## test/controllers/messages_controller_test.rb
 
-56 named declarations; 31 have scoped Rust evidence below, and 25 await attribution/signoff. Reference execution counts are in the main report.
+56 named declarations; 36 have scoped Rust evidence below, and 20 await attribution/signoff. Reference execution counts are in the main report.
 
 - index returns the last page by default — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (complete pinned Rails page/response comparisons).
 - index is not found for a soft-deleted room — WS8bm. Attributed to `messages::http_tests::deleted_room_is_inaccessible_even_with_a_lingering_membership` (actual requests with retained membership).
@@ -25,15 +25,15 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - preview requires room membership — WS8bm. Attributed to `messages::http_tests::preview_requires_membership_and_a_valid_source_parameter` (signed-in non-member receives 404).
 - preview rejects oversized Markdown without parsing or writing it — WS8bm. Attributed to `messages::http_tests::preview_matches_real_rails_http_without_writing` (actual oversized Rails source case and unchanged message count).
 - preview is protected against cross-site form submissions — WS8bm. Attributed to `messages::http_tests::preview_rejects_cross_site_submissions_without_a_csrf_token` (actual hostile-Origin request receives 422).
-- creating a message broadcasts unread room to each member — WS8bm.
-- creating a message doesn't broadcast unread room to non-members — WS8bm.
+- creating a message broadcasts unread room to each member — WS8bm. `root_http_create_sends_rails_unread_frames_to_each_member_and_none_to_nonmembers`: actual root POST, three real viewer sockets, exact Rails member frames and non-member silence.
+- creating a message doesn't broadcast unread room to non-members — WS8bm. `root_http_create_sends_rails_unread_frames_to_each_member_and_none_to_nonmembers`: actual root POST, three real viewer sockets, exact Rails member frames and non-member silence.
 - update updates a message belonging to the user — WS8bm. Attributed to `messages::root_tests::updates_match_rails_json_and_saved_rows_including_legacy_conversion` (six exact HTTP update responses and saved fields).
 - updating a Markdown message preserves exact new source — WS8bm. Attributed to `messages::root_tests::updates_match_rails_json_and_saved_rows_including_legacy_conversion` (exact persisted markdown_source).
 - a legacy body update clears stale Markdown mode — WS8bm. Attributed to `messages::root_tests::updates_match_rails_json_and_saved_rows_including_legacy_conversion` (legacy conversion and clearing state).
-- editing a message to add a PR URL broadcasts the new card — WS15g / WS15e; WS8bm render integration.
-- editing a message to remove a PR URL broadcasts an empty card container — WS15g / WS15e; WS8bm render integration.
+- editing a message to add a PR URL broadcasts the new card — WS15g / WS15e; WS8bm render integration. `provider_edit_replacements_match_all_rails_bytes_and_reference_rows`: actual root PATCH; complete real GitHub card through WS7 and exact references.
+- editing a message to remove a PR URL broadcasts an empty card container — WS15g / WS15e; WS8bm render integration. Same provider socket regression: actual root PATCH; complete empty GitHub replacement and empty reference rows.
 - legacy rich-text edits re-sync card references — WS15g / WS15e; WS8bm render integration.
-- messages render empty card containers for future broadcasts — WS15g / WS15e; WS8bm render integration.
+- messages render empty card containers for future broadcasts — WS15g / WS15e; WS8bm render integration. Same provider socket regression: actual root SHOW mounts the exact empty GitHub/Twitter container bytes from Rails replacement fixtures.
 - admin cannot update a message belonging to another user — WS8bm. Attributed to `messages::http_tests::author_only_edits_even_for_an_administrator` (admin edit/update denied).
 - destroy destroys a message belonging to the user — WS8bm. Attributed to `messages::paging_tests::root_formats_and_destroy_side_effects_match_rails` (own deletes across Rails formats remove rows).
 - admin destroy destroys a message belonging to another user — WS8bm.
@@ -153,18 +153,18 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - ordinary thread fields remain separate from work tracking — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
 ## test/controllers/channel_thread_messages_controller_test.rb
 
-12 named declarations; 8 have scoped Rust evidence below, and 4 await attribution/signoff. Reference execution counts are in the main report.
+12 named declarations; all have scoped Rust controller/publisher evidence below; merged room-shell destination rendering remains an integration check. Reference execution counts are in the main report.
 
 - a post joins and reopens an unlocked closed thread atomically — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (post request; exact joined/closed/message-count state).
 - locked threads block every edit and post while delete stays author-or-admin — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (locked_post, locked_update and locked_delete exact responses and rows).
-- thread unread state changes for every joined user regardless of preference — WS8bm.
-- editing a thread message to add a post URL broadcasts the new card — WS15g / WS15e; WS8bm render integration.
-- editing a thread message to remove a post URL broadcasts an empty card container — WS15g / WS15e; WS8bm render integration.
+- thread unread state changes for every joined user regardless of preference — WS8bm. `channel_thread_messages::tests::thread_post_marks_all_joined_users_unread_independent_of_notification_preference`: actual nested POST; both nothing/everything preferences go unread.
+- editing a thread message to add a post URL broadcasts the new card — WS15g / WS15e; WS8bm render integration. `channels::tests::hub_test::message_parity::provider_edit_replacements_match_all_rails_bytes_and_reference_rows`: actual nested PATCH; references and complete Rails replacement frames.
+- editing a thread message to remove a post URL broadcasts an empty card container — WS15g / WS15e; WS8bm render integration. Same provider socket regression: complete empty Twitter replacement and empty reference rows.
 - destroy broadcasts tombstone updates and a thread summary refresh — WS8bm. Attributed to `channels::tests::hub_test::message_parity::thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_frames` (actual nested DELETE; complete tombstone/indicator frames on the correct streams).
 - edited thread messages show an edited marker — WS8bm. Attributed to `channels::tests::hub_test::message_parity::thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_frames` (actual nested update; complete Rails meta HTML with the edited marker and time).
 - editing a thread message broadcasts its meta with the edited marker — WS8bm. Attributed to `channels::tests::hub_test::message_parity::thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_frames` (actual nested update; complete captured Rails meta frame).
 - identical thread message saves do not mark the message edited — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (identical request and exact saved edited_at).
-- nested HTML message URL redirects into the parent room shell — WS8b-r; WS8bm list integration.
+- nested HTML message URL redirects into the parent room shell — WS8b-r; WS8bm list integration. `channel_thread_messages::tests::nested_pages_show_actions_formats_and_locked_reads_match_rails_bytes`, pinned `show_html`: actual 302 and exact parent room/message/thread Location. The destination shell remains WS8b-r integration.
 - retried post with the same client id returns the original message — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
 - thread system notes cannot be edited or deleted — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (note_update/note_delete exact Rails refusals; rows retained).
 ## test/controllers/channel_thread_messages_drive_attachments_test.rb

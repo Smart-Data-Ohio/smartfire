@@ -25,8 +25,8 @@ async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given:
             let mut parts = vec![
                 ("presentation", views::PresentationPartial { ctx, message: &view }.render()?),
                 ("meta", views::MetaPartial { ctx, message: &view }.render()?),
-                ("github_pr_cards", views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0),
-                ("twitter_cards", views::cards(&view, "twitter_cards", "x-post-cards", 2, &view.components.twitter_cards).0),
+                ("github_pr_cards", view.components.github_cards_html.clone().unwrap_or_else(|| views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0)),
+                ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
                 ("message_link_cards", views::cards(&view, "message_link_cards", "message-link-cards", 0, &view.components.message_link_cards).0),
                 ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
                 ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),

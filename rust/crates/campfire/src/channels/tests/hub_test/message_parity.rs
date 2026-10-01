@@ -304,3 +304,69 @@ async fn submitted_drive_sets_publish_rails_bytes_and_omitted_sets_publish_no_at
     }
     println!("WS8bm Drive broadcasts: {checked} complete Rails frames through WS7 publisher/guard/socket; 30 root/thread requests; no extra frames");
 }
+
+#[tokio::test]
+async fn provider_edit_replacements_match_all_rails_bytes_and_reference_rows() {
+    use crate::controllers::messages::provider_tests;
+    let clock=Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let mut hub=boot_with_test_clock(clock.clone()).await.unwrap();
+    // Rails oracle uses the test adapter: enqueue jobs durably without running fetches.
+    hub.app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    hub.app.db().write(provider_tests::seed).await.unwrap();
+    let thread=provider_tests::oracle()["thread_id"].as_i64().unwrap();
+    let (mut client,streams)=subscriber(&hub,Some(thread)).await;
+    let mut viewer=hub.app.david();
+    let mut checked=0;
+    for row in provider_tests::oracle()["rows"].as_array().unwrap() {
+        clock.set(row["time"].as_str().unwrap().parse().unwrap());
+        let response=viewer.write(Req::new(Method::PATCH,row["path"].as_str().unwrap()).header("content-type","application/json").body(json!({"message":row["input"]}).to_string())).await;
+        assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{}: {}",row["name"],response.text());
+        assert_eq!(response.location(),row["location"].as_str());
+        provider_tests::assert_references(&hub.app,row).await;
+        if row["name"]=="root_remove" {
+            let show=viewer.get(row["path"].as_str().unwrap()).await;
+            assert_eq!(show.status,StatusCode::OK);
+            for prefix in ["github_pr_cards","twitter_cards"] {
+                let frame=row["frames"].as_array().unwrap().iter().find(|frame|frame["payload"].as_str().unwrap().contains(&format!("target=\"{prefix}_message_provider-root\""))).unwrap()["payload"].as_str().unwrap();
+                let html=frame.split_once("<template>").unwrap().1.split_once("</template>").unwrap().0;
+                assert!(show.text().contains(html),"empty container available for future replacement: {prefix}");
+            }
+        }
+        for frame in row["frames"].as_array().unwrap() {
+            assert!(streams.contains(&frame["stream"].as_str().unwrap().to_owned()));
+            let actual:Value=serde_json::from_str(&client.next_text().await).unwrap();
+            let html=actual["message"].as_str().unwrap();let expected=frame["payload"].as_str().unwrap();
+            if html!=expected {crate::controllers::presenters::test_support::rails_mismatch(html,expected,row["name"].as_str().unwrap());}
+            assert_eq!(campfire_cable::turbo::session_bound(html),None);checked+=1;
+        }
+        client.assert_silent().await;
+    }
+    assert_eq!(checked,40);
+}
+
+#[tokio::test]
+async fn root_http_create_sends_rails_unread_frames_to_each_member_and_none_to_nonmembers() {
+    use crate::controllers::presenters::test_support::{JASON,KEVIN};
+    use campfire_kit::Crypto;
+    let oracle:Value=serde_json::from_str(include_str!("../../../../../../vectors/messaging/recipient-declarations.json")).unwrap();
+    let hub=boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    hub.app.db().write(|tx|{tx.conn().execute("UPDATE memberships SET unread_at=NULL WHERE room_id=?",[ALL_TALK])?;Ok(())}).await.unwrap();
+    let mut clients=Vec::new();
+    for user in [DAVID,JASON,KEVIN] {
+        let session=hub.app.db().write(move|tx|campfire_db::Session::start_with(tx,user,campfire_db::NewSession {two_factor_verified:true,..Default::default()})).await.unwrap();
+        let signed=campfire_kit::RailsCrypto::new(hub.app.booted.app.secrets.clone()).sign_cookie("session_token",&session.token,None);
+        let mut client=hub.connect(&format!("session_token={signed}")).await;assert_eq!(client.next_text().await,r#"{"type":"welcome"}"#);
+        client.confirm(&identifier(json!({"channel":"UnreadRoomsChannel"}))).await;
+        clients.push((user,client));
+    }
+    let response=hub.app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages.turbo_stream")).form(&[("message[markdown_source]","Recipient marker"),("message[client_message_id]","recipient-marker")])).await;
+    assert_eq!(response.status.as_u16(),oracle["status"].as_u64().unwrap() as u16);
+    for (user,client) in &mut clients {
+        for frame in oracle["frames"].as_array().unwrap().iter().filter(|frame|frame["stream"]==format!("user_{user}_unreads")) {
+            let actual:Value=serde_json::from_str(&client.next_text().await).unwrap();assert_eq!(actual["message"],frame["payload"]);
+        }
+        client.assert_silent().await;
+    }
+    assert!(oracle["frames"].as_array().unwrap().iter().any(|frame|frame["stream"]==format!("user_{JASON}_unreads")));
+    assert!(oracle["frames"].as_array().unwrap().iter().all(|frame|frame["stream"]!=format!("user_{KEVIN}_unreads")));
+}
