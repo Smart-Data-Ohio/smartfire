@@ -3,6 +3,24 @@ use jiff::Timestamp;
 use rails_compat::{Secrets, app_verifier};
 use serde_json::{Value, json};
 
+/// Exercise queue assertions with the unrelated job main's recurring scheduler enqueues.
+/// Use the real durable sink so the fixture cannot pass without a persisted job row.
+pub(crate) fn enqueue_retention_job(tx: &mut campfire_db::Tx<'_>) -> campfire_db::Result<()> {
+    let count = |tx: &campfire_db::Tx<'_>| {
+        tx.conn().query_row(
+            "SELECT COUNT(*) FROM background_jobs WHERE job_class='Retention::PruneJob'",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+    };
+    let before = count(tx)?;
+    tx.emit_after_commit(campfire_db::Event::job(
+        &campfire_db::models::retention::PruneJob {},
+    ));
+    assert_eq!(count(tx)?, before + 1, "the recurring job must be persisted");
+    Ok(())
+}
+
 fn now() -> Timestamp {
     "2026-01-01T12:00:00Z".parse().unwrap()
 }
@@ -99,7 +117,7 @@ fn vectors() -> Value {
     serde_json::from_str(include_str!("../../../../../vectors/github.json")).unwrap()
 }
 
-async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
+pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
     let rcgen::CertifiedKey { cert, signing_key } =
         rcgen::generate_simple_self_signed(vec!["github.com".into(), "api.github.com".into()])
@@ -128,7 +146,12 @@ async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
         })
         .unwrap_or((51500, 51549));
     for port in first_port..=last_port {
-        if let Ok(bound) = tokio::net::TcpListener::bind(("127.0.0.1", port)).await {
+        let socket = tokio::net::TcpSocket::new_v4().unwrap();
+        socket.set_reuseaddr(true).unwrap();
+        if let Ok(bound) = socket
+            .bind(std::net::SocketAddr::from(([127, 0, 0, 1], port)))
+            .and_then(|()| socket.listen(128))
+        {
             listener = Some(bound);
             break;
         }
@@ -575,7 +598,7 @@ async fn test_database_with_clock(clock: Arc<campfire_db::TestClock>) -> TestDb 
     .await
     .unwrap()
 }
-fn crypto() -> Arc<ArEncryption> {
+pub(crate) fn crypto() -> Arc<ArEncryption> {
     static CRYPTO: std::sync::OnceLock<Arc<ArEncryption>> = std::sync::OnceLock::new();
     CRYPTO
         .get_or_init(|| {
@@ -711,6 +734,8 @@ async fn rust_account_rows_are_exported_for_rails_rollback_verification() {
     assert_eq!(stored_token(&test, id, "refresh_token"), "fixture-refresh");
     if let Ok(path) = std::env::var("GITHUB_RUST_OUTPUT") {
         let row: Value = test.db.read_blocking(|conn| Ok(conn.query_row("SELECT access_token, refresh_token, github_login, token_source, token_expires_at, created_at, updated_at FROM github_connected_accounts WHERE id = ?", [id], |r| Ok(json!({"access_token":r.get::<_,String>(0)?,"refresh_token":r.get::<_,String>(1)?,"github_login":r.get::<_,String>(2)?,"token_source":r.get::<_,String>(3)?,"token_expires_at":r.get::<_,String>(4)?,"created_at":r.get::<_,String>(5)?,"updated_at":r.get::<_,String>(6)?})))?)).unwrap();
+        let path=std::path::Path::new(&path);
+        if let Some(parent)=path.parent().filter(|p|!p.as_os_str().is_empty()){std::fs::create_dir_all(parent).unwrap();}
         std::fs::write(path, json!({"row":row,"plaintext":{"access_token":"fixture-access","refresh_token":"fixture-refresh"},"signed_state":oauth::sign_state(&Secrets::new(vectors()["secret_key_base"].as_str().unwrap()),"fixture-session-state")}).to_string()).unwrap();
     }
 }

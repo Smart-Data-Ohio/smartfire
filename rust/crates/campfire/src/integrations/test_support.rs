@@ -198,6 +198,7 @@ impl FakeServer {
     }
 
     pub async fn on_listener(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, listener: TcpListener) -> Self {
+
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
@@ -236,6 +237,19 @@ impl Drop for FakeServer {
     }
 }
 
+/// Isolated HTTP matrices use distinct ports at the end of their worker's reserved range.
+pub fn fixture_http_base(default_port: u16, offset: u16) -> String {
+    let port = std::env::var("INTEGRATION_TEST_PORT_RANGE").map(|range| {
+        let (first, last) = range.split_once('-').expect("INTEGRATION_TEST_PORT_RANGE=start-end");
+        let first: u16 = first.parse().unwrap();
+        let last: u16 = last.parse().unwrap();
+        let port = last.checked_sub(offset).expect("fixture port offset outside range");
+        assert!(first <= port, "fixture port offset outside range");
+        port
+    }).unwrap_or(default_port);
+    format!("http://127.0.0.1:{port}")
+}
+
 pub async fn ws15e_listener() -> TcpListener {
     if std::env::var_os("CABLE_TEST_PORT_RANGE").is_some() {
         return crate::test_support::bind_listener().await;
@@ -249,36 +263,24 @@ pub async fn ws15e_listener() -> TcpListener {
 }
 
 /// Reserve an assigned port across exec; Fizzy controllers construct system clients.
+/// Main's held-listener protocol transfers the socket through the child's stdin.
 pub async fn ws15e_http_case(marker: &str, case: &str, test: &str) -> std::process::Output {
-    use std::os::fd::AsRawFd;
-    let listener = ws15e_listener().await.into_std().unwrap();
-    let fd = listener.as_raw_fd();
-    let mut command = tokio::process::Command::new(std::env::current_exe().unwrap());
-    command.args([test, "--exact", "--nocapture"])
+    use std::os::fd::OwnedFd;
+    let listener = crate::test_support::bind_listener().await.into_std().unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    tokio::process::Command::new(std::env::current_exe().unwrap())
+        .args([test, "--exact", "--nocapture", "--test-threads=8"])
         .env(marker, case)
-        .env("FIZZY_API_BASE_URL", format!("http://{}", listener.local_addr().unwrap()))
-        .env("WS15E_TEST_LISTENER_FD", fd.to_string());
-    // SAFETY: only the async-signal-safe fcntl runs between fork and exec. The
-    // parent retains the listener; clearing CLOEXEC in the child cannot affect it.
-    unsafe {
-        command.pre_exec(move || {
-            if libc::fcntl(fd, libc::F_SETFD, 0) == -1 {
-                Err(std::io::Error::last_os_error())
-            } else { Ok(()) }
-        });
-    }
-    let output = command.output().await.unwrap();
-    drop(listener);
-    output
+        .env("FIZZY_API_BASE_URL", base)
+        .stdin(OwnedFd::from(listener))
+        .output().await.unwrap()
 }
 
 pub fn ws15e_http_case_listener() -> TcpListener {
-    use std::os::fd::FromRawFd;
-    let fd = std::env::var("WS15E_TEST_LISTENER_FD").expect("parent reserves the listener")
-        .parse().unwrap();
-    // SAFETY: ws15e_http_case inherited this live TCP socket into this one-test
-    // child. This is its single ownership transfer; the parent has a separate fd.
-    let listener = unsafe { std::net::TcpListener::from_raw_fd(fd) };
+    use std::os::fd::AsFd;
+    let listener = std::net::TcpListener::from(std::io::stdin().as_fd().try_clone_to_owned().unwrap());
+    assert_eq!(crate::integrations::fizzy::client::api_base_url(), format!("http://{}", listener.local_addr().unwrap()));
+    listener.set_nonblocking(true).unwrap();
     TcpListener::from_std(listener).unwrap()
 }
 
@@ -383,8 +385,9 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
     stream.shutdown().await
 }
 
-/// Also acknowledges the first response byte, so a paused-time test can wait for real I/O
-/// before advancing its clock.
+/// A server that answers every request with `head` and then a byte of body every 50 ms, until
+/// the client hangs up. Acknowledges the first byte, so a paused-time test can wait for real
+/// I/O before advancing its clock.
 pub async fn trickling_server_with_ready(
     head: &'static str,
 ) -> (SocketAddr, tokio::sync::oneshot::Receiver<()>) {
@@ -437,7 +440,7 @@ impl TestDb {
 
     pub fn in_dir(clock: Arc<dyn campfire_db::Clock>, directory: &std::path::Path) -> Self {
         use campfire_db::{BasicRichText, Env, NullSink};
-        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 }, directory)
+        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4, ..Default::default() }, directory)
     }
 
     pub fn with_env(env: campfire_db::Env, directory: &std::path::Path) -> Self {

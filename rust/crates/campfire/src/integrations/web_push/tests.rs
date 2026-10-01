@@ -410,6 +410,9 @@ async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() 
     let app = Arc::new(AppState {
         ar_encryption: original.ar_encryption.clone(),
         agent_repositories: Default::default(),
+        github_accounts: original.github_accounts.clone(),
+        github_app: original.github_app.clone(),
+        github_read: original.github_read.clone(),
         sudo: Default::default(),
         two_factor: Default::default(),
         subscription_network: original.subscription_network.clone(),config:original.config.clone(),secrets:original.secrets.clone(),clock:original.clock.clone(),
@@ -494,6 +497,9 @@ async fn ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_
     let app=Arc::new(AppState {
         ar_encryption: original.ar_encryption.clone(),
         agent_repositories: Default::default(),
+        github_accounts: original.github_accounts.clone(),
+        github_app: original.github_app.clone(),
+        github_read: original.github_read.clone(),
         sudo: Default::default(),
         two_factor: Default::default(),
         subscription_network: original.subscription_network.clone(),config:original.config.clone(),secrets:original.secrets.clone(),clock:original.clock.clone(),

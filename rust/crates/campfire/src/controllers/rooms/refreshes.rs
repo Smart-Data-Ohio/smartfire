@@ -28,20 +28,22 @@ pub async fn show(c: &mut Ctx) -> Result {
             let pins_changed = room.pins_changed_at.is_some_and(|stamp| stamp > last_updated_at);
             if new_messages.is_empty() && updated_messages.is_empty() && !pins_changed { return Ok(None); }
             let presenter = Presenter::new(conn, &app, request_host);
-            campfire_views::fragment_cache::with(&app.fragment_cache, || {
-                Ok(Some(RefreshView {
+            let refresh = campfire_views::fragment_cache::with(&app.fragment_cache, || {
+                Ok::<_, campfire_db::Error>(RefreshView {
                     room_id: room.id,
                     room_kind: room_kind(room.room_type),
                     new_messages: presenter.messages(&new_messages)?,
                     updated_messages: presenter.messages(&updated_messages)?,
                     pins: pins_changed.then(|| super::pins::list(conn,&app,&room)).transpose()?,
-                }))
-            })
+                })
+            })?;
+            Ok(Some((refresh, presenter.take_github_refreshes())))
         })
         .await
         .map_err(db_error)?;
-    let Some(refresh) = refresh else { return Ok(c.head(StatusCode::NO_CONTENT)); };
+    let Some((refresh, refreshes)) = refresh else { return Ok(c.head(StatusCode::NO_CONTENT)); };
     c.respond_to(&[&format::TURBO_STREAM])?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
     page::bare(c, StatusCode::OK, &format::TURBO_STREAM, |ctx| RefreshShow { ctx, refresh: &refresh }.render()).await
 }
 

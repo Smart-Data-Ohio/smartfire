@@ -26,6 +26,8 @@ pub mod autocompletable;
 pub mod rooms;
 pub mod messages;
 pub mod channel_threads;
+pub mod github;
+pub mod integration_health;
 pub mod searches;
 pub mod pins;
 pub mod saved_items;

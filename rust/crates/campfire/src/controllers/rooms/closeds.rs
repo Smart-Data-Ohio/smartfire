@@ -144,7 +144,13 @@ async fn render_form(c: &mut Ctx, room: FormRoom, status: StatusCode) -> Result 
         unselected_users,
     };
     if form.room.id.is_some() {
-        page::framed_page!(c, status, |ctx| ClosedsEdit { ctx, form: &form }).await
+        let id = form.room.id.unwrap();
+        let viewer = require_current_user(c)?.clone();
+        let github = c.app().db.read(move |conn| {
+            let room = Room::find(conn, id)?;
+            crate::controllers::presenters::github::subscription_section(conn, &room, &viewer)
+        }).await.map_err(db_error)?;
+        page::framed_page!(c, status, |ctx| ClosedsEdit { ctx, form: &form, github: github.clone() }).await
     } else {
         page::framed_page!(c, status, |ctx| ClosedsNew { ctx, form: &form }).await
     }

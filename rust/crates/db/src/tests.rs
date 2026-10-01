@@ -95,6 +95,7 @@ impl TestDb {
             sink: Arc::new(sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
+            ..Default::default()
         };
         let mut config = Config::new(dir.path().join("test.sqlite3"));
         config.readers = 2;
@@ -151,6 +152,7 @@ impl TestDb {
             sink: Arc::new(self.sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
+            ..Default::default()
         };
         let mut config = Config::new(self.db.path());
         config.readers = 1;

@@ -11,6 +11,7 @@
 {% endfilter %}
   <hr class="separator full-width margin-block-double">
 
+{{ self.github_panel() }}
   <div class="flex align-center gap justify-space-between">
     {% filter button_to(h::routes::account_bot(bot_id), h::attrs().method("delete").class("btn txt--small btn--negative").aria("label", "Delete this chat bot").data("turbo_confirm", "Are you sure you want to permanently remove this bot from the account? This can’t be undone.")) %}
       {{ h::image_tag(ctx, "trash.svg", h::attrs().aria_hidden().size(20)) }}

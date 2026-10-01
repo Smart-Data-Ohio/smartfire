@@ -13,6 +13,8 @@
   {% block room_form %}{% endblock %}
 </section>
 
+{{ github.render() }}
+
 {{ form.room.inbound_email_html(ctx, form.can_administer) }}
 
 {%- if form.can_administer %}
