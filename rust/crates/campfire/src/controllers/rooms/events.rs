@@ -5,7 +5,7 @@ use crate::concerns::{self, Before, before_actions, cast_integer, require_curren
 use crate::controllers::presenters::page::{self, db_error as default_db_error};
 use askama::Template;
 use campfire_db::{CalendarEvent, Error as DbError};
-use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
+use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, halt};
 use campfire_views::events::{Attendance, AttendanceView};
 
 // Both Rails controllers rescue RecordNotFound with head :not_found, even for
@@ -87,15 +87,26 @@ pub async fn show(c: &mut Ctx) -> Result {
     .await
 }
 
-fn present(value: Option<&str>) -> Option<&str> {
-    value.filter(|s| !campfire_richtext::ruby::is_blank(s))
+fn nested<'a>(c: &'a Ctx, key: &str) -> Result<Option<&'a Param>> {
+    // params.dig(:attendance, key) stops at nil, but raises on any non-hash
+    // container (including arrays, since the next key is a symbol). Keep this
+    // lookup lazy: Rails' presence/|| branches can bypass it entirely.
+    match c.params.get("attendance") {
+        None | Some(Param::Null) => Ok(None),
+        Some(Param::Hash(params)) => Ok(params.get(key)),
+        Some(_) => Err(Error::internal(anyhow::anyhow!(
+            "Rails attendance parameters do not support dig with a named key"
+        ))),
+    }
 }
-fn nested(c: &Ctx, key: &str) -> Option<String> {
-    c.params
-        .get("attendance")
-        .and_then(|p| p.get(key))
-        .and_then(|p| p.as_str())
-        .map(str::to_string)
+fn attendance_param<'a>(c: &'a Ctx, key: &str) -> Result<Option<&'a Param>> {
+    match c.params.get(key).filter(|p| p.is_present()) {
+        Some(value) => Ok(Some(value)),
+        None => nested(c, key),
+    }
+}
+fn message_param_text(param: &Param) -> String {
+    campfire_richtext::ruby::json_value_to_s(&param.to_json())
 }
 fn sentence(messages: Vec<String>) -> String {
     match messages.len() {
@@ -112,20 +123,18 @@ fn sentence(messages: Vec<String>) -> String {
 
 pub async fn attendance_show(c: &mut Ctx) -> Result {
     let event = set_event(c).await?;
-    let message = c.param_str("message_id").map(str::to_string);
+    let message = c.params.get("message_id").cloned();
     render_attendance(c, event, message, None).await
 }
 
 pub async fn attendance_update(c: &mut Ctx) -> Result {
     let event = set_event(c).await?;
-    let response = present(c.param_str("response"))
+    let response = attendance_param(c, "response")?
+        .and_then(Param::as_str)
         .map(str::to_string)
-        .or_else(|| nested(c, "response"))
         .unwrap_or_default();
-    let message = present(c.param_str("message_id"))
-        .map(str::to_string)
-        .or_else(|| nested(c, "message_id"));
-    let frame = c.is_turbo_frame_request() && present(message.as_deref()).is_some();
+    let message = attendance_param(c, "message_id")?.cloned();
+    let frame = c.is_turbo_frame_request() && message.as_ref().is_some_and(Param::is_present);
     let user_id = require_current_user(c)?.id;
     let respondable = c
         .app()
@@ -147,7 +156,7 @@ pub async fn attendance_update(c: &mut Ctx) -> Result {
     };
     if alert.is_none() {
         let apply = c.param_str("apply_to_future") == Some("1")
-            || nested(c, "apply_to_future").as_deref() == Some("1");
+            || nested(c, "apply_to_future")?.and_then(Param::as_str) == Some("1");
         let event_id = event.id;
         let response = response.clone();
         match c
@@ -184,10 +193,23 @@ pub async fn attendance_update(c: &mut Ctx) -> Result {
 async fn render_attendance(
     c: &mut Ctx,
     event: CalendarEvent,
-    message_id: Option<String>,
+    message: Option<Param>,
     alert: Option<String>,
 ) -> Result {
     let user_id = require_current_user(c)?.id;
+    let message_id = message
+        .as_ref()
+        .filter(|p| !p.is_null())
+        .map(message_param_text);
+    // Rails interpolates an array's inspect form in the frame id, but the tag
+    // builder joins array attribute values with spaces in the hidden input.
+    let message_id_input = message.as_ref().and_then(Param::as_array).map(|items| {
+        items
+            .iter()
+            .map(message_param_text)
+            .collect::<Vec<_>>()
+            .join(" ")
+    });
     let view = c
         .app()
         .db
@@ -197,6 +219,7 @@ async fn render_attendance(
                 event_id: event.id,
                 room_id: event.room_id,
                 message_id,
+                message_id_input,
                 current_response: event.response_for(conn, Some(user_id))?,
                 going: *counts.get("going").unwrap_or(&0),
                 maybe: *counts.get("maybe").unwrap_or(&0),

@@ -6,7 +6,7 @@
       <span class="event-card__counts">({{ view.going_count() }}, {{ view.maybe_count() }})</span>
     </p>
 {% if view.respondable %}{% let form = h::form_with(view.path()).method("patch").class("event-card__responses") %}      {% filter form_with(form) %}
-        {{ h::hidden_field_tag("message_id", view.message_id.as_deref(), h::attrs()) }}
+        {{ h::hidden_field_tag("message_id", view.message_input_value(), h::attrs()) }}
 {% if view.apply_to_future %}          <label class="event-card__future">
             {{ view.future_checkbox() }}
             Apply to all future occurrences

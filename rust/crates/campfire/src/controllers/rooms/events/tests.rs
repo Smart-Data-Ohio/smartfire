@@ -22,6 +22,187 @@ async fn event(app: &TestApp) -> CalendarEvent {
         .await
         .unwrap()
 }
+
+#[tokio::test]
+async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
+    let app = TestApp::boot().await.expect("pinned default seed");
+    let oracle: serde_json::Value =
+        serde_json::from_str(include_str!("event-review-regressions.json")).unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE sqlite_sequence SET seq=8000000000 WHERE name='events'",
+                [],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = app.david();
+    for case in oracle["attendance"].as_array().unwrap() {
+        let head = event(&app).await;
+        let rows = app.db().read(move |c| head.series_events(c)).await.unwrap();
+        let path = format!("/rooms/{ALL_TALK}/events/{}/attendance", rows[1].id);
+        let before = event_snapshot(&app).await;
+        let mut req = Req::new(
+            if case["show"] == true {
+                Method::GET
+            } else {
+                Method::PATCH
+            },
+            &path,
+        );
+        if case["frame"] == true {
+            req = req.header("turbo-frame", "response_for_message_601");
+        }
+        req = if let Some(form) = case["form"].as_str() {
+            req.header("content-type", "application/x-www-form-urlencoded")
+                .body(form.as_bytes().to_vec())
+        } else {
+            req.header("content-type", "application/json")
+                .body(serde_json::to_vec(&case["params"]).unwrap())
+        };
+        let response = if case["show"] == true {
+            david.send(req).await
+        } else {
+            david.write(req).await
+        };
+        let label = format!("{} frame={}", case["name"], case["frame"]);
+        if response.status.as_u16() as u64 != case["status"].as_u64().unwrap() {
+            let probe_rows = rows.clone();
+            let current = app
+                .db()
+                .read(move |c| {
+                    probe_rows
+                        .iter()
+                        .map(|e| e.response_for(c, Some(DAVID)))
+                        .collect::<campfire_db::Result<Vec<_>>>()
+                })
+                .await
+                .unwrap();
+            eprintln!(
+                "{label}: actual status={}, unchanged={}, responses={current:?}",
+                response.status,
+                before == event_snapshot(&app).await
+            );
+        }
+        assert_eq!(
+            response.status.as_u16() as u64,
+            case["status"].as_u64().unwrap(),
+            "{label}"
+        );
+        if response.status == StatusCode::INTERNAL_SERVER_ERROR {
+            assert_eq!(
+                response.text(),
+                oracle["production_500"].as_str().unwrap(),
+                "{label}"
+            );
+        }
+        let after = event_snapshot(&app).await;
+        assert_eq!(
+            before == after,
+            case["unchanged"].as_bool().unwrap(),
+            "{label}: persisted writes"
+        );
+        let actual = app
+            .db()
+            .read(move |c| {
+                rows.iter()
+                    .map(|e| e.response_for(c, Some(DAVID)))
+                    .collect::<campfire_db::Result<Vec<_>>>()
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(actual).unwrap(),
+            case["responses"],
+            "{label}: series responses"
+        );
+        if let Some(frame_id) = case["frame_id"].as_str() {
+            assert!(
+                response.text().contains(&format!(
+                    "id=\"{}\"",
+                    campfire_views::helpers::html::escape(frame_id)
+                )),
+                "{label}: frame id, {}",
+                response.text()
+            );
+            let hidden = campfire_views::helpers::hidden_field_tag(
+                "message_id",
+                case["message_value"].as_str(),
+                campfire_views::helpers::attrs(),
+            );
+            assert!(
+                response.text().contains(&hidden.0),
+                "{label}: hidden message value"
+            );
+        }
+        assert_eq!(
+            response
+                .text()
+                .contains("Choose going, maybe, or declined."),
+            case["invalid"].as_bool().unwrap(),
+            "{label}: alert"
+        );
+    }
+    for case in oracle["event_params"].as_array().unwrap() {
+        let event = app
+            .db()
+            .write(|tx| {
+                CalendarEvent::create(
+                    tx,
+                    NewCalendarEvent {
+                        room_id: ALL_TALK,
+                        organizer_id: DAVID,
+                        title: "Sibling shape".into(),
+                        starts_at: Timestamp::parse_db("2026-03-03 09:00:00"),
+                        time_zone: "UTC".into(),
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
+        let (method, path) = match case["action"].as_str().unwrap() {
+            "create" => (Method::POST, format!("/rooms/{ALL_TALK}/events")),
+            "update" => (
+                Method::PATCH,
+                format!("/rooms/{ALL_TALK}/events/{}", event.id),
+            ),
+            "new" => (Method::GET, format!("/rooms/{ALL_TALK}/events/new")),
+            _ => unreachable!(),
+        };
+        let before = event_snapshot(&app).await;
+        let req = Req::new(method.clone(), &path)
+            .header("content-type", "application/json")
+            .body(serde_json::to_vec(&case["params"]).unwrap());
+        let response = if method == Method::GET {
+            david.send(req).await
+        } else {
+            david.write(req).await
+        };
+        assert_eq!(
+            response.status.as_u16() as u64,
+            case["status"].as_u64().unwrap(),
+            "{}",
+            case["name"]
+        );
+        if response.status == StatusCode::INTERNAL_SERVER_ERROR {
+            assert_eq!(
+                response.text(),
+                oracle["production_500"].as_str().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+        assert_eq!(
+            before == event_snapshot(&app).await,
+            case["unchanged"].as_bool().unwrap(),
+            "{}",
+            case["name"]
+        );
+    }
+}
 #[tokio::test]
 async fn attendance_controller_security_blocks_nonmembers_and_bots() {
     let Some(app) = TestApp::boot().await else {
@@ -622,12 +803,10 @@ async fn calendar_api_meet_link_is_not_a_user_parameter() {
         .await
         .unwrap();
     let response = david
-        .write(
-            Req::new(Method::PATCH, &path).form(&[
-                ("event[starts_at]", "2026-03-03T09:00"),
-                ("event[meet_link]", "https://meet.example.test/injected"),
-            ]),
-        )
+        .write(Req::new(Method::PATCH, &path).form(&[
+            ("event[starts_at]", "2026-03-03T09:00"),
+            ("event[meet_link]", "https://meet.example.test/injected"),
+        ]))
         .await;
     assert_eq!(response.status, StatusCode::FOUND);
     assert_eq!(
