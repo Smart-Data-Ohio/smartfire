@@ -345,6 +345,8 @@ impl Broadcasts {
     }
 
     /// Remove `dom_id(boost)` from the conversation.
+    // Current controllers replace grouped reactions. Keep the legacy frame primitive for its wire tests.
+    #[cfg(test)]
     pub fn boost_remove(&self, room: &Room, message: &Message, boost: &Boost) {
         self.remove(
             &Stream::conversation(room, message),
