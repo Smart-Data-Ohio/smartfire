@@ -368,7 +368,11 @@ impl<'a> Presenter<'a> {
             Ok(view)
         };
         // Event cards contain viewer-zone dates and must render in the request context.
-        let has_events: bool = self.conn.query_row("SELECT EXISTS(SELECT 1 FROM event_references WHERE message_id=?)", [message.id], |row| row.get(0))?;
+        let has_events = if let Some(data) = &self.search_preloads {
+            data.event_views.contains_key(&message.id)
+        } else {
+            self.conn.query_row("SELECT EXISTS(SELECT 1 FROM event_references WHERE message_id=?)", [message.id], |row| row.get::<_, bool>(0))?
+        };
         let Some(base) = self.cache_base_url.as_deref().filter(|_| !has_events) else { return Ok(MessageItem::View(Box::new(view()?))) };
         let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
         let html = fragment_cache::try_fetch_value(|| key, || {
@@ -439,7 +443,11 @@ impl<'a> Presenter<'a> {
             details: self.message_details(message)?,
             components: {
                 let mut components = link_embeds::components(self, message)?;
-                components.event_views = events::for_message(self.conn, message)?;
+                components.event_views = if let Some(data) = &self.search_preloads {
+                    data.event_views.get(&message.id).cloned().unwrap_or_default()
+                } else {
+                    events::for_message(self.conn, message)?
+                };
                 components.quote_references = self.quote_components(message)?.quote_references;
                 components.github_cards_html = github_cards_html;
                 components.github_cards_stamp = github_cards_stamp;
