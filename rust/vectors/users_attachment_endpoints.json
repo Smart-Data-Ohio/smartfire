@@ -145,5 +145,71 @@
       "analysis_jobs": 1,
       "audits": 1
     }
+  ],
+  "null_analysis": [
+    {
+      "fail_analysis": false,
+      "fail_audit": false,
+      "status": 302,
+      "location": "http://campfire.test/account/edit",
+      "blob_reused": true,
+      "raw_filename": "notes.txt ",
+      "sanitized": "notes.txt",
+      "content_type": "text/plain",
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      },
+      "analysis_jobs": 0,
+      "audits": [
+        {
+          "action": "account.settings.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Account",
+          "target_id": 873240054,
+          "target_label": "37signals",
+          "details": {
+            "logo": {
+              "before": false,
+              "after": true
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "ws8br2-attachment-fixture"
+        }
+      ]
+    },
+    {
+      "fail_analysis": true,
+      "fail_audit": false,
+      "status": 500,
+      "location": null,
+      "blob_reused": true,
+      "raw_filename": "notes.txt ",
+      "sanitized": "notes.txt",
+      "content_type": "text/plain",
+      "metadata": {
+        "identified": true
+      },
+      "analysis_jobs": 0,
+      "audits": []
+    },
+    {
+      "fail_analysis": false,
+      "fail_audit": true,
+      "status": 500,
+      "location": null,
+      "blob_reused": true,
+      "raw_filename": "notes.txt ",
+      "sanitized": "notes.txt",
+      "content_type": "text/plain",
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      },
+      "analysis_jobs": 0,
+      "audits": []
+    }
   ]
 }

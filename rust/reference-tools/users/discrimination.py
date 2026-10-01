@@ -10,7 +10,18 @@ scratch = root.parent / ".scratch" / "users-discrimination"
 scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
+# Reproduce the pre-fix controller order, while keeping WS9's existing producer exactly once.
+account_source = (root / "crates/campfire/src/controllers/accounts.rs").read_text()
+account_start = account_source.index("    let (before, account, before_logo, after_logo) = c")
+account_end = account_source.index("    let location =", account_start)
+account_audit_block = account_source[account_start:account_end]
+early_audit = account_audit_block[:account_audit_block.index("    // Rails record_settings_changes")]
+early_audit = early_audit.replace("    let (before, account, before_logo, after_logo) = c", "    c")
+early_audit = early_audit.replace("            Ok((before, account, before_logo, after_logo))", "            crate::account_security::settings_changed(tx, &before, &account, before_logo, after_logo, &audit)?;\n            Ok(())")
 mutations = [
+    ("account-audit-order", "crates/campfire/src/controllers/accounts.rs", account_audit_block, early_audit, "logo_null_analysis_and_audit_failures_match_rails_after_commit_boundaries"),
+    ("logo-null-analysis", "crates/campfire/src/controllers/presenters/attachments.rs", "if !blob.is_analyzed() {", "if false {", "logo_null_analysis_and_audit_failures_match_rails_after_commit_boundaries"),
+    ("fizzy-token-usability", "crates/campfire/src/controllers/presenters/fizzy_profile.rs", "let usable = account.usable_token(tx, &crypto)?.is_some();", "let usable = true;", "blank"),
     ("agent-private-room", "crates/campfire/src/controllers/presenters/agent_profile.rs", "campfire_db::Membership::find_by_room_and_user(conn, room.id, viewer.id)?.is_some()", "true", "private_rooms_hidden"),
     ("agent-owner-actions", "crates/campfire/src/controllers/presenters/agent_profile.rs", "viewer.is_administrator()", "true", "peer_hides_grants"),
     ("signed-blob-filename", "crates/storage/src/storage.rs", "Some(&blob.filename.sanitized())", "Some(blob.filename.raw())", "signed_icon_and_logo_http_assignments_match_rails_filenames_metadata_and_jobs"),
