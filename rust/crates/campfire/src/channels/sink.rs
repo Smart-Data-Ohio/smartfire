@@ -75,7 +75,7 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             })?;
             Ok(())
         }),
-        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, app, &broadcast)),
         crate::integrations::github::notifier::MessageCreated::KIND => decode(request).and_then(|broadcast| {
             let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;
             super::github_notifier::publish(app, &broadcast)
@@ -107,8 +107,39 @@ fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updat
 
 /// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
 /// partial descriptions belongs to WS8b; template-free frames are delivered now.
-fn messaging(cable: &Cable, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
+fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
     use campfire_db::broadcasts::Broadcast;
+    if let Broadcast::Turbo(frame) = broadcast
+        && let Some(campfire_db::broadcasts::Partial::Message { message_id }) = &frame.partial
+    {
+        let app = app.ok_or_else(|| anyhow::anyhow!("message broadcast before app boot"))?;
+        let html = app.db.read_blocking(|conn| {
+            let message = campfire_db::Message::find(conn, *message_id)?;
+            let view = crate::controllers::presenters::Presenter::new(conn, app, None).message(&message)?;
+            Ok(crate::controllers::presenters::page::render_detached_at(app, None, &app.db.env().default_url_origin, |ctx| campfire_views::messages::message(ctx, &view)))
+        })?;
+        let action = match frame.action {
+            campfire_db::broadcasts::TurboAction::Append => Action::Append,
+            campfire_db::broadcasts::TurboAction::Replace => Action::Replace,
+            _ => return Err(anyhow::anyhow!("unexpected message partial action")),
+        };
+        let attributes = if frame.maintain_scroll { vec![("maintain_scroll", Some("true"))] } else { Vec::new() };
+        cable.broadcast_action_to(&[&broadcast.stream_name()], action, Target::Target(&frame.target), Some(&html), &attributes);
+        return Ok(());
+    }
+    if let Broadcast::Turbo(frame) = broadcast
+        && let Some(campfire_db::broadcasts::Partial::EventCards { message_id }) = &frame.partial
+    {
+        let app = app.ok_or_else(|| anyhow::anyhow!("event card broadcast before app boot"))?;
+        let html = app.db.read_blocking(|conn| crate::controllers::presenters::events::cards(conn, *message_id))?;
+        let action = match frame.action {
+            campfire_db::broadcasts::TurboAction::Replace => Action::Replace,
+            _ => return Err(anyhow::anyhow!("unexpected event card action")),
+        };
+        let attributes = if frame.maintain_scroll { vec![("maintain_scroll", Some("true"))] } else { Vec::new() };
+        cable.broadcast_action_to(&[&broadcast.stream_name()], action, Target::Target(&frame.target), Some(&html), &attributes);
+        return Ok(());
+    }
     let (stream, payload) = template_free_broadcast(broadcast)
         .ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
     match broadcast {

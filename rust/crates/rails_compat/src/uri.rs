@@ -56,6 +56,32 @@ pub(crate) fn is_http(url: &str) -> bool {
     })
 }
 
+/// Rooms::EventsHelper#safe_meet_link: URI::HTTPS with a nonblank host,
+/// preserving Ruby's spelling while normalizing the scheme and default port.
+pub fn safe_https(value: &str) -> Option<String> {
+    if !is_http(value) { return None; }
+    let (scheme,rest)=value.split_once(':')?;
+    if !scheme.eq_ignore_ascii_case("https") {return None;}
+    let rest=rest.strip_prefix("//")?;
+    let end=rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let authority=&rest[..end];
+    let (userinfo,host_port)=authority.rsplit_once('@').map_or(("",authority),|(user,host)|(user,host));
+    let mut host=host_port;
+    let mut port=String::new();
+    if let Some((candidate,digits))=host_port.rsplit_once(':') && digits.bytes().all(|c|c.is_ascii_digit()) {
+        host=candidate;
+        if !digits.is_empty() {
+            let number=digits.trim_start_matches('0');
+            let number=if number.is_empty() {"0"} else {number};
+            if number!="443" {port=format!(":{number}");}
+        }
+    }
+    if host.is_empty() {return None;}
+    let userinfo=if authority.contains('@') {format!("{userinfo}@")} else {String::new()};
+    Some(format!("https://{userinfo}{host}{port}{}",&rest[end..]))
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

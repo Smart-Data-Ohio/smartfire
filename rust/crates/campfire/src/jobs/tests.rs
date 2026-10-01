@@ -948,6 +948,7 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     let mut expected = golden["tasks"].as_array().unwrap().clone();
+    expected.insert(0, serde_json::json!({"name":"event reminders","seconds":17}));
     // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
     let retention = expected.pop().unwrap();
     expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
@@ -958,6 +959,8 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
     expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
     assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
+    let events = periodic.tasks().find(|task| task.name() == "event reminders").unwrap();
+    assert_eq!(events.interval(), Duration::from_secs(17));
     let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
     assert_eq!(recovery.interval(), Duration::from_secs(30));
 
@@ -1245,3 +1248,5 @@ async fn ws8_periodic_row_failures_continue_like_rails() {
         );
     }
 }
+
+mod event_tests;

@@ -10,7 +10,6 @@ use rusqlite::{Connection, Row, params};
 use crate::broadcasts::Broadcast;
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
-use crate::events::Event;
 use crate::models::User;
 use crate::sql::{CachedStatements, query_one};
 use crate::time::Timestamp;
@@ -68,11 +67,22 @@ impl ActivityItem {
     }
 
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
-        query_one(conn, r#"SELECT * FROM "activity_items" WHERE "id" = ? LIMIT 1"#, [id], Self::from_row)?.or_not_found("ActivityItem")
+        query_one(
+            conn,
+            r#"SELECT * FROM "activity_items" WHERE "id" = ? LIMIT 1"#,
+            [id],
+            Self::from_row,
+        )?
+        .or_not_found("ActivityItem")
     }
 
     /// `ActivityItem.find_by(user:, source:)`
-    pub fn find_by_user_and_source(conn: &Connection, user_id: i64, source_type: &str, source_id: i64) -> Result<Option<Self>> {
+    pub fn find_by_user_and_source(
+        conn: &Connection,
+        user_id: i64,
+        source_type: &str,
+        source_id: i64,
+    ) -> Result<Option<Self>> {
         query_one(
             conn,
             r#"SELECT * FROM "activity_items" WHERE "user_id" = ? AND "source_type" = ? AND "source_id" = ? LIMIT 1"#,
@@ -89,7 +99,13 @@ impl ActivityItem {
     /// `find_or_initialize_by(user:, source:)`, then `event_type =`, unread again (`read_at` and
     /// `handled_at` nil), `save!`. A new row broadcasts (`after_create_commit`); an existing one
     /// broadcasts only when its state or type changed (`broadcast_updated`).
-    pub fn refresh_unread(tx: &mut Tx<'_>, user_id: i64, source_type: &str, source_id: i64, event_type: &str) -> Result<Self> {
+    pub fn refresh_unread(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source_type: &str,
+        source_id: i64,
+        event_type: &str,
+    ) -> Result<Self> {
         let mut errors = Errors::default();
         if !EVENT_TYPES.contains(&event_type) {
             errors.add("event_type", "is not included in the list");
@@ -99,9 +115,12 @@ impl ActivityItem {
         }
         errors.into_result()?;
         let now = tx.now();
-        let item = match Self::find_by_user_and_source(tx.conn(), user_id, source_type, source_id)? {
+        let item = match Self::find_by_user_and_source(tx.conn(), user_id, source_type, source_id)?
+        {
             Some(item) => {
-                let changed = item.event_type != event_type || item.read_at.is_some() || item.handled_at.is_some();
+                let changed = item.event_type != event_type
+                    || item.read_at.is_some()
+                    || item.handled_at.is_some();
                 if changed {
                     tx.conn().execute_cached(
                         r#"UPDATE "activity_items" SET "event_type" = ?, "read_at" = NULL, "handled_at" = NULL, "updated_at" = ? WHERE "id" = ?"#,
@@ -132,10 +151,11 @@ impl ActivityItem {
             if crate::models::huddle_invitations::enqueue_item_ring(tx, id)? {
                 return Ok(());
             }
-            tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
+            tx.emit_broadcast_once("activity_items", id, &Broadcast::Cable {
                 stream: format!("user_{user_id}_activity"),
                 payload: serde_json::json!({ "activityItemId": id }),
-            }));
+            });
+
         }
         Ok(())
     }
@@ -154,6 +174,7 @@ impl ActivityItem {
         tx.conn().execute_cached("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),tx.now(),self.id])?;
         Self::broadcast_change(tx,self.user_id,self.id)?;
         Self::find(tx.conn(),self.id)
+
     }
 
     /// Approval settlement preserves an earlier read timestamp and broadcasts once
