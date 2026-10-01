@@ -7,38 +7,80 @@ async fn bot_edit_reads_ws11_profile_and_secret_without_creating_or_rotating_sec
     // an encrypted empty string hides the display and does not use the fallback.
     for (agent_value, webhook_value, displayed) in [
         (None, None, None),
-        (None, Some("legacy display fixture"), Some("legacy display fixture")),
+        (
+            None,
+            Some("legacy display fixture"),
+            Some("legacy display fixture"),
+        ),
         (Some(""), Some("legacy display fixture"), None),
-        (Some("agent display fixture"), Some("legacy display fixture"), Some("agent display fixture")),
+        (
+            Some("agent display fixture"),
+            Some("legacy display fixture"),
+            Some("agent display fixture"),
+        ),
     ] {
         let test = boot_seed("default").await.expect("default seed");
         let bot: i64 = test.label("users.bender").parse().unwrap();
         let crypto = test.booted.app.ar_encryption.clone();
-        let before = test.booted.app.db.write(move |tx| {
-            let agent = campfire_db::Agent::for_user(tx.conn(), bot)?.unwrap();
-            let agent_cipher = agent_value.map(|value| crypto.encrypt(value));
-            let webhook_cipher = webhook_value.map(|value| crypto.encrypt(value));
-            tx.conn().execute("UPDATE agents SET webhook_signing_secret=? WHERE id=?", rusqlite::params![agent_cipher,agent.id])?;
-            tx.conn().execute("UPDATE webhooks SET signing_secret=? WHERE user_id=?", rusqlite::params![webhook_cipher,bot])?;
-            Ok((agent.id,agent_cipher,agent.updated_at))
-        }).await.unwrap();
+        let before = test
+            .booted
+            .app
+            .db
+            .write(move |tx| {
+                let agent = campfire_db::Agent::for_user(tx.conn(), bot)?.unwrap();
+                let agent_cipher = agent_value.map(|value| crypto.encrypt(value));
+                let webhook_cipher = webhook_value.map(|value| crypto.encrypt(value));
+                tx.conn().execute(
+                    "UPDATE agents SET webhook_signing_secret=? WHERE id=?",
+                    rusqlite::params![agent_cipher, agent.id],
+                )?;
+                tx.conn().execute(
+                    "UPDATE webhooks SET signing_secret=? WHERE user_id=?",
+                    rusqlite::params![webhook_cipher, bot],
+                )?;
+                Ok((agent.id, agent_cipher, agent.updated_at))
+            })
+            .await
+            .unwrap();
         let mut browser = test.browser("198.51.100.168");
-        browser.cookies.insert("session_token".into(), test.label("session_cookies.david"));
+        browser
+            .cookies
+            .insert("session_token".into(), test.label("session_cookies.david"));
         for _ in 0..2 {
             let page = browser.get(&format!("/account/bots/{bot}/edit")).await;
             assert_eq!(page.status, StatusCode::OK);
             let html = page.text();
-            assert_eq!(html.contains("Copy this secret into the receiving service"), displayed.is_some());
-            if let Some(value) = displayed { assert!(html.contains(value)); }
-            if displayed != Some("legacy display fixture") { assert!(!html.contains("legacy display fixture")); }
+            assert_eq!(
+                html.contains("Copy this secret into the receiving service"),
+                displayed.is_some()
+            );
+            if let Some(value) = displayed {
+                assert!(html.contains(value));
+            }
+            if displayed != Some("legacy display fixture") {
+                assert!(!html.contains("legacy display fixture"));
+            }
         }
-        let after = test.booted.app.db.read(move |conn| {
-            let agent = campfire_db::Agent::for_user(conn, bot)?.unwrap();
-            let cipher: Option<String> = conn.query_row("SELECT webhook_signing_secret FROM agents WHERE id=?", [agent.id], |r| r.get(0))?;
-            Ok((agent.id,cipher,agent.updated_at))
-        }).await.unwrap();
-        assert_eq!(after,before,"edit GET must not ensure or reset an agent secret");
-        assert_eq!(secret(&test,bot).await.as_deref(),webhook_value);
+        let after = test
+            .booted
+            .app
+            .db
+            .read(move |conn| {
+                let agent = campfire_db::Agent::for_user(conn, bot)?.unwrap();
+                let cipher: Option<String> = conn.query_row(
+                    "SELECT webhook_signing_secret FROM agents WHERE id=?",
+                    [agent.id],
+                    |r| r.get(0),
+                )?;
+                Ok((agent.id, cipher, agent.updated_at))
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            after, before,
+            "edit GET must not ensure or reset an agent secret"
+        );
+        assert_eq!(secret(&test, bot).await.as_deref(), webhook_value);
     }
 }
 async fn legacy(test: &Test, url: Option<&str>) -> i64 {
@@ -161,7 +203,7 @@ async fn secret_rotation_finds_bot_then_rejects_nonowner_before_sudo() {
     assert!(secret(&test, id).await.is_none());
 }
 #[tokio::test]
-async fn audit_failure_rolls_back_legacy_secret_rotation() {
+async fn audit_failure_preserves_legacy_secret_rotation() {
     let test = boot_seed("default").await.expect("default seed");
     let id = legacy(&test, Some("https://example.test/receiver")).await;
     test.booted.app.db.write(|tx|{tx.conn().execute_batch("CREATE TRIGGER reject_secret_audit BEFORE INSERT ON audit_logs WHEN NEW.action='agent.webhook_secret.reset' BEGIN SELECT RAISE(ABORT,'test audit rejection'); END;")?;Ok(())}).await.unwrap();
@@ -175,7 +217,7 @@ async fn audit_failure_rolls_back_legacy_secret_rotation() {
             .status,
         StatusCode::INTERNAL_SERVER_ERROR
     );
-    assert!(secret(&test, id).await.is_none());
+    assert_eq!(secret(&test, id).await.unwrap().len(), 64);
 }
 
 async fn agent_secret(test: &Test, bot_id: i64) -> (i64, String, String, campfire_db::Timestamp) {
@@ -400,13 +442,72 @@ async fn bot_edit_calls_github_owner_usability_and_marks_unreadable_tokens_disco
     let response = admin.get(&format!("/account/bots/{bot}/edit")).await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(response.text().contains(UNREADABLE_TOKEN_REASON));
-    for secret in ["never-render-pat-fixture", "unreadable-cipher-fixture"] { assert!(!response.text().contains(secret)); }
-    let stamp = test.booted.app.db.read(move |conn| {
-        let account = Account::find(conn,id)?.unwrap();
-        assert_eq!(account.disconnected_reason.as_deref(),Some(UNREADABLE_TOKEN_REASON));
-        assert!(account.updated_at.to_db().as_str() > "2026-03-01 00:00:00.000000");
-        Ok(account.updated_at)
+    for secret in ["never-render-pat-fixture", "unreadable-cipher-fixture"] {
+        assert!(!response.text().contains(secret));
+    }
+    let stamp = test
+        .booted
+        .app
+        .db
+        .read(move |conn| {
+            let account = Account::find(conn, id)?.unwrap();
+            assert_eq!(
+                account.disconnected_reason.as_deref(),
+                Some(UNREADABLE_TOKEN_REASON)
+            );
+            assert!(account.updated_at.to_db().as_str() > "2026-03-01 00:00:00.000000");
+            Ok(account.updated_at)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        admin.get(&format!("/account/bots/{bot}/edit")).await.status,
+        StatusCode::OK
+    );
+    test.booted
+        .app
+        .db
+        .read(move |conn| {
+            assert_eq!(Account::find(conn, id)?.unwrap().updated_at, stamp);
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn audit_failure_preserves_key_and_agent_secret_rotations() {
+    let test = boot_seed("default").await.expect("default seed");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    initialize_agent_secret(&test, bot).await;
+    let before = agent_secret(&test, bot).await;
+    let old_key = test.label("bot_keys.bender");
+    test.booted.app.db.write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_rotation_audit BEFORE INSERT ON audit_logs WHEN NEW.action IN ('agent.credential.reset','agent.webhook_secret.reset') BEGIN SELECT RAISE(ABORT,'audit unavailable'); END;")?;
+        Ok(())
     }).await.unwrap();
-    assert_eq!(admin.get(&format!("/account/bots/{bot}/edit")).await.status,StatusCode::OK);
-    test.booted.app.db.read(move |conn| { assert_eq!(Account::find(conn,id)?.unwrap().updated_at,stamp);Ok(()) }).await.unwrap();
+    let mut admin = test.browser("198.51.100.170");
+    admin.sign_in(&test.label("emails.david")).await;
+    admin.grant_sudo_access();
+    for (method, action) in [("put", "key"), ("post", "webhook_secret")] {
+        assert_eq!(
+            admin
+                .form(method, &format!("/account/bots/{bot}/{action}"), &[])
+                .await
+                .status,
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+    test.booted.app.db.read(move |conn| {
+        assert!(campfire_db::User::authenticate_bot(conn, &old_key)?.is_none());
+        let (plain, digest): (Option<String>, Option<String>) = conn.query_row("SELECT bot_token,bot_token_digest FROM users WHERE id=?", [bot], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        assert!(plain.is_none());
+        assert!(digest.is_some());
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action IN ('agent.credential.reset','agent.webhook_secret.reset')", [], |r| r.get::<_, i64>(0))?, 0);
+        Ok(())
+    }).await.unwrap();
+    let after = agent_secret(&test, bot).await;
+    assert_eq!(after.0, before.0);
+    assert_ne!(after.1, before.1);
+    assert_ne!(after.2, before.2);
 }

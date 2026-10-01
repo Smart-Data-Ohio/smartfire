@@ -10,7 +10,7 @@ use campfire_db::{
 use campfire_kit::{Ctx, Error, Result};
 enum Rotation {
     NoWebhook,
-    Reset,
+    Reset(Target),
 }
 pub async fn create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
@@ -36,16 +36,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 webhook.reset_signing_secret(tx, &crypto)?;
                 Target::from(&bot)
             };
-            AuditLog::record(
-                tx,
-                NewAuditLog {
-                    action: "agent.webhook_secret.reset".into(),
-                    target: Some(target),
-                    ..Default::default()
-                },
-                &context,
-            )?;
-            Ok(Rotation::Reset)
+            Ok(Rotation::Reset(target))
         })
         .await
         .map_err(Error::internal)?;
@@ -55,7 +46,24 @@ pub async fn create(c: &mut Ctx) -> Result {
                 .set_alert("Set a webhook URL before generating a signing secret.");
             c.redirect_to(&c.url_for(&campfire_routes::edit_account_bot(id)))
         }
-        Rotation::Reset => {
+        Rotation::Reset(target) => {
+            // Both Rails reset methods commit before the independent audit insert.
+            c.app()
+                .db
+                .write(move |tx| {
+                    AuditLog::record(
+                        tx,
+                        NewAuditLog {
+                            action: "agent.webhook_secret.reset".into(),
+                            target: Some(target),
+                            ..Default::default()
+                        },
+                        &context,
+                    )
+                    .map(|_| ())
+                })
+                .await
+                .map_err(Error::internal)?;
             c.flash().set_notice(
                 "Signing secret reset. Update the receiving service with the new secret.",
             );

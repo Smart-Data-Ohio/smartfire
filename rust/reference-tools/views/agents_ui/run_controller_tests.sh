@@ -14,4 +14,4 @@ docker run --rm --name "${PARITY_OWNER:-ws11ui}-rails-controller-tests" --cpus 2
   -e RAILS_ENV=test -e PARALLEL_WORKERS=1 -e PARITY_REDIS=1 \
   -e BUNDLE_WITHOUT=development -e BUNDLE_JOBS=1 -e BUNDLE_DEPLOYMENT=true \
   -v "$WORK/test:/rails/test:ro" "${PARITY_IMAGE:-ws11ui-reference:d7c7de92}" \
-  bash -c 'bundle config set --local without development; bundle install --quiet; bin/rails db:prepare >/dev/null; bin/rails test "$@"' bash "$@"
+  bash -c 'bundle config set --local without development; bundle install --quiet; bin/rails db:prepare >/dev/null; status=0; for file in "$@"; do echo "Rails pinned file: $file"; bin/rails test "$file" || status=1; done; exit "$status"' bash "$@"
