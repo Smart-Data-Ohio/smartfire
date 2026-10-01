@@ -27,6 +27,15 @@ missing/off-page divider IDs produce an ordinary list. `room_native::message_lis
 is the only shell wrapper. Do not duplicate its boundary. `PendingTemplate` already
 ends with its source newline and must also be mounted verbatim.
 
+`message_collection_cache_key` retains Rails' exact collection-helper composition.
+The stored fragment uses `message_fragment_cache_key`: that collection key followed
+by the exact `MessagesController#index` page validator for the message and its reply
+source, then the verified origin. Rails' initial room list renders uncached; the
+validator preserves its reply-source and creator freshness when Rust reuses the
+collection fragment.
+Use this stored key for cache witnesses/readbacks. The review oracle records both
+Rails compositions and actual room bytes after same-second source edits and renames.
+
 `room-list.rb` covers nine actual Rails room requests, selected IDs, unread facts and
 complete container bytes. The merged `native_component_capture_matches_rails_root_selection`
 compares all nine list/composer/template components. `rooms::full_page_tests` compares
