@@ -160,7 +160,9 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    /// Stop and join workers before arranging durable enqueue assertions (PR #183).
+    /// Stop and join job workers before arranging assertions about committed enqueues.
+    /// HTTP routes and the durable queue sink stay active. Tests of job execution should
+    /// keep the default runner instead.
     pub async fn without_job_runner(mut self) -> Self {
         self.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
         self

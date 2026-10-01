@@ -423,7 +423,7 @@ async fn ws11_reply_token_unknown_message_is_forbidden() {
 
 #[tokio::test]
 async fn ws11_agent_backed_bots_never_receive_legacy_webhook_jobs() {
-    let app = TestApp::boot().await.expect("build the default parity seed");
+    let app = TestApp::boot().await.expect("build the default parity seed").without_job_runner().await;
     app.db().write(|tx| {
         tx.conn().execute("UPDATE rooms SET type='Rooms::Direct' WHERE id=?", [ALL_TALK])?;
         let message = Message::create(tx, campfire_db::NewMessage { room_id: ALL_TALK, creator_id: DAVID, body: Some("DM".into()), ..Default::default() })?;

@@ -26,6 +26,7 @@ async fn event(app: &TestApp) -> CalendarEvent {
 #[tokio::test]
 async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
     let app = TestApp::boot().await.expect("pinned default seed");
+    let app = app.without_job_runner().await;
     let oracle: serde_json::Value =
         serde_json::from_str(include_str!("event-review-regressions.json")).unwrap();
     app.db()
@@ -466,6 +467,7 @@ async fn persisted_series_nil_start_returns_rails_public_500_and_writes_nothing(
     let Some(app) = TestApp::boot().await else {
         return;
     };
+    let app = app.without_job_runner().await;
     let head = event(&app).await;
     let rows = app.db().read(move |c| head.series_events(c)).await.unwrap();
     let expected: serde_json::Value = serde_json::from_str(include_str!(concat!(
@@ -520,6 +522,7 @@ async fn event_create_update_cancel_keep_zone_and_calendar_jobs() {
     else {
         return;
     };
+    let app = app.without_job_runner().await;
     let mut david = app.david();
     let collection = format!("/rooms/{ALL_TALK}/events");
     let prefilled=david.get(&format!("{collection}/new?event[title]=Planning&event[starts_at]=2026-10-05T09%3A00%3A00Z&event[time_zone]=Eastern%20Time%20%28US%20%26%20Canada%29")).await;
