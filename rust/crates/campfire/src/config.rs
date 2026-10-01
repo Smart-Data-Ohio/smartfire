@@ -67,6 +67,8 @@ pub struct Config {
     /// WS14g display seam: normalized domains only when Google::SignIn.configured?. OAuth
     /// start/callback and provider adapters remain with WS14g; parsing reuses WS1's contract.
     pub sign_in_google_domains: Vec<String>,
+    /// Shared provider configuration from the same injected environment lookup.
+    pub google_client: crate::integrations::google::api::Config,
 }
 
 #[derive(Debug, Clone)]
@@ -174,6 +176,11 @@ impl Config {
             public_policy: crate::public_policy::PublicPolicy::from_lookup(&get),
             profile_google_calendar_configured: google_client_configured,
             sign_in_google_domains,
+            google_client: crate::integrations::google::api::Config {
+                client_id: get("GOOGLE_CLIENT_ID").unwrap_or_default(),
+                client_secret: get("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
+                webhook_url: present("GOOGLE_CALENDAR_WEBHOOK_URL"),
+            },
         })
     }
 }

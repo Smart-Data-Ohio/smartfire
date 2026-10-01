@@ -17,18 +17,18 @@ impl Default for State {
                 .ok()
                 .is_some_and(|v| !super::api::blank(&v))
         };
+        Self::new(present("GOOGLE_CLIENT_ID") && present("GOOGLE_PICKER_API_KEY") && present("GOOGLE_CLOUD_PROJECT_NUMBER"))
+    }
+}
+impl State {
+    pub fn new(configured: bool) -> Self {
         Self {
-            picker: RwLock::new(
-                present("GOOGLE_CLIENT_ID")
-                    && present("GOOGLE_PICKER_API_KEY")
-                    && present("GOOGLE_CLOUD_PROJECT_NUMBER"),
-            ),
+            picker: RwLock::new(configured),
             counts: Mutex::new(HashMap::new()),
             metadata: Mutex::new(HashMap::new()),
         }
     }
-}
-impl State {
+
     pub fn picker_configured(&self) -> bool {
         *self.picker.read().unwrap_or_else(|e| e.into_inner())
     }

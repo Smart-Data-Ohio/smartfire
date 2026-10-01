@@ -130,7 +130,7 @@ async fn google_complete_login_pages_and_configured_profile_components_match_rai
                 row["google_settings"],
                 "{name}: complete Google settings notices"
             );
-            true
+            super::asset_goldens::compare(name, &actual, expected)
         } else {
             super::asset_goldens::compare(name, &actual, expected)
         };
@@ -152,6 +152,6 @@ async fn google_complete_login_pages_and_configured_profile_components_match_rai
         "complete Google page differences: {differences:?}"
     );
     println!(
-        "Pinned Rails Google HTML: 3 complete login pages and 16 complete profile panels exercised; 0 skipped; 8 full profile pages owner-blocked"
+        "Pinned Rails Google HTML: 11 complete login/profile pages and 16 complete profile panels exercised; 0 skipped"
     );
 }

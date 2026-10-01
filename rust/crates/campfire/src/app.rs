@@ -196,6 +196,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
     let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
         db.clone(), Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets)), github_app.clone(), github_network,
     );
+    let google = crate::integrations::google::State::from_config(&config);
     let app = Arc::new(AppState {
         config,
         secrets,
@@ -210,7 +211,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         agent_repositories: crate::integrations::agent_repositories::State::default(),
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
-        google: crate::integrations::google::State::default(),
+        google,
         errors: crate::errors::Reporter::default(),
         web_push,
         github_read,

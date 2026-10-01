@@ -11,7 +11,7 @@ use hyper::Method;
 use rails_compat::{Secrets, ar_encryption::ArEncryption, calendar_credentials::Snapshot};
 use serde_json::{Value, json};
 use std::sync::Arc;
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Config {
     pub client_id: String,
     pub client_secret: String,

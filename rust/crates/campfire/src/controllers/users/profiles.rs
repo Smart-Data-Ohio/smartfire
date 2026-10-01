@@ -73,6 +73,7 @@ async fn render_show(
     let settings_form = c.app().db.read(move |conn| presenters::status_settings::forms(conn, &source, failures, campfire_db::Timestamp::from_jiff(now), configured)).await.map_err(Error::internal)?;
 
     let google = c.app().google.sign_in().config.configured();
+    let google_reauthentication = c.app().two_factor.google().is_some();
     let mut appearance = c
         .app()
         .db
@@ -134,7 +135,7 @@ async fn render_show(
             Ok(campfire_views::two_factor::ProfileData {
                 confirmed_at: credential.and_then(|c| c.confirmed_at).map(|t| t.jiff()),
                 devices,
-                google: google
+                google: google_reauthentication
                     && conn.query_row(
                         "SELECT EXISTS(SELECT 1 FROM google_identities WHERE user_id=?)",
                         [id],
