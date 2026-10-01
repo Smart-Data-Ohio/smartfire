@@ -14,7 +14,7 @@ IMAGE = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
 # _common.md explicitly accepts #163's application layout and its two assets.
 # Message/thread content still comes from d7c7de92 and is cross-checked below.
 LAYOUT_IMAGE = os.environ.get("PARITY_LAYOUT_IMAGE", "ws8br2-reference:d7c7de92-status-2e20b24c")
-ORACLES = ["cache-reaction-review", "preview", "fragments", "root", "paging", "broadcasts", "thread-memberships", "collection", "room-list", "message-states", "thread-message-reads", "thread-message-writes", "thread-pages", "thread-lifecycle", "thread-content", "forwards", "forward-success", "modern-boosts", "signed-attachments", "boost-pages", "thread-review", "thread-upload-coverage", "client-retries", "avatar-logo-uploads", "jpeg-boundary", "room-components", "github-thread-page", "drive-controllers", "live-chrome", "github-edit-refresh", "cached-csrf", "thread-declarations", "provider-declarations", "legacy-cache", "root-declarations", "validator-declarations", "recipient-declarations", "bot-controller-declarations", "event-reference-declaration", "room-csrf"]
+ORACLES = ["rendered-dependencies", "cache-reaction-review", "preview", "fragments", "root", "paging", "broadcasts", "thread-memberships", "collection", "room-list", "message-states", "thread-message-reads", "thread-message-writes", "thread-pages", "thread-lifecycle", "thread-content", "forwards", "forward-success", "modern-boosts", "signed-attachments", "boost-pages", "thread-review", "thread-upload-coverage", "client-retries", "avatar-logo-uploads", "jpeg-boundary", "room-components", "github-thread-page", "drive-controllers", "live-chrome", "github-edit-refresh", "cached-csrf", "thread-declarations", "provider-declarations", "legacy-cache", "root-declarations", "validator-declarations", "recipient-declarations", "bot-controller-declarations", "event-reference-declaration", "room-csrf"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("names", nargs="*", choices=ORACLES)
 parser.add_argument("--write", action="store_true", help="regenerate committed vectors from Rails")
@@ -65,7 +65,7 @@ for name in names:
         pinned["layout_reference"] = "2e20b24c (#163 application layout and assets only; thread/message source remains d7c7de92)"
         (SCRATCH / "out/thread-pages.json").write_text(json.dumps(pinned, ensure_ascii=False, indent=2) + "\n")
         print("WS8bm thread layout: #163 Rails layout; every non-layout field identical to d7c7de92", flush=True)
-    files = [f"{name}.json"] + (["index-template-digest.txt"] if name == "paging" else [])
+    files = [f"{name}.json"] + (["message-template-digest.txt"] if name == "rendered-dependencies" else []) + (["index-template-digest.txt"] if name == "paging" else [])
     for file in files:
         if options.write:
             shutil.copyfile(SCRATCH / "out" / file, ROOT / "rust/vectors/messaging" / file)

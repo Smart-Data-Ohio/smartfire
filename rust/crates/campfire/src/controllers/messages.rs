@@ -24,6 +24,8 @@ mod collection_tests;
 #[cfg(test)]
 mod cache_reaction_review_tests;
 #[cfg(test)]
+mod rendered_dependency_tests;
+#[cfg(test)]
 mod csrf_tests;
 #[cfg(test)]
 mod declaration_tests;

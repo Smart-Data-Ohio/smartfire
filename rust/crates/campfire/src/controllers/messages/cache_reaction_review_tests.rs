@@ -61,7 +61,7 @@ async fn review_warm_room_tracks_rails_reply_edits_and_author_renames() {
             assert_eq!(p.message_collection_cache_key(&reply)?, state["collection_key"].as_str().unwrap());
             assert_eq!(freshness::etag(conn, &[reply.clone(), Message::find(conn, source)?])?, state["validator"].as_str().unwrap());
             let expected_key = campfire_views::messages::collection_fragment_key(
-                &format!("{}/{}", state["collection_key"].as_str().unwrap(), state["validator"].as_str().unwrap()),
+                &format!("{}/{}/{}", state["collection_key"].as_str().unwrap(), state["validator"].as_str().unwrap(), p.message_rendered_cache_key(&reply)?),
                 "http://campfire.test",
             );
             let actual_key = p.message_fragment_cache_key(&reply, "http://campfire.test")?;

@@ -6,8 +6,8 @@ use rusqlite::OptionalExtension;
 
 impl Presenter<'_> {
     pub fn message_fragment_cache_key(&self, message: &Message, base: &str) -> Result<String> {
-        // Rails' initial room list is uncached. Reusing its bytes must also track
-        // MessagesController#index's exact page validator over the rendered rows.
+        // Rails' initial room list is uncached. Keep both original Rails key
+        // compositions, then expand the rendered records' individual Rails versions.
         // Include the preview's source so its author's updates are covered too;
         // reply edits and creator updates do not touch the reply itself.
         let collection = self.message_collection_cache_key(message)?;
@@ -20,8 +20,9 @@ impl Presenter<'_> {
         let validator = crate::controllers::messages::freshness::etag(
             self.conn, &dependencies,
         )?;
+        let rendered = self.message_rendered_cache_key(message)?;
         Ok(campfire_views::messages::collection_fragment_key(
-            &format!("{collection}/{validator}"), base,
+            &format!("{collection}/{validator}/{rendered}"), base,
         ))
     }
 
