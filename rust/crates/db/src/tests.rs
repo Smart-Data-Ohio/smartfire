@@ -1,6 +1,8 @@
 //! Ports of `reference/test/models/**`, run against the reference fixtures.
 
 mod account_test;
+mod slack_import_test;
+mod slack_test;
 mod agent_posting_test;
 mod agent_access_model_test;
 mod agent_approval_test;
