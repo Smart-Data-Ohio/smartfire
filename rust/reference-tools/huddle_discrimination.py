@@ -56,6 +56,7 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("quote-renderer-origin-binding-bypassed", ROOT / "rust/crates/views/src/messages.rs", lambda s: replace_once(s, "body.replace(&from, &to)", "{ let _=(&from,&to); body.clone() }"), "campfire", "warm_quote_parent_refreshes_legacy_edits_and_source_names"),
     ("quote-source-cache-dependencies-bypassed", ROOT / "rust/crates/campfire/src/controllers/presenters.rs", lambda s: replace_once(s, "if !quote_stamp.is_empty() {", "if false && !quote_stamp.is_empty() {"), "campfire", "warm_quote_parent_refreshes_legacy_edits_and_source_names"),
     ("cross-room-quote-cache-leaks-private-source", ROOT / "rust/crates/campfire/src/controllers/presenters/message_links.rs", lambda s: replace_once(s, "if source.room_id != message.room_id {", "if false && source.room_id != message.room_id {"), "campfire", "cross_room_quote_parent_never_renders_private_source_facts"),
     ("room-populated-collection-rendering-bypassed", ROOT / "rust/crates/views/templates/rooms/show.html", lambda s: replace_once(s, "{{ self.timeline()|safe }}", "{{ \"\" }}"), "campfire", "full_room_pages_match_thirty_eight_complete_rails_pages"),

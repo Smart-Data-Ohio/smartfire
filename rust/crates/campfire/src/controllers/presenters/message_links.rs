@@ -64,7 +64,10 @@ pub fn cards(presenter: &Presenter<'_>, message: &Message) -> Result<Vec<String>
                 super::page::render_detached_at(
                     presenter.app,
                     None,
-                    presenter.cache_base_url.as_deref().unwrap_or(""),
+                    presenter
+                        .cache_base_url
+                        .as_deref()
+                        .unwrap_or(campfire_views::message_links::ORIGIN_SLOT),
                     |ctx| {
                         campfire_views::message_links::Card {
                             ctx,
@@ -157,6 +160,24 @@ mod tests {
             })
             .await
             .unwrap();
+        // Build once without a request, then render under two real view contexts.
+        // Quote jumps follow the parent renderer's origin, including job defaults.
+        let app = test.booted.app.clone();
+        let quoting_id = quoting.id;
+        let view = test
+            .db()
+            .read(move |conn| {
+                let parent = Message::find(conn, quoting_id)?;
+                Presenter::new(conn, &app, None).message(&parent)
+            })
+            .await
+            .unwrap();
+        for base in ["http://example.org", "https://other.example:445"] {
+            let html = page::render_detached_at(&test.booted.app, None, base, |ctx| {
+                campfire_views::messages::message(ctx, &view)
+            });
+            assert!(html.contains(&format!("href=\"{base}/rooms/{}/@{}\"", room.id, source.id)));
+        }
         let mut browser = test.sign_in(DAVID).await;
         let path = format!("/rooms/{}", room.id);
         let card = |html: String| {

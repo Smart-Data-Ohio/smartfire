@@ -855,6 +855,16 @@ pub fn cards(
     ))
 }
 
+/// Quote children may have been prepared outside a request. Fill only their
+/// generated jump hrefs from this parent context before caching the final bytes.
+pub fn quote_cards(ctx: &ViewContext, message: &MessageView) -> h::Html {
+    let from = format!("href=\"{}", crate::message_links::ORIGIN_SLOT);
+    let to = format!("href=\"{}", h::escape(&ctx.base_url));
+    let bodies = message.components.message_link_cards.iter()
+        .map(|body| body.replace(&from, &to)).collect::<Vec<_>>();
+    cards(message, "message_link_cards", "message-link-cards", 0, &bodies)
+}
+
 pub fn event_cards(message: &MessageView) -> h::Html {
     if message.components.event_cards.is_empty() {
         return h::raw("");

@@ -2,6 +2,10 @@
 use crate::{ViewContext, helpers as h};
 use askama::Template;
 
+// The parent renderer supplies request/default origins after these tokenless children
+// are built. Only the generated href prefix is replaced, never escaped source text.
+pub const ORIGIN_SLOT: &str = "__campfire_quote_origin__";
+
 pub fn lazy(reference_id: i64, room_id: i64) -> String {
     h::content_tag(
         "turbo-frame",
