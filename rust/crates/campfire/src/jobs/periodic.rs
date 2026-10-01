@@ -121,6 +121,9 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     periodic.task(Task::new("stranded agent webhooks", Duration::from_secs(30), |app: App| async move {
         stranded_agent_webhooks(&app.db).await
     }));
+    periodic.task(Task::new("event reminders", intervals.reminders, |app: App| async move {
+        event_reminders(&app.db).await
+    }));
     periodic.task(Task::new(
         "saved item reminders",
         intervals.reminders,
@@ -165,9 +168,12 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         campfire_db::models::calendar_dispatch::dispatch_ooo(&app.db, app.db.env().now()).await?;
         Ok(())
     }));
+    periodic.task(Task::new("streaming messages", Duration::from_secs(30), |app: App| async move {
+        streaming_messages(&app.db).await
+    }));
     periodic
 }
-pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
+pub(crate) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::SavedItem::due_reminder_ids(conn, now))
@@ -178,6 +184,17 @@ pub(super) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
             .await
         {
             tracing::error!(id,%error,"Saved item reminder failed");
+        }
+    }
+    Ok(())
+}
+
+pub(super) async fn event_reminders(db: &Database) -> anyhow::Result<()> {
+    let now = db.env().now();
+    let ids = db.read(move |conn| campfire_db::CalendarEvent::due_reminder_ids(conn, now)).await?;
+    for id in ids {
+        if let Err(error) = db.write(move |tx| campfire_db::CalendarEvent::dispatch_reminder(tx, id, now)).await {
+            tracing::error!(id, %error, "Event reminder failed");
         }
     }
     Ok(())
@@ -261,6 +278,20 @@ pub(crate) async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
         if let Err(error)=db.write(move |tx|domain::recover_one(tx,candidate)).await {
             tracing::error!(%error,"Stranded agent delivery recovery failed");
         }
+    }
+    Ok(())
+}
+
+/// Each stream gets its own writer transaction; one failed finalize cannot stop the sweep.
+pub(crate) async fn streaming_messages(db:&Database)->anyhow::Result<()> {
+    let now=db.env().now();
+    let ids=db.write(move |tx|campfire_db::models::agent_streaming::overdue_ids(tx,now)).await?;
+    for id in ids {
+        if let Err(error)=db.write(move |tx| {
+            let Some(mut message)=campfire_db::Message::find_by_id(tx.conn(),id)? else {return Ok(());};
+            if message.thread_id.map(|id|campfire_db::ChannelThread::find_by_id(tx.conn(),id)).transpose()?.flatten().is_some_and(|t|t.locked_at.is_some()) {return Ok(());}
+            message.finalize_stream(tx)?;Ok(())
+        }).await {tracing::error!(message_id=id,%error,"stream finalize failed");}
     }
     Ok(())
 }

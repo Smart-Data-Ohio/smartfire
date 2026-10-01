@@ -97,6 +97,12 @@ pub(crate) fn local(
     let time = Time::new(hour, minute, second, nanosecond).ok()?;
     resolve(DateTime::from_parts(date, time), zone, None)
 }
+/// Resolve a freshly parsed local datetime like ActiveSupport::TimeZone: prefer DST at
+/// folds and advance one hour at a time through gaps, including non-hour transitions.
+pub fn local_datetime(datetime: DateTime, zone: &TimeZone) -> Option<Timestamp> {
+    resolve(datetime, zone, None)
+}
+
 fn resolve(
     mut dt: DateTime,
     zone: &TimeZone,
@@ -278,6 +284,25 @@ pub fn parse(text: &str, zone_name: &str, now: Timestamp) -> Option<Timestamp> {
     } else {
         fallback(text, &zone, now)
     }
+}
+/// Calendar forms use TimeZone#parse directly, without the slash command grammar.
+pub fn parse_calendar_time(
+    text: &str,
+    zone_name: &str,
+    viewer_zone: &str,
+    now: Timestamp,
+) -> Option<Timestamp> {
+    let zone = known_zone(zone_name).unwrap_or_else(|| zone(viewer_zone));
+    fallback(text, &zone, now).or_else(|| {
+        // Date._parse also recognizes a standalone month prefix: "junk" means June.
+        let c = re("(?i)(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)").captures(text)?;
+        let date = Date::new(now.jiff().to_zoned(zone.clone()).year(), month(&c[1])?, 1).ok()?;
+        local(date, 0, 0, 0, 0, &zone)
+    })
+}
+
+pub fn known_calendar_zone(name: &str) -> bool {
+    known_zone(name).is_some()
 }
 pub fn split_leading_time(
     text: &str,

@@ -30,6 +30,18 @@ pub struct NewCredential {
     pub expires_at: Option<Timestamp>,
     pub revoked_at: Option<Timestamp>,
 }
+#[derive(Default, Debug, Clone)]
+pub struct CredentialChanges {
+    pub agent_id: Option<i64>,
+    pub created_by_id: Option<i64>,
+    pub name: Option<String>,
+    pub token_digest: Option<String>,
+    pub token_last_four: Option<String>,
+    pub expires_at: Option<Option<Timestamp>>,
+    pub revoked_at: Option<Option<Timestamp>>,
+    pub last_used_at: Option<Option<Timestamp>>,
+    pub last_used_ip: Option<Option<String>>,
+}
 impl AgentCredential {
     fn from_row(r: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
@@ -126,6 +138,74 @@ impl AgentCredential {
     }
     pub fn active(&self, now: Timestamp) -> bool {
         self.revoked_at.is_none() && self.expires_at.is_none_or(|t| t > now)
+    }
+    pub fn update(&mut self, tx: &Tx<'_>, changes: CredentialChanges) -> Result<()> {
+        let mut candidate = Self::find(tx.conn(), self.id)?
+            .ok_or(crate::Error::RecordNotFound("AgentCredential"))?;
+        macro_rules! assign {($($field:ident),*)=>{$(if let Some(value)=changes.$field {candidate.$field=value;})*};}
+        assign!(
+            agent_id,
+            created_by_id,
+            name,
+            token_digest,
+            token_last_four,
+            expires_at,
+            revoked_at,
+            last_used_at,
+            last_used_ip
+        );
+        Self::validate(
+            tx.conn(),
+            &NewCredential {
+                agent_id: candidate.agent_id,
+                created_by_id: candidate.created_by_id,
+                name: candidate.name.clone(),
+                token_digest: candidate.token_digest.clone(),
+                token_last_four: candidate.token_last_four.clone(),
+                expires_at: candidate.expires_at,
+                revoked_at: candidate.revoked_at,
+            },
+            Some(self.id),
+        )?
+        .into_result()?;
+        let before = Self::find(tx.conn(), self.id)?.expect("loaded row");
+        let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql + '_>)> = vec![];
+        macro_rules! changed {($($field:ident),*)=>{$(if candidate.$field!=before.$field {sets.push((stringify!($field),Box::new(&candidate.$field)));})*};}
+        changed!(
+            agent_id,
+            created_by_id,
+            name,
+            token_digest,
+            token_last_four,
+            expires_at,
+            revoked_at,
+            last_used_at,
+            last_used_ip
+        );
+        if !sets.is_empty() {
+            sets.push(("updated_at", Box::new(tx.now())));
+            let columns = sets
+                .iter()
+                .map(|(field, _)| format!("{field}=?"))
+                .collect::<Vec<_>>()
+                .join(",");
+            let mut values: Vec<&dyn rusqlite::ToSql> =
+                sets.iter().map(|(_, value)| value.as_ref()).collect();
+            values.push(&self.id);
+            tx.conn().execute(
+                &format!("UPDATE agent_credentials SET {columns} WHERE id=?"),
+                values.as_slice(),
+            )?;
+            candidate.updated_at = tx.now();
+        }
+        drop(sets);
+        *self = candidate;
+        Ok(())
+    }
+    pub fn destroy(&self, tx: &Tx<'_>) -> Result<()> {
+        tx.conn()
+            .execute("DELETE FROM agent_credentials WHERE id=?", [self.id])?;
+        Ok(())
     }
     pub fn revoke(&mut self, tx: &Tx<'_>) -> Result<()> {
         if self.revoked_at.is_some() {

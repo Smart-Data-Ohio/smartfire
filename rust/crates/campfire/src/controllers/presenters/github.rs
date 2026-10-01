@@ -225,7 +225,7 @@ impl super::Presenter<'_> {
         ).optional()?;
         if let Some(id) = id {
             let pr = PullRequest::find(self.conn, id)?;
-            if pr.stale(campfire_db::Timestamp::from_jiff(self.now)) { self.github_refreshes.borrow_mut().insert(id); }
+            if pr.stale(campfire_db::Timestamp::from_jiff(self.now)) { self.remember_github_refresh(id); }
         }
         let base = self.cache_base_url.as_deref().unwrap_or("http://example.org");
         super::page::render_detached_at(self.app, None, base, |ctx| thread_header(self.conn, ctx, thread))

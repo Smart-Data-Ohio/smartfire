@@ -10,6 +10,7 @@ pub(crate) mod boosts_tests;
 mod upload_tests;
 #[cfg(test)]
 mod review_tests;
+pub mod pins;
 pub mod by_bots;
 pub(crate) mod payload;
 mod freshness;
@@ -380,7 +381,8 @@ pub(crate) async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thre
     let id = message.id;
     let app = c.app().clone();
     let host = Some(c.request.host());
-    let id = c.app().db.write(move |tx| {
+    let origin = page::renderer_base_url(c);
+    let id = c.app().db.write_scoped(move || crate::channels::message_features::origin(&origin), move |tx| {
         if let Some(thread) = thread_id
             && campfire_db::ChannelThread::find(tx.conn(), thread)?.locked_at.is_some() {
             return Err(campfire_db::Error::Other(campfire_db::channel_thread::LOCKED_MESSAGE.into()));
@@ -658,8 +660,8 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
             }
             message.edit(tx, campfire_db::MessageChanges {
-                markdown_source: attributes.markdown_source,
                 clear_markdown_source: attributes.clear_markdown_source,
+                markdown_source: attributes.markdown_source,
                 body,
                 ..Default::default()
             })?;
@@ -677,7 +679,8 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
 /// `@message.destroy` then `@message.broadcast_remove`.
 pub(crate) async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let destroyed = message.clone();
-    let (replies, thread) = c.app().db.write(move |tx| {
+    let origin = page::renderer_base_url(c);
+    let (replies, thread) = c.app().db.write_scoped(move || crate::channels::message_features::origin(&origin), move |tx| {
         let replies = tx.conn().prepare("SELECT id FROM messages WHERE reply_to_message_id = ? ORDER BY id")?
             .query_map([destroyed.id], |row| row.get::<_, i64>(0))?.collect::<std::result::Result<Vec<_>, _>>()?;
         let thread = campfire_db::ChannelThread::find_by_parent_message(tx.conn(), destroyed.id)?.map(|thread| thread.id);
@@ -736,7 +739,7 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
                     // Empty containers remove their old cards after an edit.
                     ("github_pr_cards", view.components.github_cards_html.clone().unwrap_or_else(|| views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0)),
                     ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
-                    ("message_link_cards", views::cards(&view, "message_link_cards", "message-link-cards", 0, &view.components.message_link_cards).0),
+                    ("message_link_cards", campfire_views::message_links::cards(ctx, &view).0),
                     ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
                     ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),
                     ("link_embed_cards", views::cards(&view, "link_embed_cards", "link-embed-cards", 2, &view.components.link_embed_cards).0),

@@ -1,0 +1,82 @@
+[
+  {
+    "user_id": 127326141,
+    "path": "/rooms/654632876/events/unknown",
+    "accept": "text/html",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 127326141,
+    "path": "/rooms/654632876/events/unknown",
+    "accept": "application/json",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 127326141,
+    "path": "/rooms/654632876/events/999999",
+    "accept": "text/html",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 127326141,
+    "path": "/rooms/654632876/events/999999",
+    "accept": "application/json",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 127326141,
+    "path": "/rooms/104393281/events/390339825",
+    "accept": "text/html",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 127326141,
+    "path": "/rooms/104393281/events/390339825",
+    "accept": "application/json",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 127326141,
+    "path": "/rooms/486777696/events/999999/attendance",
+    "accept": "text/html",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 127326141,
+    "path": "/rooms/486777696/events/999999/attendance",
+    "accept": "application/json",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 712064548,
+    "path": "/rooms/486777696/events",
+    "accept": "text/html",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  },
+  {
+    "user_id": 712064548,
+    "path": "/rooms/486777696/events",
+    "accept": "application/json",
+    "status": 404,
+    "content_type": "text/html",
+    "body": ""
+  }
+]

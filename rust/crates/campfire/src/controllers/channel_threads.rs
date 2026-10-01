@@ -106,7 +106,6 @@ pub async fn content(c: &mut Ctx) -> Result {
         return Ok(c.head(StatusCode::NOT_IMPLEMENTED));
     }
     let id = thread.id;
-    let room_id = room.id;
     let anchor = c.params.get("message_id").filter(|value| value.is_present()).cloned();
     let (records, anchor) = c.app().db.read(move |conn| {
         let anchor = anchor.as_ref().map(|value| messages::paging_anchor(conn, Timeline::Thread(id), value)).transpose()?;
@@ -118,21 +117,17 @@ pub async fn content(c: &mut Ctx) -> Result {
     c.no_store();
     let viewer = require_current_user(c)?.clone();
     let updated_at = room.updated_at.jiff();
+    let picker_available = c.app().config.google_picker.is_some();
     let (messages, user, steps, composer) = messages::present(c, move |p| Ok((p.messages(&records)?, p.user_view(viewer.id)?, p.thread_steps(id)?,
-        p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, false)?)?))).await?;
+        p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, picker_available && !viewer.is_bot())?)?))).await?;
     c.set_header("x-thread-content-at-latest", if anchor.is_none() {"true"} else {"false"});
     page::bare(c, StatusCode::OK, &format::HTML, |ctx| {
-        let scheduled_control = render_thread_schedule_control(ctx, room_id, id);
+        let scheduled_control = campfire_views::helpers::raw(campfire_views::scheduled_messages::ComposerButton {
+            ctx, room_id: composer.room_id, thread_id: Some(id),
+        }.render()?);
         campfire_views::channel_threads::Conversation {ctx, thread_id: id,
             room_updated_at: updated_at, anchor, messages: &messages, user: &user, steps: &steps, composer: &composer, scheduled_control: &scheduled_control}.render()
     }).await
-}
-
-/// Flagged WS8b-m2 integration call site, under the live request's context and CSRF provider.
-/// Once its provider is merged, render `scheduled_messages::ComposerButton { ctx, room_id,
-/// thread_id: Some(thread_id) }` here. Do not treat the current empty child as full pane parity.
-fn render_thread_schedule_control(_ctx: &campfire_views::ViewContext<'_>, _room_id: i64, _thread_id: i64) -> campfire_views::helpers::Html {
-    campfire_views::helpers::empty()
 }
 
 async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {

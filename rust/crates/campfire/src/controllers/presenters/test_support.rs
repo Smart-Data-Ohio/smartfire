@@ -146,13 +146,23 @@ impl TestApp {
         Self::boot_with_clock(seed_clock()).await
     }
 
-    /// A caller-owned clock for exact request/row differentials; normal seeded tests keep ticking.
-    pub async fn boot_with_test_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
-        Self::boot_with_clock(clock).await
+    /// Byte goldens generated with the reference's --freeze clock.
+    pub async fn boot_frozen() -> Option<TestApp> {
+        Self::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()))).await
+    }
+
+    /// Test-local configuration; no process environment changes or pre-existing input files.
+    pub async fn boot_frozen_with_env(values: &[(&str, &str)]) -> Option<TestApp> {
+        Self::boot_with_clock_and_env(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), values).await
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
         Self::boot_with_clients("default", seed_clock(), network, &[], None).await
+    }
+
+    /// A caller-owned clock for exact request/row differentials; normal seeded tests keep ticking.
+    pub async fn boot_with_test_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_with_clock(clock).await
     }
 
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
@@ -375,6 +385,28 @@ impl Req {
 
 pub fn encode(value: &str) -> String {
     percent_encoding::utf8_percent_encode(value, percent_encoding::NON_ALPHANUMERIC).to_string()
+}
+
+tokio::task_local! {
+    static FIXED_RENDER_SECRETS: ();
+}
+
+/// Fix only rendering entropy, before the real router/controller runs. No HTML inputs
+/// or response rewrites; authentication and forgery verification keep their real tokens.
+pub async fn with_fixed_render_secrets<T>(request: impl std::future::Future<Output = T>) -> T {
+    FIXED_RENDER_SECRETS.scope((), request).await
+}
+
+pub(super) fn fixed_render_secrets() -> Option<campfire_views::helpers::request_forgery::RequestSecrets> {
+    use campfire_views::helpers::request_forgery::{AuthenticityTokens, RequestSecrets};
+    struct Tokens;
+    impl AuthenticityTokens for Tokens {
+        fn global(&self) -> String { "GLOBAL".into() }
+        fn for_form(&self, action: &str, method: &str) -> String { format!("{method}:{action}") }
+    }
+    FIXED_RENDER_SECRETS.try_with(|()| RequestSecrets {
+        tokens: Box::new(Tokens), csp_nonce: Some("NONCE".into()),
+    }).ok()
 }
 
 impl Browser<'_> {

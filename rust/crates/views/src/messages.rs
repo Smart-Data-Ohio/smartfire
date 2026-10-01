@@ -134,12 +134,14 @@ pub struct MessageDetails {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct MessageComponents {
+    pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub github_cards_html: Option<String>,
     pub github_cards_stamp: String,
     pub twitter_cards: Vec<String>,
     pub twitter_posts: Vec<crate::twitter::Card>,
     pub event_cards: Vec<String>,
+    pub event_views: Vec<crate::events::CardView>,
     pub message_link_cards: Vec<String>,
     pub fizzy_cards: Vec<String>,
     pub linkedin_cards: Vec<String>,
@@ -563,7 +565,14 @@ pub struct MessagePartial<'a> {
 /// [`uncached_message`] because Rails only caches collection rendering.
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
-        || message_fragment_key(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp),
+        || {
+            let key = message_fragment_key(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp);
+            if message.components.event_views.is_empty() { key } else {
+                use sha2::{Digest, Sha256};
+                let facts = serde_json::to_vec(&message.components.event_views).expect("event facts serialize");
+                format!("{key}/events/{}/{:x}", ctx.time_zone.name(), Sha256::digest(facts))
+            }
+        },
         || {
             MessagePartial { ctx, message }
                 .render()
@@ -940,14 +949,15 @@ pub fn cards(
     ))
 }
 
-pub fn event_cards(message: &MessageView) -> h::Html {
-    if message.components.event_cards.is_empty() {
+pub fn event_cards(ctx: &ViewContext, message: &MessageView) -> h::Html {
+    if message.components.event_cards.is_empty() && message.components.event_views.is_empty() {
         return h::raw("");
     }
+    let bodies = format!("{}{}", message.components.event_cards.concat(), crate::events::card_entries(&message.components.event_views, &message.id.to_string(), &ctx.time_zone).concat());
     h::raw(format!(
         "  <div id=\"{}\" class=\"event-cards\">\n{}  </div>\n",
-        message.dom_id("event_cards"),
-        message.components.event_cards.concat()
+        h::escape(&message.dom_id("event_cards")),
+        bodies
     ))
 }
 

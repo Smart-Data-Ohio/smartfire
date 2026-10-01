@@ -7,6 +7,74 @@ use crate::controllers::presenters::test_support::*;
 
 fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors/messaging/thread-pages.json")).unwrap() }
 
+#[tokio::test]
+async fn seeded_pull_request_thread_header_matches_rails_bytes_through_http() {
+    let app = TestApp::boot_frozen().await.expect("default seed required");
+    let oracle: Value = serde_json::from_str(include_str!("../../../../../vectors/github_seed_fragments.json")).unwrap();
+    let row = &oracle["thread"];
+    let room = row["room_id"].as_i64().unwrap();
+    let thread = row["thread_id"].as_i64().unwrap();
+    let response = app.david().get(&format!("/rooms/{room}/threads/{thread}")).await;
+    assert_eq!(response.status, StatusCode::OK);
+    let expected = row["header"].as_str().unwrap();
+    assert!(response.text().contains(expected), "real HTTP thread page omits or changes Rails PR header/card/files/actions bytes");
+}
+
+#[tokio::test]
+async fn pull_request_thread_pages_match_four_rails_http_responses() {
+    let oracle: Value = serde_json::from_str(include_str!("../../../../../vectors/messaging/pr-thread-http.json")).unwrap();
+    for row in oracle["rows"].as_array().unwrap() {
+        let app = TestApp::boot_frozen().await.expect("default seed required");
+        let private = row["private"].as_bool();
+        let mapped = row["mapped"].as_bool().unwrap();
+        let pr = oracle["pull_request_id"].as_i64().unwrap();
+        let thread = oracle["thread_id"].as_i64().unwrap();
+        app.db().write(move |tx| {
+            tx.conn().execute("UPDATE github_pull_requests SET private=? WHERE id=?", (private, pr))?;
+            if !mapped { tx.conn().execute("DELETE FROM github_pull_request_threads WHERE channel_thread_id=?", [thread])?; }
+            Ok(())
+        }).await.unwrap();
+        let response = with_fixed_render_secrets(app.david().get(row["path"].as_str().unwrap())).await;
+        assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16);
+        let text = response.text();
+        let start = text.find("<main class=\"thread\"").unwrap();
+        let end = text[start..].find("</main>").unwrap() + start + "</main>".len();
+        let actual = &text[start..end];
+        let expected = row["body"].as_str().unwrap();
+        if actual != expected { rails_mismatch(actual, expected, row["name"].as_str().unwrap()); }
+    }
+}
+
+#[tokio::test]
+async fn pull_request_thread_without_starter_refreshes_once_and_survives_queue_failure() {
+    let app = TestApp::boot_frozen().await.expect("default seed required");
+    app.db().write(|tx| {
+        tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE channel_threads SET parent_message_id=NULL WHERE id=8; UPDATE github_pull_requests SET fetched_at=NULL,fetch_requested_at=NULL WHERE id IN (SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=8)")?;
+        Ok(())
+    }).await.unwrap();
+    let mut browser = app.david();
+    for _ in 0..2 {
+        let response = browser.get("/rooms/654632876/threads/8").await;
+        assert_eq!(response.status, StatusCode::OK);
+        assert!(response.text().contains("id=\"github_pr_header_channel_thread_8\""));
+        let jobs = app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'", [], |r| r.get::<_, i64>(0))?)).await.unwrap();
+        assert_eq!(jobs, 1);
+    }
+    app.db().write(|tx| {
+        tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL; CREATE TRIGGER reject_thread_pr_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;
+        Ok(())
+    }).await.unwrap();
+    let response = browser.get("/rooms/654632876/threads/8").await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(response.text().contains("id=\"github_pr_header_channel_thread_8\""));
+    app.db().read(|conn| {
+        let claim: Option<campfire_db::Timestamp> = conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id IN (SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=8)", [], |r| r.get(0))?;
+        assert!(claim.is_none());
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'", [], |r| r.get::<_, i64>(0))?, 0);
+        Ok(())
+    }).await.unwrap();
+}
+
 async fn fixture() -> (TestApp, i64, Vec<i64>) {
     let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
     let (parent, threads) = app.db().write(|tx| {
@@ -124,7 +192,7 @@ async fn complete_standalone_thread_templates_match_rails_layout_bytes() {
             }))
         }).await.unwrap();
         let expected = row["full_body"].as_str().unwrap();
-        if actual != expected {rails_mismatch(&actual, expected, row["name"].as_str().unwrap());}
+        if !crate::app::asset_goldens::compare(row["name"].as_str().unwrap(),&actual,expected) {rails_mismatch(&actual, expected, row["name"].as_str().unwrap());}
     }
 }
 

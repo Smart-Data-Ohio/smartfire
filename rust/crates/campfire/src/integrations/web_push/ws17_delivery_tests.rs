@@ -13,6 +13,7 @@ fn vectors() -> Value {
 fn with_pool(original: &App, pool: Pool) -> App {
     Arc::new(AppState {
         ar_encryption: original.ar_encryption.clone(),
+        agent_repositories: Default::default(),
         github_accounts: original.github_accounts.clone(),
         github_app: original.github_app.clone(),
         github_read: original.github_read.clone(),

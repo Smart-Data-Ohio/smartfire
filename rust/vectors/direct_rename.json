@@ -1,0 +1,192 @@
+{
+  "reference": "d7c7de92",
+  "renames": [
+    {
+      "input": null,
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448333/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": null,
+      "notes": [
+        "cleared the group name"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": false,
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448334/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": "false",
+      "notes": [
+        "renamed the group to false"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": true,
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448335/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": "true",
+      "notes": [
+        "renamed the group to true"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": 42,
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448336/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": "42",
+      "notes": [
+        "renamed the group to 42"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": 1.25,
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448337/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": "1.25",
+      "notes": [
+        "renamed the group to 1.25"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": "  Team <&>  ",
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448338/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": "Team <&>",
+      "notes": [
+        "renamed the group to Team <&>"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": " ",
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448339/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": null,
+      "notes": [
+        "cleared the group name"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": [
+        "ignored"
+      ],
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448340/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": null,
+      "notes": [
+        "cleared the group name"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": {
+        "name": "ignored"
+      },
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448341/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": null,
+      "notes": [
+        "cleared the group name"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "status": 302,
+      "location": "http://campfire.test/rooms/directs/699448342/edit",
+      "next_flash": {
+        "notice": "Group renamed."
+      },
+      "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "notes": [
+        "renamed the group to éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      ],
+      "error_value": null,
+      "delta": {
+        "messages": 1,
+        "audits": 0
+      }
+    },
+    {
+      "input": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "status": 422,
+      "location": null,
+      "next_flash": {},
+      "name": "Old",
+      "notes": [],
+      "error_value": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "delta": {
+        "messages": 0,
+        "audits": 0
+      }
+    }
+  ]
+}

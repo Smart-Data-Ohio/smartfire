@@ -19,7 +19,7 @@ pub struct Boost {
 }
 
 impl Boost {
-    fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+    pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
             id: row.get("id")?,
             message_id: row.get("message_id")?,

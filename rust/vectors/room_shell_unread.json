@@ -1,0 +1,90 @@
+[
+  {
+    "name": "read_stale_pointer",
+    "room_id": 486777696,
+    "user_id": 127326141,
+    "unread_at": null,
+    "last_read_message_id": 935961915,
+    "divider": null,
+    "scroll": null,
+    "count": 0,
+    "jump_url": null
+  },
+  {
+    "name": "six_unread",
+    "room_id": 486777696,
+    "user_id": 127326141,
+    "unread_at": "2026-03-02T15:36:00.000000Z",
+    "last_read_message_id": 366357198,
+    "divider": 746403085,
+    "scroll": true,
+    "count": 6,
+    "jump_url": null
+  },
+  {
+    "name": "five_unread",
+    "room_id": 486777696,
+    "user_id": 127326141,
+    "unread_at": "2026-03-02T15:37:00.000000Z",
+    "last_read_message_id": 746403085,
+    "divider": 217777555,
+    "scroll": null,
+    "count": 5,
+    "jump_url": null
+  },
+  {
+    "name": "three_unread",
+    "room_id": 486777696,
+    "user_id": 127326141,
+    "unread_at": "2026-03-02T15:39:00.000000Z",
+    "last_read_message_id": 421488677,
+    "divider": 925779126,
+    "scroll": null,
+    "count": 3,
+    "jump_url": null
+  },
+  {
+    "name": "off_page",
+    "room_id": 486777696,
+    "user_id": 127326141,
+    "unread_at": "2026-02-28T08:14:00.000000Z",
+    "last_read_message_id": 935961915,
+    "divider": null,
+    "scroll": null,
+    "count": 130,
+    "jump_url": "/rooms/486777696?message_id=935961916"
+  },
+  {
+    "name": "legacy_stamp",
+    "room_id": 486777696,
+    "user_id": 127326141,
+    "unread_at": "2026-03-02T15:39:00.000000Z",
+    "last_read_message_id": null,
+    "divider": 925779126,
+    "scroll": null,
+    "count": 3,
+    "jump_url": null
+  },
+  {
+    "name": "deleted_pointer",
+    "room_id": 486777696,
+    "user_id": 127326141,
+    "unread_at": "2026-02-28T08:14:00.000000Z",
+    "last_read_message_id": 9999999999,
+    "divider": null,
+    "scroll": null,
+    "count": 129,
+    "jump_url": "/rooms/486777696?message_id=935961917"
+  },
+  {
+    "name": "no_boundary",
+    "room_id": 486777696,
+    "user_id": 127326141,
+    "unread_at": "2026-03-12T16:00:00.000000Z",
+    "last_read_message_id": null,
+    "divider": null,
+    "scroll": null,
+    "count": 0,
+    "jump_url": null
+  }
+]

@@ -39,6 +39,7 @@ pub struct AppState {
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
     pub mail: crate::mail::State,
+    pub agent_repositories: crate::integrations::agent_repositories::State,
     pub sudo: crate::concerns::sudo::State,
     pub two_factor: crate::concerns::two_factor::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
@@ -203,6 +204,7 @@ pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, g
         cable,
         jobs,
         mail,
+        agent_repositories: crate::integrations::agent_repositories::State::default(),
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
         web_push,
@@ -238,6 +240,7 @@ async fn open_database(
         sink: Arc::new(jobs),
         rich_text,
         bcrypt_cost: 12,
+        default_url_origin: config.mail.url_origin().to_owned(),
         message_reference_syncs: vec![crate::integrations::github::references::sync],
         user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
     };

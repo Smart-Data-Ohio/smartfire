@@ -8,6 +8,15 @@ mod agent_record_test;
 mod agent_slash_command_test;
 mod agent_step_test;
 mod agent_working_presence_test;
+mod agent_work_events_test;
+mod agent_context_test;
+mod agent_direct_messages_test;
+mod agent_lifecycle_test;
+mod agent_cleanup_test;
+mod agent_credential_cases_test;
+mod agent_grant_cases_test;
+mod agent_user_removal_test;
+mod agent_streaming_test;
 mod agent_delivery_test;
 mod agent_event_access_test;
 mod agent_event_polling_test;
@@ -16,6 +25,7 @@ mod audit_log_test;
 mod callbacks_test;
 mod calendar_dispatch_test;
 mod channel_thread_test;
+mod calendar_event_test;
 mod differential_test;
 mod direct_room_test;
 mod first_run_test;
@@ -79,6 +89,10 @@ impl TestDb {
 
     /// Fixtures loaded with `clock` and BCrypt cost `bcrypt_cost` for their password digests.
     pub fn with_clock(clock: TestClock, bcrypt_cost: u32) -> Self {
+        Self::with_clock_and_origin(clock, bcrypt_cost, "http://example.com")
+    }
+
+    pub fn with_clock_and_origin(clock: TestClock, bcrypt_cost: u32, origin: &str) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let sink = RecordingSink::new();
         let env = Env {
@@ -86,6 +100,7 @@ impl TestDb {
             sink: Arc::new(sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
+            default_url_origin: origin.into(),
             ..Default::default()
         };
         let mut config = Config::new(dir.path().join("test.sqlite3"));
@@ -143,7 +158,7 @@ impl TestDb {
             sink: Arc::new(self.sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
-            ..Default::default()
+            ..Env::default()
         };
         let mut config = Config::new(self.db.path());
         config.readers = 1;

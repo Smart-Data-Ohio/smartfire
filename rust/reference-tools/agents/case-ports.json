@@ -1,0 +1,122 @@
+{
+  "reference_pin": "d7c7de92",
+  "files": [
+    {
+      "rails_file": "test/models/agent_credential_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_credential_cases_test.rs",
+      "cases": [
+        {
+          "rails": "create_with_secret stores a digest and returns a reveal-once secret",
+          "rust": "ws11_credential_case_reveal_once_digest_and_display"
+        },
+        {
+          "rails": "name is required",
+          "rust": "ws11_credential_case_name_required"
+        },
+        {
+          "rails": "token digest is unique",
+          "rust": "ws11_credential_case_digest_unique"
+        },
+        {
+          "rails": "authenticate finds an active credential and ignores whitespace",
+          "rust": "ws11_credential_case_authentication_strips_whitespace"
+        },
+        {
+          "rails": "authenticate returns nil for unknown secrets",
+          "rust": "ws11_credential_case_unknown_and_blank_secrets"
+        },
+        {
+          "rails": "revoked credentials do not authenticate",
+          "rust": "ws11_credential_case_revoked_cannot_authenticate"
+        },
+        {
+          "rails": "expired credentials do not authenticate",
+          "rust": "ws11_credential_case_expired_cannot_authenticate"
+        },
+        {
+          "rails": "future expiry stays active",
+          "rust": "ws11_credential_case_future_expiry_stays_active"
+        },
+        {
+          "rails": "record_use stamps time and ip",
+          "rust": "ws11_credential_case_use_stamps_time_and_ip"
+        },
+        {
+          "rails": "record_use throttles to once per minute",
+          "rust": "ws11_credential_case_use_throttle_preserves_first_ip_until_next_minute"
+        },
+        {
+          "rails": "destroying the agent removes its credentials",
+          "rust": "ws11_credential_case_destroy_agent_removes_credentials"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_grant_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_grant_cases_test.rs",
+      "cases": [
+        {
+          "rails": "requires a known capability",
+          "rust": "ws11_grant_case_known_capability_required"
+        },
+        {
+          "rails": "accepts every documented capability",
+          "rust": "ws11_grant_case_all_documented_capabilities_valid"
+        },
+        {
+          "rails": "dm_anyone must be workspace-wide",
+          "rust": "ws11_grant_case_dm_anyone_workspace_only"
+        },
+        {
+          "rails": "read, post, react, manage_threads, external_action, fizzy, and dm_anyone are enforced",
+          "rust": "ws11_grant_case_enforced_vocabulary_matches_rails"
+        },
+        {
+          "rails": "room is optional and means workspace-wide",
+          "rust": "ws11_grant_case_optional_room_means_workspace"
+        },
+        {
+          "rails": "duplicate active grants are rejected",
+          "rust": "ws11_grant_case_active_duplicate_rejected"
+        },
+        {
+          "rails": "database rejects a second active workspace-wide grant for the same agent and capability",
+          "rust": "ws11_grant_case_database_rejects_active_workspace_duplicate"
+        },
+        {
+          "rails": "database rejects a second active room grant for the same agent, room, and capability",
+          "rust": "ws11_grant_case_database_rejects_active_scoped_duplicate"
+        },
+        {
+          "rails": "same capability in another room or workspace-wide does not conflict",
+          "rust": "ws11_grant_case_other_room_and_workspace_do_not_conflict"
+        },
+        {
+          "rails": "re-granting after revocation is allowed",
+          "rust": "ws11_grant_case_regrant_after_revocation"
+        },
+        {
+          "rails": "revoke! timestamps and is idempotent",
+          "rust": "ws11_grant_case_revoke_timestamp_idempotent"
+        },
+        {
+          "rails": "active and revoked scopes",
+          "rust": "ws11_grant_case_active_and_revoked_scopes"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_backfill_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_cleanup_test.rs",
+      "cases": [
+        {
+          "rails": "backfill creates one ownerless workspace agent per bot user",
+          "rust": "ws11_cleanup_backfill_is_ownerless_workspace_one_shot_like_the_migration"
+        }
+      ]
+    }
+  ],
+  "boundary_deferred": {
+    "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api."
+  }
+}

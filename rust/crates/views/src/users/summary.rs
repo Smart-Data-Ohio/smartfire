@@ -43,6 +43,9 @@ pub struct UserSummary {
 }
 
 impl UserSummary {
+    pub fn sidebar_profile_button_attrs(&self) -> h::Attrs {
+        h::attrs().type_("button").class("avatar profile-card-avatar").aria("label",format!("View profile of {}",self.name)).merge(h::profile_card_trigger(self.id,false))
+    }
     pub fn two_factor_reset_confirmation(&self) -> String {
         format!("Reset two-step sign-in for {}? They will sign out everywhere and set it up again at next sign-in.",self.name)
     }

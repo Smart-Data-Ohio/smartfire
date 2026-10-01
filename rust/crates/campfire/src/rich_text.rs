@@ -53,7 +53,7 @@ pub(crate) fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<St
     Ok(names)
 }
 
-fn icons(conn: &Connection) -> Result<IconCatalog, String> {
+pub(crate) fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     let mut icons = IconCatalog::default();
     for brand in BRANDS.iter() {
         let icon = Icon::Brand {
@@ -84,6 +84,12 @@ fn icons(conn: &Connection) -> Result<IconCatalog, String> {
         );
     }
     Ok(icons)
+}
+
+/// WS8br seam: reuse WS5's data resolver for Room#icon_name_must_resolve, on the
+/// caller's transaction connection; this does not render or alter rich-text fragments.
+pub(crate) fn room_icon_resolves(conn: &Connection, name: &str) -> campfire_db::Result<bool> {
+    Ok(icons(conn).map_err(campfire_db::Error::Other)?.find_normalized(name).is_some())
 }
 
 /// `MessagesHelper#markdown_message_presentation`, using the same icon catalog as writes.

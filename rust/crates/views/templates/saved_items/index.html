@@ -1,0 +1,35 @@
+{% extends "layouts/application.html" %}
+{% block head %}  {{ h::builder_tag("meta", h::attrs().name("turbo-cache-control").attr("content", "no-cache")) }}
+{% endblock %}{% block nav %}  <div class="room-header__identity room--current min-width">
+    <span class="room-header__kind">Personal workspace</span>
+    <h1 id="saved-items-title" class="room__contents">
+      <span class="room-header__name">Saved</span>
+    </h1>
+  </div>
+{% endblock %}{% block sidebar %}{{ h::sidebar_turbo_frame_tag(Some(&h::routes::user_sidebar()), "") }}{% endblock %}
+{% block content %}
+
+
+<section class="saved-items__page" aria-labelledby="saved-items-title">
+  <header class="saved-items__header">
+    <div>
+      <p class="saved-items__kicker">Your saved messages</p>
+      <p class="saved-items__description">Messages you saved for later, with any reminders you set. Items disappear if you lose access to their channel.</p>
+    </div>
+  </header>
+
+  <nav class="saved-items__filters" aria-label="Saved filters">
+    {{ self.filter_link("all", "All") }}
+    {{ self.filter_link("in_progress", "In progress") }}
+    {{ self.filter_link("done", "Done") }}
+  </nav>
+
+  <div id="saved-items-list" class="saved-items__list">
+{% if !items.is_empty() %}{% for item in items %}        {{ self.item(item) }}
+{% endfor %}{% else %}      <p class="saved-items__empty">
+        <span class="saved-items__empty-title">Nothing saved here yet.</span>
+        Save a message from its menu to find it again here.
+      </p>
+{% endif %}  </div>
+</section>
+{% endblock %}

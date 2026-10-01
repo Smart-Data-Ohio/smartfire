@@ -5,6 +5,7 @@
 mod authorization_test;
 mod broadcasts_test;
 mod channels_test;
+mod events_test;
 mod golden;
 mod hub_test;
 mod reference_test;

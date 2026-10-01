@@ -1,0 +1,565 @@
+[
+  {
+    "name": "direct_seed_group",
+    "direct": true,
+    "room_id": 699448329,
+    "param_key": "rooms_direct",
+    "room_name": null,
+    "unread": false,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/699448329/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "Jason, JZ, Kevin"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 149087659,
+        "name": "Jason",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+      },
+      {
+        "id": 773523953,
+        "name": "JZ",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000"
+      },
+      {
+        "id": 712064548,
+        "name": "Kevin",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+      }
+    ],
+    "label": "Jason, JZ, Kevin",
+    "membership_id": 1021579682,
+    "membership_updated_at": "2026-03-02T13:00:00.000000Z",
+    "updated_at_epoch": "1772456400000",
+    "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448329\" data-rooms-list-target=\"room\" data-room-id=\"699448329\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772456400000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of JZ\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523953/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448329\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448329/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, JZ, Kevin\" href=\"/rooms/699448329\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, JZ, Kevin\n      </span>\n    </span>\n</a></div>"
+  },
+  {
+    "name": "shared_admin_read",
+    "direct": false,
+    "room_id": 486777696,
+    "param_key": "rooms_closed",
+    "room_name": "All Talk",
+    "unread": false,
+    "menu": {
+      "menu_categorizable": true,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "mentions",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/486777696/leave",
+      "menu_open_room": false,
+      "menu_direct_room": false,
+      "menu_room_label": "All Talk"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [],
+    "label": null,
+    "membership_id": 774341722,
+    "membership_updated_at": "2026-03-02T15:40:00.000000Z",
+    "updated_at_epoch": "1772466900000",
+    "html": "<a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"All Talk\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"All Talk\" class=\"sidebar-item room btn\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">All Talk</span>\n</a>"
+  },
+  {
+    "name": "shared_muted_unread_favorite_category",
+    "direct": false,
+    "room_id": 486777696,
+    "param_key": "rooms_closed",
+    "room_name": "All Talk",
+    "unread": true,
+    "menu": {
+      "menu_categorizable": true,
+      "menu_favorited": true,
+      "menu_favorite_position": 3,
+      "menu_muted": true,
+      "menu_default_involvement": "mentions",
+      "menu_category_id": 2,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/486777696/leave",
+      "menu_open_room": false,
+      "menu_direct_room": false,
+      "menu_room_label": "All Talk"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [],
+    "label": null,
+    "membership_id": 774341722,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772466900000",
+    "html": "<a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"All Talk\" data-menu-categorizable=\"true\" data-menu-favorited=\"true\" data-menu-favorite-position=\"3\" data-menu-muted=\"true\" data-menu-default-involvement=\"mentions\" data-menu-category-id=\"2\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"All Talk\" class=\"sidebar-item room btn unread muted\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">All Talk</span>\n    <span class=\"sidebar-item__status\">New</span>\n</a>"
+  },
+  {
+    "name": "shared_broadcast_defaults",
+    "direct": false,
+    "room_id": 486777696,
+    "param_key": "rooms_closed",
+    "room_name": "All Talk",
+    "unread": false,
+    "menu": {
+      "menu_categorizable": true,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "mentions",
+      "menu_category_id": null,
+      "menu_can_delete": false,
+      "menu_can_leave": false,
+      "menu_leave_url": "/rooms/486777696/leave",
+      "menu_open_room": false,
+      "menu_direct_room": false,
+      "menu_room_label": "All Talk"
+    },
+    "viewer_admin": false,
+    "icon_name": null,
+    "members": [],
+    "label": null,
+    "membership_id": null,
+    "membership_updated_at": null,
+    "updated_at_epoch": "1772466900000",
+    "html": "<a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"All Talk\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"All Talk\" class=\"sidebar-item room btn\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">All Talk</span>\n</a>"
+  },
+  {
+    "name": "shared_emoji",
+    "direct": false,
+    "room_id": 486777696,
+    "param_key": "rooms_closed",
+    "room_name": "All Talk",
+    "unread": true,
+    "menu": {
+      "menu_categorizable": true,
+      "menu_favorited": true,
+      "menu_favorite_position": 3,
+      "menu_muted": true,
+      "menu_default_involvement": "mentions",
+      "menu_category_id": 2,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/486777696/leave",
+      "menu_open_room": false,
+      "menu_direct_room": false,
+      "menu_room_label": "All Talk"
+    },
+    "viewer_admin": true,
+    "icon_name": "fire",
+    "members": [],
+    "label": null,
+    "membership_id": 774341722,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"All Talk\" data-menu-categorizable=\"true\" data-menu-favorited=\"true\" data-menu-favorite-position=\"3\" data-menu-muted=\"true\" data-menu-default-involvement=\"mentions\" data-menu-category-id=\"2\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"All Talk\" class=\"sidebar-item room btn unread muted\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon sidebar-item__icon--custom\" aria-hidden=\"true\"><span role=\"img\" aria-label=\"Fire\" class=\"icon-avatar icon-avatar--emoji\" style=\"font-size: 24px\">🔥</span></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">All Talk</span>\n    <span class=\"sidebar-item__status\">New</span>\n</a>"
+  },
+  {
+    "name": "shared_brand",
+    "direct": false,
+    "room_id": 486777696,
+    "param_key": "rooms_closed",
+    "room_name": "All Talk",
+    "unread": true,
+    "menu": {
+      "menu_categorizable": true,
+      "menu_favorited": true,
+      "menu_favorite_position": 3,
+      "menu_muted": true,
+      "menu_default_involvement": "mentions",
+      "menu_category_id": 2,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/486777696/leave",
+      "menu_open_room": false,
+      "menu_direct_room": false,
+      "menu_room_label": "All Talk"
+    },
+    "viewer_admin": true,
+    "icon_name": "github",
+    "members": [],
+    "label": null,
+    "membership_id": 774341722,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"All Talk\" data-menu-categorizable=\"true\" data-menu-favorited=\"true\" data-menu-favorite-position=\"3\" data-menu-muted=\"true\" data-menu-default-involvement=\"mentions\" data-menu-category-id=\"2\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"All Talk\" class=\"sidebar-item room btn unread muted\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon sidebar-item__icon--custom\" aria-hidden=\"true\"><img alt=\"GitHub\" class=\"icon-avatar icon-avatar--brand\" src=\"/assets/icons/brands/github-07b84d6c.svg\" width=\"24\" height=\"24\" /></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">All Talk</span>\n    <span class=\"sidebar-item__status\">New</span>\n</a>"
+  },
+  {
+    "name": "shared_member_creator",
+    "direct": false,
+    "room_id": 699448333,
+    "param_key": "rooms_closed",
+    "room_name": "Owned <&> channel",
+    "unread": false,
+    "menu": {
+      "menu_categorizable": true,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "mentions",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/699448333/leave",
+      "menu_open_room": false,
+      "menu_direct_room": false,
+      "menu_room_label": "Owned <&> channel"
+    },
+    "viewer_admin": false,
+    "icon_name": null,
+    "members": [],
+    "label": null,
+    "membership_id": 1021579704,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<a id=\"list_rooms_closed_699448333\" data-rooms-list-target=\"room\" data-room-id=\"699448333\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Owned &lt;&amp;&gt; channel\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448333/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Owned &lt;&amp;&gt; channel\" class=\"sidebar-item room btn\" href=\"/rooms/699448333\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Owned &lt;&amp;&gt; channel</span>\n</a>"
+  },
+  {
+    "name": "shared_member_not_creator",
+    "direct": false,
+    "room_id": 699448333,
+    "param_key": "rooms_closed",
+    "room_name": "Owned <&> channel",
+    "unread": false,
+    "menu": {
+      "menu_categorizable": true,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "mentions",
+      "menu_category_id": null,
+      "menu_can_delete": false,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/699448333/leave",
+      "menu_open_room": false,
+      "menu_direct_room": false,
+      "menu_room_label": "Owned <&> channel"
+    },
+    "viewer_admin": false,
+    "icon_name": null,
+    "members": [],
+    "label": null,
+    "membership_id": 1021579706,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<a id=\"list_rooms_closed_699448333\" data-rooms-list-target=\"room\" data-room-id=\"699448333\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Owned &lt;&amp;&gt; channel\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/699448333/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Owned &lt;&amp;&gt; channel\" class=\"sidebar-item room btn\" href=\"/rooms/699448333\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Owned &lt;&amp;&gt; channel</span>\n</a>"
+  },
+  {
+    "name": "direct_pair",
+    "direct": true,
+    "room_id": 186869642,
+    "param_key": "rooms_direct",
+    "room_name": null,
+    "unread": false,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/186869642/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "Jason"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 149087659,
+        "name": "Jason",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+      }
+    ],
+    "label": "Jason",
+    "membership_id": 449028908,
+    "membership_updated_at": "2026-03-02T11:03:00.000000Z",
+    "updated_at_epoch": "1772449380000",
+    "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_186869642\" data-rooms-list-target=\"room\" data-room-id=\"186869642\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772449380000\">\n\n    <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n      <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"48\" height=\"48\" />\n      <span class=\"avatar__presence\" data-dm-presence-user-id=\"149087659\" data-presence=\"offline\" role=\"img\" aria-label=\"Offline\"></span>\n</button>\n  <a class=\"direct__link\" data-room-id=\"186869642\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/186869642/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason\" href=\"/rooms/186869642\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason\n      </span>\n    </span>\n</a></div>"
+  },
+  {
+    "name": "direct_pair_member_not_creator",
+    "direct": true,
+    "room_id": 699448325,
+    "param_key": "rooms_direct",
+    "room_name": null,
+    "unread": false,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": false,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/699448325/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "David"
+    },
+    "viewer_admin": false,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 127326141,
+        "name": "David",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+      }
+    ],
+    "label": "David",
+    "membership_id": 142918545,
+    "membership_updated_at": "2026-03-02T14:00:00.000000Z",
+    "updated_at_epoch": "1772460000000",
+    "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448325\" data-rooms-list-target=\"room\" data-room-id=\"699448325\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772460000000\">\n\n    <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n      <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" />\n      <span class=\"avatar__presence\" data-dm-presence-user-id=\"127326141\" data-presence=\"offline\" role=\"img\" aria-label=\"Offline\"></span>\n</button>\n  <a class=\"direct__link\" data-room-id=\"699448325\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448325/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David\" href=\"/rooms/699448325\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David\n      </span>\n    </span>\n</a></div>"
+  },
+  {
+    "name": "direct_solo",
+    "direct": true,
+    "room_id": 699448334,
+    "param_key": "rooms_direct",
+    "room_name": null,
+    "unread": false,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/699448334/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "David"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 127326141,
+        "name": "David",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+      }
+    ],
+    "label": "David",
+    "membership_id": 1021579707,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448334\" data-rooms-list-target=\"room\" data-room-id=\"699448334\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n      <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"48\" height=\"48\" />\n      <span class=\"avatar__presence\" data-dm-presence-user-id=\"127326141\" data-presence=\"offline\" role=\"img\" aria-label=\"Offline\"></span>\n</button>\n  <a class=\"direct__link\" data-room-id=\"699448334\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448334/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David\" href=\"/rooms/699448334\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David\n      </span>\n    </span>\n</a></div>"
+  },
+  {
+    "name": "group_nonadmin_creator",
+    "direct": true,
+    "room_id": 699448335,
+    "param_key": "rooms_direct",
+    "room_name": null,
+    "unread": false,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": false,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/699448335/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "David, Jason"
+    },
+    "viewer_admin": false,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 127326141,
+        "name": "David",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000"
+      },
+      {
+        "id": 149087659,
+        "name": "Jason",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+      }
+    ],
+    "label": "David, Jason",
+    "membership_id": 1021579710,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448335\" data-rooms-list-target=\"room\" data-room-id=\"699448335\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of David\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448335\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"false\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448335/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"David, Jason\" href=\"/rooms/699448335\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        David, Jason\n      </span>\n    </span>\n</a></div>"
+  },
+  {
+    "name": "group_admin_recipient",
+    "direct": true,
+    "room_id": 699448335,
+    "param_key": "rooms_direct",
+    "room_name": null,
+    "unread": false,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/699448335/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "Jason, Kevin"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 149087659,
+        "name": "Jason",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+      },
+      {
+        "id": 712064548,
+        "name": "Kevin",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+      }
+    ],
+    "label": "Jason, Kevin",
+    "membership_id": 1021579708,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448335\" data-rooms-list-target=\"room\" data-room-id=\"699448335\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448335\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448335/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, Kevin\" href=\"/rooms/699448335\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, Kevin\n      </span>\n    </span>\n</a></div>"
+  },
+  {
+    "name": "group_named_muted_unread",
+    "direct": true,
+    "room_id": 699448335,
+    "param_key": "rooms_direct",
+    "room_name": "Weekend <&>",
+    "unread": true,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": true,
+      "menu_favorite_position": 0,
+      "menu_muted": true,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/699448335/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "Weekend <&>"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 149087659,
+        "name": "Jason",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+      },
+      {
+        "id": 712064548,
+        "name": "Kevin",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+      }
+    ],
+    "label": "Weekend <&>",
+    "membership_id": 1021579708,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<div class=\"sidebar-item direct unread muted\" id=\"list_rooms_direct_699448335\" data-rooms-list-target=\"room\" data-room-id=\"699448335\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448335\" data-menu-categorizable=\"false\" data-menu-favorited=\"true\" data-menu-favorite-position=\"0\" data-menu-muted=\"true\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448335/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Weekend &lt;&amp;&gt;\" href=\"/rooms/699448335\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Weekend &lt;&amp;&gt;\n      </span>\n    </span>\n</a>    <span class=\"sidebar-item__status\">New</span>\n</div>"
+  },
+  {
+    "name": "group_ten",
+    "direct": true,
+    "room_id": 699448336,
+    "param_key": "rooms_direct",
+    "room_name": null,
+    "unread": false,
+    "menu": {
+      "menu_categorizable": false,
+      "menu_favorited": false,
+      "menu_favorite_position": null,
+      "menu_muted": false,
+      "menu_default_involvement": "everything",
+      "menu_category_id": null,
+      "menu_can_delete": true,
+      "menu_can_leave": true,
+      "menu_leave_url": "/rooms/directs/699448336/leave",
+      "menu_open_room": false,
+      "menu_direct_room": true,
+      "menu_room_label": "Jason, Kevin, Person +6"
+    },
+    "viewer_admin": true,
+    "icon_name": null,
+    "members": [
+      {
+        "id": 149087659,
+        "name": "Jason",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000"
+      },
+      {
+        "id": 712064548,
+        "name": "Kevin",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000"
+      },
+      {
+        "id": 773523960,
+        "name": "Person 0",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTYwLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--ab11145ddaefa1986587f4bca94cb5f5eb1d9054e467a37f65db666686f70089/avatar?v=20260302160000"
+      },
+      {
+        "id": 773523961,
+        "name": "Person 1",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTYxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--220662f00c50b192058021dd5c0e83c3ed590fa4d1e4062e99e89860673d02e2/avatar?v=20260302160000"
+      },
+      {
+        "id": 773523962,
+        "name": "Person 2",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTYyLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0c16f496234f60b54e57a72ba2b7ae593995db3032b94b46aede14fbedeb3cc3/avatar?v=20260302160000"
+      },
+      {
+        "id": 773523963,
+        "name": "Person 3",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTYzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--390927a0c07d3d25b20902999d3bc2a16be300209ff7b10c1d1cd853ee07881b/avatar?v=20260302160000"
+      },
+      {
+        "id": 773523964,
+        "name": "Person 4",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTY0LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--b580ceed177ddec9fa89e95afa6787e12ab4dbde081f0a4379d58ef53e430a5d/avatar?v=20260302160000"
+      },
+      {
+        "id": 773523965,
+        "name": "Person 5",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTY1LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--04527564d64add6f82c4c248f7fd1237ae081801db01a9a48dbf36c3e88c1643/avatar?v=20260302160000"
+      },
+      {
+        "id": 773523966,
+        "name": "Person 6",
+        "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTY2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dc7d6b944dd307948d539278d22898a2bf2507a39cbe0ff69b30270fdc189722/avatar?v=20260302160000"
+      }
+    ],
+    "label": "Jason, Kevin, Person +6",
+    "membership_id": 1021579732,
+    "membership_updated_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at_epoch": "1772467200000",
+    "html": "<div class=\"sidebar-item direct\" id=\"list_rooms_direct_699448336\" data-rooms-list-target=\"room\" data-room-id=\"699448336\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-number=\"1772467200000\">\n\n    <div class=\"avatar__group\">\n        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Jason\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/149087659/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Kevin\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/712064548/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\" width=\"20\" height=\"20\" />\n</button>        <button name=\"button\" type=\"button\" class=\"avatar profile-card-avatar\" aria-label=\"View profile of Person 0\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/773523960/card\">\n          <img aria-hidden=\"true\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTYwLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--ab11145ddaefa1986587f4bca94cb5f5eb1d9054e467a37f65db666686f70089/avatar?v=20260302160000\" width=\"20\" height=\"20\" />\n</button>    </div>\n\n  <a class=\"direct__link\" data-room-id=\"699448336\" data-menu-categorizable=\"false\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"everything\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/directs/699448336/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"true\" data-menu-room-label=\"Jason, Kevin, Person +6\" href=\"/rooms/699448336\">\n    <span class=\"direct__author min-width\">\n      <span class=\"overflow-ellipsis\">\n        <span class=\"for-screen-reader\">Ping with</span>\n        Jason, Kevin, Person +6\n      </span>\n    </span>\n</a></div>"
+  }
+]

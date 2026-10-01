@@ -1,0 +1,66 @@
+{
+  "reference": "d7c7de92",
+  "cases": {
+    "preview": {
+      "status": 200,
+      "last_room": "201306877",
+      "has_join": true
+    },
+    "join": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/201306877",
+      "involvement": "mentions",
+      "unread": false,
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"prepend\" target=\"shared_rooms\"><template><a id=\"list_rooms_open_201306877\" data-rooms-list-target=\"room\" data-room-id=\"201306877\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"HQ\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"true\" data-menu-can-leave=\"true\" data-menu-leave-url=\"/rooms/201306877/leave\" data-menu-open-room=\"true\" data-menu-direct-room=\"false\" data-menu-room-label=\"HQ\" class=\"sidebar-item room btn\" href=\"/rooms/201306877\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">HQ</span>\n</a></template></turbo-stream>"
+        }
+      ]
+    },
+    "repeat": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/201306877",
+      "involvement": "mentions",
+      "unread": false,
+      "frames": []
+    },
+    "Rooms::Closed": {
+      "status": 302,
+      "location": "http://campfire.test/",
+      "frames": []
+    },
+    "Rooms::Direct": {
+      "status": 302,
+      "location": "http://campfire.test/",
+      "frames": []
+    },
+    "Rooms::Voice": {
+      "status": 302,
+      "location": "http://campfire.test/",
+      "frames": []
+    },
+    "Rooms::Stage": {
+      "status": 302,
+      "location": "http://campfire.test/",
+      "frames": []
+    },
+    "Rooms::Board": {
+      "status": 302,
+      "location": "http://campfire.test/",
+      "frames": []
+    },
+    "deleted": {
+      "status": 302,
+      "location": "http://campfire.test/"
+    }
+  },
+  "golden": {
+    "id": 654632876,
+    "name": "Join <&>",
+    "parts": {
+      "body": "\n\n\n<section class=\"panel txt-align-center\">\n  <h2>#Join &lt;&amp;&gt;</h2>\n  <p class=\"translucent\">You're not a member of this channel.</p>\n  <form class=\"button_to\" method=\"post\" action=\"/rooms/654632876/join\"><button class=\"btn btn--reversed\" type=\"submit\">Join channel</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/654632876/join\" /></form>\n</section>\n",
+      "nav": "  <div class=\"flex-item-justify-start\">\n    <a class=\"btn\" href=\"/rooms/104393281\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>\n  </div>\n"
+    }
+  }
+}

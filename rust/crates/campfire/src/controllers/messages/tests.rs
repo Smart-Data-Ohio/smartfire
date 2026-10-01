@@ -254,7 +254,9 @@ async fn a_forged_host_stays_out_of_the_caches() {
     assert!(!honest.text().contains("evil.example"), "{}", honest.text());
 
     let mut david = app.david();
-    let room = format!("/rooms/{ALL_TALK}");
+    // WS8br's shell uses the authorized empty-list placeholder. Exercise the same owner
+    // fragments through its real pagination endpoint, retaining every forged-host assertion.
+    let room = format!("/rooms/{ALL_TALK}/messages");
     assert_eq!(david.send(forged(&room)).await.status, StatusCode::OK);
     let honest = app.david().get(&room).await;
     assert_eq!(honest.status, StatusCode::OK);

@@ -5,7 +5,7 @@ use crate::{
             accounts::{Account, Input},
             cards::{Cache, Card},
         },
-        test_support::{FakeServer, Route},
+        test_support::{FakeServer, Route, ws15e_http_case, ws15e_http_case_listener},
     },
 };
 use axum::http::{Method, StatusCode};
@@ -29,18 +29,8 @@ async fn ws15e_fizzy_connection_http_matrix() {
         "sudo",
         "csrf",
     ] {
-        let output = tokio::process::Command::new(std::env::current_exe().unwrap())
-            .args([
-                "controllers::fizzy_connections::tests::ws15e_fizzy_connection_http_matrix",
-                "--exact",
-                "--nocapture",
-                "--test-threads=1",
-            ])
-            .env("WS15E_FIZZY_CONNECTION_CASE", case)
-            .env("FIZZY_API_BASE_URL", crate::integrations::test_support::fixture_http_base(51597, 1))
-            .output()
-            .await
-            .unwrap();
+        let output = ws15e_http_case("WS15E_FIZZY_CONNECTION_CASE", case,
+            "controllers::fizzy_connections::tests::ws15e_fizzy_connection_http_matrix").await;
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             output.status.success(),
@@ -65,10 +55,7 @@ async fn run(case: &str) {
     } else {
         json!({"accounts":[{"slug":"/897362094","name":"Smart Data","user":{"id":"03user1","name":"David"}}]})
     };
-    let api_base = crate::integrations::fizzy::client::api_base_url();
-    let listener = tokio::net::TcpListener::bind(api_base.strip_prefix("http://").unwrap())
-        .await
-        .unwrap();
+    let listener = ws15e_http_case_listener();
     let server = FakeServer::on_listener(
         vec![
             Route::new("GET", "127.0.0.1", "/my/identity.json", status).body(identity.to_string()),

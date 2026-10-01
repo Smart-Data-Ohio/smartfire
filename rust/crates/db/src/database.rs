@@ -46,6 +46,8 @@ pub struct Env {
     /// BCrypt cost for `has_secure_password`. Rails uses `BCrypt::Engine.cost` (12), or
     /// `MIN_COST` (4) in the test environment.
     pub bcrypt_cost: u32,
+    /// Configured default host/protocol, supplied from the mail URL configuration.
+    pub default_url_origin: String,
     /// App-owned reference domains run on Message's real save hooks, in its transaction.
     /// The flag lets importers reconcile rows without scheduling network fetches.
     pub message_reference_syncs: Vec<MessageReferenceSync>,
@@ -64,6 +66,7 @@ impl Default for Env {
             sink: Arc::new(NullSink),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 12,
+            default_url_origin: "http://example.com".into(),
             message_reference_syncs: Vec::new(),
             user_deactivation_hooks: Vec::new(),
         }
@@ -79,6 +82,17 @@ impl Env {
 type AfterCommitHook = Box<dyn FnOnce(&mut Tx<'_>) -> Result<()> + Send>;
 
 enum AfterCommit {
+    RecordJob {
+        table: &'static str,
+        id: i64,
+        event: Option<Event>,
+        condition: Option<fn(&Connection, i64) -> Result<bool>>,
+    },
+    RecordBroadcast {
+        table: &'static str,
+        id: i64,
+        event: Event,
+    },
     Hook(AfterCommitHook),
     Event(Event),
 }
@@ -131,6 +145,67 @@ impl<'c> Tx<'c> {
         }
         if self.in_transaction {
             self.after_commit.push(AfterCommit::Event(event));
+        } else {
+            self.env.sink.emit(event);
+        }
+    }
+
+    /// A record's commit callback enqueues once, even if that record was saved
+    /// repeatedly. Persist surviving callbacks before COMMIT, so both the job
+    /// and its triggering write roll back on queue failure. Explicit job calls
+    /// outside record callbacks still use `emit_after_commit` without coalescing.
+    pub(crate) fn emit_record_job_once(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        job: &impl crate::Job,
+    ) {
+        self.emit_record_job_once_if(table, id, job, None);
+    }
+
+    /// Conditional commit callbacks evaluate the surviving record at the end of
+    /// the writer transaction, as Rails evaluates a saved model at commit time.
+    pub(crate) fn emit_record_job_once_if(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        job: &impl crate::Job,
+        condition: Option<fn(&Connection, i64) -> Result<bool>>,
+    ) {
+        let event = Event::job(job);
+        if !self.in_transaction {
+            self.emit_after_commit(event);
+        } else if !self.after_commit.iter().any(|queued| {
+            matches!(queued, AfterCommit::RecordJob { table: previous_table, id: previous_id, event: Some(previous), .. } if *previous_table == table && *previous_id == id && previous == &event)
+        }) {
+            self.after_commit.push(AfterCommit::RecordJob {
+                table,
+                id,
+                event: Some(event),
+                condition,
+            });
+        }
+    }
+
+    /// Active Record runs a record's commit callback once per transaction. Keep
+    /// the first registration's position for repeated descriptions of its frame.
+    /// This API accepts broadcasts only; job callbacks use the separate job API.
+    pub fn emit_broadcast_once(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        broadcast: &impl crate::events::Broadcast,
+    ) {
+        let event = Event::broadcast(broadcast);
+        if self.in_transaction && self.after_commit.iter().any(|queued| {
+            matches!(queued, AfterCommit::RecordBroadcast { table: previous_table, id: previous_id, event: previous } if *previous_table == table && *previous_id == id && previous == &event)
+        }) { return; }
+        if !self.persist(&event) {
+            return;
+        }
+        if self.in_transaction {
+            self.after_commit
+                .push(AfterCommit::RecordBroadcast { table, id, event });
         } else {
             self.env.sink.emit(event);
         }
@@ -190,12 +265,15 @@ impl<'c> Tx<'c> {
         self.conn.execute_batch("SAVEPOINT model_operation")?;
         match f(self) {
             Ok(value) => {
-                self.conn.execute_batch("RELEASE SAVEPOINT model_operation")?;
+                self.conn
+                    .execute_batch("RELEASE SAVEPOINT model_operation")?;
                 Ok(value)
             }
             Err(error) => {
                 self.after_commit.truncate(callbacks);
-                self.conn.execute_batch("ROLLBACK TO SAVEPOINT model_operation; RELEASE SAVEPOINT model_operation")?;
+                self.conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT model_operation; RELEASE SAVEPOINT model_operation",
+                )?;
                 Err(error)
             }
         }
@@ -228,12 +306,46 @@ pub fn run_write<T>(
             return Err(error);
         }
     };
+    let mut queue = std::mem::take(&mut tx.after_commit);
+    let persist_callbacks = (|| -> Result<()> {
+        for item in &mut queue {
+            if let AfterCommit::RecordJob {
+                table,
+                id,
+                event,
+                condition,
+            } = item
+            {
+                let survives = conn.query_row(
+                    &format!("SELECT EXISTS(SELECT 1 FROM {table} WHERE id=?)"),
+                    [*id],
+                    |r| r.get::<_, bool>(0),
+                )?;
+                let should_enqueue = survives
+                    && match condition {
+                        Some(test) => test(conn, *id)?,
+                        None => true,
+                    };
+                if should_enqueue {
+                    if let Some(event) = event {
+                        env.sink.persist(&tx, event)?;
+                    }
+                } else {
+                    *event = None;
+                }
+            }
+        }
+        Ok(())
+    })();
+    if let Err(error) = persist_callbacks {
+        let _ = conn.execute_batch("ROLLBACK TRANSACTION");
+        return Err(error);
+    }
     if let Err(error) = conn.execute_batch("COMMIT TRANSACTION") {
         let _ = conn.execute_batch("ROLLBACK TRANSACTION");
         return Err(error.into());
     }
 
-    let mut queue = std::mem::take(&mut tx.after_commit);
     let mut first_error = None;
     let mut after = Tx {
         conn,
@@ -244,7 +356,24 @@ pub fn run_write<T>(
     };
     for item in queue.drain(..) {
         match item {
+            AfterCommit::RecordJob { event, .. } => {
+                if let Some(event) = event {
+                    env.sink.emit(event);
+                }
+            }
             AfterCommit::Event(event) => env.sink.emit(event),
+            AfterCommit::RecordBroadcast { table, id, event } => {
+                // A later destroy suppresses the record's earlier update callback.
+                match conn.query_row(
+                    &format!("SELECT EXISTS(SELECT 1 FROM {table} WHERE id=?)"),
+                    [id],
+                    |r| r.get::<_, bool>(0),
+                ) {
+                    Ok(true) => env.sink.emit(event),
+                    Ok(false) => (),
+                    Err(error) => tracing::warn!(%error, table, id, "broadcast callback failed"),
+                }
+            }
             AfterCommit::Hook(hook) => {
                 if let Err(error) = hook(&mut after) {
                     tracing::error!(%error, "after_commit hook failed");
@@ -347,15 +476,36 @@ impl Database {
     }
 
     /// Runs `f` as one immediate transaction on the writer thread.
+    /// Work queued behind the SQLite writer, excluding its currently running transaction.
+    /// Allows runtime tests and diagnostics to observe a real blocked critical section.
+    pub fn queued_writes(&self) -> usize {
+        self.writer.max_capacity() - self.writer.capacity()
+    }
+
     pub async fn write<T, F>(&self, f: F) -> Result<T>
     where
         T: Send + 'static,
         F: FnOnce(&mut Tx<'_>) -> Result<T> + Send + 'static,
     {
+        self.write_scoped(|| (), f).await
+    }
+
+    /// Holds a caller-owned runtime guard across the write AND its ordered after-commit
+    /// callbacks. Models remain unaware of request/rendering context.
+    pub async fn write_scoped<T, F, G>(&self, scope: impl FnOnce() -> G + Send + 'static, f: F) -> Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut Tx<'_>) -> Result<T> + Send + 'static,
+        G: 'static,
+    {
         let (reply, response) = oneshot::channel();
         self.writer
             .send(Box::new(move |conn, env| {
-                let _ = reply.send(run_write(conn, env, f));
+                let result = {
+                    let _scope = scope();
+                    run_write(conn, env, f)
+                };
+                let _ = reply.send(result);
             }))
             .await
             .map_err(|_| Error::WriterGone)?;
@@ -451,12 +601,18 @@ impl Checkpoints {
             .name("campfire-db-checkpointer".into())
             .spawn(move || {
                 while woken.recv().is_ok() {
-                    let _running = checkpointer_running.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+                    let _running = checkpointer_running
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
                     checkpoint(&conn, "PASSIVE");
                 }
             })
             .map_err(|e| Error::Other(e.to_string()))?;
-        Ok(Self { wake, running, woken_at: 0 })
+        Ok(Self {
+            wake,
+            running,
+            woken_at: 0,
+        })
     }
 
     /// Wakes the checkpointer for every [`AUTOCHECKPOINT_PAGES`] the WAL grows.
@@ -475,7 +631,10 @@ impl Checkpoints {
 /// checkpointer hasn't, and waits for readers so that the next write restarts the WAL. It waits
 /// for a running PASSIVE checkpoint first, which would otherwise make SQLite refuse it.
 fn restart_wal(conn: &Connection, checkpoints: &Checkpoints) {
-    let _running = checkpoints.running.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let _running = checkpoints
+        .running
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     checkpoint(conn, "RESTART");
 }
 
@@ -483,7 +642,9 @@ fn restart_wal(conn: &Connection, checkpoints: &Checkpoints) {
 /// running, or readers still on old frames past the busy timeout) in its `busy` column, not as an
 /// error.
 fn checkpoint(conn: &Connection, mode: &str) {
-    match conn.query_row(&format!("PRAGMA wal_checkpoint({mode})"), [], |row| row.get::<_, i64>(0)) {
+    match conn.query_row(&format!("PRAGMA wal_checkpoint({mode})"), [], |row| {
+        row.get::<_, i64>(0)
+    }) {
         Ok(0) => {}
         Ok(_) => tracing::warn!(mode, "WAL checkpoint couldn't finish"),
         Err(error) => tracing::warn!(%error, mode, "WAL checkpoint failed"),
@@ -524,18 +685,24 @@ impl ReaderPool {
 
     fn with<T>(&self, f: impl FnOnce(&Connection) -> Result<T>) -> Result<T> {
         let conn = {
-            let mut idle = self.idle.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let mut idle = self
+                .idle
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             loop {
                 if let Some(conn) = idle.pop() {
                     break conn;
                 }
-                idle = self.available.wait(idle).unwrap_or_else(|poisoned| poisoned.into_inner());
+                idle = self
+                    .available
+                    .wait(idle)
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
             }
         };
         let checkout = Checkout { pool: self, conn: Some(conn) };
         let conn = checkout.conn.as_ref().expect("checked out");
         #[cfg(feature = "test-support")]
-        let _trace = QueryTrace::enter(conn, self.query_log.lock().unwrap().clone());
+        let _trace = self.query_log.lock().unwrap().clone().map(|log| QueryTrace::enter(conn, log));
         f(conn)
     }
 }
@@ -550,7 +717,7 @@ struct QueryTrace<'a>(&'a Connection, Option<Arc<Mutex<Vec<String>>>>);
 
 #[cfg(feature = "test-support")]
 impl<'a> QueryTrace<'a> {
-    fn enter(conn: &'a Connection, log: Option<Arc<Mutex<Vec<String>>>>) -> Self {
+    fn enter(conn: &'a Connection, log: Arc<Mutex<Vec<String>>>) -> Self {
         fn record(event: rusqlite::trace::TraceEvent<'_>) {
             if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event {
                 READ_QUERIES.with(|log| {
@@ -558,8 +725,8 @@ impl<'a> QueryTrace<'a> {
                 });
             }
         }
-        let previous = READ_QUERIES.with(|slot| slot.replace(log.clone()));
-        if log.is_some() { conn.trace_v2(rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT, Some(record)); }
+        let previous = READ_QUERIES.with(|slot| slot.replace(Some(log)));
+        conn.trace_v2(rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT, Some(record));
         Self(conn, previous)
     }
 }
@@ -583,7 +750,11 @@ struct Checkout<'a> {
 impl Drop for Checkout<'_> {
     fn drop(&mut self) {
         if let Some(conn) = self.conn.take() {
-            self.pool.idle.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).push(conn);
+            self.pool
+                .idle
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .push(conn);
             self.pool.available.notify_one();
         }
     }
@@ -610,7 +781,11 @@ mod tests {
             assert!(panicked.is_err());
         }
         // With one reader, a lost connection would make this wait forever.
-        assert_eq!(db.read_blocking(|conn| Ok(conn.query_row("SELECT 1", [], |r| r.get::<_, i64>(0))?)).unwrap(), 1);
+        assert_eq!(
+            db.read_blocking(|conn| Ok(conn.query_row("SELECT 1", [], |r| r.get::<_, i64>(0))?))
+                .unwrap(),
+            1
+        );
     }
 
     /// Commits never checkpoint on the writer: the WAL reaching the auto-checkpoint threshold
@@ -622,7 +797,8 @@ mod tests {
         let mut config = Config::new(&path);
         config.readers = 1;
         let db = Database::open(config, Env::default()).unwrap();
-        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?)).unwrap();
+        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?))
+            .unwrap();
         let before = main_file_len(&path);
 
         // ~1,200 pages of 4 KiB, over a few commits.
@@ -635,7 +811,10 @@ mod tests {
 
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
         while main_file_len(&path) < before + 1000 * 4096 {
-            assert!(std::time::Instant::now() < deadline, "the WAL was never checkpointed");
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the WAL was never checkpointed"
+            );
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
     }
@@ -648,7 +827,8 @@ mod tests {
         let mut config = Config::new(&path);
         config.readers = 1;
         let db = Database::open(config, Env::default()).unwrap();
-        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?)).unwrap();
+        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE filler (data BLOB)")?))
+            .unwrap();
 
         // ~25,000 pages, 500 per commit.
         for _ in 0..50 {
@@ -659,7 +839,12 @@ mod tests {
             })
             .unwrap();
         }
-        let wal = std::fs::metadata(path.with_extension("sqlite3-wal")).unwrap().len();
-        assert!(wal < (WAL_LIMIT_PAGES as u64 + 1000) * 4200, "WAL of {wal} bytes");
+        let wal = std::fs::metadata(path.with_extension("sqlite3-wal"))
+            .unwrap()
+            .len();
+        assert!(
+            wal < (WAL_LIMIT_PAGES as u64 + 1000) * 4200,
+            "WAL of {wal} bytes"
+        );
     }
 }

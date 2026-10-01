@@ -54,13 +54,15 @@ for name in names:
         assert layout_run.returncode == 0, "thread-pages: approved layout reference failed"
         pinned = json.loads((SCRATCH / "out/thread-pages.json").read_text())
         layout = json.loads((SCRATCH / "out/thread-pages-layout.json").read_text())
-        full_bodies = [row.pop("full_body") for row in layout["rows"]]
-        for row in pinned["rows"]:
-            row.pop("full_body")
+        full_bodies = [row["full_body"] for row in layout["rows"]]
+        # Replace in place to preserve the reference oracle's JSON field order.
+        # Only layout HTML is approved drift; all other fields still compare in full.
+        for row in [*layout["rows"], *pinned["rows"]]:
+            row["full_body"] = None
         assert layout == pinned, "thread-pages: content drift outside the approved layout"
         for row, full_body in zip(pinned["rows"], full_bodies):
             row["full_body"] = full_body
-        pinned["layout_reference"] = "2e20b24c"
+        pinned["layout_reference"] = "2e20b24c (#163 application layout and assets only; thread/message source remains d7c7de92)"
         (SCRATCH / "out/thread-pages.json").write_text(json.dumps(pinned, ensure_ascii=False, indent=2) + "\n")
         print("WS8bm thread layout: #163 Rails layout; every non-layout field identical to d7c7de92", flush=True)
     files = [f"{name}.json"] + (["index-template-digest.txt"] if name == "paging" else [])
