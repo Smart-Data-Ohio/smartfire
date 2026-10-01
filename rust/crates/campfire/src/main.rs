@@ -18,6 +18,7 @@ mod jobs;
 mod mail;
 mod rich_text;
 mod messaging;
+mod public_policy;
 mod security;
 
 /// jemalloc: the room page alone makes thousands of allocations per request, across as many

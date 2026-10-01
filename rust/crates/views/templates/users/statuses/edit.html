@@ -1,0 +1,14 @@
+{% filter turbo_frame_tag("user_card", h::attrs()) %}
+  <div class="status-popup">
+    <h2 class="status-popup__title">Set a status</h2>
+
+{% let form = h::form_with("/users/me/status").model("user").method("patch").class("flex flex-column").data("action", "turbo:submit-end->profile-card#statusSaved") %}    {% filter form_with(form) %}
+      {{ self.status_fields() }}
+
+      <div class="status-popup__actions">
+        {{ h::button_tag(h::attrs().class("btn btn--reversed"), "Save") }}
+        {{ h::button_tag(h::attrs().name("user[clear_custom_status]").value("1").class("btn"), "Clear status") }}
+        {{ h::link_to(&h::routes::user_card(user_id), h::attrs().class("btn"), "Cancel") }}
+      </div>
+{% endfilter %}  </div>
+{% endfilter %}

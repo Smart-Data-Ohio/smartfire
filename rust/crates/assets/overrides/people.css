@@ -1,0 +1,448 @@
+/* Profile cards, people multi-select, and the people directory. */
+
+/* One shared popover per page; triggers point the frame at their card URL. */
+.profile-card-popover {
+  /* The display transition keeps the card rendered while the panel fades
+     out; without it the hidden flip would cut the exit. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
+}
+
+.profile-card-popover[hidden] {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.profile-card-popover[hidden] .profile-card-popover__panel {
+  transform: translateY(4px) scale(0.97);
+}
+
+@starting-style {
+  .profile-card-popover:not([hidden]) {
+    opacity: 0;
+  }
+
+  .profile-card-popover:not([hidden]) .profile-card-popover__panel {
+    transform: translateY(4px) scale(0.97);
+  }
+}
+
+.profile-card-popover__backdrop {
+  inset: 0;
+  position: fixed;
+  z-index: 60;
+}
+
+.profile-card-popover__panel {
+  background: var(--workspace-surface, var(--color-bg));
+  border: 1px solid var(--workspace-border, var(--color-border));
+  border-radius: var(--border-radius, 0.5rem);
+  box-shadow: 0 0.5rem 2rem rgb(0 0 0 / 0.18);
+  color: var(--workspace-text, var(--color-text));
+  inline-size: min(20rem, calc(100dvw - 2rem));
+  max-block-size: calc(100dvh - 2rem);
+  outline-offset: 2px;
+  overflow-y: auto;
+  padding: 1rem;
+  position: fixed;
+  transition: transform var(--motion-fast) var(--ease-standard);
+  z-index: 61;
+}
+
+.profile-card-popover__close {
+  float: inline-end;
+}
+
+.profile-card__loading {
+  color: var(--workspace-text-muted, var(--color-text));
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.profile-card__header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  margin-block-end: 0.75rem;
+}
+
+.profile-card__avatar {
+  --avatar-size: 4rem;
+
+  flex-shrink: 0;
+}
+
+.profile-card__name {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.profile-card__presence {
+  align-items: center;
+  color: var(--workspace-text-muted, var(--color-text));
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.35rem;
+}
+
+.profile-card__badges {
+  display: flex;
+  gap: 0.35rem;
+  margin-block-start: 0.25rem;
+}
+
+.profile-card__badge {
+  background: var(--workspace-sidebar-active, var(--workspace-border, var(--color-border)));
+  border-radius: 999px;
+  color: var(--workspace-text, var(--color-text));
+  font-size: 0.75rem;
+  padding: 0.1rem 0.55rem;
+}
+
+.profile-card__owner {
+  color: var(--workspace-text-muted, var(--color-text));
+  display: block;
+  font-size: 0.8rem;
+  margin-block-start: 0.25rem;
+}
+
+.profile-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-card__actions .btn,
+.profile-card__actions .button_to,
+.profile-card__actions form {
+  inline-size: 100%;
+}
+
+.profile-card__star {
+  margin-block-start: 0.5rem;
+}
+
+/* Status popup (users/statuses/edit): the profile page's status fields,
+   swapped into the card. Fields shrink to the card's width rather than
+   their options' natural width. */
+.status-popup__title {
+  font-size: 1.1rem;
+  margin-block: 0 0.5rem;
+}
+
+/* The form is a flex container, so without clearing it would narrow
+   itself beside the floated close button for its whole height. */
+.status-popup form {
+  clear: both;
+}
+
+.status-popup label {
+  white-space: nowrap;
+}
+
+.status-popup .input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.status-popup input[name="user[custom_status_emoji]"] {
+  flex: 0 0 3.5rem;
+}
+
+.status-popup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-start: 0.75rem;
+}
+
+.status-popup__actions .btn {
+  flex: 1 1 auto;
+}
+
+.profile-card__star .btn,
+.profile-card__star form {
+  inline-size: 100%;
+}
+
+/* Name triggers read as names until hovered or focused. */
+.profile-card-name {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: 0.25rem;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: start;
+}
+
+.profile-card-name:hover {
+  text-decoration: underline;
+}
+
+.profile-card-trigger {
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+/* Avatar triggers keep their avatar layout; only the reset differs. */
+button.profile-card-avatar {
+  appearance: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* At phone width the card becomes a centered sheet. */
+@media (max-width: 40rem) {
+  .profile-card-popover__panel {
+    inset-block-end: 1rem;
+    inset-inline: 1rem;
+    inline-size: auto;
+    max-block-size: 80dvh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-card-popover__panel {
+    transition: none;
+  }
+}
+
+/* Shared member-row menu: one per member panel, Star/Unstar inside. */
+.member-row-menu[hidden] {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px) scale(0.97);
+}
+
+.member-row-menu {
+  background: var(--workspace-surface, var(--color-bg));
+  border-radius: 0.7rem;
+  color: var(--workspace-text, var(--color-text));
+  inline-size: max-content;
+  margin: 0;
+  max-inline-size: min(92vw, 16rem);
+  min-inline-size: 10rem;
+  padding: 0.35rem;
+  position: fixed;
+  /* The display transition keeps the menu rendered while it fades out;
+     without it the hidden flip would cut the exit. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
+  z-index: 30;
+}
+
+@starting-style {
+  .member-row-menu:not([hidden]) {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+}
+
+.member-row-menu__item {
+  --btn-background: transparent;
+  --btn-border-color: transparent;
+
+  inline-size: 100%;
+  justify-content: flex-start;
+  text-align: start;
+  transition: background-color var(--motion-quick);
+}
+
+.member-row-menu__item:hover,
+.member-row-menu__item:focus-visible {
+  background: var(--workspace-sidebar-hover);
+}
+
+/* Sticky multi-select bar. */
+.multi-select-bar[hidden] {
+  display: none;
+  opacity: 0;
+  /* The exit keeps the bar rendered while it slides out; it must not
+     catch clicks on its way out. */
+  pointer-events: none;
+  transform: translateY(8px);
+}
+
+.multi-select-bar {
+  background: var(--workspace-surface, var(--color-bg));
+  border-block-start: 1px solid var(--workspace-border, var(--color-border));
+  inset-block-end: 0;
+  padding: 0.6rem 0.75rem;
+  position: sticky;
+  /* The display transition keeps the bar rendered while it slides out;
+     without it the hidden flip would cut the exit. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
+  z-index: 5;
+}
+
+@starting-style {
+  .multi-select-bar:not([hidden]) {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* In the member panel the bar overlays the list end instead of taking
+   flex space, so showing, hiding, or exiting it never resizes the list.
+   The surface is the positioned ancestor in both drawer and grid modes.
+   While selecting, the content pads clear of the overlay (measured
+   109px without the note, ~160px with a wrapped note; 11rem covers both
+   with room). */
+.member-panel__surface .multi-select-bar {
+  inset-block-end: 0;
+  inset-inline: 0;
+  position: absolute;
+}
+
+.member-panel__surface.is-selecting .member-panel__content {
+  padding-block-end: 11rem;
+}
+
+/* The directory and picker keep the bar in-flow and sticky: it is the
+   last child, so toggling it only grows or shrinks trailing space and
+   no row ever moves. An overlaid sticky bar is not achievable: sticky
+   positioning uses the static position, which ignores both grid
+   alignment and auto margins, so a bar sharing the list's row renders
+   at the row start instead of its end. */
+
+.multi-select-bar__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.multi-select-bar__note {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.82rem;
+  margin: 0.4rem 0 0;
+}
+
+.multi-select-row {
+  -webkit-touch-callout: none;
+}
+
+/* The base reset strips every input to appearance: none, so selection
+   checkboxes opt back into a native, theme-tinted box. */
+input[data-multi-select-target="checkbox"],
+.directs-add-members input[type="checkbox"] {
+  accent-color: var(--workspace-accent-fill-strong, var(--color-text));
+  appearance: auto;
+  block-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  inline-size: 1.1rem;
+}
+
+/* People directory. */
+.people-directory {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.people-directory__row {
+  align-items: center;
+  border-radius: 0.5rem;
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  transition: background-color var(--motion-quick);
+}
+
+.people-directory__row:hover {
+  background: var(--workspace-sidebar-hover, transparent);
+}
+
+.people-directory__identity {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.people-directory__presence {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.8rem;
+}
+
+/* New-DM picker. The filter input shrinks inside the top bar instead of
+   pushing the sidebar wider than the phone. */
+.dm-picker__topbar {
+  min-inline-size: 0;
+}
+
+.dm-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Compact rows with 32px avatars; the whole row is the tap target (the
+   dm-picker controller toggles the checkbox for clicks outside the
+   avatar and name controls). Every child shrinks or holds its size so
+   long names ellipsize instead of overflowing at phone width. */
+.dm-picker__row {
+  align-items: center;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.dm-picker__row:hover {
+  background: var(--workspace-sidebar-hover, transparent);
+}
+
+.dm-picker__row[hidden] {
+  display: none;
+}
+
+.dm-picker__row .avatar {
+  --avatar-size: 32px;
+
+  flex-shrink: 0;
+}
+
+.dm-picker__row .profile-card-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.dm-picker__row .profile-card__badge {
+  flex-shrink: 0;
+}
+
+.dm-picker__empty {
+  margin: 0;
+  padding: 1rem 0.5rem;
+}
+
+.dm-picker__empty[hidden] {
+  display: none;
+}
+
+/* At phone width rows grow to full 44px touch targets. */
+@media (max-width: 40rem) {
+  .dm-picker__row {
+    min-block-size: 44px;
+  }
+}

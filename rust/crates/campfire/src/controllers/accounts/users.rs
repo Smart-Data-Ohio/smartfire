@@ -43,11 +43,19 @@ pub async fn update(c: &mut Ctx) -> Result {
         _ => Role::Member,
     };
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    c.app()
+    let saved = c.app()
         .db
-        .write(move |tx| crate::authentication::update_role(tx, &mut user, role, &audit))
-        .await
-        .map_err(Error::internal)?;
+        .write(move |tx| {
+            // Rails validates every persisted preference before saving a new role.
+            campfire_db::models::user::profile_settings::update(tx, user.id, Default::default())?;
+            crate::authentication::update_role(tx, &mut user, role, &audit)
+        })
+        .await;
+    match saved {
+        // Accounts::UsersController redirects after an unsuccessful non-bang update.
+        Ok(()) | Err(campfire_db::Error::RecordInvalid(_)) => (),
+        Err(error) => return Err(Error::internal(error)),
+    }
     redirect_to_edit_account(c)
 }
 

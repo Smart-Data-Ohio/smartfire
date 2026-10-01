@@ -783,6 +783,14 @@
       }
     },
     {
+      "verb": "GET",
+      "path": "/users/:user_id/status/edit(.:format)",
+      "endpoint": "users/statuses#edit",
+      "defaults": {
+        "user_id": "me"
+      }
+    },
+    {
       "verb": "PATCH",
       "path": "/users/:user_id/status(.:format)",
       "endpoint": "users/statuses#update",
@@ -4611,6 +4619,14 @@
       "verb": "PUT",
       "path": "/users/1/tour",
       "endpoint": "users/tours#update",
+      "params": {
+        "user_id": "1"
+      }
+    },
+    {
+      "verb": "GET",
+      "path": "/users/1/status/edit",
+      "endpoint": "users/statuses#edit",
       "params": {
         "user_id": "1"
       }
