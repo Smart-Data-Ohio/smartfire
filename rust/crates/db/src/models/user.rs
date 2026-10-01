@@ -462,6 +462,7 @@ impl User {
         }
         if let Some(status) = changes.status.filter(|s| *s != self.status) {
             if status != Status::Active {
+                crate::models::huddle_grant::HuddleGrant::revoke_for_user(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
                 crate::models::AgentGrant::revoke_for_user(tx, self.id)?;
             }
             self.status = status;
@@ -552,11 +553,17 @@ impl User {
     }
     pub fn deactivate_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
         self.close_remote_connections(tx, false);
+        let hosted_stages = super::stage::hosted_room_ids(tx,self.id)?;
+        super::stream::Stream::end_for_user(tx,self.id)?;
         let conn = tx.conn();
         conn.execute_cached(
             r#"DELETE FROM "memberships" WHERE ("memberships"."id") IN (SELECT "memberships"."id" FROM "memberships" INNER JOIN "rooms" AS "room" ON "room"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? AND "room"."type" != ?)"#,
             params![self.id, "Rooms::Direct"],
         )?;
+        for room_id in hosted_stages {
+            super::stage::host_departed(tx,room_id,self.id,&super::room_delete::HuddleConfig::from_env())?;
+        }
+        let conn = tx.conn();
         conn.execute_cached(
             r#"DELETE FROM "push_subscriptions" WHERE "push_subscriptions"."user_id" = ?"#,
             [self.id],

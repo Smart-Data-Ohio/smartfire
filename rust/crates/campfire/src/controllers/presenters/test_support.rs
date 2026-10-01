@@ -165,6 +165,23 @@ impl TestApp {
         Self::boot_with_clock(seed_clock()).await
     }
 
+    pub async fn boot_with_huddle(huddle: crate::huddle::Config) -> Option<TestApp> {
+        Self::boot_with_huddle_and_clock(huddle, seed_clock()).await
+    }
+
+    pub async fn boot_with_huddle_and_clock(
+        huddle: crate::huddle::Config,
+        clock: campfire_kit::SharedClock,
+    ) -> Option<TestApp> {
+        Self::boot_with_huddle_services(
+            clock,
+            crate::integrations::net::Network::system(),
+            &[],
+            huddle,
+        )
+        .await
+    }
+
     /// Byte goldens generated with the reference's --freeze clock.
     pub async fn boot_frozen() -> Option<TestApp> {
         Self::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
@@ -254,6 +271,34 @@ impl TestApp {
         extra: &[(&str, &str)],
         github_app: Option<crate::integrations::github::client::AppClient>,
     ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services(
+            name,
+            clock,
+            network,
+            extra,
+            crate::huddle::Config::default(),
+            github_app,
+        )
+        .await
+    }
+
+    async fn boot_with_huddle_services(
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+        huddle: crate::huddle::Config,
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None).await
+    }
+
+    async fn boot_seed_with_huddle_services(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+        huddle: crate::huddle::Config,
+        github_app: Option<crate::integrations::github::client::AppClient>,
+    ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -265,7 +310,7 @@ impl TestApp {
         copy_dir(&seed.join("storage"), &dir.path().join("files"));
         let root = dir.path().to_string_lossy().into_owned();
         let secret = parity_env("SECRET_KEY_BASE").unwrap();
-        let config = Config::from_lookup(|name| match name {
+        let mut config = Config::from_lookup(|name| match name {
             "SECRET_KEY_BASE" => Some(secret.clone()),
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
@@ -276,6 +321,7 @@ impl TestApp {
                 .map(|(_, value)| (*value).into()),
         })
         .unwrap();
+        config.huddle = huddle;
         let intervals = crate::jobs::periodic::Intervals {
             periodic: None,
             huddle: None,

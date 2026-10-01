@@ -13,6 +13,7 @@ mod huddle_readiness;
 mod picker_configuration;
 mod controllers;
 mod integrations;
+mod huddle;
 mod jobs;
 mod mail;
 mod rich_text;

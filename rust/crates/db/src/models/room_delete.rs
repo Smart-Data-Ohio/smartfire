@@ -104,63 +104,7 @@ fn validate_room(tx: &Tx<'_>, room: &Room) -> Result<()> {
 }
 
 fn revoke_huddle_grants(tx: &mut Tx<'_>, room_id: i64, config: &HuddleConfig) -> Result<()> {
-    let names: Vec<String> = query_all(
-        tx.conn(),
-        "SELECT room_name FROM huddle_grants WHERE room_id=? LIMIT 1",
-        [room_id],
-        |r| r.get(0),
-    )?;
-    let room_name = names.into_iter().next().or_else(|| {
-        config
-            .api_secret
-            .as_ref()
-            .map(|s| rails_compat::jwt::livekit::room_name(s, room_id))
-    });
-    let grants: Vec<(i64, String, String)> = query_all(
-        tx.conn(),
-        "SELECT id,identity,room_name FROM huddle_grants WHERE room_id=? AND revoked_at IS NULL ORDER BY id",
-        [room_id],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )?;
-    for (id, identity, name) in grants {
-        let mut e = Errors::default();
-        if identity.trim().is_empty() {
-            e.add("identity", "can't be blank");
-        }
-        if name.trim().is_empty() {
-            e.add("room_name", "can't be blank");
-        }
-        let duplicate: bool = tx.conn().query_row(
-            "SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE identity=? AND id!=?)",
-            params![identity, id],
-            |r| r.get(0),
-        )?;
-        if duplicate {
-            e.add("identity", "has already been taken");
-        }
-        e.into_result()?;
-        tx.conn().execute_cached(
-            "UPDATE huddle_grants SET revoked_at=?,updated_at=? WHERE id=?",
-            params![tx.now(), tx.now(), id],
-        )?;
-        // WS13 owns in-call banner/leave payloads and voice presence on revocation.
-        // Stream.end_when_last_grant_revoked cannot find an alive Stage after marking.
-    }
-    if let Some(name) = room_name.filter(|s| !s.trim().is_empty()) {
-        let exists: bool=tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM huddle_cleanups WHERE operation='delete_room' AND room_name=?)",[&name],|r|r.get(0))?;
-        if !exists {
-            let now = tx.now();
-            let id:i64=tx.conn().query_row_cached("INSERT INTO huddle_cleanups(operation,room_name,created_at,updated_at) VALUES('delete_room',?,?,?) RETURNING id",params![name,now,now],|r|r.get(0))?;
-            if config.admin_configured {
-                tx.conn().execute_cached(
-                    "UPDATE huddle_cleanups SET enqueued_at=?,next_attempt_at=? WHERE id=?",
-                    params![now, now.since(jiff::SignedDuration::from_secs(60)), id],
-                )?;
-                tx.emit_after_commit(Event::job(&CleanupJob { cleanup_id: id }));
-            }
-        }
-    }
-    Ok(())
+    crate::models::huddle_grant::HuddleGrant::revoke_for_room(tx, room_id, config)
 }
 
 pub fn reenqueue_stuck(tx: &mut Tx<'_>, grace_seconds: i64) -> Result<usize> {

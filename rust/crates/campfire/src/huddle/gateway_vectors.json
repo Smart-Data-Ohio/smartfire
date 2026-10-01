@@ -1,0 +1,477 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1767268800,
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjE3NjcyNjg5MjAsImlhdCI6MTc2NzI2ODgwMCwiaXNzIjoid3MxMy1maXh0dXJlLWFwaS1rZXkiLCJqdGkiOiJ3czEzLWZpeHR1cmUtanRpIiwibmFtZSI6IkRhdmlkIiwibmJmIjoxNzY3MjY4Nzk1LCJzdWIiOiJ3czEzLXNlY3VyaXR5LXBhcnRpY2lwYW50IiwidmlkZW8iOnsicm9vbSI6IndzMTMtc2VjdXJpdHktcm9vbSIsInJvb21Kb2luIjp0cnVlLCJyb29tQ3JlYXRlIjpmYWxzZSwicm9vbUxpc3QiOmZhbHNlLCJyb29tQWRtaW4iOmZhbHNlLCJyb29tUmVjb3JkIjpmYWxzZSwiY2FuUHVibGlzaCI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOmZhbHNlLCJjYW5QdWJsaXNoU291cmNlcyI6WyJtaWNyb3Bob25lIiwic2NyZWVuX3NoYXJlIiwic2NyZWVuX3NoYXJlX2F1ZGlvIiwiY2FtZXJhIl0sImNhblN1YnNjcmliZSI6dHJ1ZX19.K5CqQTAWnd4LZAEpDUrQEdJ4VHYUrjuxPajciUKEYuU",
+  "cases": [
+    {
+      "name": "missing_secret",
+      "secret": null,
+      "status": 401,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "wrong_secret",
+      "secret": "wrong",
+      "status": 401,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "blank_secret",
+      "secret": " ",
+      "status": 401,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "valid",
+      "status": 200,
+      "cache": "no-store",
+      "body": {
+        "grant_id": 17,
+        "room_name": "ws13-security-room",
+        "identity": "ws13-security-participant"
+      },
+      "seen_after": 1767268800,
+      "jobs": [
+        "presence",
+        "join"
+      ]
+    },
+    {
+      "name": "missing_bearer",
+      "bearer": null,
+      "status": 401,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "wrong_scheme",
+      "scheme": "Basic",
+      "status": 401,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "case_insensitive_scheme",
+      "scheme": "bEaReR",
+      "status": 200,
+      "cache": "no-store",
+      "body": {
+        "grant_id": 17,
+        "room_name": "ws13-security-room",
+        "identity": "ws13-security-participant"
+      },
+      "seen_after": 1767268800,
+      "jobs": [
+        "presence",
+        "join"
+      ]
+    },
+    {
+      "name": "malformed_token",
+      "bearer": "malformed",
+      "status": 401,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "expired_token",
+      "bearer": "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjE3NjcyNjg4MDAsImlhdCI6MTc2NzI2ODgwMCwiaXNzIjoid3MxMy1maXh0dXJlLWFwaS1rZXkiLCJqdGkiOiJ3czEzLWZpeHR1cmUtanRpIiwibmFtZSI6IkRhdmlkIiwibmJmIjoxNzY3MjY4Nzk1LCJzdWIiOiJ3czEzLXNlY3VyaXR5LXBhcnRpY2lwYW50IiwidmlkZW8iOnsicm9vbSI6IndzMTMtc2VjdXJpdHktcm9vbSIsInJvb21Kb2luIjp0cnVlLCJyb29tQ3JlYXRlIjpmYWxzZSwicm9vbUxpc3QiOmZhbHNlLCJyb29tQWRtaW4iOmZhbHNlLCJyb29tUmVjb3JkIjpmYWxzZSwiY2FuUHVibGlzaCI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOmZhbHNlLCJjYW5QdWJsaXNoU291cmNlcyI6WyJtaWNyb3Bob25lIiwic2NyZWVuX3NoYXJlIiwic2NyZWVuX3NoYXJlX2F1ZGlvIiwiY2FtZXJhIl0sImNhblN1YnNjcmliZSI6dHJ1ZX19.z1VQHpC-TE0hL8KQMHwJ-u44TcK0ogL5Mt-XN9ZmKPY",
+      "status": 401,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "revoked",
+      "revoked": true,
+      "status": 403,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "removed_member",
+      "removed": true,
+      "status": 403,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": [
+        "cleanup"
+      ]
+    },
+    {
+      "name": "unconfigured",
+      "configured": false,
+      "status": 503,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "show",
+      "method": "get",
+      "path": "/internal/huddle/grants/17",
+      "status": 200,
+      "cache": "no-store",
+      "body": {
+        "grant_id": 17,
+        "room_name": "ws13-security-room",
+        "identity": "ws13-security-participant"
+      },
+      "seen_after": 1767268800,
+      "jobs": [
+        "presence",
+        "join"
+      ]
+    },
+    {
+      "name": "show_no_sighting",
+      "method": "get",
+      "path": "/internal/huddle/grants/17?record_seen=0",
+      "status": 200,
+      "cache": "no-store",
+      "body": {
+        "grant_id": 17,
+        "room_name": "ws13-security-room",
+        "identity": "ws13-security-participant"
+      },
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "show_query_zero",
+      "method": "get",
+      "path": "/internal/huddle/grants/17",
+      "params": {
+        "record_seen": 0
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": {
+        "grant_id": 17,
+        "room_name": "ws13-security-room",
+        "identity": "ws13-security-participant"
+      },
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "show_revoked",
+      "method": "get",
+      "path": "/internal/huddle/grants/17",
+      "revoked": true,
+      "status": 404,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "show_missing",
+      "method": "get",
+      "path": "/internal/huddle/grants/999999",
+      "status": 404,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "show_id_suffix",
+      "method": "get",
+      "path": "/internal/huddle/grants/17tail",
+      "status": 200,
+      "cache": "no-store",
+      "body": {
+        "grant_id": 17,
+        "room_name": "ws13-security-room",
+        "identity": "ws13-security-participant"
+      },
+      "seen_after": 1767268800,
+      "jobs": [
+        "presence",
+        "join"
+      ]
+    },
+    {
+      "name": "show_id_nonnumeric",
+      "method": "get",
+      "path": "/internal/huddle/grants/nope",
+      "status": 404,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_missing",
+      "path": "/internal/huddle/grants/999999/left",
+      "status": 404,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_revoked",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "revoked": true,
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_0",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": null
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_1",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": ""
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_2",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": " "
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_3",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": false
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_4",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": 0
+      },
+      "status": 422,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": 1767268800,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_5",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": 42
+      },
+      "status": 422,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": 1767268800,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_6",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": []
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_7",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": {}
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_8",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "garbage"
+      },
+      "status": 422,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": 1767268800,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_9",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "2026-01-01T12:00:00Z"
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_10",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "2026-01-01T07:00:00-05:00"
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_11",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "2026-01-01"
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": 1767268800,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_12",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "12:00"
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_13",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "2026-01-01T11:59:59Z"
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": 1767268800,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_14",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "2026-02-30"
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_15",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "999999999-01-01"
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    },
+    {
+      "name": "left_timestamp_16",
+      "path": "/internal/huddle/grants/17/left",
+      "seen": true,
+      "params": {
+        "disconnected_at": "2026-01-01T12:00:00.000001Z"
+      },
+      "status": 200,
+      "cache": "no-store",
+      "body": null,
+      "seen_after": null,
+      "jobs": []
+    }
+  ]
+}
