@@ -52,7 +52,7 @@ currently displayed invitation and returns without fetching when its readPath is
 empty. The shown frame sets that path (`:149-157`); the real PATCH implementation
 is `:124-133`. The recorder interleaves the real controller with Rails, and only
 its observed fetch requests invoke the accessible item read action
-(`app/controllers/activity_items_controller.rb:52-60,89,120-122`). An independent
+(`app/controllers/activity_items_controller.rb:52-60,89-90,122-124`). An independent
 controller replay on Rust's own frames must produce the same requests and banner
 states. The separate `read` operation represents the inbox read endpoint, even
 when a banner-only invitation is displayed. Hidden banners cannot be clicked.

@@ -142,3 +142,12 @@ No driver infers the displayed invitation from the most recent database item.
 Three new Rails-observed named cases cover those actions. Eleven corruption
 controls now include queue and UI request changes. No production code or timing
 threshold changed for these gate fixes.
+
+Fresh remote-clone verification after merging main 434d1c14 passes 3,150 workspace
+tests (12 existing opt-in/doc-test ignores), with the ignored gateway launcher
+run separately: 16/16 Node tests and its Rust integration pass. Strict workspace
+Clippy passes. All 721 committed cases regenerate byte-for-byte. Fresh seeds
+20261002, 2718281828 and 4242424242 produce 2,257/2,257 matching sequences
+(2,048 random, 209 named), with zero differences across 46,182 steps and 11/11
+output corruptions rejected. No production mismatch was found. Full raw results
+are in the external WS13b wave4 report.
