@@ -28,8 +28,8 @@ end
 
 index_messages_for_search
 
-# Randomized by the fixture ERB; the bot pages show them.
-user(:bender).update_columns(bot_token: "BenderBot123")
+# Keep deterministic keys outside persisted rows. Rails shows BOT_KEY after reload.
+user(:bender).update_columns(bot_token: nil)
 
 david, jason, jz, kevin, bender = %i[ david jason jz kevin bender ].map { |name| user(name) }
 
@@ -41,10 +41,10 @@ at NOW - 39.days
 mallory = label :users, :mallory, User.create!(name: "Mallory Banned", email_address: "mallory@example.com", password: "secret123456")
 at NOW - 38.days
 deploy_bot = label :users, :deploy_bot, User.create_bot!(name: "Deploy Bot")
-deploy_bot.update_columns(bot_token: "DeployBot456")
+deploy_bot.update_columns(bot_token: nil, bot_token_digest: User.digest_bot_token("DeployBot456"))
 at NOW - 37.days
 old_bot = label :users, :old_bot, User.create_bot!(name: "Old Bot", webhook_url: "https://example.com/old-bot")
-old_bot.update_columns(bot_token: "OldBot789abc")
+old_bot.update_columns(bot_token: nil, bot_token_digest: User.digest_bot_token("OldBot789abc"))
 
 at NOW - 36.days
 attach_avatar jason, file("moon.jpg", "image/jpeg")
@@ -244,8 +244,8 @@ unread! :designers, :kevin, message(:boosted_by_david).created_at
 label :transfers, :david, transfer_id_at(david, NOW)                    # valid until NOW + 4h
 label :transfers, :david_expired, transfer_id_at(david, NOW - 5.hours) # expired at NOW - 1h
 label :transfers, :kevin, transfer_id_at(kevin, NOW)
-label :bot_keys, :bender, bender.reload.bot_key
-label :bot_keys, :deploy_bot, deploy_bot.reload.bot_key
+label :bot_keys, :bender, "#{bender.id}-BenderToken1"
+label :bot_keys, :deploy_bot, "#{deploy_bot.id}-DeployBot456"
 label :join_codes, :signal, Account.first.join_code
 label :avatar_tokens, :david, david.avatar_token
 label :avatar_tokens, :jason, jason.avatar_token

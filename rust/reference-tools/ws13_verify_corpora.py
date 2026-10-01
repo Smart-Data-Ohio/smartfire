@@ -43,7 +43,7 @@ outputs['full_sidebar']='rust/crates/campfire/src/controllers/users/full_sidebar
 for name,path in outputs.items():
  output_path=scratch/f'{name}.json'
  with output_path.open('wb') as output,(scratch/f'{name}.log').open('wb') as error:
-  subprocess.run([str(root/'rust/parity/bin/reference'),'runner',*(['--seed','default','--time','2026-03-02T16:00:00Z','--freeze'] if name in ('call_channels','call_views','page_views','form_pages','sidebar_views','chrome','room_composition','room_shell','full_rooms','row_broadcasts','full_sidebar') else []),'-e','RAILS_LOG_LEVEL=fatal',f'rust/reference-tools/huddle_{name}.rb'],cwd=root,env=(dict(env,PARITY_IMAGE='ws13-reference:sidebar-2e20b24c') if name=='full_sidebar' else env),stdout=output,stderr=error,check=True)
+  subprocess.run([str(root/'rust/parity/bin/reference'),'runner',*(['--seed','default','--time','2026-03-02T16:00:00Z','--freeze'] if name in ('call_channels','call_views','page_views','form_pages','sidebar_views','chrome','room_composition','room_shell','full_rooms','row_broadcasts','full_sidebar') else []),'-e','RAILS_LOG_LEVEL=fatal',f'rust/reference-tools/huddle_{name}.rb'],cwd=root,env=(dict(env,PARITY_IMAGE='ws13-reference:sidebar-2e20b24c') if name in ('full_sidebar','form_pages','full_rooms') else env),stdout=output,stderr=error,check=True)
  assert output_path.read_bytes()==(root/path).read_bytes(),f'{name}: golden differs; inspect {output_path}'
  data=json.loads(output_path.read_bytes())
  count=len(data['cases']) if 'cases' in data else None

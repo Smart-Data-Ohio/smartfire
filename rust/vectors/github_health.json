@@ -1,0 +1,1127 @@
+[
+  {
+    "config": {},
+    "snapshot": {
+      "workspace_token": false,
+      "app_configured": false,
+      "webhook_secret": false,
+      "connected": 1,
+      "app_tokens": 1,
+      "disconnected": [
+        [
+          "login12",
+          "reason <12>"
+        ],
+        [
+          "login11",
+          "reason <11>"
+        ],
+        [
+          "login10",
+          "reason <10>"
+        ],
+        [
+          "login9",
+          "reason <9>"
+        ],
+        [
+          "login8",
+          "reason <8>"
+        ],
+        [
+          "login7",
+          "reason <7>"
+        ],
+        [
+          "login6",
+          "reason <6>"
+        ],
+        [
+          "login5",
+          "reason <5>"
+        ],
+        [
+          "login4",
+          "reason <4>"
+        ],
+        [
+          "login3",
+          "reason <3>"
+        ]
+      ],
+      "last_errors": [
+        [
+          "login12",
+          "error &12"
+        ],
+        [
+          "login11",
+          "error &11"
+        ],
+        [
+          "login10",
+          "error &10"
+        ],
+        [
+          "login9",
+          "error &9"
+        ],
+        [
+          "login8",
+          "error &8"
+        ],
+        [
+          "login7",
+          "error &7"
+        ],
+        [
+          "login6",
+          "error &6"
+        ],
+        [
+          "login5",
+          "error &5"
+        ],
+        [
+          "login4",
+          "error &4"
+        ],
+        [
+          "login3",
+          "error &3"
+        ]
+      ],
+      "deliveries_24h": 2,
+      "fetch_errors": [
+        [
+          "owner12",
+          "repo",
+          13,
+          "fetch <12>"
+        ],
+        [
+          "owner11",
+          "repo",
+          12,
+          "fetch <11>"
+        ],
+        [
+          "owner10",
+          "repo",
+          11,
+          "fetch <10>"
+        ],
+        [
+          "owner9",
+          "repo",
+          10,
+          "fetch <9>"
+        ],
+        [
+          "owner8",
+          "repo",
+          9,
+          "fetch <8>"
+        ],
+        [
+          "owner7",
+          "repo",
+          8,
+          "fetch <7>"
+        ],
+        [
+          "owner6",
+          "repo",
+          7,
+          "fetch <6>"
+        ],
+        [
+          "owner5",
+          "repo",
+          6,
+          "fetch <5>"
+        ],
+        [
+          "owner4",
+          "repo",
+          5,
+          "fetch <4>"
+        ],
+        [
+          "owner3",
+          "repo",
+          4,
+          "fetch <3>"
+        ]
+      ]
+    },
+    "html": "  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Not set — private cards need per-user accounts</dd></div>\n      <div><dt>GitHub App</dt><dd>Not configured — set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET (see docs/github-app.md)</dd></div>\n      <div><dt>Webhook secret</dt><dd>Not set — cards refresh on render only</dd></div>\n      <div><dt>Connected accounts</dt><dd>1 (1 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>2</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@login12</strong> — reason &lt;12&gt;</li>\n          <li><strong>@login11</strong> — reason &lt;11&gt;</li>\n          <li><strong>@login10</strong> — reason &lt;10&gt;</li>\n          <li><strong>@login9</strong> — reason &lt;9&gt;</li>\n          <li><strong>@login8</strong> — reason &lt;8&gt;</li>\n          <li><strong>@login7</strong> — reason &lt;7&gt;</li>\n          <li><strong>@login6</strong> — reason &lt;6&gt;</li>\n          <li><strong>@login5</strong> — reason &lt;5&gt;</li>\n          <li><strong>@login4</strong> — reason &lt;4&gt;</li>\n          <li><strong>@login3</strong> — reason &lt;3&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@login12</strong> — error &amp;12</li>\n          <li><strong>@login11</strong> — error &amp;11</li>\n          <li><strong>@login10</strong> — error &amp;10</li>\n          <li><strong>@login9</strong> — error &amp;9</li>\n          <li><strong>@login8</strong> — error &amp;8</li>\n          <li><strong>@login7</strong> — error &amp;7</li>\n          <li><strong>@login6</strong> — error &amp;6</li>\n          <li><strong>@login5</strong> — error &amp;5</li>\n          <li><strong>@login4</strong> — error &amp;4</li>\n          <li><strong>@login3</strong> — error &amp;3</li>\n      </ul>\n      <h3>PR fetch errors</h3>\n      <ul>\n          <li><strong>owner12/repo#13</strong> — fetch &lt;12&gt;</li>\n          <li><strong>owner11/repo#12</strong> — fetch &lt;11&gt;</li>\n          <li><strong>owner10/repo#11</strong> — fetch &lt;10&gt;</li>\n          <li><strong>owner9/repo#10</strong> — fetch &lt;9&gt;</li>\n          <li><strong>owner8/repo#9</strong> — fetch &lt;8&gt;</li>\n          <li><strong>owner7/repo#8</strong> — fetch &lt;7&gt;</li>\n          <li><strong>owner6/repo#7</strong> — fetch &lt;6&gt;</li>\n          <li><strong>owner5/repo#6</strong> — fetch &lt;5&gt;</li>\n          <li><strong>owner4/repo#5</strong> — fetch &lt;4&gt;</li>\n          <li><strong>owner3/repo#4</strong> — fetch &lt;3&gt;</li>\n      </ul>\n  </section>\n"
+  },
+  {
+    "config": {
+      "GITHUB_TOKEN": "configured-fixture"
+    },
+    "snapshot": {
+      "workspace_token": true,
+      "app_configured": false,
+      "webhook_secret": false,
+      "connected": 1,
+      "app_tokens": 1,
+      "disconnected": [
+        [
+          "login12",
+          "reason <12>"
+        ],
+        [
+          "login11",
+          "reason <11>"
+        ],
+        [
+          "login10",
+          "reason <10>"
+        ],
+        [
+          "login9",
+          "reason <9>"
+        ],
+        [
+          "login8",
+          "reason <8>"
+        ],
+        [
+          "login7",
+          "reason <7>"
+        ],
+        [
+          "login6",
+          "reason <6>"
+        ],
+        [
+          "login5",
+          "reason <5>"
+        ],
+        [
+          "login4",
+          "reason <4>"
+        ],
+        [
+          "login3",
+          "reason <3>"
+        ]
+      ],
+      "last_errors": [
+        [
+          "login12",
+          "error &12"
+        ],
+        [
+          "login11",
+          "error &11"
+        ],
+        [
+          "login10",
+          "error &10"
+        ],
+        [
+          "login9",
+          "error &9"
+        ],
+        [
+          "login8",
+          "error &8"
+        ],
+        [
+          "login7",
+          "error &7"
+        ],
+        [
+          "login6",
+          "error &6"
+        ],
+        [
+          "login5",
+          "error &5"
+        ],
+        [
+          "login4",
+          "error &4"
+        ],
+        [
+          "login3",
+          "error &3"
+        ]
+      ],
+      "deliveries_24h": 2,
+      "fetch_errors": [
+        [
+          "owner12",
+          "repo",
+          13,
+          "fetch <12>"
+        ],
+        [
+          "owner11",
+          "repo",
+          12,
+          "fetch <11>"
+        ],
+        [
+          "owner10",
+          "repo",
+          11,
+          "fetch <10>"
+        ],
+        [
+          "owner9",
+          "repo",
+          10,
+          "fetch <9>"
+        ],
+        [
+          "owner8",
+          "repo",
+          9,
+          "fetch <8>"
+        ],
+        [
+          "owner7",
+          "repo",
+          8,
+          "fetch <7>"
+        ],
+        [
+          "owner6",
+          "repo",
+          7,
+          "fetch <6>"
+        ],
+        [
+          "owner5",
+          "repo",
+          6,
+          "fetch <5>"
+        ],
+        [
+          "owner4",
+          "repo",
+          5,
+          "fetch <4>"
+        ],
+        [
+          "owner3",
+          "repo",
+          4,
+          "fetch <3>"
+        ]
+      ]
+    },
+    "html": "  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Set</dd></div>\n      <div><dt>GitHub App</dt><dd>Not configured — set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET (see docs/github-app.md)</dd></div>\n      <div><dt>Webhook secret</dt><dd>Not set — cards refresh on render only</dd></div>\n      <div><dt>Connected accounts</dt><dd>1 (1 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>2</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@login12</strong> — reason &lt;12&gt;</li>\n          <li><strong>@login11</strong> — reason &lt;11&gt;</li>\n          <li><strong>@login10</strong> — reason &lt;10&gt;</li>\n          <li><strong>@login9</strong> — reason &lt;9&gt;</li>\n          <li><strong>@login8</strong> — reason &lt;8&gt;</li>\n          <li><strong>@login7</strong> — reason &lt;7&gt;</li>\n          <li><strong>@login6</strong> — reason &lt;6&gt;</li>\n          <li><strong>@login5</strong> — reason &lt;5&gt;</li>\n          <li><strong>@login4</strong> — reason &lt;4&gt;</li>\n          <li><strong>@login3</strong> — reason &lt;3&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@login12</strong> — error &amp;12</li>\n          <li><strong>@login11</strong> — error &amp;11</li>\n          <li><strong>@login10</strong> — error &amp;10</li>\n          <li><strong>@login9</strong> — error &amp;9</li>\n          <li><strong>@login8</strong> — error &amp;8</li>\n          <li><strong>@login7</strong> — error &amp;7</li>\n          <li><strong>@login6</strong> — error &amp;6</li>\n          <li><strong>@login5</strong> — error &amp;5</li>\n          <li><strong>@login4</strong> — error &amp;4</li>\n          <li><strong>@login3</strong> — error &amp;3</li>\n      </ul>\n      <h3>PR fetch errors</h3>\n      <ul>\n          <li><strong>owner12/repo#13</strong> — fetch &lt;12&gt;</li>\n          <li><strong>owner11/repo#12</strong> — fetch &lt;11&gt;</li>\n          <li><strong>owner10/repo#11</strong> — fetch &lt;10&gt;</li>\n          <li><strong>owner9/repo#10</strong> — fetch &lt;9&gt;</li>\n          <li><strong>owner8/repo#9</strong> — fetch &lt;8&gt;</li>\n          <li><strong>owner7/repo#8</strong> — fetch &lt;7&gt;</li>\n          <li><strong>owner6/repo#7</strong> — fetch &lt;6&gt;</li>\n          <li><strong>owner5/repo#6</strong> — fetch &lt;5&gt;</li>\n          <li><strong>owner4/repo#5</strong> — fetch &lt;4&gt;</li>\n          <li><strong>owner3/repo#4</strong> — fetch &lt;3&gt;</li>\n      </ul>\n  </section>\n"
+  },
+  {
+    "config": {
+      "GITHUB_APP_CLIENT_ID": "configured-fixture"
+    },
+    "snapshot": {
+      "workspace_token": false,
+      "app_configured": false,
+      "webhook_secret": false,
+      "connected": 1,
+      "app_tokens": 1,
+      "disconnected": [
+        [
+          "login12",
+          "reason <12>"
+        ],
+        [
+          "login11",
+          "reason <11>"
+        ],
+        [
+          "login10",
+          "reason <10>"
+        ],
+        [
+          "login9",
+          "reason <9>"
+        ],
+        [
+          "login8",
+          "reason <8>"
+        ],
+        [
+          "login7",
+          "reason <7>"
+        ],
+        [
+          "login6",
+          "reason <6>"
+        ],
+        [
+          "login5",
+          "reason <5>"
+        ],
+        [
+          "login4",
+          "reason <4>"
+        ],
+        [
+          "login3",
+          "reason <3>"
+        ]
+      ],
+      "last_errors": [
+        [
+          "login12",
+          "error &12"
+        ],
+        [
+          "login11",
+          "error &11"
+        ],
+        [
+          "login10",
+          "error &10"
+        ],
+        [
+          "login9",
+          "error &9"
+        ],
+        [
+          "login8",
+          "error &8"
+        ],
+        [
+          "login7",
+          "error &7"
+        ],
+        [
+          "login6",
+          "error &6"
+        ],
+        [
+          "login5",
+          "error &5"
+        ],
+        [
+          "login4",
+          "error &4"
+        ],
+        [
+          "login3",
+          "error &3"
+        ]
+      ],
+      "deliveries_24h": 2,
+      "fetch_errors": [
+        [
+          "owner12",
+          "repo",
+          13,
+          "fetch <12>"
+        ],
+        [
+          "owner11",
+          "repo",
+          12,
+          "fetch <11>"
+        ],
+        [
+          "owner10",
+          "repo",
+          11,
+          "fetch <10>"
+        ],
+        [
+          "owner9",
+          "repo",
+          10,
+          "fetch <9>"
+        ],
+        [
+          "owner8",
+          "repo",
+          9,
+          "fetch <8>"
+        ],
+        [
+          "owner7",
+          "repo",
+          8,
+          "fetch <7>"
+        ],
+        [
+          "owner6",
+          "repo",
+          7,
+          "fetch <6>"
+        ],
+        [
+          "owner5",
+          "repo",
+          6,
+          "fetch <5>"
+        ],
+        [
+          "owner4",
+          "repo",
+          5,
+          "fetch <4>"
+        ],
+        [
+          "owner3",
+          "repo",
+          4,
+          "fetch <3>"
+        ]
+      ]
+    },
+    "html": "  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Not set — private cards need per-user accounts</dd></div>\n      <div><dt>GitHub App</dt><dd>Not configured — set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET (see docs/github-app.md)</dd></div>\n      <div><dt>Webhook secret</dt><dd>Not set — cards refresh on render only</dd></div>\n      <div><dt>Connected accounts</dt><dd>1 (1 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>2</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@login12</strong> — reason &lt;12&gt;</li>\n          <li><strong>@login11</strong> — reason &lt;11&gt;</li>\n          <li><strong>@login10</strong> — reason &lt;10&gt;</li>\n          <li><strong>@login9</strong> — reason &lt;9&gt;</li>\n          <li><strong>@login8</strong> — reason &lt;8&gt;</li>\n          <li><strong>@login7</strong> — reason &lt;7&gt;</li>\n          <li><strong>@login6</strong> — reason &lt;6&gt;</li>\n          <li><strong>@login5</strong> — reason &lt;5&gt;</li>\n          <li><strong>@login4</strong> — reason &lt;4&gt;</li>\n          <li><strong>@login3</strong> — reason &lt;3&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@login12</strong> — error &amp;12</li>\n          <li><strong>@login11</strong> — error &amp;11</li>\n          <li><strong>@login10</strong> — error &amp;10</li>\n          <li><strong>@login9</strong> — error &amp;9</li>\n          <li><strong>@login8</strong> — error &amp;8</li>\n          <li><strong>@login7</strong> — error &amp;7</li>\n          <li><strong>@login6</strong> — error &amp;6</li>\n          <li><strong>@login5</strong> — error &amp;5</li>\n          <li><strong>@login4</strong> — error &amp;4</li>\n          <li><strong>@login3</strong> — error &amp;3</li>\n      </ul>\n      <h3>PR fetch errors</h3>\n      <ul>\n          <li><strong>owner12/repo#13</strong> — fetch &lt;12&gt;</li>\n          <li><strong>owner11/repo#12</strong> — fetch &lt;11&gt;</li>\n          <li><strong>owner10/repo#11</strong> — fetch &lt;10&gt;</li>\n          <li><strong>owner9/repo#10</strong> — fetch &lt;9&gt;</li>\n          <li><strong>owner8/repo#9</strong> — fetch &lt;8&gt;</li>\n          <li><strong>owner7/repo#8</strong> — fetch &lt;7&gt;</li>\n          <li><strong>owner6/repo#7</strong> — fetch &lt;6&gt;</li>\n          <li><strong>owner5/repo#6</strong> — fetch &lt;5&gt;</li>\n          <li><strong>owner4/repo#5</strong> — fetch &lt;4&gt;</li>\n          <li><strong>owner3/repo#4</strong> — fetch &lt;3&gt;</li>\n      </ul>\n  </section>\n"
+  },
+  {
+    "config": {
+      "GITHUB_APP_CLIENT_ID": "configured-fixture",
+      "GITHUB_APP_CLIENT_SECRET": "configured-fixture"
+    },
+    "snapshot": {
+      "workspace_token": false,
+      "app_configured": true,
+      "webhook_secret": false,
+      "connected": 1,
+      "app_tokens": 1,
+      "disconnected": [
+        [
+          "login12",
+          "reason <12>"
+        ],
+        [
+          "login11",
+          "reason <11>"
+        ],
+        [
+          "login10",
+          "reason <10>"
+        ],
+        [
+          "login9",
+          "reason <9>"
+        ],
+        [
+          "login8",
+          "reason <8>"
+        ],
+        [
+          "login7",
+          "reason <7>"
+        ],
+        [
+          "login6",
+          "reason <6>"
+        ],
+        [
+          "login5",
+          "reason <5>"
+        ],
+        [
+          "login4",
+          "reason <4>"
+        ],
+        [
+          "login3",
+          "reason <3>"
+        ]
+      ],
+      "last_errors": [
+        [
+          "login12",
+          "error &12"
+        ],
+        [
+          "login11",
+          "error &11"
+        ],
+        [
+          "login10",
+          "error &10"
+        ],
+        [
+          "login9",
+          "error &9"
+        ],
+        [
+          "login8",
+          "error &8"
+        ],
+        [
+          "login7",
+          "error &7"
+        ],
+        [
+          "login6",
+          "error &6"
+        ],
+        [
+          "login5",
+          "error &5"
+        ],
+        [
+          "login4",
+          "error &4"
+        ],
+        [
+          "login3",
+          "error &3"
+        ]
+      ],
+      "deliveries_24h": 2,
+      "fetch_errors": [
+        [
+          "owner12",
+          "repo",
+          13,
+          "fetch <12>"
+        ],
+        [
+          "owner11",
+          "repo",
+          12,
+          "fetch <11>"
+        ],
+        [
+          "owner10",
+          "repo",
+          11,
+          "fetch <10>"
+        ],
+        [
+          "owner9",
+          "repo",
+          10,
+          "fetch <9>"
+        ],
+        [
+          "owner8",
+          "repo",
+          9,
+          "fetch <8>"
+        ],
+        [
+          "owner7",
+          "repo",
+          8,
+          "fetch <7>"
+        ],
+        [
+          "owner6",
+          "repo",
+          7,
+          "fetch <6>"
+        ],
+        [
+          "owner5",
+          "repo",
+          6,
+          "fetch <5>"
+        ],
+        [
+          "owner4",
+          "repo",
+          5,
+          "fetch <4>"
+        ],
+        [
+          "owner3",
+          "repo",
+          4,
+          "fetch <3>"
+        ]
+      ]
+    },
+    "html": "  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Not set — private cards need per-user accounts</dd></div>\n      <div><dt>GitHub App</dt><dd>Configured</dd></div>\n      <div><dt>Webhook secret</dt><dd>Not set — cards refresh on render only</dd></div>\n      <div><dt>Connected accounts</dt><dd>1 (1 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>2</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@login12</strong> — reason &lt;12&gt;</li>\n          <li><strong>@login11</strong> — reason &lt;11&gt;</li>\n          <li><strong>@login10</strong> — reason &lt;10&gt;</li>\n          <li><strong>@login9</strong> — reason &lt;9&gt;</li>\n          <li><strong>@login8</strong> — reason &lt;8&gt;</li>\n          <li><strong>@login7</strong> — reason &lt;7&gt;</li>\n          <li><strong>@login6</strong> — reason &lt;6&gt;</li>\n          <li><strong>@login5</strong> — reason &lt;5&gt;</li>\n          <li><strong>@login4</strong> — reason &lt;4&gt;</li>\n          <li><strong>@login3</strong> — reason &lt;3&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@login12</strong> — error &amp;12</li>\n          <li><strong>@login11</strong> — error &amp;11</li>\n          <li><strong>@login10</strong> — error &amp;10</li>\n          <li><strong>@login9</strong> — error &amp;9</li>\n          <li><strong>@login8</strong> — error &amp;8</li>\n          <li><strong>@login7</strong> — error &amp;7</li>\n          <li><strong>@login6</strong> — error &amp;6</li>\n          <li><strong>@login5</strong> — error &amp;5</li>\n          <li><strong>@login4</strong> — error &amp;4</li>\n          <li><strong>@login3</strong> — error &amp;3</li>\n      </ul>\n      <h3>PR fetch errors</h3>\n      <ul>\n          <li><strong>owner12/repo#13</strong> — fetch &lt;12&gt;</li>\n          <li><strong>owner11/repo#12</strong> — fetch &lt;11&gt;</li>\n          <li><strong>owner10/repo#11</strong> — fetch &lt;10&gt;</li>\n          <li><strong>owner9/repo#10</strong> — fetch &lt;9&gt;</li>\n          <li><strong>owner8/repo#9</strong> — fetch &lt;8&gt;</li>\n          <li><strong>owner7/repo#8</strong> — fetch &lt;7&gt;</li>\n          <li><strong>owner6/repo#7</strong> — fetch &lt;6&gt;</li>\n          <li><strong>owner5/repo#6</strong> — fetch &lt;5&gt;</li>\n          <li><strong>owner4/repo#5</strong> — fetch &lt;4&gt;</li>\n          <li><strong>owner3/repo#4</strong> — fetch &lt;3&gt;</li>\n      </ul>\n  </section>\n"
+  },
+  {
+    "config": {
+      "GITHUB_WEBHOOK_SECRET": "configured-fixture"
+    },
+    "snapshot": {
+      "workspace_token": false,
+      "app_configured": false,
+      "webhook_secret": true,
+      "connected": 1,
+      "app_tokens": 1,
+      "disconnected": [
+        [
+          "login12",
+          "reason <12>"
+        ],
+        [
+          "login11",
+          "reason <11>"
+        ],
+        [
+          "login10",
+          "reason <10>"
+        ],
+        [
+          "login9",
+          "reason <9>"
+        ],
+        [
+          "login8",
+          "reason <8>"
+        ],
+        [
+          "login7",
+          "reason <7>"
+        ],
+        [
+          "login6",
+          "reason <6>"
+        ],
+        [
+          "login5",
+          "reason <5>"
+        ],
+        [
+          "login4",
+          "reason <4>"
+        ],
+        [
+          "login3",
+          "reason <3>"
+        ]
+      ],
+      "last_errors": [
+        [
+          "login12",
+          "error &12"
+        ],
+        [
+          "login11",
+          "error &11"
+        ],
+        [
+          "login10",
+          "error &10"
+        ],
+        [
+          "login9",
+          "error &9"
+        ],
+        [
+          "login8",
+          "error &8"
+        ],
+        [
+          "login7",
+          "error &7"
+        ],
+        [
+          "login6",
+          "error &6"
+        ],
+        [
+          "login5",
+          "error &5"
+        ],
+        [
+          "login4",
+          "error &4"
+        ],
+        [
+          "login3",
+          "error &3"
+        ]
+      ],
+      "deliveries_24h": 2,
+      "fetch_errors": [
+        [
+          "owner12",
+          "repo",
+          13,
+          "fetch <12>"
+        ],
+        [
+          "owner11",
+          "repo",
+          12,
+          "fetch <11>"
+        ],
+        [
+          "owner10",
+          "repo",
+          11,
+          "fetch <10>"
+        ],
+        [
+          "owner9",
+          "repo",
+          10,
+          "fetch <9>"
+        ],
+        [
+          "owner8",
+          "repo",
+          9,
+          "fetch <8>"
+        ],
+        [
+          "owner7",
+          "repo",
+          8,
+          "fetch <7>"
+        ],
+        [
+          "owner6",
+          "repo",
+          7,
+          "fetch <6>"
+        ],
+        [
+          "owner5",
+          "repo",
+          6,
+          "fetch <5>"
+        ],
+        [
+          "owner4",
+          "repo",
+          5,
+          "fetch <4>"
+        ],
+        [
+          "owner3",
+          "repo",
+          4,
+          "fetch <3>"
+        ]
+      ]
+    },
+    "html": "  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Not set — private cards need per-user accounts</dd></div>\n      <div><dt>GitHub App</dt><dd>Not configured — set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET (see docs/github-app.md)</dd></div>\n      <div><dt>Webhook secret</dt><dd>Set</dd></div>\n      <div><dt>Connected accounts</dt><dd>1 (1 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>2</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@login12</strong> — reason &lt;12&gt;</li>\n          <li><strong>@login11</strong> — reason &lt;11&gt;</li>\n          <li><strong>@login10</strong> — reason &lt;10&gt;</li>\n          <li><strong>@login9</strong> — reason &lt;9&gt;</li>\n          <li><strong>@login8</strong> — reason &lt;8&gt;</li>\n          <li><strong>@login7</strong> — reason &lt;7&gt;</li>\n          <li><strong>@login6</strong> — reason &lt;6&gt;</li>\n          <li><strong>@login5</strong> — reason &lt;5&gt;</li>\n          <li><strong>@login4</strong> — reason &lt;4&gt;</li>\n          <li><strong>@login3</strong> — reason &lt;3&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@login12</strong> — error &amp;12</li>\n          <li><strong>@login11</strong> — error &amp;11</li>\n          <li><strong>@login10</strong> — error &amp;10</li>\n          <li><strong>@login9</strong> — error &amp;9</li>\n          <li><strong>@login8</strong> — error &amp;8</li>\n          <li><strong>@login7</strong> — error &amp;7</li>\n          <li><strong>@login6</strong> — error &amp;6</li>\n          <li><strong>@login5</strong> — error &amp;5</li>\n          <li><strong>@login4</strong> — error &amp;4</li>\n          <li><strong>@login3</strong> — error &amp;3</li>\n      </ul>\n      <h3>PR fetch errors</h3>\n      <ul>\n          <li><strong>owner12/repo#13</strong> — fetch &lt;12&gt;</li>\n          <li><strong>owner11/repo#12</strong> — fetch &lt;11&gt;</li>\n          <li><strong>owner10/repo#11</strong> — fetch &lt;10&gt;</li>\n          <li><strong>owner9/repo#10</strong> — fetch &lt;9&gt;</li>\n          <li><strong>owner8/repo#9</strong> — fetch &lt;8&gt;</li>\n          <li><strong>owner7/repo#8</strong> — fetch &lt;7&gt;</li>\n          <li><strong>owner6/repo#7</strong> — fetch &lt;6&gt;</li>\n          <li><strong>owner5/repo#6</strong> — fetch &lt;5&gt;</li>\n          <li><strong>owner4/repo#5</strong> — fetch &lt;4&gt;</li>\n          <li><strong>owner3/repo#4</strong> — fetch &lt;3&gt;</li>\n      </ul>\n  </section>\n"
+  },
+  {
+    "config": {
+      "GITHUB_TOKEN": " \t",
+      "GITHUB_APP_CLIENT_ID": "configured-fixture",
+      "GITHUB_APP_CLIENT_SECRET": " ",
+      "GITHUB_WEBHOOK_SECRET": " "
+    },
+    "snapshot": {
+      "workspace_token": false,
+      "app_configured": false,
+      "webhook_secret": false,
+      "connected": 1,
+      "app_tokens": 1,
+      "disconnected": [
+        [
+          "login12",
+          "reason <12>"
+        ],
+        [
+          "login11",
+          "reason <11>"
+        ],
+        [
+          "login10",
+          "reason <10>"
+        ],
+        [
+          "login9",
+          "reason <9>"
+        ],
+        [
+          "login8",
+          "reason <8>"
+        ],
+        [
+          "login7",
+          "reason <7>"
+        ],
+        [
+          "login6",
+          "reason <6>"
+        ],
+        [
+          "login5",
+          "reason <5>"
+        ],
+        [
+          "login4",
+          "reason <4>"
+        ],
+        [
+          "login3",
+          "reason <3>"
+        ]
+      ],
+      "last_errors": [
+        [
+          "login12",
+          "error &12"
+        ],
+        [
+          "login11",
+          "error &11"
+        ],
+        [
+          "login10",
+          "error &10"
+        ],
+        [
+          "login9",
+          "error &9"
+        ],
+        [
+          "login8",
+          "error &8"
+        ],
+        [
+          "login7",
+          "error &7"
+        ],
+        [
+          "login6",
+          "error &6"
+        ],
+        [
+          "login5",
+          "error &5"
+        ],
+        [
+          "login4",
+          "error &4"
+        ],
+        [
+          "login3",
+          "error &3"
+        ]
+      ],
+      "deliveries_24h": 2,
+      "fetch_errors": [
+        [
+          "owner12",
+          "repo",
+          13,
+          "fetch <12>"
+        ],
+        [
+          "owner11",
+          "repo",
+          12,
+          "fetch <11>"
+        ],
+        [
+          "owner10",
+          "repo",
+          11,
+          "fetch <10>"
+        ],
+        [
+          "owner9",
+          "repo",
+          10,
+          "fetch <9>"
+        ],
+        [
+          "owner8",
+          "repo",
+          9,
+          "fetch <8>"
+        ],
+        [
+          "owner7",
+          "repo",
+          8,
+          "fetch <7>"
+        ],
+        [
+          "owner6",
+          "repo",
+          7,
+          "fetch <6>"
+        ],
+        [
+          "owner5",
+          "repo",
+          6,
+          "fetch <5>"
+        ],
+        [
+          "owner4",
+          "repo",
+          5,
+          "fetch <4>"
+        ],
+        [
+          "owner3",
+          "repo",
+          4,
+          "fetch <3>"
+        ]
+      ]
+    },
+    "html": "  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Not set — private cards need per-user accounts</dd></div>\n      <div><dt>GitHub App</dt><dd>Not configured — set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET (see docs/github-app.md)</dd></div>\n      <div><dt>Webhook secret</dt><dd>Not set — cards refresh on render only</dd></div>\n      <div><dt>Connected accounts</dt><dd>1 (1 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>2</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@login12</strong> — reason &lt;12&gt;</li>\n          <li><strong>@login11</strong> — reason &lt;11&gt;</li>\n          <li><strong>@login10</strong> — reason &lt;10&gt;</li>\n          <li><strong>@login9</strong> — reason &lt;9&gt;</li>\n          <li><strong>@login8</strong> — reason &lt;8&gt;</li>\n          <li><strong>@login7</strong> — reason &lt;7&gt;</li>\n          <li><strong>@login6</strong> — reason &lt;6&gt;</li>\n          <li><strong>@login5</strong> — reason &lt;5&gt;</li>\n          <li><strong>@login4</strong> — reason &lt;4&gt;</li>\n          <li><strong>@login3</strong> — reason &lt;3&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@login12</strong> — error &amp;12</li>\n          <li><strong>@login11</strong> — error &amp;11</li>\n          <li><strong>@login10</strong> — error &amp;10</li>\n          <li><strong>@login9</strong> — error &amp;9</li>\n          <li><strong>@login8</strong> — error &amp;8</li>\n          <li><strong>@login7</strong> — error &amp;7</li>\n          <li><strong>@login6</strong> — error &amp;6</li>\n          <li><strong>@login5</strong> — error &amp;5</li>\n          <li><strong>@login4</strong> — error &amp;4</li>\n          <li><strong>@login3</strong> — error &amp;3</li>\n      </ul>\n      <h3>PR fetch errors</h3>\n      <ul>\n          <li><strong>owner12/repo#13</strong> — fetch &lt;12&gt;</li>\n          <li><strong>owner11/repo#12</strong> — fetch &lt;11&gt;</li>\n          <li><strong>owner10/repo#11</strong> — fetch &lt;10&gt;</li>\n          <li><strong>owner9/repo#10</strong> — fetch &lt;9&gt;</li>\n          <li><strong>owner8/repo#9</strong> — fetch &lt;8&gt;</li>\n          <li><strong>owner7/repo#8</strong> — fetch &lt;7&gt;</li>\n          <li><strong>owner6/repo#7</strong> — fetch &lt;6&gt;</li>\n          <li><strong>owner5/repo#6</strong> — fetch &lt;5&gt;</li>\n          <li><strong>owner4/repo#5</strong> — fetch &lt;4&gt;</li>\n          <li><strong>owner3/repo#4</strong> — fetch &lt;3&gt;</li>\n      </ul>\n  </section>\n"
+  },
+  {
+    "config": {
+      "GITHUB_TOKEN": "configured-fixture",
+      "GITHUB_APP_CLIENT_ID": "configured-fixture",
+      "GITHUB_APP_CLIENT_SECRET": "configured-fixture",
+      "GITHUB_WEBHOOK_SECRET": "configured-fixture"
+    },
+    "snapshot": {
+      "workspace_token": true,
+      "app_configured": true,
+      "webhook_secret": true,
+      "connected": 1,
+      "app_tokens": 1,
+      "disconnected": [
+        [
+          "login12",
+          "reason <12>"
+        ],
+        [
+          "login11",
+          "reason <11>"
+        ],
+        [
+          "login10",
+          "reason <10>"
+        ],
+        [
+          "login9",
+          "reason <9>"
+        ],
+        [
+          "login8",
+          "reason <8>"
+        ],
+        [
+          "login7",
+          "reason <7>"
+        ],
+        [
+          "login6",
+          "reason <6>"
+        ],
+        [
+          "login5",
+          "reason <5>"
+        ],
+        [
+          "login4",
+          "reason <4>"
+        ],
+        [
+          "login3",
+          "reason <3>"
+        ]
+      ],
+      "last_errors": [
+        [
+          "login12",
+          "error &12"
+        ],
+        [
+          "login11",
+          "error &11"
+        ],
+        [
+          "login10",
+          "error &10"
+        ],
+        [
+          "login9",
+          "error &9"
+        ],
+        [
+          "login8",
+          "error &8"
+        ],
+        [
+          "login7",
+          "error &7"
+        ],
+        [
+          "login6",
+          "error &6"
+        ],
+        [
+          "login5",
+          "error &5"
+        ],
+        [
+          "login4",
+          "error &4"
+        ],
+        [
+          "login3",
+          "error &3"
+        ]
+      ],
+      "deliveries_24h": 2,
+      "fetch_errors": [
+        [
+          "owner12",
+          "repo",
+          13,
+          "fetch <12>"
+        ],
+        [
+          "owner11",
+          "repo",
+          12,
+          "fetch <11>"
+        ],
+        [
+          "owner10",
+          "repo",
+          11,
+          "fetch <10>"
+        ],
+        [
+          "owner9",
+          "repo",
+          10,
+          "fetch <9>"
+        ],
+        [
+          "owner8",
+          "repo",
+          9,
+          "fetch <8>"
+        ],
+        [
+          "owner7",
+          "repo",
+          8,
+          "fetch <7>"
+        ],
+        [
+          "owner6",
+          "repo",
+          7,
+          "fetch <6>"
+        ],
+        [
+          "owner5",
+          "repo",
+          6,
+          "fetch <5>"
+        ],
+        [
+          "owner4",
+          "repo",
+          5,
+          "fetch <4>"
+        ],
+        [
+          "owner3",
+          "repo",
+          4,
+          "fetch <3>"
+        ]
+      ]
+    },
+    "html": "  <section aria-labelledby=\"health-github\">\n    <h2 id=\"health-github\">GitHub</h2>\n    <dl class=\"flex flex-column gap-half\">\n      <div><dt>Workspace token</dt><dd>Set</dd></div>\n      <div><dt>GitHub App</dt><dd>Configured</dd></div>\n      <div><dt>Webhook secret</dt><dd>Set</dd></div>\n      <div><dt>Connected accounts</dt><dd>1 (1 App, 0 PAT)</dd></div>\n      <div><dt>Webhook deliveries (24h)</dt><dd>2</dd></div>\n    </dl>\n      <h3>Disconnected accounts</h3>\n      <ul>\n          <li><strong>@login12</strong> — reason &lt;12&gt;</li>\n          <li><strong>@login11</strong> — reason &lt;11&gt;</li>\n          <li><strong>@login10</strong> — reason &lt;10&gt;</li>\n          <li><strong>@login9</strong> — reason &lt;9&gt;</li>\n          <li><strong>@login8</strong> — reason &lt;8&gt;</li>\n          <li><strong>@login7</strong> — reason &lt;7&gt;</li>\n          <li><strong>@login6</strong> — reason &lt;6&gt;</li>\n          <li><strong>@login5</strong> — reason &lt;5&gt;</li>\n          <li><strong>@login4</strong> — reason &lt;4&gt;</li>\n          <li><strong>@login3</strong> — reason &lt;3&gt;</li>\n      </ul>\n      <h3>Recent account errors</h3>\n      <ul>\n          <li><strong>@login12</strong> — error &amp;12</li>\n          <li><strong>@login11</strong> — error &amp;11</li>\n          <li><strong>@login10</strong> — error &amp;10</li>\n          <li><strong>@login9</strong> — error &amp;9</li>\n          <li><strong>@login8</strong> — error &amp;8</li>\n          <li><strong>@login7</strong> — error &amp;7</li>\n          <li><strong>@login6</strong> — error &amp;6</li>\n          <li><strong>@login5</strong> — error &amp;5</li>\n          <li><strong>@login4</strong> — error &amp;4</li>\n          <li><strong>@login3</strong> — error &amp;3</li>\n      </ul>\n      <h3>PR fetch errors</h3>\n      <ul>\n          <li><strong>owner12/repo#13</strong> — fetch &lt;12&gt;</li>\n          <li><strong>owner11/repo#12</strong> — fetch &lt;11&gt;</li>\n          <li><strong>owner10/repo#11</strong> — fetch &lt;10&gt;</li>\n          <li><strong>owner9/repo#10</strong> — fetch &lt;9&gt;</li>\n          <li><strong>owner8/repo#9</strong> — fetch &lt;8&gt;</li>\n          <li><strong>owner7/repo#8</strong> — fetch &lt;7&gt;</li>\n          <li><strong>owner6/repo#7</strong> — fetch &lt;6&gt;</li>\n          <li><strong>owner5/repo#6</strong> — fetch &lt;5&gt;</li>\n          <li><strong>owner4/repo#5</strong> — fetch &lt;4&gt;</li>\n          <li><strong>owner3/repo#4</strong> — fetch &lt;3&gt;</li>\n      </ul>\n  </section>\n"
+  }
+]

@@ -12,6 +12,11 @@ pub type UserNames<'a> = &'a dyn Fn(i64) -> Option<String>;
 /// reader it holds) for any record lookups: they must never check out another connection, which
 /// deadlocks once every pooled reader waits on the writer.
 pub trait RichText: Send + Sync {
+    /// Boost.resolve_content: app adapters supply the shared Icons catalog.
+    fn resolve_boost_content(&self, _conn: &Connection, content: &str) -> Result<String, String> {
+        Ok(campfire_richtext::ruby::strip(content).to_owned())
+    }
+
     /// `ActionText::Content#to_plain_text` of a stored body. Mention attachments render as
     /// `attachable_plain_text_representation`, i.e. `"@#{name}"`
     /// (`reference/app/models/user/mentionable.rb`), hence the name lookup.

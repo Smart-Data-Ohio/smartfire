@@ -23,6 +23,11 @@ use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext};
 use crate::app::AppCtx;
 use crate::concerns;
 
+/// Profiles renders the same unsaved Current.user attributes as its failed forms.
+/// This request-only view snapshot never changes the authenticated principal or database.
+#[derive(Clone)]
+pub(crate) struct RenderedSettings(pub campfire_db::UserStatusSettings);
+
 /// Everything the layout needs, loaded before rendering.
 #[derive(Debug, Clone)]
 pub struct Layout {
@@ -49,27 +54,44 @@ impl Layout {
         let secrets = app.secrets.clone();
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
-        let now = campfire_db::Timestamp::from_jiff(app.clock.now());
-        let (account, has_logo, preferences, brand_icon_names, recent_searches) = app
+        let app_now = app.db.env().now();
+        let (account, has_logo, mut preferences, brand_icon_names, recent_searches) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
                 let has_logo = match &account {
-                    Some(account) => super::attachments::attached_blob(conn, "Account", account.id, "logo")?.is_some(),
+                    Some(account) => {
+                        super::attachments::attached_blob(conn, "Account", account.id, "logo")?
+                            .is_some()
+                    }
                     None => false,
                 };
                 let preferences = match user_id {
-                    Some(user_id) => user_preferences_at(conn, user_id, now)?,
+                    Some(user_id) => user_preferences_at(conn, user_id, app_now)?,
                     None => UserPreferences::default(),
                 };
                 Ok((account, has_logo, preferences, super::client_icon_names(conn)?, super::runtime_chrome::recent_searches(conn,user_id)?))
             })
             .await
             .map_err(Error::internal)?;
-        let last_room_visited_id = if user.is_some() { concerns::last_room_visited(c).await?.map(|room| room.id) } else { None };
+        let last_room_visited_id = if user.is_some() {
+            concerns::last_room_visited(c).await?.map(|room| room.id)
+        } else {
+            None
+        };
 
         let time_zone = Zone::for_user(preferences.time_zone.as_deref());
-        let current_user = user.as_ref().map(|user| CurrentUser { preferences, ..current_user(&secrets, user) });
+        // SetTimeZone wraps the Rails action before attributes are assigned; its request
+        // zone remains the persisted zone while metadata reads the submitted user values.
+        if let Some(RenderedSettings(settings)) = c.current::<RenderedSettings>()
+            && Some(settings.user.id) == user_id
+        {
+            apply_settings_preferences(&mut preferences, settings, app_now);
+        }
+        let current_user = user.as_ref().map(|user| CurrentUser {
+            preferences,
+            ..current_user(&secrets, user)
+        });
         let chrome = Chrome {
             service_worker_auto_register: true,
             brand_icon_names,
@@ -97,6 +119,15 @@ impl Layout {
     /// `csp_meta_tag` and the importmap tags), which puts the CSRF token in the session.
     pub fn render(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
         let secrets = RequestSecrets { tokens: Box::new(KitTokens(c.authenticity_tokens())), csp_nonce: c.content_security_policy_nonce() };
+        self.render_with_secrets(c, Some(secrets), render)
+    }
+
+    /// Token-free partials use the viewer's time zone without creating a CSRF session.
+    pub fn render_without_secrets(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
+        self.render_with_secrets(c, None, render)
+    }
+
+    fn render_with_secrets(&self, c: &mut Ctx, secrets: Option<RequestSecrets>, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
         let flash_notice = c.flash().notice().map(str::to_string);
         let flash_alert = c.flash().alert().map(str::to_string);
         let base_url = c.url_for("");
@@ -106,7 +137,9 @@ impl Layout {
 
         let asset_path = |path: &str| campfire_assets::asset_path(path);
         let app_secrets = c.app().secrets.clone();
-        let signed_stream_name = move |streamables: &[&str]| rails_compat::turbo::signed_stream_name(&app_secrets, streamables);
+        let signed_stream_name = move |streamables: &[&str]| {
+            rails_compat::turbo::signed_stream_name(&app_secrets, streamables)
+        };
         let ctx = ViewContext {
             current_user: self.current_user.clone(),
             account: self.account.clone(),
@@ -128,15 +161,26 @@ impl Layout {
             time_zone: self.time_zone.clone(),
             chrome: self.chrome.clone(),
         };
-        request_forgery::rendering_with(secrets, || render(&ctx)).map_err(Error::internal)
+        match secrets {
+            Some(secrets) => request_forgery::rendering_with(secrets, || render(&ctx)),
+            None => render(&ctx),
+        }.map_err(Error::internal)
     }
 
     /// A page rendered in the application layout: `text/html`, plus the `Link` preload header
     /// `stylesheet_link_tag` adds (`config.action_view.preload_links_header`).
     pub fn page(&self, c: &mut Ctx, status: StatusCode, html: String) -> Response {
         let links = &stylesheet_tags().preload_links;
-        let existing = c.headers.get("link").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
-        c.set_header("link", &campfire_assets::append_preload_links(&existing, links));
+        let existing = c
+            .headers
+            .get("link")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+        c.set_header(
+            "link",
+            &campfire_assets::append_preload_links(&existing, links),
+        );
         c.render(status, &format::HTML, html)
     }
 
@@ -162,8 +206,9 @@ impl request_forgery::AuthenticityTokens for KitTokens {
 /// The layout's `stylesheet_link_tag :all, "data-turbo-track": "reload"`: the assets are fixed at
 /// build time, so it renders once per process.
 pub fn stylesheet_tags() -> &'static campfire_assets::StylesheetTags {
-    static TAGS: LazyLock<campfire_assets::StylesheetTags> =
-        LazyLock::new(|| campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")]));
+    static TAGS: LazyLock<campfire_assets::StylesheetTags> = LazyLock::new(|| {
+        campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")])
+    });
     &TAGS
 }
 
@@ -182,31 +227,71 @@ pub fn current_user(secrets: &rails_compat::Secrets, user: &User) -> CurrentUser
 /// The `users` columns the layout reads straight off `Current.user` (theme, text size, time zone,
 /// tour, voice settings). The settings other domains derive (notification sounds, Google Drive)
 /// stay at their defaults until their owners fill them in.
-pub(crate) fn user_preferences(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<UserPreferences> {
-    Ok(conn.query_row(
-        "SELECT theme, text_size, time_zone, time_zone_explicit, tour_completed_at IS NOT NULL, voice_mode, push_to_talk_key \
-         FROM users WHERE id = ?",
-        [user_id],
-        |row| {
-            Ok(UserPreferences {
-                theme: row.get(0)?,
-                text_size: row.get(1)?,
-                time_zone: row.get(2)?,
-                time_zone_explicit: row.get(3)?,
-                tour_completed: row.get(4)?,
-                voice_mode: row.get(5)?,
-                push_to_talk_key: row.get(6)?,
-                ..UserPreferences::default()
+fn settings_preferences(
+    conn: &campfire_db::Connection,
+    user_id: i64,
+    now: campfire_db::Timestamp,
+) -> campfire_db::Result<UserPreferences> {
+    let mut preferences = user_preferences(conn, user_id)?;
+    let settings = campfire_db::UserStatusSettings::find(conn, user_id)?;
+    apply_settings_preferences(&mut preferences, &settings, now);
+    Ok(preferences)
+}
+
+fn apply_settings_preferences(
+    preferences: &mut UserPreferences,
+    settings: &campfire_db::UserStatusSettings,
+    now: campfire_db::Timestamp,
+) {
+    preferences.theme = Some(settings.theme.clone());
+    preferences.text_size = Some(settings.text_size.clone());
+    preferences.time_zone = settings.time_zone.clone();
+    preferences.time_zone_explicit = settings.time_zone_explicit;
+    let mut sounds = campfire_views::layouts::NotificationSounds {
+        muted: settings.manual_dnd_active(now) || settings.presence_setting == "dnd",
+        quiet_hours: settings
+            .quiet_hours_enabled
+            .then(|| {
+                settings
+                    .quiet_hours_start_minute
+                    .zip(settings.quiet_hours_end_minute)
             })
-        },
-    )?)
+            .flatten(),
+        ..Default::default()
+    };
+    if settings.meeting_dnd_enabled && settings.meeting_status_enabled {
+        sounds.meeting_quiet = settings
+            .meeting_cache
+            .as_ref()
+            .map(|cache| cache.quiet_window_epochs(now))
+            .unwrap_or_default();
+    }
+    if !settings.ooo_notify_enabled {
+        if settings.manual_ooo_active(now) {
+            sounds
+                .ooo_quiet
+                .push((0, settings.ooo_until.unwrap().jiff().as_second()));
+        }
+        if settings.ooo_calendar_enabled {
+            sounds.ooo_quiet.extend(
+                settings
+                    .meeting_cache
+                    .as_ref()
+                    .map(|cache| cache.ooo_window_epochs(now))
+                    .unwrap_or_default(),
+            );
+        }
+    }
+    preferences.notification_sounds = sounds;
 }
 
 /// `Current.account` for the layout: its name, `fresh_account_logo_path` and whether a logo is
 /// attached.
 pub fn account_summary(account: Option<&Account>, has_logo: bool) -> AccountSummary {
     AccountSummary {
-        name: account.map(|account| account.name.clone()).unwrap_or_default(),
+        name: account
+            .map(|account| account.name.clone())
+            .unwrap_or_default(),
         logo_url: super::accounts::fresh_account_logo_path(account, None),
         has_logo,
     }
@@ -263,5 +348,26 @@ pub fn find_template(c: &mut Ctx, template: campfire_kit::Format) -> Result<()> 
 }
 
 pub(crate) fn user_preferences_at(conn: &campfire_db::Connection, user_id: i64, now: campfire_db::Timestamp) -> campfire_db::Result<UserPreferences> {
-    super::runtime_chrome::preferences(conn,user_id,now,user_preferences(conn,user_id)?)
+    super::runtime_chrome::preferences(conn,user_id,now,settings_preferences(conn,user_id,now)?)
+}
+
+pub(crate) fn user_preferences(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<UserPreferences> {
+    Ok( conn.query_row(
+        "SELECT theme, text_size, time_zone, time_zone_explicit, tour_completed_at IS NOT NULL, voice_mode, push_to_talk_key \
+         FROM users WHERE id = ?",
+        [user_id],
+        |row| {
+            Ok(UserPreferences {
+                theme: row.get(0)?,
+                text_size: row.get(1)?,
+                time_zone: row.get(2)?,
+                time_zone_explicit: row.get(3)?,
+                tour_completed: row.get(4)?,
+                voice_mode: row.get(5)?,
+                push_to_talk_key: row.get(6)?,
+                ..UserPreferences::default()
+            })
+        },
+    )?)
+
 }

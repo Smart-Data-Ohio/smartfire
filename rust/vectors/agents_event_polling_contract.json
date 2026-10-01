@@ -1,0 +1,723 @@
+{
+  "reference_pin": "d7c7de92",
+  "pages": {
+    "all": {
+      "events": [
+        {
+          "id": 900000001,
+          "event_type": "reply",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "hop": 2,
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "message": {
+            "presented_message_id": 136976342
+          },
+          "pull_request": null
+        },
+        {
+          "id": 900000002,
+          "event_type": "github_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "github_action": {
+            "action": "github.comment",
+            "status": false,
+            "message": ""
+          }
+        },
+        {
+          "id": 900000003,
+          "event_type": "fizzy_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "fizzy_action": {}
+        },
+        {
+          "id": 900000004,
+          "event_type": "approval_decided",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "approval": {
+            "id": 900010001,
+            "approval_id": 900010001,
+            "action": "release",
+            "summary": "Ship <>&",
+            "status": "pending",
+            "decided_by": "Fallback",
+            "note": "",
+            "expires_at": "2026-03-02T17:00:00.000Z"
+          }
+        },
+        {
+          "id": 900000007,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "work": {
+            "id": 900020001,
+            "room_id": 486777696,
+            "board_id": null,
+            "board_name": null,
+            "title": "Inspect",
+            "work_status": "planned",
+            "owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "agent": true
+            },
+            "tags": [],
+            "result": null,
+            "result_updated_at": null,
+            "run_url": null,
+            "url": "/rooms/486777696?thread=900020001",
+            "updated_at": "2026-03-02T16:00:00.000Z",
+            "links": [],
+            "thread_id": 900020001,
+            "status": "planned",
+            "assigned_by": "David"
+          }
+        },
+        {
+          "id": 900000008,
+          "event_type": "work_handed_off",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "work": {
+            "id": 900020001,
+            "room_id": 486777696,
+            "board_id": null,
+            "board_name": null,
+            "title": "Inspect",
+            "work_status": "planned",
+            "owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "agent": true
+            },
+            "tags": [],
+            "result": null,
+            "result_updated_at": null,
+            "run_url": null,
+            "url": "/rooms/486777696?thread=900020001",
+            "updated_at": "2026-03-02T16:00:00.000Z",
+            "links": [],
+            "thread_id": 900020001,
+            "status": "planned",
+            "assigned_by": null
+          },
+          "handoff": {
+            "id": 9,
+            "summary": "<>&",
+            "links": [],
+            "open_questions": [],
+            "sender_name": "Sender",
+            "receiver_agent_id": 773018776
+          }
+        },
+        {
+          "id": 900000009,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "work": {
+            "id": 7,
+            "title": "Deleted"
+          },
+          "thread_deleted": true
+        },
+        {
+          "id": 900000012,
+          "event_type": "slash_command",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "thread_id": 900020001,
+          "command": {
+            "name": "inspect",
+            "arguments": ""
+          }
+        },
+        {
+          "id": 900000013,
+          "event_type": "slash_command",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "command": {
+            "name": null,
+            "arguments": null
+          }
+        }
+      ],
+      "next_since": 900000015,
+      "presenter_calls": [
+        136976342
+      ]
+    },
+    "first": {
+      "events": [
+        {
+          "id": 900000001,
+          "event_type": "reply",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "hop": 2,
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "message": {
+            "presented_message_id": 136976342
+          },
+          "pull_request": null
+        }
+      ],
+      "next_since": 900000001,
+      "presenter_calls": [
+        136976342
+      ]
+    },
+    "dropped": {
+      "events": [],
+      "next_since": 900000015,
+      "presenter_calls": []
+    },
+    "empty": {
+      "events": [],
+      "next_since": 900000015,
+      "presenter_calls": []
+    },
+    "suspended": {
+      "events": [
+        {
+          "id": 900000002,
+          "event_type": "github_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "github_action": {
+            "action": "github.comment",
+            "status": false,
+            "message": ""
+          }
+        },
+        {
+          "id": 900000003,
+          "event_type": "fizzy_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "fizzy_action": {}
+        },
+        {
+          "id": 900000004,
+          "event_type": "approval_decided",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "approval": {
+            "id": 900010001,
+            "approval_id": 900010001,
+            "action": "release",
+            "summary": "Ship <>&",
+            "status": "pending",
+            "decided_by": "Fallback",
+            "note": "",
+            "expires_at": "2026-03-02T17:00:00.000Z"
+          }
+        }
+      ],
+      "next_since": 900000015,
+      "presenter_calls": []
+    },
+    "soft_deleted_room": {
+      "events": [
+        {
+          "id": 900000001,
+          "event_type": "reply",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "hop": 2,
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "message": {
+            "presented_message_id": 136976342
+          },
+          "pull_request": null
+        },
+        {
+          "id": 900000002,
+          "event_type": "github_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "github_action": {
+            "action": "github.comment",
+            "status": false,
+            "message": ""
+          }
+        },
+        {
+          "id": 900000003,
+          "event_type": "fizzy_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "fizzy_action": {}
+        },
+        {
+          "id": 900000004,
+          "event_type": "approval_decided",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "approval": {
+            "id": 900010001,
+            "approval_id": 900010001,
+            "action": "release",
+            "summary": "Ship <>&",
+            "status": "pending",
+            "decided_by": "Fallback",
+            "note": "",
+            "expires_at": "2026-03-02T17:00:00.000Z"
+          }
+        },
+        {
+          "id": 900000007,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "work": {
+            "id": 900020001,
+            "room_id": 486777696,
+            "board_id": null,
+            "board_name": null,
+            "title": "Inspect",
+            "work_status": "planned",
+            "owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "agent": true
+            },
+            "tags": [],
+            "result": null,
+            "result_updated_at": null,
+            "run_url": null,
+            "url": "/rooms/486777696?thread=900020001",
+            "updated_at": "2026-03-02T16:00:00.000Z",
+            "links": [],
+            "thread_id": 900020001,
+            "status": "planned",
+            "assigned_by": "David"
+          }
+        },
+        {
+          "id": 900000008,
+          "event_type": "work_handed_off",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "work": {
+            "id": 900020001,
+            "room_id": 486777696,
+            "board_id": null,
+            "board_name": null,
+            "title": "Inspect",
+            "work_status": "planned",
+            "owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "agent": true
+            },
+            "tags": [],
+            "result": null,
+            "result_updated_at": null,
+            "run_url": null,
+            "url": "/rooms/486777696?thread=900020001",
+            "updated_at": "2026-03-02T16:00:00.000Z",
+            "links": [],
+            "thread_id": 900020001,
+            "status": "planned",
+            "assigned_by": null
+          },
+          "handoff": {
+            "id": 9,
+            "summary": "<>&",
+            "links": [],
+            "open_questions": [],
+            "sender_name": "Sender",
+            "receiver_agent_id": 773018776
+          }
+        },
+        {
+          "id": 900000009,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "work": {
+            "id": 7,
+            "title": "Deleted"
+          },
+          "thread_deleted": true
+        },
+        {
+          "id": 900000012,
+          "event_type": "slash_command",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "thread_id": 900020001,
+          "command": {
+            "name": "inspect",
+            "arguments": ""
+          }
+        },
+        {
+          "id": 900000013,
+          "event_type": "slash_command",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "command": {
+            "name": null,
+            "arguments": null
+          }
+        }
+      ],
+      "next_since": 900000015,
+      "presenter_calls": [
+        136976342
+      ]
+    },
+    "revoked": {
+      "events": [
+        {
+          "id": 900000002,
+          "event_type": "github_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "github_action": {
+            "action": "github.comment",
+            "status": false,
+            "message": ""
+          }
+        },
+        {
+          "id": 900000003,
+          "event_type": "fizzy_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "fizzy_action": {}
+        },
+        {
+          "id": 900000004,
+          "event_type": "approval_decided",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "approval": {
+            "id": 900010001,
+            "approval_id": 900010001,
+            "action": "release",
+            "summary": "Ship <>&",
+            "status": "pending",
+            "decided_by": "Fallback",
+            "note": "",
+            "expires_at": "2026-03-02T17:00:00.000Z"
+          }
+        }
+      ],
+      "next_since": 900000015,
+      "presenter_calls": []
+    },
+    "event_room_denied": {
+      "events": [
+        {
+          "id": 900000001,
+          "event_type": "reply",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "hop": 2,
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "message": {
+            "presented_message_id": 136976342
+          },
+          "pull_request": null
+        },
+        {
+          "id": 900000002,
+          "event_type": "github_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "github_action": {
+            "action": "github.comment",
+            "status": false,
+            "message": ""
+          }
+        },
+        {
+          "id": 900000003,
+          "event_type": "fizzy_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "fizzy_action": {}
+        },
+        {
+          "id": 900000004,
+          "event_type": "approval_decided",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "approval": {
+            "id": 900010001,
+            "approval_id": 900010001,
+            "action": "release",
+            "summary": "Ship <>&",
+            "status": "pending",
+            "decided_by": "Fallback",
+            "note": "",
+            "expires_at": "2026-03-02T17:00:00.000Z"
+          }
+        },
+        {
+          "id": 900000007,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "work": {
+            "id": 900020001,
+            "room_id": 486777696,
+            "board_id": null,
+            "board_name": null,
+            "title": "Inspect",
+            "work_status": "planned",
+            "owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "agent": true
+            },
+            "tags": [],
+            "result": null,
+            "result_updated_at": null,
+            "run_url": null,
+            "url": "/rooms/486777696?thread=900020001",
+            "updated_at": "2026-03-02T16:00:00.000Z",
+            "links": [],
+            "thread_id": 900020001,
+            "status": "planned",
+            "assigned_by": "David"
+          }
+        },
+        {
+          "id": 900000008,
+          "event_type": "work_handed_off",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "work": {
+            "id": 900020001,
+            "room_id": 486777696,
+            "board_id": null,
+            "board_name": null,
+            "title": "Inspect",
+            "work_status": "planned",
+            "owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "agent": true
+            },
+            "tags": [],
+            "result": null,
+            "result_updated_at": null,
+            "run_url": null,
+            "url": "/rooms/486777696?thread=900020001",
+            "updated_at": "2026-03-02T16:00:00.000Z",
+            "links": [],
+            "thread_id": 900020001,
+            "status": "planned",
+            "assigned_by": null
+          },
+          "handoff": {
+            "id": 9,
+            "summary": "<>&",
+            "links": [],
+            "open_questions": [],
+            "sender_name": "Sender",
+            "receiver_agent_id": 773018776
+          }
+        },
+        {
+          "id": 900000009,
+          "event_type": "work_unassigned",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "work": {
+            "id": 7,
+            "title": "Deleted"
+          },
+          "thread_deleted": true
+        },
+        {
+          "id": 900000012,
+          "event_type": "slash_command",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "actor": {
+            "id": 127326141,
+            "name": "David"
+          },
+          "thread_id": 900020001,
+          "command": {
+            "name": "inspect",
+            "arguments": ""
+          }
+        },
+        {
+          "id": 900000013,
+          "event_type": "slash_command",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "room": {
+            "id": 486777696,
+            "name": "All Talk"
+          },
+          "command": {
+            "name": null,
+            "arguments": null
+          }
+        }
+      ],
+      "next_since": 900000016,
+      "presenter_calls": [
+        136976342
+      ]
+    }
+  }
+}

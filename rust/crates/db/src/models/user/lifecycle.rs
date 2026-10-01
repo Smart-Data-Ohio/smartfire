@@ -6,8 +6,7 @@ use crate::{Result, Tx};
 use rusqlite::params;
 
 pub(super) fn revoke_agent_grants(tx: &Tx<'_>, user: i64) -> Result<()> {
-    tx.conn().execute("UPDATE agent_grants SET revoked_at=?1,updated_at=?1 WHERE revoked_at IS NULL AND agent_id=(SELECT id FROM agents WHERE user_id=?2 LIMIT 1)", params![tx.now(), user])?;
-    Ok(())
+    crate::models::AgentGrant::revoke_for_user(tx, user).map(|_| ())
 }
 
 pub(super) fn deactivate(tx: &mut Tx<'_>, user: i64, context: &Context) -> Result<()> {

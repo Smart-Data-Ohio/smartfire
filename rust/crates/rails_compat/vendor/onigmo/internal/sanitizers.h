@@ -1,0 +1,1 @@
+/* Standalone build has no Ruby allocator instrumentation. */

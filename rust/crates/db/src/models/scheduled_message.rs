@@ -8,7 +8,7 @@ use rusqlite::{Connection, Row, params};
 use crate::broadcasts::{Broadcast, Partial, conversation_messages, dom_id, room_dom_id};
 use crate::error::OptionalExt;
 use crate::models::message::SOURCE_LIMIT;
-use crate::sql::{self, CachedStatements, query_all, query_one};
+use crate::sql::{CachedStatements, query_all, query_one};
 use crate::{
     ActivityItem, ChannelThread, Database, Errors, Event, Membership, Message, NewMessage, Result,
     Room, Timestamp, Tx, User,
@@ -353,26 +353,7 @@ impl ScheduledMessage {
         }
         // Scheduled messages have no attachment column. process_attachment therefore has no
         // work here. Human root posts fan out to legacy bots; thread posts never do.
-        if scheduled.thread_id.is_none() {
-            let recipients = if room.direct() {
-                room.users(tx.conn())?
-            } else {
-                message.mentionees(tx.conn(), tx.rich_text())?
-            };
-            for bot in recipients {
-                if bot.id != message.creator_id
-                    && bot.is_active()
-                    && bot.is_bot()
-                    && !sql::exists(
-                        tx.conn(),
-                        "SELECT 1 FROM agents WHERE user_id = ? LIMIT 1",
-                        [bot.id],
-                    )?
-                {
-                    bot.deliver_webhook_later(tx, message.id)?;
-                }
-            }
-        }
+        crate::models::bot_webhook_fanout::deliver(tx, &message)?;
         Ok(true)
     }
 

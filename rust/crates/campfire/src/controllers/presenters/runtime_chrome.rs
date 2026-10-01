@@ -36,6 +36,7 @@ pub(crate) fn preferences(
     now: Timestamp,
     mut preferences: UserPreferences,
 ) -> campfire_db::Result<UserPreferences> {
+    preferences.notification_sounds = Default::default();
     let (dnd,until,presence,hours,start,end,meeting_dnd,meeting_status,ooo_notify,ooo_calendar,ooo_until)=conn.query_row_cached("SELECT dnd_enabled,dnd_until,presence_setting,quiet_hours_enabled,quiet_hours_start_minute,quiet_hours_end_minute,meeting_dnd_enabled,meeting_status_enabled,ooo_notify_enabled,ooo_calendar_enabled,ooo_until FROM users WHERE id=?",[user_id],|r|Ok((r.get::<_,bool>(0)?,r.get::<_,Option<Timestamp>>(1)?,r.get::<_,String>(2)?,r.get::<_,bool>(3)?,r.get::<_,Option<i64>>(4)?,r.get::<_,Option<i64>>(5)?,r.get::<_,bool>(6)?,r.get::<_,bool>(7)?,r.get::<_,bool>(8)?,r.get::<_,bool>(9)?,r.get::<_,Option<Timestamp>>(10)?)))?;
     preferences.notification_sounds.muted =
         (dnd && until.is_none_or(|until| until > now)) || presence == "dnd";

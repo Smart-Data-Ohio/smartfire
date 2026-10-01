@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_clock};
+use crate::app::{Booted, boot_with_services};
 use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -152,23 +152,50 @@ impl TestApp {
         Self::boot_with_huddle(crate::huddle::Config::default()).await
     }
 
+    pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+        Self::boot_with_clients("default", seed_clock(), network, &[], None, crate::huddle::Config::default()).await
+    }
+
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
         Self::boot_with_clock_and_env(clock, &[]).await
     }
-    pub async fn boot_with_clock_and_env(clock: campfire_kit::SharedClock, extra: &[(&str, &str)]) -> Option<TestApp> {
-        Self::boot_with_settings(crate::huddle::Config::default(), clock, extra).await
+
+    pub async fn boot_with_clock_and_env(
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_clients("default", clock, crate::integrations::net::Network::system(), extra, None, crate::huddle::Config::default()).await
+    }
+
+    pub async fn boot_with_github_app(
+        github_app: crate::integrations::github::client::AppClient,
+    ) -> Option<TestApp> {
+        Self::boot_with_clients("default", seed_clock(), crate::integrations::net::Network::system(), &[], Some(github_app), crate::huddle::Config::default()).await
+    }
+
+    pub async fn boot_seed(name: &str) -> Option<TestApp> {
+        Self::boot_with_clients(name, seed_clock(), crate::integrations::net::Network::system(), &[], None, crate::huddle::Config::default()).await
     }
 
     pub async fn boot_with_huddle(huddle: crate::huddle::Config) -> Option<TestApp> {
         Self::boot_with_huddle_and_clock(huddle, seed_clock()).await
     }
-
     pub async fn boot_with_huddle_and_clock(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock) -> Option<TestApp> {
-        Self::boot_with_settings(huddle,clock,&[]).await
+        Self::boot_with_settings(huddle, clock, &[]).await
+    }
+    pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str, &str)]) -> Option<TestApp> {
+        Self::boot_with_clients("default", clock, crate::integrations::net::Network::system(), settings, None, huddle).await
     }
 
-    pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str,&str)]) -> Option<TestApp> {
-        let seed = seed_dir("default")?;
+    async fn boot_with_clients(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+        github_app: Option<crate::integrations::github::client::AppClient>,
+        huddle: crate::huddle::Config,
+    ) -> Option<TestApp> {
+        let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
         std::fs::copy(
@@ -184,11 +211,20 @@ impl TestApp {
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
             "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
-            _ => settings.iter().find(|(key,_)|*key==name).map(|(_,value)|(*value).to_string()),
+            _ => extra.iter().find(|(key,_)|*key==name).map(|(_,value)|(*value).to_string()),
         })
         .unwrap();
         config.huddle = huddle;
-        Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap().into(), _dir: dir })
+        let intervals = crate::jobs::periodic::Intervals { periodic: None, huddle: None };
+        let booted = match github_app {
+            Some(client) => crate::app::boot_with_all_services(
+                config, clock, crate::integrations::github::client::ReadClient::from_env(),
+                client, crate::integrations::net::Network::system(), network, intervals,
+            ).await.unwrap(),
+            None => boot_with_services(config, clock, network, intervals).await.unwrap(),
+        };
+        Some(TestApp { booted: booted.into(), _dir: dir })
+
     }
 
     /// Observe only a controller's SQL, without the independent queue's polling writes.

@@ -296,9 +296,11 @@ async fn huddle_gateway_request_response_vectors_match_pinned_rails() {
         let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
             jiff::Timestamp::from_second(now).unwrap(),
         ));
-        let Some(app) = TestApp::boot_with_huddle_and_clock(cfg, clock).await else {
+        let Some(mut app) = TestApp::boot_with_huddle_and_clock(cfg, clock).await else {
             return;
         };
+        // Inspect the enqueue from this request before the real cleanup worker consumes it.
+        app.stop_jobs().await;
         let seen = case["seen"] == true;
         let revoked = case["revoked"] == true;
         let removed = case["removed"] == true;

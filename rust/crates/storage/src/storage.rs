@@ -8,6 +8,7 @@
 //! record step then saves rows inside a transaction and is quick. The `&Connection` methods that
 //! do both at once are for tests and tools.
 
+use std::io::Read as _;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -70,6 +71,21 @@ impl Storage {
         Self { service, verifier }
     }
 
+    /// `Blob#identify_without_saving`, called by signed-ID assignment before validation.
+    /// Rails reads at most 4 KB from the service, and saves these changes with the attachment.
+    pub fn identify_blob(&self, mut blob: Blob) -> Result<Blob> {
+        if !blob.is_identified() {
+            let mut head = Vec::new();
+            if blob.byte_size > 0 {
+                std::fs::File::open(self.path_for(&blob))?.take(4096).read_to_end(&mut head)?;
+            }
+            // Blob::Identifiable#identify_content_type passes Filename#to_s (sanitized).
+            blob.content_type = Some(crate::marcel::identify(&head, Some(&blob.filename.sanitized()), blob.content_type.as_deref()));
+            blob.metadata.set("identified", Json::Bool(true));
+        }
+        Ok(blob)
+    }
+
     // --- File work: no connection, blocking -------------------------------------------------------
 
     /// The file half of `Blob.create_and_upload!(io:, filename:, content_type:)` as attaching an
@@ -90,7 +106,8 @@ impl Storage {
     /// fresh key with identify:false, and retain its content type and metadata.
     pub fn stage_copy(&self, source: &Blob) -> Result<Staged> {
         let file = self.open(source)?;
-        let mut blob = NewBlob::unfurl_file(file.path(), source.filename.clone(), source.content_type.as_deref(), self.service.name(), false)?;
+        // Messages::Forwarder#copy_attachment_to stores filename.to_s, not the raw name.
+        let mut blob = NewBlob::unfurl_file(file.path(), Filename::new(source.filename.sanitized()), source.content_type.as_deref(), self.service.name(), false)?;
         blob.metadata = source.metadata.clone();
         blob.metadata.set("identified", Json::Bool(true));
         self.stage(blob, std::fs::File::open(file.path())?)

@@ -10,6 +10,8 @@
 pub mod activity;
 pub mod agents;
 pub mod broadcasts;
+mod github_notifier;
+mod github_cards;
 mod connection;
 pub mod huddle_notice;
 pub(crate) mod huddle_effects;

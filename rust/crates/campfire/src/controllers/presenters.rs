@@ -3,6 +3,8 @@
 //! partials) computed up front.
 
 pub mod accounts;
+pub mod github;
+pub mod status_settings;
 pub mod attachments;
 pub mod link_embeds;
 pub mod fizzy_cards;
@@ -15,7 +17,7 @@ pub mod test_support;
 pub mod view_context;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::sync::LazyLock;
 
 use campfire_db::{Boost, Connection, Membership, Message, RichText, Room, RoomType, User};
@@ -121,6 +123,7 @@ pub fn user_json(secrets: &Secrets, base_url: &str, user: &User) -> UserJson {
 /// Everything a page of messages needs, with the rows it looks up along the way remembered
 /// (Rails preloads them with `with_creator`, `with_boosts` and friends).
 pub struct Presenter<'a> {
+    app: &'a AppState,
     pub conn: &'a Connection,
     pub secrets: &'a Secrets,
     pub storage: &'a Storage,
@@ -129,6 +132,7 @@ pub struct Presenter<'a> {
     /// `Current.request_host`, which opengraph embeds are checked against.
     pub request_host: Option<String>,
     pub cache_base_url: Option<String>,
+    github_refreshes: RefCell<BTreeSet<i64>>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
     link_fetches: RefCell<std::collections::BTreeSet<i64>>,
@@ -140,6 +144,7 @@ pub struct Presenter<'a> {
 impl<'a> Presenter<'a> {
     pub fn new(conn: &'a Connection, app: &'a AppState, request_host: Option<String>) -> Self {
         Self {
+            app,
             conn,
             secrets: &app.secrets,
             storage: &app.storage,
@@ -147,6 +152,7 @@ impl<'a> Presenter<'a> {
             now: app.clock.now(),
             request_host,
             cache_base_url: None,
+            github_refreshes: RefCell::default(),
             users: RefCell::default(),
             room_names: RefCell::default(),
             link_fetches: RefCell::default(),
@@ -154,6 +160,12 @@ impl<'a> Presenter<'a> {
             twitter_posts: RefCell::default(),
             twitter_existence: RefCell::default(),
         }
+    }
+
+    /// Collected only when a card partial actually renders (never on a fragment-cache hit).
+    /// Callers enqueue on the writer after releasing this read-only connection.
+    pub fn take_github_refreshes(&self) -> Vec<i64> {
+        self.github_refreshes.take().into_iter().collect()
     }
 
     pub fn resolver(&self) -> DbResolver<'_> {
@@ -255,7 +267,8 @@ impl<'a> Presenter<'a> {
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff(), base)) {
+        let stamp = github::cache_stamp(self.conn, message)?;
+        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment_with_cards(message.id, message.updated_at.jiff(), base, &stamp)) {
             Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
             None => MessageItem::View(Box::new(self.message(message)?)),
         })
@@ -286,6 +299,11 @@ impl<'a> Presenter<'a> {
     }
 
     fn renderable_message(&self, message: &Message, room_name: &str) -> Result<MessageView> {
+        let github_cards_html = github::message_cards(self.conn, self.app, message)?;
+        self.github_refreshes.borrow_mut().extend(
+            crate::integrations::github::pull_requests::PullRequest::for_message(self.conn, message.id)?
+                .into_iter().filter(|pr| pr.stale(campfire_db::Timestamp::from_jiff(self.now))).map(|pr| pr.id)
+        );
         let plain_text = self.plain_text_body(message)?;
         Ok(MessageView {
             id: message.id,
@@ -299,7 +317,11 @@ impl<'a> Presenter<'a> {
             content: self.content(message, &plain_text)?,
             boosts: self.boosts(message)?,
             details: self.message_details(message)?,
-            components: link_embeds::components(self, message)?,
+            components: campfire_views::messages::MessageComponents {
+                github_cards_html: Some(github_cards_html),
+                github_cards_stamp: github::cache_stamp(self.conn, message)?,
+                ..link_embeds::components(self, message)?
+            },
         })
     }
 

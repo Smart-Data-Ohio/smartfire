@@ -1,0 +1,182 @@
+{
+  "reference_pin": "d7c7de92",
+  "pages": {
+    "scoped": [
+      "granted_message",
+      "missing_event_room",
+      "approval",
+      "github",
+      "fizzy",
+      "granted_work",
+      "slash"
+    ],
+    "first_page": [
+      "granted_message"
+    ],
+    "second_page": [
+      "missing_event_room"
+    ],
+    "revoked": [
+      "approval",
+      "github",
+      "fizzy"
+    ],
+    "workspace": [
+      "blocked_message",
+      "granted_message",
+      "missing_event_room",
+      "approval",
+      "github",
+      "fizzy",
+      "granted_work",
+      "blocked_work",
+      "slash"
+    ],
+    "overlapping": [
+      "blocked_message",
+      "granted_message",
+      "missing_event_room",
+      "approval",
+      "github",
+      "fizzy",
+      "granted_work",
+      "blocked_work",
+      "slash"
+    ],
+    "removed_membership": [
+      "blocked_message",
+      "approval",
+      "github",
+      "fizzy",
+      "blocked_work"
+    ],
+    "suspended": [
+      "approval",
+      "github",
+      "fizzy"
+    ],
+    "legacy": [
+      "blocked_message",
+      "approval",
+      "github",
+      "fizzy",
+      "blocked_work"
+    ]
+  },
+  "acks": {
+    "granted_message_0": {
+      "status": "ok",
+      "error": null,
+      "outcome": "acknowledged",
+      "webhook_status": "pending",
+      "webhook_attempts": 2
+    },
+    "granted_message_1": {
+      "status": "ok",
+      "error": null,
+      "outcome": "acknowledged",
+      "webhook_status": "pending",
+      "webhook_attempts": 2
+    },
+    "blocked_message_2": {
+      "status": "forbidden",
+      "error": "Forbidden: agent lacks read_messages capability",
+      "outcome": "pending",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "missing_message_3": {
+      "status": "not_found",
+      "error": "Event not found",
+      "outcome": "pending",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "missing_event_room_4": {
+      "status": "forbidden",
+      "error": "Forbidden: agent lacks read_messages capability",
+      "outcome": "pending",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "blocked_work_5": {
+      "status": "ok",
+      "error": null,
+      "outcome": "acknowledged",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "suppressed_6": {
+      "status": "not_found",
+      "error": "Event not found",
+      "outcome": "suppressed",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "posted_7": {
+      "status": "not_found",
+      "error": "Event not found",
+      "outcome": "delivered",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "null_outcome_8": {
+      "status": "not_found",
+      "error": "Event not found",
+      "outcome": null,
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "other_agent_9": {
+      "status": "not_found",
+      "error": "Event not found",
+      "outcome": "pending",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "revoked_approval": {
+      "status": "forbidden",
+      "error": "Forbidden: agent lacks read_messages capability",
+      "outcome": "pending",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "revoked_work": {
+      "status": "forbidden",
+      "error": "Forbidden: agent lacks read_messages capability",
+      "outcome": "pending",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "removed_message": {
+      "status": "not_found",
+      "error": "Event not found",
+      "outcome": "acknowledged",
+      "webhook_status": "pending",
+      "webhook_attempts": 2
+    },
+    "removed_work": {
+      "status": "ok",
+      "error": null,
+      "outcome": "acknowledged",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "suspended_approval": {
+      "status": "forbidden",
+      "error": "Forbidden: agent lacks read_messages capability",
+      "outcome": "pending",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    }
+  },
+  "capabilities": {
+    "legacy_read": true,
+    "legacy_dm": false,
+    "unknown": false,
+    "legacy_workspace": true,
+    "inactive_user": false,
+    "suspended": false,
+    "deleted_room": false
+  }
+}

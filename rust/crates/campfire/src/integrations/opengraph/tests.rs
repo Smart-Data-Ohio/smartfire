@@ -9,7 +9,7 @@ use base64::Engine;
 use serde_json::Value;
 
 use super::*;
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, gzip_bomb, network, trickling_server};
+use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, gzip_bomb, network, trickling_server_with_ready};
 
 fn route(spec: &Value) -> Route {
     let s = |key: &str| spec[key].as_str().unwrap_or_default().to_string();
@@ -144,25 +144,103 @@ async fn stops_reading_a_gzip_bomb_at_the_limit() {
             .header("Content-Encoding", "gzip")
             .body([page.clone(), zeros].concat())
     };
-    let mut oversized = gzip_bomb(6);
+    let mut oversized = gzip_bomb(1024);
     oversized.extend_from_slice(b"invalid gzip member after the decoded limit");
-    let server = FakeServer::start(vec![gzipped("/", oversized), gzipped("/small", gzip_bomb(2))]).await;
+    let large = gzipped("/", oversized);
+    assert!(
+        large.body.len() < fetch::MAX_BODY_SIZE,
+        "the compressed body must fit, so rejection tests the inflated size"
+    );
+    let server = FakeServer::start(vec![large, gzipped("/small", gzip_bomb(2))]).await;
     let net = network_to(server.addr);
 
-    assert!(matches!(unfurl(&net, "http://www.example.com/small").await, Ok(Unfurl::Json(_))));
+    assert!(matches!(
+        crate::test_support::wait(
+            "unfurling the small gzip page",
+            unfurl(&net, "http://www.example.com/small")
+        )
+        .await,
+        Ok(Unfurl::Json(_))
+    ));
+    // This fixture is 200 HTML with a compressed length below the limit. Only the inflated
+    // size can produce Ok(None); a stalled body produces a transport error instead.
     let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
-    assert!(matches!(fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()).await, Ok(None)));
+    let fetched = crate::test_support::wait(
+        "rejecting the inflated gzip size",
+        fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()),
+    )
+    .await;
+    assert!(
+        matches!(fetched, Ok(None)),
+        "expected inflated-size rejection, got {fetched:?}"
+    );
+    assert_eq!(
+        crate::test_support::wait(
+            "unfurling the oversized gzip page",
+            unfurl(&net, "http://www.example.com/")
+        )
+        .await,
+        Ok(Unfurl::NoContent)
+    );
 }
 
 /// A server that keeps sending a byte at a time never trips a read timeout, but the unfurl as a
 /// whole gives up.
-#[tokio::test]
-async fn gives_up_on_a_trickling_page() {
-    let server = trickling_server("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n").await;
-    let started = std::time::Instant::now();
-    let deadline = std::time::Duration::from_millis(500);
-    assert_eq!(unfurl_within(&network_to(server), "http://www.example.com/", deadline).await, Ok(Unfurl::NoContent));
-    assert!(started.elapsed() < deadline * 2, "{:?}", started.elapsed());
+#[test]
+fn gives_up_on_a_trickling_page() {
+    use futures_util::FutureExt;
+    use std::time::Duration;
+
+    // The watchdog uses wall time on a different thread; paused Tokio time cannot hide a hang.
+    let (finished, result) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let outcome = std::panic::catch_unwind(|| {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .start_paused(true)
+                .build()
+                .unwrap();
+            runtime.block_on(async {
+                // Prevent Tokio's idle-time auto-advance while waiting for real TCP readiness.
+                let keep_time_paused = tokio::spawn(async {
+                    loop {
+                        tokio::task::yield_now().await;
+                    }
+                });
+                let (server, ready) = trickling_server_with_ready("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n").await;
+                let net = network_to(server);
+                let started = tokio::time::Instant::now();
+                let deadline = Duration::from_millis(500);
+                let unfurling = unfurl_within(&net, "http://www.example.com/", deadline);
+                tokio::pin!(unfurling);
+                tokio::select! {
+                    biased;
+                    outcome = &mut unfurling => panic!("trickling fetch finished before its deadline: {outcome:?}"),
+                    ready = ready => ready.expect("trickling server must send its first response byte"),
+                }
+                assert_eq!(started.elapsed(), Duration::ZERO, "clock advanced during TCP setup");
+
+                tokio::time::advance(deadline - Duration::from_millis(1)).await;
+                tokio::time::sleep_until(started + deadline - Duration::from_millis(1)).await;
+                assert!(unfurling.as_mut().now_or_never().is_none(), "trickling fetch finished before 500 ms");
+                tokio::time::advance(Duration::from_millis(1)).await;
+                tokio::time::sleep_until(started + deadline).await;
+                assert_eq!(unfurling.as_mut().now_or_never(), Some(Ok(Unfurl::NoContent)), "trickling fetch must expire at its 500 ms deadline");
+                assert_eq!(started.elapsed(), deadline);
+                keep_time_paused.abort();
+            });
+        });
+        let _ = finished.send(outcome);
+    });
+    let outcome = result
+        .recv_timeout(crate::test_support::WAIT)
+        .expect("trickling deadline test exceeded its 30 s wall-clock watchdog");
+    worker
+        .join()
+        .expect("deadline worker panicked outside its test");
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
+    }
 }
 
 // Regression tests for our fork's fetch contract (local sockets only).
@@ -222,22 +300,35 @@ async fn ws15e_honors_zero_and_three_redirect_budgets() {
     assert_eq!(server.received().len(), 5);
 }
 
-#[tokio::test]
-async fn ws15e_deadline_covers_body_reads() {
-    let server = crate::integrations::test_support::ws15e_trickling_server(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n",
-    )
-    .await;
-    let net = network_to(server);
-    let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
-    let options = fetch::FetchOptions { max_redirects: 3, deadline: Some(std::time::Duration::from_millis(150)) };
-    let result = tokio::time::timeout(
-        std::time::Duration::from_millis(750),
-        fetch::fetch_document_with(&net, &url, "93.184.216.34".parse().unwrap(), options),
-    )
-    .await;
-    assert!(result.is_ok(), "fetch ignored its overall deadline");
-    assert!(matches!(result.unwrap(), Err(fetch::FetchError::Deadline)));
+#[test]
+fn ws15e_deadline_covers_body_reads() {
+    use futures_util::FutureExt;
+    use std::time::Duration;
+    crate::integrations::test_support::with_paused_time("OpenGraph body-read deadline", async {
+        let (server, ready) = trickling_server_with_ready(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n",
+        ).await;
+        let net = network_to(server);
+        let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
+        let deadline = Duration::from_millis(150);
+        let options = fetch::FetchOptions { max_redirects: 3, deadline: Some(deadline) };
+        let started = tokio::time::Instant::now();
+        let fetching = fetch::fetch_document_with(&net, &url, "93.184.216.34".parse().unwrap(), options);
+        tokio::pin!(fetching);
+        tokio::select! {
+            biased;
+            outcome = &mut fetching => panic!("trickling body fetch finished before its deadline: {outcome:?}"),
+            ready = ready => ready.expect("trickling server must send its first response byte"),
+        }
+        assert_eq!(started.elapsed(), Duration::ZERO, "clock advanced during TCP setup");
+        tokio::time::advance(deadline - Duration::from_millis(1)).await;
+        tokio::time::sleep_until(started + deadline - Duration::from_millis(1)).await;
+        assert!(fetching.as_mut().now_or_never().is_none(), "body fetch finished before 150 ms");
+        tokio::time::advance(Duration::from_millis(1)).await;
+        tokio::time::sleep_until(started + deadline).await;
+        assert!(matches!(fetching.as_mut().now_or_never(), Some(Err(fetch::FetchError::Deadline))), "body fetch ignored its 150 ms deadline");
+        assert_eq!(started.elapsed(), deadline);
+    });
 }
 
 #[tokio::test]
@@ -280,37 +371,39 @@ async fn ws15e_rejects_private_redirect_before_dialing() {
     assert_eq!(server.received().len(), 1);
 }
 
-#[tokio::test]
-async fn ws15e_retries_header_eof_once_unless_a_deadline_is_armed() {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    for deadline in [None, Some(std::time::Duration::from_secs(1))] {
-        let listener = crate::integrations::test_support::ws15e_listener().await;
-        let address = listener.local_addr().unwrap();
-        let count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let log = count.clone();
-        let server = tokio::spawn(async move {
-            while let Ok((mut stream, _)) = listener.accept().await {
-                let _ = stream.read(&mut [0; 4096]).await;
-                if log.fetch_add(1, std::sync::atomic::Ordering::SeqCst) > 0 {
-                    let _ = stream
-                        .write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
-                        .await;
+#[test]
+fn ws15e_retries_header_eof_once_unless_a_deadline_is_armed() {
+    crate::integrations::test_support::with_paused_time("header EOF retry policy", async {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        for deadline in [None, Some(std::time::Duration::from_secs(1))] {
+            let listener = crate::integrations::test_support::ws15e_listener().await;
+            let address = listener.local_addr().unwrap();
+            let count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+            let log = count.clone();
+            let server = tokio::spawn(async move {
+                while let Ok((mut stream, _)) = listener.accept().await {
+                    let _ = stream.read(&mut [0; 4096]).await;
+                    if log.fetch_add(1, std::sync::atomic::Ordering::SeqCst) > 0 {
+                        let _ = stream
+                            .write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
+                            .await;
+                    }
+                    let _ = stream.shutdown().await;
                 }
-                let _ = stream.shutdown().await;
+            });
+            let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
+            let options = fetch::FetchOptions { max_redirects: 3, deadline };
+            let result = fetch::fetch_document_with(&network_to(address), &url, "93.184.216.34".parse().unwrap(), options).await;
+            if deadline.is_some() {
+                assert!(result.is_err());
+                assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 1);
+            } else {
+                assert_eq!(result.unwrap(), Some(b"ok".to_vec()));
+                assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 2);
             }
-        });
-        let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
-        let options = fetch::FetchOptions { max_redirects: 3, deadline };
-        let result = fetch::fetch_document_with(&network_to(address), &url, "93.184.216.34".parse().unwrap(), options).await;
-        if deadline.is_some() {
-            assert!(result.is_err());
-            assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 1);
-        } else {
-            assert_eq!(result.unwrap(), Some(b"ok".to_vec()));
-            assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 2);
+            server.abort();
         }
-        server.abort();
-    }
+    });
 }
 
 #[tokio::test]

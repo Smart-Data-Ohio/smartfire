@@ -30,7 +30,8 @@ cases = [
   { name: "late_finish", age: 960, webhook: true, late_finish: true },
   { name: "finish_before_sweep", age: 960, webhook: true, finish_first: true },
   { name: "fizzy", age: 960, fizzy: true },
-  { name: "audit_failure", age: 960, webhook: true, audit_failure: true }
+  { name: "audit_failure", age: 960, webhook: true, audit_failure: true },
+  { name: "preserved_url_excluded_from_timeout_audit", age: 960, url: "https://github.com/rails/rails/pull/12#historical" }
 ]
 module ClaimAuditFailure
   def record!(**args)
@@ -49,7 +50,7 @@ output = cases.map do |test|
   bot.create_webhook!(url: "https://example.com/hooks") if test[:webhook]
   bot.webhook&.update_columns(url: "")
   bot.reload # clear its association cache between cases
-  event = AgentEvent.create!(id: 814, agent:, actor: owner, event_type: test[:fizzy] ? "fizzy_action_completed" : "github_action_completed", outcome: "delivered", agent_approval_id: test[:historical] ? nil : test[:missing] ? 999 : approval.id, webhook_attempts: 2, created_at: test[:age].seconds.ago, metadata: { approval_id: test[:missing] ? 999 : approval.id, action:, status: "running", extra: "preserved" })
+  event = AgentEvent.create!(id: 814, agent:, actor: owner, event_type: test[:fizzy] ? "fizzy_action_completed" : "github_action_completed", outcome: "delivered", agent_approval_id: test[:historical] ? nil : test[:missing] ? 999 : approval.id, webhook_attempts: 2, created_at: test[:age].seconds.ago, metadata: { approval_id: test[:missing] ? 999 : approval.id, action:, status: "running", extra: "preserved" }.merge(test[:url] ? {url: test[:url]} : {}))
   job = test[:fizzy] ? Fizzy::PerformAgentActionJob : Github::PerformAgentActionJob
   finish = -> {
     job.new.send(:finish_claim, event, approval, agent, status: "completed", url: "https://github.com/rails/rails/pull/12#issuecomment-9")
