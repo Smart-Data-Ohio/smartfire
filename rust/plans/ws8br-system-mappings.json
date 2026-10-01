@@ -4,7 +4,7 @@
   "files": [
     {
       "file": "test/system/quick_switcher_test.rb",
-      "runner": "rust/reference-tools/rooms/room_browser.py",
+      "runner": "rust/reference-tools/rooms/quick_switcher_browser.py",
       "original_cases": [
         "keyboard-only room jump filters and opens with enter",
         "arrow keys move the active option",

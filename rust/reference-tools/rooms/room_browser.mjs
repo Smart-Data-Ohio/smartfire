@@ -6,6 +6,7 @@ const require=createRequire(new URL('../../parity/package.json',import.meta.url)
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
 const browser=await chromium.launch({headless:true});
+const quickSwitcherOnly=process.argv.includes('--quick-switcher-only');
 async function acceptance(base) {
  const context=await browser.newContext({viewport:{width:1440,height:1000}});
  try {
@@ -43,6 +44,7 @@ async function acceptance(base) {
   await input.press('End');assert.equal(await active(),titles.at(-1));
   await input.press('Escape');
   assert.equal(await page.locator('#quick-switcher[open]').count(),0);
+  if (!quickSwitcherOnly) {
   // The member drawer opens automatically on desktop, then traps/restores focus on phones.
   await page.getByRole('button',{name:'Hide members',exact:true}).waitFor();
   await page.locator('#channel-members [data-member-id="712064548"]').waitFor();
@@ -85,6 +87,7 @@ async function acceptance(base) {
   await page.locator('.pins-panel turbo-frame .pins-panel__list').waitFor();
   await page.getByRole('button',{name:'Close pinned messages',exact:true}).click();
   assert.equal(await page.locator('.pins-panel[open]').count(),0);
+  }
   await page.goto(base+'/rooms/201306877');
   const rooms=()=>page.evaluate(async()=>{
     const url=document.getElementById('quick-switcher').dataset.quickSwitcherUrlValue;
@@ -107,11 +110,12 @@ async function acceptance(base) {
   await input.press('Enter');
   await page.locator('.room-header__name').filter({hasText:'Kevin'}).waitFor();
   assert.equal((await rooms()).length,before.length+1,'person jump creates exactly one new accessible room');
-  return {roomJump:true,recents:true,arrows:true,escape:true,personCreatesDm:true,memberDrawer:true,focusTrap:true,menuKeyboard:true,outsideDismiss:true,threadFocusReturn:true,pins:true};
+  const original={roomJump:true,recents:true,arrows:true,escape:true,personCreatesDm:true};
+  return quickSwitcherOnly ? original : {...original,memberDrawer:true,focusTrap:true,menuKeyboard:true,outsideDismiss:true,threadFocusReturn:true,pins:true};
  } finally {await context.close();}
 }
 try {
  const rails=await acceptance(process.argv[2]);
  assert.deepEqual(await acceptance(process.argv[3]),rails);
- console.log('Room browser acceptance: 2 targets passed; keyboard room/person jumps, recent rooms, option navigation, Escape, member drawer/focus trap, header menu keyboard/outside dismissal, thread focus return and native pins match');
+ console.log(quickSwitcherOnly ? 'QuickSwitcher browser acceptance: 2 targets passed; all five original interactions match' : 'Room browser acceptance: 2 targets passed; keyboard room/person jumps, recent rooms, option navigation, Escape, member drawer/focus trap, header menu keyboard/outside dismissal, thread focus return and native pins match');
 } finally {await browser.close();}
