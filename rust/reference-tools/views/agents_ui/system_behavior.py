@@ -20,6 +20,7 @@ child = None
 def fixture(db):
     c = sqlite3.connect(db)
     c.execute("UPDATE agents SET provider='OpenAI',runtime='Codex CLI 0.9',description='Does things',status='working',status_note='on it',last_seen_at='2026-03-02 16:00:00',working_presence='Running tests…',working_presence_expires_at='2026-03-02 16:02:00' WHERE id=?",(labels['agents.bender'],))
+    c.execute("UPDATE messages SET created_at='2026-03-02 16:00:00',updated_at='2026-03-02 16:00:00' WHERE id=?",(labels['messages.agent_ui'],))
     for label,name,status,input_,output,duration in [('ui_done','Run tests','done',None,'All green',1500),('ui_running','Deploy','running','Ship it',None,None)]:
         c.execute('UPDATE agent_steps SET channel_thread_id=NULL,message_id=?,name=?,status=?,input_summary=?,output_summary=?,duration_ms=? WHERE id=?',(labels['messages.agent_ui'],name,status,input_,output,duration,labels['agent_steps.'+label]))
     # A public fixture, matching AgentApprovalsTest setup; boot's owner callbacks
