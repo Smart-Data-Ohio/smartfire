@@ -1,0 +1,65 @@
+{
+  "reference": "d7c7de92",
+  "rows": [
+    {
+      "viewer_id": 127326141,
+      "room_id": 654632876,
+      "body": "{\"members\":[{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":773523956,\"name\":\"Deploy Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"c1c24701faa77d795e9a2bdcdd694fcd\""
+      }
+    },
+    {
+      "viewer_id": 127326141,
+      "room_id": 201306877,
+      "body": "{\"members\":[{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":773523956,\"name\":\"Deploy Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523959,\"name\":\"New member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"5a5a389da898b50c637b886c598b49e5\""
+      }
+    },
+    {
+      "viewer_id": 127326141,
+      "room_id": 186869642,
+      "body": "{\"members\":[{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"45fb2834f6f49e5269a3f166925a01fd\""
+      }
+    },
+    {
+      "viewer_id": 149087659,
+      "room_id": 654632876,
+      "body": "{\"members\":[{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":773523956,\"name\":\"Deploy Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"c1c24701faa77d795e9a2bdcdd694fcd\""
+      }
+    },
+    {
+      "viewer_id": 149087659,
+      "room_id": 201306877,
+      "body": "{\"members\":[{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":773523956,\"name\":\"Deploy Bot\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125160100\",\"bot\":true,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523953,\"name\":\"JZ\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102180000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":712064548,\"name\":\"Kevin\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102190000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false},{\"id\":773523959,\"name\":\"New member\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"5a5a389da898b50c637b886c598b49e5\""
+      }
+    },
+    {
+      "viewer_id": 149087659,
+      "room_id": 186869642,
+      "body": "{\"members\":[{\"id\":127326141,\"name\":\"David\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":\"🚀 Shipping Rust\",\"starred\":false},{\"id\":149087659,\"name\":\"Jason\",\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125160000\",\"bot\":false,\"online\":false,\"presence\":\"offline\",\"status\":null,\"starred\":false}]}",
+      "headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "etag": "W/\"45fb2834f6f49e5269a3f166925a01fd\""
+      }
+    }
+  ]
+}

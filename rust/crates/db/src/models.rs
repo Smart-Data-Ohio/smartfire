@@ -6,9 +6,14 @@ pub mod agent_access;
 pub mod agent_approval;
 pub mod agent_approvals;
 pub mod agent_service;
+pub mod agent_context;
+pub mod agent_direct_messages;
+pub mod agent_lifecycle;
+pub mod agent_streaming;
 pub mod agent_slash_command;
 pub mod agent_step;
 pub mod agent_working_presence;
+pub mod agent_work_events;
 pub mod agent_credential;
 pub mod agent_grant;
 pub mod agent_delivery;
@@ -96,9 +101,17 @@ pub mod room_delete;
 pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
 
-pub use agent_credential::{AgentCredential, NewCredential};
-pub use agent_grant::{AgentGrant, NewGrant};
+pub use agent_credential::{AgentCredential, CredentialChanges, NewCredential};
+pub use agent_grant::{AgentGrant, GrantChanges, NewGrant};
 pub use agent_approval::{AgentApproval, NewApproval};
 pub use agent::{Agent,AgentChanges,AgentKind,NewAgent};
 pub use agent_slash_command::{AgentSlashCommand,NewAgentSlashCommand};
 pub use agent_step::{AgentStep,NewAgentStep,AgentStepChanges};
+// WS8bm2 read-only rendering preload seam.
+pub mod message_rendering;
+
+// WS8bm2 listing/quote read adapters.
+pub mod room_files;
+pub mod message_quote;
+
+pub mod reminder_policy;

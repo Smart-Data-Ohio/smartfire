@@ -39,7 +39,7 @@ impl<'a> DbResolver<'a> {
         resolver
     }
 
-    fn mention_user(&self, user: &User) -> MentionUser {
+    pub(crate) fn mention_user(&self, user: &User) -> MentionUser {
         MentionUser {
             id: user.id,
             name: user.name.clone(),

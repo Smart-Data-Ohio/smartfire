@@ -1,0 +1,221 @@
+{
+  "reference": "d7c7de92",
+  "draft_id": 3,
+  "steps": [
+    {
+      "method": "post",
+      "path": "/rooms/486777696/scheduled_messages",
+      "input": {
+        "scheduled_message": {
+          "markdown_source": "Morning!",
+          "send_at": "2026-03-02T17:00:00Z"
+        }
+      },
+      "zone": "UTC",
+      "status": 201,
+      "body": "{\"id\":4,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Morning!\",\"send_at\":\"2026-03-02T17:00:00.000Z\",\"sent_at\":null,\"dropped_at\":null}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/rooms/486777696/scheduled_messages",
+      "input": {
+        "scheduled_message": {
+          "markdown_source": "Late",
+          "send_at": "2026-03-02T15:00:00Z"
+        }
+      },
+      "zone": "UTC",
+      "status": 422,
+      "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/rooms/486777696/scheduled_messages",
+      "input": {
+        "scheduled_message": {
+          "markdown_source": "Bad time",
+          "send_at": "not a time"
+        }
+      },
+      "zone": "UTC",
+      "status": 422,
+      "body": "{\"error\":\"Send time is invalid\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "patch",
+      "path": "/scheduled_messages/4",
+      "input": {
+        "scheduled_message": {
+          "markdown_source": "Sooner!",
+          "send_at": "2026-03-02T18:00"
+        }
+      },
+      "zone": "UTC",
+      "status": 200,
+      "body": "{\"id\":4,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Sooner!\",\"send_at\":\"2026-03-02T18:00:00.000Z\",\"sent_at\":null,\"dropped_at\":null}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "patch",
+      "path": "/scheduled_messages/4",
+      "input": {
+        "scheduled_message": {
+          "send_at": "2026-03-02T15:00:00Z"
+        }
+      },
+      "zone": "UTC",
+      "status": 422,
+      "body": "{\"errors\":{\"send_at\":[\"must be in the future\"]}}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "patch",
+      "path": "/scheduled_messages/4",
+      "input": {
+        "scheduled_message": {
+          "markdown_source": "Busy"
+        }
+      },
+      "zone": "UTC",
+      "status": 409,
+      "body": "{\"error\":\"That message is sending right now; try again in a moment.\"}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/scheduled_messages/4/send_now",
+      "input": {},
+      "zone": "UTC",
+      "status": 202,
+      "body": "{\"id\":4,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Sooner!\",\"send_at\":\"2026-03-02T18:00:00.000Z\",\"sent_at\":null,\"dropped_at\":null}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "patch",
+      "path": "/scheduled_messages/4",
+      "input": {
+        "scheduled_message": {
+          "markdown_source": "Ready"
+        }
+      },
+      "zone": "UTC",
+      "status": 200,
+      "body": "{\"id\":4,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Ready\",\"send_at\":\"2026-03-02T18:00:00.000Z\",\"sent_at\":null,\"dropped_at\":null}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/scheduled_messages/4/send_now",
+      "input": {},
+      "zone": "UTC",
+      "status": 200,
+      "body": "{\"id\":4,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Ready\",\"send_at\":\"2026-03-02T18:00:00.000Z\",\"sent_at\":\"2026-03-02T16:00:00.000Z\",\"dropped_at\":null}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "delete",
+      "path": "/scheduled_messages/3",
+      "input": {},
+      "zone": "UTC",
+      "status": 204,
+      "body": "",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/rooms/486777696/scheduled_messages",
+      "input": {
+        "scheduled_message": {
+          "markdown_source": "Hawaii",
+          "send_at": "2026-03-03T09:00"
+        }
+      },
+      "zone": "Hawaii",
+      "status": 201,
+      "body": "{\"id\":5,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Hawaii\",\"send_at\":\"2026-03-03T09:00:00.000-10:00\",\"sent_at\":null,\"dropped_at\":null}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    },
+    {
+      "method": "post",
+      "path": "/rooms/486777696/scheduled_messages",
+      "input": {
+        "scheduled_message": {
+          "markdown_source": "Gap",
+          "send_at": "2026-03-08T02:30"
+        }
+      },
+      "zone": "Eastern Time (US & Canada)",
+      "status": 201,
+      "body": "{\"id\":6,\"room_id\":486777696,\"thread_id\":null,\"markdown_source\":\"Gap\",\"send_at\":\"2026-03-08T03:30:00.000-04:00\",\"sent_at\":null,\"dropped_at\":null}",
+      "cache_control": "no-store",
+      "pragma": "no-cache"
+    }
+  ],
+  "html": [
+    {
+      "zone": "UTC",
+      "state": "pending",
+      "html": "<article id=\"scheduled_message_3\" class=\"scheduled-message\">\n  <div class=\"scheduled-message__meta\">\n    <span class=\"scheduled-message__room\">All Talk</span>\n      <span class=\"scheduled-message__time\">· Sends <time datetime=\"2026-03-02T17:00:00Z\" data-local-time-target=\"datetime\"></time></span>\n  </div>\n\n  <form class=\"scheduled-message__form\" action=\"/scheduled_messages/3\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n    <div>\n      <label class=\"for-screen-reader\" for=\"scheduled_message_markdown_source\">Message</label>\n      <textarea rows=\"2\" class=\"input\" maxlength=\"50000\" name=\"scheduled_message[markdown_source]\" id=\"scheduled_message_markdown_source\">\nDraft &lt;body&gt; &amp; example</textarea>\n    </div>\n    <div class=\"scheduled-message__row\">\n      <div>\n        <label for=\"scheduled_message_send_at\">Send at</label>\n        <input class=\"input\" value=\"2026-03-02T17:00\" type=\"datetime-local\" name=\"scheduled_message[send_at]\" id=\"scheduled_message_send_at\" />\n      </div>\n      <input type=\"submit\" name=\"commit\" value=\"Save\" class=\"btn btn--primary btn--small\" data-disable-with=\"Save\" />\n    </div>\n</form>\n  <div class=\"scheduled-message__actions\">\n    <form class=\"scheduled-message__action-form\" method=\"post\" action=\"/scheduled_messages/3/send_now\"><button class=\"btn btn--plain btn--small\" type=\"submit\">Send now</button></form>\n    <form class=\"scheduled-message__action-form\" method=\"post\" action=\"/scheduled_messages/3\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain btn--small\" type=\"submit\">Cancel</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "UTC",
+      "state": "stranded",
+      "html": "<article id=\"scheduled_message_3\" class=\"scheduled-message\">\n  <div class=\"scheduled-message__meta\">\n    <span class=\"scheduled-message__room\">All Talk</span>\n      <span class=\"scheduled-message__time\">· No longer sendable (channel access lost)</span>\n  </div>\n\n  <form class=\"scheduled-message__form\" action=\"/scheduled_messages/3\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n    <div>\n      <label class=\"for-screen-reader\" for=\"scheduled_message_markdown_source\">Message</label>\n      <textarea rows=\"2\" class=\"input\" maxlength=\"50000\" name=\"scheduled_message[markdown_source]\" id=\"scheduled_message_markdown_source\">\nDraft &lt;body&gt; &amp; example</textarea>\n    </div>\n    <div class=\"scheduled-message__row\">\n      <div>\n        <label for=\"scheduled_message_send_at\">Send at</label>\n        <input class=\"input\" value=\"2026-03-02T17:00\" type=\"datetime-local\" name=\"scheduled_message[send_at]\" id=\"scheduled_message_send_at\" />\n      </div>\n      <input type=\"submit\" name=\"commit\" value=\"Save\" class=\"btn btn--primary btn--small\" data-disable-with=\"Save\" />\n    </div>\n</form>\n  <div class=\"scheduled-message__actions\">\n    <form class=\"scheduled-message__action-form\" method=\"post\" action=\"/scheduled_messages/3/send_now\"><button class=\"btn btn--plain btn--small\" type=\"submit\">Send now</button></form>\n    <form class=\"scheduled-message__action-form\" method=\"post\" action=\"/scheduled_messages/3\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain btn--small\" type=\"submit\">Cancel</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "UTC",
+      "state": "sent",
+      "html": "<article id=\"scheduled_message_3\" class=\"scheduled-message scheduled-message--past\">\n  <div class=\"scheduled-message__meta\">\n    <span class=\"scheduled-message__room\">All Talk</span>\n      <span class=\"scheduled-message__time\">· Sent <time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"datetime\"></time></span>\n  </div>\n  <p class=\"scheduled-message__body\">Draft &lt;body&gt; &amp; example</p>\n</article>\n"
+    },
+    {
+      "zone": "UTC",
+      "state": "dropped",
+      "html": "<article id=\"scheduled_message_3\" class=\"scheduled-message scheduled-message--past\">\n  <div class=\"scheduled-message__meta\">\n    <span class=\"scheduled-message__room\">All Talk</span>\n      <span class=\"scheduled-message__time\">· Not sent (channel access lost)</span>\n  </div>\n  <p class=\"scheduled-message__body\">Draft &lt;body&gt; &amp; example</p>\n</article>\n"
+    },
+    {
+      "zone": "Hawaii",
+      "state": "pending",
+      "html": "<article id=\"scheduled_message_3\" class=\"scheduled-message\">\n  <div class=\"scheduled-message__meta\">\n    <span class=\"scheduled-message__room\">All Talk</span>\n      <span class=\"scheduled-message__time\">· Sends <time datetime=\"2026-03-02T07:00:00-10:00\" data-local-time-target=\"datetime\"></time></span>\n  </div>\n\n  <form class=\"scheduled-message__form\" action=\"/scheduled_messages/3\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n    <div>\n      <label class=\"for-screen-reader\" for=\"scheduled_message_markdown_source\">Message</label>\n      <textarea rows=\"2\" class=\"input\" maxlength=\"50000\" name=\"scheduled_message[markdown_source]\" id=\"scheduled_message_markdown_source\">\nDraft &lt;body&gt; &amp; example</textarea>\n    </div>\n    <div class=\"scheduled-message__row\">\n      <div>\n        <label for=\"scheduled_message_send_at\">Send at</label>\n        <input class=\"input\" value=\"2026-03-02T07:00\" type=\"datetime-local\" name=\"scheduled_message[send_at]\" id=\"scheduled_message_send_at\" />\n      </div>\n      <input type=\"submit\" name=\"commit\" value=\"Save\" class=\"btn btn--primary btn--small\" data-disable-with=\"Save\" />\n    </div>\n</form>\n  <div class=\"scheduled-message__actions\">\n    <form class=\"scheduled-message__action-form\" method=\"post\" action=\"/scheduled_messages/3/send_now\"><button class=\"btn btn--plain btn--small\" type=\"submit\">Send now</button></form>\n    <form class=\"scheduled-message__action-form\" method=\"post\" action=\"/scheduled_messages/3\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain btn--small\" type=\"submit\">Cancel</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "Hawaii",
+      "state": "stranded",
+      "html": "<article id=\"scheduled_message_3\" class=\"scheduled-message\">\n  <div class=\"scheduled-message__meta\">\n    <span class=\"scheduled-message__room\">All Talk</span>\n      <span class=\"scheduled-message__time\">· No longer sendable (channel access lost)</span>\n  </div>\n\n  <form class=\"scheduled-message__form\" action=\"/scheduled_messages/3\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" />\n    <div>\n      <label class=\"for-screen-reader\" for=\"scheduled_message_markdown_source\">Message</label>\n      <textarea rows=\"2\" class=\"input\" maxlength=\"50000\" name=\"scheduled_message[markdown_source]\" id=\"scheduled_message_markdown_source\">\nDraft &lt;body&gt; &amp; example</textarea>\n    </div>\n    <div class=\"scheduled-message__row\">\n      <div>\n        <label for=\"scheduled_message_send_at\">Send at</label>\n        <input class=\"input\" value=\"2026-03-02T07:00\" type=\"datetime-local\" name=\"scheduled_message[send_at]\" id=\"scheduled_message_send_at\" />\n      </div>\n      <input type=\"submit\" name=\"commit\" value=\"Save\" class=\"btn btn--primary btn--small\" data-disable-with=\"Save\" />\n    </div>\n</form>\n  <div class=\"scheduled-message__actions\">\n    <form class=\"scheduled-message__action-form\" method=\"post\" action=\"/scheduled_messages/3/send_now\"><button class=\"btn btn--plain btn--small\" type=\"submit\">Send now</button></form>\n    <form class=\"scheduled-message__action-form\" method=\"post\" action=\"/scheduled_messages/3\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--plain btn--small\" type=\"submit\">Cancel</button></form>\n  </div>\n</article>\n"
+    },
+    {
+      "zone": "Hawaii",
+      "state": "sent",
+      "html": "<article id=\"scheduled_message_3\" class=\"scheduled-message scheduled-message--past\">\n  <div class=\"scheduled-message__meta\">\n    <span class=\"scheduled-message__room\">All Talk</span>\n      <span class=\"scheduled-message__time\">· Sent <time datetime=\"2026-03-02T06:00:00-10:00\" data-local-time-target=\"datetime\"></time></span>\n  </div>\n  <p class=\"scheduled-message__body\">Draft &lt;body&gt; &amp; example</p>\n</article>\n"
+    },
+    {
+      "zone": "Hawaii",
+      "state": "dropped",
+      "html": "<article id=\"scheduled_message_3\" class=\"scheduled-message scheduled-message--past\">\n  <div class=\"scheduled-message__meta\">\n    <span class=\"scheduled-message__room\">All Talk</span>\n      <span class=\"scheduled-message__time\">· Not sent (channel access lost)</span>\n  </div>\n  <p class=\"scheduled-message__body\">Draft &lt;body&gt; &amp; example</p>\n</article>\n"
+    }
+  ],
+  "empty": "\n\n\n<section class=\"scheduled-messages__page\" aria-labelledby=\"scheduled-messages-title\">\n  <header class=\"scheduled-messages__header\">\n    <div>\n      <p class=\"scheduled-messages__kicker\">Your scheduled messages</p>\n      <p class=\"scheduled-messages__description\">Drafts waiting to send, in your time zone. Times are checked when they send: if you lose access to a channel, its drafts are dropped and you get an inbox item.</p>\n    </div>\n  </header>\n\n  <h2 class=\"scheduled-messages__group-title\">Upcoming</h2>\n  <div id=\"scheduled-messages-upcoming\" class=\"scheduled-messages__list\">\n      <p class=\"scheduled-messages__empty\">\n        <span class=\"scheduled-messages__empty-title\">Nothing scheduled.</span>\n        Use “Schedule send” next to the composer's send button to write ahead.\n      </p>\n  </div>\n\n\n</section>\n",
+  "composer": [
+    {
+      "thread_id": null,
+      "html": "<span class=\"schedule-send\" data-controller=\"schedule-send\"\n    data-schedule-send-url-value=\"/rooms/486777696/scheduled_messages\"\n    data-schedule-send-thread-id-value=\"\"\n    data-schedule-send-dialog-id-value=\"schedule-send\">\n  <button type=\"button\" class=\"btn btn--borderless composer__schedule-btn flex-item-no-shrink\"\n      title=\"Schedule send\" aria-label=\"Schedule send\" aria-haspopup=\"dialog\"\n      data-action=\"schedule-send#open\">\n    <img aria-hidden=\"true\" src=\"/assets/calendar-1df59226.svg\" width=\"17\" height=\"17\" />\n  </button>\n\n  <dialog id=\"schedule-send\" class=\"schedule-send__dialog\" aria-labelledby=\"schedule-send-title\">\n    <div class=\"schedule-send__panel\">\n      <div class=\"schedule-send__header\">\n        <h2 id=\"schedule-send-title\">Schedule send</h2>\n        <button type=\"button\" class=\"btn btn--borderless\" data-action=\"schedule-send#close\" aria-label=\"Close schedule send\">✕</button>\n      </div>\n\n      <p class=\"txt-small schedule-send__hint\">Times are in your time zone.</p>\n      <p class=\"schedule-send__status txt-small\" role=\"alert\" hidden data-schedule-send-target=\"status\"></p>\n\n      <div class=\"schedule-send__presets\">\n        <button type=\"button\" class=\"btn btn--plain schedule-send__preset\" data-action=\"schedule-send#schedulePreset\" data-preset=\"hour\">In 1 hour</button>\n        <button type=\"button\" class=\"btn btn--plain schedule-send__preset\" data-action=\"schedule-send#schedulePreset\" data-preset=\"tomorrow\">Tomorrow at 9 AM</button>\n        <button type=\"button\" class=\"btn btn--plain schedule-send__preset\" data-action=\"schedule-send#schedulePreset\" data-preset=\"monday\">Next Monday at 9 AM</button>\n      </div>\n\n      <div class=\"schedule-send__custom\">\n        <label for=\"schedule-send-custom\">Custom time</label>\n        <div class=\"schedule-send__custom-row\">\n          <input type=\"datetime-local\" id=\"schedule-send-custom\" class=\"input\"\n              data-schedule-send-target=\"custom\"\n              data-action=\"keydown->schedule-send#customEnter\">\n          <button type=\"button\" class=\"btn btn--primary btn--small\" data-action=\"schedule-send#scheduleCustom\">Schedule</button>\n        </div>\n      </div>\n\n      <p class=\"schedule-send__footer txt-small\">\n        <a target=\"_top\" href=\"/scheduled_messages\">View scheduled messages</a>\n      </p>\n    </div>\n  </dialog>\n</span>\n"
+    },
+    {
+      "thread_id": 777,
+      "html": "<span class=\"schedule-send\" data-controller=\"schedule-send\"\n    data-schedule-send-url-value=\"/rooms/486777696/scheduled_messages\"\n    data-schedule-send-thread-id-value=\"777\"\n    data-schedule-send-dialog-id-value=\"schedule-send-thread-777\">\n  <button type=\"button\" class=\"btn btn--borderless composer__schedule-btn flex-item-no-shrink\"\n      title=\"Schedule send\" aria-label=\"Schedule send\" aria-haspopup=\"dialog\"\n      data-action=\"schedule-send#open\">\n    <img aria-hidden=\"true\" src=\"/assets/calendar-1df59226.svg\" width=\"17\" height=\"17\" />\n  </button>\n\n  <dialog id=\"schedule-send-thread-777\" class=\"schedule-send__dialog\" aria-labelledby=\"schedule-send-thread-777-title\">\n    <div class=\"schedule-send__panel\">\n      <div class=\"schedule-send__header\">\n        <h2 id=\"schedule-send-thread-777-title\">Schedule send</h2>\n        <button type=\"button\" class=\"btn btn--borderless\" data-action=\"schedule-send#close\" aria-label=\"Close schedule send\">✕</button>\n      </div>\n\n      <p class=\"txt-small schedule-send__hint\">Times are in your time zone.</p>\n      <p class=\"schedule-send__status txt-small\" role=\"alert\" hidden data-schedule-send-target=\"status\"></p>\n\n      <div class=\"schedule-send__presets\">\n        <button type=\"button\" class=\"btn btn--plain schedule-send__preset\" data-action=\"schedule-send#schedulePreset\" data-preset=\"hour\">In 1 hour</button>\n        <button type=\"button\" class=\"btn btn--plain schedule-send__preset\" data-action=\"schedule-send#schedulePreset\" data-preset=\"tomorrow\">Tomorrow at 9 AM</button>\n        <button type=\"button\" class=\"btn btn--plain schedule-send__preset\" data-action=\"schedule-send#schedulePreset\" data-preset=\"monday\">Next Monday at 9 AM</button>\n      </div>\n\n      <div class=\"schedule-send__custom\">\n        <label for=\"schedule-send-thread-777-custom\">Custom time</label>\n        <div class=\"schedule-send__custom-row\">\n          <input type=\"datetime-local\" id=\"schedule-send-thread-777-custom\" class=\"input\"\n              data-schedule-send-target=\"custom\"\n              data-action=\"keydown->schedule-send#customEnter\">\n          <button type=\"button\" class=\"btn btn--primary btn--small\" data-action=\"schedule-send#scheduleCustom\">Schedule</button>\n        </div>\n      </div>\n\n      <p class=\"schedule-send__footer txt-small\">\n        <a target=\"_top\" href=\"/scheduled_messages\">View scheduled messages</a>\n      </p>\n    </div>\n  </dialog>\n</span>\n"
+    }
+  ]
+}

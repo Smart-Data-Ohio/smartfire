@@ -1,0 +1,678 @@
+{
+  "reference": "d7c7de92",
+  "steps": [
+    {
+      "text": "/shrug ship it",
+      "status": 200,
+      "body": "{\"status\":\"posted\",\"message_id\":935962119}"
+    },
+    {
+      "text": "/me testing",
+      "status": 200,
+      "body": "{\"status\":\"posted\",\"message_id\":935962120}"
+    },
+    {
+      "text": "/play bell",
+      "status": 200,
+      "body": "{\"status\":\"posted\",\"message_id\":935962121}"
+    },
+    {
+      "text": "/play 56k",
+      "status": 200,
+      "body": "{\"status\":\"posted\",\"message_id\":935962122}"
+    },
+    {
+      "text": "/play unknown",
+      "status": 200,
+      "body": "{\"status\":\"posted\",\"message_id\":935962123}"
+    },
+    {
+      "text": "/play",
+      "status": 200,
+      "body": "{\"status\":\"posted\",\"message_id\":935962124}"
+    },
+    {
+      "text": "/poll",
+      "status": 200,
+      "body": "{\"status\":\"open_poll\"}"
+    },
+    {
+      "text": "/event",
+      "status": 200,
+      "body": "{\"status\":\"open_url\",\"url\":\"/rooms/486777696/events/new\"}"
+    },
+    {
+      "text": "/event Launch party",
+      "status": 200,
+      "body": "{\"status\":\"open_url\",\"url\":\"/rooms/486777696/events/new?event%5Btime_zone%5D=America%2FNew_York&event%5Btitle%5D=Launch+party\"}"
+    },
+    {
+      "text": "/status 🚂 On a train",
+      "status": 200,
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Status set to “🚂 On a train”.\"}"
+    },
+    {
+      "text": "/dnd 30m",
+      "status": 200,
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is on until March 02, 2026 11:30.\"}"
+    },
+    {
+      "text": "/dnd off",
+      "status": 200,
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Do Not Disturb is off.\"}"
+    },
+    {
+      "text": "/ooo tomorrow Working remote",
+      "status": 200,
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office until March 03, 2026. Note: “Working remote”.\"}"
+    },
+    {
+      "text": "/ooo off",
+      "status": 200,
+      "body": "{\"status\":\"ephemeral\",\"message\":\"Out of office is off.\"}"
+    },
+    {
+      "text": "/remind in 20 minutes review deploy",
+      "status": 200,
+      "body": "{\"status\":\"posted\",\"message_id\":935962125,\"notice\":\"Reminder set for March 02, 2026 11:20.\"}"
+    },
+    {
+      "text": "/frobnicate",
+      "status": 200,
+      "body": "{\"status\":\"error\",\"message\":\"Unknown command “/frobnicate”. Available: /huddle, /event, /poll, /remind, /status, /dnd, /ooo, /shrug, /me, /play.\"}"
+    },
+    {
+      "text": null,
+      "status": 200,
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "text": 42,
+      "status": 200,
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "text": [
+        "/poll"
+      ],
+      "status": 200,
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    },
+    {
+      "text": {
+        "a": "b"
+      },
+      "status": 200,
+      "body": "{\"status\":\"error\",\"message\":\"Type / to see available commands.\"}"
+    }
+  ],
+  "pickers": [
+    {
+      "path": "/autocompletable/icons.json?q=open",
+      "status": 200,
+      "body": "[{\"name\":\"openai\",\"title\":\"OpenAI\",\"kind\":\"brand\",\"value\":\"brand:openai\",\"image\":\"/assets/icons/brands/openai-a0bb8578.svg\"},{\"name\":\"open_book\",\"title\":\"Open book\",\"kind\":\"emoji\",\"value\":\"emoji:open_book\",\"character\":\"📖\"},{\"name\":\"open_file_folder\",\"title\":\"Open file folder\",\"kind\":\"emoji\",\"value\":\"emoji:open_file_folder\",\"character\":\"📂\"},{\"name\":\"open_hands\",\"title\":\"Open hands\",\"kind\":\"emoji\",\"value\":\"emoji:open_hands\",\"character\":\"👐\"},{\"name\":\"open_mouth\",\"title\":\"Open mouth\",\"kind\":\"emoji\",\"value\":\"emoji:open_mouth\",\"character\":\"😮\"},{\"name\":\"open_umbrella\",\"title\":\"Open umbrella\",\"kind\":\"emoji\",\"value\":\"emoji:open_umbrella\",\"character\":\"☂️\"},{\"name\":\"face_with_open_eyes_and_hand_over_mouth\",\"title\":\"Face with open eyes and hand over mouth\",\"kind\":\"emoji\",\"value\":\"emoji:face_with_open_eyes_and_hand_over_mouth\",\"character\":\"🫢\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?q=fire",
+      "status": 200,
+      "body": "[{\"name\":\"fire\",\"title\":\"Fire\",\"kind\":\"emoji\",\"value\":\"emoji:fire\",\"character\":\"🔥\"},{\"name\":\"fire_engine\",\"title\":\"Fire engine\",\"kind\":\"emoji\",\"value\":\"emoji:fire_engine\",\"character\":\"🚒\"},{\"name\":\"fire_extinguisher\",\"title\":\"Fire extinguisher\",\"kind\":\"emoji\",\"value\":\"emoji:fire_extinguisher\",\"character\":\"🧯\"},{\"name\":\"firecracker\",\"title\":\"Firecracker\",\"kind\":\"emoji\",\"value\":\"emoji:firecracker\",\"character\":\"🧨\"},{\"name\":\"firefighter\",\"title\":\"Firefighter\",\"kind\":\"emoji\",\"value\":\"emoji:firefighter\",\"character\":\"🧑‍🚒\"},{\"name\":\"fireworks\",\"title\":\"Fireworks\",\"kind\":\"emoji\",\"value\":\"emoji:fireworks\",\"character\":\"🎆\"},{\"name\":\"heart_on_fire\",\"title\":\"Heart on fire\",\"kind\":\"emoji\",\"value\":\"emoji:heart_on_fire\",\"character\":\"❤️‍🔥\"},{\"name\":\"man_firefighter\",\"title\":\"Man firefighter\",\"kind\":\"emoji\",\"value\":\"emoji:man_firefighter\",\"character\":\"👨‍🚒\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?q=",
+      "status": 200,
+      "body": "[]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?q=zzz_no_such_icon",
+      "status": 200,
+      "body": "[]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?q=acme",
+      "status": 200,
+      "body": "[{\"name\":\"acme\",\"title\":\"Acme\",\"kind\":\"custom\",\"value\":\"custom:acme\",\"image\":\"/icons/acme\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?custom=0",
+      "status": 200,
+      "body": "[{\"name\":\"acme\",\"title\":\"Acme\",\"kind\":\"custom\",\"value\":\"custom:acme\",\"image\":\"/icons/acme\"},{\"name\":\"globex\",\"title\":\"Globex\",\"kind\":\"custom\",\"value\":\"custom:globex\",\"image\":\"/icons/globex\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?q=&query=fire",
+      "status": 200,
+      "body": "[{\"name\":\"fire\",\"title\":\"Fire\",\"kind\":\"emoji\",\"value\":\"emoji:fire\",\"character\":\"🔥\"},{\"name\":\"fire_engine\",\"title\":\"Fire engine\",\"kind\":\"emoji\",\"value\":\"emoji:fire_engine\",\"character\":\"🚒\"},{\"name\":\"fire_extinguisher\",\"title\":\"Fire extinguisher\",\"kind\":\"emoji\",\"value\":\"emoji:fire_extinguisher\",\"character\":\"🧯\"},{\"name\":\"firecracker\",\"title\":\"Firecracker\",\"kind\":\"emoji\",\"value\":\"emoji:firecracker\",\"character\":\"🧨\"},{\"name\":\"firefighter\",\"title\":\"Firefighter\",\"kind\":\"emoji\",\"value\":\"emoji:firefighter\",\"character\":\"🧑‍🚒\"},{\"name\":\"fireworks\",\"title\":\"Fireworks\",\"kind\":\"emoji\",\"value\":\"emoji:fireworks\",\"character\":\"🎆\"},{\"name\":\"heart_on_fire\",\"title\":\"Heart on fire\",\"kind\":\"emoji\",\"value\":\"emoji:heart_on_fire\",\"character\":\"❤️‍🔥\"},{\"name\":\"man_firefighter\",\"title\":\"Man firefighter\",\"kind\":\"emoji\",\"value\":\"emoji:man_firefighter\",\"character\":\"👨‍🚒\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?q=FIRE",
+      "status": 200,
+      "body": "[{\"name\":\"fire\",\"title\":\"Fire\",\"kind\":\"emoji\",\"value\":\"emoji:fire\",\"character\":\"🔥\"},{\"name\":\"fire_engine\",\"title\":\"Fire engine\",\"kind\":\"emoji\",\"value\":\"emoji:fire_engine\",\"character\":\"🚒\"},{\"name\":\"fire_extinguisher\",\"title\":\"Fire extinguisher\",\"kind\":\"emoji\",\"value\":\"emoji:fire_extinguisher\",\"character\":\"🧯\"},{\"name\":\"firecracker\",\"title\":\"Firecracker\",\"kind\":\"emoji\",\"value\":\"emoji:firecracker\",\"character\":\"🧨\"},{\"name\":\"firefighter\",\"title\":\"Firefighter\",\"kind\":\"emoji\",\"value\":\"emoji:firefighter\",\"character\":\"🧑‍🚒\"},{\"name\":\"fireworks\",\"title\":\"Fireworks\",\"kind\":\"emoji\",\"value\":\"emoji:fireworks\",\"character\":\"🎆\"},{\"name\":\"heart_on_fire\",\"title\":\"Heart on fire\",\"kind\":\"emoji\",\"value\":\"emoji:heart_on_fire\",\"character\":\"❤️‍🔥\"},{\"name\":\"man_firefighter\",\"title\":\"Man firefighter\",\"kind\":\"emoji\",\"value\":\"emoji:man_firefighter\",\"character\":\"👨‍🚒\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?q=gpt",
+      "status": 200,
+      "body": "[{\"name\":\"openai\",\"title\":\"OpenAI\",\"kind\":\"brand\",\"value\":\"brand:openai\",\"image\":\"/assets/icons/brands/openai-a0bb8578.svg\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/icons.json?q=%20%3Afire%3A%20",
+      "status": 200,
+      "body": "[]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/slash_commands.json?room_id=486777696",
+      "status": 200,
+      "body": "[{\"name\":\"huddle\",\"value\":\"huddle\",\"description\":\"Start a call in this room\",\"arg_hint\":\"\",\"takes_arguments\":false,\"agent\":null},{\"name\":\"event\",\"value\":\"event\",\"description\":\"Open the event form prefilled\",\"arg_hint\":\"<title> <when>\",\"takes_arguments\":false,\"agent\":null},{\"name\":\"poll\",\"value\":\"poll\",\"description\":\"Open the poll builder\",\"arg_hint\":\"\",\"takes_arguments\":false,\"agent\":null},{\"name\":\"remind\",\"value\":\"remind\",\"description\":\"Post and remind yourself about it later\",\"arg_hint\":\"<when> <text>\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"status\",\"value\":\"status\",\"description\":\"Set your custom status\",\"arg_hint\":\"<emoji> <text>\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"dnd\",\"value\":\"dnd\",\"description\":\"Toggle Do Not Disturb, optionally for a while\",\"arg_hint\":\"[duration|off]\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"ooo\",\"value\":\"ooo\",\"description\":\"Set out of office with an optional note\",\"arg_hint\":\"<when> [note]|off\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"shrug\",\"value\":\"shrug\",\"description\":\"Post with a shrug\",\"arg_hint\":\"[text]\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"me\",\"value\":\"me\",\"description\":\"Post an action line\",\"arg_hint\":\"<action>\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"play\",\"value\":\"play\",\"description\":\"Play a chat sound\",\"arg_hint\":\"<sound>\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"deploy\",\"value\":\"deploy\",\"description\":\"Ship it\",\"arg_hint\":\"\",\"takes_arguments\":true,\"agent\":\"Bender Bot\"},{\"name\":\"zero\",\"value\":\"zero\",\"description\":\"Custom command\",\"arg_hint\":\"\",\"takes_arguments\":false,\"agent\":\"Bender Bot\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/slash_commands.json?room_id=486777696&query=STA",
+      "status": 200,
+      "body": "[{\"name\":\"huddle\",\"value\":\"huddle\",\"description\":\"Start a call in this room\",\"arg_hint\":\"\",\"takes_arguments\":false,\"agent\":null},{\"name\":\"status\",\"value\":\"status\",\"description\":\"Set your custom status\",\"arg_hint\":\"<emoji> <text>\",\"takes_arguments\":true,\"agent\":null}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/slash_commands.json?room_id=486777696&thread_id=9",
+      "status": 200,
+      "body": "[{\"name\":\"huddle\",\"value\":\"huddle\",\"description\":\"Start a call in this room\",\"arg_hint\":\"\",\"takes_arguments\":false,\"agent\":null},{\"name\":\"event\",\"value\":\"event\",\"description\":\"Open the event form prefilled\",\"arg_hint\":\"<title> <when>\",\"takes_arguments\":false,\"agent\":null},{\"name\":\"remind\",\"value\":\"remind\",\"description\":\"Post and remind yourself about it later\",\"arg_hint\":\"<when> <text>\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"status\",\"value\":\"status\",\"description\":\"Set your custom status\",\"arg_hint\":\"<emoji> <text>\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"dnd\",\"value\":\"dnd\",\"description\":\"Toggle Do Not Disturb, optionally for a while\",\"arg_hint\":\"[duration|off]\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"ooo\",\"value\":\"ooo\",\"description\":\"Set out of office with an optional note\",\"arg_hint\":\"<when> [note]|off\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"shrug\",\"value\":\"shrug\",\"description\":\"Post with a shrug\",\"arg_hint\":\"[text]\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"me\",\"value\":\"me\",\"description\":\"Post an action line\",\"arg_hint\":\"<action>\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"play\",\"value\":\"play\",\"description\":\"Play a chat sound\",\"arg_hint\":\"<sound>\",\"takes_arguments\":true,\"agent\":null},{\"name\":\"deploy\",\"value\":\"deploy\",\"description\":\"Ship it\",\"arg_hint\":\"\",\"takes_arguments\":true,\"agent\":\"Bender Bot\"},{\"name\":\"zero\",\"value\":\"zero\",\"description\":\"Custom command\",\"arg_hint\":\"\",\"takes_arguments\":false,\"agent\":\"Bender Bot\"}]",
+      "total": null,
+      "link": null
+    },
+    {
+      "path": "/autocompletable/users.json?query=da",
+      "status": 200,
+      "body": "[{\"name\":\"David\",\"markdown_display_name\":\"David\",\"value\":127326141,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302110000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\",\"mention_token\":\"@[David]\"}]",
+      "total": "1",
+      "link": null
+    },
+    {
+      "path": "/autocompletable/users.json?query=da&room_id=486777696",
+      "status": 200,
+      "body": "[{\"name\":\"David\",\"markdown_display_name\":\"David\",\"value\":127326141,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302110000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\",\"mention_token\":\"@[David]\"}]",
+      "total": "1",
+      "link": null
+    },
+    {
+      "path": "/autocompletable/users.json?filter=da",
+      "status": 200,
+      "body": "[{\"name\":\"Bender Bot\",\"markdown_display_name\":\"Bender Bot\",\"value\":394959859,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102150000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMzk0OTU5ODU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--b01cb71b7140dace27e8e8a6b0bcc4e9799352db\",\"mention_token\":\"@[Bender Bot]\"},{\"name\":\"David\",\"markdown_display_name\":\"David\",\"value\":127326141,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260302110000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTI3MzI2MTQxP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--4edfcf69f0cfab9a83f00fcd57de54061ab62d4a\",\"mention_token\":\"@[David]\"},{\"name\":\"Deploy Bot\",\"markdown_display_name\":\"Deploy Bot\",\"value\":773523956,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU2LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--dcf9959245bd2d19fb295c0580f86eaf3f49abd470719300216bc05349aa39d5/avatar?v=20260125110100\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvNzczNTIzOTU2P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--fe1666501ad953c6f1d9eabc428e323ec83e1533\",\"mention_token\":\"@[Deploy Bot]\"},{\"name\":\"Jason\",\"markdown_display_name\":\"Jason\",\"value\":149087659,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6MTQ5MDg3NjU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6ab1dc9205475402f2a2d59c27beba22032063f81ed01ac8f39bce177563c4fc/avatar?v=20260125110000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMTQ5MDg3NjU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--2d7e85bc60af2ffd9f0bcdef54c409b3a50e3726\",\"mention_token\":\"@[Jason]\"},{\"name\":\"JZ\",\"markdown_display_name\":\"JZ\",\"value\":773523953,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260102130000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvNzczNTIzOTUzP2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--6b2264965f8cf2ee611d8640d2da696094062945\",\"mention_token\":\"@[JZ]\"},{\"name\":\"Kevin\",\"markdown_display_name\":\"Kevin\",\"value\":712064548,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260102140000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvNzEyMDY0NTQ4P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--5be8d80808e2c78021c7d87a5bf44e86facab2e4\",\"mention_token\":\"@[Kevin]\"},{\"name\":\"Lonely Lou\",\"markdown_display_name\":\"Lonely Lou\",\"value\":773523958,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--0a717f7b4077c834c840dc47ed190e5baa3d3e1b91d267d1298e9f5a13e7b66b/avatar?v=20260203110000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvNzczNTIzOTU4P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--ad650c7904f01a48f7d6d16654ee01da64baffd8\",\"mention_token\":\"@[Lonely Lou]\"},{\"name\":\"New member\",\"markdown_display_name\":\"New member\",\"value\":773523959,\"avatar_url\":\"http://campfire.test/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--fadd4fdbb5e26c30d1096255502fbbbbb64bfd4161e2c5326163f5a41ef800a3/avatar?v=20260302110000\",\"sgid\":\"eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvNzczNTIzOTU5P2V4cGlyZXNfaW4iLCJwdXIiOiJhdHRhY2hhYmxlIn19--fc9f1299c0054c9ef752f898b27b70c234d0587c\",\"mention_token\":\"@[New member]\"}]",
+      "total": "8",
+      "link": null
+    },
+    {
+      "path": "/autocompletable/users.json?page=2",
+      "status": 200,
+      "body": "[]",
+      "total": "8",
+      "link": "<http://campfire.test/autocompletable/users.json?page=3>; rel=\"next\""
+    }
+  ],
+  "play": [
+    {
+      "source": "/play 56k",
+      "client_message_id": "slash-play-0",
+      "html": "<div id=\"presentation_message_slash-play-0\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/56k-67359aa6.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"79\" height=\"33\" class=\"align--middle\" src=\"/assets/sounds/56k-1567db5b.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play ballmer",
+      "client_message_id": "slash-play-1",
+      "html": "<div id=\"presentation_message_slash-play-1\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/ballmer-055893e5.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>developers!</div>\n</div>\n"
+    },
+    {
+      "source": "/play bell",
+      "client_message_id": "slash-play-2",
+      "html": "<div id=\"presentation_message_slash-play-2\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/bell-4dd04376.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>🔔</div>\n</div>\n"
+    },
+    {
+      "source": "/play bezos",
+      "client_message_id": "slash-play-3",
+      "html": "<div id=\"presentation_message_slash-play-3\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/bezos-ed56ef09.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>😆💭</div>\n</div>\n"
+    },
+    {
+      "source": "/play bueller",
+      "client_message_id": "slash-play-4",
+      "html": "<div id=\"presentation_message_slash-play-4\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/bueller-edbffb89.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>anyone?</div>\n</div>\n"
+    },
+    {
+      "source": "/play butts",
+      "client_message_id": "slash-play-5",
+      "html": "<div id=\"presentation_message_slash-play-5\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/butts-6774d8a3.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>👐 🚬</div>\n</div>\n"
+    },
+    {
+      "source": "/play clowntown",
+      "client_message_id": "slash-play-6",
+      "html": "<div id=\"presentation_message_slash-play-6\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/clowntown-880ab480.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"210\" height=\"150\" class=\"align--middle\" src=\"/assets/sounds/clowntown-1670db9e.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play cottoneyejoe",
+      "client_message_id": "slash-play-7",
+      "html": "<div id=\"presentation_message_slash-play-7\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/cottoneyejoe-39c980e8.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>🎶🙉🎶 </div>\n</div>\n"
+    },
+    {
+      "source": "/play crickets",
+      "client_message_id": "slash-play-8",
+      "html": "<div id=\"presentation_message_slash-play-8\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/crickets-b50f1da0.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>hears crickets chirping</div>\n</div>\n"
+    },
+    {
+      "source": "/play curb",
+      "client_message_id": "slash-play-9",
+      "html": "<div id=\"presentation_message_slash-play-9\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/curb-f9327cfc.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"150\" height=\"101\" class=\"align--middle\" src=\"/assets/sounds/curb-b74cab9f.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play dadgummit",
+      "client_message_id": "slash-play-10",
+      "html": "<div id=\"presentation_message_slash-play-10\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/dadgummit-6c84151f.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>dad gummit!! 🎣</div>\n</div>\n"
+    },
+    {
+      "source": "/play dangerzone",
+      "client_message_id": "slash-play-11",
+      "html": "<div id=\"presentation_message_slash-play-11\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/dangerzone-7382b27e.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"157\" height=\"32\" class=\"align--middle\" src=\"/assets/sounds/dangerzone-0e0f0d09.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play danielsan",
+      "client_message_id": "slash-play-12",
+      "html": "<div id=\"presentation_message_slash-play-12\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/danielsan-0815085a.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>🎆 🏆 🎆</div>\n</div>\n"
+    },
+    {
+      "source": "/play deeper",
+      "client_message_id": "slash-play-13",
+      "html": "<div id=\"presentation_message_slash-play-13\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/deeper-c9fe70a0.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"188\" height=\"80\" class=\"align--middle\" src=\"/assets/sounds/top-cc086a68.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play donotwant",
+      "client_message_id": "slash-play-14",
+      "html": "<div id=\"presentation_message_slash-play-14\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/donotwant-fa71a459.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"150\" height=\"150\" class=\"align--middle\" src=\"/assets/sounds/donotwant-d29fb6fb.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play drama",
+      "client_message_id": "slash-play-15",
+      "html": "<div id=\"presentation_message_slash-play-15\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/drama-92fb52d2.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"300\" height=\"16\" class=\"align--middle\" src=\"/assets/sounds/drama-b398c916.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play flawless",
+      "client_message_id": "slash-play-16",
+      "html": "<div id=\"presentation_message_slash-play-16\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/flawless-678d1f3c.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>#flawless</div>\n</div>\n"
+    },
+    {
+      "source": "/play glados",
+      "client_message_id": "slash-play-17",
+      "html": "<div id=\"presentation_message_slash-play-17\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/glados-f033ed9e.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>🤖💢</div>\n</div>\n"
+    },
+    {
+      "source": "/play gogogo",
+      "client_message_id": "slash-play-18",
+      "html": "<div id=\"presentation_message_slash-play-18\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/gogogo-f091ebbc.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>Go, go, go!</div>\n</div>\n"
+    },
+    {
+      "source": "/play greatjob",
+      "client_message_id": "slash-play-19",
+      "html": "<div id=\"presentation_message_slash-play-19\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/greatjob-7d6aada2.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"79\" height=\"16\" class=\"align--middle\" src=\"/assets/sounds/greatjob-99af483c.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play greyjoy",
+      "client_message_id": "slash-play-20",
+      "html": "<div id=\"presentation_message_slash-play-20\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/greyjoy-dcb0e786.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>😖🎺</div>\n</div>\n"
+    },
+    {
+      "source": "/play guarantee",
+      "client_message_id": "slash-play-21",
+      "html": "<div id=\"presentation_message_slash-play-21\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/guarantee-8e639fbb.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>guarantees it 👌</div>\n</div>\n"
+    },
+    {
+      "source": "/play heygirl",
+      "client_message_id": "slash-play-22",
+      "html": "<div id=\"presentation_message_slash-play-22\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/heygirl-b9a85600.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>✨💁✨</div>\n</div>\n"
+    },
+    {
+      "source": "/play honk",
+      "client_message_id": "slash-play-23",
+      "html": "<div id=\"presentation_message_slash-play-23\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/honk-9c336a89.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>HONK</div>\n</div>\n"
+    },
+    {
+      "source": "/play horn",
+      "client_message_id": "slash-play-24",
+      "html": "<div id=\"presentation_message_slash-play-24\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/horn-efb0f714.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>🐶 ✂️ 🐱</div>\n</div>\n"
+    },
+    {
+      "source": "/play horror",
+      "client_message_id": "slash-play-25",
+      "html": "<div id=\"presentation_message_slash-play-25\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/horror-5181b7e4.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>💀 💀 💀 💀 💀 💀 💀</div>\n</div>\n"
+    },
+    {
+      "source": "/play inconceivable",
+      "client_message_id": "slash-play-26",
+      "html": "<div id=\"presentation_message_slash-play-26\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/inconceivable-c8811768.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>doesn&#39;t think it means what you think it means…</div>\n</div>\n"
+    },
+    {
+      "source": "/play letitgo",
+      "client_message_id": "slash-play-27",
+      "html": "<div id=\"presentation_message_slash-play-27\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/letitgo-bc89591d.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>❄️👩❄️⛄️❄️</div>\n</div>\n"
+    },
+    {
+      "source": "/play live",
+      "client_message_id": "slash-play-28",
+      "html": "<div id=\"presentation_message_slash-play-28\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/live-550f1f88.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>is DOING IT LIVE</div>\n</div>\n"
+    },
+    {
+      "source": "/play loggins",
+      "client_message_id": "slash-play-29",
+      "html": "<div id=\"presentation_message_slash-play-29\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/loggins-63aac7af.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"200\" height=\"151\" class=\"align--middle\" src=\"/assets/sounds/loggins-a40a75e6.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play makeitso",
+      "client_message_id": "slash-play-30",
+      "html": "<div id=\"presentation_message_slash-play-30\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/makeitso-f6e530b1.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>make it so 👉</div>\n</div>\n"
+    },
+    {
+      "source": "/play noooo",
+      "client_message_id": "slash-play-31",
+      "html": "<div id=\"presentation_message_slash-play-31\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/noooo-c68a85f4.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>👸💀😒</div>\n</div>\n"
+    },
+    {
+      "source": "/play nyan",
+      "client_message_id": "slash-play-32",
+      "html": "<div id=\"presentation_message_slash-play-32\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/nyan-1fe5c553.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"36\" height=\"15\" class=\"align--middle\" src=\"/assets/sounds/nyan-8cc577e4.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play ohmy",
+      "client_message_id": "slash-play-33",
+      "html": "<div id=\"presentation_message_slash-play-33\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/ohmy-189dd829.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>raises an eyebrow 😏</div>\n</div>\n"
+    },
+    {
+      "source": "/play ohyeah",
+      "client_message_id": "slash-play-34",
+      "html": "<div id=\"presentation_message_slash-play-34\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/ohyeah-48506f41.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>isn&#39;t playing by the rules</div>\n</div>\n"
+    },
+    {
+      "source": "/play pushit",
+      "client_message_id": "slash-play-35",
+      "html": "<div id=\"presentation_message_slash-play-35\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/pushit-f43f90a7.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"104\" height=\"15\" class=\"align--middle\" src=\"/assets/sounds/pushit-05915cda.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play rimshot",
+      "client_message_id": "slash-play-36",
+      "html": "<div id=\"presentation_message_slash-play-36\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/rimshot-66c3332b.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>plays a rimshot</div>\n</div>\n"
+    },
+    {
+      "source": "/play rollout",
+      "client_message_id": "slash-play-37",
+      "html": "<div id=\"presentation_message_slash-play-37\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/rollout-3a826ae4.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>is rolling out 🚗</div>\n</div>\n"
+    },
+    {
+      "source": "/play rumble",
+      "client_message_id": "slash-play-38",
+      "html": "<div id=\"presentation_message_slash-play-38\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/rumble-7b5d6e4f.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"220\" height=\"150\" class=\"align--middle\" src=\"/assets/sounds/rumble-c4fc52a9.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play sax",
+      "client_message_id": "slash-play-39",
+      "html": "<div id=\"presentation_message_slash-play-39\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/sax-9e7841a8.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>🌇🎷🎶</div>\n</div>\n"
+    },
+    {
+      "source": "/play secret",
+      "client_message_id": "slash-play-40",
+      "html": "<div id=\"presentation_message_slash-play-40\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/secret-9f61e3b5.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>found a secret area 🔑</div>\n</div>\n"
+    },
+    {
+      "source": "/play sexyback",
+      "client_message_id": "slash-play-41",
+      "html": "<div id=\"presentation_message_slash-play-41\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/sexyback-ec0cf66f.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>🔞</div>\n</div>\n"
+    },
+    {
+      "source": "/play story",
+      "client_message_id": "slash-play-42",
+      "html": "<div id=\"presentation_message_slash-play-42\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/story-0665aaac.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>and now you know…</div>\n</div>\n"
+    },
+    {
+      "source": "/play tada",
+      "client_message_id": "slash-play-43",
+      "html": "<div id=\"presentation_message_slash-play-43\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/tada-6500487f.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>plays a fanfare 🎏</div>\n</div>\n"
+    },
+    {
+      "source": "/play tmyk",
+      "client_message_id": "slash-play-44",
+      "html": "<div id=\"presentation_message_slash-play-44\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/tmyk-035cbb8b.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>✨ ⭐️ The More You Know ✨ ⭐️</div>\n</div>\n"
+    },
+    {
+      "source": "/play totes",
+      "client_message_id": "slash-play-45",
+      "html": "<div id=\"presentation_message_slash-play-45\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/totes-665011c8.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>😁👍</div>\n</div>\n"
+    },
+    {
+      "source": "/play trololo",
+      "client_message_id": "slash-play-46",
+      "html": "<div id=\"presentation_message_slash-play-46\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/trololo-d7f880d7.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>трололо</div>\n</div>\n"
+    },
+    {
+      "source": "/play trombone",
+      "client_message_id": "slash-play-47",
+      "html": "<div id=\"presentation_message_slash-play-47\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/trombone-3cbeabc3.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>plays a sad trombone</div>\n</div>\n"
+    },
+    {
+      "source": "/play unix",
+      "client_message_id": "slash-play-48",
+      "html": "<div id=\"presentation_message_slash-play-48\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/unix-bb19b65d.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>knows this 💻</div>\n</div>\n"
+    },
+    {
+      "source": "/play vuvuzela",
+      "client_message_id": "slash-play-49",
+      "html": "<div id=\"presentation_message_slash-play-49\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/vuvuzela-d177cb0f.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>======&lt;() ~ ♪ ~♫</div>\n</div>\n"
+    },
+    {
+      "source": "/play what",
+      "client_message_id": "slash-play-50",
+      "html": "<div id=\"presentation_message_slash-play-50\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/what-880c5f29.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"100\" height=\"131\" class=\"align--middle\" src=\"/assets/sounds/what-02690db4.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play whoomp",
+      "client_message_id": "slash-play-51",
+      "html": "<div id=\"presentation_message_slash-play-51\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/whoomp-f21c3c43.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>👏‼️😎</div>\n</div>\n"
+    },
+    {
+      "source": "/play wups",
+      "client_message_id": "slash-play-52",
+      "html": "<div id=\"presentation_message_slash-play-52\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/wups-fbad935c.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>wups!</div>\n</div>\n"
+    },
+    {
+      "source": "/play yay",
+      "client_message_id": "slash-play-53",
+      "html": "<div id=\"presentation_message_slash-play-53\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/yay-1fae7a37.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"103\" height=\"50\" class=\"align--middle\" src=\"/assets/sounds/yay-914d17c4.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play yeah",
+      "client_message_id": "slash-play-54",
+      "html": "<div id=\"presentation_message_slash-play-54\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/yeah-71e3371e.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button><img width=\"104\" height=\"15\" class=\"align--middle\" src=\"/assets/sounds/yeah-886795b2.webp\" /></div>\n</div>\n"
+    },
+    {
+      "source": "/play yodel",
+      "client_message_id": "slash-play-55",
+      "html": "<div id=\"presentation_message_slash-play-55\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"sound\" data-controller=\"sound\" data-action=\"messages:play-&gt;sound#play\" data-sound-url-value=\"/assets/yodel-b14597bb.mp3\"><button class=\"btn btn--plain\" data-action=\"sound#play\">🔊</button>📣🗻🙉</div>\n</div>\n"
+    },
+    {
+      "source": "/play unknown",
+      "client_message_id": "slash-play-56",
+      "html": "<div id=\"presentation_message_slash-play-56\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>/play unknown</p></div>\n</div>\n"
+    },
+    {
+      "source": "/play",
+      "client_message_id": "slash-play-57",
+      "html": "<div id=\"presentation_message_slash-play-57\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>/play</p></div>\n</div>\n"
+    },
+    {
+      "source": "/play BELL",
+      "client_message_id": "slash-play-58",
+      "html": "<div id=\"presentation_message_slash-play-58\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>/play BELL</p></div>\n</div>\n"
+    },
+    {
+      "source": "/play bell two",
+      "client_message_id": "slash-play-59",
+      "html": "<div id=\"presentation_message_slash-play-59\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>/play bell two</p></div>\n</div>\n"
+    },
+    {
+      "source": "/play bell\\nbell",
+      "client_message_id": "slash-play-60",
+      "html": "<div id=\"presentation_message_slash-play-60\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"markdown\">\n  <div class=\"markdown-body\" data-controller=\"drive-link\"><p>/play bell\\nbell</p></div>\n</div>\n"
+    }
+  ],
+  "formats": [
+    {
+      "path": "/autocompletable/users",
+      "status": 406,
+      "content_type": "text/html"
+    },
+    {
+      "path": "/autocompletable/icons",
+      "status": 406,
+      "content_type": "text/html"
+    },
+    {
+      "path": "/autocompletable/slash_commands?room_id=486777696",
+      "status": 200,
+      "content_type": "application/json"
+    }
+  ],
+  "agent_id": 773018776,
+  "thread_id": 9,
+  "readiness": [
+    {
+      "env": {
+        "LIVEKIT_URL": "https://gateway",
+        "LIVEKIT_INTERNAL_URL": "http://livekit:7880",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": true
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": " ",
+        "LIVEKIT_INTERNAL_URL": "http://livekit:7880",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": false
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "http://Gateway",
+        "LIVEKIT_INTERNAL_URL": "ws://gateway",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": false
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "https://gateway",
+        "LIVEKIT_INTERNAL_URL": "wss://gateway:443",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": false
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "wss://gateway",
+        "LIVEKIT_INTERNAL_URL": "http://livekit:7880",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": true
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "http://gateway:81",
+        "LIVEKIT_INTERNAL_URL": "ws://gateway",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": true
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "ftp://gateway",
+        "LIVEKIT_INTERNAL_URL": "http://livekit:7880",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": false
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "/gateway",
+        "LIVEKIT_INTERNAL_URL": "http://livekit:7880",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": false
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "not a url",
+        "LIVEKIT_INTERNAL_URL": "http://livekit:7880",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": false
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "https://gateway",
+        "LIVEKIT_INTERNAL_URL": "http://livekit:7880",
+        "LIVEKIT_API_KEY": null,
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": false
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "HTTPS://gateway",
+        "LIVEKIT_INTERNAL_URL": "http://livekit:7880",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": true
+    },
+    {
+      "env": {
+        "LIVEKIT_URL": "http://[::1]:81",
+        "LIVEKIT_INTERNAL_URL": "http://[::1]:80",
+        "LIVEKIT_API_KEY": "fixture-key",
+        "LIVEKIT_API_SECRET": "fixture-secret",
+        "LIVEKIT_GATEWAY_SECRET": "fixture-gateway"
+      },
+      "configured": true
+    }
+  ]
+}

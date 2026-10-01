@@ -1,0 +1,177 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "same": [],
+    "assigned": [
+      {
+        "agent_id": 773018776,
+        "event_type": "work_assigned",
+        "outcome": "delivered",
+        "actor_id": 127326141,
+        "metadata": {
+          "thread_id": 900070001,
+          "title": "Work events",
+          "work_status": "in_progress",
+          "assigned_by": "David",
+          "hop": 0
+        },
+        "hop": 0,
+        "detail": null,
+        "webhook_status": "pending",
+        "webhook_next_attempt_at": "2026-03-02T16:00:00.000Z",
+        "chain": "uuid"
+      }
+    ],
+    "nonmember": [
+      {
+        "agent_id": 773018776,
+        "event_type": "work_unassigned",
+        "outcome": "delivered",
+        "actor_id": null,
+        "metadata": {
+          "thread_id": 900070001,
+          "title": "Work events",
+          "work_status": "in_progress",
+          "assigned_by": null,
+          "hop": 0
+        },
+        "hop": 0,
+        "detail": null,
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "chain": "uuid"
+      }
+    ],
+    "revoked": [
+      {
+        "agent_id": 773018776,
+        "event_type": "work_unassigned",
+        "outcome": "delivered",
+        "actor_id": 127326141,
+        "metadata": {
+          "thread_id": 900070001,
+          "title": "Work events",
+          "work_status": "in_progress",
+          "assigned_by": "David",
+          "hop": 0
+        },
+        "hop": 0,
+        "detail": null,
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "chain": "uuid"
+      }
+    ],
+    "suppressed": [
+      {
+        "agent_id": 773018776,
+        "event_type": "delivery_suppressed_hop_limit",
+        "outcome": "suppressed",
+        "actor_id": 394959859,
+        "metadata": {
+          "thread_id": 900070001,
+          "title": "Work events",
+          "work_status": "in_progress",
+          "assigned_by": "Bender Bot",
+          "hop": 3
+        },
+        "hop": 3,
+        "detail": "Hop limit reached (hop 3)",
+        "webhook_status": "none",
+        "webhook_next_attempt_at": null,
+        "chain": "ws11-trigger-chain"
+      }
+    ],
+    "handoff": [
+      {
+        "agent_id": 773018776,
+        "event_type": "work_handed_off",
+        "outcome": "delivered",
+        "actor_id": 127326141,
+        "metadata": {
+          "thread_id": 900070001,
+          "title": "Work events",
+          "work_status": "in_progress",
+          "assigned_by": "David",
+          "hop": 0,
+          "handoff": {
+            "summary": "Take over",
+            "empty": "",
+            "flag": false
+          }
+        },
+        "hop": 0,
+        "detail": null,
+        "webhook_status": "pending",
+        "webhook_next_attempt_at": "2026-03-02T16:00:00.000Z",
+        "chain": "uuid"
+      }
+    ],
+    "deleted_snapshot": {
+      "id": 900070001,
+      "room_id": 486777696,
+      "board_id": null,
+      "board_name": null,
+      "title": "Work events",
+      "work_status": "in_progress",
+      "owner": {
+        "id": 394959859,
+        "name": "Bender Bot",
+        "agent": true
+      },
+      "tags": [],
+      "result": null,
+      "result_updated_at": null,
+      "run_url": null,
+      "url": "/rooms/486777696?thread=900070001",
+      "updated_at": "2026-03-02T16:00:00.000Z",
+      "links": [],
+      "thread_id": 900070001,
+      "status": "in_progress",
+      "assigned_by": "David"
+    },
+    "deleted": [
+      {
+        "agent_id": 773018776,
+        "event_type": "work_unassigned",
+        "outcome": "delivered",
+        "actor_id": 127326141,
+        "metadata": {
+          "thread_id": 900070001,
+          "title": "Work events",
+          "work_status": "in_progress",
+          "assigned_by": "David",
+          "hop": 0,
+          "work_snapshot": {
+            "id": 900070001,
+            "room_id": 486777696,
+            "board_id": null,
+            "board_name": null,
+            "title": "Work events",
+            "work_status": "in_progress",
+            "owner": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "agent": true
+            },
+            "tags": [],
+            "result": null,
+            "result_updated_at": null,
+            "run_url": null,
+            "url": "/rooms/486777696?thread=900070001",
+            "updated_at": "2026-03-02T16:00:00.000Z",
+            "links": [],
+            "thread_id": 900070001,
+            "status": "in_progress",
+            "assigned_by": "David"
+          }
+        },
+        "hop": 0,
+        "detail": null,
+        "webhook_status": "pending",
+        "webhook_next_attempt_at": "2026-03-02T16:00:00.000Z",
+        "chain": "uuid"
+      }
+    ]
+  }
+}

@@ -1,0 +1,320 @@
+{
+  "reference": "d7c7de92",
+  "cases": {
+    "open": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "room": {
+        "id": 699448333,
+        "name": "Audited open",
+        "type": "Rooms::Open",
+        "user_ids": [
+          127326141,
+          149087659,
+          394959859,
+          712064548,
+          773523953,
+          773523956,
+          773523958,
+          773523959
+        ]
+      },
+      "audits": [
+        {
+          "action": "room.create",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Room",
+          "target_id": 699448333,
+          "target_label": "Audited open",
+          "details": {
+            "name": "Audited open"
+          },
+          "ip_address": "127.0.0.1"
+        }
+      ],
+      "frames": [
+        {
+          "stream": "rooms",
+          "html": "<turbo-stream action=\"prepend\" target=\"shared_rooms\"><template><a id=\"list_rooms_open_699448333\" data-rooms-list-target=\"room\" data-room-id=\"699448333\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Audited open\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/699448333/leave\" data-menu-open-room=\"true\" data-menu-direct-room=\"false\" data-menu-room-label=\"Audited open\" class=\"sidebar-item room btn\" href=\"/rooms/699448333\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Audited open</span>\n</a></template></turbo-stream>"
+        }
+      ]
+    },
+    "closed": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448334",
+      "room": {
+        "id": 699448334,
+        "name": "Audited closed",
+        "type": "Rooms::Closed",
+        "user_ids": [
+          127326141,
+          149087659
+        ]
+      },
+      "audits": [
+        {
+          "action": "room.create",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Room",
+          "target_id": 699448334,
+          "target_label": "Audited closed",
+          "details": {
+            "name": "Audited closed"
+          },
+          "ip_address": "127.0.0.1"
+        }
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"prepend\" target=\"shared_rooms\"><template><a id=\"list_rooms_closed_699448334\" data-rooms-list-target=\"room\" data-room-id=\"699448334\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Audited closed\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/699448334/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Audited closed\" class=\"sidebar-item room btn\" href=\"/rooms/699448334\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Audited closed</span>\n</a></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"prepend\" target=\"shared_rooms\"><template><a id=\"list_rooms_closed_699448334\" data-rooms-list-target=\"room\" data-room-id=\"699448334\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Audited closed\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/699448334/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Audited closed\" class=\"sidebar-item room btn\" href=\"/rooms/699448334\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Audited closed</span>\n</a></template></turbo-stream>"
+        }
+      ]
+    },
+    "open_update": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/699448333",
+      "room": {
+        "id": 699448333,
+        "name": "Renamed <&>",
+        "type": "Rooms::Open",
+        "user_ids": [
+          127326141,
+          149087659,
+          394959859,
+          712064548,
+          773523953,
+          773523956,
+          773523958,
+          773523959
+        ]
+      },
+      "audits": [
+        {
+          "action": "room.create",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Room",
+          "target_id": 699448333,
+          "target_label": "Audited open",
+          "details": {
+            "name": "Audited open"
+          },
+          "ip_address": "127.0.0.1"
+        }
+      ],
+      "frames": [
+        {
+          "stream": "rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_open_699448333\"><template><a id=\"list_rooms_open_699448333\" data-rooms-list-target=\"room\" data-room-id=\"699448333\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Renamed &lt;&amp;&gt;\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/699448333/leave\" data-menu-open-room=\"true\" data-menu-direct-room=\"false\" data-menu-room-label=\"Renamed &lt;&amp;&gt;\" class=\"sidebar-item room btn\" href=\"/rooms/699448333\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Renamed &lt;&amp;&gt;</span>\n</a></template></turbo-stream>"
+        },
+        {
+          "stream": "rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_open_699448333\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_open_699448333\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Renamed &lt;&amp;&gt;</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    "revise": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696",
+      "room": {
+        "id": 486777696,
+        "name": "Revised room",
+        "type": "Rooms::Closed",
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "audits": [
+        {
+          "action": "room.membership.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Room",
+          "target_id": 486777696,
+          "target_label": "Revised room",
+          "details": {
+            "granted": [
+              "Kevin"
+            ],
+            "revoked": [
+              "Bender Bot"
+            ]
+          },
+          "ip_address": "127.0.0.1"
+        }
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8zOTQ5NTk4NTk:rooms",
+          "html": "<turbo-stream action=\"remove\" target=\"list_rooms_closed_486777696\"></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_closed_486777696\"><template><a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Revised room\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Revised room\" class=\"sidebar-item room btn\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Revised room</span>\n</a></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_closed_486777696\"><template><a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Revised room\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Revised room\" class=\"sidebar-item room btn\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Revised room</span>\n</a></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_closed_486777696\"><template><a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Revised room\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Revised room\" class=\"sidebar-item room btn\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Revised room</span>\n</a></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_closed_486777696\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Revised room</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_closed_486777696\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Revised room</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_closed_486777696\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Revised room</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    "no_change": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696",
+      "room": {
+        "id": 486777696,
+        "name": "Revised room",
+        "type": "Rooms::Closed",
+        "user_ids": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "audits": [
+        {
+          "action": "room.membership.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Room",
+          "target_id": 486777696,
+          "target_label": "Revised room",
+          "details": {
+            "granted": [
+              "Kevin"
+            ],
+            "revoked": [
+              "Bender Bot"
+            ]
+          },
+          "ip_address": "127.0.0.1"
+        }
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_closed_486777696\"><template><a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Revised room\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Revised room\" class=\"sidebar-item room btn\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Revised room</span>\n</a></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_closed_486777696\"><template><a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Revised room\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Revised room\" class=\"sidebar-item room btn\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Revised room</span>\n</a></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"list_rooms_closed_486777696\"><template><a id=\"list_rooms_closed_486777696\" data-rooms-list-target=\"room\" data-room-id=\"486777696\" data-badge-dot-target=\"unread\" data-sorted-list-target=\"item\" data-sorted-list-name=\"Revised room\" data-menu-categorizable=\"true\" data-menu-favorited=\"false\" data-menu-muted=\"false\" data-menu-default-involvement=\"mentions\" data-menu-can-delete=\"false\" data-menu-can-leave=\"false\" data-menu-leave-url=\"/rooms/486777696/leave\" data-menu-open-room=\"false\" data-menu-direct-room=\"false\" data-menu-room-label=\"Revised room\" class=\"sidebar-item room btn\" href=\"/rooms/486777696\">\n  <span class=\"sidebar-item__icon\" aria-hidden=\"true\"></span>\n  <span class=\"sidebar-item__label overflow-ellipsis\">Revised room</span>\n</a></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_closed_486777696\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Revised room</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_closed_486777696\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Revised room</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci83MTIwNjQ1NDg:rooms",
+          "html": "<turbo-stream action=\"replace\" target=\"header_rooms_closed_486777696\"><template><div class=\"room-header__identity room--current min-width\" id=\"header_rooms_closed_486777696\">\n  <span class=\"room-header__kind\">Channel</span>\n  <h1 class=\"room__contents overflow-ellipsis\">\n      <span class=\"room-header__hash\" aria-hidden=\"true\">#</span>\n\n    <span class=\"room-header__name overflow-ellipsis\">Revised room</span>\n  </h1>\n</div>\n</template></turbo-stream>"
+        }
+      ]
+    },
+    "failed_open": {
+      "status": 500,
+      "location": null,
+      "room": {
+        "id": 699448335,
+        "name": "Audit failed failed_open",
+        "type": "Rooms::Open",
+        "user_ids": [
+          127326141,
+          149087659,
+          394959859,
+          712064548,
+          773523953,
+          773523956,
+          773523958,
+          773523959
+        ]
+      },
+      "audits": [],
+      "frames": []
+    },
+    "failed_closed": {
+      "status": 500,
+      "location": null,
+      "room": {
+        "id": 699448336,
+        "name": "Audit failed failed_closed",
+        "type": "Rooms::Closed",
+        "user_ids": [
+          127326141,
+          149087659
+        ]
+      },
+      "audits": [],
+      "frames": []
+    },
+    "failed_revision": {
+      "status": 500,
+      "location": null,
+      "room": {
+        "id": 486777696,
+        "name": "Audit failed revision",
+        "type": "Rooms::Closed",
+        "user_ids": [
+          127326141,
+          712064548
+        ]
+      },
+      "audits": [
+        {
+          "action": "room.membership.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@37signals.com>",
+          "target_type": "Room",
+          "target_id": 486777696,
+          "target_label": "Revised room",
+          "details": {
+            "granted": [
+              "Kevin"
+            ],
+            "revoked": [
+              "Bender Bot"
+            ]
+          },
+          "ip_address": "127.0.0.1"
+        }
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xNDkwODc2NTk:rooms",
+          "html": "<turbo-stream action=\"remove\" target=\"list_rooms_closed_486777696\"></turbo-stream>"
+        }
+      ]
+    }
+  }
+}
