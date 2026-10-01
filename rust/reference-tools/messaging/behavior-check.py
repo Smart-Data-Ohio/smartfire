@@ -28,6 +28,11 @@ CASES = {
         "desktop keyboard composition keeps line breaks and sends once after composition ends",
         "untrusted markup stays inert in the delivered message",
     ],
+    "threads": [
+        "creates a thread from a channel message and keeps the channel draft separate",
+        "the thread root counts its replies live and hides the count when none remain",
+        "a stray create re-entry does not wipe the half-filled thread name",
+    ],
 }
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("files", nargs="*", choices=CASES)
@@ -120,6 +125,24 @@ for file in files:
                             elif case == CASES["workspace_markdown"][2]:
                                 payload = textwrap.dedent(source.decode().split("payload = <<~'MARKDOWN'\n")[1].split("    MARKDOWN")[0])
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (payload,)).fetchone()[0] == 1
+                            elif case == CASES["threads"][0]:
+                                thread = conn.execute("SELECT id,parent_message_id,auto_archive_after_minutes FROM channel_threads WHERE name='Design review thread'").fetchone()
+                                assert thread is not None and thread[1:] == (607264868, 1440)
+                                assert conn.execute("SELECT involvement FROM thread_memberships WHERE thread_id=? AND user_id=773523953", (thread[0],)).fetchone() == ("nothing",)
+                                for body in ["A reply from the thread drawer.", "A reply to the drawer message.", "The edited thread starter."]:
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE thread_id=? AND markdown_source=?", (thread[0], body)).fetchone()[0] == 1
+                                reply = conn.execute("SELECT reply_to_message_id FROM messages WHERE thread_id=? AND markdown_source='A reply to the drawer message.'", (thread[0],)).fetchone()[0]
+                                assert conn.execute("SELECT markdown_source FROM messages WHERE id=?", (reply,)).fetchone() == ("A reply from the thread drawer.",)
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='A channel draft stays here.'").fetchone()[0] == 0
+                                assert conn.execute("SELECT COUNT(*) FROM boosts JOIN messages ON messages.id=boosts.message_id WHERE messages.thread_id=? AND boosts.content='👍'", (thread[0],)).fetchone()[0] == 1
+                            elif case == CASES["threads"][1]:
+                                thread = conn.execute("SELECT id,parent_message_id FROM channel_threads WHERE name='Indicator thread'").fetchone()
+                                assert thread is not None and thread[1] == 607264868
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE thread_id=?", (thread[0],)).fetchone()[0] == 0
+                            elif case == CASES["threads"][2]:
+                                thread = conn.execute("SELECT id FROM channel_threads WHERE name='Survives a stray reset'").fetchone()
+                                assert thread is not None
+                                assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [("The name survives the re-entry.",)]
                     passed += 1
                     print(f"WS8bm behaviour: {file}: {case}: Rails PASS; Rust PASS; persisted rows PASS", flush=True)
                 finally:
