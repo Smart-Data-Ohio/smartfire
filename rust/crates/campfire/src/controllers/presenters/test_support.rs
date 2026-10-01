@@ -144,6 +144,10 @@ impl TestApp {
         Self::boot_with_clients("default", clock, crate::integrations::net::Network::system(), extra, None).await
     }
 
+    pub async fn boot_with_github_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+        Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network, &[], Some(crate::integrations::github::client::AppClient::new(None,None))).await
+    }
+
     pub async fn boot_with_github_app(
         github_app: crate::integrations::github::client::AppClient,
     ) -> Option<TestApp> {
@@ -187,7 +191,7 @@ impl TestApp {
         let booted = match github_app {
             Some(client) => crate::app::boot_with_all_services(
                 config, clock, crate::integrations::github::client::ReadClient::from_env(),
-                client, crate::integrations::net::Network::system(), network, intervals,
+                client, network.clone(), network, intervals,
             ).await.unwrap(),
             None => boot_with_services(config, clock, network, intervals).await.unwrap(),
         };

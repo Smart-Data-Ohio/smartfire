@@ -138,28 +138,7 @@
       "rails_file": "test/models/agent_kill_switch_test.rb",
       "owner": "WS11; WS15g/WS15e approved-action execution callbacks",
       "remaining_named_case_ports": [
-        "kill switch suspends, cancels pending approvals, and audits",
-        "kill switch marks cancelled approvals' inbox items handled",
-        "kill switch blocks approved-but-unexecuted external actions",
-        "kill switch is safe to repeat",
-        "kill switch quietly finalizes the agent's open streams",
-        "suspend quietly finalizes the agent's open streams",
-        "a suspension that rolls back leaves open streams untouched",
         "kill switch leaves owned work assigned without reassigning it"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_revocation_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "removing a membership revokes that agent's grants in that room only",
-        "workspace-wide grants survive membership removal",
-        "membership revocation persists in the same transaction as the removal",
-        "destroying a room revokes its grants and forbids the next post",
-        "suspending an agent revokes all of its grants immediately",
-        "deactivating the agent user revokes all of its grants",
-        "banning the agent user revokes all of its grants",
-        "destroying the agent user revokes all of its grants"
       ]
     },
     {
