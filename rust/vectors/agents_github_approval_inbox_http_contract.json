@@ -1,0 +1,14 @@
+{
+  "reference_pin": "d7c7de92",
+  "result": {
+    "status": 500,
+    "approvals": 1,
+    "status_after_error": "pending",
+    "inbox": 0,
+    "jobs": 0,
+    "replay_status": 200,
+    "replay_same_id": true,
+    "approvals_after_replay": 1,
+    "inbox_after_replay": 0
+  }
+}
