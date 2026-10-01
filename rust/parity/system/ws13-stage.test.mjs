@@ -1,65 +1,8 @@
-// Transcribed behaviour assertions from pinned test/system/stage_test.rb.
-// Real Rust pages, production JavaScript, signed sessions and Cable; no screenshots.
+// Complete ordinary Stage declarations from pinned test/system/stage_test.rb.
 import assert from 'node:assert/strict';
-import { before, after, test } from 'node:test';
-import { chromium } from 'playwright';
-import { startProxy } from '../capture/proxy.ts';
-let browser, proxy, api;
-// Loopback is a secure browser context, like Capybara's local Rails server.
-const origin = 'http://127.0.0.1';
-before(async () => {
-  proxy = await startProxy(process.env.WS13_SYSTEM_TARGET);
-  browser = await chromium.launch({headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--mute-audio']});
-  api = await browser.newContext({proxy:{server:proxy.server,bypass:'<-loopback>'}});
-});
-after(async () => { await api?.close(); await browser?.close(); await proxy?.close(); });
-async function fixture(t, names, options={}) {
-  const response = await api.request.post(`${origin}/__ws13__/fixture`,{data:options});
-  assert.equal(response.status(),200);
-  const data = await response.json();
-  const pages = {};
-  for (const name of names) {
-    const context = await browser.newContext({proxy:{server:proxy.server,bypass:'<-loopback>'},timezoneId:'UTC',locale:'en-US',viewport:{width:1400,height:1000}});
-    t.after(() => context.close());
-    await context.addCookies([{name:'session_token',value:data.people[name].cookie,url:origin}]);
-    const page = await context.newPage();
-    page.setDefaultTimeout(2000); // Capybara selector wait; individual Rails waits below are unchanged.
-    // Capybara's selector wait does not bound Selenium page loads. Retain
-    // Playwright's normal navigation budget rather than inheriting that 2 s wait.
-    page.setDefaultNavigationTimeout(30000);
-    const response = await page.goto(`${origin}/rooms/${data.room}`,{waitUntil:'domcontentloaded'});
-    assert.equal(response.status(),200);
-    await page.waitForFunction(() => {
-      const sources = [...document.querySelectorAll('turbo-cable-stream-source')];
-      return sources.length>=3 && sources.every(source=>source.hasAttribute('connected'));
-    },null,{timeout:15000});
-    pages[name] = page;
-  }
-  const state = async () => (await api.request.get(`${origin}/__ws13__/rooms/${data.room}`)).json();
-  return {...data,pages,state};
-}
-async function text(page, selector, value, timeout=2000) {
-  await page.locator(selector).filter({hasText:value}).first().waitFor({state:'visible',timeout});
-}
-async function absent(page,selector,timeout=2000) {
-  await page.locator(selector).waitFor({state:'hidden',timeout});
-}
-// Selenium/Capybara considers this empty, whitespace-bearing inline span displayed.
-// Playwright requires a nonzero box. Preserve the original display/visibility assertion
-// without manufacturing dimensions absent from the byte-identical Rails/CSS oracle.
-async function emptyStackShown(page,selector) {
-  await page.waitForFunction(selector=>{
-    let element=document.querySelector(selector);if(!element) return false;
-    for (;element;element=element.parentElement) {
-      const style=getComputedStyle(element);
-      if(element.hidden || style.display==='none' || ['hidden','collapse'].includes(style.visibility)) return false;
-    }
-    return true;
-  },selector,{timeout:2000});
-}
-async function panel(page) { await page.getByRole('button',{name:'Show stage',exact:true}).click(); }
-const row = id => `#stage_row_membership_${id}`;
-const controls = room => `#stage_controls_rooms_stage_${room}`;
+import { test } from 'node:test';
+import { fixture, text, absent, emptyStackShown, panel, row, controls } from './ws13-support.mjs';
+import './ws13-audio.cases.mjs';
 
 test('stage rooms list in their own section with distinct creation controls and a stage panel',async t => {
   const f=await fixture(t,['jason']); const p=f.pages.jason;

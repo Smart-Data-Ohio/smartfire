@@ -25,7 +25,11 @@ async fn huddle_system_cases_in_real_browser() {
                 let secrets = app.secrets.clone();
                 Json(app.db.write(move |tx| {
                     use campfire_kit::Crypto;
-                    let room = Room::create_for(tx, RoomType::Stage, Some("Town Hall"), DAVID, &[DAVID,JASON,KEVIN])?;
+                    let room = if options["kind"] == "designers" {
+                        Room::find(tx.conn(),654632876)?
+                    } else {
+                        Room::create_for(tx,RoomType::Stage,Some("Town Hall"),DAVID,&[DAVID,JASON,KEVIN])?
+                    };
                     if options["speaker"]==true {
                         let mut member = Membership::find_by_room_and_user(tx.conn(),room.id,KEVIN)?.unwrap();
                         member.change_stage_role(tx,campfire_db::StageRole::Speaker)?;
@@ -35,7 +39,7 @@ async fn huddle_system_cases_in_real_browser() {
                     for (name,id) in [("david",DAVID),("jason",JASON),("kevin",KEVIN)] {
                         let session = campfire_db::Session::start_with(tx,id,campfire_db::NewSession {two_factor_verified:true,..Default::default()})?;
                         let cookie = campfire_kit::cookies::escape(&crypto.sign_cookie("session_token",&session.token,None));
-                        let member = Membership::find_by_room_and_user(tx.conn(),room.id,id)?.unwrap();
+                        let Some(member) = Membership::find_by_room_and_user(tx.conn(),room.id,id)? else {continue;};
                         people.insert(name.into(),json!({"id":id,"membership":member.id,"cookie":cookie}));
                     }
                     Ok(json!({"room":room.id,"people":people}))

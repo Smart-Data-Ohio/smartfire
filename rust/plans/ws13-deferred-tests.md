@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. All 548 original declarations remain inventoried across 33 Rails files: 274 passed, 274 open. All 226 WS13 controller/integration declarations have complete assertions. WS13b owns the 216 model/job/service declarations, whose historical 37 passed and 179 open counts remain unchanged pending PR #172; that branch has not been merged. WS17's public seams stay unchanged. Eleven Stage browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 95 system declarations remain open: 60 ordinary browser cases and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
+Status: partial. All 548 original declarations remain inventoried across 33 Rails files: 282 passed, 266 open. All 226 WS13 controller/integration declarations have complete assertions. WS13b owns the 216 model/job/service declarations, whose historical 37 passed and 179 open counts remain unchanged pending PR #172; that branch has not been merged. WS17's public seams stay unchanged. Eleven Stage and eight audio-processing browser declarations now pass against real Rust pages, JavaScript, sessions and Cable. The other 87 system declarations remain open: 52 ordinary browser cases and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. All 38 complete room pages, including both Designers pages, match the frozen Rails fixtures plus the approved #163 application-layout action. No screenshot or pixel work remains. Counts refer to complete original declarations, not vector or Rust-test counts.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -50,7 +50,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
 | `test/models/huddle_revocation_test.rb` | 9 | 0 | 9 |
 | `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
-| `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
+| `test/system/huddle_audio_test.rb` | 8 | 8 | 0 |
 | `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
 | `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 6 | 0 |
 | `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
@@ -60,7 +60,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **274** | **274** |
+| **Total** | **548** | **282** | **266** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -631,16 +631,16 @@ Owner: WS13b. Deferred.
 
 ## test/system/huddle_audio_test.rb
 
-Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers and HTML integration must land, then run the browser harness. These cases use stubbed rooms and do not require a real LiveKit server.
+Owner: WS13. Complete: 8/8 original declarations passed against the actual seeded Designers room, production JavaScript and the original recorded SDK/audio-track stub. The assertions retain capture constraints, device preference, room defaults, processor attachment, restarts and muted-track behavior.
 
-- the capture asks for no browser suppression while RNNoise is on
-- the capture keeps browser suppression while RNNoise is off
-- unmuting requests the selected device without rewriting the room defaults
-- muting keeps the noise processor attached across mute and unmute
-- toggling noise suppression off re-acquires the microphone with browser suppression
-- toggling noise suppression on re-acquires the microphone without browser suppression
-- toggling noise suppression off without a stored device re-acquires on the live device
-- toggling noise suppression off while muted refreshes the stored constraints
+- **Passed:** the capture asks for no browser suppression while RNNoise is on
+- **Passed:** the capture keeps browser suppression while RNNoise is off
+- **Passed:** unmuting requests the selected device without rewriting the room defaults
+- **Passed:** muting keeps the noise processor attached across mute and unmute
+- **Passed:** toggling noise suppression off re-acquires the microphone with browser suppression
+- **Passed:** toggling noise suppression on re-acquires the microphone without browser suppression
+- **Passed:** toggling noise suppression off without a stored device re-acquires on the live device
+- **Passed:** toggling noise suppression off while muted refreshes the stored constraints
 
 ## test/system/huddle_invitations_test.rb
 
@@ -801,4 +801,8 @@ Both previously retained Designers renders are now in the 38-page acceptance set
 
 `parity/system/ws13` explicitly runs eleven complete original Stage declarations in the pinned Playwright image against the production Rust router/assets/Cable over signed sessions. The private fixture/state routes exist only in the ignored external-test launcher, never in the shipped binary. Microphone and credential failure injections remain at the same boundary as the original declarations. The synthetic join/leave declaration holds external SDK signaling pending so the isolated capture proxy cannot misroute its TLS connection to Rust HTTP; its original event, label, no-second-join and idle assertions remain intact. The original selector and explicit broadcast/connection waits are unchanged. Selenium's empty inline-stack visibility is checked through CSS display/visibility because Playwright's nonzero-box predicate disagrees for Rails' whitespace-only target. No screenshots or image comparisons are used.
 
-The previous continuation paragraphs are historical: Designers and application-layout reconciliation are closed, and Stage ordinary cases have advanced from 0/11 to 11/11. The current table and retained title markers are authoritative; 95/106 system declarations remain, including all 35 real LiveKit declarations.
+The previous continuation paragraphs are historical: Designers and application-layout reconciliation are closed, and Stage ordinary cases have advanced from 0/11 to 11/11. Eight audio-processing declarations also pass in the same browser acceptance run. The current table and retained title markers are authoritative; 87/106 system declarations remain, including all 35 real LiveKit declarations.
+
+## Audio browser continuation
+
+The eight audio declarations use the real Designers seed room (the fixture asserts its ID) and signed Rust sessions, with the actual Rails SDK/track stub transcribed verbatim apart from named JavaScript arguments. No product JavaScript, LiveKit policy, transport seam or original assertion was changed. The ordinary browser total is now 19 passed, 52 remaining; the real LiveKit total remains 0 passed, 35 remaining. Browser acceptance runs explicitly rather than being silently skipped as part of the ordinary workspace suite.
