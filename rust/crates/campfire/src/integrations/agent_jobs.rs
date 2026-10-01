@@ -742,7 +742,7 @@ async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
         tx.conn().execute_batch(&format!("CREATE TRIGGER reject_recovery BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' AND json_extract(NEW.arguments,'$.event_id')={} BEGIN SELECT RAISE(ABORT,'WS11 one rejected candidate'); END;",a.id))?;
         Ok((a.id,b.id))
     }).await.unwrap();
-    crate::jobs::periodic::stranded_agent_webhooks(&db)
+    crate::jobs::periodic::stranded_agent_webhooks(db)
         .await
         .unwrap();
     db.read(move |c| {

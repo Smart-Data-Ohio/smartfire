@@ -97,9 +97,24 @@ mod tests {
             assert_eq!(html, case["html"].as_str().unwrap());
         }
     }
+    async fn cached_quote(test: &TestApp, id: i64) -> String {
+        let app = test.booted.app.clone();
+        test.db().read(move |conn| {
+            let mut presenter = Presenter::new(conn, &app, None);
+            presenter.cache_base_url = Some("http://campfire.test".into());
+            let message = Message::find(conn, id)?;
+            campfire_views::fragment_cache::with(&app.fragment_cache, || {
+                let item = presenter.message_item(&message)?;
+                Ok(page::render_detached_at(&app, None, "http://campfire.test", |ctx| {
+                    campfire_views::messages::cached_message_item(ctx, &item).to_string()
+                }))
+            })
+        }).await.unwrap()
+    }
+
     #[tokio::test]
     async fn warm_quote_parent_refreshes_legacy_edits_and_source_names() {
-        let test = TestApp::boot().await.expect("build pinned parity seed");
+        let test = TestApp::boot_frozen().await.expect("build pinned parity seed");
         let (room, source, quoting) = test
             .db()
             .write(|tx| {
@@ -164,6 +179,9 @@ mod tests {
             .unwrap()
             .to_owned()
         };
+        let cached_old = cached_quote(&test, quoting.id).await;
+        assert!(cached_old.contains("Old quoted excerpt"));
+        assert_eq!(cached_quote(&test, quoting.id).await, cached_old);
         let old = card(browser.get(&path).await.text());
         assert!(old.contains("Old quoted excerpt"));
         assert!(old.contains("Old quote room"));
@@ -177,6 +195,9 @@ mod tests {
             tx.conn().execute("UPDATE messages SET edited_at='2026-03-02 16:00:01' WHERE id=?",[source_id])?;
             Ok(())
         }).await.unwrap();
+        let cached_edited = cached_quote(&test, quoting.id).await;
+        assert!(cached_edited.contains("New quoted excerpt"));
+        assert!(!cached_edited.contains("Old quoted excerpt"));
         let edited = card(browser.get(&path).await.text());
         assert!(edited.contains("New quoted excerpt"));
         assert!(!edited.contains("Old quoted excerpt"));
@@ -195,6 +216,9 @@ mod tests {
             })
             .await
             .unwrap();
+        let cached_renamed = cached_quote(&test, quoting.id).await;
+        assert!(cached_renamed.contains("Renamed quote author"));
+        assert!(cached_renamed.contains("Renamed quote room"));
         let renamed = card(browser.get(&path).await.text());
         assert!(renamed.contains("Renamed quote author"));
         assert!(renamed.contains("Renamed quote room"));
@@ -236,6 +260,7 @@ mod tests {
             })
             .await
             .unwrap();
+        let path = format!("/rooms/{}", message.room_id);
         let app = test.booted.app.clone();
         test.db()
             .read(move |conn| {
@@ -249,5 +274,11 @@ mod tests {
             })
             .await
             .unwrap();
+        let response = test.david().get(&path).await;
+        assert_eq!(response.status, axum::http::StatusCode::OK);
+        assert!(response.text().contains("message-link-frame"));
+        assert!(!response.text().contains("Secret source body"));
+        assert!(!response.text().contains("Private source room"));
+        assert!(!response.text().contains("Kevin"));
     }
 }
