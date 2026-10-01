@@ -434,3 +434,5 @@ async fn slack_oauth_replay_unique_constraint_and_setup_csrf_are_rejected() {
         json!({"code":"[FILTERED]","access_token":"[FILTERED]","client_secret":"[FILTERED]"})
     );
 }
+#[path = "run_tests.rs"]
+mod run_tests;

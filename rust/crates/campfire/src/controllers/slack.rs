@@ -179,6 +179,7 @@ pub async fn disconnect(c: &mut Ctx) -> Result {
         )
     }
 }
+pub mod runs;
 pub mod setup;
 #[cfg(test)]
 mod tests;

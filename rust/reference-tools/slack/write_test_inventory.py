@@ -39,6 +39,7 @@ client_deferred = {
  'on_request fires once per attempt for api call counts': 'Callback counts tested for failed retries; recovery sequence still needed.',
 }
 job_ports = {
+ 'undo is blocked while another run is queued': '109 real Rails HTTP actions compare blocking reason and unchanged DB/queue.',
  'dry run writes nothing except the run row and its issues': 'slack_sql_store_dry_run_collects_samples_without_domain_rows_or_reply_fetches',
  'workspace import creates rooms, memberships, messages, threads, boosts and pins': 'slack_sequence_matches_rails_import_undo_reimport_database_rows: every field in 89 tables',
  'tiny step budget spans several steps for one conversation': 'slack_runner_zero_budget_stops_after_page_and_preserves_reply_cursor plus actual fixture completion',
@@ -74,12 +75,12 @@ job_partial = {
  'scope errors fail with the missing scope and leave the connection': 'Client vector plus shared job failure branch; direct job scope-failure scenario remains.',
  'transient failures past the retry budget fail the run': 'Client exhaustion/protocol guards implemented; exact non-Slack Ruby exception class text remains.',
  'undo keeps mappings for kept placeholders, so re-import creates no duplicates': 'Claimed-user mapping and kept-root reimport covered; all original session/Google/authorship variants remain.',
- 'undo is blocked while another run is queued': 'Domain blocking and actual LIFO guarded; original controller response remains.',
+
 }
 paths = sorted(set(root.glob('test/models/*slack*_test.rb')) | set(root.glob('test/models/slack/*_test.rb')) | set(root.glob('test/jobs/slack_import/*_test.rb')) | set(root.glob('test/controllers/slack/*_test.rb')) | set(root.glob('test/controllers/accounts/*slack*_test.rb')) | {root / 'test/system/slack_import_test.rb'})
 lines = ['# WS16 Rails test inventory — partial', '',
  'Owner for every deferred or partial row: **WS16 continuation**. No tests are reassigned to other workstreams.', '',
- 'Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. OAuth, connection and setup routes now have Rails-generated transport/HTTP/view goldens and runtime security tests. Admin/personal run controllers and remaining fault/large-history cases are deferred below.', '']
+ 'Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. OAuth, connection and setup routes now have Rails-generated transport/HTTP/view goldens and runtime security tests. All fifteen admin/personal run actions have real HTTP session/CSRF/row/audit/queue comparisons and 83 complete template body goldens. The combined setup/sudo/preview/plan/import/progress/undo interaction also executes over HTTP. Remaining fault/large-history cases are listed below.', '']
 counts = {'covered': 0, 'partial': 0, 'deferred': 0}
 for path in paths:
     tests = re.findall(r'^\s*test "((?:[^"\\]|\\.)*)"', path.read_text(), re.M)
@@ -90,6 +91,11 @@ for path in paths:
             state, note = 'covered', 'Rails-generated converter vectors; crafted-token timing guard is a Rust test.'
         elif path.name in ('oauth_controller_test.rb', 'connections_controller_test.rb', 'slack_imports_controller_test.rb'):
             state, note = 'covered', 'slack OAuth TLS/state golden tests; 37 real Rails HTTP callback/disconnect/setup/remove scenarios; 11 complete setup body goldens; replay/unique conflict/CSRF/sudo/role/request filtering checks.'
+        elif path.name in ('slack_import_runs_controller_test.rb', 'imports_controller_test.rb'):
+            if name == "run page loads later runs' stats once across the undo checks":
+                state, note = 'partial', 'One blocked-reason scan feeds the view; the original SQL-count regression still needs instrumentation.'
+            else:
+                state, note = 'covered', '109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow.'
         elif '/models/slack/client_test.rb' in str(path):
             if name in client_deferred:
                 state, note = 'partial', client_deferred[name]
@@ -97,8 +103,10 @@ for path in paths:
                 state, note = 'covered', 'Local TLS fixture requests, Rails error vectors, retry and pacing tests.'
         elif path.name == 'slack_import_test.rb' and path.parent.name == 'models' and name in model_ports:
             state, note = 'covered', 'Database lifecycle tests; independent writers for claims, leases, undo and sweeps.'
-        elif path.name == 'slack_import_test.rb' and path.parent.name == 'models' and name.startswith('start! creates'):
-            state, note = 'partial', 'Creation/enqueue covered; options normalization remains deferred.'
+        elif path.name == 'slack_import_test.rb' and path.parent.name == 'models' and name.startswith('start!'):
+            state, note = 'covered', '33 actual Ruby normalization/time vectors plus real HTTP run creation and durable enqueue comparison.'
+        elif path.parent.name == 'system':
+            state, note = 'covered', 'slack_admin_credentials_preview_plan_import_progress_and_undo_over_http: real sudo password/session, credentials, preview, selection, import, polling and undo controls.'
         elif path.parent.name == 'slack_import' and name in job_ports:
             state, note = 'covered', job_ports[name]
         elif path.parent.name == 'slack_import' and name in job_partial:

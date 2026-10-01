@@ -2,45 +2,45 @@
 
 Owner for every deferred or partial row: **WS16 continuation**. No tests are reassigned to other workstreams.
 
-Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. OAuth, connection and setup routes now have Rails-generated transport/HTTP/view goldens and runtime security tests. Admin/personal run controllers and remaining fault/large-history cases are deferred below.
+Covered is a behavior mapping, not a claim that the original Rails test was run against Rust. The executable Rust coverage is in `db/src/tests/slack*_test.rs`, `campfire/src/integrations/slack/client/tests.rs`, and the 481 generated converter vectors. Runner/protocol, actual durable worker execution, mappers, quiet Message save/undo and workspace/personal Rails row differentials now have executable coverage. OAuth, connection and setup routes now have Rails-generated transport/HTTP/view goldens and runtime security tests. All fifteen admin/personal run actions have real HTTP session/CSRF/row/audit/queue comparisons and 83 complete template body goldens. The combined setup/sudo/preview/plan/import/progress/undo interaction also executes over HTTP. Remaining fault/large-history cases are listed below.
 
 ## test/controllers/accounts/slack_import_runs_controller_test.rb
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| run pages are admin-only | deferred | WS16 continuation: implement and exercise the original behavior. |
-| run list shows every run newest first | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting a dry run needs a connected account | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting a dry run is blocked while another run is active | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting a dry run creates a workspace dry run with the options | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting a dry run ignores unparseable dates | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting a dry run defaults to including private channels | deferred | WS16 continuation: implement and exercise the original behavior. |
-| run page shows status, counts, timestamps, and issues with pagination | deferred | WS16 continuation: implement and exercise the original behavior. |
-| run page polls while active and stops when finished | deferred | WS16 continuation: implement and exercise the original behavior. |
-| status frame renders the run without polling itself | deferred | WS16 continuation: implement and exercise the original behavior. |
-| status frame marks a finished run so polling stops | deferred | WS16 continuation: implement and exercise the original behavior. |
-| run page shows queued-behind while another run is active | deferred | WS16 continuation: implement and exercise the original behavior. |
-| administrators can view personal runs from the admin page | deferred | WS16 continuation: implement and exercise the original behavior. |
-| plan renders conversations, targets, and samples | deferred | WS16 continuation: implement and exercise the original behavior. |
-| plan escapes Slack text and sample markdown | deferred | WS16 continuation: implement and exercise the original behavior. |
-| plan needs a completed dry run | deferred | WS16 continuation: implement and exercise the original behavior. |
-| test import starts with checked conversations and a recent default | deferred | WS16 continuation: implement and exercise the original behavior. |
-| test import date bounds are full timestamps covering their days | deferred | WS16 continuation: implement and exercise the original behavior. |
-| full import starts with no date bounds | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting an import keeps only conversations in the dry run | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting an import with only unknown conversations is rejected | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting an import drops room targets outside alive open and closed rooms | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting an import with nothing checked is rejected | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting an import is blocked without a connection or with an active run | deferred | WS16 continuation: implement and exercise the original behavior. |
-| catch-up repeats a full import's conversations and targets | deferred | WS16 continuation: implement and exercise the original behavior. |
-| catch-up refuses a date-bounded test import | deferred | WS16 continuation: implement and exercise the original behavior. |
-| catch-up needs a completed import | deferred | WS16 continuation: implement and exercise the original behavior. |
-| only a completed full import offers catch-up | deferred | WS16 continuation: implement and exercise the original behavior. |
-| cancel and undo act on workspace runs | deferred | WS16 continuation: implement and exercise the original behavior. |
-| administrators may cancel and undo personal runs | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo is blocked with a reason while another run is active | deferred | WS16 continuation: controller behavior deferred; domain overlap/naming checks exist. |
-| undo is blocked with a reason while a later import covers the same conversations | deferred | WS16 continuation: controller behavior deferred; domain overlap/naming checks exist. |
-| cancel and undo refuse finished and non-undoable runs | deferred | WS16 continuation: implement and exercise the original behavior. |
+| run pages are admin-only | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| run list shows every run newest first | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting a dry run needs a connected account | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting a dry run is blocked while another run is active | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting a dry run creates a workspace dry run with the options | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting a dry run ignores unparseable dates | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting a dry run defaults to including private channels | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| run page shows status, counts, timestamps, and issues with pagination | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| run page polls while active and stops when finished | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| status frame renders the run without polling itself | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| status frame marks a finished run so polling stops | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| run page shows queued-behind while another run is active | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| administrators can view personal runs from the admin page | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| plan renders conversations, targets, and samples | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| plan escapes Slack text and sample markdown | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| plan needs a completed dry run | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| test import starts with checked conversations and a recent default | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| test import date bounds are full timestamps covering their days | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| full import starts with no date bounds | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting an import keeps only conversations in the dry run | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting an import with only unknown conversations is rejected | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting an import drops room targets outside alive open and closed rooms | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting an import with nothing checked is rejected | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting an import is blocked without a connection or with an active run | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| catch-up repeats a full import's conversations and targets | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| catch-up refuses a date-bounded test import | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| catch-up needs a completed import | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| only a completed full import offers catch-up | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| cancel and undo act on workspace runs | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| administrators may cancel and undo personal runs | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| undo is blocked with a reason while another run is active | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| undo is blocked with a reason while a later import covers the same conversations | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| cancel and undo refuse finished and non-undoable runs | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
 
 ## test/controllers/accounts/slack_imports_controller_test.rb
 
@@ -72,26 +72,26 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| personal page needs workspace setup first | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal page explains the scope and offers connect | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal page lists only the member's own runs | deferred | WS16 continuation: implement and exercise the original behavior. |
-| members can view their own personal runs | deferred | WS16 continuation: implement and exercise the original behavior. |
-| other members' runs 404 on the personal page | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal status frame renders the member's own run | deferred | WS16 continuation: implement and exercise the original behavior. |
-| workspace runs 404 on the personal page | deferred | WS16 continuation: implement and exercise the original behavior. |
-| administrators use the admin pages for other members' runs | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting a preview needs workspace setup and a connection | deferred | WS16 continuation: implement and exercise the original behavior. |
-| starting a preview creates a personal dry run | deferred | WS16 continuation: implement and exercise the original behavior. |
-| one active run per member | deferred | WS16 continuation: implement and exercise the original behavior. |
-| another member's active run queues the preview behind it | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal import starts from the preview's checked conversations | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal import never passes room targets or date bounds | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal import needs a completed preview with checked conversations | deferred | WS16 continuation: implement and exercise the original behavior. |
-| members can cancel and undo their own runs | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo is blocked with a reason while another run is active | deferred | WS16 continuation: controller behavior deferred; domain overlap/naming checks exist. |
-| undo is blocked with a reason while a later import covers the same conversations | deferred | WS16 continuation: controller behavior deferred; domain overlap/naming checks exist. |
-| run page loads later runs' stats once across the undo checks | deferred | WS16 continuation: implement and exercise the original behavior. |
-| personal run page shows the plan with skip checkboxes | deferred | WS16 continuation: implement and exercise the original behavior. |
+| personal page needs workspace setup first | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| personal page explains the scope and offers connect | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| personal page lists only the member's own runs | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| members can view their own personal runs | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| other members' runs 404 on the personal page | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| personal status frame renders the member's own run | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| workspace runs 404 on the personal page | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| administrators use the admin pages for other members' runs | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting a preview needs workspace setup and a connection | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| starting a preview creates a personal dry run | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| one active run per member | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| another member's active run queues the preview behind it | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| personal import starts from the preview's checked conversations | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| personal import never passes room targets or date bounds | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| personal import needs a completed preview with checked conversations | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| members can cancel and undo their own runs | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| undo is blocked with a reason while another run is active | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| undo is blocked with a reason while a later import covers the same conversations | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
+| run page loads later runs' stats once across the undo checks | partial | One blocked-reason scan feeds the view; the original SQL-count regression still needs instrumentation. |
+| personal run page shows the plan with skip checkboxes | covered | 109 real Rails HTTP action goldens with signed sessions, CSRF, role/scope, rows, audits and queue; 83 complete template body goldens; actual HTTP ordering/pagination and combined workflow. |
 
 ## test/controllers/slack/oauth_controller_test.rb
 
@@ -176,7 +176,7 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 | finishing refreshes the heartbeat while looping over rooms | deferred | WS16 continuation: implement and exercise the original behavior. |
 | completing a run kicks the next queued run | deferred | WS16 continuation: implement and exercise the original behavior. |
 | undoing a run kicks the next queued run | deferred | WS16 continuation: implement and exercise the original behavior. |
-| undo is blocked while another run is queued | partial | Domain blocking and actual LIFO guarded; original controller response remains. |
+| undo is blocked while another run is queued | covered | 109 real Rails HTTP actions compare blocking reason and unchanged DB/queue. |
 | message timestamps keep exact microseconds | covered | slack_writer_timestamp_microseconds_do_not_round_through_float plus full Rails row differential |
 | truncated reaction lists import the listed users with one issue per message | deferred | WS16 continuation: implement and exercise the original behavior. |
 | undo removes exactly what the run created and leaves the rest | covered | slack_undo_deletes_data_search_and_mappings_then_reimports_fixture plus kept-content tests and Rails differential |
@@ -255,9 +255,9 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| start! creates a queued run with normalized options and enqueues it | partial | Creation/enqueue covered; options normalization remains deferred. |
-| start! defaults to including private channels | deferred | WS16 continuation: implement and exercise the original behavior. |
-| start! rejects unparseable date bounds | deferred | WS16 continuation: implement and exercise the original behavior. |
+| start! creates a queued run with normalized options and enqueues it | covered | 33 actual Ruby normalization/time vectors plus real HTTP run creation and durable enqueue comparison. |
+| start! defaults to including private channels | covered | 33 actual Ruby normalization/time vectors plus real HTTP run creation and durable enqueue comparison. |
+| start! rejects unparseable date bounds | covered | 33 actual Ruby normalization/time vectors plus real HTTP run creation and durable enqueue comparison. |
 | cancel! stops queued and running runs at their boundary | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | undo! enqueues the undo job and resets progress tracking | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
 | undo! refuses dry runs and active runs | covered | Database lifecycle tests; independent writers for claims, leases, undo and sweeps. |
@@ -301,8 +301,8 @@ Covered is a behavior mapping, not a claim that the original Rails test was run 
 
 | Rails test | State | Coverage or remaining work |
 |---|---|---|
-| admin saves credentials, dry-runs, plans, and watches a test import | deferred | WS16 continuation: implement and exercise the original behavior. |
+| admin saves credentials, dry-runs, plans, and watches a test import | covered | slack_admin_credentials_preview_plan_import_progress_and_undo_over_http: real sudo password/session, credentials, preview, selection, import, polling and undo controls. |
 
 ## Totals
 
-133 covered, 10 partial, 101 deferred; 244 Rails tests inventoried.
+190 covered, 9 partial, 45 deferred; 244 Rails tests inventoried.

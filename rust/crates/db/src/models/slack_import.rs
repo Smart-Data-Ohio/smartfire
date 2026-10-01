@@ -151,6 +151,16 @@ impl SlackImport {
     }
 
     pub fn create(tx: &mut Tx<'_>, new: NewImport) -> Result<Self> {
+        Self::create_with_enqueued_at(tx, new, None)
+    }
+
+    /// Rails `start!` stamps pending jobs with the request's Time.current zone. Lease stamps
+    /// remain UTC; this stamp is parsed as an instant and never compared lexically in SQL.
+    pub fn create_with_enqueued_at(
+        tx: &mut Tx<'_>,
+        new: NewImport,
+        enqueued_at: Option<&str>,
+    ) -> Result<Self> {
         require_transaction(tx)?;
         let mut errors = Errors::default();
         for (table, attribute, id) in [
@@ -176,7 +186,7 @@ impl SlackImport {
         errors.into_result()?;
         let now = tx.now();
         let id = tx.conn().query_row("INSERT INTO slack_imports (slack_workspace_id, slack_connection_id, user_id, kind, mode, options, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-            params![new.workspace_id, new.connection_id, new.user_id, new.kind.as_str(), new.mode.as_str(), new.options.to_string(), json!({"enqueued_at": lease_stamp(now)}).to_string(), now, now], |r| r.get(0))?;
+            params![new.workspace_id, new.connection_id, new.user_id, new.kind.as_str(), new.mode.as_str(), new.options.to_string(), json!({"enqueued_at": enqueued_at.map(str::to_owned).unwrap_or_else(||lease_stamp(now))}).to_string(), now, now], |r| r.get(0))?;
         tx.emit_after_commit(Event::job(&StepJob { import_id: id }));
         Self::find(tx.conn(), id)?.ok_or(Error::RecordNotFound("SlackImport"))
     }

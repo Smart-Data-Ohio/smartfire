@@ -48,7 +48,6 @@ pub mod fizzy_cards;
 pub mod fizzy_connections;
 pub mod fizzy_message_cards;
 pub mod github;
-pub mod slack;
 pub mod message_embed_suppressions;
 pub(crate) mod message_features;
 mod message_forwards;
@@ -65,6 +64,7 @@ pub mod saved_items;
 pub mod scheduled_messages;
 pub mod searches;
 pub mod sessions;
+pub mod slack;
 pub mod sudos;
 pub mod switchers;
 pub mod two_factor;
@@ -191,6 +191,21 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts/slack_imports#destroy" => arc(slack::setup::destroy),
         "slack/oauth#start" => arc(slack::start),
         "slack/oauth#callback" => arc(slack::callback),
+        "accounts/slack_import_runs#index" => arc(slack::runs::admin_index),
+        "accounts/slack_import_runs#create" => arc(slack::runs::admin_create),
+        "accounts/slack_import_runs#show" => arc(slack::runs::admin_show),
+        "accounts/slack_import_runs#status" => arc(slack::runs::admin_status),
+        "accounts/slack_import_runs#plan" => arc(slack::runs::plan),
+        "accounts/slack_import_runs#start_import" => arc(slack::runs::start_import),
+        "accounts/slack_import_runs#catch_up" => arc(slack::runs::catch_up),
+        "accounts/slack_import_runs#cancel" => arc(slack::runs::admin_cancel),
+        "accounts/slack_import_runs#undo" => arc(slack::runs::admin_undo),
+        "slack/imports#index" => arc(slack::runs::personal_index),
+        "slack/imports#create" => arc(slack::runs::personal_create),
+        "slack/imports#show" => arc(slack::runs::personal_show),
+        "slack/imports#status" => arc(slack::runs::personal_status),
+        "slack/imports#cancel" => arc(slack::runs::personal_cancel),
+        "slack/imports#undo" => arc(slack::runs::personal_undo),
         "slack/connections#destroy" => arc(slack::disconnect),
         "github/connections#create" => arc(github::connections::create),
         "github/connections#destroy" => arc(github::connections::destroy),
@@ -755,8 +770,27 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
-        "slack/oauth#start", "slack/oauth#callback", "slack/connections#destroy",
-        "accounts/slack_imports#show", "accounts/slack_imports#update", "accounts/slack_imports#destroy",
+        "accounts/slack_import_runs#index",
+        "accounts/slack_import_runs#create",
+        "accounts/slack_import_runs#show",
+        "accounts/slack_import_runs#status",
+        "accounts/slack_import_runs#plan",
+        "accounts/slack_import_runs#start_import",
+        "accounts/slack_import_runs#catch_up",
+        "accounts/slack_import_runs#cancel",
+        "accounts/slack_import_runs#undo",
+        "slack/imports#index",
+        "slack/imports#create",
+        "slack/imports#show",
+        "slack/imports#status",
+        "slack/imports#cancel",
+        "slack/imports#undo",
+        "slack/oauth#start",
+        "slack/oauth#callback",
+        "slack/connections#destroy",
+        "accounts/slack_imports#show",
+        "accounts/slack_imports#update",
+        "accounts/slack_imports#destroy",
         "embeds/images#show",
         "users/presences#show",
         "users/dnd_allowances#create",
