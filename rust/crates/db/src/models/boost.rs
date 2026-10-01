@@ -82,6 +82,7 @@ impl Boost {
         booster_id: i64,
         content: &str,
     ) -> Result<Self> {
+        let content=tx.rich_text().resolve_boost_content(tx.conn(),content).map_err(crate::Error::Other)?;
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
             r#"INSERT INTO "boosts" ("booster_id", "content", "created_at", "message_id", "updated_at") VALUES (?, ?, ?, ?, ?) RETURNING "id""#,
@@ -93,7 +94,7 @@ impl Boost {
             id,
             message_id,
             booster_id,
-            content: content.into(),
+            content,
             created_at: now,
             updated_at: now,
         })

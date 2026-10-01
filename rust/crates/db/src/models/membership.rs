@@ -378,10 +378,11 @@ impl Membership {
     /// (`broadcast_room_removal_to_user`), then the user's sockets reconnect, so their
     /// subscriptions to this room are dropped, and a direct room recomputes its member key
     /// (`after_destroy_commit :refresh_direct_member_key`), in the order the callbacks are
-    /// declared. Not yet ported, for the workstreams that own them: the huddle, agent and stream
+    /// declared. Not yet ported, for the workstreams that own them: the huddle and stream
     /// revocations (`before_destroy`), the last stage host's successor and
     /// calendar syncs.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        crate::models::AgentGrant::revoke_for_membership(tx, self.user_id, self.room_id)?;
         tx.conn().execute_cached(
             r#"DELETE FROM "memberships" WHERE "memberships"."id" = ?"#,
             [self.id],

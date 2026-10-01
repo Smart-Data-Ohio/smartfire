@@ -44,6 +44,11 @@ pub async fn resolve_public_ips(resolver: &dyn Resolver, host: &str) -> Result<V
     Ok(v4.into_iter().chain(v6).collect())
 }
 
+/// Webhooks share the same Surfguard policy at the reference pin.
+pub async fn resolve_webhook(resolver: &dyn Resolver, host: &str) -> Result<IpAddr, GuardError> {
+    resolve(resolver, host).await
+}
+
 /// `IPAddr.new(text)` for a single address: dotted-quad IPv4, or IPv6 with optional brackets.
 fn ip_literal(text: &str) -> Option<IpAddr> {
     let inner = text.strip_prefix('[').and_then(|t| t.strip_suffix(']'));

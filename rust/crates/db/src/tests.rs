@@ -1,6 +1,17 @@
 //! Ports of `reference/test/models/**`, run against the reference fixtures.
 
 mod account_test;
+mod agent_posting_test;
+mod agent_access_model_test;
+mod agent_approval_test;
+mod agent_record_test;
+mod agent_slash_command_test;
+mod agent_step_test;
+mod agent_working_presence_test;
+mod agent_delivery_test;
+mod agent_event_access_test;
+mod agent_event_polling_test;
+mod bot_webhook_fanout_test;
 mod audit_log_test;
 mod callbacks_test;
 mod calendar_dispatch_test;
@@ -75,6 +86,7 @@ impl TestDb {
             sink: Arc::new(sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
+            ..Default::default()
         };
         let mut config = Config::new(dir.path().join("test.sqlite3"));
         config.readers = 2;
@@ -131,6 +143,7 @@ impl TestDb {
             sink: Arc::new(self.sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
+            ..Default::default()
         };
         let mut config = Config::new(self.db.path());
         config.readers = 1;

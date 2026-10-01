@@ -408,6 +408,10 @@ async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() 
     }).await.unwrap();
     let pool = Pool::new(service.net.clone(),vapid(),|_|Ok::<_,String>(()));
     let app = Arc::new(AppState {
+        ar_encryption: original.ar_encryption.clone(),
+        github_accounts: original.github_accounts.clone(),
+        github_app: original.github_app.clone(),
+        github_read: original.github_read.clone(),
         sudo: Default::default(),
         two_factor: Default::default(),
         subscription_network: original.subscription_network.clone(),config:original.config.clone(),secrets:original.secrets.clone(),clock:original.clock.clone(),
@@ -490,6 +494,10 @@ async fn ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_
     db.write(|tx|{tx.conn().execute_batch("DROP TRIGGER ws17_hold_test_push")?;tx.conn().execute("UPDATE background_jobs SET run_at=? WHERE job_class='Push::Subscription::TestNotificationJob'",[tx.now()])?;Ok(())}).await.unwrap();
     let pool=Pool::new(service.net.clone(),vapid(),|_|Ok::<_,String>(()));
     let app=Arc::new(AppState {
+        ar_encryption: original.ar_encryption.clone(),
+        github_accounts: original.github_accounts.clone(),
+        github_app: original.github_app.clone(),
+        github_read: original.github_read.clone(),
         sudo: Default::default(),
         two_factor: Default::default(),
         subscription_network: original.subscription_network.clone(),config:original.config.clone(),secrets:original.secrets.clone(),clock:original.clock.clone(),

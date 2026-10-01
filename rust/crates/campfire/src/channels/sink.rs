@@ -67,6 +67,14 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             Ok(())
         }),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, app, &broadcast)),
+        crate::integrations::github::notifier::MessageCreated::KIND => decode(request).and_then(|broadcast| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;
+            super::github_notifier::publish(app, &broadcast)
+        }),
+        crate::integrations::github::pull_requests::CardUpdated::KIND => decode(request).and_then(|broadcast| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app has not booted"))?;
+            super::github_cards::publish(app, &broadcast)
+        }),
         campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND => decode(request).and_then(|b| status_badge(cable, b)),
         campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND => decode(request).and_then(|b| ooo_notice(cable, b)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),

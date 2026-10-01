@@ -10,7 +10,7 @@ use std::sync::{Arc, LazyLock};
 
 use campfire_db::{BasicRichText, Connection, RichText};
 use campfire_kit::SharedClock;
-use campfire_richtext::markdown::{self, Icon, IconCatalog};
+use campfire_richtext::markdown::{self, Icon, IconCatalog, IconResolver};
 use campfire_richtext::{AttachableResolver, GidLookup, RenderContext};
 use rails_compat::Secrets;
 use serde::Deserialize;
@@ -83,6 +83,19 @@ pub(crate) fn markdown_presentation(conn: &Connection, body: &str, ctx: &RenderC
 }
 
 impl RichText for AppRichText {
+    fn resolve_boost_content(&self, conn:&Connection, content:&str)->Result<String,String> {
+        let content=campfire_richtext::ruby::strip(content);
+        let name=content.strip_prefix(':').and_then(|s|s.strip_suffix(':')).filter(|name|!name.is_empty() && name.bytes().all(|b|b.is_ascii_lowercase() || b.is_ascii_digit() || b==b'_'));
+        if let Some(name)=name {
+            match icons(conn)?.find(name) {
+                Some(Icon::Emoji(character))=>return Ok(character),
+                Some(Icon::Brand {name,..} | Icon::Custom {name,..})=>return Ok(format!(":{name}:")),
+                None=>{},
+            }
+        }
+        Ok(content.to_owned())
+    }
+
     fn render_markdown(
         &self,
         conn: &Connection,

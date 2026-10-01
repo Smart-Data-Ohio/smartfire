@@ -1,0 +1,144 @@
+{
+  "reference_pin": "d7c7de92",
+  "validation": {
+    "missing_user": {
+      "user": [
+        "must exist"
+      ]
+    },
+    "personal_owner": {
+      "owner_id": [
+        "can't be blank"
+      ]
+    },
+    "workspace_owner": {
+      "owner_id": [
+        "can't be blank"
+      ]
+    },
+    "duplicate_user": {
+      "user_id": [
+        "has already been taken"
+      ]
+    },
+    "bad_status": {
+      "status": [
+        "is not included in the list"
+      ]
+    },
+    "long_note": {
+      "status_note": [
+        "is too long (maximum is 200 characters)"
+      ]
+    },
+    "long_description": {
+      "description": [
+        "is too long (maximum is 500 characters)"
+      ]
+    },
+    "long_presence": {
+      "working_presence": [
+        "is too long (maximum is 140 characters)"
+      ]
+    },
+    "presence_boundary": {},
+    "zero_messages": {
+      "daily_message_cap": [
+        "must be greater than 0"
+      ]
+    },
+    "negative_board": {
+      "daily_board_post_cap": [
+        "must be greater than 0"
+      ]
+    },
+    "zero_actions": {
+      "daily_external_action_cap": [
+        "must be greater than 0"
+      ]
+    },
+    "valid": {}
+  },
+  "reads": {
+    "defaults": {
+      "kind": "personal",
+      "status": "idle"
+    },
+    "legacy": "legacy access (no grants recorded)",
+    "grants": "post_messages in 3 rooms, read_messages workspace-wide",
+    "revoked": "no active grants",
+    "personal": "Personal agent of Kevin",
+    "workspace": "Workspace agent, managed by Kevin",
+    "ownerless": "no owner recorded",
+    "ownerless_valid": true,
+    "activity": "1 delivered, 1 acknowledged, 1 posted, 1 suppressed",
+    "suspended_grants": 0,
+    "active": false,
+    "suspended": true,
+    "directory": [
+      "Bender Bot",
+      "Ágent",
+      "Banned",
+      "Zed Suspended"
+    ]
+  },
+  "status": {
+    "note": {
+      "changed_at": null,
+      "broadcasts": [
+        {
+          "stream": "agents:all",
+          "target": "status_badge_agent_773018776"
+        },
+        {
+          "stream": "agents:all",
+          "target": "directory_row_agent_773018776"
+        }
+      ]
+    },
+    "provider": {
+      "changed_at": null,
+      "broadcasts": []
+    },
+    "working": {
+      "changed_at": "2026-03-02T16:00:00.000Z",
+      "broadcasts": [
+        {
+          "stream": "agents:all",
+          "target": "status_badge_agent_773018776"
+        },
+        {
+          "stream": "agents:all",
+          "target": "directory_row_agent_773018776"
+        }
+      ]
+    },
+    "no_change": {
+      "changed_at": "2026-03-02T16:00:00.000Z",
+      "broadcasts": []
+    },
+    "seen": {
+      "changed_at": "2026-03-02T16:00:00.000Z",
+      "broadcasts": []
+    }
+  },
+  "presence": {
+    "set": {
+      "stored": "Thinking…",
+      "expires_at": "2026-03-02T16:05:00.000Z",
+      "text": "Thinking…"
+    },
+    "clear": {
+      "stored": null,
+      "expires_at": null,
+      "text": null
+    },
+    "unicode": {
+      "stored": " Thinking ",
+      "expires_at": "2026-03-02T16:05:00.000Z",
+      "text": " Thinking "
+    },
+    "boundary": null,
+    "before": " Thinking "
+  }
+}

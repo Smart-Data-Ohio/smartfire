@@ -135,6 +135,8 @@ pub struct MessageDetails {
 #[serde(default)]
 pub struct MessageComponents {
     pub github_cards: Vec<String>,
+    pub github_cards_html: Option<String>,
+    pub github_cards_stamp: String,
     pub twitter_cards: Vec<String>,
     pub twitter_posts: Vec<crate::twitter::Card>,
     pub event_cards: Vec<String>,
@@ -331,6 +333,7 @@ impl MessageItem {
                     message.id,
                     message.updated_at,
                     base_url,
+                    &message.components.github_cards_stamp,
                 )),
             })
             .filter(|html| !crate::helpers::request_forgery::has_token_slots(html))
@@ -560,7 +563,7 @@ pub struct MessagePartial<'a> {
 /// [`uncached_message`] because Rails only caches collection rendering.
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
-        || message_fragment_key(message.id, message.updated_at, &ctx.base_url),
+        || message_fragment_key(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp),
         || {
             MessagePartial { ctx, message }
                 .render()
@@ -605,16 +608,21 @@ pub fn cached_message_fragment(
     updated_at: Timestamp,
     base_url: &str,
 ) -> Option<fragment_cache::Fragment> {
-    fragment_cache::read(&message_fragment_key(id, updated_at, base_url))
+    cached_message_fragment_with_cards(id, updated_at, base_url, "")
 }
 
-fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str) -> String {
-    format!(
+pub fn cached_message_fragment_with_cards(id: i64, updated_at: Timestamp, base_url: &str, stamp: &str) -> Option<fragment_cache::Fragment> {
+    fragment_cache::read(&message_fragment_key(id, updated_at, base_url, stamp))
+}
+
+fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str, stamp: &str) -> String {
+    let key = format!(
         "views/messages/_message:{}/{}/presentation-v{}/{base_url}",
         message_digest(),
         fragment_cache::cache_key_with_version("messages", id, updated_at),
         fragment_cache::keys::PRESENTATION_CACHE_VERSION,
-    )
+    );
+    if stamp.is_empty() { key } else { format!("{key}/{stamp}") }
 }
 
 /// Collection fragments carry the domain's full presentation key. The Index/MessageItem API

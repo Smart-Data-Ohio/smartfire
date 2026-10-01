@@ -244,6 +244,11 @@ impl Message {
         query_one(conn, &sql, [room_id, id], Self::from_row)?.or_not_found("Message")
     }
 
+    /// `room.root_messages.count` (bot API pagination excludes replies).
+    pub fn count_roots_in_room(conn: &Connection, room_id: i64) -> Result<i64> {
+        sql::count(conn, r#"SELECT COUNT(*) FROM "messages" WHERE "room_id" = ? AND "thread_id" IS NULL"#, [room_id])
+    }
+
     /// `room.messages.count`
     pub fn count_in_room(conn: &Connection, room_id: i64) -> Result<i64> {
         sql::count(
@@ -394,8 +399,8 @@ impl Message {
     /// SQLite transaction as the write, so failure rolls it all back. Broadcasts and job wakes
     /// run after commit in Rails' order: unread, push, then the final thread indicator.
     /// Not ported here, for their owners: agent deliveries
-    /// (WS11), activity items (WS12), the GitHub, Fizzy, Twitter, event and link-embed reference
-    /// syncs (WS14, WS15), and the Slack importer's `importing` flag (WS16).
+    /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
+    /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
         let body = Self::rendered_body(tx, &attributes)?;
         Self::validate(tx.conn(), &attributes)?.into_result()?;
@@ -471,6 +476,7 @@ impl Message {
             // room's archive state.
             ChannelThread::close_stale_in(tx, Some(message.room_id))?;
         }
+        crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)
@@ -480,6 +486,9 @@ impl Message {
     /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
     /// must not warm previews. Import callers pass false to retain DB references without fetches.
     pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
+        for sync in tx.env().message_reference_syncs.clone() {
+            sync(tx, self, enqueue)?;
+        }
         let sink = tx.env().sink.clone();
         sink.sync_message_references(tx, self, enqueue)
     }
@@ -823,6 +832,11 @@ impl Message {
             }
         }
         Ok(())
+    }
+
+    /// Compatibility entry point for import callers; both owners use the real save hook.
+    pub fn sync_integration_references(&self, tx: &mut Tx<'_>, enqueue_fetches: bool) -> Result<()> {
+        self.sync_external_references(tx, enqueue_fetches)
     }
 
     /// `drive_attachments.map(&:file_id)`, in id order.

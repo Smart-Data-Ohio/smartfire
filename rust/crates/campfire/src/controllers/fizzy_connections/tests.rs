@@ -34,9 +34,10 @@ async fn ws15e_fizzy_connection_http_matrix() {
                 "controllers::fizzy_connections::tests::ws15e_fizzy_connection_http_matrix",
                 "--exact",
                 "--nocapture",
+                "--test-threads=1",
             ])
             .env("WS15E_FIZZY_CONNECTION_CASE", case)
-            .env("FIZZY_API_BASE_URL", "http://127.0.0.1:51597")
+            .env("FIZZY_API_BASE_URL", crate::integrations::test_support::fixture_http_base(51597, 1))
             .output()
             .await
             .unwrap();
@@ -64,7 +65,8 @@ async fn run(case: &str) {
     } else {
         json!({"accounts":[{"slug":"/897362094","name":"Smart Data","user":{"id":"03user1","name":"David"}}]})
     };
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:51597")
+    let api_base = crate::integrations::fizzy::client::api_base_url();
+    let listener = tokio::net::TcpListener::bind(api_base.strip_prefix("http://").unwrap())
         .await
         .unwrap();
     let server = FakeServer::on_listener(
