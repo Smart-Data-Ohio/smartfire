@@ -18,7 +18,7 @@ const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
 async function acceptance(base,caseName,probe={}) {
-  const contexts=[];
+  const contexts=[],threadResponses=[];
   try {
     async function viewer(name) {
       const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
@@ -27,6 +27,15 @@ async function acceptance(base,caseName,probe={}) {
       const [cookie,...value]=sessions.find(s=>s.user_name===name).cookie_header.split('=');
       await context.addCookies([{name:cookie,value:value.join('='),url:base}]);
       const page=await context.newPage();
+      if(file==='threads') page.on('response',async response=>{
+        const url=new URL(response.url());
+        if(!/^\/rooms\/654632876\/threads(?:\/|$)/.test(url.pathname)) return;
+        const entry={method:response.request().method(),path:url.pathname,status:response.status()};
+        threadResponses.push(entry);
+        if((response.headers()['content-type']||'').includes('json')) {
+          try {const body=await response.json();entry.threadName=(body.thread||body).name;entry.error=body.error||body.message;} catch {}
+        }
+      });
       if(negative) await installMutation(page,caseName,probe);
       page.on('pageerror',error=>console.error('WS8bm browser JavaScript:',base,error.stack));
       page.on('requestfailed',request=>{
@@ -112,7 +121,15 @@ async function acceptance(base,caseName,probe={}) {
       async function finishCreate(name,page=author) {
         const panel=page.locator('#thread-panel');
         await panel.locator('[data-thread-panel-target="createSubmit"]').click();
-        await panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name}).waitFor();
+        try {await panel.locator('[data-thread-panel-target="conversationTitle"]').filter({hasText:name}).waitFor();}
+        catch(error) {
+          console.error('WS8bm thread create diagnostics:',base,caseName,
+            await page.evaluate(()=>Object.fromEntries(['create','conversation','conversationTitle','threadStatus','createStatus','createName','createMessage'].map(target=>{
+              const node=document.querySelector(`[data-thread-panel-target="${target}"]`);
+              return [target,node?{hidden:node.hidden,text:node.value??node.textContent.trim()}:null];
+            }))),threadResponses);
+          throw error;
+        }
         await panel.locator('turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]').waitFor({state:'attached'});
       }
       const threadMessage=value=>panel.locator('.message[data-message-id]').filter({has:author.locator('[data-reply-target="body"]').filter({hasText:value})});
