@@ -10,6 +10,14 @@ use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
 
+// Worker-local ports keep simultaneous fresh-clone checks isolated.
+fn case_port() -> u16 {
+    std::env::var("WS15E_FIZZY_MESSAGE_CASE_PORT")
+        .ok()
+        .map(|port| port.parse().expect("Fizzy case port"))
+        .unwrap_or(51598)
+}
+
 #[tokio::test]
 async fn ws15e_fizzy_message_creation_http_matrix() {
     if let Ok(case) = std::env::var("WS15E_FIZZY_MESSAGE_CASE") {
@@ -39,9 +47,13 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
                 "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
                 "--exact",
                 "--nocapture",
+                "--test-threads=8",
             ])
             .env("WS15E_FIZZY_MESSAGE_CASE", case)
-            .env("FIZZY_API_BASE_URL", "http://127.0.0.1:51598")
+            .env(
+                "FIZZY_API_BASE_URL",
+                format!("http://127.0.0.1:{}", case_port()),
+            )
             .output()
             .await
             .unwrap();
@@ -152,7 +164,7 @@ async fn run(case: &str) {
     if case == "enqueue_rollback" {
         app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws15e_reject_fizzy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Fizzy::FetchCardJob' BEGIN SELECT RAISE(ABORT,'queue rejected'); END;")?;Ok(())}).await.unwrap();
     }
-    let base = "http://127.0.0.1:51598/897362094/cards/580".to_owned();
+    let base = format!("http://127.0.0.1:{}/897362094/cards/580", case_port());
     let url = if case == "long_reply" {
         format!("https://example.com/{}", "x".repeat(60000))
     } else {
@@ -173,7 +185,7 @@ async fn run(case: &str) {
         "new_rejected" => 401,
         _ => 200,
     };
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:51598")
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", case_port()))
         .await
         .unwrap();
     let server = FakeServer::on_listener(
