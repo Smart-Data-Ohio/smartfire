@@ -1,11 +1,17 @@
 //! `AccountsController` (reference/app/controllers/accounts_controller.rb): account settings.
 
+pub mod audit_logs;
+pub mod icons;
 pub mod bots;
 pub mod integrations_health;
 pub mod custom_styles;
 pub mod join_codes;
 pub mod logos;
 pub mod users;
+#[cfg(test)]
+mod mutation_tests;
+#[cfg(test)]
+mod view_tests;
 
 use campfire_db::Account;
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, format};
@@ -62,7 +68,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let logo = Assignment::from_params(&params, "logo")?.stage(c.app()).await?;
     let audit = super::two_factor::audit_context(c)?;
 
-    c
+    let (before, account, before_logo, after_logo) = c
         .app()
         .db
         .write(move |tx| {
@@ -72,11 +78,16 @@ pub async fn update(c: &mut Ctx) -> Result {
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
             attachments::assign(tx, Record::account(account.id), "logo", logo)?;
             let after_logo = attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
-            crate::account_security::settings_changed(tx, &before, &account, before_logo, after_logo, &audit)?;
-            Ok(())
+            Ok((before, account, before_logo, after_logo))
         })
         .await
         .map_err(Error::internal)?;
+
+    // Rails record_settings_changes runs only after update! and its after_commit callbacks
+    // return. In particular, failed NullAnalyzer metadata leaves the logo saved and no audit.
+    c.app().db.write(move |tx| {
+        crate::account_security::settings_changed(tx, &before, &account, before_logo, after_logo, &audit)
+    }).await.map_err(Error::internal)?;
 
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to_with(&location, Redirect { notice: Some("✓".into()), ..Redirect::default() })
@@ -91,3 +102,6 @@ pub async fn current_account(c: &Ctx) -> Result<Account> {
         .map_err(Error::internal)?
         .ok_or_else(|| Error::internal(anyhow::anyhow!("no account")))
 }
+
+#[cfg(test)]
+mod attachment_tests;

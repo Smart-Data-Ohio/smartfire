@@ -8,20 +8,22 @@ use campfire_views::rooms::{DirectEditView, DirectPickerUser, DirectsEdit, Direc
 use super::{Scope, audit_room, destroy_room, redirect_to_room, set_room};
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, require_current_user};
+use crate::controllers::presenters::Presenter;
 use crate::controllers::presenters::page::{self, Rendered, db_error};
-use crate::controllers::presenters::{Presenter};
 
 /// The pinned namespace inherits show without setting `@room`, so the last-room callback
 /// raises. The working, membership-scoped page route is `/rooms/:id`.
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    Err(Error::internal(anyhow::anyhow!("undefined method 'id' for nil")))
+    Err(Error::internal(anyhow::anyhow!(
+        "undefined method 'id' for nil"
+    )))
 }
 
 pub async fn new(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let viewer=require_current_user(c)?.id;
-    let app=c.app().clone();
+    let viewer = require_current_user(c)?.id;
+    let app = c.app().clone();
     let users=c.app().db.read(move|conn| {
         let presenter=Presenter::new(conn,&app,None);
         let mut users=User::active_ordered(conn)?.into_iter().filter(|u|u.id!=viewer).map(|user| {
@@ -34,7 +36,7 @@ pub async fn new(c: &mut Ctx) -> Result {
         users.sort_by_key(|u|!u.starred); // stable partition preserves User.ordered within each half.
         Ok(users)
     }).await.map_err(db_error)?;
-    page::framed_page!(c, StatusCode::OK, |ctx| DirectsNew { ctx,users:&users }).await
+    page::framed_page!(c, StatusCode::OK, |ctx| DirectsNew { ctx, users: &users }).await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -88,7 +90,12 @@ pub async fn edit(c: &mut Ctx) -> Result {
     render_edit(c, room, Vec::new(), StatusCode::OK).await
 }
 
-async fn render_edit(c: &mut Ctx, room: Room, error_attributes: Vec<String>, status: StatusCode) -> Result {
+async fn render_edit(
+    c: &mut Ctx,
+    room: Room,
+    error_attributes: Vec<String>,
+    status: StatusCode,
+) -> Result {
     let current_user = require_current_user(c)?.clone();
     let app = c.app().clone();
     let edit = c
@@ -97,10 +104,14 @@ async fn render_edit(c: &mut Ctx, room: Room, error_attributes: Vec<String>, sta
         .read(move |conn| {
             let presenter = Presenter::new(conn, &app, None);
             // `@room.users.many? ? @room.users.without(Current.user) : @room.users`
-            let member_ids=room.user_ids(conn)?;
+            let member_ids = room.user_ids(conn)?;
             // The form reflects an attempted invalid name; capabilities still use persisted rows.
-            let group_capable=room.direct_group_capable(conn)?;
-            let candidates=User::active_ordered(conn)?.iter().filter(|u|!member_ids.contains(&u.id)).map(|u|presenter.user_view(u.id)).collect::<campfire_db::Result<Vec<_>>>()?;
+            let group_capable = room.direct_group_capable(conn)?;
+            let candidates = User::active_ordered(conn)?
+                .iter()
+                .filter(|u| !member_ids.contains(&u.id))
+                .map(|u| presenter.user_view(u.id))
+                .collect::<campfire_db::Result<Vec<_>>>()?;
             let users = room.users(conn)?;
             let users: Vec<User> = if users.len() > 1 {
                 users
@@ -112,9 +123,9 @@ async fn render_edit(c: &mut Ctx, room: Room, error_attributes: Vec<String>, sta
             };
             Ok(DirectEditView {
                 room_id: room.id,
-                name:room.name.clone(),
+                name: room.name.clone(),
                 group_capable,
-                administrator:current_user.is_administrator(),
+                administrator: current_user.is_administrator(),
                 candidates,
                 error_attributes,
                 display_name: presenter.room_display_name(&room, Some(&current_user))?,
@@ -141,8 +152,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         .get("name")
         .and_then(Param::to_s)
         .unwrap_or_default();
-    let clean=campfire_richtext::ruby::strip(&name).to_owned();
-    let attempted=(!campfire_richtext::ruby::is_blank(&clean)).then_some(clean);
+    let clean = campfire_richtext::ruby::strip(&name).to_owned();
+    let attempted = (!campfire_richtext::ruby::is_blank(&clean)).then_some(clean);
     let mut updated = room.clone();
     match c
         .app()
@@ -158,8 +169,19 @@ pub async fn update(c: &mut Ctx) -> Result {
             Some("Only group direct messages can be renamed.".into()),
         ),
         Err(campfire_db::Error::RecordInvalid(errors)) => {
-            let mut invalid=room;invalid.name=attempted;
-            render_edit(c, invalid, errors.0.iter().map(|(attribute,_)| (*attribute).to_owned()).collect(), StatusCode::UNPROCESSABLE_ENTITY).await
+            let mut invalid = room;
+            invalid.name = attempted;
+            render_edit(
+                c,
+                invalid,
+                errors
+                    .0
+                    .iter()
+                    .map(|(attribute, _)| (*attribute).to_owned())
+                    .collect(),
+                StatusCode::UNPROCESSABLE_ENTITY,
+            )
+            .await
         }
         Err(error) => Err(db_error(error)),
     }
@@ -238,7 +260,9 @@ fn selected_user_ids(c: &Ctx, actor: Option<i64>) -> Vec<i64> {
     };
     // Including Current.user happens before User.where, so a nested sole operand
     // becomes an IN operand instead of being recursively unwrapped on creation.
-    if let Some(actor)=actor {values.push(Param::Number(actor.into()));}
+    if let Some(actor) = actor {
+        values.push(Param::Number(actor.into()));
+    }
     super::user_ids_from_param(&Param::Array(values))
 }
 fn active_user_ids(conn: &campfire_db::Connection, ids: &[i64]) -> campfire_db::Result<Vec<i64>> {
@@ -312,3 +336,6 @@ async fn broadcast_create_room(c: &Ctx, room: &Room) -> Result<()> {
         .await
         .map_err(db_error)
 }
+
+#[cfg(test)]
+mod picker_tests;

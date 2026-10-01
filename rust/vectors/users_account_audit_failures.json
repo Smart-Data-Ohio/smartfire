@@ -1,0 +1,124 @@
+{
+  "reference": "d7c7de92",
+  "rows": {
+    "settings": {
+      "status": 500,
+      "location": null,
+      "name": "Reviewer name",
+      "styles": null,
+      "restrict": true,
+      "code_changed": false,
+      "logo": true,
+      "blob": {
+        "filename": "logo.png",
+        "content_type": "image/png",
+        "byte_size": 405666,
+        "checksum": "VZYg4THVOGn4YBerAuXoCg==",
+        "metadata": {
+          "identified": true
+        }
+      },
+      "audits": []
+    },
+    "join_reset": {
+      "status": 500,
+      "location": null,
+      "name": "37signals",
+      "styles": null,
+      "restrict": false,
+      "code_changed": true,
+      "logo": true,
+      "blob": {
+        "filename": "logo.png",
+        "content_type": "image/png",
+        "byte_size": 405666,
+        "checksum": "VZYg4THVOGn4YBerAuXoCg==",
+        "metadata": {
+          "identified": true
+        }
+      },
+      "audits": []
+    },
+    "styles": {
+      "status": 500,
+      "location": null,
+      "name": "37signals",
+      "styles": "body { --review: 1 }",
+      "restrict": false,
+      "code_changed": false,
+      "logo": true,
+      "blob": {
+        "filename": "logo.png",
+        "content_type": "image/png",
+        "byte_size": 405666,
+        "checksum": "VZYg4THVOGn4YBerAuXoCg==",
+        "metadata": {
+          "identified": true
+        }
+      },
+      "audits": []
+    },
+    "logo_destroy": {
+      "status": 500,
+      "location": null,
+      "name": "37signals",
+      "styles": null,
+      "restrict": false,
+      "code_changed": false,
+      "logo": false,
+      "blob": null,
+      "audits": []
+    },
+    "settings_add_logo": {
+      "status": 500,
+      "location": null,
+      "name": "37signals",
+      "styles": null,
+      "restrict": false,
+      "code_changed": false,
+      "logo": true,
+      "blob": {
+        "filename": "logo.png",
+        "content_type": "image/png",
+        "byte_size": 405666,
+        "checksum": "VZYg4THVOGn4YBerAuXoCg==",
+        "metadata": {
+          "identified": true
+        }
+      },
+      "audits": []
+    }
+  },
+  "icons": {
+    "create": {
+      "status": 500,
+      "location": null,
+      "icon": {
+        "name": "review_icon",
+        "title": "Review icon",
+        "creator_id": 127326141
+      },
+      "blob": {
+        "filename": "square_64.png",
+        "content_type": "image/png",
+        "byte_size": 297,
+        "checksum": "2wjEewKd/QaEvFJoA6b+tQ==",
+        "metadata": {
+          "identified": true
+        }
+      },
+      "analysis_jobs": 1,
+      "purge_jobs": 0,
+      "audits": 0
+    },
+    "destroy": {
+      "status": 500,
+      "location": null,
+      "icon": null,
+      "blob": null,
+      "analysis_jobs": 0,
+      "purge_jobs": 1,
+      "audits": 0
+    }
+  }
+}

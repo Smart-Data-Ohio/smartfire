@@ -1,4 +1,6 @@
 //! `app/models/audit_log.rb`. Request owners supply the equivalent of Rails `Current` explicitly.
+pub mod browsing;
+
 use crate::sql::{count, exists, query_one};
 use crate::{Account, Connection, Result, Room, Timestamp, Tx, User};
 use campfire_richtext::ruby::{is_blank, strip, truncate};

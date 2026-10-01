@@ -243,20 +243,20 @@ impl SettingsFormData {
 }
 
 #[derive(Template)]
-#[template(path = "users/profiles/_status.html")]
+#[template(path = "users/settings/status.html")]
 pub struct StatusForm<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub data: &'a SettingsFormData,
 }
 #[derive(Template)]
-#[template(path = "users/profiles/_notifications.html")]
+#[template(path = "users/settings/notifications.html")]
 pub struct NotificationForm<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub data: &'a SettingsFormData,
 }
 
 #[derive(Template)]
-#[template(path = "users/profiles/_appearance.html")]
+#[template(path = "users/settings/appearance.html")]
 pub struct AppearanceForm<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub data: &'a SettingsFormData,

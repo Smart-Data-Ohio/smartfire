@@ -1,0 +1,91 @@
+{% let form = h::form_with(h::routes::user_notification_settings()).model("user").method("patch").data("controller", "form").class("flex flex-column gap") %}{% filter form_with(form) %}
+  <fieldset class="margin-none">
+    <legend class="txt-large">Do not disturb</legend>
+    <p class="txt-small margin-none">While DND is on, push notifications and sounds stay silent. Your inbox still records everything.</p>
+
+    <div class="flex align-start gap pad-block-half">
+      <label class="switch flex-item-no-shrink">
+        {{ data.hidden("dnd_enabled") }}
+        {{ data.check("dnd_enabled", data.dnd_active) }}
+        <span class="switch__btn round"></span>
+        <span class="for-screen-reader">Do not disturb</span>
+      </label>
+      <span>
+        <span class="txt-medium">Do not disturb</span><br>
+        <span class="txt-small">Silence push and sounds until you turn this off.</span>
+      </span>
+    </div>
+
+    <div class="flex align-start gap pad-block-half">
+      <label class="switch flex-item-no-shrink">
+        {{ data.hidden("quiet_hours_enabled") }}
+        {{ data.check("quiet_hours_enabled", data.quiet_hours_enabled) }}
+        <span class="switch__btn round"></span>
+        <span class="for-screen-reader">Quiet hours</span>
+      </label>
+      <span>
+        <span class="txt-medium">Quiet hours</span><br>
+        <span class="txt-small">Scheduled DND every day, in your time zone.</span>
+      </span>
+    </div>
+
+    <div class="flex align-center gap pad-block-half profile-settings__range">
+      <span class="flex align-center gap">
+        {{ data.label(&form, "quiet_hours_start", "Quiet from", "txt-medium") }}
+        {{ data.clock_field(&form, "quiet_hours_start", data.quiet_hours_start.as_deref()) }}
+      </span>
+      <span class="flex align-center gap">
+        {{ data.label(&form, "quiet_hours_end", "until", "txt-medium") }}
+        {{ data.clock_field(&form, "quiet_hours_end", data.quiet_hours_end.as_deref()) }}
+      </span>
+    </div>
+{% if data.has_errors("quiet_hours_start") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">Quiet hours {{ data.error_sentence("quiet_hours_start") }}.</p>
+{% endif %}
+    <div class="flex align-start gap pad-block-half">
+      <label class="switch flex-item-no-shrink">
+        {{ data.hidden("meeting_dnd_enabled") }}
+        {{ data.check("meeting_dnd_enabled", data.meeting_dnd_enabled) }}
+        <span class="switch__btn round"></span>
+        <span class="for-screen-reader">Do not disturb during meetings</span>
+      </label>
+      <span>
+        <span class="txt-medium">Do not disturb during meetings</span><br>
+        <span class="txt-small">Silence push and sounds while you're in a meeting. Only works while "Show when I'm in a meeting" is on; starred people still get through.</span>
+      </span>
+    </div>
+
+    <div class="flex align-start gap pad-block-half">
+      <label class="switch flex-item-no-shrink">
+        {{ data.hidden("ooo_notify_enabled") }}
+        {{ data.check("ooo_notify_enabled", data.ooo_notify_enabled) }}
+        <span class="switch__btn round"></span>
+        <span class="for-screen-reader">Keep notifying me while I'm out of office</span>
+      </label>
+      <span>
+        <span class="txt-medium">Keep notifying me while I'm out of office</span><br>
+        <span class="txt-small">Off means push, sounds, and huddle rings stay silent while you're out of office, like DND. Starred people still get through; your inbox still records everything.</span>
+      </span>
+    </div>
+
+{% if !data.allowed_people.is_empty() %}      <p class="txt-medium margin-none pad-block-half">Still notify me for:</p>
+      <ul class="margin-none pad-inline">
+{% for person in data.allowed_people %}          <li class="flex align-center gap pad-block-half">
+            <span class="flex-item-grow">{{ person.name }}</span>
+            {{ data.remove_button(person) }}
+          </li>
+{% endfor %}      </ul>
+{% endif %}    <p class="txt-small">Star people from their profile page to let their messages through DND.</p>
+
+    {{ h::profile_form_submit_button(ctx) }}
+  </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Keyword alerts</legend>
+    <p class="txt-small margin-none">One word or phrase per line, up to 20. A match in any room you belong to lands in your inbox.</p>
+    {{ data.label(&form, "keyword_alerts", "Keywords", "txt-medium for-screen-reader") }}
+    {{ data.keyword_field() }}
+{% if data.has_errors("base") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">{{ data.error_sentence("base") }}.</p>
+{% endif %}
+    {{ h::profile_form_submit_button(ctx) }}
+  </fieldset>
+{% endfilter %}
