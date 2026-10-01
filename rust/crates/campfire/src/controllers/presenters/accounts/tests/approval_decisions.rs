@@ -399,17 +399,18 @@ async fn html_external_approve_is_303_for_owner_with_alert_and_safe_referer() {
 
 #[tokio::test]
 async fn external_decisions_revalidate_identity_and_atomically_enqueue_owner_jobs() {
+    use crate::controllers::presenters::test_support::{BENDER, KEVIN, Req, TestApp};
     use crate::integrations::{
         fizzy::accounts::{Account as Fizzy, Input},
         github::accounts::{Account as Github, AccountInput},
     };
-    let mut test = boot_seed("default").await.expect("default seed");
-    test.booted
-        .jobs
-        .stop(std::time::Duration::from_secs(1))
+    let test = TestApp::boot_frozen()
+        .await
+        .expect("default seed")
+        .without_job_runner()
         .await;
-    let bot_id = test.label("users.bender").parse::<i64>().unwrap();
-    let owner_id = test.label("users.kevin").parse::<i64>().unwrap();
+    let bot_id = BENDER;
+    let owner_id = KEVIN;
     let crypto = test.booted.app.ar_encryption.clone();
     let (github_id, fizzy_id) = test
         .booted
@@ -444,18 +445,40 @@ async fn external_decisions_revalidate_identity_and_atomically_enqueue_owner_job
         })
         .await
         .unwrap();
-    let mut admin = test.browser("198.51.100.214");
-    admin.sign_in(&test.label("emails.david")).await;
+    let mut admin = test.david();
     for (service, job) in [
         ("github", "Github::PerformAgentActionJob"),
         ("fizzy", "Fizzy::PerformAgentActionJob"),
     ] {
-        let id = approval(&test, &format!("{service}.comment")).await;
+        let action = format!("{service}.comment");
+        let id = test
+            .db()
+            .write(move |tx| {
+                let mut agent = campfire_db::Agent::for_user(tx.conn(), bot_id)?.unwrap();
+                agent.update(
+                    tx,
+                    campfire_db::AgentChanges {
+                        owner_id: Some(Some(owner_id)),
+                        ..Default::default()
+                    },
+                )?;
+                Ok(AgentApproval::create(
+                    tx,
+                    NewApproval {
+                        agent_id: agent.id,
+                        action,
+                        summary: "A human must decide".into(),
+                        ..Default::default()
+                    },
+                )?
+                .id)
+            })
+            .await
+            .unwrap();
         let missing = admin
-            .form(
-                "patch",
-                &format!("/agent_approvals/{id}.json"),
-                &[("decision", "approved")],
+            .write(
+                Req::new(Method::PATCH, &format!("/agent_approvals/{id}.json"))
+                    .form(&[("decision", "approved")]),
             )
             .await;
         assert_eq!(
@@ -464,7 +487,13 @@ async fn external_decisions_revalidate_identity_and_atomically_enqueue_owner_job
             "{}",
             missing.text()
         );
-        assert_eq!(state(&test, id).await.status, "pending");
+        assert_eq!(
+            test.db()
+                .read(move |conn| Ok(AgentApproval::find(conn, id)?.unwrap().status))
+                .await
+                .unwrap(),
+            "pending"
+        );
         let github = service == "github";
         test.booted.app.db.write(move|tx| {
             tx.conn().execute("UPDATE agent_approvals SET github_account_id=?,github_login=?,fizzy_connected_account_id=?,fizzy_user_id=? WHERE id=?",rusqlite::params![github.then_some(github_id),github.then_some("machine-fixture"),(!github).then_some(fizzy_id),(!github).then_some("fixture-user"),id])?;Ok(())
@@ -473,14 +502,19 @@ async fn external_decisions_revalidate_identity_and_atomically_enqueue_owner_job
             tx.conn().execute_batch("CREATE TRIGGER ws11ui_reject_external BEFORE INSERT ON background_jobs WHEN NEW.job_class IN ('Github::PerformAgentActionJob','Fizzy::PerformAgentActionJob') BEGIN SELECT RAISE(ABORT,'external enqueue rejected'); END;")?;Ok(())
         }).await.unwrap();
         let rejected = admin
-            .form(
-                "patch",
-                &format!("/agent_approvals/{id}.json"),
-                &[("decision", "approved")],
+            .write(
+                Req::new(Method::PATCH, &format!("/agent_approvals/{id}.json"))
+                    .form(&[("decision", "approved")]),
             )
             .await;
         assert_eq!(rejected.status, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(state(&test, id).await.status, "pending");
+        assert_eq!(
+            test.db()
+                .read(move |conn| Ok(AgentApproval::find(conn, id)?.unwrap().status))
+                .await
+                .unwrap(),
+            "pending"
+        );
         test.booted.app.db.read(move|conn| {
             assert_eq!(conn.query_row("SELECT count(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NOT NULL",[id],|r|r.get::<_,i64>(0))?,0);
             assert_eq!(conn.query_row("SELECT count(*) FROM agent_events WHERE event_type='approval_decided' AND json_extract(metadata,'$.approval_id')=?",[id],|r|r.get::<_,i64>(0))?,0);Ok(())
@@ -496,14 +530,13 @@ async fn external_decisions_revalidate_identity_and_atomically_enqueue_owner_job
             .await
             .unwrap();
         let accepted = admin
-            .form(
-                "patch",
-                &format!("/agent_approvals/{id}.json"),
-                &[("decision", "approved")],
+            .write(
+                Req::new(Method::PATCH, &format!("/agent_approvals/{id}.json"))
+                    .form(&[("decision", "approved")]),
             )
             .await;
         assert_eq!(accepted.status, StatusCode::OK, "{}", accepted.text());
-        assert_eq!(payload(&accepted)["status"], "approved");
+        assert_eq!(accepted.json()["status"], "approved");
         let job = job.to_owned();
         test.booted.app.db.read(move|conn| {
             assert_eq!(conn.query_row("SELECT count(*) FROM background_jobs WHERE job_class=? AND json_extract(arguments,'$.approval_id')=?",rusqlite::params![job,id],|r|r.get::<_,i64>(0))?,1);Ok(())

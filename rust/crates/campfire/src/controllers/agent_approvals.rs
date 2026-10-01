@@ -195,3 +195,6 @@ fn redirect(c: &mut Ctx, message: &str, alert: bool) -> Result {
     response.status = StatusCode::SEE_OTHER;
     Ok(response)
 }
+
+#[cfg(test)]
+mod execution_tests;
