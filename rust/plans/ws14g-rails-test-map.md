@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 217 ported domain/API/controller cases; 394 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 218 ported domain/API/controller cases; 393 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -288,7 +288,7 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/users/google_sign_in_links_controller_test.rb
 
-- **Partial** — the profile offers the link and the flow links the verified subject to the signed-in member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — the profile offers the link and the flow links the verified subject to the signed-in member — complete pinned profile bodies in `app::google_page_tests` plus link_success in the 87-case `app::google_tests::parity_cases` matrix (identity/audit/session/grant deltas).
 - **Ported** — the link flow keeps sign-in's domain allowlist — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
 - **Ported** — the link flow keeps sign-in's nonce check — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
 - **Ported** — a Google account that already signs in as someone else is refused — `app::google_tests::parity_cases::google_controller_cases_match_complete_pinned_rails_observations` (complete pinned Rails request, flash, identities, password, session markers and audits).
@@ -789,33 +789,33 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/users/profiles_two_factor_test.rb (Google/Calendar/Drive cases only)
 
-- **Deferred** — profile offers Google confirmation to linked members — WS14g adapter + WS9 profile.
-- **Deferred** — profile hides Google confirmation without a linked account — WS14g adapter + WS9 profile.
+- **Ported** — profile offers Google confirmation to linked members — `controllers::users::profile_security_tests::{linked_profile_offers_ws9_google_confirmation,unlinked_profile_hides_ws9_google_confirmation}` (merged WS9 configured adapter, real enrollment/identity rows and actual profile requests; configured provider/adapter preserved).
+- **Ported** — profile hides Google confirmation without a linked account — `controllers::users::profile_security_tests::{linked_profile_offers_ws9_google_confirmation,unlinked_profile_hides_ws9_google_confirmation}` (merged WS9 configured adapter, real enrollment/identity rows and actual profile requests; configured provider/adapter preserved).
 
 ## test/controllers/users/profiles_controller_test.rb (Google/Calendar/Drive cases only)
 
-- **Deferred** — profile shows Google Calendar as not configured without credentials — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile links to connect for meeting status without an account — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile offers the meeting toggle for a connected account — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile shows the meeting fetch notice when a refresh failed — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile asks to reconnect for meeting status left on after disconnect — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile lists the quiet-during-meetings switch — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — the layout sends meeting windows for the live sound gate — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — the layout sends future meeting windows before the meeting starts — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — the layout sends no meeting windows without cached intervals — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — the layout sends no meeting windows when meeting status itself is off — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — the layout sends future calendar OOO windows before the OOO starts — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — the layout leaves sounds alone for meetings when quiet-during-meetings is off — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile offers a reconnect when Google rejected the connection — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile offers Drive previews for a connected account without the Drive scope — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile shows Drive previews as enabled when the account has the Drive scope — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile offers Drive previews again for the retired metadata grant — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile shows no Drive row when Google is not configured — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile asks to reconnect when the grant lacks the calendar scope — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — profile shows Disconnect for a partial grant with Drive still active — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — reconnect preserves a granted Drive scope — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — reconnect without Drive requests the calendar scope only — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
-- **Deferred** — layout carries the Drive previews meta tag only with the Drive scope — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
+- **Ported** — profile shows Google Calendar as not configured without credentials — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile links to connect for meeting status without an account — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile offers the meeting toggle for a connected account — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile shows the meeting fetch notice when a refresh failed — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile asks to reconnect for meeting status left on after disconnect — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile lists the quiet-during-meetings switch — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — the layout sends meeting windows for the live sound gate — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — the layout sends future meeting windows before the meeting starts — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — the layout sends no meeting windows without cached intervals — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — the layout sends no meeting windows when meeting status itself is off — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — the layout sends future calendar OOO windows before the OOO starts — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — the layout leaves sounds alone for meetings when quiet-during-meetings is off — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile offers a reconnect when Google rejected the connection — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile offers Drive previews for a connected account without the Drive scope — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile shows Drive previews as enabled when the account has the Drive scope — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile offers Drive previews again for the retired metadata grant — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile shows no Drive row when Google is not configured — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile asks to reconnect when the grant lacks the calendar scope — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — profile shows Disconnect for a partial grant with Drive still active — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — reconnect preserves a granted Drive scope — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — reconnect without Drive requests the calendar scope only — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
+- **Ported** — layout carries the Drive previews meta tag only with the Drive scope — `app::google_page_tests::google_complete_login_pages_and_configured_profile_components_match_rails` (21 complete pinned login/profile HTTP bodies; fresh/configured/disconnected/partial/retired/Drive grants, meeting/fetch/quiet/future-OOO cache states; no browser pixels or response rewriting).
 
 
 ## Continuation coverage and remaining seams
@@ -838,7 +838,7 @@ The new controller-cases probe captures 80 complete Rails request observations, 
 
 Inbound preloading now has the original one-event-read assertion, scaled from 3 to 30 confirmed entries, with recorded Google calls and unchanged responses/jobs. The merged owner SQL tracer is reused on the actual reader count.
 
-Complete Google HTML now compares all three login HTTP pages and sixteen complete Google profile panels across eight configured/grant/link states, including complete Google Calendar notices. The injected Calendar configuration now drives settings notices; the old process-global environment read caused configured clients to render the unconfigured notice. Full profile pages remain owner-blocked: WS8b-r2 profile/status/membership composition, WS10 GitHub/inbox controls, WS13 call settings, WS15f Fizzy, WS16 Slack, and WS6 timezone ordering. The eight full Rails profile responses are retained in google_full_pages.json; no failed whole-page claim is relabeled complete and no pixel work is required.
+Complete Google HTML now compares all three login HTTP pages and sixteen complete Google profile panels across eight configured/grant/link states, including complete Google Calendar notices. The injected Calendar configuration now drives settings notices; the old process-global environment read caused configured clients to render the unconfigured notice. That historical 434-based slice compared components only. Requested main b908ebc2 now supplies the full composition: 21 whole login/profile bodies pass, with strict surrounding bytes and only the existing validated live asset fingerprints. No pixel work is required.
 
 Error service reporting is now implemented through the app subscriber boundary. The Rails probe observes real report defaults and represents its execution-context ActiveJob object by class name (Ruby object pointers are not a cross-language contract); all other options, account contexts, request counts and retry emissions are compared exactly. The real error is passed to subscribers; default structured logs contain only classification/options, never snapshot tokens. Missing subscribers were reproduced after all eight committed attempts before wiring the consumer exhaustion block.
 
@@ -848,7 +848,7 @@ The sign-in lifecycle matrix now commits the Rails HTTP requests and restores th
 
 Release-input validation caught production Drive recipient validation reading the regex from a test vector. The verified URI::MailTo pattern is now a production constant; tests compare its complete source and all twelve email/twelve selection vectors. The guard remains unweakened and excludes parity files.
 
-Owner availability was rechecked at remote main b908ebc2 after the requested 434d1c14 merge. Agent polling/REST endpoints remain absent. New profile composition exists in main 72fc8b05 and is not yet consumed by this verified 434d1c14-based slice; those integration cases are available next, rather than being described as wholly owner-blocked. Original full-page fixture differences above describe this branch.
+Requested main b908ebc2 is now merged with both parents retained. Its real profile composition and settings/status APIs are consumed. All 22 additional Google/Calendar/Drive profile declarations and both Google confirmation declarations are mapped. The three agent polling/REST/webhook delivery declarations remain deferred to WS11; other unblocked scope still remains.
 
 ## WS11 key-provider integration handoff
 
@@ -861,3 +861,7 @@ The controller matrix now compares 87 complete request/state observations, inclu
 ### Requested b908ebc2 continuation: Drive recipients
 
 All 23 named recipient declarations now have real pinned request observations. The 31-case matrix includes blank/nil/malformed emails, deactivated/banned/bot/agent members, both company domains and external passwords, stale membership, canonical order/duplicate collapse/empty selection, malformed/oversized selections, absent picker key/project, anonymous/nonmember/bot/agent access, CSRF, 60 previews then list/validate rejection and a separate user budget. Google consent is unnecessary and no Google HTTP occurs. The three agent polling/webhook delivery declarations remain WS11-owned, distinct from these existing authentication APIs.
+
+### Requested b908ebc2 continuation: configured composition
+
+Twenty-one complete responses (3 login and 18 profile) now match the approved pinned Rails templates: configured/disabled credentials/domains, absent/Calendar/Drive/retired/partial/rejected/linked accounts, Drive-preserving reconnect, refresh errors and meeting/future/empty/off/quiet-off/OOO cache states. Configuration comes from the same injected Config as the provider; security controls retain WS9's configured reauthentication adapter. No duplicated Google partial or public-metadata SQL adapter remains.

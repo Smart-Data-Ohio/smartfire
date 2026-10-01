@@ -75,6 +75,35 @@ async fn google_complete_login_pages_and_configured_profile_components_match_rai
             })
             .await
             .unwrap();
+        if let Some(settings) = spec["settings"].as_object() {
+            let settings = settings.clone();
+            a.db()
+                .write(move |tx| {
+                    for (key, value) in settings {
+                        assert!(matches!(
+                            key.as_str(),
+                            "meeting_status_enabled"
+                                | "meeting_dnd_enabled"
+                                | "ooo_calendar_enabled"
+                        ));
+                        tx.conn().execute(
+                            &format!("UPDATE users SET {key}=? WHERE id=?"),
+                            rusqlite::params![value.as_bool().unwrap(), DAVID],
+                        )?;
+                    }
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        }
+        if spec["cache"].is_object() {
+            let cache = spec["cache"].clone();
+            a.db().write(move |tx| {
+                tx.conn().execute("DELETE FROM calendar_meeting_caches WHERE user_id=?",[DAVID])?;
+                tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetch_error,fetched_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)", rusqlite::params![DAVID,cache["busy_intervals"].as_array().map(|values|serde_json::to_string(values).unwrap()).unwrap_or_else(||"[]".into()),cache["ooo_intervals"].as_array().map(|values|serde_json::to_string(values).unwrap()).unwrap_or_else(||"[]".into()),cache["fetch_error"].as_str(),tx.now(),tx.now(),tx.now()])?;
+                Ok(())
+            }).await.unwrap();
+        }
         if let Some(scope) = row["scope"].as_str() {
             support::grant(
                 &a,
@@ -84,7 +113,10 @@ async fn google_complete_login_pages_and_configured_profile_components_match_rai
             )
             .await;
             let scope = scope.to_owned();
-            let disconnected = spec["account"] == "disconnected";
+            let disconnected = matches!(
+                spec["account"].as_str(),
+                Some("disconnected" | "disconnected_drive")
+            );
             a.db().write(move |tx| {tx.conn().execute("UPDATE google_accounts SET email='david@smartdata.net',scopes=?,disconnected_reason=? WHERE user_id=?",rusqlite::params![scope,disconnected.then_some("revoked"),DAVID])?;Ok(())}).await.unwrap();
         }
         if spec["account"] == "linked" {
@@ -152,6 +184,6 @@ async fn google_complete_login_pages_and_configured_profile_components_match_rai
         "complete Google page differences: {differences:?}"
     );
     println!(
-        "Pinned Rails Google HTML: 11 complete login/profile pages and 16 complete profile panels exercised; 0 skipped"
+        "Pinned Rails Google HTML: 21 complete login/profile pages and 36 complete profile panels exercised; 0 skipped"
     );
 }
