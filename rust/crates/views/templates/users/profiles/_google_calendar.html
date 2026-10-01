@@ -1,4 +1,4 @@
-<section class="margin-block pad-inline pad-block fill-shade border-radius" aria-labelledby="google-calendar-title">
+{% let data = self.calendar_data() %}<section class="margin-block pad-inline pad-block fill-shade border-radius" aria-labelledby="google-calendar-title">
   <h2 id="google-calendar-title" class="txt-large">Google Calendar</h2>
 
 {% if !data.configured %}    <p>Google Calendar is not configured for this workspace</p>

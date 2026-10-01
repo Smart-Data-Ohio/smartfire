@@ -53,7 +53,7 @@ async fn full_native_room_pages_match_four_complete_rails_pages() {
             let room = campfire_db::Room::find(conn, room_id)?;
             let native = room_native::load(conn, &state, &room, &viewer, None, Some("campfire.test".into()), "http://campfire.test".into())?;
             let account = campfire_db::Account::first(conn)?;
-            let preferences = view_context::user_preferences(conn, user_id, state.db.env().now())?;
+            let preferences = view_context::user_preferences(conn, user_id, state.db.env().now().jiff())?;
             let last = campfire_db::Room::original_for_user(conn, user_id)?.map(|r| r.id);
             let recent = campfire_db::Search::recent_for_user(conn, user_id)?;
             let icons = crate::controllers::presenters::client_icon_names(conn)?;

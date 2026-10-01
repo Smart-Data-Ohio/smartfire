@@ -240,9 +240,13 @@ pub fn clear_plaintext_bot_tokens_task() -> Task<App> {
 }
 
 /// `Huddle::Reconciler`'s steps, every `HUDDLE_RECONCILE_INTERVAL`, each isolated from the
-/// others' failures. None is ported yet.
-pub fn huddle_reconciler(_interval: Duration) -> Periodic<App> {
-    Periodic::new("Huddle reconciliation")
+/// others' failures: overdue invitations, stale presenters, then due LiveKit cleanups.
+pub fn huddle_reconciler(interval: Duration) -> Periodic<App> {
+    let mut periodic = Periodic::new("Huddle reconciliation");
+    periodic.task(Task::new("huddle reconciliation", interval, |app: App| async move {
+        super::huddle::reconcile(&app.db, crate::huddle::RoomService::new(crate::huddle::Config::from_env())).await.map(drop)
+    }));
+    periodic
 }
 
 /// `Bots::ClearPlaintextTokens.run!`: for every user that still has a plaintext `bot_token`, the

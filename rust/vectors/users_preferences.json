@@ -1,0 +1,283 @@
+{
+  "reference": "d7c7de92",
+  "time_zones": [
+    {
+      "name": "rails_name",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": "Pacific Time (US & Canada)",
+      "status": 200,
+      "json": {
+        "time_zone": "Pacific Time (US & Canada)"
+      },
+      "state": {
+        "time_zone": "Pacific Time (US & Canada)",
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    },
+    {
+      "name": "iana",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": "America/New_York",
+      "status": 200,
+      "json": {
+        "time_zone": "America/New_York"
+      },
+      "state": {
+        "time_zone": "America/New_York",
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    },
+    {
+      "name": "saved_wins",
+      "path": "/users/me/time_zone",
+      "initial": {
+        "time_zone": "Eastern Time (US & Canada)"
+      },
+      "zone": "America/Los_Angeles",
+      "status": 200,
+      "json": {
+        "time_zone": "Eastern Time (US & Canada)"
+      },
+      "state": {
+        "time_zone": "Eastern Time (US & Canada)",
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "explicit_blank",
+      "path": "/users/me/time_zone",
+      "initial": {
+        "time_zone_explicit": true
+      },
+      "zone": "America/New_York",
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": true,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "unknown",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": "Narnia",
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "wrong_case",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": "america/new_york",
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "padded",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": " America/New_York ",
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "nil",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": null,
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "array",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": [
+        "America/New_York"
+      ],
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "hash",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": {
+        "time_zone": "America/New_York"
+      },
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "boolean",
+      "path": "/users/me/time_zone",
+      "initial": {},
+      "zone": false,
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "invalid_user",
+      "path": "/users/me/time_zone",
+      "initial": {
+        "theme": "unknown"
+      },
+      "zone": "America/New_York",
+      "status": 422,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "invalid_voice",
+      "path": "/users/me/time_zone",
+      "initial": {
+        "voice_mode": "unknown"
+      },
+      "zone": "America/New_York",
+      "status": 422,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "incomplete_quiet",
+      "path": "/users/me/time_zone",
+      "initial": {
+        "quiet_hours_enabled": true
+      },
+      "zone": "America/New_York",
+      "status": 422,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "invalid_user_unknown_zone",
+      "path": "/users/me/time_zone",
+      "initial": {
+        "theme": "unknown"
+      },
+      "zone": "Narnia",
+      "status": 200,
+      "json": {
+        "time_zone": null
+      },
+      "state": {
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T15:00:00.000000Z"
+      }
+    },
+    {
+      "name": "blank_saved",
+      "path": "/users/me/time_zone",
+      "initial": {
+        "time_zone": " "
+      },
+      "zone": "America/New_York",
+      "status": 200,
+      "json": {
+        "time_zone": "America/New_York"
+      },
+      "state": {
+        "time_zone": "America/New_York",
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    },
+    {
+      "name": "path_user_id_ignored",
+      "path": "/users/149087659/time_zone",
+      "initial": {},
+      "zone": "America/New_York",
+      "status": 200,
+      "json": {
+        "time_zone": "America/New_York"
+      },
+      "state": {
+        "time_zone": "America/New_York",
+        "time_zone_explicit": false,
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    }
+  ],
+  "tour": {
+    "status": 204,
+    "completed_at": "2026-03-02T16:00:00.000000Z",
+    "updated_at": "2026-03-02T16:00:00.000000Z"
+  }
+}

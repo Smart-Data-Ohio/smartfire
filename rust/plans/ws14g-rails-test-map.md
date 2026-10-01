@@ -849,3 +849,7 @@ The sign-in lifecycle matrix now commits the Rails HTTP requests and restores th
 Release-input validation caught production Drive recipient validation reading the regex from a test vector. The verified URI::MailTo pattern is now a production constant; tests compare its complete source and all twelve email/twelve selection vectors. The guard remains unweakened and excludes parity files.
 
 Owner availability was rechecked at remote main b908ebc2 after the requested 434d1c14 merge. Agent polling/REST endpoints remain absent. New profile composition exists in main 72fc8b05 and is not yet consumed by this verified 434d1c14-based slice; those integration cases are available next, rather than being described as wholly owner-blocked. Original full-page fixture differences above describe this branch.
+
+## WS11 key-provider integration handoff
+
+Checked `origin/rust/ws11-agents` while merging requested main `b908ebc2`. WS11's `sync_message_references` and `sync_message_reference_phase` reuse boot's `app.ar_encryption`. Retain that reuse when #176 merges. Retain `Secrets::ar_encryption_key` and its OnceLock in `rails_compat`: boot's object and any other object share exactly that provider's derivation, with no global/phase cache and no derived-byte change. Existing pinned cipher vectors and the concurrent provider regression cover both construction and reuse. The three Drive agent-delivery declarations above remain deferred to WS11's real polling/webhook APIs.

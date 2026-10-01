@@ -1,0 +1,12 @@
+{
+  "users/profiles/_status.html.erb": "8e4553dee3137b28212fe4dd08160f91475f859a7ecefa83e52bcfcd9d55e40b",
+  "users/statuses/_fields.html.erb": "7fc9a81a97a1816f96f774ec83a49bc6bcc19022bec9976c887281b72f8ba853",
+  "app/controllers/users/statuses_controller.rb": "52ad94e30c348765241eaac190b02e4cbf56c2584324c21ce74267f8ea3fe67e",
+  "config/routes.rb": "2c9e642c07b1d22f5ec692ab2d448b11d7d77d8d39eef7e78f42081f0d3f6657",
+  "users/statuses/edit.html.erb": "a0f535c35998f35efc0deaf5781e426e867f6dd3df94588d42848b6685528da0",
+  "users/cards/show.html.erb": "8d898a311eeb58f4160d8ed29346b1766e37808fb10083ab2c47f8323f84bc67",
+  "users/sidebars/show.html.erb": "6fd40c08b6f437ecefac5ab906511093234da3327dcb72c4cad131365ee2f8e8",
+  "layouts/application.html.erb": "53008a50df6bf20f53013c146ef0584690cdd1061b5b748d5bf2035f3fd854c9",
+  "app/assets/stylesheets/people.css": "fdef4009a16efb9294d643d187afa6fcffbdf8054eadccf5ed6aee3e343855db",
+  "app/javascript/controllers/profile_card_controller.js": "dadc00e7439ce18049f64e5e9f6e640a81318aeb8262c1b987655abce942a29b"
+}

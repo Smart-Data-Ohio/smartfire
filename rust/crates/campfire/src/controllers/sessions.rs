@@ -117,12 +117,19 @@ async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
         .read(presenters::accounts::help_contact)
         .await
         .map_err(Error::internal)?;
-    let google_domains = c.app().google.sign_in().config.configured().then(||super::google_sign_in::domain_list(c));
+    // WS14g supplies the configured provider and /session/google start/callback handlers.
+    // This read-only display input never authenticates or completes a Google flow.
+    let provider = c.app().google.sign_in();
+    let google_sign_in_domains = if provider.config.configured() {
+        provider.config.domains.clone()
+    } else {
+        Vec::new()
+    };
     framed_page!(c, status, |ctx| sessions::New {
         ctx,
         email_address: email_address.clone(),
         help_contact: help_contact.clone(),
-        google_domains: google_domains.clone()
+        google_sign_in_domains: google_sign_in_domains.clone(),
     })
     .await
 }

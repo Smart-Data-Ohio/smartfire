@@ -12,9 +12,15 @@ mod sidebar;
 pub use sidebar::*;
 mod summary;
 pub use summary::*;
+mod agent_profile;
+pub use agent_profile::*;
+mod people;
+pub use people::*;
 mod settings;
 pub use settings::*;
+mod appearance;
 pub mod statuses;
+pub use appearance::*;
 
 #[derive(Clone)]
 pub struct UserSession {
@@ -33,19 +39,35 @@ pub struct SessionsIndex<'a> {
     pub now: jiff::Timestamp,
 }
 impl Page for SessionsIndex<'_> {
-    fn page_title(&self) -> Option<String> { Some("Your sessions".into()) }
+    fn page_title(&self) -> Option<String> {
+        Some("Your sessions".into())
+    }
 }
 impl SessionsIndex<'_> {
-    fn ip<'s>(&self,s: &'s UserSession) -> Option<&'s str> { s.ip_address.as_deref().filter(|v| !v.chars().all(char::is_whitespace)) }
-    fn last_active(&self,s: &UserSession) -> String { h::time_ago_in_words(&self.ctx.time_zone,s.last_active_at,self.now) }
-    fn signed_in(&self,s: &UserSession) -> h::Html {
-        h::local_datetime_tag(&self.ctx.time_zone,s.created_at,"date",h::attrs(),&self.ctx.time_zone.to_fs(s.created_at,"short"))
+    fn ip<'s>(&self, s: &'s UserSession) -> Option<&'s str> {
+        s.ip_address
+            .as_deref()
+            .filter(|v| !v.chars().all(char::is_whitespace))
+    }
+    fn last_active(&self, s: &UserSession) -> String {
+        h::time_ago_in_words(&self.ctx.time_zone, s.last_active_at, self.now)
+    }
+    fn signed_in(&self, s: &UserSession) -> h::Html {
+        h::local_datetime_tag(
+            &self.ctx.time_zone,
+            s.created_at,
+            "date",
+            h::attrs(),
+            &self.ctx.time_zone.to_fs(s.created_at, "short"),
+        )
     }
 }
 
 #[derive(Template)]
-#[template(path="users/profiles/_sessions.html")]
-pub struct ProfileSessions<'a> { pub ctx: &'a ViewContext<'a> }
+#[template(path = "users/profiles/_sessions.html")]
+pub struct ProfileSessions<'a> {
+    pub ctx: &'a ViewContext<'a>,
+}
 
 /// `users/new.html.erb` (the join page).
 #[derive(Template)]
@@ -74,6 +96,8 @@ pub struct Show<'a> {
     /// `user.transfer_id`, for `users/profiles/_transfer` (shown to administrators).
     pub transfer_id: String,
     pub profile_status: Option<statuses::ProfileStatus>,
+    pub agent_profile: Option<AgentProfile>,
+    pub can_manage_bot: bool,
 }
 
 impl Show<'_> {
@@ -175,9 +199,10 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
-    pub google_calendar: google::CalendarData,
-    pub google_sign_in: google::SignInData,
     pub github: crate::github::connections::Connection,
+    pub settings: SettingsFormData,
+    pub sections: ProfileSections,
+    pub appearance: AppearanceData,
     pub has_password: bool,
     pub current_password_error: Option<&'a str>,
     pub security: crate::two_factor::ProfileData,
@@ -188,23 +213,28 @@ pub struct ProfileShow<'a> {
     pub transfer_id: String,
     pub shared_memberships: Vec<ProfileMembership>,
     pub direct_memberships: Vec<ProfileMembership>,
-    pub settings: SettingsFormData,
 }
 
 impl<'a> ProfileShow<'a> {
-    fn google_calendar_panel(&self) -> h::Html { h::raw(google::Calendar{data:self.google_calendar.clone()}.render().unwrap()) }
-    fn google_sign_in_panel(&self) -> h::Html { h::raw(google::SignIn{data:self.google_sign_in.clone()}.render().unwrap()) }
-    fn github_panel(&self) -> h::Html {
-        h::raw(crate::github::connections::profile(&self.github))
-    }
-    fn status_form(&self) -> h::Html {
-        h::raw(StatusForm { ctx: self.ctx, data: &self.settings }.render().expect("status form renders"))
-    }
     fn notification_form(&self) -> h::Html {
-        h::raw(NotificationForm { ctx: self.ctx, data: &self.settings }.render().expect("notification form renders"))
+        h::raw(
+            NotificationForm {
+                ctx: self.ctx,
+                data: &self.settings,
+            }
+            .render()
+            .expect("notification form renders"),
+        )
     }
-    fn appearance_form(&self) -> h::Html {
-        h::raw(AppearanceForm { ctx: self.ctx, data: &self.settings }.render().expect("appearance form renders"))
+    fn appearance_panel(&self) -> h::Html {
+        h::raw(
+            Appearance {
+                ctx: self.ctx,
+                data: self.appearance.clone(),
+            }
+            .render()
+            .unwrap(),
+        )
     }
     fn security_panel(&self) -> h::Html {
         h::raw(
@@ -264,3 +294,9 @@ impl Page for PushSubscriptionsIndex<'_> {
         Some("Push notification subscriptions".into())
     }
 }
+
+mod profile_sections;
+pub use profile_sections::*;
+
+mod status_popup;
+pub use status_popup::*;

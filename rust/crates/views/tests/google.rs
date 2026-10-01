@@ -24,7 +24,7 @@ fn sign_in_partial_matches_pinned_rails() {
         },
         || {
             GoogleSignIn {
-                domains: v["domains"].as_str().unwrap(),
+                domains: vec!["smartdata.net".into(), "cnbssoftware.com".into(), "other.test".into()],
             }
             .render()
             .unwrap()

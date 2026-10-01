@@ -759,7 +759,8 @@ fn google_administrator_link_forms_match_complete_pinned_rails_bytes() {
             role: match row["role"].as_str().unwrap() { "administrator" => Role::Administrator, "bot" => Role::Bot, _ => Role::Member },
             status: match row["status"].as_str().unwrap() { "deactivated" => Status::Deactivated, "banned" => Status::Banned, _ => Status::Active },
             google_identity_email: row["google_identity_email"].as_str().map(str::to_string),
-            google_link_untrusted: row["untrusted"].as_bool().unwrap(),
+            email_self_changed: row["untrusted"].as_bool().unwrap(),
+            google_email_link_allowed: true,
             ..Default::default()
         };
         let html = render(&campfire_views::accounts::UserPartial {ctx: &ctx, user});

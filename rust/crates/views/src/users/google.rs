@@ -24,7 +24,8 @@ pub struct Calendar {
     pub data: CalendarData,
 }
 impl Calendar {
-    fn connect(&self, label: &str, drive: bool) -> h::Html {
+    pub(super) fn calendar_data(&self) -> CalendarData { self.data.clone() }
+    pub(super) fn connect(&self, label: &str, drive: bool) -> h::Html {
         let mut form = h::button_to_form(
             "/google/connect",
             h::attrs().method("post").class("btn"),
@@ -41,7 +42,7 @@ impl Calendar {
         }
         h::raw(form)
     }
-    fn disconnect(&self) -> h::Html {
+    pub(super) fn disconnect(&self) -> h::Html {
         h::button_to_form(
             "/google/connection",
             h::attrs().method("delete").class("btn btn--negative"),

@@ -55,11 +55,18 @@ pub struct Config {
     pub mail: campfire_mail::config::Config,
     /// `LIVEKIT_URL`, whose origin the Content Security Policy allows to connect.
     pub livekit_url: Option<String>,
+    pub huddle: crate::huddle::Config,
     /// WS8bm2 readiness seam; WS13 owns launching the returned huddle.
     pub huddles_configured: bool,
     pub google_picker: Option<campfire_views::layouts::GooglePicker>,
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
     pub admin_session_idle_timeout: jiff::SignedDuration,
+    pub public_policy: crate::public_policy::PublicPolicy,
+    /// WS14g display seam: Google::Client.configured?, separate from Workspace sign-in.
+    pub profile_google_calendar_configured: bool,
+    /// WS14g display seam: normalized domains only when Google::SignIn.configured?. OAuth
+    /// start/callback and provider adapters remain with WS14g; parsing reuses WS1's contract.
+    pub sign_in_google_domains: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -132,6 +139,12 @@ impl Config {
             }
         };
 
+        let google_client_configured = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"].iter()
+            .all(|key| get(key).is_some_and(|value| !campfire_richtext::ruby::is_blank(&value)));
+        let sign_in_google_domains = if google_client_configured {
+            rails_compat::jwt::google::allowed_domains(get("GOOGLE_SIGN_IN_DOMAINS").as_deref())
+        } else { Vec::new() };
+
         Ok(Self {
             mail: campfire_mail::config::Config::from_map(&[
                 "SMTP_ADDRESS", "SMTP_PORT", "SMTP_DOMAIN", "SMTP_USER_NAME", "SMTP_PASSWORD",
@@ -154,9 +167,13 @@ impl Config {
             fragment_cache_bytes: number("CAMPFIRE_FRAGMENT_CACHE_MB", campfire_views::fragment_cache::DEFAULT_MAX_BYTES >> 20)?
                 .saturating_mul(1 << 20),
             livekit_url: get("LIVEKIT_URL"),
+            huddle: crate::huddle::Config::from_lookup(&get),
             huddles_configured: crate::huddle_readiness::huddles_configured(&get),
             google_picker: crate::picker_configuration::picker(&get),
             admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),
+            public_policy: crate::public_policy::PublicPolicy::from_lookup(&get),
+            profile_google_calendar_configured: google_client_configured,
+            sign_in_google_domains,
         })
     }
 }
