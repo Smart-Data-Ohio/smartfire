@@ -142,6 +142,8 @@ pub struct Presenter<'a> {
     /// `Current.request_host`, which opengraph embeds are checked against.
     pub request_host: Option<String>,
     pub cache_base_url: Option<String>,
+    /// The viewer's zone for token-free request partials; detached jobs default to UTC.
+    pub render_zone: campfire_views::time::Zone,
     github_refreshes: std::rc::Rc<RefCell<BTreeSet<i64>>>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
@@ -166,6 +168,7 @@ impl<'a> Presenter<'a> {
             now: app.clock.now(),
             request_host,
             cache_base_url: None,
+            render_zone: campfire_views::time::Zone::utc(),
             github_refreshes: Default::default(),
             users: RefCell::default(),
             room_names: RefCell::default(),
@@ -173,6 +176,12 @@ impl<'a> Presenter<'a> {
             link_fetches: Default::default(), twitter_fetches: Default::default(),
             twitter_posts: Default::default(), twitter_existence: Default::default(),
         }
+    }
+
+    pub(crate) fn use_viewer_zone(&mut self, user_id: i64) -> Result<()> {
+        let zone: Option<String> = self.conn.query_row("SELECT time_zone FROM users WHERE id=?", [user_id], |row| row.get(0))?;
+        self.render_zone = campfire_views::time::Zone::for_user(zone.as_deref());
+        Ok(())
     }
 
     /// Collected only when a card partial actually renders (never on a fragment-cache hit).
@@ -198,6 +207,7 @@ impl<'a> Presenter<'a> {
         self.twitter_posts.borrow_mut().extend(posts);
         Ok(Self { app:self.app,conn:self.conn,secrets:self.secrets,storage:self.storage,rich_text:self.rich_text,now:self.now,
             request_host:self.request_host.clone(),cache_base_url:self.cache_base_url.clone(),
+            render_zone:self.render_zone.clone(),
             users:RefCell::default(),room_names:RefCell::default(),search_preloads:Some(data),
             link_fetches:self.link_fetches.clone(),twitter_fetches:self.twitter_fetches.clone(),
             twitter_posts:self.twitter_posts.clone(),twitter_existence:self.twitter_existence.clone(),github_refreshes:self.github_refreshes.clone() })

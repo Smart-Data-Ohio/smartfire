@@ -100,6 +100,13 @@ pub fn renderer_base_url(c: &Ctx) -> String {
 /// [`render_detached`] during a request: URLs get the request's host through
 /// `default_url_options` (`SetCurrentRequest`), see [`renderer_base_url`].
 pub fn render_detached_at<T>(app: &AppState, account: Option<&Account>, base_url: &str, render: impl FnOnce(&ViewContext) -> T) -> T {
+    render_detached_in_zone(app, account, base_url, &campfire_views::time::Zone::utc(), render)
+}
+
+/// Nested request partials keep Rails' `Time.zone` without carrying Current.user or
+/// session secrets into the detached renderer. Background callers retain the UTC default.
+pub fn render_detached_in_zone<T>(app: &AppState, account: Option<&Account>, base_url: &str,
+    time_zone: &campfire_views::time::Zone, render: impl FnOnce(&ViewContext) -> T) -> T {
     let asset_path = |path: &str| campfire_assets::asset_path(path);
     let stylesheets = crate::controllers::presenters::view_context::stylesheet_tags();
     let signed_stream_name = |streamables: &[&str]| rails_compat::turbo::signed_stream_name(&app.secrets, streamables);
@@ -121,7 +128,7 @@ pub fn render_detached_at<T>(app: &AppState, account: Option<&Account>, base_url
         last_room_visited_id: None,
         app_version: app.config.app_version.clone(),
         signed_stream_name: &signed_stream_name,
-        time_zone: campfire_views::time::Zone::utc(),
+        time_zone: time_zone.clone(),
         chrome: Default::default(),
     };
     // Renders outside a request (broadcasts from jobs) share the fragment cache too.

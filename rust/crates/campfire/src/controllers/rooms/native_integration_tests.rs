@@ -116,3 +116,74 @@ async fn native_room_page_provider_cards_match_rails_bytes() {
     }
     assert_eq!(populated, 3, "the seed must exercise all three merged provider bodies");
 }
+
+async fn cards_in_viewer_zones(zones: &[Option<&str>], thread: bool) {
+    let app = TestApp::boot_frozen().await.expect("default seed required");
+    let oracle: serde_json::Value = serde_json::from_str(include_str!("event_zones.json")).unwrap();
+    let rows = oracle["rows"].clone();
+    let github = oracle["github"].clone();
+    // Persist the Rails fixture records, not rendered provider HTML. Every HTTP path
+    // resolves cards through the real Rust presenter and owner partials.
+    app.db().write(move |tx| {
+        for table in ["events", "messages", "action_text_rich_texts", "event_references"] {
+            for row in rows[table].as_array().unwrap() {
+                let row = row.as_object().unwrap();
+                let columns = row.keys().map(|name| format!("\"{name}\"")).collect::<Vec<_>>().join(",");
+                let parameters = vec!["?"; row.len()].join(",");
+                let values = row.values().map(|value| match value {
+                    serde_json::Value::Null => rusqlite::types::Value::Null,
+                    serde_json::Value::Bool(value) => rusqlite::types::Value::Integer(i64::from(*value)),
+                    serde_json::Value::Number(value) => rusqlite::types::Value::Integer(value.as_i64().unwrap()),
+                    serde_json::Value::String(value) => rusqlite::types::Value::Text(value.clone()),
+                    _ => panic!("unexpected SQL fixture value {value}"),
+                });
+                tx.conn().execute(&format!("INSERT INTO {table} ({columns}) VALUES ({parameters})"), rusqlite::params_from_iter(values))?;
+            }
+        }
+        tx.conn().execute("UPDATE github_pull_requests SET github_updated_at=? WHERE id=?",
+            (github["updated_at"].as_str().unwrap(), github["id"].as_i64().unwrap()))?;
+        Ok(())
+    }).await.unwrap();
+    let mut browser = app.david();
+    for zone in zones {
+        let stored = zone.map(str::to_owned);
+        app.db().write(move |tx| {
+            tx.conn().execute("UPDATE users SET time_zone=? WHERE id=?", (stored, DAVID))?;
+            Ok(())
+        }).await.unwrap();
+        for case in oracle["cases"].as_array().unwrap().iter().filter(|case| case["zone"].as_str() == *zone && case["path"].as_str().unwrap().contains("/threads/") == thread) {
+            let path = case["path"].as_str().unwrap();
+            let response = browser.send(Req::new(axum::http::Method::GET, path).header("accept",
+                if path.contains("refresh") { "text/vnd.turbo-stream.html" } else { "text/html" })).await;
+            assert_eq!(response.status.as_u16(), case["status"].as_u64().unwrap() as u16, "{zone:?}: {path}");
+            let body = response.text();
+            for card in case["cards"].as_array().unwrap() {
+                let target = card["target"].as_str().unwrap();
+                let actual = card_container(&body, target);
+                let expected = card["html"].as_str().unwrap();
+                if actual != expected { rails_mismatch(actual, expected, &format!("viewer zone {zone:?}: {path}: {target}")); }
+                assert_eq!(campfire_cable::turbo::session_bound(actual), None);
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn native_room_event_cards_match_rails_hawaii_and_warm_viewer_changes() {
+    cards_in_viewer_zones(&[Some("Hawaii"), Some("UTC"), Some("Hawaii")], false).await;
+}
+
+#[tokio::test]
+async fn native_room_event_cards_match_rails_both_eastern_dst_transitions() {
+    cards_in_viewer_zones(&[Some("Eastern Time (US & Canada)"), Some("Hawaii"), Some("Eastern Time (US & Canada)")], false).await;
+}
+
+#[tokio::test]
+async fn native_room_event_cards_match_rails_utc_and_invalid_zone_fallbacks() {
+    cards_in_viewer_zones(&[Some("UTC"), None, Some(""), Some("Not a real zone"), Some("UTC")], false).await;
+}
+
+#[tokio::test]
+async fn native_thread_header_matches_rails_viewer_zones() {
+    cards_in_viewer_zones(&[Some("Hawaii"), Some("Eastern Time (US & Canada)"), Some("UTC"), Some("Hawaii")], true).await;
+}
