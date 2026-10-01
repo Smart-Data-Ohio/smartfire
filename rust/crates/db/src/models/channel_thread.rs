@@ -740,7 +740,8 @@ impl ChannelThread {
     /// memberships and the other dependents' rows, then the thread; the parent message is stamped
     /// (`after_destroy :stamp_parent_message`) and its indicator hidden after commit.
     ///
-    /// Work/SLA inbox dependencies and the agent-owned deletion snapshot are atomic.
+    /// Work/SLA dependents commit with deletion. The agent ledger runs after
+    /// commit; a reserved event identity keeps its durable enqueue atomic.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.destroy_by(tx, None)
     }

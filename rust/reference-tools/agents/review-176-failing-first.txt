@@ -1,0 +1,18 @@
+Production baseline: 356fc9e3f913517a079ebd50fd45f93980c333bf
+New tests and independently generated Rails oracle added before production edits.
+Pinned image: triage-reference-d7c7de92
+
+.scratch/review-failing-first.log
+REVIEW stream reference error: streaming=false quote_references=1
+    integrations::agent_repositories::review_tests::ws11_review_repository_batch_order_disconnect_and_public_fields_match_rails
+    integrations::agent_repositories::review_tests::ws11_review_stream_github_failure_precedes_quote_sync
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 1046 filtered out; finished in 11.26s
+
+.scratch/review-db-failing-first.log
+REVIEW deletion-event failure: thread_exists=true
+REVIEW approval-recipient failure: owner=712064548 notified_users=[127326141]
+    tests::agent_approval_cases_test::ws11_review_approval_partial_fanout_reaches_owner_first
+    tests::agent_work_events_test::ws11_review_deleted_ledger_failure_keeps_deletion
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 888 filtered out; finished in 0.15s
+
+Repository regression: Rails z/a/m disconnect-at-first redacted all private fields. Baseline posted Private a/Private m and their private head/base branches; paths were /repos/a/private,/repos/m/private,/repos/z/private. The regression ran all 18 initial matrix cases and reported seven order-dependent mismatches.

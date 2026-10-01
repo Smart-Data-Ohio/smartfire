@@ -276,6 +276,12 @@ impl EventSink for Jobs {
         crate::integrations::sync_message_references(tx, message, enqueue, crypto.as_ref())
     }
 
+    fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, phase: campfire_db::callbacks::Phase, enqueue: bool) -> campfire_db::Result<()> {
+        let app = self.app.get().and_then(Weak::upgrade);
+        let crypto = app.as_ref().map(|app| rails_compat::ar_encryption::ArEncryption::new(&app.secrets));
+        crate::integrations::sync_message_reference_phase(tx,message,phase,enqueue,crypto.as_ref())
+    }
+
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
         if let Some(request) = request_for(event) {
             if !tx.in_transaction() {

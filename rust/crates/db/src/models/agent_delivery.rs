@@ -107,7 +107,20 @@ impl AgentEvent {
             Self::from_row,
         )
     }
-    pub fn create(tx: &Tx<'_>, mut a: NewEvent) -> Result<Self> {
+    pub fn create(tx: &Tx<'_>, a: NewEvent) -> Result<Self> {
+        Self::create_with_id(tx,None,a)
+    }
+    /// Reserve the identity of an after-commit deletion event so its durable
+    /// job can be persisted with deletion without inserting the ledger early.
+    pub(crate) fn reserve_id(tx: &Tx<'_>) -> Result<i64> {
+        let last:i64=tx.conn().query_row("SELECT max(COALESCE((SELECT seq FROM sqlite_sequence WHERE name='agent_events'),0),COALESCE((SELECT max(id) FROM agent_events),0))",[],|r|r.get(0))?;
+        let id=last.checked_add(1).ok_or_else(||crate::Error::Other("Agent event identity exhausted".into()))?;
+        if tx.conn().execute("UPDATE sqlite_sequence SET seq=? WHERE name='agent_events'",[id])?==0 {
+            tx.conn().execute("INSERT INTO sqlite_sequence(name,seq) VALUES ('agent_events',?)",[id])?;
+        }
+        Ok(id)
+    }
+    pub(crate) fn create_with_id(tx: &Tx<'_>, id: Option<i64>, mut a: NewEvent) -> Result<Self> {
         let mut errors = Errors::default();
         if !DELIVERABLE_TYPES.contains(&a.event_type.as_str())
             && !["posted", "delivery_suppressed_rate_limit", "delivery_suppressed_hop_limit", "delivery_suppressed_revoked"].contains(&a.event_type.as_str())        {
@@ -139,8 +152,8 @@ impl AgentEvent {
         {
             a.hop = ruby_i64(hop);
         }
-        let id=tx.conn().query_row_cached("INSERT INTO agent_events (agent_id,room_id,message_id,actor_id,agent_approval_id,agent_credential_id,event_type,outcome,chain_id,metadata,hop,detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",
-            params![a.agent_id,a.room_id,a.message_id,a.actor_id,a.agent_approval_id,a.agent_credential_id,a.event_type,a.outcome,a.chain_id,(!a.metadata.is_null()).then_some(&a.metadata),a.hop,a.detail,tx.now()],|r|r.get(0))?;
+        let id=tx.conn().query_row_cached("INSERT INTO agent_events (id,agent_id,room_id,message_id,actor_id,agent_approval_id,agent_credential_id,event_type,outcome,chain_id,metadata,hop,detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",
+            params![id,a.agent_id,a.room_id,a.message_id,a.actor_id,a.agent_approval_id,a.agent_credential_id,a.event_type,a.outcome,a.chain_id,(!a.metadata.is_null()).then_some(&a.metadata),a.hop,a.detail,tx.now()],|r|r.get(0))?;
         Ok(Self::find(tx.conn(), id)?.expect("inserted event"))
     }
     /// The unfiltered ledger association. Polling must use agent_event_access,
@@ -181,7 +194,7 @@ impl AgentEvent {
         }
     }
 }
-pub(crate) fn ruby_i64(v: &Value) -> i64 {
+pub fn ruby_i64(v: &Value) -> i64 {
     match v {
         Value::Number(n) => n
             .as_i64()

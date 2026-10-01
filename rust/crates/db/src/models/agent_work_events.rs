@@ -28,20 +28,7 @@ pub fn enqueue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<()> {
     let Some(agent) = Agent::find(tx.conn(), event.agent_id)? else {
         return Ok(());
     };
-    if !exists(
-        tx.conn(),
-        "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?",
-        params![agent.user_id, room_id],
-    )? || !agent_access::capability_for_agent(
-        tx.conn(),
-        agent.id,
-        "read_messages",
-        Some(room_id),
-    )? || !exists(
-        tx.conn(),
-        "SELECT 1 FROM webhooks WHERE user_id=?",
-        [agent.user_id],
-    )? {
+    if !webhook_eligible(tx, agent.user_id, agent.id, room_id)? {
         return Ok(());
     }
     let changed=tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND webhook_status='none'",params![tx.now(),event.id])?;
@@ -52,6 +39,12 @@ pub fn enqueue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<()> {
         }));
     }
     Ok(())
+}
+
+fn webhook_eligible(tx: &Tx<'_>, user_id: i64, agent_id: i64, room_id: i64) -> Result<bool> {
+    Ok(exists(tx.conn(), "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?", params![user_id,room_id])?
+        && agent_access::capability_for_agent(tx.conn(),agent_id,"read_messages",Some(room_id))?
+        && exists(tx.conn(),"SELECT 1 FROM webhooks WHERE user_id=?",[user_id])?)
 }
 
 fn record(
@@ -207,15 +200,31 @@ pub(crate) fn record_deleted(
     deleted: Option<DeletedWork>,
 ) -> Result<()> {
     if let Some(deleted) = deleted {
-        record(
-            tx,
-            thread,
-            deleted.agent_id,
-            "work_unassigned",
-            actor_id,
-            (0, &uuid::Uuid::new_v4().to_string()),
-            json!({"work_snapshot":deleted.snapshot}),
-        )?;
+        let agent = Agent::find(tx.conn(), deleted.agent_id)?;
+        let deliverable = agent.map(|agent| webhook_eligible(tx, agent.user_id, agent.id, thread.room_id)).transpose()?.unwrap_or(false);
+        let reserved = if deliverable {Some(AgentEvent::reserve_id(tx)?)} else {None};
+        // The durable job shares deletion's transaction; a rejected enqueue
+        // still rolls back deletion. The ledger itself belongs after commit.
+        if let Some(event_id)=reserved {
+            tx.emit_after_commit(crate::Event::job(&EventWebhookJob {event_id,attempt:Some(0)}));
+        }
+        let event=NewEvent {
+            agent_id:deleted.agent_id, room_id:Some(thread.room_id), actor_id,
+            event_type:"work_unassigned".into(),outcome:Some("delivered".into()),
+            chain_id:Some(uuid::Uuid::new_v4().to_string()),
+            metadata:json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":deleted.snapshot["assigned_by"],"hop":0,"work_snapshot":deleted.snapshot}),
+            ..Default::default()
+        };
+        tx.after_commit(move|tx|crate::database::run_write(tx.conn(),tx.env(),move|tx| {
+            // A removed agent no longer owns this callback, like Rails' fresh
+            // agent_for_work_owner lookup after the enclosing removal commits.
+            if Agent::find(tx.conn(),event.agent_id)?.is_none() {return Ok(());}
+            let event=AgentEvent::create_with_id(tx,reserved,event)?;
+            if reserved.is_some() {
+                tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",params![tx.now(),event.id])?;
+            } else {enqueue_webhook(tx,&event)?;}
+            Ok(())
+        }));
     }
     Ok(())
 }

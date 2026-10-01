@@ -93,11 +93,12 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
         Ok(ids) => ids,
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };
-    let access = match app
-        .agent_repositories
-        .resolve_threads(&app.db, id, threads)
-        .await
-    {
+    let access_result = if campfire_db::models::agent_delivery::MESSAGE_TYPES.contains(&e.event_type.as_str()) {
+        app.agent_repositories.resolve_messages(&app.db,id,threads).await
+    } else {
+        app.agent_repositories.resolve_work(&app.db,id,threads).await
+    };
+    let access = match access_result {
         Ok(access) => access,
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };

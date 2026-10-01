@@ -1,0 +1,718 @@
+{
+  "reference": "d7c7de92",
+  "results": {
+    "repositories": [
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": null,
+        "disconnect_index": 0,
+        "paths": [
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": null,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/z/private",
+          "/repos/a/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private z",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": null,
+        "disconnect_index": 2,
+        "paths": [
+          "/repos/z/private",
+          "/repos/a/private",
+          "/repos/m/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private z",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": 0,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/a/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private z",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": 0,
+        "disconnect_index": 2,
+        "paths": [
+          "/repos/a/private",
+          "/repos/m/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private z",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": 1,
+        "disconnect_index": 0,
+        "paths": [
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": 1,
+        "disconnect_index": 2,
+        "paths": [
+          "/repos/z/private",
+          "/repos/m/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private z",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": 2,
+        "disconnect_index": 0,
+        "paths": [
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": "Private m",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          }
+        ]
+      },
+      {
+        "order": [
+          "z",
+          "a",
+          "m"
+        ],
+        "public_index": 2,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/z/private",
+          "/repos/a/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private z",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": "Private m",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": null,
+        "disconnect_index": 0,
+        "paths": [
+          "/repos/a/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": null,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/a/private",
+          "/repos/m/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": null,
+        "disconnect_index": 2,
+        "paths": [
+          "/repos/a/private",
+          "/repos/m/private",
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": "Private m",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": 0,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/m/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": 0,
+        "disconnect_index": 2,
+        "paths": [
+          "/repos/m/private",
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": "Private m",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": 1,
+        "disconnect_index": 0,
+        "paths": [
+          "/repos/a/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": "Private m",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": 1,
+        "disconnect_index": 2,
+        "paths": [
+          "/repos/a/private",
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": "Private m",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": 2,
+        "disconnect_index": 0,
+        "paths": [
+          "/repos/a/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": "Private z",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "m",
+          "z"
+        ],
+        "public_index": 2,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/a/private",
+          "/repos/m/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": "Private z",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "z",
+          "a"
+        ],
+        "public_index": null,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/a/private",
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "z",
+          "a"
+        ],
+        "public_index": 0,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          }
+        ]
+      },
+      {
+        "order": [
+          "a",
+          "z",
+          "a"
+        ],
+        "public_index": 2,
+        "disconnect_index": 1,
+        "paths": [
+          "/repos/a/private",
+          "/repos/z/private"
+        ],
+        "disconnected_reason": "GitHub rejected the linked token (401)",
+        "details": [
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          },
+          {
+            "title": null,
+            "head_branch": null,
+            "base_branch": null
+          },
+          {
+            "title": "Private a",
+            "head_branch": "private-head",
+            "base_branch": "private-base"
+          }
+        ]
+      }
+    ],
+    "poll_batch": {
+      "paths": [
+        "/repos/a/private",
+        "/repos/z/private"
+      ],
+      "details": [
+        {
+          "title": "Private a",
+          "head_branch": "private-head",
+          "base_branch": "private-base"
+        },
+        {
+          "title": null,
+          "head_branch": null,
+          "base_branch": null
+        },
+        {
+          "title": null,
+          "head_branch": null,
+          "base_branch": null
+        }
+      ],
+      "cursor_advanced": true
+    },
+    "deletion": {
+      "error": "ActiveRecord::StatementInvalid",
+      "thread_exists": false,
+      "events": 0
+    },
+    "deletion_with_webhook": {
+      "error": "ActiveRecord::StatementInvalid",
+      "thread_exists": false,
+      "events": 0
+    },
+    "stream_failure": {
+      "error": "ActiveRecord::RecordInvalid",
+      "streaming": false,
+      "quote_references": 0,
+      "order": [
+        "sync_github_pull_request_references"
+      ]
+    },
+    "stream_success": {
+      "streaming": false,
+      "quote_references": 1,
+      "order": [
+        "sync_github_pull_request_references",
+        "sync_fizzy_card_references",
+        "sync_twitter_post_references",
+        "sync_event_references",
+        "sync_message_references",
+        "sync_link_embed_references"
+      ]
+    },
+    "approval": {
+      "error": "ActiveRecord::StatementInvalid",
+      "owner": 712064548,
+      "deciders": [
+        712064548,
+        127326141,
+        149087659
+      ],
+      "notified_users": [
+        712064548
+      ],
+      "status": "pending"
+    }
+  }
+}

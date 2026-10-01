@@ -431,8 +431,8 @@ impl AgentApproval {
     pub fn decider_ids(&self, conn: &Connection) -> Result<Vec<i64>> {
         query_all(
             conn,
-            "SELECT u.id FROM users u WHERE u.status=0 AND u.role!=2 AND (u.role=1 OR u.id=(SELECT owner_id FROM agents WHERE id=?)) ORDER BY u.id",
-            [self.agent_id],
+            "SELECT u.id FROM users u WHERE u.status=0 AND u.role!=2 AND (u.role=1 OR u.id=(SELECT owner_id FROM agents WHERE id=?)) ORDER BY CASE WHEN u.id=(SELECT owner_id FROM agents WHERE id=?) THEN 0 ELSE 1 END,u.id",
+            params![self.agent_id,self.agent_id],
             |r| r.get(0),
         )
     }

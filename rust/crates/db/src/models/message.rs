@@ -480,11 +480,13 @@ impl Message {
     /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
     /// must not warm previews. Import callers pass false to retain DB references without fetches.
     pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
-        for sync in tx.env().message_reference_syncs.clone() {
-            sync(tx, self, enqueue)?;
+        use crate::callbacks::Phase;
+        for sync in tx.env().message_reference_syncs.clone() { sync(tx,self,enqueue)?; }
+        let sink=tx.env().sink.clone();
+        for phase in [Phase::MessageFizzyReferences,Phase::MessageTwitterReferences,Phase::MessageLinkReferences] {
+            sink.sync_message_reference_phase(tx,self,phase,enqueue)?;
         }
-        let sink = tx.env().sink.clone();
-        sink.sync_message_references(tx, self, enqueue)
+        Ok(())
     }
 
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
@@ -1179,11 +1181,19 @@ impl Message {
         use crate::callbacks::Phase;
         for phase in [Phase::MessageGithubReferences, Phase::MessageFizzyReferences,
             Phase::MessageTwitterReferences, Phase::MessageEventReferences] {
-            tx.model_callback(phase, self.id)?;
+            self.sync_reference_phase(tx, phase, true)?;
         }
         crate::models::message_reference::sync(tx,self)?;
-        tx.model_callback(Phase::MessageLinkReferences, self.id)?;
-        self.sync_external_references(tx, true)
+        self.sync_reference_phase(tx, Phase::MessageLinkReferences, true)
+    }
+
+    fn sync_reference_phase(&self, tx: &mut Tx<'_>, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+        tx.model_callback(phase, self.id)?;
+        if phase == crate::callbacks::Phase::MessageGithubReferences {
+            for sync in tx.env().message_reference_syncs.clone() { sync(tx, self, enqueue)?; }
+        }
+        let sink = tx.env().sink.clone();
+        sink.sync_message_reference_phase(tx, self, phase, enqueue)
     }
 
     /// Claim first, like Rails' `update_all`, then run the deferred callbacks.

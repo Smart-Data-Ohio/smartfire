@@ -552,3 +552,21 @@ fn ws11_approval_case_disabled_preference_preserves_decider_and_ordinary_mention
         assert_eq!(serde_json::json!({"items":items,"deciders":deciders,"owner_can_decide":approval.decidable_by(c,&User::find(c,id("kevin"))?)?,"mention":mention}),oracle["results"]);Ok(())
     });
 }
+
+#[test]
+fn ws11_review_approval_partial_fanout_reaches_owner_first() {
+    let t = setup();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE agents SET owner_id=? WHERE id=?", params![id("kevin"), id("bender_agent")])?;
+        tx.conn().execute("UPDATE users SET inbox_preferences='{}'", [])?;
+        tx.conn().execute_batch("CREATE TEMP TRIGGER review_reject_later_approval_recipient BEFORE INSERT ON activity_items WHEN NEW.source_type='AgentApproval' AND EXISTS(SELECT 1 FROM activity_items WHERE source_type='AgentApproval' AND source_id=NEW.source_id) BEGIN SELECT RAISE(ABORT,'review later approval recipient rejected'); END")?;
+        Ok(())
+    });
+    assert!(t.try_write(create).is_err());
+    let notified = t.read(|c| {
+        Ok(c.prepare("SELECT user_id FROM activity_items WHERE source_type='AgentApproval' ORDER BY id")?.query_map([], |r| r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)
+    });
+    println!("REVIEW approval-recipient failure: owner={} notified_users={notified:?}",id("kevin"));
+    let gold: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/agents_review_fixes_contract.json")).unwrap();
+    assert_eq!(serde_json::json!(notified),gold["results"]["approval"]["notified_users"]);
+}

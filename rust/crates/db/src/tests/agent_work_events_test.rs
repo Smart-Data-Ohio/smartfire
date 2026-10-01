@@ -64,11 +64,15 @@ fn ws11_work_events_assign_handoff_access_hop_and_real_delete_match_rails() {
         let events=work::record_handoff(tx,&thread,bot,id("bender_agent"),human,json!({"summary":"Take over","empty":"","flag":false}))?;
         assert_eq!(capture(tx,&events)?,gold()["results"]["handoff"]);
         thread.destroy_by(tx,human)?;
+        assert!(ChannelThread::find_by_id(tx.conn(),THREAD)?.is_none());
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='work_unassigned' AND json_extract(metadata,'$.thread_id')=?",[THREAD],|r|r.get::<_,i64>(0))?,0);
+        Ok(())
+    });
+    t.write(|tx| {
         let event_id:i64=tx.conn().query_row("SELECT id FROM agent_events WHERE event_type='work_unassigned' ORDER BY id DESC LIMIT 1",[],|r|r.get(0))?;
         let event=AgentEvent::find(tx.conn(),event_id)?.unwrap();
         assert_eq!(event.metadata["work_snapshot"],gold()["results"]["deleted_snapshot"]);
         assert_eq!(capture(tx,&[event])?,gold()["results"]["deleted"]);
-        assert!(ChannelThread::find_by_id(tx.conn(),THREAD)?.is_none());
         Ok(())
     });
 }
@@ -112,4 +116,20 @@ fn ws11_work_enqueue_rechecks_access_and_is_idempotent() {
         .filter(|e| matches!(e,Event::Job(j) if j.class=="Agent::EventWebhookJob"))
         .count();
     assert_eq!(jobs, 1);
+}
+
+#[test]
+fn ws11_review_deleted_ledger_failure_keeps_deletion() {
+    let t = setup();
+    t.write(|tx| {
+        tx.conn().execute("DELETE FROM webhooks WHERE user_id=?", [id("bender")])?;
+        tx.conn().execute_batch("CREATE TEMP TRIGGER review_reject_deleted_event BEFORE INSERT ON agent_events WHEN NEW.event_type='work_unassigned' BEGIN SELECT RAISE(ABORT,'review deletion event rejected'); END")?;
+        Ok(())
+    });
+    let failed = t.try_write(|tx| ChannelThread::find(tx.conn(), THREAD)?.destroy(tx));
+    assert!(failed.is_err());
+    let exists = t.read(|conn| Ok(ChannelThread::find_by_id(conn, THREAD)?.is_some()));
+    println!("REVIEW deletion-event failure: thread_exists={exists}");
+    let gold: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/agents_review_fixes_contract.json")).unwrap();
+    assert_eq!(exists, gold["results"]["deletion"]["thread_exists"].as_bool().unwrap());
 }
