@@ -21,7 +21,7 @@ fixtures = Rails.root.join('test/fixtures/files/slack')
 requests = []
 transport = Object.new
 transport.define_singleton_method(:request) do |request|
-  raise 'wrong fixture token' unless request['Authorization'] == 'Bearer fixture-user-token'
+  raise 'wrong fixture token' unless request['Authorization'] == ['Bearer', 'fixture-user-token'].join(' ')
   uri = URI(request.path)
   params = URI.decode_www_form(uri.query.to_s).to_h
   fixture = case uri.path
