@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
 import {messageList} from './behavior-message-list.mjs';
+import {searchForward} from './behavior-search-forward.mjs';
 import {installMutation} from './behavior-mutations.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
@@ -11,7 +12,7 @@ const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.
 const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y'].includes(file));
+assert.ok(['sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit'].includes(file));
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 async function acceptance(base,caseName,probe={}) {
@@ -74,6 +75,10 @@ async function acceptance(base,caseName,probe={}) {
     }
     if(file==='message_list_a11y') {
       await messageList({author,recipient,caseName,send,text,openEdit,field});
+      return;
+    }
+    if(file==='search_forward_edit') {
+      await searchForward({author,recipient,base,caseName});
       return;
     }
     if (file==='threads') {

@@ -64,6 +64,10 @@ CASES = {
         "an edit replacement is not announced as an addition",
         "an own message is not re-announced when its broadcast replaces the pending copy",
     ],
+    "search_forward_edit": [
+        "search tolerates operators, shows an empty state and pages older results",
+        "forwarded Markdown keeps tables and code blocks",
+    ],
 }
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("files", nargs="*", choices=CASES)
@@ -143,6 +147,10 @@ for file in files:
             shutil.copytree(RUST / "parity/.seed/default", fixture)
             if file == "message_list_a11y":
                 fixture_kind = "history" if case.startswith("paginated history") else "message_list"
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            elif file == "search_forward_edit":
+                fixture_kind = "search" if case.startswith("search tolerates") else "forward"
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             shutil.copytree(fixture / "db", work / "db")
@@ -259,6 +267,19 @@ for file in files:
                                     with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                         expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
                                     assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected, "navigation/focus/history must not change saved messages"
+                            elif file == "search_forward_edit":
+                                if case.startswith("search tolerates"):
+                                    assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source LIKE 'system paging %'").fetchone()[0] == 42
+                                    with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                        expected = seed.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall()
+                                    assert conn.execute("SELECT id,markdown_source FROM messages ORDER BY id").fetchall() == expected
+                                else:
+                                    source_row = conn.execute("SELECT id,markdown_source FROM messages WHERE client_message_id='system-forward-source'").fetchone()
+                                    assert source_row is not None
+                                    copies = conn.execute("SELECT id,markdown_source,forwarded_markdown,room_id FROM messages WHERE forwarded_from_message_id=?", (source_row[0],)).fetchall()
+                                    assert len(copies) == 1 and copies[0][1:] == (None, 1, 654632876), "Rails forwards store a rendered snapshot, not source Markdown"
+                                    original = conn.execute("SELECT body FROM action_text_rich_texts WHERE record_type='Message' AND record_id=? AND name='body'", (source_row[0],)).fetchone()
+                                    assert conn.execute("SELECT body FROM action_text_rich_texts WHERE record_type='Message' AND record_id=? AND name='body'", (copies[0][0],)).fetchone() == original
                     for case in batch:
                         passed += 1
                         print(f"WS8bm behaviour: {file}: {case}: Rails PASS; Rust PASS; persisted rows PASS", flush=True)

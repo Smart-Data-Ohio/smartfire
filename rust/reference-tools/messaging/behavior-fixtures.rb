@@ -17,6 +17,19 @@ when "history"
       markdown_source: "History post #{index}", client_message_id: "a11y-history-#{index}",
       created_at: first_created_at + index.seconds)
   end
+when "search"
+  room = Room.find(654632876)
+  creator = User.find(773523953)
+  room.messages.create!(creator:, markdown_source: "system paging alpha",
+    client_message_id: "system-search-alpha", created_at: 1.hour.ago)
+  41.times do |index|
+    room.messages.create!(creator:, markdown_source: "system paging filler #{index}",
+      client_message_id: "system-search-filler-#{index}")
+  end
+when "forward"
+  Room.find(654632876).messages.create!(creator: User.find(773523953),
+    markdown_source: "| Keep |\n| --- |\n| row |\n\n```ruby\nputs :forwarded\n```",
+    client_message_id: "system-forward-source")
 else
   raise "Unknown browser fixture"
 end

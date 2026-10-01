@@ -34,6 +34,8 @@ const mutations=new Map([
   ['mention suggestions select a room member without sending the unfinished message',['mention-response']],
   ['a rejected message can be recovered corrected and sent',[composer,'recover(event) {','recover(event) { return;']],
   ['sending preserves the submitted source and a newer draft',[composer,'if (this.markdownTarget.value === submission.content)','if (true)']],
+  ['search tolerates operators, shows an empty state and pages older results',['search-page-response']],
+  ['forwarded Markdown keeps tables and code blocks',['forward-response']],
 ]);
 export const mutationNames=[...mutations.keys()];
 export async function installMutation(page,caseName,probe) {
@@ -45,7 +47,7 @@ export async function installMutation(page,caseName,probe) {
     const refresh=asset==='refresh-content-type'&&url.searchParams.get('reason')==='connection';
     const mention=asset==='mention-response'&&url.pathname.includes('/autocompletable/users');
     const search=asset==='search-page-response'&&url.pathname==='/searches'&&url.searchParams.has('before');
-    const forward=asset==='forward-response'&&request.method()==='POST'&&url.pathname.endsWith('/forwards');
+    const forward=asset==='forward-response'&&request.method()==='POST'&&/\/forwards(?:\.json)?$/.test(url.pathname);
     if(!refresh&&!mention&&!search&&!forward&&!url.pathname.includes('/assets/'+asset)) return route.continue();
     const response=await route.fetch();let body=await response.text(),headers=response.headers();
     if(refresh) {headers['content-type']='text/vnd.turbo-stream.html';body=' ';}

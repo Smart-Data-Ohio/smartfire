@@ -681,13 +681,13 @@
       "cases": [
         {
           "name": "search tolerates operators, shows an empty state and pages older results",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: real search empty/operator/40+2 paging controls and forwarding dialog; author and recipient tables/code; exact one rendered snapshot with NULL Markdown source and copied Action Text bytes on both apps; both checks reject committed response mutants"
         },
         {
           "name": "forwarded Markdown keeps tables and code blocks",
-          "status": "deferred",
-          "evidence": null
+          "status": "passed",
+          "evidence": "reference-tools/messaging/behavior-check.py search_forward_edit: real search empty/operator/40+2 paging controls and forwarding dialog; author and recipient tables/code; exact one rendered snapshot with NULL Markdown source and copied Action Text bytes on both apps; both checks reject committed response mutants"
         },
         {
           "name": "editing to add a URL renders its card live and the edited marker on load",
